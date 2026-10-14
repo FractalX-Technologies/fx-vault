@@ -1,0 +1,41 @@
+name: Set up toolchain
+description: >
+  Selects the newest GA Xcode matching a glob (beta and RC builds and symlinked
+  aliases are skipped) and installs the XcodeGen release pinned in .xcodegen-version
+  (version on line 1, sha256 of xcodegen.zip on line 2), verifying its checksum.
+inputs:
+  xcode-glob:
+    description: Shell glob for the Xcode bundle name in /Applications, for example Xcode_26*.app
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Select Xcode
+      shell: bash
+      env:
+        XCODE_GLOB: ${{ inputs.xcode-glob }}
+      run: |
+        set -euo pipefail
+        xcode="$(find /Applications -maxdepth 1 -type d -name "$XCODE_GLOB" \
+          | grep -viE 'beta|_rc|release_candidate' | sort -V | tail -n 1)"
+        if [[ -z "$xcode" ]]; then
+          echo "::error::No Xcode matching $XCODE_GLOB in /Applications"
+          exit 1
+        fi
+        sudo xcode-select -s "$xcode"
+        xcodebuild -version
+        swift --version
+
+    - name: Install XcodeGen (pinned, sha256-verified)
+      shell: bash
+      run: |
+        set -euo pipefail
+        version="$(sed -n 1p .xcodegen-version)"
+        sha256="$(sed -n 2p .xcodegen-version)"
+        zip="$RUNNER_TEMP/xcodegen.zip"
+        curl -fsSL --retry 3 -o "$zip" \
+          "https://github.com/yonaskolb/XcodeGen/releases/download/${version}/xcodegen.zip"
+        echo "${sha256}  ${zip}" | shasum -a 256 -c -
+        unzip -q -o "$zip" -d "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+        "$RUNNER_TEMP/xcodegen/bin/xcodegen" --version

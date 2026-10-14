@@ -1,0 +1,31 @@
+# Local secrets and research (never commit)
+.env
+*.env
+!Packages/FXVaultKit/Tests/*/Fixtures/*.env
+.research/
+Config/Local.xcconfig
+*.p8
+*.p12
+*.mobileprovision
+*.provisionprofile
+
+# Build output
+.build/
+.build-*/
+.swiftpm/
+DerivedData/
+build/
+dist/
+*.dmg
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# macOS
+.DS_Store
+
+# Build output (skeleton additions)
+.spm/
+*.xcresult

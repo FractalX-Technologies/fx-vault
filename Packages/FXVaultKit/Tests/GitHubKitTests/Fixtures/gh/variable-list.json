@@ -1,0 +1,20 @@
+[
+  {
+    "createdAt": "2026-09-01T08:00:00Z",
+    "name": "FXV_FIXTURE_URL",
+    "updatedAt": "2026-09-02T08:00:00Z",
+    "value": "https://example.invalid/api"
+  },
+  {
+    "createdAt": "2026-09-03T08:00:00Z",
+    "name": "FXV_FIXTURE_PEM",
+    "updatedAt": "2026-09-03T08:00:00Z",
+    "value": "-----BEGIN FXV FIXTURE-----\nAAAA\n-----END FXV FIXTURE-----\n"
+  },
+  {
+    "createdAt": "2026-09-04T08:00:00Z",
+    "name": "FXV_FIXTURE_UNICODE",
+    "updatedAt": "2026-09-04T08:00:00Z",
+    "value": "Producci\u00f3n \u2013 \u2713"
+  }
+]

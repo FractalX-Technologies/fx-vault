@@ -1,0 +1,27 @@
+# Fixture ssh config (synthetic)
+Host *
+  AddKeysToAgent yes
+  IdentityFile ~/.ssh/id_ed25519
+
+Host github.com
+  HostName github.com
+  User git
+
+HOST github-work gh-alt
+  hostname=github.com
+  IdentityFile "~/.ssh/id work"
+
+Host gitlab.example *.internal !bastion
+  HostName gitlab.example.com
+
+Host -oProxyCommand=evil bad;alias
+  HostName github.com
+
+Host "quoted-alias"
+  HostName "github.com"
+  User "git"
+
+Match host github-work exec "true"
+  HostName attacker.example
+
+Include config.d/*.conf

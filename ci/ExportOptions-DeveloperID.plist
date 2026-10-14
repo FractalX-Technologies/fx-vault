@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Export options for the official Developer ID build of FX Vault (tasks/todo.md D25, M7).
+  Used by scripts/release-local.sh, which copies this file and pins signingCertificate
+  to the SHA-1 of the resolved identity and the profile to its UUID before exporting.
+  Notarization is done by release-local.sh with notarytool, not by xcodebuild.
+-->
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>developer-id</string>
+	<key>destination</key>
+	<string>export</string>
+	<key>signingStyle</key>
+	<string>manual</string>
+	<key>teamID</key>
+	<string>QYKC498D5D</string>
+	<key>signingCertificate</key>
+	<string>Developer ID Application</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>io.fractalx.fxvault</key>
+		<string>FX Vault Developer ID</string>
+	</dict>
+</dict>
+</plist>

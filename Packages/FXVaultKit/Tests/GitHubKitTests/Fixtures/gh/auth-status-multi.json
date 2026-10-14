@@ -1,0 +1,69 @@
+{
+  "hosts": {
+    "github.com": [
+      {
+        "state": "success",
+        "active": true,
+        "host": "github.com",
+        "login": "user-a",
+        "tokenSource": "keyring",
+        "scopes": "gist, read:org, repo",
+        "gitProtocol": "ssh"
+      },
+      {
+        "state": "success",
+        "active": false,
+        "host": "github.com",
+        "login": "user-b",
+        "tokenSource": "keyring",
+        "gitProtocol": "https"
+      },
+      {
+        "state": "success",
+        "active": false,
+        "host": "github.com",
+        "login": "user-c",
+        "tokenSource": "keyring",
+        "scopes": "gist, workflow",
+        "gitProtocol": "ssh"
+      },
+      {
+        "state": "error",
+        "error": "error connecting to api.github.com\ncheck your internet connection or https://githubstatus.com",
+        "active": false,
+        "host": "github.com",
+        "login": "user-d",
+        "tokenSource": "keyring",
+        "gitProtocol": "ssh"
+      },
+      {
+        "state": "error",
+        "error": "HTTP 401: Bad credentials (https://api.github.com/)",
+        "active": false,
+        "host": "github.com",
+        "login": "user-e",
+        "tokenSource": "keyring",
+        "gitProtocol": "ssh"
+      },
+      {
+        "state": "timeout",
+        "active": false,
+        "host": "github.com",
+        "login": "user-f",
+        "tokenSource": "keyring",
+        "gitProtocol": "ssh"
+      }
+    ],
+    "ghe.example.com": [
+      {
+        "state": "success",
+        "active": true,
+        "host": "ghe.example.com",
+        "login": "user-z",
+        "tokenSource": "keyring",
+        "scopes": "repo, read:org",
+        "gitProtocol": "https"
+      }
+    ]
+  }
+}

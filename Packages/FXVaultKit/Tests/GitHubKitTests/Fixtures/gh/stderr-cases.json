@@ -1,0 +1,344 @@
+[
+ {
+  "name": "native 401 with login hint",
+  "operation": "B6",
+  "exitCode": 1,
+  "stderr": "HTTP 401: Bad credentials (https://api.github.com/user)\nTry authenticating with:  gh auth login -h github.com\n",
+  "expected": "tokenRevoked",
+  "synthetic": false
+ },
+ {
+  "name": "gh api 401 via -i status",
+  "operation": "B4",
+  "exitCode": 1,
+  "stderr": "gh: Bad credentials (HTTP 401)\n",
+  "expected": "tokenRevoked",
+  "synthetic": false,
+  "responseStatus": 401
+ },
+ {
+  "name": "exit 4 not logged in",
+  "operation": "B1",
+  "exitCode": 4,
+  "stderr": "You are not logged into any GitHub hosts. To log in, run: gh auth login\n",
+  "expected": "notAuthenticated",
+  "synthetic": false
+ },
+ {
+  "name": "not logged in text exit 1",
+  "operation": "A5",
+  "exitCode": 1,
+  "stderr": "You are not logged into any GitHub hosts. To log in, run: gh auth login\n",
+  "expected": "notAuthenticated",
+  "synthetic": false
+ },
+ {
+  "name": "bare gh auth login fragment is not notAuthenticated",
+  "operation": "B1",
+  "exitCode": 1,
+  "stderr": "To get started with GitHub CLI, please run:  gh auth login\nAlternatively, populate the GH_TOKEN environment variable with a GitHub API authentication token.\n",
+  "expected": "unexpected(1)",
+  "synthetic": true
+ },
+ {
+  "name": "native SAML two spaces",
+  "operation": "B6",
+  "exitCode": 1,
+  "stderr": "failed to get secrets: HTTP 403: Resource protected by organization SAML enforcement. You must grant your OAuth token access to this organization. (https://api.github.com/repos/owner-a/repo-a/actions/secrets?per_page=100)\nAuthorize in your web browser:  https://github.com/orgs/owner-a/sso?authorization_request=AAAA1111\n",
+  "expected": "samlRequired",
+  "synthetic": false,
+  "samlURL": "https://github.com/orgs/owner-a/sso?authorization_request=AAAA1111"
+ },
+ {
+  "name": "gh api SAML one space",
+  "operation": "B3",
+  "exitCode": 1,
+  "stderr": "gh: Resource protected by organization SAML enforcement. You must grant your OAuth token access to this organization. (HTTP 403)\nAuthorize in your web browser: https://github.com/orgs/owner-a/sso?authorization_request=BBBB2222\n",
+  "expected": "samlRequired",
+  "synthetic": false,
+  "samlURL": "https://github.com/orgs/owner-a/sso?authorization_request=BBBB2222"
+ },
+ {
+  "name": "GraphQL SAML with sso link",
+  "operation": "B1",
+  "exitCode": 1,
+  "stderr": "GraphQL: Resource protected by organization SAML enforcement. You must grant your OAuth token access to this organization. See https://github.com/orgs/owner-a/sso?authorization_request=CCCC3333 (organization)\n",
+  "expected": "samlRequired",
+  "synthetic": true,
+  "samlURL": "https://github.com/orgs/owner-a/sso?authorization_request=CCCC3333"
+ },
+ {
+  "name": "SAML link on another host is dropped",
+  "operation": "B1",
+  "exitCode": 1,
+  "stderr": "HTTP 403: Resource protected by organization SAML enforcement.\nAuthorize in your web browser:  https://evil.example/orgs/owner-a/sso\n",
+  "expected": "samlRequired",
+  "synthetic": true,
+  "samlURL": ""
+ },
+ {
+  "name": "secondary rate limit",
+  "operation": "C5",
+  "exitCode": 1,
+  "stderr": "failed to set secret \"FXV_FIXTURE_TOKEN\": HTTP 403: You have exceeded a secondary rate limit. Please wait a few minutes before you try again. (https://api.github.com/repos/owner-a/repo-a/actions/secrets/FXV_FIXTURE_TOKEN)\n",
+  "expected": "rateLimited",
+  "synthetic": true
+ },
+ {
+  "name": "GraphQL API rate limit",
+  "operation": "B1",
+  "exitCode": 1,
+  "stderr": "GraphQL: API rate limit exceeded for user ID 1000001.\n",
+  "expected": "rateLimited",
+  "synthetic": true
+ },
+ {
+  "name": "gh api 429",
+  "operation": "C2",
+  "exitCode": 1,
+  "stderr": "gh: HTTP 429\n",
+  "expected": "rateLimited",
+  "synthetic": false
+ },
+ {
+  "name": "must have admin rights",
+  "operation": "B6",
+  "exitCode": 1,
+  "stderr": "failed to get secrets: HTTP 403: Must have admin rights to Repository. (https://api.github.com/repos/owner-a/repo-a/actions/secrets?per_page=100)\n",
+  "expected": "adminRequired",
+  "synthetic": false
+ },
+ {
+  "name": "read permissions (recorded 403 on a public repo)",
+  "operation": "B6",
+  "exitCode": 1,
+  "stderr": "failed to get secrets: HTTP 403: You must have repository read permissions or have the repository secrets fine-grained permission. (https://api.github.com/repos/owner-b/repo-c/actions/secrets?per_page=100)\n",
+  "expected": "writeAccessRequired",
+  "synthetic": false
+ },
+ {
+  "name": "variables read permissions (recorded)",
+  "operation": "B8",
+  "exitCode": 1,
+  "stderr": "failed to get variables: HTTP 403: You must have repository read permissions or have the repository variables fine-grained permission. (https://api.github.com/repos/owner-b/repo-c/actions/variables?per_page=100)\n",
+  "expected": "writeAccessRequired",
+  "synthetic": false
+ },
+ {
+  "name": "resource not accessible",
+  "operation": "C7",
+  "exitCode": 1,
+  "stderr": "failed to set variable \"FXV_FIXTURE_URL\": HTTP 403: Resource not accessible by integration (https://api.github.com/repos/owner-a/repo-a/actions/variables)\n",
+  "expected": "writeAccessRequired",
+  "synthetic": false
+ },
+ {
+  "name": "needs scope",
+  "operation": "B3",
+  "exitCode": 1,
+  "stderr": "gh: This API operation needs the \"admin:org\" scope. To request it, run:  gh auth refresh -h github.com -s admin:org (HTTP 403)\n",
+  "expected": "missingScopes",
+  "synthetic": true,
+  "scopes": [
+   "admin:org"
+  ]
+ },
+ {
+  "name": "missing required scopes",
+  "operation": "A5",
+  "exitCode": 1,
+  "stderr": "error: your authentication token is missing required scopes [read:org]\nTo request it, run:  gh auth refresh -s read:org\n",
+  "expected": "missingScopes",
+  "synthetic": false,
+  "scopes": [
+   "read:org"
+  ]
+ },
+ {
+  "name": "org policy on create",
+  "operation": "C1",
+  "exitCode": 1,
+  "stderr": "GraphQL: Repository creation failed: organization policy restricts repository creation to organization owners (createRepository)\n",
+  "expected": "orgPolicyForbidsCreate",
+  "synthetic": true
+ },
+ {
+  "name": "org policy text outside create is not orgPolicy",
+  "operation": "B1",
+  "exitCode": 1,
+  "stderr": "GraphQL: organization policy notice (organization)\n",
+  "expected": "unexpected(1)",
+  "synthetic": true
+ },
+ {
+  "name": "billing plan",
+  "operation": "C2",
+  "exitCode": 1,
+  "stderr": "gh: Deployment branch policies are not available for your billing plan. (HTTP 422)\n",
+  "expected": "planGated",
+  "synthetic": true
+ },
+ {
+  "name": "upgrade to GitHub Pro",
+  "operation": "C2",
+  "exitCode": 1,
+  "stderr": "gh: Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)\n",
+  "expected": "planGated",
+  "synthetic": true
+ },
+ {
+  "name": "native wrapped 404",
+  "operation": "C6",
+  "exitCode": 1,
+  "stderr": "failed to delete secret FXV_FIXTURE_TOKEN: HTTP 404: Not Found (https://api.github.com/repos/owner-a/repo-a/actions/secrets/FXV_FIXTURE_TOKEN)\n",
+  "expected": "notFound",
+  "synthetic": false
+ },
+ {
+  "name": "gh api 404 with -i status",
+  "operation": "B4",
+  "exitCode": 1,
+  "stderr": "gh: Not Found (HTTP 404)\n",
+  "expected": "notFound",
+  "synthetic": false,
+  "responseStatus": 404
+ },
+ {
+  "name": "gh api bare 404",
+  "operation": "C9",
+  "exitCode": 1,
+  "stderr": "gh: HTTP 404\n",
+  "expected": "notFound",
+  "synthetic": false
+ },
+ {
+  "name": "could not resolve (recorded)",
+  "operation": "B2",
+  "exitCode": 1,
+  "stderr": "GraphQL: Could not resolve to a Repository with the name 'owner-z/repo-z'. (repository)\n",
+  "expected": "notFound",
+  "synthetic": false
+ },
+ {
+  "name": "variable env lookup",
+  "operation": "C7",
+  "exitCode": 1,
+  "stderr": "failed to look up repository owner-a/repo-a: GraphQL: Could not resolve to a Repository with the name 'owner-a/repo-a'. (repository)\n",
+  "expected": "notFound",
+  "synthetic": false
+ },
+ {
+  "name": "create with invalid owner",
+  "operation": "C1",
+  "exitCode": 1,
+  "stderr": "HTTP 404: Not Found (https://api.github.com/users/owner-z)\n",
+  "expected": "validation",
+  "synthetic": false
+ },
+ {
+  "name": "create already exists",
+  "operation": "C1",
+  "exitCode": 1,
+  "stderr": "GraphQL: Name already exists on this account (createRepository)\n",
+  "expected": "validation",
+  "synthetic": false
+ },
+ {
+  "name": "gh api 422",
+  "operation": "C2",
+  "exitCode": 1,
+  "stderr": "gh: Validation Failed (HTTP 422)\n",
+  "expected": "validation",
+  "synthetic": false
+ },
+ {
+  "name": "native 422",
+  "operation": "C7",
+  "exitCode": 1,
+  "stderr": "failed to set variable \"FXV_FIXTURE_URL\": HTTP 422: Invalid request. (https://api.github.com/repos/owner-a/repo-a/actions/variables)\n",
+  "expected": "validation",
+  "synthetic": true
+ },
+ {
+  "name": "native 502",
+  "operation": "B8",
+  "exitCode": 1,
+  "stderr": "failed to get variables: HTTP 502: Bad Gateway (https://api.github.com/repos/owner-a/repo-a/actions/variables?per_page=100)\n",
+  "expected": "serverError(502)",
+  "synthetic": false
+ },
+ {
+  "name": "gh api 503",
+  "operation": "C2",
+  "exitCode": 1,
+  "stderr": "gh: Service Unavailable (HTTP 503)\n",
+  "expected": "serverError(503)",
+  "synthetic": false
+ },
+ {
+  "name": "gh api 500 bare",
+  "operation": "B3",
+  "exitCode": 1,
+  "stderr": "gh: HTTP 500\n",
+  "expected": "serverError(500)",
+  "synthetic": false
+ },
+ {
+  "name": "offline DNS",
+  "operation": "B1",
+  "exitCode": 1,
+  "stderr": "error connecting to api.github.com\ncheck your internet connection or https://githubstatus.com\n",
+  "expected": "network",
+  "synthetic": false
+ },
+ {
+  "name": "dial tcp",
+  "operation": "C5",
+  "exitCode": 1,
+  "stderr": "Put \"https://api.github.com/repos/owner-a/repo-a/actions/secrets/X\": dial tcp: lookup api.github.com: no such host\n",
+  "expected": "network",
+  "synthetic": false
+ },
+ {
+  "name": "connection reset",
+  "operation": "B6",
+  "exitCode": 1,
+  "stderr": "read tcp 192.0.2.1:50000->192.0.2.2:443: read: connection reset by peer\n",
+  "expected": "network",
+  "synthetic": false
+ },
+ {
+  "name": "write timeout is indeterminate",
+  "operation": "C5",
+  "exitCode": 143,
+  "stderr": "",
+  "expected": "indeterminate",
+  "synthetic": false,
+  "didTimeOut": true
+ },
+ {
+  "name": "read timeout",
+  "operation": "B6",
+  "exitCode": 143,
+  "stderr": "",
+  "expected": "timeout",
+  "synthetic": false,
+  "didTimeOut": true
+ },
+ {
+  "name": "exit 2 cancelled",
+  "operation": "B1",
+  "exitCode": 2,
+  "stderr": "",
+  "expected": "unexpected(2)",
+  "synthetic": false
+ },
+ {
+  "name": "unknown",
+  "operation": "B1",
+  "exitCode": 1,
+  "stderr": "something odd happened\n",
+  "expected": "unexpected(1)",
+  "synthetic": false
+ }
+]

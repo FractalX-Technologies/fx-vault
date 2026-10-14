@@ -1,0 +1,276 @@
+{
+  "generator": "generate_kat.py (argon2-cffi + pyca/cryptography)",
+  "argon2id": [
+    {
+      "label": "ascii",
+      "text": "correct horse battery staple",
+      "pw_utf8_hex": "636f727265637420686f727365206261747465727920737461706c65",
+      "salt_hex": "000102030405060708090a0b0c0d0e0f",
+      "ops": 1,
+      "mem_bytes": 8388608,
+      "out_hex": "9aeef75313e585f492c33c5e12d82e9ad253b7dd78632d537e899cd4eddd789c",
+      "moderate": false
+    },
+    {
+      "label": "nfc-latin",
+      "text": "Producción-Contraseña",
+      "pw_utf8_hex": "50726f6475636369c3b36e2d436f6e7472617365c3b161",
+      "salt_hex": "101112131415161718191a1b1c1d1e1f",
+      "ops": 2,
+      "mem_bytes": 67108864,
+      "out_hex": "c5c4dcc49f14961d6f1421384053b3f3a0f694a2332e822011e1f0dd114e74c7",
+      "moderate": false
+    },
+    {
+      "label": "empty",
+      "text": "",
+      "pw_utf8_hex": "",
+      "salt_hex": "303132333435363738393a3b3c3d3e3f",
+      "ops": 1,
+      "mem_bytes": 8388608,
+      "out_hex": "1dfbd57e022661f3965ce824ffcd6a5f39ce80ce1d142ebded5739cfb0212867",
+      "moderate": false
+    },
+    {
+      "label": "arabic-emoji",
+      "text": "كلمة-السر-🔐",
+      "pw_utf8_hex": "d983d984d985d8a92dd8a7d984d8b3d8b12df09f9490",
+      "salt_hex": "404142434445464748494a4b4c4d4e4f",
+      "ops": 1,
+      "mem_bytes": 8388608,
+      "out_hex": "433242176871e15c156e45b4f0ff04903b05007bc093b41c08db955011092c9c",
+      "moderate": false
+    },
+    {
+      "label": "moderate",
+      "text": "FX Vault moderate KAT",
+      "pw_utf8_hex": "4658205661756c74206d6f646572617465204b4154",
+      "salt_hex": "202122232425262728292a2b2c2d2e2f",
+      "ops": 3,
+      "mem_bytes": 268435456,
+      "out_hex": "2bac37add76e8baadfd4c5fcbae7a909a50dea89978d96872fe4869b61905576",
+      "moderate": true
+    }
+  ],
+  "hierarchy": {
+    "dek_hex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+    "vault_id_hex": "606162636465666768696a6b6c6d6e6f",
+    "k_field_hex": "31eb070cde213b7071fbfe1de1d564a948dc2ac27c435883068dd3f1eb9e9314",
+    "k_fp_hex": "c4c6137d5eb281aa0475d7b25dbed09e327d4064c2d6cea0bcd90d58739f3bb2",
+    "kcv_hex": "0913142dcf221a13139c39fe2262797c",
+    "recovery_material_hex": "707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f",
+    "recovery_kek_hex": "0017fa8cdaed34a3230560b4543044eb96d705502dcdcd36855262d5b2142b5c",
+    "fingerprint": {
+      "row": "3f2c8a1e-5b7d-4c9e-8f10-2a3b4c5d6e7f",
+      "value_hex": "4658565f464958545552455f56414c5545",
+      "out_hex": "259759fe04311f925b3ffa2752457a57428034c94ef09f428bd24ee53717468a"
+    }
+  },
+  "field": [
+    {
+      "label": "env-secret-value",
+      "aes_k_hex": "31eb070cde213b7071fbfe1de1d564a948dc2ac27c435883068dd3f1eb9e9314",
+      "table": "config_items",
+      "column": "value_ct",
+      "row": "0b7e2f5a-9c41-4d3e-a6b2-7f8e9d0c1b2a",
+      "repo": "5d6c7b8a-1e2f-4a3b-9c4d-0e1f2a3b4c5d",
+      "env": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+      "kind": "secret",
+      "name": "FXV_FIXTURE_NAME",
+      "dek_version": 1,
+      "plain_hex": "4658565f464958545552455f5345435245545f56414c5545",
+      "nonce_hex": "a0a1a2a3a4a5a6a7a8a9aaab",
+      "aad_hex": "0000001066787661756c742f76312f6669656c640000000c636f6e6669675f6974656d730000000876616c75655f6374000000100b7e2f5a9c414d3ea6b27f8e9d0c1b2a000000105d6c7b8a1e2f4a3b9c4d0e1f2a3b4c5d000000109a8b7c6d5e4f4a3b8c2d1e0f9a8b7c6d00000006736563726574000000104658565f464958545552455f4e414d4500000001",
+      "blob_hex": "01a0a1a2a3a4a5a6a7a8a9aaab6b1b6436ddeadfeea249fd569c6565f62cf3d7a259437dd0bacb1af8c03417308fb2def9082791c1"
+    },
+    {
+      "label": "repo-variable-synced-empty",
+      "aes_k_hex": "31eb070cde213b7071fbfe1de1d564a948dc2ac27c435883068dd3f1eb9e9314",
+      "table": "config_items",
+      "column": "synced_value_ct",
+      "row": "0b7e2f5a-9c41-4d3e-a6b2-7f8e9d0c1b2a",
+      "repo": "5d6c7b8a-1e2f-4a3b-9c4d-0e1f2a3b4c5d",
+      "env": null,
+      "kind": "variable",
+      "name": "FXV_FIXTURE_SYNCED",
+      "dek_version": 7,
+      "plain_hex": "",
+      "nonce_hex": "b0b1b2b3b4b5b6b7b8b9babb",
+      "aad_hex": "0000001066787661756c742f76312f6669656c640000000c636f6e6669675f6974656d730000000f73796e6365645f76616c75655f6374000000100b7e2f5a9c414d3ea6b27f8e9d0c1b2a000000105d6c7b8a1e2f4a3b9c4d0e1f2a3b4c5d00000000000000087661726961626c65000000124658565f464958545552455f53594e43454400000007",
+      "blob_hex": "01b0b1b2b3b4b5b6b7b8b9babb423528b989828df0a0ee2629a494be9c"
+    },
+    {
+      "label": "env-variable-multiline",
+      "aes_k_hex": "31eb070cde213b7071fbfe1de1d564a948dc2ac27c435883068dd3f1eb9e9314",
+      "table": "config_items",
+      "column": "value_ct",
+      "row": "0b7e2f5a-9c41-4d3e-a6b2-7f8e9d0c1b2a",
+      "repo": "5d6c7b8a-1e2f-4a3b-9c4d-0e1f2a3b4c5d",
+      "env": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+      "kind": "variable",
+      "name": "FXV_FIXTURE_MULTI",
+      "dek_version": 2,
+      "plain_hex": "6c696e65310a6c696e653220e29c93092227",
+      "nonce_hex": "c0c1c2c3c4c5c6c7c8c9cacb",
+      "aad_hex": "0000001066787661756c742f76312f6669656c640000000c636f6e6669675f6974656d730000000876616c75655f6374000000100b7e2f5a9c414d3ea6b27f8e9d0c1b2a000000105d6c7b8a1e2f4a3b9c4d0e1f2a3b4c5d000000109a8b7c6d5e4f4a3b8c2d1e0f9a8b7c6d000000087661726961626c65000000114658565f464958545552455f4d554c544900000002",
+      "blob_hex": "01c0c1c2c3c4c5c6c7c8c9cacb892ee96bacaec6f29d14eb45537d0b0ba30b7bf05143eaa50b56137db6dbe99e0708"
+    }
+  ],
+  "wrap": {
+    "password": {
+      "text": "FXV fixture pässwörd ✓",
+      "salt_hex": "b0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+      "ops": 1,
+      "mem_bytes": 8388608,
+      "vault_id_hex": "606162636465666768696a6b6c6d6e6f",
+      "dek_version": 1,
+      "dek_hex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+      "kek_hex": "6f87e168b11aa1efe4f8c5f60441d8f878351bbcc66ae1fc1475a60d12a23448",
+      "nonce_hex": "d0d1d2d3d4d5d6d7d8d9dadb",
+      "aad_hex": "01010000001366787661756c742f76312f64656b2d777261700000000870617373776f726400000010606162636465666768696a6b6c6d6e6f000000010100000001000000000080000000000010b0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+      "wrapped_hex": "0101d0d1d2d3d4d5d6d7d8d9dadb114b1cf0dcfd40606ee912eda3419a8eaacdc9812f7d41cf06893a017b23c5b6bcd2fcf5d5e9e0f50042f44fcc97c245"
+    },
+    "recovery": {
+      "material_hex": "707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f",
+      "vault_id_hex": "606162636465666768696a6b6c6d6e6f",
+      "dek_version": 3,
+      "dek_hex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+      "kek_hex": "0017fa8cdaed34a3230560b4543044eb96d705502dcdcd36855262d5b2142b5c",
+      "nonce_hex": "e0e1e2e3e4e5e6e7e8e9eaeb",
+      "aad_hex": "01010000001366787661756c742f76312f64656b2d77726170000000087265636f7665727900000010606162636465666768696a6b6c6d6e6f000000030200000000000000000000000000000000",
+      "wrapped_hex": "0101e0e1e2e3e4e5e6e7e8e9eaeb09532361b6bf780407b56015bc03dda2c76596c8ed1ce4d80d73f805e38e3427c7650f1bd342d4757856dcf31ad35110"
+    }
+  },
+  "recovery": [
+    {
+      "material_hex": "707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f",
+      "checksum_hex": "2af2c0",
+      "text": "E1RQ4WVMENV7EY3SF9XQRZBYFY0830M3GJ2RD1W8H658Q34DHT7JNWP0",
+      "groups": [
+        "E1RQ",
+        "4WVM",
+        "ENV7",
+        "EY3S",
+        "F9XQ",
+        "RZBY",
+        "FY08",
+        "30M3",
+        "GJ2R",
+        "D1W8",
+        "H658",
+        "Q34D",
+        "HT7J",
+        "NWP0"
+      ]
+    },
+    {
+      "material_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "checksum_hex": "a9fd0c",
+      "text": "000000000000000000000000000000000000000000000000000AKZ8C",
+      "groups": [
+        "0000",
+        "0000",
+        "0000",
+        "0000",
+        "0000",
+        "0000",
+        "0000",
+        "0000",
+        "0000",
+        "0000",
+        "0000",
+        "0000",
+        "000A",
+        "KZ8C"
+      ]
+    },
+    {
+      "material_hex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "checksum_hex": "384400",
+      "text": "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZKGH00",
+      "groups": [
+        "ZZZZ",
+        "ZZZZ",
+        "ZZZZ",
+        "ZZZZ",
+        "ZZZZ",
+        "ZZZZ",
+        "ZZZZ",
+        "ZZZZ",
+        "ZZZZ",
+        "ZZZZ",
+        "ZZZZ",
+        "ZZZZ",
+        "ZZZK",
+        "GH00"
+      ]
+    },
+    {
+      "material_hex": "131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132",
+      "checksum_hex": "4c2976",
+      "text": "2CA1A5GQ30CHM6RW3MF1Y81148HJ89964WM2JAHB5GPJWBSG64S4RABP",
+      "groups": [
+        "2CA1",
+        "A5GQ",
+        "30CH",
+        "M6RW",
+        "3MF1",
+        "Y811",
+        "48HJ",
+        "8996",
+        "4WM2",
+        "JAHB",
+        "5GPJ",
+        "WBSG",
+        "64S4",
+        "RABP"
+      ]
+    }
+  ],
+  "crockford": [
+    {
+      "in_hex": "",
+      "text": ""
+    },
+    {
+      "in_hex": "5a",
+      "text": "B8"
+    },
+    {
+      "in_hex": "5a5b",
+      "text": "B9DG"
+    },
+    {
+      "in_hex": "5a5b5c",
+      "text": "B9DNR"
+    },
+    {
+      "in_hex": "5a5b5c5d",
+      "text": "B9DNRQ8"
+    },
+    {
+      "in_hex": "5a5b5c5d5e",
+      "text": "B9DNRQAY"
+    },
+    {
+      "in_hex": "5a5b5c5d5e5f",
+      "text": "B9DNRQAYBW"
+    },
+    {
+      "in_hex": "5a5b5c5d5e5f60",
+      "text": "B9DNRQAYBXG0"
+    },
+    {
+      "in_hex": "5a5b5c5d5e5f6061",
+      "text": "B9DNRQAYBXG62"
+    },
+    {
+      "in_hex": "5a5b5c5d5e5f606162",
+      "text": "B9DNRQAYBXG62RG"
+    },
+    {
+      "in_hex": "5a5b5c5d5e5f60616263",
+      "text": "B9DNRQAYBXG62RK3"
+    }
+  ]
+}

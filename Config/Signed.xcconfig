@@ -1,0 +1,14 @@
+// Signed.xcconfig - Developer ID signing for official FX Vault builds (team QYKC498D5D).
+//
+// Not included by default. Enable it by copying Local.xcconfig.example to the
+// gitignored Config/Local.xcconfig.
+// Requires the "Developer ID Application" certificate and the "FX Vault Developer ID"
+// provisioning profile (explicit App ID io.fractalx.fxvault with Keychain Sharing).
+// No secrets live here: the identity and profile come from the local keychain.
+
+DEVELOPMENT_TEAM = QYKC498D5D
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = Developer ID Application
+CODE_SIGN_ENTITLEMENTS = Config/FXVault-Signed.entitlements
+PROVISIONING_PROFILE_SPECIFIER = FX Vault Developer ID
+OTHER_CODE_SIGN_FLAGS = --timestamp

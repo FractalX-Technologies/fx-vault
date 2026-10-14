@@ -1,0 +1,16 @@
+# gitleaks configuration (CI job "gitleaks" in .github/workflows/ci.yml).
+# Uses the default rule set and allowlists only the synthetic test vectors below.
+# Every allowlisted file holds generated or placeholder values only (the KAT generators live
+# next to the vectors); never add a path here for a real credential.
+title = "FX Vault gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic cryptographic test vectors and a sample .env with placeholder values"
+paths = [
+  '''^Packages/FXVaultKit/Tests/VaultCryptoTests/Fixtures/kat/kat_vectors\.json$''',
+  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/nearby_kat\.json$''',
+  '''^Packages/FXVaultKit/Tests/EnvToolsTests/Fixtures/sample\.env$''',
+]

@@ -1,0 +1,10 @@
+HTTP/2.0 404 Not Found
+Access-Control-Allow-Origin: *
+Content-Type: application/json; charset=utf-8
+Date: Thu, 01 Jan 2026 00:00:00 GMT
+Server: github.com
+X-Content-Type-Options: nosniff
+X-Github-Api-Version-Selected: 2026-03-10
+X-Github-Media-Type: github.v3; format=json
+
+{"message":"Not Found","documentation_url":"https://docs.github.com/rest/deployments/environments#get-an-environment","status":"404"}

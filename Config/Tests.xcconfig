@@ -1,0 +1,10 @@
+// Tests.xcconfig - signing for the AppTests bundle.
+//
+// Inherits the app's identity and team (a hosted test bundle must match its host
+// for library validation), but never an entitlements file or provisioning profile:
+// the Developer ID profile belongs to io.fractalx.fxvault only.
+
+#include "Base.xcconfig"
+
+CODE_SIGN_ENTITLEMENTS =
+PROVISIONING_PROFILE_SPECIFIER =

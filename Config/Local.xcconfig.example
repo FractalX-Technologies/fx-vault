@@ -1,0 +1,3 @@
+// Copy to Config/Local.xcconfig (gitignored) to build the Developer ID-signed app
+// with Touch ID support. Remove the file to go back to ad-hoc signing.
+#include "Signed.xcconfig"

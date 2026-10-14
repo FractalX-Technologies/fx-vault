@@ -1,0 +1,121 @@
+# FX Vault - XcodeGen project spec (source of truth; tasks/todo.md D1).
+# Regenerate with `xcodegen generate` (version pinned in .xcodegen-version).
+# The generated FXVault.xcodeproj is committed; CI fails if it drifts from this file.
+# Signing settings live only in Config/*.xcconfig (D15).
+name: FXVault
+options:
+  bundleIdPrefix: io.fractalx
+  deploymentTarget:
+    macOS: "14.0"
+  developmentLanguage: en
+  projectFormat: xcode16_0                   # objectVersion 77: opens in Xcode 26.6 (blocking CI) and 27
+  xcodeVersion: "26.0"                       # pinned so a newer XcodeGen does not change the output
+  defaultSourceDirectoryType: syncedFolder   # adding a source file never touches project.pbxproj
+  defaultConfig: Debug
+  groupSortPosition: top
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+packages:
+  FXVaultKit:
+    path: Packages/FXVaultKit                # GRDB and swift-sodium are declared in its Package.swift
+targets:
+  FXVault:
+    type: application
+    platform: macOS
+    configFiles:
+      Debug: Config/Base.xcconfig
+      Release: Config/Base.xcconfig
+    sources:
+      - path: App
+    dependencies:
+      - package: FXVaultKit
+        product: FXVaultKit
+    info:
+      path: Config/Info.plist
+      properties:
+        CFBundleName: FX Vault
+        CFBundleDisplayName: FX Vault
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.developer-tools
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHumanReadableCopyright: Copyright (c) 2026 FractalX. MIT License.
+        NSLocalNetworkUsageDescription: FX Vault uses the local network to share configuration with a nearby teammate.
+        NSBonjourServices:
+          - _fxvault-share._tcp
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: io.fractalx.fxvault.share
+            UTTypeDescription: FX Vault Share
+            UTTypeConformsTo:
+              - public.data
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - fxvault
+              public.mime-type:
+                - application/vnd.fractalx.fxvault
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: FX Vault Share
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Owner
+            LSItemContentTypes:
+              - io.fractalx.fxvault.share
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.fractalx.fxvault
+        PRODUCT_NAME: FXVault
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: Accent
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOLS: YES
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+        COMBINE_HIDPI_IMAGES: YES
+  AppTests:
+    type: bundle.unit-test
+    platform: macOS
+    configFiles:
+      Debug: Config/Tests.xcconfig
+      Release: Config/Tests.xcconfig
+    sources:
+      - path: AppTests
+    dependencies:
+      - target: FXVault                      # XcodeGen sets TEST_HOST/BUNDLE_LOADER (app-hosted tests)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.fractalx.fxvault.apptests
+        GENERATE_INFOPLIST_FILE: YES         # required, or codesign fails for the test bundle
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+schemes:
+  FXVault:
+    build:
+      targets:
+        FXVault: all
+        AppTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - AppTests
+        - package: FXVaultKit/VaultCoreTests
+        - package: FXVaultKit/VaultCryptoTests
+        - package: FXVaultKit/VaultStoreTests
+        - package: FXVaultKit/GitHubKitTests
+        - package: FXVaultKit/EnvToolsTests
+        - package: FXVaultKit/SharingKitTests
+        - package: FXVaultKit/SyncEngineTests
+        - package: FXVaultKit/VaultDataTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

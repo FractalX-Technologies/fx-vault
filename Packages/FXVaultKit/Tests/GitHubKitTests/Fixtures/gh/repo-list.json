@@ -1,0 +1,63 @@
+[
+  {
+    "createdAt": "2026-01-02T03:04:05Z",
+    "defaultBranchRef": {
+      "name": "main"
+    },
+    "id": "R_kgDOAAAAAA",
+    "isArchived": false,
+    "isFork": false,
+    "isPrivate": true,
+    "name": "repo-a",
+    "nameWithOwner": "owner-a/repo-a",
+    "owner": {
+      "id": "O_kgDOAAAAAA",
+      "login": "owner-a"
+    },
+    "sshUrl": "git@github.com:owner-a/repo-a.git",
+    "viewerCanAdminister": true,
+    "viewerPermission": "ADMIN",
+    "visibility": "PRIVATE"
+  },
+  {
+    "createdAt": "2026-02-03T04:05:06Z",
+    "defaultBranchRef": {
+      "name": ""
+    },
+    "id": "R_kgDOBBBBBB",
+    "isArchived": false,
+    "isFork": false,
+    "isPrivate": false,
+    "name": "repo-b",
+    "nameWithOwner": "owner-a/repo-b",
+    "owner": {
+      "id": "O_kgDOAAAAAA",
+      "login": "owner-a"
+    },
+    "sshUrl": "git@github.com:owner-a/repo-b.git",
+    "viewerCanAdminister": false,
+    "viewerPermission": "WRITE",
+    "visibility": "PUBLIC"
+  },
+  {
+    "createdAt": "2026-03-04T05:06:07Z",
+    "defaultBranchRef": {
+      "name": "main"
+    },
+    "id": "R_kgDOCCCCCC",
+    "isArchived": true,
+    "isFork": true,
+    "isPrivate": true,
+    "name": "legacy.git",
+    "nameWithOwner": "owner-a/legacy.git",
+    "owner": {
+      "id": "O_kgDOAAAAAA",
+      "login": "owner-a"
+    },
+    "sshUrl": "git@github.com:owner-a/legacy.git.git",
+    "viewerCanAdminister": false,
+    "viewerPermission": "",
+    "visibility": "INTERNAL",
+    "unknownField": 1
+  }
+]

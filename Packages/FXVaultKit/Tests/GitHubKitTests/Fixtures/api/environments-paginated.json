@@ -1,0 +1,86 @@
+[
+ {
+  "total_count": 3,
+  "environments": [
+   {
+    "id": 101,
+    "node_id": "EN_AAAA",
+    "name": "production",
+    "url": "https://api.github.com/repos/owner-a/repo-a/environments/production",
+    "html_url": "https://github.com/owner-a/repo-a/deployments/activity_log?environments_filter=production",
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2026-01-02T00:00:00Z",
+    "can_admins_bypass": true,
+    "protection_rules": [
+     {
+      "id": 9001,
+      "node_id": "GA_AAAA",
+      "type": "required_reviewers",
+      "prevent_self_review": false,
+      "reviewers": [
+       {
+        "type": "Team",
+        "reviewer": {
+         "name": "team-a",
+         "id": 1001,
+         "node_id": "T_AAAA",
+         "slug": "team-a",
+         "privacy": "closed",
+         "parent": null
+        }
+       }
+      ]
+     },
+     {
+      "id": 9002,
+      "node_id": "GA_BBBB",
+      "type": "branch_policy"
+     }
+    ],
+    "deployment_branch_policy": {
+     "protected_branches": false,
+     "custom_branch_policies": true
+    }
+   },
+   {
+    "id": 102,
+    "node_id": "EN_BBBB",
+    "name": "staging",
+    "url": "https://api.github.com/repos/owner-a/repo-a/environments/staging",
+    "html_url": "https://github.com/owner-a/repo-a/deployments/activity_log?environments_filter=staging",
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2026-01-01T00:00:00Z",
+    "can_admins_bypass": true,
+    "protection_rules": [],
+    "deployment_branch_policy": null
+   }
+  ]
+ },
+ {
+  "total_count": 3,
+  "environments": [
+   {
+    "id": 103,
+    "node_id": "EN_CCCC",
+    "name": "Producci\u00f3n",
+    "url": "https://api.github.com/repos/owner-a/repo-a/environments/Producci%C3%B3n",
+    "html_url": "https://github.com/owner-a/repo-a/deployments",
+    "created_at": "2026-01-03T00:00:00Z",
+    "updated_at": "2026-01-03T00:00:00Z",
+    "can_admins_bypass": true,
+    "protection_rules": [
+     {
+      "id": 9003,
+      "node_id": "GA_CCCC",
+      "type": "wait_timer",
+      "wait_timer": 5
+     }
+    ],
+    "deployment_branch_policy": {
+     "protected_branches": true,
+     "custom_branch_policies": false
+    }
+   }
+  ]
+ }
+]

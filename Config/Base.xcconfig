@@ -1,0 +1,17 @@
+// Base.xcconfig - committed signing defaults for the FXVault app target.
+//
+// Ad-hoc signing, so any contributor or fork can build without an Apple account.
+// Ad-hoc builds cannot use Touch ID (tasks/todo.md D14/D15).
+// Official builds add a gitignored Config/Local.xcconfig that includes Signed.xcconfig
+// (copy Local.xcconfig.example). XcodeGen parses include directives even inside
+// comments, so comments here must never spell one out. Signing settings live only in Config/*.xcconfig.
+
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+PROVISIONING_PROFILE_SPECIFIER =
+CODE_SIGN_ENTITLEMENTS = Config/FXVault.entitlements
+ENABLE_HARDENED_RUNTIME = YES
+
+// Optional, gitignored per-developer or signed-CI override. Must stay last.
+#include? "Local.xcconfig"
