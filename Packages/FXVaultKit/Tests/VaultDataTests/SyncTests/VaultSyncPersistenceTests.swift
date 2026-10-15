@@ -60,6 +60,26 @@ struct VaultSyncPersistenceTests {
         #expect(try persistence.writeStartTimes(accountLogin: "USER-A", since: .distantPast).count == 1)
     }
 
+    /// SYNC-1: a set row keeps the fingerprints of what it pushed (never the value), so launch
+    /// reconciliation records them instead of the value as it is later.
+    @Test func journaledPushFingerprintsRoundTrip() async throws {
+        let harness = try await harness()
+        let persistence = persistence(harness)
+        let push = SyncJournalPushModel(
+            sourceFingerprint: Data(repeating: 1, count: 32),
+            pushedFingerprint: Data(repeating: 2, count: 32),
+            didNormalizeValue: true
+        )
+        var withPush = try entry(harness)
+        withPush.push = push
+        let pushedID = try persistence.appendJournal(withPush)
+        let plainID = try persistence.appendJournal(try entry(harness, command: .secretDelete))
+
+        let rows = try persistence.journalEntries(states: [.inFlight])
+        #expect(rows.first { $0.id == pushedID }?.push == push)
+        #expect(rows.first { $0.id == plainID }?.push == nil)
+    }
+
     @Test func anOutcomeForAPrunedRowIsIgnored() async throws {
         let harness = try await harness()
         try persistence(harness).commit(SyncCommitModel(journal: [

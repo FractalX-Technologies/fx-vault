@@ -329,8 +329,10 @@ text) because packages ship no user-facing text.
 - `SyncPreflight(schedulers:persistence:values:clock:writePolicy:).run(_ snapshots, runID:,
   scopeStatus:) -> SyncPreflightModel` (capability, name and value rules, scope capacity, the
   256 KB repository-variable warning, write budget, the pending-verification pass, D27 base
-  checks via `RemoteBaseChecker`). Throws only `.locked` / `.persistenceFailed`; gh failures
-  become `SyncBlockedChangeModel{change, reason: SyncBlockReason}`.
+  checks via `RemoteBaseChecker`, and `.protectionRulesPresent` for a policy change on an
+  existing environment that B3 lists with reviewers, wait timers or app rules). Throws only
+  `.locked` / `.persistenceFailed`; gh failures become
+  `SyncBlockedChangeModel{change, reason: SyncBlockReason}`.
 - `SyncPlanner.plan(_:includeDeletions:) -> SyncPlanModel` with ordered `SyncStepModel`s:
   create, environment upserts, patterns, guided renames, scope writes (repository first,
   variables before secrets), item deletes, environment deletes.
@@ -345,7 +347,9 @@ text) because packages ship no user-facing text.
   `.repositoryNotConfirmed`, `.cloneRequested`).
 - `WriteVerifier` (`isSecretVerified`, `isVariableVerified`, `pendingVerificationPass(local:
   remote:failedChecks:countsMisses:)`), `SyncReconciler.reconcile(_:)` (launch reconciliation of
-  `in_flight` / `indeterminate` rows by re-list, never by the local clock),
+  `in_flight` / `indeterminate` rows by re-list, never by the local clock; a confirmed secret
+  set records the journaled `SyncJournalPushModel` fingerprints, and guided-rename copies only
+  close their rows),
   `DeletionPreviewLoader.load(_:)` (§7.5 live contents per environment).
 - `SyncError`: `.locked`, `.persistenceFailed`, `.valueUnavailable`, `.accountUnavailable`,
   `.github(GHError)`, `.alreadyRunning`; `logCode`.

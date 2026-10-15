@@ -25,8 +25,11 @@ cask "fx-vault" do
   ]
 
   caveats <<~EOS
-    `brew uninstall --zap --cask fx-vault` permanently deletes the local vault
-    (~/Library/Application Support/FX Vault), including every stored value that
-    has not been synced to GitHub. Export or sync anything you need first.
+    `brew uninstall --zap --cask fx-vault` moves the local vault
+    (~/Library/Application Support/FX Vault) to the Trash. It stays recoverable
+    there until you empty the Trash, and values never synced to GitHub exist
+    only in it. Export or sync anything you need first.
+    zap does not remove the Touch ID keychain item. To erase the vault and that
+    item, use Settings > Advanced > Reset Vault... in FX Vault before uninstalling.
   EOS
 end

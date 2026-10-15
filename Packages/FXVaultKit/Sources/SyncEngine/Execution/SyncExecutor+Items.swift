@@ -189,7 +189,12 @@ extension SyncExecutor {
             preWriteUpdatedAt: baseline,
             detachedPreviousName: { if case .renamed(let from) = set.reason { return from } else { return nil } }()
         )
-        let entry = try run.journal.begin(change, command: .set(set.kind), preWriteUpdatedAt: baseline)
+        let entry = try run.journal.begin(
+            change,
+            command: .set(set.kind),
+            preWriteUpdatedAt: baseline,
+            push: SyncJournalPushModel(effect)
+        )
         let scheduler = run.scheduler
         let environment = step.environmentName
         do {

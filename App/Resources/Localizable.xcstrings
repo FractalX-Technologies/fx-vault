@@ -3626,7 +3626,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This environment also has protection rules set on GitHub (reviewers, wait timers or custom rules). FX Vault keeps them unchanged."
+            "value" : "This environment also has protection rules set on GitHub (reviewers, wait timers or custom rules). Sync does not change its branch policy while they are set; change the policy on GitHub instead."
           }
         }
       }
@@ -10931,6 +10931,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "The account's token lacks %@."
+          }
+        }
+      }
+    },
+    "sync.blocked.protectionRules" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This environment has other protection rules on GitHub (reviewers, wait timers or app rules). Change its branch policy on GitHub so they are kept."
           }
         }
       }

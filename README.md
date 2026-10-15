@@ -32,19 +32,38 @@ environments and accounts, with a local encrypted vault and the GitHub CLI.
 
 - macOS 14 Sonoma or later
 - [GitHub CLI](https://cli.github.com) (`gh`) 2.97.0 or later, logged in (`gh auth login`)
+- `git`, and an SSH key or host alias for GitHub, to clone repositories and for **New
+  Repository** with cloning (the Xcode Command Line Tools provide `git`)
+
+FX Vault turns off gh's telemetry and update notifier for the gh commands it runs itself
+(`GH_TELEMETRY=false`, `DO_NOT_TRACK=1`, `GH_NO_UPDATE_NOTIFIER=1`).
 
 ## Install
 
-With Homebrew (installs `gh` too):
+With Homebrew (installs `gh` if it is missing):
 
 ```sh
 brew install --cask fractalx-technologies/tap/fx-vault
 ```
 
+Homebrew does not upgrade a `gh` you already have. If yours is older than 2.97.0, run
+`brew upgrade gh` (FX Vault shows a setup screen until it is).
+
 Or download `FXVault-<version>.dmg` from the GitHub Releases page, open it and drag
 **FX Vault** to Applications.
 
-After installing, run `gh auth login` once if you have not used the GitHub CLI before.
+After installing, run `gh auth login` once if you have not used the GitHub CLI before, and
+`brew upgrade gh` if FX Vault reports that gh is too old.
+
+### First launch
+
+1. **Choose a master password.** It encrypts the vault on this Mac. FX Vault cannot recover it.
+2. **Save the recovery key offline** (on paper or in a password manager). It is shown once and
+   is the only way back in if you forget the password. Losing both means losing the vault.
+3. **Connect gh.** FX Vault looks for `gh` and its logged-in accounts. If it asks, run
+   `gh auth login`, or `brew upgrade gh`, then choose **Check Again**.
+4. **Optional: turn on Touch ID** in **Settings › Security**. Only the signed release can use
+   Touch ID; ad-hoc builds use the master password.
 
 ### Verify a download
 

@@ -11,12 +11,14 @@ struct SyncJournalWriter: Sendable {
     let accountLogin: String
     let repositoryID: RepoID
 
-    /// Appends an `in_flight` row for `command` on behalf of `change`.
+    /// Appends an `in_flight` row for `command` on behalf of `change`. A set passes its `push`
+    /// fingerprints so launch reconciliation can record what was sent.
     func begin(
         _ change: ConfigChangeModel,
         command: SyncJournalCommand,
         itemName: String? = nil,
-        preWriteUpdatedAt: Date? = nil
+        preWriteUpdatedAt: Date? = nil,
+        push: SyncJournalPushModel? = nil
     ) throws(SyncError) -> SyncJournalEntryID {
         try persistence.appendJournal(SyncJournalEntryModel(
             runID: runID,
@@ -28,7 +30,8 @@ struct SyncJournalWriter: Sendable {
             targetKey: change.target.journalKey,
             itemName: itemName ?? Self.itemName(of: change.operation),
             startedAt: clock.now,
-            preWriteUpdatedAt: preWriteUpdatedAt
+            preWriteUpdatedAt: preWriteUpdatedAt,
+            push: push
         ))
     }
 

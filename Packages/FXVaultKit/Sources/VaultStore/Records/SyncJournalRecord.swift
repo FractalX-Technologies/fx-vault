@@ -48,6 +48,13 @@ public struct SyncJournalRecord: Codable, Sendable, Hashable, FetchableRecord, M
     /// GitHub's `updatedAt` listed right before the write (verification baseline, §7.3).
     public var preWriteUpdatedAt: Date?
     public var finishedAt: Date?
+    /// `source_fp` (§6 `v7_journal_fingerprints`): `value_fp` of the value a set row read for
+    /// its push. Nil for other commands and rows written before v7.
+    public var sourceFingerprint: Data?
+    /// `pushed_fp`: the fingerprint of the bytes gh received (D32-normalized).
+    public var pushedFingerprint: Data?
+    /// `did_normalize_value`: trailing CR/LF were stripped before the push.
+    public var didNormalizeValue: Bool?
 
     public init(
         id: Int64? = nil,
@@ -65,7 +72,10 @@ public struct SyncJournalRecord: Codable, Sendable, Hashable, FetchableRecord, M
         errorCode: String? = nil,
         startedAt: Date,
         preWriteUpdatedAt: Date? = nil,
-        finishedAt: Date? = nil
+        finishedAt: Date? = nil,
+        sourceFingerprint: Data? = nil,
+        pushedFingerprint: Data? = nil,
+        didNormalizeValue: Bool? = nil
     ) {
         self.id = id
         self.runID = runID
@@ -83,6 +93,9 @@ public struct SyncJournalRecord: Codable, Sendable, Hashable, FetchableRecord, M
         self.startedAt = startedAt
         self.preWriteUpdatedAt = preWriteUpdatedAt
         self.finishedAt = finishedAt
+        self.sourceFingerprint = sourceFingerprint
+        self.pushedFingerprint = pushedFingerprint
+        self.didNormalizeValue = didNormalizeValue
     }
 
     public mutating func didInsert(_ inserted: InsertionSuccess) {
@@ -106,6 +119,9 @@ public struct SyncJournalRecord: Codable, Sendable, Hashable, FetchableRecord, M
         case startedAt = "started_at"
         case preWriteUpdatedAt = "pre_write_updated_at"
         case finishedAt = "finished_at"
+        case sourceFingerprint = "source_fp"
+        case pushedFingerprint = "pushed_fp"
+        case didNormalizeValue = "did_normalize_value"
     }
 
     public static func databaseDateEncodingStrategy(for column: String) -> DatabaseDateEncodingStrategy {

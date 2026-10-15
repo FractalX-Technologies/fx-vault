@@ -18,9 +18,10 @@ struct MigrationTests {
     @Test func migrationIdentifiersAreFrozenAndOrdered() {
         #expect(Migration.allCases.map(\.rawValue) == [
             "v1_vault", "v2_accounts_repos", "v3_config", "v4_sync_journal", "v5_create_policies", "v6_sharing",
+            "v7_journal_fingerprints",
         ])
-        #expect(Migration.latest == .v6Sharing)
-        #expect(Migration.v1Vault < Migration.v6Sharing)
+        #expect(Migration.latest == .v7JournalFingerprints)
+        #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
 
@@ -292,6 +293,8 @@ struct MigrationTests {
     static let seedPatternID = "55555555-5555-4555-8555-555555555555"
     static let seedPackageID = "66666666-6666-4666-8666-666666666666"
     static let seedTime = "2001-01-01T00:00:00.000Z"
+    static let seedSourceFingerprint = Data(repeating: 9, count: 32)
+    static let seedPushedFingerprint = Data(repeating: 10, count: 32)
 
     static func seed(_ database: VaultDatabase, upTo version: Migration) throws {
         try database.write { tx in
@@ -344,6 +347,11 @@ struct MigrationTests {
                 sql: "INSERT INTO imported_share_packages (package_id, created_at, imported_at) VALUES (?, ?, ?)",
                 arguments: [seedPackageID, seedTime, seedTime]
             )
+            guard version >= .v7JournalFingerprints else { return }
+            try db.execute(
+                sql: "UPDATE sync_journal SET source_fp = ?, pushed_fp = ?, did_normalize_value = 1",
+                arguments: [seedSourceFingerprint, seedPushedFingerprint]
+            )
         }
     }
 
@@ -373,5 +381,14 @@ struct MigrationTests {
         guard version >= .v6Sharing else { return }
         let packageID = try #require(SharePackageID(uuidString: seedPackageID))
         #expect(try SharePackageStore(database: database).hasImported(packageID))
+        let journal = try #require(try SyncJournalStore(database: database).fetchLatestRun().first)
+        guard version >= .v7JournalFingerprints else {
+            // Rows journaled before v7 read back without push fingerprints.
+            #expect(journal.sourceFingerprint == nil && journal.pushedFingerprint == nil && journal.didNormalizeValue == nil)
+            return
+        }
+        #expect(journal.sourceFingerprint == seedSourceFingerprint)
+        #expect(journal.pushedFingerprint == seedPushedFingerprint)
+        #expect(journal.didNormalizeValue == true)
     }
 }

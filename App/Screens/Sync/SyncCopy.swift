@@ -268,6 +268,11 @@ nonisolated enum SyncCopy {
             error.localizedMessage
         case .listingFailed(let error):
             error.localizedMessage
+        case .protectionRulesPresent:
+            String(
+                localized: "sync.blocked.protectionRules",
+                defaultValue: "This environment has other protection rules on GitHub (reviewers, wait timers or app rules). Change its branch policy on GitHub so they are kept."
+            )
         }
     }
 

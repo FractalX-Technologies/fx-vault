@@ -11,6 +11,7 @@ struct AutoLockManagerTests {
         .systemSleep, .displaySleep, .sessionResignedActive, .protectedDataUnavailable,
         .screenLocked, .screensaverStarted,
     ]
+    nonisolated private static let liveTickInterval = Duration.milliseconds(50)
 
     @Test(arguments: signalTriggers)
     func everySystemSignalLocksSynchronously(_ trigger: LockTrigger) async throws {
@@ -25,6 +26,23 @@ struct AutoLockManagerTests {
         #expect(harness.app.phase == .locked)
         #expect(harness.app.lastLockTrigger == trigger)
         #expect(harness.app.lockCount == 1)
+    }
+
+    /// The live ticker fires on a utility queue. Its handler once inherited the app's default
+    /// MainActor isolation and trapped on the first tick, which the fake ticker cannot show.
+    @Test(.timeLimit(.minutes(1)))
+    func liveTickerDeliversTicksOnTheMainActor() async {
+        let ticker = DispatchInactivityTicker()
+        let probe = TickProbe()
+        await withCheckedContinuation { continuation in
+            probe.continuation = continuation
+            ticker.start(interval: Self.liveTickInterval) {
+                ticker.stop()
+                probe.fire()
+            }
+        }
+        ticker.stop()
+        #expect(probe.ticks >= 1)
     }
 
     @Test func checksEveryFifteenSeconds() async throws {
@@ -160,5 +178,18 @@ struct AutoLockManagerTests {
         #expect(!harness.container.autoLock.isRunning)
         harness.signals.send(.systemSleep)
         #expect(harness.app.phase == .unlocked)
+    }
+}
+
+/// Resumes a waiting test once, on the first tick of a live ticker.
+@MainActor
+private final class TickProbe {
+    var continuation: CheckedContinuation<Void, Never>?
+    private(set) var ticks = 0
+
+    func fire() {
+        ticks += 1
+        continuation?.resume()
+        continuation = nil
     }
 }

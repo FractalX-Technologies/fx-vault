@@ -82,7 +82,9 @@ FXVault/
 │   │   └── Theme/                   # Theme (+ Layout, Opacity), Colors, Typography, Spacing,
 │   │                                # Radius, Durations
 │   └── Resources/                   # Assets.xcassets (AppIcon, semantic colors),
-│                                    # Localizable.xcstrings, InfoPlist.xcstrings
+│                                    # Localizable.xcstrings, InfoPlist.xcstrings,
+│                                    # Credits.rtf (About panel: LICENSE + THIRD_PARTY_NOTICES.md;
+│                                    # regenerate with textutil when either changes)
 ├── AppTests/                        # Swift Testing, hosted by the app (runs in .preview mode)
 │   ├── Support/TestHarness.swift    # in-memory vault, scripted gh, temp home, ActionRecorder,
 │   │                                # TestFixtures
@@ -238,7 +240,7 @@ FXVault/
 │   ├── SHARING-PROTOCOL.md          # payload, .fxvault, nearby protocol, merge rules
 │   └── RELEASING.md                 # signing, notarization, cask, manual checklist
 ├── tasks/                           # todo.md (plan), lessons.md
-├── README.md, LICENSE, SECURITY.md, CONTRIBUTING.md, THIRD_PARTY_NOTICES.md
+├── README.md, CHANGELOG.md, LICENSE, SECURITY.md, CONTRIBUTING.md, THIRD_PARTY_NOTICES.md
 └── .gitignore
 ```
 

@@ -608,11 +608,19 @@ struct SyncViewModelTests {
         #expect(!repository.blocked.isEmpty)
         #expect(model.executableCount == 0)
 
-        let texts = [model.summaryText]
-            + model.repositories.flatMap { repository in
-                [repository.fullName] + repository.scopes.flatMap { [$0.sentence] + $0.details }
-                    + (repository.blocked + repository.remoteChanged).flatMap { [$0.title, $0.reason] }
+        // Built with explicit types: the single-expression form timed out the type checker on
+        // Xcode 26 (the blocking CI gate).
+        var texts: [String] = [model.summaryText]
+        for repository in model.repositories {
+            texts.append(repository.fullName)
+            for scope in repository.scopes {
+                texts.append(scope.sentence)
+                texts += scope.details
             }
+            for item in repository.blocked + repository.remoteChanged {
+                texts += [item.title, item.reason]
+            }
+        }
         #expect(texts.contains { $0.contains("API_TOKEN") })
         #expect(!texts.contains { $0.contains(secretValue) || $0.contains(variableValue) })
 

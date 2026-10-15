@@ -251,6 +251,16 @@ struct ConstraintTests {
         }
     }
 
+    @Test func journalNormalizeFlagIsABoolean() throws {
+        let seeded = try SeededDatabase()
+        #expect(throws: Self.check) {
+            try seeded.execute("""
+                INSERT INTO sync_journal (run_id, account_login, op, command, is_write, scope_label, target_key, state, started_at, did_normalize_value)
+                VALUES ('r', 'a', 'o', 'c', 1, 's', 't', 'in_flight', 't', 2)
+                """)
+        }
+    }
+
     // MARK: - Cascades
 
     @Test func deletingARepositoryCascadesAndNullsTheJournal() throws {

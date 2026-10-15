@@ -94,6 +94,9 @@ public struct SyncJournalEntryModel: Sendable, Hashable, Identifiable {
     /// The secret's `updatedAt` listed right before the write (§7.3 verification baseline).
     public var preWriteUpdatedAt: Date?
     public var finishedAt: Date?
+    /// What a set row pushed, as fingerprints (never values). Launch reconciliation records
+    /// these, not the value as it is now. Nil for other commands and rows written before v7.
+    public var push: SyncJournalPushModel?
 
     public init(
         id: SyncJournalEntryID? = nil,
@@ -110,7 +113,8 @@ public struct SyncJournalEntryModel: Sendable, Hashable, Identifiable {
         errorCode: String? = nil,
         startedAt: Date,
         preWriteUpdatedAt: Date? = nil,
-        finishedAt: Date? = nil
+        finishedAt: Date? = nil,
+        push: SyncJournalPushModel? = nil
     ) {
         self.id = id
         self.runID = runID
@@ -127,11 +131,38 @@ public struct SyncJournalEntryModel: Sendable, Hashable, Identifiable {
         self.startedAt = startedAt
         self.preWriteUpdatedAt = preWriteUpdatedAt
         self.finishedAt = finishedAt
+        self.push = push
     }
 
     /// `is_write`.
     public var isWrite: Bool {
         command.isWrite
+    }
+}
+
+/// The fingerprints of one push, journaled with its set row (`source_fp`, `pushed_fp`,
+/// `did_normalize_value`). Row-bound HMACs (§5.4), never values.
+public struct SyncJournalPushModel: Sendable, Hashable {
+    /// `value_fp` of the value that was read for the push.
+    public var sourceFingerprint: Data
+    /// Fingerprint of the bytes gh received (D32-normalized).
+    public var pushedFingerprint: Data
+    /// Trailing CR/LF were stripped before the push.
+    public var didNormalizeValue: Bool
+
+    public init(sourceFingerprint: Data, pushedFingerprint: Data, didNormalizeValue: Bool) {
+        self.sourceFingerprint = sourceFingerprint
+        self.pushedFingerprint = pushedFingerprint
+        self.didNormalizeValue = didNormalizeValue
+    }
+
+    /// The journaled part of a push effect.
+    init(_ effect: ItemPushedEffectModel) {
+        self.init(
+            sourceFingerprint: effect.sourceFingerprint,
+            pushedFingerprint: effect.pushedFingerprint,
+            didNormalizeValue: effect.didNormalizeValue
+        )
     }
 }
 

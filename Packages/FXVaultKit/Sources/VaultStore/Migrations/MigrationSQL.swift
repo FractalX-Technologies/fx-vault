@@ -137,4 +137,14 @@ enum MigrationSQL {
         CREATE TABLE imported_share_packages (
           package_id TEXT PRIMARY KEY, created_at TEXT NOT NULL, imported_at TEXT NOT NULL, sender_name TEXT);
         """
+
+    // MARK: v7_journal_fingerprints (v0.1.0). FROZEN.
+
+    /// The row-bound fingerprints of a set row's push (never values), so launch reconciliation
+    /// records what was actually sent instead of the value as it is now.
+    static let v7JournalFingerprints = """
+        ALTER TABLE sync_journal ADD COLUMN source_fp BLOB;
+        ALTER TABLE sync_journal ADD COLUMN pushed_fp BLOB;
+        ALTER TABLE sync_journal ADD COLUMN did_normalize_value INTEGER CHECK (did_normalize_value IN (0, 1));
+        """
 }

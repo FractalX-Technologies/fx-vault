@@ -1,5 +1,6 @@
 import Foundation
 import VaultCore
+import VaultStore
 
 /// Stores the DEK in a Touch ID-protected keychain item (§5.5, D14).
 ///
@@ -38,8 +39,24 @@ public protocol BiometricKeyStoring: Sendable {
 
 /// Names of the Touch ID keychain items (§5.5).
 public enum BiometricKeyAccount {
-    /// Keychain service of the DEK items.
-    public static let service = "io.fractalx.fxvault.dek"
+    /// Keychain service of the DEK items of this build's flavor. Signed Debug and Release builds
+    /// share one access group but use separate vaults (`FX Vault Dev` / `FX Vault`), so each
+    /// flavor has its own service: a Debug build's orphan cleanup or reset can never delete the
+    /// installed release vault's item.
+    public static var service: String {
+        service(for: .current)
+    }
+
+    /// `io.fractalx.fxvault.dek` for release, `io.fractalx.fxvault.dek.dev` for debug.
+    public static func service(for flavor: DatabaseFactory.Flavor) -> String {
+        switch flavor {
+        case .release: releaseService
+        case .debug: releaseService + debugServiceSuffix
+        }
+    }
+
+    private static let releaseService = "io.fractalx.fxvault.dek"
+    private static let debugServiceSuffix = ".dev"
     /// Prefix of every account name; the vault id follows in lowercase hex.
     public static let prefix = "touchid-v1-"
 

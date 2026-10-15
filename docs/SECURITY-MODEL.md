@@ -46,7 +46,7 @@ Touch ID   the DEK in a data-protection keychain item (signed builds only, §5)
 - **Fingerprints** (`value_fp`, `synced_fp`) are `HMAC-SHA256(K_fp, row id ‖ value)`: change
   detection without decrypting, and no cross-row comparison.
 - **Plaintext on disk:** names (repositories, environments, items), GitHub ids, timestamps,
-  branch patterns, the sync journal (names only, never values) and preferences.
+  branch patterns, the sync journal (names and row-bound push fingerprints, never values) and preferences.
 - Repositories write ciphertext only through `VaultSession.write`, whose keys are checked
   against the stored `vaults` row, and decrypt only through `VaultSession.read`; a write commits
   only if no lock or rotation happened while it ran.
@@ -99,8 +99,9 @@ Touch ID needs the keychain access group entitlement, which only the Developer I
 with its provisioning profile has (D14). Ad-hoc builds disable the toggle ("Touch ID requires
 the official signed release.") and every keychain call refuses with `.unsignedBuild`.
 
-- The DEK is stored in a data-protection keychain item: service `io.fractalx.fxvault.dek`,
-  account `touchid-v1-<vault_id hex>`, `WhenPasscodeSetThisDeviceOnly` with
+- The DEK is stored in a data-protection keychain item: service `io.fractalx.fxvault.dek`
+  (`io.fractalx.fxvault.dek.dev` in Debug builds, whose vault is `FX Vault Dev`, so a signed
+  Debug build never touches the release vault's item), account `touchid-v1-<vault_id hex>`, `WhenPasscodeSetThisDeviceOnly` with
   `.biometryCurrentSet`, not synchronizable. Enabling it requires the master password and first
   deletes items of other vaults (orphans).
 - Each unlock uses a fresh `LAContext` with no reuse window; the prompt strings come from the
@@ -160,7 +161,12 @@ non-writable locations owned by root or the user. Details: [API.md](API.md).
 
 - Every gh write is journaled `in_flight` before it starts; its outcome and the row bookkeeping
   commit together. Timeouts, server errors and crashes are reconciled by re-listing GitHub
-  (never by the local clock); a repository create is never retried blindly.
+  (never by the local clock); a repository create is never retried blindly. A reconciled secret
+  push records the fingerprints journaled with it, never the value as it is later, and a guided
+  rename's interrupted copies only close their journal rows (the rename runs again).
+- A branch-policy change is not sent to an environment that GitHub lists with other protection
+  rules (reviewers, wait timer, app rules): C2 sends only the policy, and whether GitHub keeps
+  the omitted rules is unverified (Q6). Sync blocks it; the user changes the policy on GitHub.
 - Optimistic concurrency (D27): each scope is re-listed right before our writes, and a change
   whose base moved on GitHub is blocked as "changed on GitHub" for Drift review.
 - A write is confirmed by re-listing: a secret by a changed `updatedAt`, a variable by its value

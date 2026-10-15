@@ -76,7 +76,12 @@ count of `HEAD`. A version with a suffix is published as a **pre-release**. Home
 `livecheck` ignores pre-releases, but `brew install` still installs the version the cask
 names.
 
-1. **Check that `main` is green.** CI must pass on `main`, and `CHANGELOG.md` must be updated.
+1. **Check that `main` is green.** CI must pass on `main` (the `macos-26` job is the blocking
+   gate), and `CHANGELOG.md` must have an entry for the version. Private vulnerability
+   reporting must be on, because SECURITY.md sends reporters there:
+   `gh api repos/FractalX-Technologies/fx-vault/private-vulnerability-reporting --jq .enabled`
+   must print `true`. Before the first release with environment writes, run the LiveE2E write
+   suite on a throwaway repository and record the results in docs/API.md (Q6).
 2. **Tag and push.**
 
    ```sh

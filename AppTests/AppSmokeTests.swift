@@ -25,6 +25,16 @@ struct AppSmokeTests {
         #expect(viewModel.phase == .onboarding)
     }
 
+    /// PKG-6: the standard About panel shows `Credits.rtf`, which carries the MIT, ISC and
+    /// CC BY notices the app and DMG must ship with.
+    @Test func creditsShipTheThirdPartyNotices() throws {
+        let url = try #require(Bundle.main.url(forResource: "Credits", withExtension: "rtf"))
+        let credits = try NSAttributedString(url: url, options: [:], documentAttributes: nil).string
+        for notice in ["MIT License", "GRDB.swift", "libsodium", "ISC License", "EFF Large Wordlist", "creativecommons.org/licenses/by/3.0"] {
+            #expect(credits.contains(notice), "missing \(notice)")
+        }
+    }
+
     /// Asset catalog color set names behind `Theme.Colors`.
     @Test(arguments: [
         "Accent", "Background", "Surface", "TextPrimary", "TextSecondary",

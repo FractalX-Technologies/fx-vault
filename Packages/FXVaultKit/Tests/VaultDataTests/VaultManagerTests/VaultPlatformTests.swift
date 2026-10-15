@@ -25,6 +25,14 @@ struct VaultPlatformTests {
         #expect(all[kSecAttrAccount as String] == nil)
     }
 
+    /// PKG-5: a signed Debug build shares the access group with the release app, so its items
+    /// live under another service and its orphan cleanup cannot reach the release vault's item.
+    @Test func eachFlavorHasItsOwnKeychainService() {
+        #expect(BiometricKeyAccount.service(for: .release) == "io.fractalx.fxvault.dek")
+        #expect(BiometricKeyAccount.service(for: .debug) == "io.fractalx.fxvault.dek.dev")
+        #expect(BiometricKeyAccount.service == BiometricKeyAccount.service(for: DatabaseFactory.Flavor.current))
+    }
+
     @Test func loadErrorMapping() {
         #expect(KeychainManager.loadError(for: errSecItemNotFound, isLockedOut: false) == .biometryInvalidated)
         #expect(KeychainManager.loadError(for: errSecAuthFailed, isLockedOut: false) == .biometryInvalidated)

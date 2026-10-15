@@ -99,12 +99,13 @@ final class EnvironmentSettingsViewModel {
         return .success(String(localized: "environment.settings.synced", defaultValue: "On GitHub as \(syncedName)."))
     }
 
-    /// Reviewers, wait timers and custom rules set on GitHub, which FX Vault keeps as they are.
+    /// Reviewers, wait timers and custom rules set on GitHub. Sync blocks a policy change while
+    /// GitHub lists them (`SyncBlockReason.protectionRulesPresent`), so they are never reset.
     var foreignRulesNote: ConfigEditorNoteModel? {
         guard environment?.foreignRulesJSON != nil else { return nil }
         return .info(String(
             localized: "environment.settings.foreignRules",
-            defaultValue: "This environment also has protection rules set on GitHub (reviewers, wait timers or custom rules). FX Vault keeps them unchanged."
+            defaultValue: "This environment also has protection rules set on GitHub (reviewers, wait timers or custom rules). Sync does not change its branch policy while they are set; change the policy on GitHub instead."
         ))
     }
 

@@ -284,6 +284,35 @@ struct GHAuthServiceTests {
         #expect(cache.token(for: "user-a") == nil)
     }
 
+    /// SEC-1: the vault locks (purge) while A4 runs. The late token is wiped, not cached, and
+    /// the caller gets `.cancelled` so no command runs with it.
+    @Test func aTokenFetchedAcrossAPurgeIsNeitherCachedNorReturned() async throws {
+        let runner = FakeCommandRunner()
+        runner.stub(argumentsPrefix: ["auth", "token"], with: .success("\(TestValues.token)\n"))
+        let cache = GHTokenCache()
+        let service = GHAuthService(service: TestValues.service(PurgingRunner(inner: runner, cache: cache)), tokenCache: cache)
+
+        await #expect(throws: GHError.cancelled) {
+            _ = try await service.token(for: "user-a")
+        }
+        #expect(cache.count == 0)
+        await #expect(throws: GHError.cancelled) {
+            _ = try await service.refreshToken(for: "user-a", replacing: TestValues.secret(TestValues.otherToken))
+        }
+        #expect(cache.count == 0)
+    }
+
+    @Test func storeIfGenerationRefusesAfterAPurge() {
+        let cache = GHTokenCache()
+        let generation = cache.generation
+        cache.purge()
+        let late = TestValues.secret(TestValues.token)
+        #expect(!cache.store(late, for: "user-a", ifGeneration: generation))
+        #expect(late.isWiped && cache.count == 0)
+        #expect(cache.store(TestValues.secret(TestValues.token), for: "user-a", ifGeneration: cache.generation))
+        #expect(cache.count == 1)
+    }
+
     @Test func refreshReportsWhetherTheTokenChanged() async throws {
         let runner = FakeCommandRunner()
         runner.enqueue(.success(TestValues.otherToken), matching: Match.prefix(["auth", "token"]))
@@ -291,6 +320,17 @@ struct GHAuthServiceTests {
         let service = auth(runner)
         #expect(try await service.refreshToken(for: "user-a", replacing: TestValues.secret(TestValues.token)))
         #expect(!(try await service.refreshToken(for: "user-a", replacing: TestValues.secret(TestValues.otherToken))))
+    }
+}
+
+/// Purges the token cache while each command runs, as a vault lock during A4 would.
+private struct PurgingRunner: CommandRunning {
+    let inner: FakeCommandRunner
+    let cache: GHTokenCache
+
+    func run(_ spec: CommandSpec) async throws(CommandRunnerError) -> CommandResult {
+        cache.purge()
+        return try await inner.run(spec)
     }
 }
 

@@ -48,7 +48,10 @@ enum SyncJournalMapper {
             errorCode: entry.errorCode,
             startedAt: entry.startedAt,
             preWriteUpdatedAt: entry.preWriteUpdatedAt,
-            finishedAt: entry.finishedAt
+            finishedAt: entry.finishedAt,
+            sourceFingerprint: entry.push?.sourceFingerprint,
+            pushedFingerprint: entry.push?.pushedFingerprint,
+            didNormalizeValue: entry.push?.didNormalizeValue
         )
     }
 
@@ -71,7 +74,19 @@ enum SyncJournalMapper {
             errorCode: record.errorCode,
             startedAt: record.startedAt,
             preWriteUpdatedAt: record.preWriteUpdatedAt,
-            finishedAt: record.finishedAt
+            finishedAt: record.finishedAt,
+            push: push(of: record)
+        )
+    }
+
+    /// The journaled push fingerprints, or nil when the row has none (other commands, rows
+    /// written before v7).
+    private static func push(of record: SyncJournalRecord) -> SyncJournalPushModel? {
+        guard let source = record.sourceFingerprint, let pushed = record.pushedFingerprint else { return nil }
+        return SyncJournalPushModel(
+            sourceFingerprint: source,
+            pushedFingerprint: pushed,
+            didNormalizeValue: record.didNormalizeValue ?? false
         )
     }
 

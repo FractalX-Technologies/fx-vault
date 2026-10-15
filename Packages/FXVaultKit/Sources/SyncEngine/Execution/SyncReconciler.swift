@@ -10,13 +10,17 @@ import VaultCore
 /// - item set: a secret listed with `updatedAt` ≠ the row's `pre_write_updated_at` (or listed at
 ///   all when that was nil); a variable whose listed fingerprint equals the fingerprint of the
 ///   current local value, D32-normalized. Confirmed → `reconciled` with `itemPushed` +
-///   `itemVerified`;
+///   `itemVerified`. A secret's `itemPushed` carries the fingerprints journaled with the push
+///   (``SyncJournalPushModel``), never the current value's: a value edited since then stays
+///   pending. A secret row journaled without them (before v7) is closed as `failed`;
 /// - item delete: the name is no longer listed → `reconciled` with `itemDeleted`;
 /// - environment PUT: B4 shows the environment with the local policy → `environmentSynced`;
 /// - environment delete: B3 no longer lists it → `environmentDeleted`;
 /// - repository create: ``RepositoryAdoption`` (a journaled "free" lookup, then B2 finds the
 ///   expected owner and visibility) → `repositoryCreated`; a mismatch is a conflict;
-/// - writes that belong to a guided rename only get their journal state (the rename re-runs);
+/// - writes that belong to a guided rename only get their journal state (the rename re-runs):
+///   the environment PUT (`op = rename_environment`) and the copies into the new name of an
+///   environment whose rename is still pending (``isRenameCopy(_:placement:)``);
 /// - pattern writes and journaled reads are closed as `failed` (the next reconcile matches
 ///   GitHub's patterns by name).
 ///
@@ -172,22 +176,34 @@ public struct SyncReconciler: Sendable {
               let listing = try await cache.listing(placement, kind: key.kind, ref: ref, context: context, values: values)
         else { return .failed }
         let row = row(for: key, placement: placement, snapshot: context.snapshot)
+        let isRenameWrite = context.isRenameWrite || Self.isRenameCopy(key, placement: placement)
         switch key.kind {
         case .secret:
             let listed = listing.secret(nameKey: key.nameKey)
             guard WriteVerifier.isSecretVerified(listed: listed, preWriteUpdatedAt: context.entry.preWriteUpdatedAt) else {
                 return .failed
             }
-            guard !context.isRenameWrite, let row else { return Decision(kind: .reconciled) }
-            return try pushedDecision(row: row, entry: context.entry, remoteUpdatedAt: listed?.updatedAt)
+            guard !isRenameWrite, let row else { return Decision(kind: .reconciled) }
+            // A moved `updatedAt` shows that *a* write landed, not which value: record what this
+            // push sent. Without its fingerprints nothing proves the row is synced.
+            guard let push = context.entry.push else { return .failed }
+            return pushedDecision(
+                row: row,
+                key: key,
+                push: push,
+                entry: context.entry,
+                remoteUpdatedAt: listed?.updatedAt
+            )
         case .variable:
             guard let row, let source = try values.value(of: row.id) else { return .failed }
             defer { source.wipe() }
             let expected: Data
+            let didNormalize: Bool
             do {
                 let normalized = try ValueNormalizer.normalize(source.value)
                 defer { normalized.value.wipe() }
                 expected = try values.fingerprint(normalized.value, rowID: row.id)
+                didNormalize = normalized.didStripTrailingNewlines
             } catch {
                 return .failed
             }
@@ -195,30 +211,52 @@ public struct SyncReconciler: Sendable {
             guard WriteVerifier.isVariableVerified(listedFingerprint: listed?.fingerprint(for: row.id), expected: expected) else {
                 return .failed
             }
-            guard !context.isRenameWrite else { return Decision(kind: .reconciled) }
-            return try pushedDecision(row: row, entry: context.entry, remoteUpdatedAt: listed?.updatedAt)
+            guard !isRenameWrite else { return Decision(kind: .reconciled) }
+            // GitHub holds exactly the current local value (fingerprints matched above).
+            let current = SyncJournalPushModel(
+                sourceFingerprint: source.fingerprint,
+                pushedFingerprint: expected,
+                didNormalizeValue: didNormalize
+            )
+            return pushedDecision(row: row, key: key, push: current, entry: context.entry, remoteUpdatedAt: listed?.updatedAt)
         }
     }
 
-    /// `itemPushed` (with the current value as the pushed one) and `itemVerified`.
-    private func pushedDecision(row: ConfigItemSnapshotModel, entry: SyncJournalEntryModel, remoteUpdatedAt: Date?) throws(SyncError) -> Decision {
-        guard let source = try values.value(of: row.id) else { return Decision(kind: .reconciled) }
-        defer { source.wipe() }
-        guard let normalized = try? ValueNormalizer.normalize(source.value) else { return Decision(kind: .reconciled) }
-        defer { normalized.value.wipe() }
+    /// `itemPushed` with `push` as what was sent under the journaled name, and `itemVerified`.
+    /// `SyncEffectApplier` records a value edited since the push as still pending.
+    private func pushedDecision(
+        row: ConfigItemSnapshotModel,
+        key: RemoteItemKeyModel,
+        push: SyncJournalPushModel,
+        entry: SyncJournalEntryModel,
+        remoteUpdatedAt: Date?
+    ) -> Decision {
+        let pushedName = entry.itemName.flatMap { GitHubNameValidator.foldKey($0) == key.nameKey ? $0 : nil } ?? row.name
+        let previousName = row.syncedNameKey.flatMap { $0 == key.nameKey ? nil : row.syncedName }
         let pushed = ItemPushedEffectModel(
             itemID: row.id,
-            syncedName: row.name,
-            sourceFingerprint: source.fingerprint,
-            pushedFingerprint: try values.fingerprint(normalized.value, rowID: row.id),
-            didNormalizeValue: normalized.didStripTrailingNewlines,
+            syncedName: pushedName,
+            sourceFingerprint: push.sourceFingerprint,
+            pushedFingerprint: push.pushedFingerprint,
+            didNormalizeValue: push.didNormalizeValue,
             preWriteUpdatedAt: entry.preWriteUpdatedAt,
-            detachedPreviousName: row.isRenamed ? row.syncedName : nil
+            detachedPreviousName: previousName
         )
         return Decision(kind: .reconciled, effects: [
             .itemPushed(pushed),
             .itemVerified(itemID: row.id, remoteUpdatedAt: remoteUpdatedAt),
         ])
+    }
+
+    /// True for an item write into the new name of an environment whose guided rename is still
+    /// pending (synced under another name): a rename copy (§7.6), journaled as a plain set or
+    /// delete. Recording it would move the row to the new environment's identity while the
+    /// environment is still synced under its old name.
+    static func isRenameCopy(_ key: RemoteItemKeyModel, placement: Placement) -> Bool {
+        guard let environment = placement.environment, !environment.isDeleted,
+              let syncedNameKey = environment.syncedNameKey, syncedNameKey != environment.nameKey
+        else { return false }
+        return key.scope.environmentKey == environment.nameKey
     }
 
     private func decideDelete(_ context: Context, ref: GHRepoRef, cache: inout ListingCache) async throws(SyncError) -> Decision {
@@ -227,7 +265,9 @@ public struct SyncReconciler: Sendable {
               let listing = try await cache.listing(placement, kind: key.kind, ref: ref, context: context, values: values),
               listing.item(kind: key.kind, nameKey: key.nameKey) == nil
         else { return .failed }
-        guard let row = row(for: key, placement: placement, snapshot: context.snapshot), let syncedName = row.syncedName else {
+        guard !context.isRenameWrite, !Self.isRenameCopy(key, placement: placement),
+              let row = row(for: key, placement: placement, snapshot: context.snapshot), let syncedName = row.syncedName
+        else {
             return Decision(kind: .reconciled)
         }
         return Decision(kind: .reconciled, effects: [

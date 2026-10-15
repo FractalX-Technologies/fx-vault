@@ -105,7 +105,7 @@ parallel. Values and JSON bodies are on stdin.
 | Op | argv (`logTemplate`) | Builder | Success and special cases |
 |---|---|---|---|
 | C1 create repo | `gh repo create {o}/{n} --private\|--public\|--internal [--description={d}] [--add-readme] [--gitignore={t}] [--license={l}]` | `GHReposCommands.create(_:)` / `decodeCreated` | Never `--clone`, **never retried**. stdout is one line, the new repo URL, which gives the normalized name. A `users/<owner>` 404 is `.validation`; "already exists" is `.validation`; org policy text is `.orgPolicyForbidsCreate`. |
-| C2 env upsert | `gh api -X PUT -i repos/{o}/{r}/environments/{e} --input -` | `GHEnvironmentsAPI.upsert` | Body `{"deployment_branch_policy": null \| {"protected_branches":true,"custom_branch_policies":false} \| {false,true}}`. Never sends reviewers, wait timer or prevent-self-review. |
+| C2 env upsert | `gh api -X PUT -i repos/{o}/{r}/environments/{e} --input -` | `GHEnvironmentsAPI.upsert` | Body `{"deployment_branch_policy": null \| {"protected_branches":true,"custom_branch_policies":false} \| {false,true}}`. Never sends reviewers, wait timer or prevent-self-review, so preflight blocks it for an existing environment with such rules until Q6 is verified. |
 | C3 pattern add | `gh api -X POST -i repos/{o}/{r}/environments/{e}/deployment-branch-policies --input -` | `.addBranchPolicy` | Body `{"name","type"}`. 200 returns the policy; a bare 303 (gh exits 1 with `gh: HTTP 303`) also counts as success and returns nil (the caller re-lists with B5). |
 | C4 pattern delete | `gh api -X DELETE -i repos/{o}/{r}/environments/{e}/deployment-branch-policies/{id}` | `.deleteBranchPolicy` | 204; a 404 counts as done. |
 | C5 secret set | `gh secret set {n} --repo={o}/{r} [--env={e}]` | `GHSecretsCommands.set` | Value on stdin (the builder copies it). Verified by the caller through B6/B7 `updatedAt`. |
@@ -287,8 +287,26 @@ organization. Only **read** calls were made; the write facts below are still ope
   the suggested line `/.env.production`, and after `addGitignoreEntry` it is `.ignored`. The
   exported file is mode 0600.
 
+**Write run, 2026-10-15 (gh 2.102.0).** The opt-in write suite passed against real GitHub:
+the public-repository scenario (create repository with README, `.gitignore` and license; two
+environments with custom and protected-branch policies; repository and environment secrets and
+variables including a multi-line value and Unicode; independent re-checks with raw `gh`; edit,
+delete and item rename; guided environment rename; drift from a simulated teammate resolved
+once keep-local and once accept-GitHub; clone through the SSH alias; `.env` export) and the
+Free-plan scenario on a private organization repository. Observed on that Free-plan private
+repository: C2 PUT with or without a branch policy returns 200, environment secret and variable
+sets succeed, but C3 (add a deployment branch pattern) returns `gh: Not Found (HTTP 404)` with an
+empty body. The executor now classifies a C3 404 on a visible repository as `.planGated`
+(test `a404OnAPatternPostOfAVisibleRepositoryIsPlanGated`). The facts below that the suite did
+not assert explicitly stay open.
+
 **Pending: write spike (Q6).** Not run: creating repositories and writing to GitHub needs
-the maintainer's approval of each repository (tasks/todo.md §13 Q6). The opt-in suite
+the maintainer's approval of each repository (tasks/todo.md §13 Q6). Until it confirms that a
+C2 PUT without `reviewers`/`wait_timer` keeps them, preflight blocks a policy change on any
+existing environment that B3 lists with rules other than `branch_policy`
+(`SyncBlockReason.protectionRulesPresent`); new environments and guided-rename targets are not
+affected. Run the write suite on a throwaway repository before tagging a release and record the
+results here. The opt-in suite
 `Tests/VaultDataTests/Live` records every open fact when run with
 `FXV_LIVE_E2E=1 FXV_LIVE_E2E_WRITE=1 FXV_LIVE_E2E_FREE_ORG=<org>
 FXV_LIVE_E2E_REPORT=<file.json> swift test --filter LiveE2E`: identical-value `gh secret set` and

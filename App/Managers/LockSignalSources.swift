@@ -131,7 +131,9 @@ final class DispatchInactivityTicker: InactivityTicker {
         let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
         let seconds = interval.timeInterval
         timer.schedule(deadline: .now() + seconds, repeating: seconds, leeway: Self.leeway)
-        timer.setEventHandler {
+        // The handler runs on the utility queue, so it must not inherit the class's default
+        // MainActor isolation: an inferred-MainActor closure traps on its first tick.
+        timer.setEventHandler { @Sendable in
             Task { @MainActor in
                 onTick()
             }

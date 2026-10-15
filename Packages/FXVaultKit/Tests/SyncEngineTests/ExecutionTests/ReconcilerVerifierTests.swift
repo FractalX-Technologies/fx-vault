@@ -15,7 +15,8 @@ struct ReconcilerTests {
         target: String,
         state: SyncJournalOutcomeState = .inFlight,
         preWrite: Date? = nil,
-        errorCode: String? = nil
+        errorCode: String? = nil,
+        push: SyncJournalPushModel? = nil
     ) -> SyncJournalEntryID {
         world.vault.seedJournal(SyncJournalEntryModel(
             runID: SyncRunID(),
@@ -28,8 +29,15 @@ struct ReconcilerTests {
             state: state,
             errorCode: errorCode,
             startedAt: world.clock.now,
-            preWriteUpdatedAt: preWrite
+            preWriteUpdatedAt: preWrite,
+            push: push
         ))
+    }
+
+    /// The fingerprints the executor journals for a push of `value` (no normalization).
+    private func push(_ value: String, row: ConfigItemID) -> SyncJournalPushModel {
+        let fingerprint = InMemorySyncVault.fingerprint(value, rowID: row)
+        return SyncJournalPushModel(sourceFingerprint: fingerprint, pushedFingerprint: fingerprint, didNormalizeValue: false)
     }
 
     private func item(_ kind: ConfigKind, _ name: String, environment: String? = nil) -> String {
@@ -41,7 +49,7 @@ struct ReconcilerTests {
         let scenario = ExecScenario()
         let id = scenario.newItem("FXV_TOKEN", kind: .secret, value: "v")
         let world = ExecWorld(scenario, github: github)
-        let entry = leftover(world, command: .secretSet, op: .setSecret, target: item(.secret, "FXV_TOKEN"))
+        let entry = leftover(world, command: .secretSet, op: .setSecret, target: item(.secret, "FXV_TOKEN"), push: push("v", row: id))
         let landed = github.addSecret("FXV_TOKEN")
 
         let outcome = try await world.reconciler().reconcile(world.vault.snapshots)
@@ -66,6 +74,93 @@ struct ReconcilerTests {
         #expect(outcome.failed.count == 1)
         #expect(world.vault.journal.first?.state == .failed && world.vault.journal.first?.errorCode == "indeterminate")
         #expect(world.vault.item(id)?.hasPendingChange == true)
+    }
+
+    /// SYNC-1: v1's push timed out after it reached GitHub, then the user edited the secret to
+    /// v2. A moved `updatedAt` confirms v1, so v1 is recorded as synced and v2 stays pending
+    /// (and is not blocked as changed on GitHub).
+    @Test func aSecretEditedAfterAnIndeterminatePushStaysPending() async throws {
+        let github = GitHubSimulator()
+        let scenario = ExecScenario()
+        let id = scenario.syncedItem("FXV_TOKEN", kind: .secret, value: "v2", syncedValue: "v0", github: github)
+        let world = ExecWorld(scenario, github: github)
+        let before = github.secret("FXV_TOKEN")?.updatedAt
+        leftover(
+            world,
+            command: .secretSet,
+            op: .setSecret,
+            target: item(.secret, "FXV_TOKEN"),
+            state: .indeterminate,
+            preWrite: before,
+            errorCode: "indeterminate",
+            push: push("v1", row: id)
+        )
+        let landed = github.addSecret("FXV_TOKEN")
+
+        let outcome = try await world.reconciler().reconcile(world.vault.snapshots)
+
+        #expect(outcome.reconciled.count == 1)
+        let row = try #require(world.vault.item(id))
+        #expect(row.hasPendingChange)
+        #expect(row.syncedFingerprint == InMemorySyncVault.fingerprint("v1", rowID: id))
+        #expect(row.verifyState == .verified && row.remoteUpdatedAt == landed)
+        #expect(world.vault.storedValue(of: id) == "v2")
+        #expect(ChangeSetBuilder.build(world.snapshot).changes.map(\.kind) == [.setSecret])
+        let preflight = try await world.preflight()
+        #expect(preflight.repositories[0].executable.map(\.kind) == [.setSecret])
+        #expect(preflight.repositories[0].remoteChanged.isEmpty)
+    }
+
+    /// SYNC-1: a row journaled without push fingerprints (before v7) cannot prove which value
+    /// landed, for example when a teammate moved `updatedAt`: the local value stays pending.
+    @Test func aSecretSetJournaledWithoutFingerprintsIsNotRecordedAsSynced() async throws {
+        let github = GitHubSimulator()
+        let scenario = ExecScenario()
+        let id = scenario.syncedItem("FXV_TOKEN", kind: .secret, value: "mine", syncedValue: "old", github: github)
+        let world = ExecWorld(scenario, github: github)
+        let before = github.secret("FXV_TOKEN")?.updatedAt
+        leftover(world, command: .secretSet, op: .setSecret, target: item(.secret, "FXV_TOKEN"), preWrite: before)
+        github.addSecret("FXV_TOKEN")
+
+        let outcome = try await world.reconciler().reconcile(world.vault.snapshots)
+
+        #expect(outcome.failed.count == 1)
+        #expect(world.vault.journal.first?.errorCode == SyncExecutionConstants.notConfirmedErrorCode)
+        let row = try #require(world.vault.item(id))
+        #expect(row.hasPendingChange)
+        #expect(row.syncedFingerprint == InMemorySyncVault.fingerprint("old", rowID: id))
+        #expect(row.remoteUpdatedAt == before)
+    }
+
+    /// SYNC-2: a guided rename's copy into the new name (journaled as a plain set) that crashed in
+    /// flight must not move the row to the new environment's identity: the rename re-runs.
+    @Test func anInFlightRenameCopyOnlyGetsItsJournalState() async throws {
+        let github = GitHubSimulator()
+        let scenario = ExecScenario()
+        let staging = scenario.syncedEnvironment("staging", github: github)
+        let secret = scenario.syncedItem("FXV_TOKEN", kind: .secret, value: "s", syncedValue: "s", in: staging, github: github)
+        scenario.environments[0].name = "stage"
+        let world = ExecWorld(scenario, github: github)
+        let synced = try #require(world.vault.item(secret))
+        leftover(world, command: .environmentPut, op: .renameEnvironment, target: RemoteScopeKeyModel.environment(named: "stage").journalKey)
+        leftover(world, command: .secretSet, op: .setSecret, target: item(.secret, "FXV_TOKEN", environment: "stage"), push: push("s", row: secret))
+        github.addEnvironment("stage", id: 11)
+        github.addSecret("FXV_TOKEN", environment: "stage")
+
+        let outcome = try await world.reconciler().reconcile(world.vault.snapshots)
+
+        #expect(outcome.reconciled.count == 2)
+        let row = try #require(world.vault.item(secret))
+        #expect(row.remoteUpdatedAt == synced.remoteUpdatedAt && row.verifyState == synced.verifyState)
+        #expect(row.syncedFingerprint == synced.syncedFingerprint)
+        #expect(world.vault.environment(staging.id)?.syncedName == "staging")
+        let preflight = try await world.preflight()
+        #expect(preflight.repositories[0].blocked.isEmpty, "\(preflight.repositories[0].blocked.map(\.reason))")
+        #expect(preflight.repositories[0].executable.contains { $0.kind == .renameEnvironment })
+        let rerun = try await world.sync()
+        #expect(rerun.outcome(of: .renameEnvironment) == .succeeded(.verified))
+        #expect(world.vault.environment(staging.id)?.syncedName == "stage")
+        #expect(world.vault.item(secret)?.remoteUpdatedAt == github.secret("FXV_TOKEN", environment: "stage")?.updatedAt)
     }
 
     @Test func variablesReconcileByTheFingerprintOfTheNormalizedLocalValue() async throws {

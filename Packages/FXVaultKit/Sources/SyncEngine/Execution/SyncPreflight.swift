@@ -17,7 +17,9 @@ import VaultCore
 /// 4. Optimistic concurrency (D27): every touched scope is re-listed (B3, B6–B9), the
 ///    pending-verification pass runs on that re-list (without counting misses), and each
 ///    change's base is checked with ``RemoteBaseChecker``. Moved bases are blocked as
-///    `.remoteChanged` through ``ChangeSetModel/blocking(_:reason:)``.
+///    `.remoteChanged` through ``ChangeSetModel/blocking(_:reason:)``. A policy change on an
+///    existing environment that B3 lists with other protection rules is blocked as
+///    ``SyncBlockReason/protectionRulesPresent`` (C2 omits them; Q6 unverified).
 /// 5. Scope capacity (`ScopeCapacityValidator`) against the listed counts.
 /// 6. The hourly write budget of each account (seed the scheduler once at launch with
 ///    ``SyncThrottleSeeder``).
@@ -440,6 +442,9 @@ public struct SyncPreflight: Sendable {
                 let local = environmentRow(for: change.operation, snapshot: snapshot)
                 if RemoteBaseChecker.environmentBaseMoved(change.operation, remote: environments, local: local, ownedTargetKeys: ownedTargets) {
                     remoteChanged.insert(change.id)
+                } else if case .upsertEnvironment(let upsert) = change.operation, !upsert.isNew,
+                          environments[.environment(named: upsert.name)]?.foreignRulesJSON != nil {
+                    reasons[change.id] = .protectionRulesPresent
                 } else if case .renameEnvironment(let rename) = change.operation {
                     checkRenameSource(rename, change: change, rows: rows, remote: remote, listings: listings, remoteChanged: &remoteChanged, reasons: &reasons)
                 }

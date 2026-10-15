@@ -19,6 +19,10 @@ public enum SyncBlockReason: Sendable, Hashable {
     case scopeFull(ValidationError)
     /// Preflight could not re-list the scopes the change touches (D27 needs them).
     case listingFailed(GHError)
+    /// A policy change on an environment that has other protection rules on GitHub (reviewers,
+    /// wait timer, app rules). C2 sends only `deployment_branch_policy`, and whether GitHub keeps
+    /// the omitted rules is not verified yet (docs/API.md Q6), so FX Vault does not PUT it.
+    case protectionRulesPresent
     /// Depends on a change blocked by preflight.
     case dependsOn(changeID: String)
 

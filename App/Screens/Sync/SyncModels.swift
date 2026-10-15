@@ -305,7 +305,7 @@ enum SyncPresentationBuilder {
             return editorContext(change, mode: ItemEditorContext.Mode.fill).map(SyncFixActionModel.fillValue)
         case .change(.remoteChanged):
             return .reviewDrift(change.repositoryID)
-        case .change(.renameNeedsValues), .change(.dependsOn), .dependsOn, .scopeFull, .readOnly(.archived):
+        case .change(.renameNeedsValues), .change(.dependsOn), .dependsOn, .scopeFull, .readOnly(.archived), .protectionRulesPresent:
             return nil
         case .readOnly(.adminRequired), .readOnly(.unavailable):
             return repository.map(askAdmin)

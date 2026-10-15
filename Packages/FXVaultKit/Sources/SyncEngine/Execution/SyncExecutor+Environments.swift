@@ -182,8 +182,14 @@ extension SyncExecutor {
                 pendingIDs.append(pattern)
                 try commitPattern(entry, effects: [], deferEffects: deferEffects, outcome: &outcome, run: run)
             case .failure(let error):
-                try run.journal.finish(entry, run.journal.failed(error))
-                return PatternOutcome(failure: .github(error), effects: outcome.effects)
+                // Observed live: a Free-plan private repository accepts the environment PUT but
+                // answers C3 with a bare 404, so a 404 on a visible repository is plan-gated.
+                let classified = try await classifyEnvironmentFailure(error, run: run)
+                let effects: [SyncStateEffectModel] = classified == .planGated
+                    ? [.repositoryPlanGated(repositoryID: run.repositoryID)]
+                    : []
+                try run.journal.finish(entry, run.journal.failed(classified), effects: effects)
+                return PatternOutcome(failure: .github(classified), effects: outcome.effects)
             }
         }
         let desiredKeys = Set(desired.map { PatternKey(pattern: $0.pattern, type: $0.type) })

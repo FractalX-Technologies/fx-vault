@@ -51,22 +51,32 @@ public struct GHAuthService: Sendable {
     }
 
     /// A copy of `login`'s token: from the cache, else from A4 (then cached).
+    ///
+    /// - Throws: ``GHError/cancelled`` when the cache was purged (the vault locked) while A4 ran:
+    ///   the fresh token is wiped instead of being cached or used.
     public func token(for login: String) async throws(GHError) -> SecretBytes {
         if let cached = tokenCache.token(for: login) {
             return cached
         }
+        let generation = tokenCache.generation
         let fresh = try await fetchToken(for: login)
-        tokenCache.store(fresh.copy(), for: login)
+        guard tokenCache.store(fresh.copy(), for: login, ifGeneration: generation) else {
+            fresh.wipe()
+            throw .cancelled
+        }
         return fresh
     }
 
     /// After `.tokenRevoked`: drops the cached token, runs A4 once, caches the result, and
     /// returns true when the token changed (the caller then retries once, §7.3).
+    ///
+    /// - Throws: ``GHError/cancelled`` when the cache was purged while A4 ran.
     public func refreshToken(for login: String, replacing stale: SecretBytes) async throws(GHError) -> Bool {
         tokenCache.invalidate(login: login)
+        let generation = tokenCache.generation
         let fresh = try await fetchToken(for: login)
         let changed = !stale.withUnsafeBytes { fresh.constantTimeEquals($0) }
-        tokenCache.store(fresh, for: login)
+        guard tokenCache.store(fresh, for: login, ifGeneration: generation) else { throw .cancelled }
         return changed
     }
 

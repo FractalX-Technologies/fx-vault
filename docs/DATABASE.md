@@ -217,6 +217,24 @@ CREATE TABLE imported_share_packages (
 
 `imported_share_packages` drives replay detection (`ShareReplayWarning.alreadyImported`).
 
+### v7_journal_fingerprints (v0.1.0)
+
+```sql
+ALTER TABLE sync_journal ADD COLUMN source_fp BLOB;   -- value_fp of the value the push read
+ALTER TABLE sync_journal ADD COLUMN pushed_fp BLOB;   -- fingerprint of the bytes gh received (D32)
+ALTER TABLE sync_journal ADD COLUMN did_normalize_value INTEGER CHECK (did_normalize_value IN (0, 1));
+```
+
+- Set on `secret.set` / `variable.set` rows only (`SyncJournalPushModel`); NULL for every other
+  command and for rows written before v7. They are row-bound HMAC fingerprints (§5.4), never
+  values.
+- Launch reconciliation builds a confirmed secret push from these columns, not from the value as
+  it is at reconcile time, so a value edited after an indeterminate push stays pending. A
+  secret row without them is closed as `failed` (`notConfirmed`).
+- A DEK rotation recomputes `config_items` fingerprints but not these. A row reconciled after a
+  rotation therefore never matches `value_fp`, so the value stays pending and is pushed again
+  (the safe direction).
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -228,7 +246,7 @@ CREATE TABLE imported_share_packages (
 | `environments` | `EnvironmentRecord` | `ConfigStore` | Patterns are attached when the policy is custom |
 | `deployment_branch_patterns` | `BranchPatternRecord` | `ConfigStore` | |
 | `config_items` | `ConfigItemRecord` (with ciphertext), `ConfigItemState` (read-only projection without ciphertext) | `ConfigStore` | Status is derived with `ConfigSyncStatus.derive(state.syncFacts)` |
-| `sync_journal` | `SyncJournalRecord` | `SyncJournalStore` | |
+| `sync_journal` | `SyncJournalRecord` | `SyncJournalStore` | Names and push fingerprints only, never values |
 | `imported_share_packages` | `ImportedSharePackageRecord` | `SharePackageStore` | |
 
 ## Transactions

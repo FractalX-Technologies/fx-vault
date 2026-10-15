@@ -289,6 +289,30 @@ struct ExecutorEnvironmentTests {
         #expect(world.vault.environment(environmentID)?.branchPolicy.patterns.first?.isSynced == false)
     }
 
+    /// Recorded in the live E2E run: on a Free-plan private repository the environment PUT
+    /// succeeds and C3 answers `gh: Not Found (HTTP 404)`.
+    @Test func a404OnAPatternPostOfAVisibleRepositoryIsPlanGated() async throws {
+        let github = GitHubSimulator()
+        let scenario = ExecScenario()
+        scenario.syncedEnvironment("production", github: github, policy: .custom([]))
+        let environmentID = scenario.environments[0].id
+        scenario.environments[0].branchPolicy = .custom([
+            BranchPatternModel(environmentID: environmentID, pattern: "release/*", type: .branch),
+        ])
+        let world = ExecWorld(scenario, github: github)
+        github.enqueue(
+            FakeCommandRunner.Response(exitCode: 1, stdout: Data("HTTP/2.0 404 Not Found\r\n\r\n".utf8), stderr: "gh: Not Found (HTTP 404)\n"),
+            matching: GHMatch.api("POST", "deployment-branch-policies")
+        )
+
+        let result = try await world.sync()
+
+        #expect(result.outcome(of: .reconcileBranchPatterns) == .failed(.github(.planGated)))
+        #expect(world.journal(.branchPolicyAdd).first?.errorCode == "planGated")
+        #expect(world.snapshot.repository.isEnvPlanGated)
+        #expect(world.vault.environment(environmentID)?.branchPolicy.patterns.first?.isSynced == false)
+    }
+
     @Test func anIndeterminateEnvironmentDeleteIsConfirmedByB3() async throws {
         let github = GitHubSimulator()
         let (scenario, qa) = tombstoneScenario(github)
@@ -339,9 +363,12 @@ struct ExecutorEnvironmentTests {
         let scenario = ExecScenario()
         let production = scenario.syncedEnvironment("production", github: github)
         scenario.environments[0].branchPolicy = .protectedBranches
-        github.removeEnvironment("production")
-        github.addEnvironment("production", id: 10, foreignRules: [#"{"id":9001,"type":"required_reviewers"}"#])
         let world = ExecWorld(scenario, github: github)
+        // The rules appear on GitHub after preflight's B3, which would otherwise block the PUT.
+        github.afterCall(matching: GHMatch.api("GET", "/environments")) {
+            github.removeEnvironment("production")
+            github.addEnvironment("production", id: 10, foreignRules: [Self.reviewersRule])
+        }
 
         let result = try await world.sync()
 
@@ -349,6 +376,30 @@ struct ExecutorEnvironmentTests {
         #expect(result.warnings.contains(.foreignRulesChanged(environmentID: production.id, name: "production")))
         #expect(world.vault.environment(production.id)?.foreignRulesJSON?.contains("required_reviewers") == true)
     }
+
+    /// C2 sends only the branch policy, and whether GitHub keeps omitted reviewers and wait
+    /// timers is unverified (docs/API.md Q6): the PUT must not run while GitHub lists them.
+    @Test func aPolicyChangeIsBlockedWhileGitHubListsOtherProtectionRules() async throws {
+        let github = GitHubSimulator()
+        let scenario = ExecScenario()
+        scenario.syncedEnvironment("production", github: github)
+        scenario.environments[0].branchPolicy = .protectedBranches
+        github.removeEnvironment("production")
+        github.addEnvironment("production", id: 10, foreignRules: [Self.reviewersRule])
+        let world = ExecWorld(scenario, github: github)
+
+        let preflight = try await world.preflight()
+        let result = try await world.sync()
+
+        #expect(preflight.repositories[0].blocked.map(\.reason) == [.protectionRulesPresent])
+        #expect(preflight.repositories[0].executable.isEmpty)
+        #expect(result.outcome(of: .upsertEnvironment) == .blocked(.protectionRulesPresent))
+        #expect(!github.invocations.contains { GHMatch.api("PUT", "/environments/production")($0.arguments) })
+        #expect(github.environment("production")?.foreignRules == [Self.reviewersRule])
+        #expect(github.environment("production")?.policy == .all)
+    }
+
+    private static let reviewersRule = #"{"id":9001,"type":"required_reviewers"}"#
 
     // MARK: - Guided rename (§7.6)
 
