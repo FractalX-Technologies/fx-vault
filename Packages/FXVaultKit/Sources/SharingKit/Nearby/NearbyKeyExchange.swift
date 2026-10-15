@@ -31,6 +31,10 @@ struct NearbyKeyExchange: Sendable {
 
     let role: NearbyRole
     let purpose: NearbyPurpose
+    /// The version this Mac offers in HELLO (``NearbyPurpose/maxVersion``; tests pin older ones).
+    let maxVersion: UInt8
+    /// `min(maxVerI, maxVerR)` once keys exist: what the session may use (v0.4.0 chat features).
+    private(set) var version: UInt8?
     /// The code and the peer's sanitized name once keys exist. Kept after ``wipe()``.
     private(set) var sas: NearbySASModel?
     private(set) var localConfirmed = false
@@ -47,9 +51,17 @@ struct NearbyKeyExchange: Sendable {
     /// - Parameters:
     ///   - localName: this Mac's display name; sanitized (NFC, ≤ 63 bytes) before sending.
     ///   - keyMaterial: fresh per session; tests inject fixed material.
-    init(role: NearbyRole, purpose: NearbyPurpose, localName: String, keyMaterial: NearbyKeyMaterial) {
+    ///   - maxVersion: the version to offer; nil is the purpose's (tests pin older versions).
+    init(
+        role: NearbyRole,
+        purpose: NearbyPurpose,
+        localName: String,
+        keyMaterial: NearbyKeyMaterial,
+        maxVersion: UInt8? = nil
+    ) {
         self.role = role
         self.purpose = purpose
+        self.maxVersion = maxVersion ?? purpose.maxVersion
         self.localName = Data(DisplayNameSanitizer.sanitize(localName).utf8)
         self.keyMaterial = keyMaterial
     }
@@ -73,20 +85,20 @@ struct NearbyKeyExchange: Sendable {
         guard role == .initiator else { return nil }
         let labels = purpose.labels
         let commitment = NearbyCrypto.commitment(
-            maxVersion: NearbyProtocol.maxVersion,
+            maxVersion: self.maxVersion,
             suite: NearbyProtocol.suite,
             publicKey: keyMaterial.publicKey,
             nonce: keyMaterial.nonce,
             labels: labels
         )
         helloI = HelloInitiator(
-            maxVersion: NearbyProtocol.maxVersion,
+            maxVersion: self.maxVersion,
             suite: NearbyProtocol.suite,
             commitment: commitment,
             name: localName
         )
         return NearbyHandshakeFrame.helloInitiator(
-            maxVersion: NearbyProtocol.maxVersion,
+            maxVersion: self.maxVersion,
             suite: NearbyProtocol.suite,
             commitment: commitment,
             name: localName
@@ -130,7 +142,7 @@ struct NearbyKeyExchange: Sendable {
         guard let keyMaterial else { throw NearbyFailure(.cancelled) }
         helloI = HelloInitiator(maxVersion: maxVersion, suite: suite, commitment: commitment, name: name)
         let frame = NearbyHandshakeFrame.helloResponder(
-            maxVersion: NearbyProtocol.maxVersion,
+            maxVersion: self.maxVersion,
             suite: NearbyProtocol.suite,
             publicKey: keyMaterial.publicKey,
             nonce: keyMaterial.nonce,
@@ -188,8 +200,8 @@ struct NearbyKeyExchange: Sendable {
         let secret = try NearbyCrypto.sharedSecret(privateKey: keyMaterial.privateKey, peerPublicKey: publicKey)
         let transcript = NearbyTranscriptModel(
             maxVersionI: helloI.maxVersion,
-            maxVersionR: NearbyProtocol.maxVersion,
-            version: min(helloI.maxVersion, NearbyProtocol.maxVersion),
+            maxVersionR: maxVersion,
+            version: min(helloI.maxVersion, maxVersion),
             suiteI: helloI.suite,
             suiteR: NearbyProtocol.suite,
             commitment: helloI.commitment,
@@ -217,6 +229,7 @@ struct NearbyKeyExchange: Sendable {
         )
         keys = derived
         keyMaterial = nil
+        version = transcript.version
         let model = NearbySASModel(value: derived.sasValue, peerName: Self.displayName(peerName))
         sas = model
         return model

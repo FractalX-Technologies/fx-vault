@@ -62,38 +62,86 @@ public struct ChatMessageModel: Sendable, Hashable, Identifiable {
     }
 }
 
-/// An attachment offer: one secret or variable, described by names only. Never carries a value.
+/// What an attachment offer holds, by names and counts only.
+public enum ChatAttachmentContentModel: Sendable, Equatable {
+    /// One secret or variable with a value.
+    case item(kind: ConfigKind, name: String, environmentName: String?)
+    /// A whole repository's or environment's configuration (v0.4.0, chat v2).
+    case configuration(ChatConfigurationSummaryModel)
+}
+
+/// The counts a configuration attachment card shows (v0.4.0).
+public struct ChatConfigurationSummaryModel: Sendable, Equatable {
+    /// The environments, in package order.
+    public let environmentNames: [String]
+    public let secretCount: Int
+    public let variableCount: Int
+    /// Secrets the sender has no value for (GitHub never returns one): they travel by name.
+    public let valueMissingCount: Int
+
+    init(_ manifest: SharePackageModel) {
+        environmentNames = manifest.repository.environments.map(\.name)
+        let items = manifest.flattenedItems
+        secretCount = items.filter { $0.kind == .secret }.count
+        variableCount = items.filter { $0.kind == .variable }.count
+        valueMissingCount = items.filter { $0.item.valueState != .present }.count
+    }
+}
+
+/// An attachment offer: one secret or variable, or (v0.4.0) a whole repository's or
+/// environment's configuration, described by names only. Never carries a value.
 public struct ChatAttachmentOfferModel: Sendable, Equatable, Identifiable {
     public let id: ChatAttachmentID
     public let direction: ChatDirection
-    public let kind: ConfigKind
-    /// The item's GitHub name.
-    public let itemName: String
+    public let content: ChatAttachmentContentModel
     /// `owner/name`.
     public let repositoryFullName: String
-    /// Nil for a repository-level item.
-    public let environmentName: String?
-    /// The offered package with every value null (scope `secret`, one item). The receiver can
-    /// preview it with the share import planner before asking for the value.
+    /// The offered package with every value null. The receiver can preview it with the share
+    /// import planner before asking for the values.
     public let manifest: SharePackageModel
 
-    /// Builds the card from a single-item manifest; nil when `manifest` does not hold exactly
-    /// one item. Values in `manifest` are stripped.
+    /// Builds the card from a manifest: one item (scope `secret`) or a configuration (scope
+    /// `repository` or `environment`); nil for a `secret` manifest that does not hold exactly one
+    /// item. Values in `manifest` are stripped.
     public init?(id: ChatAttachmentID, direction: ChatDirection, manifest: SharePackageModel) {
         let manifest = manifest.manifest()
-        guard let located = manifest.flattenedItems.first, manifest.itemCount == 1 else { return nil }
+        switch manifest.scope {
+        case .secret:
+            guard let located = manifest.flattenedItems.first, manifest.itemCount == 1 else { return nil }
+            content = .item(kind: located.kind, name: located.item.name, environmentName: located.environmentName)
+        case .repository, .environment:
+            content = .configuration(ChatConfigurationSummaryModel(manifest))
+        }
         self.id = id
         self.direction = direction
-        kind = located.kind
-        itemName = located.item.name
         repositoryFullName = manifest.repository.fullName
-        environmentName = located.environmentName
         self.manifest = manifest
     }
 
-    /// Repository or environment level.
-    public var level: ConfigScopeLevel {
-        environmentName == nil ? .repository : .environment
+    /// True for a whole repository or environment (v0.4.0).
+    public var isConfiguration: Bool {
+        if case .configuration = content { true } else { false }
+    }
+
+    /// The item's kind; nil for a configuration.
+    public var kind: ConfigKind? {
+        if case .item(let kind, _, _) = content { kind } else { nil }
+    }
+
+    /// The item's GitHub name; nil for a configuration.
+    public var itemName: String? {
+        if case .item(_, let name, _) = content { name } else { nil }
+    }
+
+    /// The item's environment; nil for a repository-level item and for a configuration.
+    public var environmentName: String? {
+        if case .item(_, _, let environmentName) = content { environmentName } else { nil }
+    }
+
+    /// The item's level (repository or environment); nil for a configuration.
+    public var level: ConfigScopeLevel? {
+        guard case .item(_, _, let environmentName) = content else { return nil }
+        return environmentName == nil ? .repository : .environment
     }
 }
 
@@ -119,9 +167,9 @@ public enum NearbyChatEvent: Sendable, Equatable {
     case attachmentDeclined(ChatAttachmentID)
     /// This Mac's offer was requested and its payload sent.
     case attachmentSent(ChatAttachmentID)
-    /// The requested payload, with its one value as ``SecretBytes``. Validated and identical to
-    /// the offer apart from the value. The caller previews and merges it through the share
-    /// import planner, re-encrypts it into the vault and then calls ``SharePackageModel/wipeValues()``.
+    /// The requested payload, with its values as ``SecretBytes``. Validated and identical to the
+    /// offer apart from the values. The caller previews and merges it through the share import
+    /// planner, re-encrypts it into the vault and then calls ``SharePackageModel/wipeValues()``.
     case attachmentReceived(ChatAttachmentID, SharePackageModel)
     /// The peer closed a verified chat.
     case peerClosed
@@ -141,9 +189,12 @@ public enum ChatError: Error, Sendable, Hashable {
     case messageTooLarge
     /// No open attachment has this id, or it is not in a state that allows the action.
     case unknownAttachment
-    /// The manifest is not exactly one secret or variable with a value (scope `secret`), or it
-    /// breaks a share validator rule.
+    /// The manifest is not one secret or variable with a value (scope `secret`) nor, in a chat
+    /// v2, a configuration (scope `repository` or `environment`), or it breaks a share validator
+    /// rule.
     case invalidAttachment
+    /// The peer runs FX Vault 0.3 or earlier (chat v1): it cannot receive a configuration.
+    case peerNeedsUpdate
     /// ``Limits/chatMaxOpenAttachments`` offers are already open.
     case tooManyAttachments
     /// The payload is larger than ``Limits/chatAttachmentBytes``.
@@ -153,3 +204,8 @@ public enum ChatError: Error, Sendable, Hashable {
 /// Supplies the value of an offered attachment when the peer asks for it. It runs only after a
 /// request; the session copies the value into the payload and wipes the returned buffer.
 public typealias ChatAttachmentValueProvider = @Sendable () async throws -> SecretBytes
+
+/// Supplies the payload of an offered configuration when the peer asks for it (v0.4.0): the
+/// offered manifest with its values. It runs only after a request and must return a package
+/// whose manifest equals the offer; the session sends it and wipes its values.
+public typealias ChatConfigurationPayloadProvider = @Sendable () async throws -> SharePackageModel

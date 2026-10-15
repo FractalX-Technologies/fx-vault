@@ -313,7 +313,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   dashed `hairlineStrong` row.
 - Detail (`ground`, insets 28 top / 36 sides, 20 between blocks): `Banner`s first; then
   `SectionLabel("Environment")` + `.largeTitle` name + `StatusChip.tag`s + branch patterns in
-  `.monoMeta`, with outline/secondary actions on the right; the `SegmentedPill`
+  `.monoMeta`, with outline/secondary actions on the right (Clone, Refresh, and since v0.4.0
+  the scope's actions menu as an outline `ellipsis` circle); the `SegmentedPill`
   (Secrets / Variables) with outline + primary actions; the table with `.fxTable()`.
 - Dark appearance and offline are the same layout (MainDark): only tokens change; offline adds
   `Banner(.offline)` and disables the Sync pill.
@@ -323,6 +324,11 @@ foreground color, so `.primary` text still turns white on selected rows.
   width, where a wrapped empty-state message is about 1,000 pt tall; the split view then
   outgrew the window and was centered in it, so the sidebar's first rows sat under the traffic
   lights and its footer fell below the window. A column scrolls or centers its own content.
+- With two or more rows selected (v0.4.0), the add actions give their place to the selection's:
+  "N selected" in `.monoMeta` `mutedText`, Copy To (an outline pill menu with a chevron), Push on
+  Next Sync and Revert as outline pills when some rows allow them, Delete… as an outline pill
+  (the destructive style stays for the dialog's final confirm), and Deselect as an outline
+  circle.
 - The detail fits its narrowest column (`Theme.Layout.detailMinWidth`): Clone and Refresh move
   under the title, the tags stack, and the add actions move under the Secrets / Variables pill
   when a row does not fit (`ViewThatFits`); the table scrolls sideways inside its card. Nothing
@@ -392,6 +398,17 @@ Failures use `Banner(.danger)`.
   The composer is an `.fxInputField(.rounded)` editor with a ghost Attach and a primary Send.
   Attachment cards are `Card`s with the kind as a `SectionLabel`, the name in `.mono`, and Save
   (primary) / Dismiss (ghost).
+- Repositories in chat (v0.4.0): the attachment picker switches Secret or Variable / Whole
+  Repository with a `SegmentedPill`; repository rows show the `book.closed` symbol, the
+  `owner/name` in `.monoName` and "1 environment · 4 items" as a caption (automatic grammar
+  agreement, `inflect: true`). With an older peer the tab shows a `SheetCallout` instead. A
+  repository card uses the `REPOSITORY` label, `book.closed`, the counts line in `.monoMeta`, and
+  Import Into… (primary), Save as File… (secondary) and Dismiss (ghost). Import Into… first lists
+  the receiver's repositories in `.shareListContainer()`; a repository that cannot be chosen is
+  `.selectionDisabled` with the capability chip text ("Read-only: admin required") as a caption
+  and its explanation as help, and the sender's own `owner/name` says "Same as the sender's".
+  Save as File… is the Share as File sheet titled "Save as File" with "Received in Nearby Chat"
+  as its scope label.
 
 ## Do and don't
 

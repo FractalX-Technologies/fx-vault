@@ -26,6 +26,8 @@ final class ClipboardManager {
 
     /// `changeCount` right after our last write, or nil when we own nothing.
     private var ownedChangeCount: Int?
+    /// `changeCount` right after the last ``copyItemNames(_:)``.
+    private var itemNamesChangeCount: Int?
     /// The scheduled clear for the last copy. Internal so tests can await it.
     private(set) var pendingClear: Task<Void, Never>?
 
@@ -81,6 +83,32 @@ final class ClipboardManager {
             AppLog.ui.error("Pasteboard write failed")
             return
         }
+    }
+
+    /// ⌘C on the detail table (v0.4.0): the copied items' names, one per line, with the
+    /// Transient and source markers so clipboard managers skip them; never values. The items
+    /// stay in the app, and a paste in FX Vault pastes them while ``holdsItemNames`` is true.
+    func copyItemNames(_ names: [String]) {
+        pendingClear?.cancel()
+        pendingClear = nil
+        ownedChangeCount = nil
+        pasteboard.prepareForNewContents(with: .currentHostOnly)
+        let item = NSPasteboardItem()
+        item.setString(names.joined(separator: "\n"), forType: .string)
+        item.setData(Data(), forType: Marker.transient)
+        item.setString(Marker.sourceIdentifier, forType: Marker.source)
+        guard pasteboard.writeObjects([item]) else {
+            itemNamesChangeCount = nil
+            AppLog.ui.error("Pasteboard write failed")
+            return
+        }
+        itemNamesChangeCount = pasteboard.changeCount
+    }
+
+    /// True while the pasteboard still holds the last ``copyItemNames(_:)`` (judged by
+    /// `changeCount` only: anything copied since, in any app, makes it false).
+    var holdsItemNames: Bool {
+        itemNamesChangeCount == pasteboard.changeCount
     }
 
     /// Clears the pasteboard if it still holds our last copy (lock, terminate, timer).

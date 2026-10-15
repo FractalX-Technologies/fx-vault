@@ -24,8 +24,10 @@ struct ShareExportScreen: View {
         @Bindable var viewModel = viewModel
         VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
             SheetHeader(
-                label: ShareSheetLabel.share,
-                title: String(localized: "shareExport.title", defaultValue: "Share as File"),
+                label: viewModel.isFromChat ? ShareSheetLabel.nearbyChat : ShareSheetLabel.share,
+                title: viewModel.isFromChat
+                    ? String(localized: "shareExport.chat.title", defaultValue: "Save as File")
+                    : String(localized: "shareExport.title", defaultValue: "Share as File"),
                 subtitle: String(
                     localized: "shareExport.subtitle",
                     defaultValue: "An encrypted .fxvault file that only opens with its six-word passphrase."
@@ -67,7 +69,9 @@ struct ShareExportScreen: View {
 
     private var scopeStep: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            SectionLabel(String(localized: "shareExport.scope.title", defaultValue: "What to share"))
+            SectionLabel(viewModel.isFromChat
+                ? String(localized: "shareExport.chat.scope.title", defaultValue: "Received in Nearby Chat")
+                : String(localized: "shareExport.scope.title", defaultValue: "What to share"))
             if let tree = viewModel.tree {
                 ShareScopeTreeView(tree: tree) { checked, node in
                     viewModel.setChecked(checked, for: node)

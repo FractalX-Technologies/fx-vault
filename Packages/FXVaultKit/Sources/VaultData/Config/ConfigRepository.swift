@@ -218,6 +218,116 @@ public struct ConfigRepository: Sendable {
         Self.log.info("Push on next Sync requested for one secret")
     }
 
+    // MARK: - Several items (v0.4.0)
+
+    /// Deletes several items of one repository in one transaction: unsynced items are removed,
+    /// synced ones become tombstones that the next Sync deletes on GitHub after the deletion
+    /// review (§7.5). Nothing is written when one of them cannot be deleted.
+    public func deleteItems(_ ids: [ConfigItemID], repositoryID: RepoID) throws(ConfigRepositoryError) {
+        try batch(repositoryID: repositoryID) { batch in
+            for id in ids {
+                try batch.delete(id)
+            }
+        }
+        Self.log.info("Deleted \(ids.count, privacy: .public) items")
+    }
+
+    /// Reverts several items of one repository in one transaction (``revertItem(_:)`` for each).
+    /// Nothing is written when one of them cannot be reverted.
+    public func revertItems(_ ids: [ConfigItemID], repositoryID: RepoID) throws(ConfigRepositoryError) {
+        try batch(repositoryID: repositoryID) { batch in
+            for id in ids {
+                try batch.revert(id)
+            }
+        }
+        Self.log.info("Reverted \(ids.count, privacy: .public) items")
+    }
+
+    /// Push on Next Sync for several secrets of one repository in one transaction
+    /// (``requestPush(_:)`` for each). Nothing is written when one of them does not apply.
+    public func requestPush(_ ids: [ConfigItemID], repositoryID: RepoID) throws(ConfigRepositoryError) {
+        try batch(repositoryID: repositoryID) { batch in
+            for id in ids {
+                try batch.requestPush(id)
+            }
+        }
+        Self.log.info("Push on next Sync requested for \(ids.count, privacy: .public) secrets")
+    }
+
+    // MARK: - Copy between scopes (v0.4.0)
+
+    /// The names among `ids` that `scope` already holds (same kind, not deleted): the copy asks
+    /// whether to replace or keep those items. Deleted and missing ids are ignored here.
+    public func copyConflicts(
+        _ ids: [ConfigItemID],
+        to scope: ConfigScope,
+        repositoryID: RepoID
+    ) throws(ConfigRepositoryError) -> [String] {
+        try performConfig {
+            let targets = try store.fetchItemRecords(repositoryID: repositoryID, scope: scope).filter { !$0.isDeleted }
+            let taken = Set(targets.map { TargetKey(kind: $0.kind, name: GitHubNameValidator.foldKey($0.name)) })
+            return try ids.compactMap { id in
+                guard let source = try store.fetchItemRecord(id: id),
+                      !source.isDeleted,
+                      source.scope != scope,
+                      taken.contains(TargetKey(kind: source.kind, name: GitHubNameValidator.foldKey(source.name)))
+                else { return nil }
+                return source.name
+            }
+        }
+    }
+
+    /// Copies items of a repository into another of its scopes (repository level ↔ environments,
+    /// environment ↔ environment) in one transaction: each becomes a pending add there with its
+    /// value re-encrypted for its new row, or, when the target already has the name, replaces
+    /// that item's value or keeps it (`conflicts`). Secrets without a value are not copied (they
+    /// are listed in the result). Nothing is written when one of them fails (an edit the account
+    /// may not make, a full scope).
+    @discardableResult
+    public func copyItems(
+        _ ids: [ConfigItemID],
+        to scope: ConfigScope,
+        repositoryID: RepoID,
+        conflicts: ItemCopyConflictPolicy
+    ) throws(ConfigRepositoryError) -> ItemCopyResultModel {
+        let result = try batch(repositoryID: repositoryID) { batch in
+            try batch.requireEditable(scope)
+            var result = ItemCopyResultModel()
+            for id in ids {
+                guard let source = batch.row(id), !source.isDeleted else {
+                    throw ConfigRepositoryError.itemNotFound
+                }
+                guard source.scope != scope else { continue }
+                guard let value = try batch.storedValue(of: id) else {
+                    result.withoutValue.append(source.name)
+                    continue
+                }
+                defer { value.wipe() }
+                if let existing = batch.liveRow(scope: scope, kind: source.kind, name: source.name) {
+                    switch conflicts {
+                    case .keep:
+                        result.kept += 1
+                    case .replace:
+                        try batch.editValue(existing.id, value: value)
+                        result.replaced += 1
+                    }
+                } else {
+                    try batch.add(scope: scope, kind: source.kind, name: source.name, value: value)
+                    result.added += 1
+                }
+            }
+            return result
+        }
+        Self.log.info("Copied \(result.added + result.replaced, privacy: .public) items to another scope")
+        return result
+    }
+
+    /// The kind and folded name a copy target is matched on.
+    private struct TargetKey: Hashable {
+        let kind: ConfigKind
+        let name: String
+    }
+
     /// "Convert to variable / Move to…" (D11): the item moves to `kind` and `scope` as a new row
     /// (or a revived tombstone there) and the source row is deleted. The app confirms a
     /// secret→variable conversion first (§5.13). A value-missing secret cannot become a

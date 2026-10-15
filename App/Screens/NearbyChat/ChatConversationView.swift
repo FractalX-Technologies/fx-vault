@@ -140,7 +140,8 @@ private struct ChatBubbleView: View {
     }
 }
 
-/// The message field, the remaining length, "Attach secret or variable…" and Send (⌘↩).
+/// The message field, the remaining length, "Attach…" (a secret, a variable or, since v0.4.0, a
+/// whole repository) and Send (⌘↩).
 private struct ChatComposerView: View {
     let viewModel: NearbyChatViewModel
     @FocusState private var isFocused: Bool
@@ -172,15 +173,15 @@ private struct ChatComposerView: View {
                     viewModel.attach()
                 } label: {
                     Label(
-                        String(localized: "chat.attach", defaultValue: "Attach secret or variable…"),
+                        String(localized: "chat.attach.any", defaultValue: "Attach…"),
                         systemImage: "paperclip"
                     )
                 }
                 .fxButtonStyle(.ghost)
                 .disabled(!viewModel.canAttach)
                 .help(String(
-                    localized: "chat.attach.help",
-                    defaultValue: "Asks for Touch ID or your master password, then sends the name only. The value is sent only if your teammate saves it."
+                    localized: "chat.attach.any.help",
+                    defaultValue: "Attach a secret, a variable or a whole repository. Asks for Touch ID or your master password, then sends names only. Values are sent only if your teammate saves them."
                 ))
                 Spacer()
                 Text(String(

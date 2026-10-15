@@ -3,6 +3,38 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.4.0
+
+### Added
+
+- **Act on several secrets or variables at once.** Select rows with ⌘-click or ⇧-click, or all
+  of them with ⌘A. With two or more selected, the bar above the table shows how many and offers
+  Push on Next Sync and Revert (for the rows they apply to) and Delete…; the context menu offers
+  the same, and ⌫ deletes the selection. One confirmation covers them all: rows on GitHub are
+  deleted there by the next Sync, after you confirm them in its deletion review, and rows never
+  synced are removed at once. A scope your account can only read offers none of these.
+- **Copy and paste between the repository level and environments.** Select secrets or variables
+  and press ⌘C, open another scope of the same repository and press ⌘V, or choose **Copy To ›**
+  in the context menu or the selection bar. The copies are changes for the next Sync. When the
+  target already has a name, FX Vault asks whether to replace its value or keep it. Values never
+  leave the vault: the clipboard gets only the names. Secrets that have no value in FX Vault
+  (GitHub never returns secret values) are not copied, and FX Vault names them.
+- **Environment actions next to Clone and Refresh.** The ••• button in the header offers the
+  open environment's Settings, Rename, Duplicate, Export .env, Share, Revert and Delete (and
+  Export .env and Share for the repository level), as the right-click menu of the scope list
+  does. **New Environment** stays at the bottom of the scope list. Actions that need admin
+  access on the repository are shown disabled for other accounts.
+- **Send a whole repository in Nearby Chat.** Attach… › Whole Repository sends a repository's
+  configuration (the repository level and every environment with its branch rules) as one card,
+  after Touch ID or your master password. Your teammate sees its name and counts; the values
+  travel only if they choose **Import Into…**, which lets them pick any of their repositories
+  and review everything in the usual import preview (environments it lacks are created, and
+  nothing reaches GitHub before their next Sync), or **Save as File…**, which writes an
+  encrypted `.fxvault` file with a new six-word passphrase that they can still import
+  afterwards. Repositories their account cannot change are listed with the reason. If anything
+  in the repository changes after you attach it, nothing is sent. Both Macs need FX Vault 0.4
+  or later; chatting and sending one secret or variable with 0.2 or 0.3 work as before.
+
 ## 0.3.2
 
 ### Fixed

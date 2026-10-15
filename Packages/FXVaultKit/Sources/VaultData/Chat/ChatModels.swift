@@ -32,6 +32,26 @@ public struct ChatAttachableItemModel: Sendable, Hashable, Identifiable {
     }
 }
 
+/// A repository whose whole configuration can be attached to a nearby chat (v0.4.0): names and
+/// counts only; the values are decrypted only when the peer asks for them
+/// (``NearbyChatConversation/offerRepository(_:senderName:appVersion:authorization:)``).
+public struct ChatAttachableRepositoryModel: Sendable, Hashable, Identifiable {
+    public let id: RepoID
+    /// `owner/name`.
+    public let fullName: String
+    /// Environments that are not deleted.
+    public let environmentCount: Int
+    /// Secrets and variables that are not deleted, values or not.
+    public let itemCount: Int
+
+    public init(id: RepoID, fullName: String, environmentCount: Int, itemCount: Int) {
+        self.id = id
+        self.fullName = fullName
+        self.environmentCount = environmentCount
+        self.itemCount = itemCount
+    }
+}
+
 /// Why a nearby chat action failed. Typed and without text: the app maps it to a message.
 public enum NearbyChatError: Error, Sendable, Hashable {
     /// The chat session refused (phase, size, unknown attachment, ...).

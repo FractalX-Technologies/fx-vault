@@ -126,6 +126,7 @@ final class FakeChatNetwork: NearbyChatNetworking {
 struct NearbyChatViewModelTests {
     static let nameA = "Mac A"
     static let nameB = "Mac B"
+    static let repository = "\(TestFixtures.owner)/\(TestFixtures.repoName)"
 
     @MainActor
     struct Fixture {
@@ -139,13 +140,17 @@ struct NearbyChatViewModelTests {
         let macA: NearbyChatViewModel
         /// Mac B (the receiver vault): advertises and is connected to.
         let macB: NearbyChatViewModel
+        /// Mac B's "Save as File…" save panel.
+        let fileDelivery: FakeShareFileDelivery
 
         init() async throws {
             world = try await SharingWorld()
             let initiator = RecordingTransport(pair.initiator)
             let responder = RecordingTransport(pair.responder)
+            let fileDelivery = FakeShareFileDelivery()
             self.initiator = initiator
             self.responder = responder
+            self.fileDelivery = fileDelivery
             networkA = FakeChatNetwork(serviceName: NearbyChatViewModelTests.nameA, connect: { initiator })
             networkB = FakeChatNetwork(serviceName: NearbyChatViewModelTests.nameB, connect: { nil }, advertisements: [responder])
             macA = NearbyChatViewModel(
@@ -158,7 +163,8 @@ struct NearbyChatViewModelTests {
                 app: world.receiver.app,
                 dependencies: world.receiverDependencies(),
                 network: networkB,
-                identity: ShareLocalIdentityModel(displayName: NearbyChatViewModelTests.nameB, appVersion: "1.0.0")
+                identity: ShareLocalIdentityModel(displayName: NearbyChatViewModelTests.nameB, appVersion: "1.0.0"),
+                makeFileDelivery: { fileDelivery }
             )
         }
 
@@ -200,6 +206,49 @@ struct NearbyChatViewModelTests {
             let macB = macB
             #expect(await TestFixtures.eventually { !macB.cards.isEmpty })
             return try #require(macB.cards.keys.first)
+        }
+
+        /// A attaches its whole repository (v0.4.0); returns the id of B's new card.
+        func attachRepository() async throws -> ChatAttachmentID {
+            let known = Set(macB.cards.keys)
+            macA.attach()
+            let picker = try #require(macA.picker)
+            await picker.begin()
+            picker.reauth.password = testPassword
+            await picker.authenticateWithPassword()
+            picker.mode = .repository
+            picker.selectedRepositoryID = world.senderRepositoryID
+            await picker.send()
+            let macB = macB
+            #expect(await TestFixtures.eventually { macB.cards.keys.contains { !known.contains($0) } })
+            return try #require(macB.cards.keys.first { !known.contains($0) })
+        }
+
+        /// B chooses "Save as File…" on the repository card `id` and saves it through the fake
+        /// save panel; returns the file and its passphrase.
+        func saveRepositoryAsFile(_ id: ChatAttachmentID) async throws -> (url: URL, passphrase: String) {
+            await macB.handleConfiguration(id, .saveAsFile)
+            let macB = macB
+            #expect(await TestFixtures.eventually { macB.fileSheet != nil })
+            let sheet = try #require(macB.fileSheet)
+            #expect(sheet.isFromChat)
+            #expect(macB.cards[id]?.status == .savingToFile)
+            await sheet.start()
+            #expect(sheet.preview?.itemCount == 4)
+            sheet.reauth.password = testPassword
+            await sheet.authenticateWithPassword()
+            #expect(sheet.canCreate)
+            await sheet.createShareFile()
+            let passphrase = try #require(sheet.passphrase)
+            sheet.hasSavedPassphrase = true
+            let destination = world.receiver.sandbox.appendingPathComponent("Received-\(UUID().uuidString).fxvault")
+            fileDelivery.saveDestination = destination
+            await sheet.saveToFile()
+            #expect(sheet.savedFileURL == destination)
+            macB.fileSheetDismissed()
+            #expect(macB.fileSheet == nil)
+            #expect(sheet.passphrase == nil)
+            return (destination, passphrase)
         }
 
         func close() {
@@ -633,6 +682,265 @@ struct NearbyChatViewModelTests {
         #expect(macB.saveSheet == nil)
         #expect(try await fixture.world.receiverValue("NEW_SECRET", kind: .secret) == nil)
         fixture.close()
+    }
+
+    // MARK: - Repositories (v0.4.0)
+
+    @Test func aWholeRepositoryIsOfferedByNamesAndCounts() async throws {
+        let fixture = try await Fixture()
+        try await fixture.chat()
+        let macA = fixture.macA
+        let macB = fixture.macB
+        #expect(macA.peerAcceptsRepositories)
+        #expect(macB.peerAcceptsRepositories)
+
+        macA.attach()
+        let picker = try #require(macA.picker)
+        #expect(picker.acceptsRepositories)
+        picker.reauth.password = testPassword
+        await picker.authenticateWithPassword()
+        picker.mode = .repository
+        let listed = try #require(picker.matchingRepositories.first)
+        #expect(picker.matchingRepositories.map(\.fullName) == [Self.repository])
+        #expect(listed.environmentCount == 1)
+        #expect(listed.itemCount == 4)
+        #expect(!picker.canSend)
+        picker.selectedRepositoryID = fixture.world.senderRepositoryID
+        // An item chosen in the other tab does not change what Attach sends.
+        picker.selectedID = picker.items.first?.id
+        #expect(picker.choice == .repository(listed))
+        #expect(picker.canSend)
+        await picker.send()
+        #expect(macA.picker == nil)
+        let sent = try #require(macA.sentCards.first)
+        #expect(sent.offer.isConfiguration)
+        #expect(sent.status == .awaitingPeer)
+
+        #expect(await TestFixtures.eventually { !macB.cards.isEmpty })
+        let card = try #require(macB.cards.values.first)
+        guard case .configuration(let summary) = card.offer.content else {
+            Issue.record("expected a repository card")
+            return
+        }
+        #expect(card.offer.repositoryFullName == Self.repository)
+        #expect(summary.environmentNames == [SharingWorld.environment])
+        #expect(summary.secretCount == 3)
+        #expect(summary.variableCount == 1)
+        #expect(summary.valueMissingCount == 0)
+        #expect(card.isAwaitingDecision)
+        #expect(!textDump(macA.cards, macB.cards, macB.entries).contains(SharingWorld.secretValue))
+        fixture.close()
+    }
+
+    @Test func importIntoAsksWhichRepositoryThenRunsThePreview() async throws {
+        let fixture = try await Fixture()
+        let receiver = fixture.world.receiver
+        let otherID = try await receiver.stageRepository(name: "other-repo")
+        try await fixture.chat()
+        let id = try await fixture.attachRepository()
+        let macA = fixture.macA
+        let macB = fixture.macB
+
+        await macB.handleConfiguration(id, .importInto)
+        #expect(await TestFixtures.eventually { macB.saveSheet != nil })
+        #expect(await TestFixtures.eventually { macA.sentCards.first?.status == .sent })
+        let sheet = try #require(macB.saveSheet)
+        #expect(macB.cards[id]?.status == .reviewing)
+        #expect(sheet.isConfiguration)
+        #expect(sheet.step == .choosingTarget)
+        #expect(sheet.targets.map(\.fullName) == [Self.repository, "\(TestFixtures.owner)/other-repo"])
+        // The sender's repository is preselected when this vault has it.
+        #expect(sheet.selectedTargetID == fixture.world.receiverRepositoryID)
+        // The sheet appearing does not plan anything before Continue.
+        await sheet.prepare()
+        #expect(sheet.step == .choosingTarget)
+        #expect(sheet.editor == nil)
+
+        sheet.selectedTargetID = otherID
+        #expect(sheet.canChooseTarget)
+        await sheet.importIntoSelectedTarget()
+        #expect(sheet.step == .preview)
+        let editor = try #require(sheet.editor)
+        #expect(sheet.repositoryFullName == "\(TestFixtures.owner)/other-repo")
+        #expect(Set(editor.plan.allItems.map(\.key.name)) == ["API_TOKEN", "NEW_SECRET", "BASE_URL", "DEPLOY_KEY"])
+        #expect(editor.plan.allItems.allSatisfy { $0.chip == .new })
+        #expect(editor.plan.environments.map(\.createsEnvironment) == [true])
+        #expect(!textDump(editor.plan, macB.cards, macB.entries).contains(SharingWorld.secretValue))
+        #expect(editor.canApply)
+
+        await sheet.apply()
+        #expect(sheet.step == .done)
+        sheet.finish()
+        #expect(macB.saveSheet == nil)
+        #expect(macB.cards[id]?.status == .saved)
+
+        let repositoryItems = try await fixture.world.items(of: receiver, repositoryID: otherID, scope: .repository)
+        #expect(Set(repositoryItems.map(\.name)) == ["API_TOKEN", "NEW_SECRET", "BASE_URL"])
+        let token = try #require(repositoryItems.first { $0.name == "API_TOKEN" })
+        let value = try receiver.data.config.reveal(token.id)
+        defer { value.wipe() }
+        #expect(value.utf8String() == SharingWorld.secretValue)
+        let production = try fixture.world.environmentScope(in: receiver, repositoryID: otherID)
+        #expect(try await fixture.world.items(of: receiver, repositoryID: otherID, scope: production).map(\.name) == ["DEPLOY_KEY"])
+        // This vault's copy of the sender's repository is untouched.
+        #expect(try await fixture.world.receiverValue("API_TOKEN", kind: .secret) == SharingWorld.receiverSecretValue)
+        #expect(try await fixture.world.receiverValue("NEW_SECRET", kind: .secret) == nil)
+        fixture.close()
+    }
+
+    @Test func saveAsFileWritesAnEncryptedFileAndTheRepositoryCanStillBeImported() async throws {
+        let fixture = try await Fixture()
+        try await fixture.chat()
+        let id = try await fixture.attachRepository()
+        let macB = fixture.macB
+
+        let file = try await fixture.saveRepositoryAsFile(id)
+        #expect(macB.cards[id]?.status == .savedToFile)
+        #expect(macB.cards[id]?.hasSavedFile == true)
+        #expect(macB.cards[id]?.canReview == true)
+        #expect(!textDump(macB.cards, macB.entries).contains(file.passphrase))
+        #expect(!textDump(macB.cards, macB.entries).contains(SharingWorld.secretValue))
+
+        // The file opens with its passphrase and keeps the sender's name.
+        let sharing = fixture.world.receiver.data.sharing
+        let opened = try await sharing.openFile(try sharing.readFile(at: file.url), passphrase: file.passphrase, checkGitHub: false)
+        #expect(opened.manifest.flattenedItems.count == 4)
+        #expect(opened.manifest.repository.fullName == Self.repository)
+        #expect(opened.manifest.sender.displayName == Self.nameA)
+        opened.discard()
+
+        // Then Import Into… this vault's copy of the sender's repository.
+        await macB.handleConfiguration(id, .importInto)
+        let sheet = try #require(macB.saveSheet)
+        #expect(sheet.selectedTargetID == fixture.world.receiverRepositoryID)
+        await sheet.importIntoSelectedTarget()
+        let editor = try #require(sheet.editor)
+        #expect(editor.plan.allItems.first { $0.key.name == "API_TOKEN" }?.chip == .differs)
+        #expect(editor.plan.allItems.first { $0.key.name == "BASE_URL" }?.chip == .same)
+        #expect(editor.canApply)
+        await sheet.apply()
+        #expect(sheet.step == .done)
+        sheet.finish()
+        #expect(macB.cards[id]?.status == .saved)
+        #expect(try await fixture.world.receiverValue("NEW_SECRET", kind: .secret) == SharingWorld.secretValue)
+        fixture.close()
+    }
+
+    @Test func closingSaveAsFileOrCancellingTheImportSaysWhatIsLeft() async throws {
+        let fixture = try await Fixture()
+        try await fixture.chat()
+        let id = try await fixture.attachRepository()
+        let macB = fixture.macB
+
+        // Save as File… closed before Save: the values are still here.
+        await macB.handleConfiguration(id, .saveAsFile)
+        #expect(await TestFixtures.eventually { macB.fileSheet != nil })
+        macB.fileSheetDismissed()
+        #expect(macB.cards[id]?.status == .readyToSave)
+        #expect(macB.cards[id]?.hasSavedFile == false)
+
+        // Saved once, then a second Save as File… closed without saving keeps "saved as a file".
+        _ = try await fixture.saveRepositoryAsFile(id)
+        await macB.handleConfiguration(id, .saveAsFile)
+        macB.fileSheetDismissed()
+        #expect(macB.cards[id]?.status == .savedToFile)
+
+        // Import Into… cancelled at the repository choice: nothing was planned, the values stay.
+        await macB.handleConfiguration(id, .importInto)
+        let chooser = try #require(macB.saveSheet)
+        #expect(chooser.step == .choosingTarget)
+        chooser.finish()
+        #expect(macB.saveSheet == nil)
+        #expect(macB.cards[id]?.status == .savedToFile)
+        #expect(macB.cards[id]?.canSaveAsFile == true)
+
+        // Import Into… cancelled at the preview: nothing imported, the values here are wiped, the
+        // file stays.
+        await macB.handleConfiguration(id, .importInto)
+        let sheet = try #require(macB.saveSheet)
+        await sheet.importIntoSelectedTarget()
+        #expect(sheet.step == .preview)
+        sheet.finish()
+        #expect(macB.cards[id]?.status == .notSaved)
+        #expect(macB.cards[id]?.hasSavedFile == true)
+        #expect(macB.cards[id]?.canSaveAsFile == false)
+        #expect(try await fixture.world.receiverValue("NEW_SECRET", kind: .secret) == nil)
+        fixture.close()
+    }
+
+    @Test func aRepositoryThatArrivesWhileAnotherSheetIsOpenWaitsOnItsCard() async throws {
+        let fixture = try await Fixture()
+        try await fixture.chat()
+        let first = try await fixture.attachRepository()
+        let second = try await fixture.attachRepository()
+        let macB = fixture.macB
+
+        await macB.handleConfiguration(first, .saveAsFile)
+        #expect(await TestFixtures.eventually { macB.fileSheet != nil })
+        await macB.handleConfiguration(second, .importInto)
+        #expect(await TestFixtures.eventually { macB.cards[second]?.status == .readyToSave })
+        #expect(macB.saveSheet == nil, "one sheet at a time")
+
+        macB.fileSheetDismissed()
+        await macB.handleConfiguration(second, .importInto)
+        #expect(macB.saveSheet?.id == second)
+        fixture.close()
+    }
+
+    @Test func aTeammateOnAnOlderVersionCannotBeSentARepository() async throws {
+        let world = try await SharingWorld()
+        let picker = ChatAttachmentPickerViewModel(dependencies: world.senderDependencies(), acceptsRepositories: false) { _, _ in
+            Issue.record("nothing may be offered")
+        }
+        picker.reauth.password = testPassword
+        await picker.authenticateWithPassword()
+        picker.mode = .repository
+        picker.selectedRepositoryID = world.senderRepositoryID
+        #expect(picker.selectedRepository != nil)
+        #expect(picker.choice == nil)
+        #expect(!picker.canSend)
+        await picker.send()
+        #expect(picker.step == .choosing)
+        // One item still goes.
+        picker.mode = .item
+        picker.selectedID = picker.items.first?.id
+        #expect(picker.canSend)
+        picker.close()
+    }
+
+    /// Bryan: some accounts lack access to some things. A repository this account cannot change
+    /// is listed with the reason and cannot be chosen.
+    @Test func importTargetsSayWhyARepositoryCannotBeChosen() {
+        func repository(_ name: String, admin: Bool = true, push: Bool = true, archived: Bool = false) -> RepoModel {
+            RepoModel(
+                accountLogin: TestFixtures.account,
+                githubID: "R_\(name)",
+                ownerLogin: TestFixtures.owner,
+                ownerType: .organization,
+                name: name,
+                visibility: .private,
+                isArchived: archived,
+                hasAdmin: admin,
+                hasPush: push,
+                origin: .imported,
+                importedAt: ManualClock.defaultStart
+            )
+        }
+        let sender = Self.repository.uppercased()
+        let admin = ChatImportTargetModel(repository: repository(TestFixtures.repoName), senderFullName: sender, hasEnvironments: true)
+        #expect(admin.isEditable)
+        #expect(admin.isSenderRepository)
+
+        let write = repository("write-access", admin: false)
+        #expect(ChatImportTargetModel(repository: write, senderFullName: sender, hasEnvironments: true).readOnlyReason == .adminRequired)
+        #expect(ChatImportTargetModel(repository: write, senderFullName: sender, hasEnvironments: false).readOnlyReason == .adminRequired)
+        let read = repository("read-access", admin: false, push: false)
+        #expect(ChatImportTargetModel(repository: read, senderFullName: sender, hasEnvironments: false).readOnlyReason == .adminRequired)
+
+        let archived = ChatImportTargetModel(repository: repository("archived", archived: true), senderFullName: sender, hasEnvironments: false)
+        #expect(archived.readOnlyReason == .archived)
+        #expect(!archived.isEditable)
+        #expect(!archived.isSenderRepository)
     }
 
     // MARK: - Wipe

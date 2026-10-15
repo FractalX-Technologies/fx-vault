@@ -48,20 +48,42 @@ struct RepoDetailScreen: View {
         }
         .errorAlert($viewModel.alert)
         .confirmationDialog(
-            String(localized: "main.detail.delete.title", defaultValue: "Delete this item?"),
+            viewModel.pendingDeletion?.title ?? "",
             isPresented: deletionBinding,
             titleVisibility: .visible,
             presenting: viewModel.pendingDeletion
-        ) { _ in
-            Button(String(localized: "main.detail.delete.confirm", defaultValue: "Delete"), role: .destructive) {
+        ) { deletion in
+            Button(deletion.confirmTitle, role: .destructive) {
                 viewModel.confirmDeletion()
             }
-        } message: { row in
-            Text(String(
-                localized: "main.detail.delete.message",
-                defaultValue: "\(row.name) is deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
-            ))
+        } message: { deletion in
+            Text(deletion.message)
         }
+        .confirmationDialog(
+            viewModel.pendingCopy?.title ?? "",
+            isPresented: copyBinding,
+            titleVisibility: .visible,
+            presenting: viewModel.pendingCopy
+        ) { request in
+            Button(request.replaceTitle) {
+                viewModel.confirmCopy(replacing: true)
+            }
+            Button(String(localized: "main.detail.copy.conflict.keep", defaultValue: "Keep Existing")) {
+                viewModel.confirmCopy(replacing: false)
+            }
+            Button(String(localized: "main.detail.copy.conflict.cancel", defaultValue: "Cancel"), role: .cancel) {
+                viewModel.pendingCopy = nil
+            }
+        } message: { request in
+            Text(request.message)
+        }
+    }
+
+    private var copyBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.pendingCopy != nil },
+            set: { if !$0 { viewModel.pendingCopy = nil } }
+        )
     }
 
     private var deletionBinding: Binding<Bool> {
@@ -73,7 +95,8 @@ struct RepoDetailScreen: View {
 }
 
 /// The Secrets | Variables pill with the add actions on its right, or under it when the column is
-/// too narrow for one row, so the actions never spill under the scope column.
+/// too narrow for one row, so the actions never spill under the scope column. While several rows
+/// are selected, the selection's actions take the add actions' place (v0.4.0).
 private struct RepoDetailControls: View {
     @Bindable var viewModel: RepoDetailViewModel
 
@@ -82,12 +105,21 @@ private struct RepoDetailControls: View {
             HStack(spacing: Theme.Spacing.medium) {
                 kindPill
                 Spacer(minLength: 0)
-                RepoDetailAddActions(viewModel: viewModel)
+                actions
             }
             VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
                 kindPill
-                RepoDetailAddActions(viewModel: viewModel)
+                actions
             }
+        }
+    }
+
+    @ViewBuilder
+    private var actions: some View {
+        if viewModel.selection.count > 1 {
+            RepoDetailSelectionActions(viewModel: viewModel)
+        } else {
+            RepoDetailAddActions(viewModel: viewModel)
         }
     }
 
@@ -108,6 +140,59 @@ private struct RepoDetailControls: View {
             ],
             accessibilityLabel: String(localized: "main.detail.kind", defaultValue: "Kind")
         )
+        .fixedSize()
+    }
+}
+
+/// What several selected rows can do (v0.4.0): their count, Push on Next Sync and Revert when
+/// some of them allow it, Delete…, and Deselect. ⌘-click or ⇧-click selects rows, ⌘A all of
+/// them; the context menu offers the same actions.
+private struct RepoDetailSelectionActions: View {
+    let viewModel: RepoDetailViewModel
+
+    var body: some View {
+        let rows = viewModel.selectedRows
+        let actions = ConfigSelectionActionsModel(rows: rows)
+        HStack(spacing: Theme.Spacing.mediumMinus) {
+            Text(String(localized: "main.detail.selection.count", defaultValue: "\(rows.count) selected"))
+                .fxTextStyle(.monoMeta)
+                .foregroundStyle(Theme.Colors.mutedText)
+            CopyToMenu(
+                title: String(localized: "main.detail.selection.copyTo", defaultValue: "Copy To"),
+                rows: actions.deletable,
+                viewModel: viewModel,
+                showsChevron: true
+            )
+            .menuStyle(.button)
+            .menuIndicator(.hidden)
+            .fxButtonStyle(.outline)
+            if !actions.pushable.isEmpty {
+                Button(String(localized: "main.table.pushOnNextSync", defaultValue: "Push on Next Sync")) {
+                    viewModel.pushOnNextSync(actions.pushable)
+                }
+                .fxButtonStyle(.outline)
+                .disabled(!viewModel.canEdit)
+            }
+            if !actions.revertible.isEmpty {
+                Button(String(localized: "main.table.revert", defaultValue: "Revert")) {
+                    viewModel.revert(actions.revertible)
+                }
+                .fxButtonStyle(.outline)
+            }
+            Button(String(localized: "main.table.delete", defaultValue: "Delete…")) {
+                viewModel.requestDeletion(of: actions.deletable)
+            }
+            .fxButtonStyle(.outline)
+            .disabled(!viewModel.canEdit || actions.deletable.isEmpty)
+            .help(viewModel.readOnlyReason?.localizedExplanation ?? "")
+            Button {
+                viewModel.clearSelection()
+            } label: {
+                Label(String(localized: "main.detail.selection.clear", defaultValue: "Deselect"), systemImage: "xmark")
+            }
+            .fxIconButtonStyle()
+            .help(String(localized: "main.detail.selection.clear", defaultValue: "Deselect"))
+        }
         .fixedSize()
     }
 }
@@ -217,6 +302,9 @@ private struct RepoDetailHeader: View {
                 localized: "main.detail.refresh.help",
                 defaultValue: "Read permissions and check GitHub for changes"
             )))
+            if let scopeList = main.scopeList, let scope = scopeList.selectedScope {
+                ScopeActionsMenu(scope: scope, scopeList: scopeList)
+            }
         }
     }
 
@@ -230,6 +318,30 @@ private struct RepoDetailHeader: View {
             return summary.title
         }
         return viewModel.repository?.name ?? ""
+    }
+}
+
+/// The selected scope's actions as an outline circle in the header (v0.4.0): the scope row's
+/// context menu (Settings, Rename, Duplicate, Export .env, Share, Revert, Delete for an
+/// environment; Export .env and Share for the repository level), so they are not only a
+/// right-click away. Actions the account may not take are listed disabled.
+private struct ScopeActionsMenu: View {
+    let scope: ConfigScopeSummaryModel
+    let scopeList: ScopeListViewModel
+
+    var body: some View {
+        let label = scope.environment == nil
+            ? String(localized: "main.detail.scopeActions.repository", defaultValue: "Repository Actions")
+            : String(localized: "main.detail.scopeActions.environment", defaultValue: "Environment Actions")
+        Menu {
+            ScopeContextMenu(scope: scope, viewModel: scopeList)
+        } label: {
+            Label(label, systemImage: "ellipsis")
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .fxIconButtonStyle()
+        .help(label)
     }
 }
 
@@ -356,5 +468,89 @@ struct RepoImportPromptView: View {
                     .foregroundStyle(Theme.Colors.mutedText)
             }
         }
+    }
+}
+
+/// The rows of a selection each action applies to (v0.4.0): the selection bar and the context
+/// menu offer an action only when some rows allow it, and act on those rows only.
+struct ConfigSelectionActionsModel {
+    let deletable: [ConfigRowModel]
+    let revertible: [ConfigRowModel]
+    let pushable: [ConfigRowModel]
+
+    init(rows: [ConfigRowModel]) {
+        deletable = rows.filter { !$0.isDeleted }
+        revertible = rows.filter(\.canRevert)
+        pushable = rows.filter(\.canPushOnNextSync)
+    }
+}
+
+extension ConfigDeletionModel {
+    var title: String {
+        rows.count == 1
+            ? String(localized: "main.detail.delete.title", defaultValue: "Delete this item?")
+            : String(localized: "main.detail.delete.several.title", defaultValue: "Delete \(rows.count) items?")
+    }
+
+    var confirmTitle: String {
+        rows.count == 1
+            ? String(localized: "main.detail.delete.confirm", defaultValue: "Delete")
+            : String(localized: "main.detail.delete.several.confirm", defaultValue: "Delete \(rows.count) Items")
+    }
+
+    var message: String {
+        let synced = syncedRows
+        let onGitHub = if synced.count == 1, let row = synced.first {
+            String(
+                localized: "main.detail.delete.message",
+                defaultValue: "\(row.name) is deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
+            )
+        } else {
+            String(
+                localized: "main.detail.delete.several.message",
+                defaultValue: "\(Self.names(synced.map(\.name))) are deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
+            )
+        }
+        switch unsyncedCount {
+        case 0:
+            return onGitHub
+        case 1:
+            let local = String(localized: "main.detail.delete.unsynced.one", defaultValue: "The one never synced is removed now.")
+            return "\(onGitHub) \(local)"
+        default:
+            let local = String(
+                localized: "main.detail.delete.unsynced.several",
+                defaultValue: "The \(unsyncedCount) never synced are removed now."
+            )
+            return "\(onGitHub) \(local)"
+        }
+    }
+
+    /// The first three names, then "and N more".
+    static func names(_ names: [String]) -> String {
+        let shown = Array(names.prefix(3)).formatted(.list(type: .and))
+        guard names.count > 3 else { return shown }
+        return String(localized: "main.detail.delete.names.more", defaultValue: "\(names.prefix(3).joined(separator: ", ")) and \(names.count - 3) more")
+    }
+}
+
+extension ItemCopyRequestModel {
+    var title: String {
+        conflicts.count == 1
+            ? String(localized: "main.detail.copy.conflict.title.one", defaultValue: "\(targetTitle) already has \(conflicts[0])")
+            : String(localized: "main.detail.copy.conflict.title", defaultValue: "\(targetTitle) already has \(conflicts.count) of these items")
+    }
+
+    var replaceTitle: String {
+        conflicts.count == 1
+            ? String(localized: "main.detail.copy.conflict.replace.one", defaultValue: "Replace Its Value")
+            : String(localized: "main.detail.copy.conflict.replace", defaultValue: "Replace \(conflicts.count) Values")
+    }
+
+    var message: String {
+        String(
+            localized: "main.detail.copy.conflict.message",
+            defaultValue: "Replace sets the copied values there (\(ConfigDeletionModel.names(conflicts))); Keep Existing leaves them as they are. The other items are copied either way, as changes for the next Sync."
+        )
     }
 }

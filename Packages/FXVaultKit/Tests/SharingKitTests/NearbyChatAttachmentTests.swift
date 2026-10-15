@@ -95,8 +95,9 @@ struct NearbyChatAttachmentTests {
             scope: .repository,
             secrets: [PackageFactory.item("ONE"), PackageFactory.item("TWO")]
         )
-        #expect(throws: ChatError.invalidAttachment) { _ = try harness.initiator.offerAttachment(two) }
-        #expect(throws: ChatError.invalidAttachment) {
+        // A chat v1 (the KAT pair, as with a 0.2.x or 0.3.x peer) carries no configuration (v0.4.0).
+        #expect(throws: ChatError.peerNeedsUpdate) { _ = try harness.initiator.offerAttachment(two) }
+        #expect(throws: ChatError.peerNeedsUpdate) {
             _ = try harness.initiator.offerAttachment(PackageFactory.sample())
         }
         let missing = PackageFactory.package(scope: .secret, secrets: [PackageFactory.item("NO_VALUE", value: nil)])

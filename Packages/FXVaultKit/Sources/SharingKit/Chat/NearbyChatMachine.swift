@@ -82,14 +82,28 @@ struct NearbyChatMachine: Sendable {
     /// - Parameters:
     ///   - localName: this Mac's display name; sanitized (NFC, ≤ 63 bytes) before sending.
     ///   - keyMaterial: fresh per session; tests inject fixed material.
-    init(role: NearbyRole, localName: String, keyMaterial: NearbyKeyMaterial = .random()) {
+    ///   - maxVersion: the chat version to offer; nil is ``NearbyChatProtocol/maxVersion`` (tests
+    ///     pin 1 to act as a 0.2.x or 0.3.x Mac).
+    init(role: NearbyRole, localName: String, keyMaterial: NearbyKeyMaterial = .random(), maxVersion: UInt8? = nil) {
         self.role = role
-        exchange = NearbyKeyExchange(role: role, purpose: .chat, localName: localName, keyMaterial: keyMaterial)
+        exchange = NearbyKeyExchange(
+            role: role,
+            purpose: .chat,
+            localName: localName,
+            keyMaterial: keyMaterial,
+            maxVersion: maxVersion
+        )
     }
 
     /// The code and peer name once keys exist.
     var sas: NearbySASModel? {
         exchange.sas
+    }
+
+    /// True once keys exist and both Macs speak chat v2 or later (v0.4.0): a whole repository or
+    /// environment may be attached. False with a 0.2.x or 0.3.x peer.
+    var acceptsConfigurationAttachments: Bool {
+        (exchange.version ?? 0) >= NearbyChatProtocol.configurationAttachmentsVersion
     }
 
     /// True when nothing sensitive is held: no keys, no offers, no partial payload.
@@ -214,14 +228,18 @@ struct NearbyChatMachine: Sendable {
 
     // MARK: - Attachments (sender)
 
-    /// Offers one secret or variable. `manifest` may still hold the value: it is stripped here.
+    /// Offers one secret or variable or, in a chat v2, a whole repository or environment.
+    /// `manifest` may still hold values: they are stripped here.
     mutating func offerAttachment(
         _ manifest: SharePackageModel,
         id: ChatAttachmentID = ChatAttachmentID()
     ) throws(ChatError) -> (NearbyChatStep, ChatAttachmentOfferModel?) {
         try requirePhase(.chatting)
         let stripped = manifest.manifest()
-        guard Self.attachmentViolation(stripped) == nil,
+        if stripped.scope != .secret, !acceptsConfigurationAttachments {
+            throw .peerNeedsUpdate
+        }
+        guard Self.attachmentViolation(stripped, acceptsConfiguration: acceptsConfigurationAttachments) == nil,
               outgoing[id] == nil,
               incoming[id] == nil,
               let offer = ChatAttachmentOfferModel(id: id, direction: .sent, manifest: stripped)
@@ -246,11 +264,12 @@ struct NearbyChatMachine: Sendable {
         }
     }
 
-    /// Sends the payload of a requested offer: the offered manifest with `value` filled in.
+    /// Sends the payload of a requested item offer: the offered manifest with `value` filled in.
     /// Does not keep or wipe `value`; the caller wipes it.
     mutating func sendAttachmentPayload(_ id: ChatAttachmentID, value: SecretBytes) throws(ChatError) -> NearbyChatStep {
         try requirePhase(.chatting)
         guard let offer = outgoing[id], offer.isRequested else { throw .unknownAttachment }
+        guard offer.manifest.scope == .secret else { throw .invalidAttachment }
         var payload = offer.manifest
         payload.repository = payload.repository.mapItems { item in
             var filled = item
@@ -258,6 +277,22 @@ struct NearbyChatMachine: Sendable {
             filled.valueState = .present
             return filled
         }
+        return try sendPayload(id, payload)
+    }
+
+    /// Sends the payload of a requested configuration offer (v0.4.0): `package` must be the
+    /// offered manifest with its values. Does not keep or wipe `package`; the caller wipes it.
+    mutating func sendAttachmentPayload(_ id: ChatAttachmentID, package: SharePackageModel) throws(ChatError) -> NearbyChatStep {
+        try requirePhase(.chatting)
+        guard let offer = outgoing[id], offer.isRequested else { throw .unknownAttachment }
+        guard offer.manifest.scope != .secret, package.manifest() == offer.manifest else {
+            throw .invalidAttachment
+        }
+        return try sendPayload(id, package)
+    }
+
+    /// Validates, encodes and chunks a payload, then forgets the offer.
+    private mutating func sendPayload(_ id: ChatAttachmentID, _ payload: SharePackageModel) throws(ChatError) -> NearbyChatStep {
         guard SharePackageValidator.violation(in: payload, mode: .payload) == nil else {
             throw .invalidAttachment
         }
@@ -268,7 +303,7 @@ struct NearbyChatMachine: Sendable {
             throw .invalidAttachment
         }
         defer { json.wipe() }
-        guard json.count <= Limits.chatAttachmentBytes else { throw .attachmentTooLarge }
+        guard json.count <= Self.payloadLimit(for: payload.scope) else { throw .attachmentTooLarge }
         var bytes = json.withUnsafeBytes { Data($0) }
         defer { bytes.wipe() }
         var prefix = Data(id.bytes)
@@ -450,7 +485,9 @@ struct NearbyChatMachine: Sendable {
         } catch {
             throw NearbyFailure(NearbyHandshake.abortReason(for: error))
         }
-        if let reason = Self.attachmentViolation(manifest) { throw NearbyFailure(reason) }
+        if let reason = Self.attachmentViolation(manifest, acceptsConfiguration: acceptsConfigurationAttachments) {
+            throw NearbyFailure(reason)
+        }
         guard let offer = ChatAttachmentOfferModel(id: id, direction: .received, manifest: manifest) else {
             throw NearbyFailure(.invalidPackage(.scopeMismatch(manifest.scope)))
         }
@@ -479,7 +516,7 @@ struct NearbyChatMachine: Sendable {
         if transfer == nil {
             guard let offer = incoming[id] else { throw NearbyFailure(.unknownItemIDs) }
             guard offer.state == .requested else { throw NearbyFailure(.unexpectedMessage) }
-            guard totalLength > 0, totalLength <= Limits.chatAttachmentBytes else {
+            guard totalLength > 0, totalLength <= Self.payloadLimit(for: offer.manifest.scope) else {
                 throw NearbyFailure(.payloadTooLarge)
             }
             transfer = IncomingTransfer(id: id, totalLength: totalLength)
@@ -554,19 +591,28 @@ struct NearbyChatMachine: Sendable {
         }
     }
 
-    /// Chat attachments are exactly one secret or variable that has a value (scope `secret`),
-    /// and must pass every share validator rule (manifest mode).
-    static func attachmentViolation(_ manifest: SharePackageModel) -> NearbyAbortReason? {
+    /// Chat attachments are one secret or variable that has a value (scope `secret`) or, in a
+    /// chat v2 (v0.4.0), a whole repository or environment (scope `repository` or `environment`,
+    /// values present or missing). Every one must pass the share validator (manifest mode).
+    static func attachmentViolation(_ manifest: SharePackageModel, acceptsConfiguration: Bool) -> NearbyAbortReason? {
         if let violation = SharePackageValidator.violation(in: manifest, mode: .manifest) {
             return .invalidPackage(violation)
         }
-        guard manifest.scope == .secret, manifest.itemCount == 1 else {
-            return .invalidPackage(.scopeMismatch(manifest.scope))
+        switch manifest.scope {
+        case .secret:
+            guard manifest.itemCount == 1 else { return .invalidPackage(.scopeMismatch(manifest.scope)) }
+            guard manifest.flattenedItems.first?.item.valueState == .present else {
+                return .invalidPackage(.valueStateMismatch)
+            }
+            return nil
+        case .repository, .environment:
+            return acceptsConfiguration ? nil : .invalidPackage(.scopeMismatch(manifest.scope))
         }
-        guard manifest.flattenedItems.first?.item.valueState == .present else {
-            return .invalidPackage(.valueStateMismatch)
-        }
-        return nil
+    }
+
+    /// The largest payload JSON of an offer: one value, or a configuration (v0.4.0).
+    static func payloadLimit(for scope: ShareScope) -> Int {
+        scope == .secret ? Limits.chatAttachmentBytes : Limits.chatConfigurationAttachmentBytes
     }
 
     private static func attachmentID(_ reader: inout NearbyByteReader) throws(NearbyFailure) -> ChatAttachmentID {

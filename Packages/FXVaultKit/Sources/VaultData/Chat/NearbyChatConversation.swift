@@ -198,6 +198,107 @@ public actor NearbyChatConversation {
         }
     }
 
+    // MARK: - Configurations (sender, v0.4.0)
+
+    /// True once both Macs speak chat v2 (FX Vault 0.4 or later): a whole repository can be
+    /// attached. Check it before asking for Touch ID or the master password.
+    public var acceptsConfigurationAttachments: Bool {
+        get async { await session.acceptsConfigurationAttachments }
+    }
+
+    /// Offers a repository's whole configuration (repository level and every environment with its
+    /// branch policy): only names and counts travel now. The values are read, inside
+    /// `VaultSession.read`, only when the peer asks, and only if nothing changed since the offer.
+    ///
+    /// - Parameter authorization: from `ReauthGate.authorizeShare(.nearbySend, …)`; consumed here.
+    /// - Throws: `.chat(.peerNeedsUpdate)` with a 0.3 or older peer (before the authorization is
+    ///   used), `.sharing(.authorizationInvalid)`, `.sharing(.repositoryNotFound)`,
+    ///   `.sharing(.nothingToShare)`, `.sharing(.vault(.locked))`, `.chat(…)`.
+    @discardableResult
+    public func offerRepository(
+        _ repositoryID: RepoID,
+        senderName: String,
+        appVersion: String,
+        authorization: ShareAuthorizationModel
+    ) async throws(NearbyChatError) -> ChatAttachmentOfferModel {
+        guard await session.acceptsConfigurationAttachments else { throw .chat(.peerNeedsUpdate) }
+        let manifest: SharePackageModel
+        let fingerprints: [ConfigItemID: Data?]
+        do {
+            try authorization.consume(.nearbySend, for: vault)
+            manifest = try builder.build(.repository(repositoryID), senderName: senderName, appVersion: appVersion, includeValues: false)
+            fingerprints = try Self.storedFingerprints(ofRepository: repositoryID, vault: vault)
+        } catch {
+            throw .sharing(error)
+        }
+        let provider = Self.configurationProvider(
+            for: repositoryID,
+            offered: manifest,
+            fingerprints: fingerprints,
+            vault: vault,
+            builder: builder,
+            senderName: senderName,
+            appVersion: appVersion
+        )
+        do {
+            return try await session.offerConfiguration(manifest: manifest, payloadProvider: provider)
+        } catch {
+            throw .chat(error)
+        }
+    }
+
+    /// Reads the offered repository's values when the peer asks for them. Refuses (the session
+    /// then withdraws the offer) when anything changed since the user authorized the offer: an
+    /// item or environment added, removed, renamed or re-policied, or a value edited (the stored
+    /// keyed `value_fp` of every item), or when the vault is locked.
+    private static func configurationProvider(
+        for repositoryID: RepoID,
+        offered: SharePackageModel,
+        fingerprints: [ConfigItemID: Data?],
+        vault: VaultSession,
+        builder: ShareExportBuilder,
+        senderName: String,
+        appVersion: String
+    ) -> ChatConfigurationPayloadProvider {
+        {
+            let fresh = try builder.build(.repository(repositoryID), senderName: senderName, appVersion: appVersion, includeValues: true)
+            // The values go to the session (which wipes them once sent) or are wiped here, also
+            // when reading the fingerprints throws.
+            var isHandedOver = false
+            defer {
+                if !isHandedOver {
+                    fresh.wipeValues()
+                }
+            }
+            var payload = offered
+            if let repository = fresh.repository.withEntryIDs(of: offered.repository) {
+                payload.repository = repository
+            }
+            // Checked after reading the values: a change in between also refuses.
+            guard try storedFingerprints(ofRepository: repositoryID, vault: vault) == fingerprints,
+                  payload.manifest() == offered.manifest(),
+                  payload.flattenedItems.allSatisfy({ ($0.item.value != nil) == ($0.item.valueState == .present) })
+            else { throw NearbyChatError.attachmentUnavailable }
+            isHandedOver = true
+            return payload
+        }
+    }
+
+    /// The stored value fingerprints (`value_fp`, keyed, never values) of every item of the
+    /// repository that is not deleted.
+    private static func storedFingerprints(ofRepository repositoryID: RepoID, vault: VaultSession) throws(SharingError) -> [ConfigItemID: Data?] {
+        let database = vault.database
+        return try performSharing {
+            try vault.read { _, tx in
+                let records = try ConfigStore(database: database).fetchItemRecords(repositoryID: repositoryID, in: tx)
+                return Dictionary(
+                    records.filter { !$0.isDeleted }.map { ($0.id, $0.valueFingerprint) },
+                    uniquingKeysWith: { first, _ in first }
+                )
+            }
+        }
+    }
+
     // MARK: - Attachments (receiver)
 
     /// "Save to my vault": asks the peer for the value of its offer. The value arrives as
@@ -219,20 +320,75 @@ public actor NearbyChatConversation {
         }
     }
 
-    /// Plans the received value against this vault (the share import preview, §9.5). The value
-    /// moves into the returned draft (apply it with `SharingRepository.apply`, or `discard()` it);
+    /// Plans the received values against this vault (the share import preview, §9.5). The values
+    /// move into the returned draft (apply it with `SharingRepository.apply`, or `discard()` it);
     /// nothing is kept here.
     ///
+    /// - Parameter target: v0.4.0 "Import into…": a repository of this vault the user chose
+    ///   instead of the sender's `owner/name` (the package is planned and imported as if it were
+    ///   for that repository). Nil plans it for the sender's repository, as before.
     /// - Throws: `.attachmentUnavailable` (not received, already previewed or wiped),
-    ///   `.sharing(.vault(.locked))`, `.sharing(…)`.
-    public func previewAttachment(_ id: ChatAttachmentID, checkGitHub: Bool) async throws(NearbyChatError) -> ShareImportDraftModel {
+    ///   `.sharing(.repositoryNotFound)` (target), `.sharing(.vault(.locked))`, `.sharing(…)`.
+    public func previewAttachment(
+        _ id: ChatAttachmentID,
+        into target: RepoID? = nil,
+        checkGitHub: Bool
+    ) async throws(NearbyChatError) -> ShareImportDraftModel {
         guard let package = received.removeValue(forKey: id) else { throw .attachmentUnavailable }
         defer { package.wipeValues() }
         do {
-            return try await sharing.draft(for: package, mode: .payload, checkGitHub: checkGitHub)
+            let planned = if let target {
+                try Self.retargeted(package, to: target, vault: vault)
+            } else {
+                package
+            }
+            return try await sharing.draft(for: planned, mode: .payload, checkGitHub: checkGitHub)
         } catch {
             throw .sharing(error)
         }
+    }
+
+    /// v0.4.0 "Save as File…": writes the received package to an encrypted `.fxvault` file under a
+    /// fresh passphrase (shown once), keeping the sender's name and package id. The package stays
+    /// here, so it can still be imported.
+    ///
+    /// - Parameter authorization: from `ReauthGate.authorizeShare(.fileExport, …)`; consumed here.
+    /// - Throws: `.attachmentUnavailable`, `.sharing(.authorizationInvalid)`, `.sharing(.write(…))`.
+    public func saveAttachment(
+        _ id: ChatAttachmentID,
+        to destination: URL,
+        authorization: ShareAuthorizationModel
+    ) async throws(NearbyChatError) -> ShareFileExportResultModel {
+        guard let package = received[id] else { throw .attachmentUnavailable }
+        do {
+            return try await sharing.exportFile(package: package, to: destination, authorization: authorization)
+        } catch {
+            throw .sharing(error)
+        }
+    }
+
+    /// Names and counts of a received package (no values), for "Save as File…"; nil when it has
+    /// not arrived or was already imported or wiped.
+    public func receivedPreview(_ id: ChatAttachmentID) -> ShareExportPreviewModel? {
+        received[id].map { ShareExportBuilder.preview($0) }
+    }
+
+    /// `package` as if it were for the vault repository `target` (its owner, name and GitHub id).
+    private static func retargeted(
+        _ package: SharePackageModel,
+        to target: RepoID,
+        vault: VaultSession
+    ) throws(SharingError) -> SharePackageModel {
+        let database = vault.database
+        let repository = try performSharing {
+            try vault.read { _, tx in try RepoStore(database: database).fetch(id: target, in: tx) }
+        }
+        guard let repository else { throw .repositoryNotFound }
+        var copy = package
+        copy.repository.owner = repository.ownerLogin
+        copy.repository.name = repository.name
+        copy.repository.githubRepoID = repository.githubID
+        return copy
     }
 
     /// Wipes a received value the user chose not to save. Idempotent.

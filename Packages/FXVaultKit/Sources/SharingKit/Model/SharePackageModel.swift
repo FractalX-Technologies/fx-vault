@@ -244,6 +244,40 @@ public struct ShareRepositoryModel: Sendable, Equatable {
         "\(owner)/\(name)"
     }
 
+    /// This repository with the entry ids of `other` (v0.4.0 chat configurations): entry ids are
+    /// random per package, so a package rebuilt from the vault for an offer's payload takes the
+    /// offer's ids before both are compared. Nil when the two differ in shape (environments or
+    /// items added, removed or reordered); names, states, policies and values are not compared.
+    public func withEntryIDs(of other: ShareRepositoryModel) -> ShareRepositoryModel? {
+        func items(_ items: [ShareItemModel], _ others: [ShareItemModel]) -> [ShareItemModel]? {
+            guard items.count == others.count else { return nil }
+            return zip(items, others).map { item, other in
+                var copy = item
+                copy.id = other.id
+                return copy
+            }
+        }
+        guard environments.count == other.environments.count,
+              let secrets = items(secrets, other.secrets),
+              let variables = items(variables, other.variables)
+        else { return nil }
+        var copy = self
+        copy.secrets = secrets
+        copy.variables = variables
+        copy.environments = []
+        for (environment, otherEnvironment) in zip(environments, other.environments) {
+            guard let secrets = items(environment.secrets, otherEnvironment.secrets),
+                  let variables = items(environment.variables, otherEnvironment.variables)
+            else { return nil }
+            var renumbered = environment
+            renumbered.id = otherEnvironment.id
+            renumbered.secrets = secrets
+            renumbered.variables = variables
+            copy.environments.append(renumbered)
+        }
+        return copy
+    }
+
     func mapItems(_ transform: (ShareItemModel) -> ShareItemModel) -> ShareRepositoryModel {
         var copy = self
         copy.secrets = secrets.map(transform)

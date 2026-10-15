@@ -716,24 +716,24 @@
         }
       }
     },
-    "chat.attach" : {
+    "chat.attach.any" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Attach secret or variable…"
+            "value" : "Attach…"
           }
         }
       }
     },
-    "chat.attach.help" : {
+    "chat.attach.any.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Asks for Touch ID or your master password, then sends the name only. The value is sent only if your teammate saves it."
+            "value" : "Attach a secret, a variable or a whole repository. Asks for Touch ID or your master password, then sends names only. Values are sent only if your teammate saves them."
           }
         }
       }
@@ -833,6 +833,160 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Arrived. Review it to save it to your vault."
+          }
+        }
+      }
+    },
+    "chat.card.repository.awaitingPeer" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Offered. The values are sent only if your teammate imports it or saves it as a file."
+          }
+        }
+      }
+    },
+    "chat.card.repository.counts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%1$lld environment](inflect: true) · ^[%2$lld secret](inflect: true) · ^[%3$lld variable](inflect: true)"
+          }
+        }
+      }
+    },
+    "chat.card.repository.dismissedByPeer" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not sent. Your teammate dismissed it, or the repository changed since you attached it."
+          }
+        }
+      }
+    },
+    "chat.card.repository.importInto" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import Into…"
+          }
+        }
+      }
+    },
+    "chat.card.repository.kind" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository"
+          }
+        }
+      }
+    },
+    "chat.card.repository.notImportedSavedFile" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved as an encrypted file, not imported. The values in this chat were wiped."
+          }
+        }
+      }
+    },
+    "chat.card.repository.notSaved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not imported. The values were wiped."
+          }
+        }
+      }
+    },
+    "chat.card.repository.offered" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The values are not shown. Import Into… lets you choose one of your repositories and review everything first."
+          }
+        }
+      }
+    },
+    "chat.card.repository.readyToSave" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Arrived. Import it into one of your repositories, or save it as a file."
+          }
+        }
+      }
+    },
+    "chat.card.repository.saveAsFile" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save as File…"
+          }
+        }
+      }
+    },
+    "chat.card.repository.savedToFile" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved as an encrypted file. You can still import it."
+          }
+        }
+      }
+    },
+    "chat.card.repository.savingToFile" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saving as a file…"
+          }
+        }
+      }
+    },
+    "chat.card.repository.sent" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your teammate received it. The values were sent once."
+          }
+        }
+      }
+    },
+    "chat.card.repository.valueMissing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld without a value"
           }
         }
       }
@@ -1118,7 +1272,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Only one secret or variable that has a value can be attached."
+            "value" : "Attach one secret or variable that has a value, or a whole repository."
           }
         }
       }
@@ -1130,6 +1284,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "This item can't be attached"
+          }
+        }
+      }
+    },
+    "chat.error.attachmentTooLarge.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share it with Share › File… or Share › Nearby… instead."
+          }
+        }
+      }
+    },
+    "chat.error.attachmentTooLarge.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Too large for the chat"
           }
         }
       }
@@ -1218,6 +1394,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "That Mac is no longer nearby"
+          }
+        }
+      }
+    },
+    "chat.error.peerNeedsUpdate.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Their FX Vault cannot receive a whole repository. Ask them to update, then start a new chat, or share the repository as a file."
+          }
+        }
+      }
+    },
+    "chat.error.peerNeedsUpdate.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your teammate needs FX Vault 0.4"
           }
         }
       }
@@ -1464,6 +1662,39 @@
         }
       }
     },
+    "chat.picker.mode" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "What to attach"
+          }
+        }
+      }
+    },
+    "chat.picker.mode.item" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secret or Variable"
+          }
+        }
+      }
+    },
+    "chat.picker.mode.repository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Whole Repository"
+          }
+        }
+      }
+    },
     "chat.picker.reauth" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -1471,6 +1702,72 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Attaching from your vault needs Touch ID or your master password."
+          }
+        }
+      }
+    },
+    "chat.picker.repository.counts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%1$lld environment](inflect: true) · ^[%2$lld item](inflect: true)"
+          }
+        }
+      }
+    },
+    "chat.picker.repository.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No repository with environments, secrets or variables matches."
+          }
+        }
+      }
+    },
+    "chat.picker.repository.peerNeedsUpdate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your teammate's FX Vault cannot receive a whole repository yet. Ask them to update to FX Vault 0.4 or later, then start a new chat."
+          }
+        }
+      }
+    },
+    "chat.picker.repository.search" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search repositories"
+          }
+        }
+      }
+    },
+    "chat.picker.repository.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The repository level and every environment with its branch rules. Your teammate sees names and counts; the values are sent only if they import it or save it as a file."
+          }
+        }
+      }
+    },
+    "chat.picker.repository.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Attach a Whole Repository"
           }
         }
       }
@@ -1537,6 +1834,83 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Preparing the preview…"
+          }
+        }
+      }
+    },
+    "chat.save.repository.continue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "chat.save.repository.noTargets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your vault has no repository yet. Import one from the sidebar, then try again."
+          }
+        }
+      }
+    },
+    "chat.save.repository.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Environments it does not have are created there. Everything becomes changes for your next Sync; nothing reaches GitHub before you review it there."
+          }
+        }
+      }
+    },
+    "chat.save.repository.sender" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Same as the sender's"
+          }
+        }
+      }
+    },
+    "chat.save.repository.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@, received in Nearby Chat. Choose one of your repositories, then review everything before it is imported."
+          }
+        }
+      }
+    },
+    "chat.save.repository.target" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import into"
+          }
+        }
+      }
+    },
+    "chat.save.repository.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import Into a Repository"
           }
         }
       }
@@ -8185,6 +8559,160 @@
         }
       }
     },
+    "main.detail.copiedItem.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied %@. Open another scope of this repository and paste it with ⌘V."
+          }
+        }
+      }
+    },
+    "main.detail.copiedItems.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied %lld items. Open another scope of this repository and paste them with ⌘V."
+          }
+        }
+      }
+    },
+    "main.detail.copy.conflict.cancel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "main.detail.copy.conflict.keep" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep Existing"
+          }
+        }
+      }
+    },
+    "main.detail.copy.conflict.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Replace sets the copied values there (%@); Keep Existing leaves them as they are. The other items are copied either way, as changes for the next Sync."
+          }
+        }
+      }
+    },
+    "main.detail.copy.conflict.replace" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Replace %lld Values"
+          }
+        }
+      }
+    },
+    "main.detail.copy.conflict.replace.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Replace Its Value"
+          }
+        }
+      }
+    },
+    "main.detail.copy.conflict.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ already has %2$lld of these items"
+          }
+        }
+      }
+    },
+    "main.detail.copy.conflict.title.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ already has %2$@"
+          }
+        }
+      }
+    },
+    "main.detail.copy.kept" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kept %1$lld that %2$@ already had."
+          }
+        }
+      }
+    },
+    "main.detail.copy.none" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nothing was copied to %@."
+          }
+        }
+      }
+    },
+    "main.detail.copy.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied 1 item to %@."
+          }
+        }
+      }
+    },
+    "main.detail.copy.several" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied %1$lld items to %2$@."
+          }
+        }
+      }
+    },
+    "main.detail.copy.withoutValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not copied, no value in FX Vault (GitHub never returns secret values): %@. Fill them first."
+          }
+        }
+      }
+    },
     "main.detail.delete.confirm" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8207,6 +8735,50 @@
         }
       }
     },
+    "main.detail.delete.names.more" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ and %2$lld more"
+          }
+        }
+      }
+    },
+    "main.detail.delete.several.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete %lld Items"
+          }
+        }
+      }
+    },
+    "main.detail.delete.several.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ are deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
+          }
+        }
+      }
+    },
+    "main.detail.delete.several.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete %lld items?"
+          }
+        }
+      }
+    },
     "main.detail.delete.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8214,6 +8786,39 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Delete this item?"
+          }
+        }
+      }
+    },
+    "main.detail.delete.unsynced.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The one never synced is removed now."
+          }
+        }
+      }
+    },
+    "main.detail.delete.unsynced.several" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The %lld never synced are removed now."
+          }
+        }
+      }
+    },
+    "main.detail.deleted.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Deleted %1$lld items. The next Sync deletes %2$lld of them on GitHub after you confirm. Revert undoes it until then."
           }
         }
       }
@@ -8306,6 +8911,28 @@
         }
       }
     },
+    "main.detail.paste.otherRepository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied items paste into another scope of the same repository. To bring configuration to another repository, use Share."
+          }
+        }
+      }
+    },
+    "main.detail.paste.sameScope" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "These items are already in this scope. Open another scope of this repository to paste them."
+          }
+        }
+      }
+    },
     "main.detail.pasteMultiple" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8350,6 +8977,28 @@
         }
       }
     },
+    "main.detail.pushOnNextSync.one.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The next Sync pushes 1 secret to GitHub. Revert cancels it."
+          }
+        }
+      }
+    },
+    "main.detail.pushOnNextSync.several.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The next Sync pushes %lld secrets to GitHub. Revert cancels it."
+          }
+        }
+      }
+    },
     "main.detail.refresh" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8372,6 +9021,17 @@
         }
       }
     },
+    "main.detail.removed.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Removed %lld items that were never synced."
+          }
+        }
+      }
+    },
     "main.detail.repository" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8379,6 +9039,83 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Repository"
+          }
+        }
+      }
+    },
+    "main.detail.reverted.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reverted %lld items to what GitHub has."
+          }
+        }
+      }
+    },
+    "main.detail.reverted.one.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reverted 1 item to what GitHub has."
+          }
+        }
+      }
+    },
+    "main.detail.scopeActions.environment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Environment Actions"
+          }
+        }
+      }
+    },
+    "main.detail.scopeActions.repository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository Actions"
+          }
+        }
+      }
+    },
+    "main.detail.selection.clear" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Deselect"
+          }
+        }
+      }
+    },
+    "main.detail.selection.copyTo" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy To"
+          }
+        }
+      }
+    },
+    "main.detail.selection.count" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld selected"
           }
         }
       }
@@ -9010,6 +9747,17 @@
         }
       }
     },
+    "main.table.copyTo" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy To"
+          }
+        }
+      }
+    },
     "main.table.delete" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9138,6 +9886,50 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Revert"
+          }
+        }
+      }
+    },
+    "main.table.several.copyTo" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy %lld Items To"
+          }
+        }
+      }
+    },
+    "main.table.several.delete" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete %lld…"
+          }
+        }
+      }
+    },
+    "main.table.several.pushOnNextSync" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Push %lld on Next Sync"
+          }
+        }
+      }
+    },
+    "main.table.several.revert" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Revert %lld"
           }
         }
       }
@@ -13043,6 +13835,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "AirDrop…"
+          }
+        }
+      }
+    },
+    "shareExport.chat.scope.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Received in Nearby Chat"
+          }
+        }
+      }
+    },
+    "shareExport.chat.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save as File"
           }
         }
       }

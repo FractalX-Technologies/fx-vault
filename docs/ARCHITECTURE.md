@@ -260,9 +260,14 @@ See [SHARING-PROTOCOL.md](SHARING-PROTOCOL.md).
   `attachmentDeclined`, `attachmentSent`, `attachmentReceived(id, SharePackageModel)`,
   `peerClosed`, `aborted(NearbyAbortModel)`) and `start`, `confirmSAS`, `rejectSAS`, `sendText`,
   `offerAttachment(manifest:payloadProvider:)`, `requestAttachment`, `declineAttachment`,
-  `close`; `phase` (`NearbyChatPhase`), `ChatError`, `ChatTextSanitizer`. Ephemeral: no message
+  `close`; `phase` (`NearbyChatPhase`), `ChatError`, `ChatTextSanitizer`. Since v0.4.0 (chat
+  version 2, `NearbyChatProtocol.maxVersion`): `acceptsConfigurationAttachments` and
+  `offerConfiguration(manifest:payloadProvider:)` (a whole repository or environment;
+  `ChatConfigurationPayloadProvider` returns the offered manifest with its values), and an
+  offer's `content` is `ChatAttachmentContentModel.item(kind:name:environmentName:)` or
+  `.configuration(ChatConfigurationSummaryModel)`. Ephemeral: no message
   history, everything wiped on close, abort or disconnect. Chat limits and timers are
-  `Limits.chatMessageBytes`, `chatAttachmentBytes`, `chatMaxOpenAttachments`,
+  `Limits.chatMessageBytes`, `chatAttachmentBytes`, `chatConfigurationAttachmentBytes`, `chatMaxOpenAttachments`,
   `chatMaxOffersPerChat`, `chatMaxPeerFramesPerFloodWindow`, `chatMaxUnansweredPings`,
   `chatMaxBlankLines`, `chatMaxMarksPerCharacter` and `Timeouts.chatKeepaliveInterval`,
   `chatIdle`, `chatFloodWindow`, declared in
@@ -537,6 +542,14 @@ ShareImportDraftModel` (moves the received value into a share import draft; appl
 `SharingRepository.apply`), `discardAttachment`, `close()` (wipes every received value; aborts
 and disconnects do too). Errors: `NearbyChatError` (`.chat(ChatError)`, `.sharing(SharingError)`,
 `.valueMissing`, `.attachmentUnavailable`).
+v0.4.0 (repositories in chat, SHARING-PROTOCOL.md §7.1): `ChatRepository.attachableRepositories()`
+(repositories with environments or items, names and counts) and `importTargets()` (the vault's
+repositories, for Import Into…); on the conversation `acceptsConfigurationAttachments`,
+`offerRepository(_:senderName:appVersion:authorization:)` (checks the peer's version before it
+consumes the `.nearbySend` authorization), `previewAttachment(_:into:checkGitHub:)` (`into`: plan
+for another repository of this vault), `saveAttachment(_:to:authorization:)` (`.fileExport`;
+`SharingRepository.exportFile(package:to:authorization:existingFile:)` seals the received
+package; the package stays for an import) and `receivedPreview(_:)` (names and counts).
 
 **Composition (`AppContainer`, `App/Composition/VaultDataComponents.swift`).**
 
@@ -679,6 +692,16 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 68 | Status | `GHStatusModel` gains `.foreignOwner(path:owner:isHomebrew:)`, `.environmentToken(version:path:variables:)`, `.unusableAccounts(version:path:accounts:)`; `.outdated` carries the checked path and `.untrusted` the rejection, so the texts say what is wrong |
 | 69 | Layout | Every column of the main split view takes the window's height (`mainColumnHeight()`: `frame(minHeight: 0, maxHeight: .infinity)`). AppKit sizes the split view from each column's minimum height, which SwiftUI measures at zero width; a wrapped empty-state message measured about 1,000 pt, so the split view outgrew the window and was centered (sidebar under the title bar, footer below the window). The detail fits its narrowest column with `ViewThatFits` rows (header actions, tags, kind pill and add actions); the table scrolls sideways. `MainWindowLayoutTests` |
 | 70 | Accounts | FX Vault lists only gh's accounts, so an SSH alias whose key belongs to an account not logged in to gh had no place in Settings › Accounts. GitHub aliases that no account uses are listed with the `gh auth login` command and Check Again; mapping stays manual (no automatic `ssh -T` suggestions, v1.1 stretch) |
+### As built in v0.4.0 (several rows at once, copy between scopes, repositories in chat)
+
+| # | Area | Decision |
+|---|---|---|
+| 71 | Selection | Actions on several secrets or variables (v0.4.0) reuse the one-item rules: Delete stages GitHub deletions that Sync's §7.5 review confirms (Bryan, Q1: no immediate GitHub delete), Revert and Push on Next Sync apply only to the rows they fit, and a read-only scope offers nothing. One `ItemEditBatch` transaction per action, so a failure writes nothing |
+| 72 | Copy | Copy and paste between scopes stays inside one repository (Bryan, Q2; other repositories get configuration through Share or chat) and inside the vault: the pasteboard gets names only (Transient, not concealed) and FX Vault recognizes its own copy by `changeCount`, never by reading it. Secrets without a value are not copied (a value-missing copy would only add a blocked row to fill by hand), unlike Duplicate environment, which keeps them by name |
+| 73 | Chat | Chat version 2: chat offers `maxVer` 2 in HELLO (`NearbyChatProtocol.maxVersion`; nearby share keeps 1) and both sides use `min(maxVerI, maxVerR)`, which the transcript binds. Labels, TXT `v=1`, frame layout and frame types are unchanged, so a chat with 0.2.x or 0.3.x negotiates 1 and behaves as before. Configuration attachments (scope `repository` or `environment`) exist only at version 2: the sender refuses with `ChatError.peerNeedsUpdate` before an authorization is used, and the picker's Whole Repository tab says the other Mac needs 0.4 |
+| 74 | Chat | A repository offer is a manifest (names and counts, `ChatConfigurationSummaryModel`). On request the provider rebuilds the package, gives it the offer's random entry ids (`ShareRepositoryModel.withEntryIDs(of:)`) and sends it only when every item's stored `value_fp`, the shape (names, kinds, scopes, policies) and the value states equal what the user authorized; otherwise the offer is withdrawn. Values read for a refused payload are wiped at once. A configuration payload may be as large as a nearby share (16 MiB); one item keeps 512 KiB |
+| 75 | Chat | **Import Into…** (Bryan, Q3) plans the package as if it were for the repository the receiver picks: owner, name and GitHub id come from that vault row, then the same `ShareImportPlanner`, preview and `SharingRepository.apply` as any import, so environments it lacks are created and everything is pending for the next Sync. Repositories the account cannot change are listed with the reason (archived; admin required when the package has environments, which need admin) and cannot be chosen; the sender's `owner/name` is preselected when the vault has it. Cancel at the repository choice keeps the received values (nothing was planned); Cancel after the preview wipes them, as for one item |
+| 76 | Chat | **Save as File…** (Bryan, Q3) reuses `ShareExportViewModel` with a chat source: `.fileExport` re-authentication, a fresh passphrase shown once, Save… or AirDrop. The file keeps the sender's name and package id; the package stays in the conversation, so it can still be imported. No plaintext `.env` from chat. The chat window shows one sheet at a time: a value that arrives while another sheet is open waits on its card |
 
 ## App shell
 
@@ -824,6 +847,31 @@ AppTests).
     target. Revealed values re-mask after
     `Timeouts.revealRemask` (injected clock), on resign active, on scope change and on lock.
     The drift check runs when a repository opens (`DriftRepository.detectOnOpen`).
+    v0.4.0 multi-selection: ⌘/⇧-click and ⌘A select rows (`selection`); with two or more
+    selected, `RepoDetailSelectionActions` replaces the add actions ("N selected", Push on Next
+    Sync and Revert when some rows allow them, Delete…, Deselect) and the context menu offers the
+    same (`ConfigSelectionMenu`); ⌫ is `deleteSelection()`. `ConfigSelectionActionsModel` keeps
+    the rows each action applies to; `ConfigDeletionModel` holds one or several rows for one
+    confirmation (synced rows are deleted on GitHub by the next Sync after its review, rows never
+    synced are removed at once). Each action is one transaction:
+    `ConfigRepository.deleteItems(_:repositoryID:)`, `revertItems(_:repositoryID:)`,
+    `requestPush(_:repositoryID:)`, all or nothing.
+    v0.4.0 copy and paste between scopes of the repository: ⌘C (`onCommand(copy:)` on the table,
+    `copySelection()`) keeps `CopiedItemsModel` (ids, names, source scope) and writes only the
+    names through `ClipboardManager.copyItemNames(_:)`; ⌘V (`handlePaste`) copies those items
+    into the open scope while `ClipboardManager.holdsItemNames` (by `changeCount`), otherwise it
+    opens the `.env` import as before. Copy To › (row and selection menus, the selection bar)
+    lists `copyTargets` (the other scopes, disabled where the account may not add items).
+    `ConfigRepository.copyConflicts(_:to:repositoryID:)` finds the names the target has; then
+    `ItemCopyRequestModel` asks Replace (values) / Keep Existing / Cancel, and
+    `copyItems(_:to:repositoryID:conflicts:)` adds the rest as pending adds in one
+    `ItemEditBatch` (a tombstone of the name comes back). Secrets without a value are left out
+    and named in the notice.
+    v0.4.0 header actions menu: an `ellipsis` outline circle after Clone and Refresh
+    (`ScopeActionsMenu`) shows the scope list's `ScopeContextMenu` for the selected scope
+    (Settings, Rename, Duplicate, Export .env, Share, Revert Changes, Delete… for an environment;
+    Export .env and Share for the repository level), so creating and deleting environments is
+    not only a right-click away; the delete confirmation stays on the scope list.
   - Connectivity (v0.2.0): `ConnectivityBannerView` (a `Banner`, at the top of the detail
     column since v0.3.0) shows
     `MainViewModel.connectivityBanner` ("No internet connection. Your changes stay in the vault;
@@ -929,6 +977,16 @@ AppTests).
   wiped and the window shows "Conversation ended. Nothing was saved." Disabled only without any
   network interface (`ConnectivityMonitor.hasNetworkInterface`); closing the main window locks the
   vault (D16) and therefore ends the chat.
+  v0.4.0: `peerAcceptsRepositories` (known once the codes match) enables the picker's Whole
+  Repository tab (`ChatAttachmentPickerViewModel.Mode`, `ChatAttachmentChoiceModel`); with an
+  older peer the tab explains the update instead. A received repository card offers Import
+  Into…, Save as File… and Dismiss (`handleConfiguration(_:_:)` asks for the values first and
+  runs the action when they arrive). Import Into… opens `ChatSaveViewModel` at `.choosingTarget`
+  (`ChatImportTargetModel`: read-only reason per repository), then the same preview
+  (`ChatSaveViewModel.Outcome`: `imported`, `wiped`, or `kept` when closed before Continue); Save as
+  File… opens `ShareExportViewModel(chatAttachment:…)` (`fileSheet`; `makeFileDelivery` is
+  injected for tests). A file saved and then a cancelled import leaves the card at "Saved as an
+  encrypted file, not imported" (`hasSavedFile`).
 
 **Components** (`App/Components`): `SecretValueEditor`, `MaskedValueCell` (display-only: masked /
 revealed / plain / missing, the view model owns reveal state), `CommandRow`,

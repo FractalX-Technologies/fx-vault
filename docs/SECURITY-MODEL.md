@@ -150,9 +150,10 @@ the official signed release.") and every keychain call refuses with `.unsignedBu
 
 ## 6. Re-authentication (D30)
 
-`.env` export, `.fxvault` export, nearby send and attaching a secret or variable in Nearby Chat
-(`ShareAuthorizationPurpose.nearbySend`, asked before the item picker opens) require a fresh
-Touch ID or master-password
+`.env` export, `.fxvault` export, nearby send and attaching a secret, a variable or (v0.4.0) a
+whole repository in Nearby Chat (`ShareAuthorizationPurpose.nearbySend`, asked before the picker
+opens), and saving a repository received in chat as a file (`.fileExport`, v0.4.0), require a
+fresh Touch ID or master-password
 check through `ReauthGate` (never `.deviceOwnerAuthentication`, which would accept the macOS
 login password). The result is a single-use authorization (`EnvExportAuthorizationModel`,
 `ShareAuthorizationModel`) bound to the session and its key generation: a lock, unlock or
@@ -165,6 +166,12 @@ another.
   redacted in every textual representation, constant-time comparison.
 - Values are decrypted only to reveal, copy, edit, push, export or share. A push goes from
   decryption to gh's stdin pipe, which is closed, and the buffer is wiped.
+- **Copying items between scopes (v0.4.0):** ⌘C on the detail table keeps the selected items
+  in the app (by id, dropped on lock) and puts only their names on the pasteboard (this Mac only,
+  Transient and source markers, not concealed: names are not values). ⌘V in another scope of the
+  same repository copies them inside the vault: each value is decrypted and re-encrypted for its
+  new row in one transaction and never reaches the pasteboard. FX Vault tells its own copy from
+  other text by `changeCount` only, without reading the pasteboard.
 - **Clipboard:** current host only, Concealed / Transient / source markers, cleared after 30 s,
   on lock and on quit, but only if FX Vault still owns it. The pasteboard is never read in the
   background: only a user paste (⌘V in the detail column, ⌘V or the Paste button in the import
@@ -264,7 +271,8 @@ trusted for that path (below). Details: [API.md](API.md).
 
 Protocol details: [SHARING-PROTOCOL.md](SHARING-PROTOCOL.md) §7.
 
-**Assets.** Message text, an attached secret or variable value, and the user's display name.
+**Assets.** Message text, an attached secret or variable value, an attached repository's
+values (v0.4.0), and the user's display name.
 
 **Adversaries.** Anyone within Wi-Fi range (on the same network or over peer-to-peer Wi-Fi, about
 10 m): passive listeners, an active relay between the two Macs, a Mac that impersonates a
@@ -276,21 +284,25 @@ teammate's name, and a peer that sends hostile frames.
 | Man in the middle | Commit-reveal X25519 with a 6-digit code (SAS) both people compare. A relay gets different codes on each leg; one attempt per session (the commitment stops it from searching for a matching code). Nothing is sent before both press "Codes match"; "Don't match" ends the chat with an interception warning. |
 | Impersonation by name | Display names are unverified and shown as such: the code comparison (in person or over a trusted channel) is what authenticates the peer, and the UI says so. |
 | Share and chat confusion | Separate Bonjour types and label prefixes (`fxvault/chat/v1`): a share session can never complete as a chat or the reverse, and each rejects the other's frame types. |
-| Replay, reorder, truncation, reflection, oversize | Abort the chat (`NearbyChatMachine`): exact sequence numbers per direction, 64 KiB frames, 4 KiB messages, 512 KiB attachments, at most 8 open offers and 32 offers per chat. Text and display names are sanitized on both sides before display: controls, bidi, zero-width and every other invisible character (format characters such as tag characters, soft hyphens and invisible operators, Hangul fillers); a message keeps at most one blank line in a row and four combining marks per character. |
+| Replay, reorder, truncation, reflection, oversize | Abort the chat (`NearbyChatMachine`): exact sequence numbers per direction, 64 KiB frames, 4 KiB messages, 512 KiB single-item attachments and 16 MiB repository attachments (v0.4.0), at most 8 open offers and 32 offers per chat. Text and display names are sanitized on both sides before display: controls, bidi, zero-width and every other invisible character (format characters such as tag characters, soft hyphens and invisible operators, Hangul fillers); a message keeps at most one blank line in a row and four combining marks per character. |
 | Flooding by a verified peer | More than 100 TEXT, offer, request, decline or PING frames within 10 s abort the chat; the window keeps at most 1,000 messages. Decrypted attachment chunks are zeroed once copied into the payload buffer, which is reserved at its final size. |
 | Leaving traces | Ephemeral: messages live only in memory (the session keeps no history; the window's transcript is dropped), no message is logged or written to disk, and closing the window, End Chat, a lock (also on sleep and screen lock), a disconnect, the idle timeout (10 min) or a missed keepalive end the chat and wipe keys, offers, typed text and received values. Message text cannot be selected; Copy goes through `ClipboardManager` (concealed, this Mac only, cleared after 30 s and on lock). One exception: saving an attachment is a share import, so like any import it records the package id, its dates and the sender's (unverified) display name in `imported_share_packages` (replay detection) and logs "Imported a share package" with the count of changed items; never a value or a message. |
 | An attached value | Sending needs Touch ID or the master password first (ReauthGate, `.nearbySend`). The offer is a manifest without the value; the value is decrypted only when the peer asks, re-read and checked against the offered name, kind and scope and against the stored value fingerprint taken when the user authorized the offer (a value changed since then is never sent: the offer is withdrawn), then wiped. The receiver's UI shows name, kind and scope only; "Save to my vault" moves the value into the normal share import preview (re-encrypted under the receiver's DEK), and Dismiss or the end of the chat wipes it. |
+| An attached repository (v0.4.0) | Only between two Macs on 0.4 or later (chat version 2, negotiated in the transcript); with an older peer nothing is offered and no authorization is used. Sending needs Touch ID or the master password first (`.nearbySend`). The offer carries names and counts only; the values are read only when the peer asks, and sent only if every item's stored value fingerprint and the repository's shape (names, kinds, scopes, branch policies, value states) still equal what the user authorized, otherwise the offer is withdrawn and the values read are wiped. The session wipes them once sent. The receiver chooses where it goes: Import Into… lists their repositories, and those the account cannot change (archived; admin required for environments) are shown with the reason and cannot be chosen; the import is the normal share preview, re-encrypted under the receiver's DEK, and every change waits for their next Sync (deletion and push review included). Save as File… needs the receiver's Touch ID or master password (`.fileExport`) and writes an encrypted `.fxvault` under a fresh six-word passphrase shown once; there is no plaintext export from chat. The received package stays in memory (`SecretBytes`) until an import preview takes it (applied, or wiped on Cancel) or the chat ends. |
 | Unwanted visibility | The Mac is advertised only while the chat window lists people, and only on the link-local Bonjour domain (`local.`, never a wide-area DNS-SD domain); connecting or being connected stops advertising and browsing. The listener accepts one connection. |
 | Disruption by strangers | Anyone nearby can connect to an advertising Mac. A connection that drops, stays silent or sends garbage before its HELLO, or that leaves before the code is shown, returns the window to the people list and advertises again: no "Conversation ended" screen, no failed-handshake count (interception warning), and it never counts toward the listener-failure limit (3 in a row), so a stranger cannot make the Mac invisible. The chip shows "Not visible" while such a connection is held. A Mac that advertises the user's own name stays listed (the own entry is filtered by the name Bonjour actually registered). |
 
 **Cleartext metadata.** While the chat window lists people, the Bonjour instance name (the
 sanitized display name, at most 63 bytes) and the TXT record `v=1` are visible to every Mac in
-range, and HELLO carries the display name and protocol versions in cleartext. Anyone nearby
+range, and HELLO carries the display name and protocol versions in cleartext (since v0.4.0 the
+chat version, 2, also tells a listener that FX Vault 0.4 or later is running). Anyone nearby
 learns that someone with that name has FX Vault's chat window open. Users who do not want that
 can set a different name in Settings › General or keep the window closed.
 
 **Not covered.** A peer who passes the code check is trusted with what the user chooses to send
-it; FX Vault cannot stop them from copying a message or a saved value. A user who skips the
+it; FX Vault cannot stop them from copying a message or a saved value. The receiver of a
+repository decides where it goes (any repository they can change, or a file); the sender cannot
+restrict it. A user who skips the
 code comparison gets no protection against a relay. Denial of service by radio jamming or by
 flooding Bonjour is out of scope. There is no accept/decline step before the code comparison:
 a stranger who connects and lets the code screen appear, then cancels, ends that conversation
@@ -336,7 +348,9 @@ attempt on the other Mac like any cancelled chat (pending a product decision).
   history and writes nothing to disk, and the window drops its transcript when the chat ends
   (close, lock, sleep, disconnect, timeout). An attached value is decrypted only when the peer
   asks for it (re-read and checked against the offered name, kind and scope) and reaches the
-  receiver's vault only through the share import preview; the chat UI never holds a value.
+  receiver's vault only through the share import preview; the chat UI never holds a value. A
+  received repository (v0.4.0) waits in memory for Import Into… or Save as File… until the chat
+  ends; a file saved from it is as safe as its passphrase, like any `.fxvault` file.
 - The Keychain status codes for the Touch ID fallback button, lockout and an enrollment-
   invalidated item follow Apple's documentation and still need confirmation on a signed build
   (RELEASING.md manual checklist). Since v0.1.1 an unexpected `errSecAuthFailed` can no longer

@@ -189,7 +189,8 @@ struct ItemEditBatch {
     }
 
     /// The stored local value of `id` (nil when missing). The caller wipes it.
-    private func storedValue(of id: ConfigItemID) throws -> SecretBytes? {
+    /// The decrypted stored value of `id`, or nil for a value-missing secret. The caller wipes it.
+    func storedValue(of id: ConfigItemID) throws -> SecretBytes? {
         guard let record = try writer.store.fetchItemRecord(id: id, in: tx) else {
             throw ConfigRepositoryError.itemNotFound
         }

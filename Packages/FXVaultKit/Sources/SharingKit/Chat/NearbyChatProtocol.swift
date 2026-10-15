@@ -16,6 +16,13 @@ public enum NearbyChatProtocol {
 
     /// Size of an attachment id on the wire.
     static let attachmentIDBytes = ChatAttachmentID.byteCount
+    /// The highest chat version this Mac offers in HELLO. 1: text and single-item attachments
+    /// (v0.2.0). 2 (v0.4.0): configuration attachments too. The frame format is unchanged, so a
+    /// chat between 0.4.0 and an older version negotiates 1 and works as before.
+    public static let maxVersion: UInt8 = 2
+    /// The negotiated version from which a chat carries configuration attachments (a whole
+    /// repository or environment, scope `repository` or `environment`).
+    public static let configurationAttachmentsVersion: UInt8 = 2
 }
 
 /// Encrypted chat frame types. HELLO_I, HELLO_R, REVEAL_I and the plaintext ABORT are the share
@@ -54,6 +61,9 @@ extension Limits {
     /// Largest attachment payload JSON. One value is at most ``maxValueBytes``; JSON escaping can
     /// grow it up to six times.
     public static let chatAttachmentBytes = 512 * bytesPerKiB
+    /// Largest configuration attachment payload JSON (v0.4.0): a whole repository or
+    /// environment, as large as a nearby share package.
+    public static let chatConfigurationAttachmentBytes = maxNearbyPayloadBytes
     /// Most open attachment offers per direction (offered or requested, not yet delivered).
     public static let chatMaxOpenAttachments = 8
     /// Keepalive PINGs that may be unanswered; the next keepalive tick aborts the chat.

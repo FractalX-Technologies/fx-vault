@@ -27,6 +27,30 @@ struct ClipboardManagerTests {
         }
     }
 
+    /// v0.4.0 ⌘C on the table: item names, transient (never concealed: they are not values),
+    /// never cleared, and recognized by FX Vault's paste only until anything else is copied.
+    @Test func itemNamesAreTransientAndRecognizedUntilSomethingElseIsCopied() async {
+        await withPasteboard { pasteboard, _, manager in
+            manager.copyItemNames(["API_KEY", "DB_URL"])
+            #expect(pasteboard.string(forType: .string) == "API_KEY\nDB_URL")
+            let types = pasteboard.types ?? []
+            #expect(types.contains(ClipboardManager.Marker.transient))
+            #expect(!types.contains(ClipboardManager.Marker.concealed))
+            #expect(pasteboard.string(forType: ClipboardManager.Marker.source) == ClipboardManager.Marker.sourceIdentifier)
+            #expect(manager.holdsItemNames)
+            #expect(manager.pendingClear == nil)
+            #expect(!manager.ownsContents, "lock does not clear names")
+
+            pasteboard.clearContents()
+            pasteboard.setString("REGION=eu", forType: .string)
+            #expect(!manager.holdsItemNames)
+
+            manager.copyItemNames(["API_KEY"])
+            manager.copy("FXV_FIXTURE_VALUE")
+            #expect(!manager.holdsItemNames, "a value copy replaces the names")
+        }
+    }
+
     @Test func clearsAfterDelayWhenUnchanged() async {
         await withPasteboard { pasteboard, clock, manager in
             manager.copy("FXV_FIXTURE_VALUE")

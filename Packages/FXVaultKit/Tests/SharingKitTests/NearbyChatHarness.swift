@@ -65,19 +65,23 @@ struct ChatHarness {
         self.responder = responder
     }
 
-    /// The KAT parties: fixed keys and nonces, names "Alice's Mac" / "Bob's Mac".
-    static func kat() throws -> ChatHarness {
+    /// The KAT parties: fixed keys and nonces, names "Alice's Mac" / "Bob's Mac", chat version
+    /// 1 on both sides (chat_kat.json was recorded with v1; a 0.2.x or 0.3.x Mac still offers
+    /// it). `maxVersions` overrides the versions (v0.4.0 tests of configuration attachments).
+    static func kat(maxVersions: (initiator: UInt8, responder: UInt8) = (1, 1)) throws -> ChatHarness {
         let kat = try ChatKAT.load()
         return ChatHarness(
             initiator: NearbyChatMachine(
                 role: .initiator,
                 localName: kat.inputs.nameI,
-                keyMaterial: try kat.keyMaterial(.initiator)
+                keyMaterial: try kat.keyMaterial(.initiator),
+                maxVersion: maxVersions.initiator
             ),
             responder: NearbyChatMachine(
                 role: .responder,
                 localName: kat.inputs.nameR,
-                keyMaterial: try kat.keyMaterial(.responder)
+                keyMaterial: try kat.keyMaterial(.responder),
+                maxVersion: maxVersions.responder
             )
         )
     }

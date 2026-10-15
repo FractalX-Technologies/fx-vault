@@ -53,7 +53,20 @@ struct NearbyChatScreen: View {
         .sheet(item: $viewModel.saveSheet, onDismiss: viewModel.saveSheetDismissed) { save in
             ChatSaveSheet(viewModel: save)
         }
+        .sheet(isPresented: fileSheetBinding) {
+            if let file = viewModel.fileSheet {
+                ShareExportScreen(viewModel: file)
+            }
+        }
         .errorAlert($viewModel.alert)
+    }
+
+    /// "Save as File…" of a received repository (v0.4.0; the view model is not `Identifiable`).
+    private var fileSheetBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.fileSheet != nil },
+            set: { if !$0 { viewModel.fileSheetDismissed() } }
+        )
     }
 
     @ViewBuilder

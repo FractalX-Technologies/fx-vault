@@ -89,7 +89,32 @@ public actor SharingRepository {
         let generator = try passphrases()
         let package = try builder.build(selection, senderName: senderName, appVersion: appVersion, includeValues: true)
         defer { package.wipeValues() }
-        let passphrase = generator.generate()
+        return try await seal(package, passphrase: generator.generate(), to: destination, existingFile: existingFile)
+    }
+
+    /// Writes a package received in Nearby Chat to a `.fxvault` file (v0.4.0 "Save as File…"):
+    /// as ``exportFile(_:to:senderName:appVersion:authorization:existingFile:)``, under a fresh
+    /// passphrase, keeping the sender's package id, name and date. Does not wipe `package`.
+    ///
+    /// - Parameter authorization: from `ReauthGate.authorizeShare(.fileExport, …)`; consumed here.
+    public func exportFile(
+        package: SharePackageModel,
+        to destination: URL,
+        authorization: ShareAuthorizationModel,
+        existingFile: SecureFileWriter.ExistingFilePolicy = .fail
+    ) async throws(SharingError) -> ShareFileExportResultModel {
+        try authorization.consume(.fileExport, for: session)
+        let generator = try passphrases()
+        return try await seal(package, passphrase: generator.generate(), to: destination, existingFile: existingFile)
+    }
+
+    /// Seals `package` under `passphrase` and writes it owner-only; wipes the passphrase on failure.
+    private func seal(
+        _ package: SharePackageModel,
+        passphrase: SecretBytes,
+        to destination: URL,
+        existingFile: SecureFileWriter.ExistingFilePolicy
+    ) async throws(SharingError) -> ShareFileExportResultModel {
         let file: Data
         do {
             file = try await codec.seal(package, passphrase: passphrase)

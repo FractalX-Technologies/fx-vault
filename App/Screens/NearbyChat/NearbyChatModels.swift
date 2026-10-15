@@ -63,8 +63,15 @@ enum ChatEntryModel: Identifiable, Equatable {
     }
 }
 
-/// An attachment card: names, kind and scope of one secret or variable. Never a value.
+/// An attachment card: names, kind and scope of one secret or variable, or (v0.4.0) the names
+/// and counts of a whole repository. Never a value.
 struct ChatAttachmentCardModel: Identifiable, Equatable {
+    /// What the user chose on a received configuration, done once its values arrive (v0.4.0).
+    enum ConfigurationAction: Equatable {
+        case importInto
+        case saveAsFile
+    }
+
     enum Status: Equatable {
         // Offered by this Mac
         /// Waiting for the other person to save or dismiss it.
@@ -83,6 +90,10 @@ struct ChatAttachmentCardModel: Identifiable, Equatable {
         case readyToSave
         /// The import preview is open.
         case reviewing
+        /// "Save as File…" is open (v0.4.0, configurations).
+        case savingToFile
+        /// Written to an encrypted file; it can still be imported (v0.4.0, configurations).
+        case savedToFile
         /// Imported into this vault.
         case saved
         /// The preview was cancelled; the value was wiped.
@@ -97,6 +108,11 @@ struct ChatAttachmentCardModel: Identifiable, Equatable {
     /// When it was offered (this Mac's clock).
     let date: Date
     var status: Status
+    /// The action to run when a requested configuration arrives.
+    var pendingAction: ConfigurationAction?
+    /// A configuration was saved as an encrypted file at least once (the file stays after its
+    /// values here are wiped).
+    var hasSavedFile = false
 
     var id: ChatAttachmentID {
         offer.id
@@ -111,10 +127,22 @@ struct ChatAttachmentCardModel: Identifiable, Equatable {
         direction == .received && status == .offered
     }
 
-    /// "Review…" reopens the import preview of an arrived value.
+    /// "Review…" reopens the import preview of an arrived value; for a configuration also
+    /// after it was saved to a file.
     var canReview: Bool {
-        direction == .received && status == .readyToSave
+        direction == .received && (status == .readyToSave || status == .savedToFile)
     }
+
+    /// "Save as File…" for an arrived configuration that was not imported yet.
+    var canSaveAsFile: Bool {
+        offer.isConfiguration && direction == .received && (status == .readyToSave || status == .savedToFile)
+    }
+}
+
+/// What the attachment picker sends (v0.4.0): one item, or a whole repository.
+enum ChatAttachmentChoiceModel: Equatable {
+    case item(ChatAttachableItemModel)
+    case repository(ChatAttachableRepositoryModel)
 }
 
 /// One group of the attachment picker: a repository level or one environment.

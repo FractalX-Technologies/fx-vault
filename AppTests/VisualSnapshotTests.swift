@@ -55,6 +55,17 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
+    /// v0.4.0: two rows selected, so the header shows the selection actions.
+    @Test func mainWindowSelection() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let detail = try #require(main.detail)
+        detail.selection = Set(detail.rows.prefix(2).map(\.id))
+        try await SnapshotOutput.write("main-selection", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
     /// The sidebar on its own: inside the split view it sits in a macOS 26+ glass view that a
     /// window capture draws blank.
     @Test func mainSidebar() async throws {
@@ -167,6 +178,89 @@ struct VisualSnapshotTests {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
+        }
+        fixture.close()
+    }
+
+    // MARK: - Nearby Chat repositories (v0.4.0)
+
+    @Test func nearbyChatRepositoryPicker() async throws {
+        let fixture = try await NearbyChatViewModelTests.Fixture()
+        try await fixture.chat()
+        fixture.macA.attach()
+        let picker = try #require(fixture.macA.picker)
+        picker.reauth.password = testPassword
+        await picker.authenticateWithPassword()
+        picker.mode = .repository
+        picker.selectedRepositoryID = fixture.world.senderRepositoryID
+        try await SnapshotOutput.write(
+            "nearby-chat-repository-picker",
+            size: CGSize(width: Theme.Layout.chatPickerWidth, height: SnapshotOutput.tallSheetHeight)
+        ) {
+            ChatAttachmentPickerSheet(viewModel: picker)
+        }
+        fixture.close()
+    }
+
+    /// Mac B's side: a repository offered (Import Into…, Save as File…, Dismiss) and one saved as
+    /// a file; Mac A's side: the repository it sent.
+    @Test func nearbyChatRepositoryCards() async throws {
+        let fixture = try await NearbyChatViewModelTests.Fixture()
+        try await fixture.chat()
+        let saved = try await fixture.attachRepository()
+        _ = try await fixture.saveRepositoryAsFile(saved)
+        _ = try await fixture.attachRepository()
+        let size = CGSize(width: Theme.Layout.chatWindowDefaultWidth - Theme.Layout.chatPeerListWidth, height: Theme.Layout.chatWindowDefaultHeight)
+        try await SnapshotOutput.write("nearby-chat-repository-received", size: size) {
+            ChatConversationView(viewModel: fixture.macB)
+        }
+        try await SnapshotOutput.write("nearby-chat-repository-sent", size: size) {
+            ChatConversationView(viewModel: fixture.macA)
+        }
+        fixture.close()
+    }
+
+    @Test func nearbyChatImportTarget() async throws {
+        let fixture = try await NearbyChatViewModelTests.Fixture()
+        _ = try await fixture.world.receiver.stageRepository(name: "another-service-with-a-long-name")
+        try await fixture.chat()
+        let id = try await fixture.attachRepository()
+        let macB = fixture.macB
+        await macB.handleConfiguration(id, .importInto)
+        #expect(await TestFixtures.eventually { macB.saveSheet != nil })
+        let sheet = try #require(macB.saveSheet)
+        try await SnapshotOutput.write(
+            "nearby-chat-import-target",
+            size: CGSize(width: Theme.Layout.shareSheetWidth, height: SnapshotOutput.sheetHeight)
+        ) {
+            ChatSaveSheet(viewModel: sheet)
+        }
+        await sheet.importIntoSelectedTarget()
+        try await SnapshotOutput.write(
+            "nearby-chat-import-preview",
+            size: CGSize(width: Theme.Layout.shareSheetWidth, height: SnapshotOutput.sheetHeight)
+        ) {
+            ChatSaveSheet(viewModel: sheet)
+        }
+        fixture.close()
+    }
+
+    @Test func nearbyChatSaveAsFile() async throws {
+        let fixture = try await NearbyChatViewModelTests.Fixture()
+        try await fixture.chat()
+        let id = try await fixture.attachRepository()
+        let macB = fixture.macB
+        await macB.handleConfiguration(id, .saveAsFile)
+        #expect(await TestFixtures.eventually { macB.fileSheet != nil })
+        let sheet = try #require(macB.fileSheet)
+        await sheet.start()
+        sheet.reauth.password = testPassword
+        await sheet.authenticateWithPassword()
+        try await SnapshotOutput.write(
+            "nearby-chat-save-as-file",
+            size: CGSize(width: Theme.Layout.shareSheetWidth, height: SnapshotOutput.sheetHeight)
+        ) {
+            ShareExportScreen(viewModel: sheet)
         }
         fixture.close()
     }
@@ -328,6 +422,8 @@ enum SnapshotOutput {
     static let scale: CGFloat = 2
     static let windowSize = CGSize(width: Theme.Layout.windowDefaultWidth, height: Theme.Layout.windowDefaultHeight)
     static let sheetHeight: CGFloat = 640
+    /// Sheets that grow with their content (the attachment picker with its list).
+    static let tallSheetHeight: CGFloat = 780
     static let settingsHeight: CGFloat = 560
     /// Time for observation streams and layout passes to settle before a window capture.
     static let settleDelay: Duration = .milliseconds(400)

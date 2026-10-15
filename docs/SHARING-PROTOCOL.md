@@ -282,7 +282,7 @@ SharingKit stays pure; VaultData's `SharingRepository` connects it to the vault.
   receiver previews the manifest, decides, previews the payload and applies through the same
   importer; events forwarded to the UI never carry values.
 
-## 7. Nearby chat: `fxvault-chat/v1` (v0.2.0, experimental)
+## 7. Nearby chat: `fxvault-chat/v1` (v0.2.0, experimental; chat version 2 in v0.4.0, §7.1)
 
 Implemented in `SharingKit/Chat/` (`NearbyChatSession` actor over the pure `NearbyChatMachine`).
 Bryan's decisions: chat is 1:1 and **ephemeral** (messages live only in memory and are wiped
@@ -320,9 +320,9 @@ yet), `peerConnected(name)` when the peer's HELLO arrives (unverified name), `sa
 |---|---|---|---|
 | 0x10 | CONFIRM | `0x01` | Only while comparing codes. |
 | 0x20 | TEXT | UTF-8, 1…4,096 bytes (`Limits.chatMessageBytes`) | Only when verified. Over the limit: `oversizeFrame`; empty or invalid UTF-8: `malformedFrame`. Both sides sanitize (`ChatTextSanitizer`: CR/LF and U+2028/9 → LF, other C0/C1/DEL, bidi controls, zero-width characters except ZWJ and every other invisible character (`UnicodeScalarPolicy.isInvisible`: General_Category Cf such as tag characters, soft hyphen and invisible operators, Hangul fillers, U+034F) removed, NFC, at most one blank line in a row (`Limits.chatMaxBlankLines`) and four combining marks per character (`Limits.chatMaxMarksPerCharacter`), trimmed); a message left empty is dropped. |
-| 0x21 | ATTACHMENT_OFFER | `id(16) ‖ manifest JSON` | A share manifest (no values) of scope `secret`: exactly one secret or variable with `valueState = present`, passing `SharePackageValidator` (manifest). Duplicate id: `malformedFrame`; more than 8 open offers (`Limits.chatMaxOpenAttachments`) or more than 32 offers in the chat (`Limits.chatMaxOffersPerChat`): `unexpectedMessage`. |
+| 0x21 | ATTACHMENT_OFFER | `id(16) ‖ manifest JSON` | A share manifest (no values) of scope `secret`: exactly one secret or variable with `valueState = present`, passing `SharePackageValidator` (manifest). In a chat of version 2, also scope `repository` or `environment` (§7.1). Duplicate id: `malformedFrame`; more than 8 open offers (`Limits.chatMaxOpenAttachments`) or more than 32 offers in the chat (`Limits.chatMaxOffersPerChat`): `unexpectedMessage`. |
 | 0x22 | ATTACHMENT_REQUEST | `id(16)` | Receiver → sender ("Save to my vault"); once per offer. Unknown id: `unknownItemIDs`. |
-| 0x23 | ATTACHMENT_PAYLOAD | `id(16) ‖ u32 totalLength ‖ chunk` | Sender → receiver, only for a requested offer, chunks in order with a constant total ≤ 512 KiB (`Limits.chatAttachmentBytes`). The complete JSON must validate (payload mode) and equal the offer apart from the value, else `payloadMismatch`. One transfer at a time. |
+| 0x23 | ATTACHMENT_PAYLOAD | `id(16) ‖ u32 totalLength ‖ chunk` | Sender → receiver, only for a requested offer, chunks in order with a constant total ≤ 512 KiB (`Limits.chatAttachmentBytes`; a configuration ≤ 16 MiB, §7.1). The complete JSON must validate (payload mode) and equal the offer apart from the values, else `payloadMismatch`. One transfer at a time. |
 | 0x24 | ATTACHMENT_DECLINE | `id(16)` | Receiver: dismisses an offer it has not requested. Sender: withdraws an offer whose value it cannot supply. Anything else aborts. |
 | 0x30 / 0x31 | PING / PONG | empty | Keepalive; a PONG without an outstanding PING is `unexpectedMessage`. |
 | — | Flood limit | — | More than 100 TEXT, ATTACHMENT_OFFER, ATTACHMENT_REQUEST, ATTACHMENT_DECLINE and PING frames from the peer within 10 s (`Limits.chatMaxPeerFramesPerFloodWindow`, `Timeouts.chatFloodWindow`, by receive time) abort with `unexpectedMessage`. |
@@ -390,11 +390,68 @@ does.
   no "ended" screen and no failed-handshake count. Every end of a chat wipes the transcript; a
   new chat is a new session and a new advertisement.
 
-**Vectors** (`Fixtures/chat_kat.json`, same inputs as §4): C `bb69f4e4…4eb50c58`,
+**Vectors** (`Fixtures/chat_kat.json`, same inputs as §4, both sides offering `maxVer` 1): C `bb69f4e4…4eb50c58`,
 TH `b2ba2fab…90065cb4`, SAS **550 392**, the chat transcript over the share commitment
 `360 242`, plus CONFIRM (both directions), TEXT "Hello from FX Vault" I→R seq 1, PING R→I seq 1
 and CLOSE I→R seq 2. `crosscheck.py --write-chat` and `NearbyProtocolReference.swift` (its
 `chat_` lines) produce them byte for byte; regenerating `nearby_kat.json` gives an identical file.
+
+### 7.1 Chat version 2: whole repositories (v0.4.0)
+
+Bryan's decisions (Q3): a whole repository's configuration can be sent in a chat; the receiver
+imports it into a repository they choose or saves it as an encrypted `.fxvault` file; there is
+no plaintext export from chat.
+
+**Negotiation.** The chat now offers `maxVer` 2 in HELLO_I and HELLO_R
+(`NearbyChatProtocol.maxVersion`; nearby share keeps 1). Both sides use
+`version = min(maxVerI, maxVerR)`, and the transcript binds both offers and the result (§4
+step 4), so a relay that lowers a version changes the commitment check and the code. A 0.2.x or
+0.3.x Mac offers 1 and accepts a HELLO that offers 2 (it requires only `≥ minVersion`), so a
+chat between 0.4.0 and an older Mac negotiates 1 and works exactly as before. The label prefix
+(`fxvault/chat/v1/…`), the TXT record `v=1`, the frame layout (its version byte stays 1) and the
+frame types are unchanged.
+
+**What version 2 adds.** At a negotiated version ≥ 2
+(`NearbyChatProtocol.configurationAttachmentsVersion`), ATTACHMENT_OFFER may carry a manifest of
+scope `repository` (the repository level and every environment with its branch policy) or
+`environment`: names and value states only, every item allowed with a value present or missing
+(GitHub never returns secret values), validated as any share manifest. Below version 2 such an
+offer aborts with `invalidPackage(scopeMismatch)` as in version 1, and the sender refuses to
+make one (`ChatError.peerNeedsUpdate`) before anything is sent.
+
+| Rule | One item | Configuration (version 2) |
+|---|---|---|
+| Offer scope | `secret`, one item with a value | `repository` or `environment` |
+| Payload JSON | ≤ 512 KiB (`chatAttachmentBytes`) | ≤ 16 MiB (`chatConfigurationAttachmentBytes`, the nearby share limit) |
+| Payload content | the offer with its value | the offer with its values (`payloadMismatch` otherwise) |
+| Sender's provider | `ChatAttachmentValueProvider` → one value | `ChatConfigurationPayloadProvider` → the package |
+
+Payload chunks never count toward the flood limit and restart the idle timer, as in version 1.
+Open-offer and per-chat offer limits count both kinds together.
+
+**Sender.** `offerConfiguration(manifest:payloadProvider:)` strips values and sends the offer;
+the provider runs only after ATTACHMENT_REQUEST and must return a package whose manifest equals
+the offer, or the offer is withdrawn (DECLINE); the session wipes the values once sent. VaultData
+(`NearbyChatConversation.offerRepository`) checks the negotiated version before it consumes the
+`.nearbySend` authorization, builds the manifest with the share builder's `.repository(id)`
+selection and records every item's stored `value_fp`. On request it rebuilds the package with
+values, gives it the offer's entry ids (`ShareRepositoryModel.withEntryIDs(of:)`: entry ids are
+random per build, so the same shape takes the offered ids and another shape is refused) and
+sends it only if the fingerprints, the shape and the value states still equal the offer.
+
+**Receiver.** The card shows the repository's `owner/name` and counts
+(`ChatConfigurationSummaryModel`: environments, secrets, variables, items without a value).
+**Import Into…** requests the payload, then lists the receiver's repositories;
+`previewAttachment(_:into:checkGitHub:)` plans the package as if it were for the chosen
+repository (its owner, name and GitHub id are taken from the receiver's vault row, so the §9.5
+GitHub id check holds for that repository) with the same planner, preview, replay rules and
+`SharingRepository.apply` as §5–§6. Environments the target lacks are created; every change is
+pending for the next Sync. **Save as File…** (`saveAttachment(_:to:authorization:)`, after
+`.fileExport` re-authentication) seals the received package unchanged (sender's name and package
+id kept) into a `.fxvault` file under a fresh passphrase (§2–§3). The package stays in the
+conversation until an import preview takes it (applied, or wiped on Cancel, as for one item) or
+the chat ends; closing the repository choice before Continue leaves it there. A whole repository
+is a schema 1 package (§1.1), so the file opens in every FX Vault version.
 
 ## 8. Compatibility between versions (v0.2.0)
 
@@ -406,14 +463,23 @@ and CLOSE I→R seq 2. `crosscheck.py --write-chat` and `NearbyProtocolReference
 | Nearby share, no shared network (AWDL) | Not found: 0.1.x neither advertises nor browses over peer-to-peer Wi-Fi | Not found |
 | Nearby Chat | 0.1.x has no chat and never browses `_fxvault-chat._tcp` | n/a |
 
+Since v0.4.0 (§7.1):
+
+| Chat feature | 0.4.0 with 0.4.0 | 0.4.0 with 0.2.x or 0.3.x |
+|---|---|---|
+| Messages, one secret or variable | Version 2 | Version 1, unchanged |
+| A whole repository | Sent as one card; Import Into… or Save as File… | Not offered: the Whole Repository tab says the other Mac needs FX Vault 0.4 or later; nothing is sent |
+| A `.fxvault` file saved from a received repository | Imports | Imports (schema 1) |
+
 - **Versioning.** Nearby share (protocol v1, labels `fxvault/nearby/v1/…`) and chat
   (`fxvault-chat/v1`, labels `fxvault/chat/v1/…`) are fixed, as are the TXT record `v=1` and
   the frame types. A later revision raises `maxVer` in HELLO (bound into the transcript, §4
-  step 4); a change that cannot be negotiated gets a new label prefix, so the commitment check
-  fails cleanly, as it does between share and chat. `schemaVersion` changes
-  follow the lowest-version rule in §1.1.
+  step 4), as chat did in v0.4.0 (version 2, §7.1); a change that cannot be negotiated gets a
+  new label prefix, so the commitment check fails cleanly, as it does between share and chat.
+  `schemaVersion` changes follow the lowest-version rule in §1.1.
 - **Chat attachments** are share manifests and payloads of scope `secret`, so they follow the
   schema rules of §1: a repository-level item is v1, an environment-level item is v2 (partial
-  environment). Both ends of a chat are 0.2.0 or later, so both are always readable.
+  environment). Both ends of a chat are 0.2.0 or later, so both are always readable. A whole
+  repository (version 2 chats only) is schema 1.
 - **Mixed fleets.** Until every Mac runs 0.2.0, share whole environments (v1) with 0.1.x users,
   and use a shared network for nearby sharing with them.

@@ -15,10 +15,13 @@ import VaultData
 ///   "Codes match" / "Don't match", no default button) before any message flows.
 /// - **Messages** live only in this view model's memory (``entries``); nothing is written to
 ///   disk. ⌘↩ sends; the limit is `Limits.chatMessageBytes` after sanitizing.
-/// - **Attachments:** "Attach secret or variable…" asks for Touch ID or the master password first,
-///   then one item is offered by name (``ChatAttachmentPickerViewModel``). A received offer shows
-///   a card (name, kind, repository/environment, never the value) with "Save to my vault", which
-///   asks for the value and opens the share import preview (``ChatSaveViewModel``), or "Dismiss".
+/// - **Attachments:** "Attach…" asks for Touch ID or the master password first, then one item is
+///   offered by name (``ChatAttachmentPickerViewModel``). A received offer shows a card (name,
+///   kind, repository/environment, never the value) with "Save to my vault", which asks for the
+///   value and opens the share import preview (``ChatSaveViewModel``), or "Dismiss".
+/// - **Repositories (v0.4.0, chat v2):** with a teammate on 0.4 or later, a whole repository can
+///   be attached. Its card has "Import Into…" (choose one of this vault's repositories, then the
+///   same preview) and "Save as File…" (an encrypted `.fxvault` through ``ShareExportViewModel``).
 /// - **Wiped** on window close (``close()``), vault lock (``vaultDidLock()``; sleep and screen lock
 ///   lock the vault), disconnect, timeout or when either person ends the chat: the window then
 ///   shows "Conversation ended. Nothing was saved."
@@ -50,8 +53,13 @@ final class NearbyChatViewModel: LockObserving {
     private(set) var discoveryError: ErrorPresentationModel?
     /// Advertising failed repeatedly: this Mac is not visible ("Try Again" restarts).
     private(set) var visibilityError: ErrorPresentationModel?
-    /// The open "Attach secret or variable…" sheet.
+    /// The open "Attach…" sheet.
     var picker: ChatAttachmentPickerViewModel?
+    /// The open "Save as File…" sheet of a received configuration (v0.4.0).
+    var fileSheet: ShareExportViewModel?
+    /// Whether the teammate's FX Vault can receive a whole repository (chat v2), known once the
+    /// codes match.
+    private(set) var peerAcceptsRepositories = false
     /// The open "Save to my vault" import preview.
     var saveSheet: ChatSaveViewModel?
     var alert: ErrorPresentationModel?
@@ -59,6 +67,7 @@ final class NearbyChatViewModel: LockObserving {
     @ObservationIgnored private let app: AppViewModel
     @ObservationIgnored private let dependencies: FeatureDependencies
     @ObservationIgnored private let network: any NearbyChatNetworking
+    @ObservationIgnored private let makeFileDelivery: () -> any ShareFileDelivering
     @ObservationIgnored private let fixedIdentity: ShareLocalIdentityModel?
     @ObservationIgnored private var identity: ShareLocalIdentityModel
     @ObservationIgnored private var conversation: NearbyChatConversation?
@@ -80,16 +89,20 @@ final class NearbyChatViewModel: LockObserving {
     @ObservationIgnored private(set) var tracker = NearbyFailureTracker()
     @ObservationIgnored private let tasks = TaskBag()
 
-    /// - Parameter identity: fixed in tests; nil reads the name from Preferences on every start.
+    /// - Parameters:
+    ///   - identity: fixed in tests; nil reads the name from Preferences on every start.
+    ///   - makeFileDelivery: the save panel and sharing picker of each "Save as File…" sheet.
     init(
         app: AppViewModel,
         dependencies: FeatureDependencies,
         network: any NearbyChatNetworking = LiveNearbyChatNetworking(),
-        identity: ShareLocalIdentityModel? = nil
+        identity: ShareLocalIdentityModel? = nil,
+        makeFileDelivery: @escaping () -> any ShareFileDelivering = { SystemShareFileDelivery() }
     ) {
         self.app = app
         self.dependencies = dependencies
         self.network = network
+        self.makeFileDelivery = makeFileDelivery
         fixedIdentity = identity
         self.identity = identity ?? .nearby(preferences: dependencies.preferences)
         dependencies.actions.addLockObserver(self)
@@ -304,6 +317,7 @@ final class NearbyChatViewModel: LockObserving {
             }
             tracker.recordSuccess()
             step = .chatting
+            peerAcceptsRepositories = await conversation?.acceptsConfigurationAttachments ?? false
         case .message(let message):
             appendMessage(message)
         case .attachmentOffered(let offer):
@@ -320,7 +334,12 @@ final class NearbyChatViewModel: LockObserving {
             updateCard(id) { $0.status = .sent }
         case .attachmentReceived(let id, _):
             updateCard(id) { $0.status = .readyToSave }
-            if saveSheet == nil {
+            let action = cards[id]?.pendingAction
+            updateCard(id) { $0.pendingAction = nil }
+            switch action {
+            case .saveAsFile:
+                saveAsFile(id)
+            case .importInto, nil:
                 review(id)
             }
         case .peerClosed:
@@ -444,11 +463,14 @@ final class NearbyChatViewModel: LockObserving {
         step == .chatting && picker == nil
     }
 
-    /// "Attach secret or variable…": re-authenticate, then choose one item.
+    /// "Attach…": re-authenticate, then choose one item or a whole repository.
     func attach() {
         guard canAttach else { return }
-        picker = ChatAttachmentPickerViewModel(dependencies: dependencies) { [weak self] item, authorization in
-            await self?.offer(item, authorization: authorization)
+        picker = ChatAttachmentPickerViewModel(
+            dependencies: dependencies,
+            acceptsRepositories: peerAcceptsRepositories
+        ) { [weak self] choice, authorization in
+            await self?.offer(choice, authorization: authorization)
         }
     }
 
@@ -458,17 +480,27 @@ final class NearbyChatViewModel: LockObserving {
         picker = nil
     }
 
-    private func offer(_ item: ChatAttachableItemModel, authorization: ShareAuthorizationModel) async {
+    private func offer(_ choice: ChatAttachmentChoiceModel, authorization: ShareAuthorizationModel) async {
         defer { pickerDismissed() }
         guard step == .chatting, let conversation else { return }
         let generation = generation
         do {
-            let offer = try await conversation.offerItem(
-                item.id,
-                senderName: identity.displayName,
-                appVersion: identity.appVersion,
-                authorization: authorization
-            )
+            let offer = switch choice {
+            case .item(let item):
+                try await conversation.offerItem(
+                    item.id,
+                    senderName: identity.displayName,
+                    appVersion: identity.appVersion,
+                    authorization: authorization
+                )
+            case .repository(let repository):
+                try await conversation.offerRepository(
+                    repository.id,
+                    senderName: identity.displayName,
+                    appVersion: identity.appVersion,
+                    authorization: authorization
+                )
+            }
             guard isCurrent(generation) else { return }
             add(ChatAttachmentCardModel(offer: offer, date: dependencies.clock.now, status: .awaitingPeer))
         } catch {
@@ -492,6 +524,46 @@ final class NearbyChatViewModel: LockObserving {
         }
     }
 
+    /// "Import Into…" or "Save as File…" on a received configuration (v0.4.0): asks for the
+    /// values first, then runs the action when they arrive; an arrived one runs it at once.
+    func handleConfiguration(_ id: ChatAttachmentID, _ action: ChatAttachmentCardModel.ConfigurationAction) async {
+        guard let card = cards[id], card.offer.isConfiguration, card.direction == .received else { return }
+        if card.isAwaitingDecision {
+            updateCard(id) { $0.pendingAction = action }
+            await save(id)
+            return
+        }
+        switch action {
+        case .importInto:
+            review(id)
+        case .saveAsFile:
+            saveAsFile(id)
+        }
+    }
+
+    /// "Save as File…": the Share as File sheet for the received package (Touch ID or the master
+    /// password, then a fresh passphrase, then Save… or AirDrop…).
+    func saveAsFile(_ id: ChatAttachmentID) {
+        guard !isPresentingSheet, let card = cards[id], card.canSaveAsFile, let conversation else { return }
+        updateCard(id) { $0.status = .savingToFile }
+        fileSheet = ShareExportViewModel(
+            chatAttachment: ShareExportViewModel.ChatAttachmentSource(conversation: conversation, attachmentID: id),
+            dependencies: dependencies,
+            delivery: makeFileDelivery()
+        ) { [weak self] wroteFile in
+            self?.updateCard(id) { card in
+                card.hasSavedFile = card.hasSavedFile || wroteFile
+                card.status = card.hasSavedFile ? .savedToFile : .readyToSave
+            }
+        }
+    }
+
+    /// The Save as File sheet went away.
+    func fileSheetDismissed() {
+        fileSheet?.close()
+        fileSheet = nil
+    }
+
     /// "Dismiss": declines the offer; nothing is sent.
     func dismiss(_ id: ChatAttachmentID) async {
         guard cards[id]?.isAwaitingDecision == true, let conversation else { return }
@@ -508,11 +580,16 @@ final class NearbyChatViewModel: LockObserving {
 
     /// Opens the import preview of an arrived value.
     func review(_ id: ChatAttachmentID) {
-        guard saveSheet == nil, let card = cards[id], card.canReview, let conversation else { return }
+        guard !isPresentingSheet, let card = cards[id], card.canReview, let conversation else { return }
         updateCard(id) { $0.status = .reviewing }
-        saveSheet = ChatSaveViewModel(card: card, conversation: conversation, dependencies: dependencies) { [weak self] saved in
-            self?.saveFinished(id, saved: saved)
+        saveSheet = ChatSaveViewModel(card: card, conversation: conversation, dependencies: dependencies) { [weak self] outcome in
+            self?.saveFinished(id, outcome)
         }
+    }
+
+    /// One sheet at a time: a value that arrives while another sheet is open waits on its card.
+    private var isPresentingSheet: Bool {
+        picker != nil || saveSheet != nil || fileSheet != nil
     }
 
     /// The import preview sheet went away (Esc or a lock) without Done or Cancel.
@@ -520,11 +597,17 @@ final class NearbyChatViewModel: LockObserving {
         saveSheet?.finish()
     }
 
-    private func saveFinished(_ id: ChatAttachmentID, saved: Bool) {
-        if saved {
+    private func saveFinished(_ id: ChatAttachmentID, _ outcome: ChatSaveViewModel.Outcome) {
+        updateCard(id) { card in
+            switch outcome {
+            case .imported: card.status = .saved
+            case .wiped: card.status = .notSaved
+            case .kept: card.status = card.hasSavedFile ? .savedToFile : .readyToSave
+            }
+        }
+        if outcome == .imported {
             savedCount += 1
         }
-        updateCard(id) { $0.status = saved ? .saved : .notSaved }
         saveSheet = nil
     }
 
@@ -589,6 +672,9 @@ final class NearbyChatViewModel: LockObserving {
         picker = nil
         saveSheet?.close()
         saveSheet = nil
+        fileSheet?.close()
+        fileSheet = nil
+        peerAcceptsRepositories = false
     }
 
     /// Listener failures in a row before the window stops trying (a failing listener must not

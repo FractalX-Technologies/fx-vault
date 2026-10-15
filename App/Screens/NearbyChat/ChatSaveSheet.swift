@@ -1,5 +1,6 @@
 import SharingKit
 import SwiftUI
+import VaultCore
 import VaultData
 
 /// "Save to my vault": the share import preview of a secret or variable received in chat
@@ -13,11 +14,18 @@ struct ChatSaveSheet: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
             SheetHeader(
                 label: ShareSheetLabel.nearbyChat,
-                title: String(localized: "chat.save.title", defaultValue: "Save to My Vault"),
-                subtitle: String(
-                    localized: "chat.save.subtitle",
-                    defaultValue: "\(viewModel.itemName), received in Nearby Chat. Review it before it is imported."
-                )
+                title: viewModel.isConfiguration
+                    ? String(localized: "chat.save.repository.title", defaultValue: "Import Into a Repository")
+                    : String(localized: "chat.save.title", defaultValue: "Save to My Vault"),
+                subtitle: viewModel.step == .choosingTarget
+                    ? String(
+                        localized: "chat.save.repository.subtitle",
+                        defaultValue: "\(viewModel.itemName), received in Nearby Chat. Choose one of your repositories, then review everything before it is imported."
+                    )
+                    : String(
+                        localized: "chat.save.subtitle",
+                        defaultValue: "\(viewModel.itemName), received in Nearby Chat. Review it before it is imported."
+                    )
             )
             content
             Spacer(minLength: 0)
@@ -34,6 +42,8 @@ struct ChatSaveSheet: View {
     @ViewBuilder
     private var content: some View {
         switch viewModel.step {
+        case .choosingTarget:
+            ChatImportTargetList(viewModel: viewModel)
         case .preparing:
             NearbyProgressRow(text: String(localized: "chat.save.preparing", defaultValue: "Preparing the preview…"))
         case .preview, .applying:
@@ -84,6 +94,18 @@ struct ChatSaveSheet: View {
                 }
                 .fxButtonStyle(.primary, size: .large)
                 .keyboardShortcut(.defaultAction)
+            case .choosingTarget:
+                Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
+                    viewModel.finish()
+                }
+                .fxButtonStyle(.secondary, size: .large)
+                .keyboardShortcut(.cancelAction)
+                Button(String(localized: "chat.save.repository.continue", defaultValue: "Continue")) {
+                    Task { await viewModel.importIntoSelectedTarget() }
+                }
+                .fxButtonStyle(.primary, size: .large)
+                .keyboardShortcut(.defaultAction)
+                .disabled(!viewModel.canChooseTarget)
             case .preparing, .preview, .applying:
                 Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                     viewModel.finish()
@@ -97,6 +119,66 @@ struct ChatSaveSheet: View {
                 .fxButtonStyle(.primary, size: .large)
                 .disabled(!viewModel.canApply)
             }
+        }
+    }
+}
+
+/// The repositories of this vault a received configuration can go to (v0.4.0); those this
+/// account may not change are listed with the reason and cannot be chosen.
+private struct ChatImportTargetList: View {
+    let viewModel: ChatSaveViewModel
+
+    var body: some View {
+        @Bindable var viewModel = viewModel
+        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
+            SectionLabel(String(localized: "chat.save.repository.target", defaultValue: "Import into"))
+            if viewModel.targets.isEmpty {
+                Text(String(
+                    localized: "chat.save.repository.noTargets",
+                    defaultValue: "Your vault has no repository yet. Import one from the sidebar, then try again."
+                ))
+                .fxTextStyle(.callout)
+                .foregroundStyle(Theme.Colors.mutedText)
+            } else {
+                List(selection: $viewModel.selectedTargetID) {
+                    ForEach(viewModel.targets) { target in
+                        HStack(spacing: Theme.Spacing.small) {
+                            Image(systemName: "book.closed")
+                                .font(Theme.Typography.callout)
+                                .foregroundStyle(Theme.Colors.onSelectionSecondary)
+                                .accessibilityHidden(true)
+                            Text(verbatim: target.fullName)
+                                .fxTextStyle(.monoName)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Spacer()
+                            if let reason = target.readOnlyReason {
+                                Text(RepoCapabilityModel.readOnly(reason).chipTitle)
+                                    .fxTextStyle(.caption)
+                                    .foregroundStyle(Theme.Colors.onSelectionSecondary)
+                                    .help(reason.localizedExplanation)
+                            } else if target.isSenderRepository {
+                                Text(String(localized: "chat.save.repository.sender", defaultValue: "Same as the sender's"))
+                                    .fxTextStyle(.caption)
+                                    .foregroundStyle(Theme.Colors.onSelectionSecondary)
+                            }
+                        }
+                        .frame(minHeight: Theme.Layout.scopeRowHeight)
+                        .tag(target.id)
+                        .selectionDisabled(!target.isEditable)
+                    }
+                }
+                .shareListContainer()
+                .frame(height: Theme.Layout.chatPickerListHeight)
+            }
+            SheetCallout(
+                systemImage: "info.circle",
+                tint: Theme.Colors.subtleText,
+                text: String(
+                    localized: "chat.save.repository.note",
+                    defaultValue: "Environments it does not have are created there. Everything becomes changes for your next Sync; nothing reaches GitHub before you review it there."
+                )
+            )
         }
     }
 }

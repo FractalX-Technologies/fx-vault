@@ -100,12 +100,28 @@ nonisolated extension ChatError: PresentableError {
                     defaultValue: "The other Mac withdrew it, or it was already saved or dismissed."
                 )
             )
-        case .invalidAttachment, .attachmentTooLarge:
+        case .invalidAttachment:
             ErrorPresentationModel(
                 title: String(localized: "chat.error.attachmentInvalid.title", defaultValue: "This item can't be attached"),
                 message: String(
                     localized: "chat.error.attachmentInvalid.message",
-                    defaultValue: "Only one secret or variable that has a value can be attached."
+                    defaultValue: "Attach one secret or variable that has a value, or a whole repository."
+                )
+            )
+        case .attachmentTooLarge:
+            ErrorPresentationModel(
+                title: String(localized: "chat.error.attachmentTooLarge.title", defaultValue: "Too large for the chat"),
+                message: String(
+                    localized: "chat.error.attachmentTooLarge.message",
+                    defaultValue: "Share it with Share › File… or Share › Nearby… instead."
+                )
+            )
+        case .peerNeedsUpdate:
+            ErrorPresentationModel(
+                title: String(localized: "chat.error.peerNeedsUpdate.title", defaultValue: "Your teammate needs FX Vault 0.4"),
+                message: String(
+                    localized: "chat.error.peerNeedsUpdate.message",
+                    defaultValue: "Their FX Vault cannot receive a whole repository. Ask them to update, then start a new chat, or share the repository as a file."
                 )
             )
         case .tooManyAttachments:

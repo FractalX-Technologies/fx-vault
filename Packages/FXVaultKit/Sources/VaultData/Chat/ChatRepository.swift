@@ -62,6 +62,57 @@ public struct ChatRepository: Sendable {
         }
     }
 
+    /// Every repository with at least one environment or item, by `owner/name`: what a whole
+    /// configuration attachment can send (v0.4.0). Names and counts only.
+    ///
+    /// - Throws: `.sharing(.vault(.locked))` while locked, `.sharing(.store)`.
+    public func attachableRepositories() throws(NearbyChatError) -> [ChatAttachableRepositoryModel] {
+        let database = session.database
+        do {
+            return try performSharing {
+                try session.read { _, tx in
+                    let config = ConfigStore(database: database)
+                    return try RepoStore(database: database).fetchAll(in: tx).compactMap { repository in
+                        let environments = try config.fetchEnvironments(repositoryID: repository.id, in: tx)
+                            .filter { !$0.isDeleted }
+                        let live = Set(environments.map(\.id))
+                        let items = try config.fetchItemRecords(repositoryID: repository.id, in: tx).filter { record in
+                            !record.isDeleted && (record.environmentID.map(live.contains) ?? true)
+                        }
+                        guard !environments.isEmpty || !items.isEmpty else { return nil }
+                        return ChatAttachableRepositoryModel(
+                            id: repository.id,
+                            fullName: "\(repository.ownerLogin)/\(repository.name)",
+                            environmentCount: environments.count,
+                            itemCount: items.count
+                        )
+                    }
+                    .sorted { $0.fullName.lowercased() < $1.fullName.lowercased() }
+                }
+            }
+        } catch {
+            throw .sharing(error)
+        }
+    }
+
+    /// The repositories of this vault, by `owner/name`: where "Import Into…" can import a
+    /// configuration received in chat (v0.4.0).
+    ///
+    /// - Throws: `.sharing(.vault(.locked))` while locked, `.sharing(.store)`.
+    public func importTargets() throws(NearbyChatError) -> [RepoModel] {
+        let database = session.database
+        do {
+            return try performSharing {
+                try session.read { _, tx in
+                    try RepoStore(database: database).fetchAll(in: tx)
+                        .sorted { $0.fullName.lowercased() < $1.fullName.lowercased() }
+                }
+            }
+        } catch {
+            throw .sharing(error)
+        }
+    }
+
     /// One chat over `transport` (an `NWNearbyTransport` the app connected or advertised, or an
     /// in-memory one in tests). A conversation runs once; a new chat needs a new one.
     ///

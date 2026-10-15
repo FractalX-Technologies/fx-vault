@@ -54,6 +54,8 @@ struct ConfigTableView: View {
         .contextMenu(forSelectionType: ConfigItemID.self) { ids in
             if let id = ids.first, ids.count == 1, let row = rows.first(where: { $0.id == id }) {
                 ConfigRowActions(row: row, viewModel: viewModel)
+            } else if ids.count > 1 {
+                ConfigSelectionMenu(rows: viewModel.rows(for: ids), viewModel: viewModel)
             }
         } primaryAction: { ids in
             if let id = ids.first, let row = rows.first(where: { $0.id == id }) {
@@ -61,6 +63,12 @@ struct ConfigTableView: View {
             }
         }
         // ⌘V is handled by the whole detail column (RepoDetailScreen), not only the table.
+        .onDeleteCommand {
+            viewModel.deleteSelection()
+        }
+        // ⌘C copies the selected items (v0.4.0): ⌘V in another scope pastes them. Disabled (the
+        // Copy menu item greyed) with nothing selected.
+        .onCommand(#selector(NSText.copy(_:)), perform: viewModel.selection.isEmpty ? nil : { viewModel.copySelection() })
         .overlay {
             if rows.isEmpty {
                 EmptyStateView(
@@ -110,6 +118,73 @@ struct ConfigTableView: View {
     }
 }
 
+/// "Copy To ›" (v0.4.0): the repository's other scopes; the ones this account may not change are
+/// listed disabled. The copies are pending adds there, values re-encrypted in the vault.
+struct CopyToMenu: View {
+    let title: String
+    let rows: [ConfigRowModel]
+    let viewModel: RepoDetailViewModel
+    /// A trailing chevron, for the selection bar's pill (a context menu draws its own arrow).
+    var showsChevron = false
+
+    var body: some View {
+        let targets = viewModel.copyTargets
+        Menu {
+            ForEach(targets) { target in
+                Button(target.title) {
+                    viewModel.copy(rows, to: target)
+                }
+                .disabled(!target.isEditable)
+            }
+        } label: {
+            if showsChevron {
+                HStack(spacing: Theme.Spacing.smallMinus) {
+                    Text(title)
+                    Image(systemName: "chevron.down")
+                        .font(Theme.Typography.monoLabel)
+                        .accessibilityHidden(true)
+                }
+            } else {
+                Text(title)
+            }
+        }
+        .disabled(targets.isEmpty || rows.isEmpty)
+    }
+}
+
+/// Copy To, Push on Next Sync, Revert and Delete… for several rows (v0.4.0), each for the rows it
+/// applies to.
+private struct ConfigSelectionMenu: View {
+    let rows: [ConfigRowModel]
+    let viewModel: RepoDetailViewModel
+
+    var body: some View {
+        let actions = ConfigSelectionActionsModel(rows: rows)
+        CopyToMenu(
+            title: String(localized: "main.table.several.copyTo", defaultValue: "Copy \(actions.deletable.count) Items To"),
+            rows: actions.deletable,
+            viewModel: viewModel
+        )
+        Divider()
+        if !actions.pushable.isEmpty {
+            Button(String(localized: "main.table.several.pushOnNextSync", defaultValue: "Push \(actions.pushable.count) on Next Sync")) {
+                viewModel.pushOnNextSync(actions.pushable)
+            }
+            .disabled(!viewModel.canEdit)
+        }
+        if !actions.revertible.isEmpty {
+            Button(String(localized: "main.table.several.revert", defaultValue: "Revert \(actions.revertible.count)")) {
+                viewModel.revert(actions.revertible)
+            }
+        }
+        Divider()
+        Button(String(localized: "main.table.several.delete", defaultValue: "Delete \(actions.deletable.count)…"), role: .destructive) {
+            viewModel.requestDeletion(of: actions.deletable)
+        }
+        .disabled(!viewModel.canEdit || actions.deletable.isEmpty)
+    }
+}
+
 /// Reveal, Copy, Edit (or Fill Value), Convert/Move…, Push on Next Sync, Revert and Delete for
 /// one row.
 private struct ConfigRowActions: View {
@@ -137,6 +212,9 @@ private struct ConfigRowActions: View {
             viewModel.move(row)
         }
         .disabled(!viewModel.canEdit || row.isDeleted)
+        if !row.isDeleted {
+            CopyToMenu(title: String(localized: "main.table.copyTo", defaultValue: "Copy To"), rows: [row], viewModel: viewModel)
+        }
         if row.canPushOnNextSync {
             Button(String(localized: "main.table.pushOnNextSync", defaultValue: "Push on Next Sync")) {
                 viewModel.pushOnNextSync(row)

@@ -151,8 +151,9 @@ private struct NewEnvironmentButton: View {
     }
 }
 
-/// Settings… / Rename / Duplicate… / Export .env… / Share… / Delete (or Restore).
-private struct ScopeContextMenu: View {
+/// Settings… / Rename / Duplicate… / Export .env… / Share… / Delete (or Restore): the row's
+/// context menu, and since v0.4.0 the detail header's actions menu for the selected scope.
+struct ScopeContextMenu: View {
     let scope: ConfigScopeSummaryModel
     let viewModel: ScopeListViewModel
 

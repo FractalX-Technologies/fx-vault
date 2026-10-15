@@ -53,6 +53,48 @@ struct ConfigRowModel: Identifiable, Hashable {
     }
 }
 
+/// The rows waiting for the "Delete?" confirmation: one row, or a multi-selection (v0.4.0).
+struct ConfigDeletionModel: Hashable {
+    let rows: [ConfigRowModel]
+
+    /// The rows on GitHub: the next Sync deletes them there after its deletion review.
+    var syncedRows: [ConfigRowModel] {
+        rows.filter(\.isSynced)
+    }
+
+    /// The rows never synced: they are removed from the vault at once.
+    var unsyncedCount: Int {
+        rows.count - syncedRows.count
+    }
+}
+
+/// Items copied with ⌘C on the detail table (v0.4.0), by id: their values stay in the vault and
+/// only their names go to the pasteboard.
+struct CopiedItemsModel: Hashable {
+    let ids: [ConfigItemID]
+    let names: [String]
+    let sourceScope: ConfigScope
+}
+
+/// A copy into another scope waiting for "Replace or keep?": the target already has `conflicts`.
+struct ItemCopyRequestModel: Hashable {
+    let ids: [ConfigItemID]
+    let target: ConfigScope
+    let targetTitle: String
+    let conflicts: [String]
+}
+
+/// A scope Copy to… offers, and whether this account may add items there.
+struct ItemCopyTargetModel: Hashable, Identifiable {
+    let scope: ConfigScope
+    let title: String
+    let isEditable: Bool
+
+    var id: ConfigScope {
+        scope
+    }
+}
+
 /// Column 3 (§10): the header (owner/name, visibility, capability chip, Clone, Refresh, drift
 /// banner, deployment branches and plan note on environments, read-only explanation) and one
 /// table with the Secrets | Variables picker and the row actions.
@@ -83,8 +125,12 @@ final class RepoDetailViewModel: LockObserving {
     var alert: ErrorPresentationModel?
     /// A short confirmation ("Copied API_TOKEN. The clipboard clears in 30 seconds.").
     private(set) var notice: String?
-    /// The item waiting for the "Delete?" confirmation.
-    var pendingDeletion: ConfigRowModel?
+    /// The items waiting for the "Delete?" confirmation.
+    var pendingDeletion: ConfigDeletionModel?
+    /// The items ⌘C copied, until the vault locks (v0.4.0).
+    private(set) var copiedItems: CopiedItemsModel?
+    /// A copy waiting for "Replace or keep?".
+    var pendingCopy: ItemCopyRequestModel?
 
     /// The scheduled re-mask of each revealed value (internal so tests can await it).
     @ObservationIgnored private(set) var remaskTasks: [ConfigItemID: Task<Void, Never>] = [:]
@@ -198,6 +244,117 @@ final class RepoDetailViewModel: LockObserving {
             return revealedValues[row.id].map(ConfigValueDisplayModel.revealed) ?? .masked
         case .variable:
             return variableValues[row.id].map(ConfigValueDisplayModel.plain) ?? .masked
+        }
+    }
+
+    // MARK: - Selection (v0.4.0)
+
+    /// The selected rows of the visible kind, in table order.
+    var selectedRows: [ConfigRowModel] {
+        rows(for: selection)
+    }
+
+    /// The rows of `ids` in table order (a context menu's rows can differ from the selection).
+    func rows(for ids: Set<ConfigItemID>) -> [ConfigRowModel] {
+        rows.filter { ids.contains($0.id) }
+    }
+
+    func clearSelection() {
+        selection.removeAll()
+    }
+
+    // MARK: - Copy and paste between scopes (v0.4.0)
+
+    /// The repository's other scopes, where Copy to… copies; those the account may not change
+    /// are listed disabled.
+    var copyTargets: [ItemCopyTargetModel] {
+        let summaries = (try? dependencies.config.scopes(repositoryID: repositoryID)) ?? []
+        return summaries
+            .filter { $0.scope != scope && !$0.isDeleted }
+            .map { summary in
+                ItemCopyTargetModel(
+                    scope: summary.scope,
+                    title: summary.title,
+                    isEditable: capability?.canEditItems(at: summary.scope.level) == true
+                )
+            }
+    }
+
+    /// ⌘C on the table: the selected rows go to the app's item clipboard and their names to the
+    /// pasteboard. ⌘V in another scope of this repository pastes them.
+    func copySelection() {
+        let rows = selectedRows.filter { !$0.isDeleted }
+        guard let first = rows.first else { return }
+        copiedItems = CopiedItemsModel(ids: rows.map(\.id), names: rows.map(\.name), sourceScope: scope)
+        dependencies.clipboard.copyItemNames(rows.map(\.name))
+        notice = rows.count == 1
+            ? String(
+                localized: "main.detail.copiedItem.notice",
+                defaultValue: "Copied \(first.name). Open another scope of this repository and paste it with ⌘V."
+            )
+            : String(
+                localized: "main.detail.copiedItems.notice",
+                defaultValue: "Copied \(rows.count) items. Open another scope of this repository and paste them with ⌘V."
+            )
+    }
+
+    /// Copy to… from the context menu or the selection bar.
+    func copy(_ rows: [ConfigRowModel], to target: ItemCopyTargetModel) {
+        requestCopy(ids: rows.filter { !$0.isDeleted }.map(\.id), to: target.scope, title: target.title)
+    }
+
+    func confirmCopy(replacing: Bool) {
+        guard let request = pendingCopy else { return }
+        pendingCopy = nil
+        performCopy(request, conflicts: replacing ? .replace : .keep)
+    }
+
+    /// ⌘V while the pasteboard still holds names FX Vault copied: their items, not the text.
+    private func pasteCopiedItems() {
+        guard let copied = copiedItems else {
+            notice = String(
+                localized: "main.detail.paste.otherRepository",
+                defaultValue: "Copied items paste into another scope of the same repository. To bring configuration to another repository, use Share."
+            )
+            return
+        }
+        guard copied.sourceScope != scope else {
+            notice = String(
+                localized: "main.detail.paste.sameScope",
+                defaultValue: "These items are already in this scope. Open another scope of this repository to paste them."
+            )
+            return
+        }
+        requestCopy(ids: copied.ids, to: scope, title: scopeSummary?.title ?? "")
+    }
+
+    /// Asks "Replace or keep?" when the target already has some of the names, otherwise copies.
+    private func requestCopy(ids: [ConfigItemID], to target: ConfigScope, title: String) {
+        guard !ids.isEmpty, capability?.canEditItems(at: target.level) == true else { return }
+        do {
+            let conflicts = try dependencies.config.copyConflicts(ids, to: target, repositoryID: repositoryID)
+            let request = ItemCopyRequestModel(ids: ids, target: target, targetTitle: title, conflicts: conflicts)
+            if conflicts.isEmpty {
+                performCopy(request, conflicts: .keep)
+            } else {
+                pendingCopy = request
+            }
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    private func performCopy(_ request: ItemCopyRequestModel, conflicts: ItemCopyConflictPolicy) {
+        do {
+            let result = try dependencies.config.copyItems(
+                request.ids,
+                to: request.target,
+                repositoryID: repositoryID,
+                conflicts: conflicts
+            )
+            notice = result.notice(target: request.targetTitle)
+        } catch {
+            alert = error.presentation
         }
     }
 
@@ -347,7 +504,12 @@ final class RepoDetailViewModel: LockObserving {
     /// background). Reads the pasted plain text from the providers and opens the import preview
     /// prefilled with it, even for a single KEY=value line. Nothing is logged.
     func handlePaste(_ providers: [NSItemProvider]) async {
-        guard canEdit, let text = await Self.plainText(from: providers) else { return }
+        guard canEdit else { return }
+        if dependencies.clipboard.holdsItemNames {
+            pasteCopiedItems()
+            return
+        }
+        guard let text = await Self.plainText(from: providers) else { return }
         paste(text)
     }
 
@@ -412,24 +574,81 @@ final class RepoDetailViewModel: LockObserving {
     }
 
     func requestDeletion(_ row: ConfigRowModel) {
-        guard canEdit, !row.isDeleted else { return }
-        if row.isSynced {
-            pendingDeletion = row
+        requestDeletion(of: [row])
+    }
+
+    /// Delete… for one row or a multi-selection: rows on GitHub need the confirmation (the next
+    /// Sync deletes them there after its review); rows never synced are removed at once.
+    func requestDeletion(of rows: [ConfigRowModel]) {
+        let deletable = rows.filter { !$0.isDeleted }
+        guard canEdit, !deletable.isEmpty else { return }
+        if deletable.contains(where: \.isSynced) {
+            pendingDeletion = ConfigDeletionModel(rows: deletable)
         } else {
-            delete(row)
+            delete(deletable)
         }
     }
 
-    func confirmDeletion() {
-        guard let row = pendingDeletion else { return }
-        pendingDeletion = nil
-        delete(row)
+    /// ⌫ on the table: Delete… for the selected rows.
+    func deleteSelection() {
+        requestDeletion(of: selectedRows)
     }
 
-    private func delete(_ row: ConfigRowModel) {
-        hide(row.id)
+    func confirmDeletion() {
+        guard let deletion = pendingDeletion else { return }
+        pendingDeletion = nil
+        delete(deletion.rows)
+    }
+
+    /// One transaction for all of them.
+    private func delete(_ rows: [ConfigRowModel]) {
+        let ids = rows.map(\.id)
+        ids.forEach(hide)
         do {
-            try dependencies.config.deleteItem(row.id)
+            try dependencies.config.deleteItems(ids, repositoryID: repositoryID)
+            selection.subtract(ids)
+            if rows.count > 1 {
+                let onGitHub = rows.filter(\.isSynced).count
+                notice = onGitHub > 0
+                    ? String(
+                        localized: "main.detail.deleted.notice",
+                        defaultValue: "Deleted \(rows.count) items. The next Sync deletes \(onGitHub) of them on GitHub after you confirm. Revert undoes it until then."
+                    )
+                    : String(localized: "main.detail.removed.notice", defaultValue: "Removed \(rows.count) items that were never synced.")
+            }
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    /// Revert for a multi-selection: the rows with a local change, in one transaction.
+    func revert(_ rows: [ConfigRowModel]) {
+        let ids = rows.filter(\.canRevert).map(\.id)
+        guard !ids.isEmpty else { return }
+        do {
+            try dependencies.config.revertItems(ids, repositoryID: repositoryID)
+            selection.removeAll()
+            notice = ids.count == 1
+                ? String(localized: "main.detail.reverted.one.notice", defaultValue: "Reverted 1 item to what GitHub has.")
+                : String(localized: "main.detail.reverted.notice", defaultValue: "Reverted \(ids.count) items to what GitHub has.")
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    /// Push on Next Sync for a multi-selection: the secrets it applies to, in one transaction.
+    func pushOnNextSync(_ rows: [ConfigRowModel]) {
+        let ids = rows.filter(\.canPushOnNextSync).map(\.id)
+        guard canEdit, !ids.isEmpty else { return }
+        do {
+            try dependencies.config.requestPush(ids, repositoryID: repositoryID)
+            selection.removeAll()
+            notice = ids.count == 1
+                ? String(localized: "main.detail.pushOnNextSync.one.notice", defaultValue: "The next Sync pushes 1 secret to GitHub. Revert cancels it.")
+                : String(
+                    localized: "main.detail.pushOnNextSync.several.notice",
+                    defaultValue: "The next Sync pushes \(ids.count) secrets to GitHub. Revert cancels it."
+                )
         } catch {
             alert = error.presentation
         }
@@ -533,5 +752,31 @@ final class RepoDetailViewModel: LockObserving {
         driftTask?.cancel()
         driftReport = nil
         pendingDeletion = nil
+        copiedItems = nil
+        pendingCopy = nil
+    }
+}
+
+extension ItemCopyResultModel {
+    /// "Copied 3 items to staging." with what was kept or left out.
+    func notice(target: String) -> String {
+        let copied = added + replaced
+        let summary = switch copied {
+        case 0: String(localized: "main.detail.copy.none", defaultValue: "Nothing was copied to \(target).")
+        case 1: String(localized: "main.detail.copy.one", defaultValue: "Copied 1 item to \(target).")
+        default: String(localized: "main.detail.copy.several", defaultValue: "Copied \(copied) items to \(target).")
+        }
+        var parts = [summary]
+        if kept > 0 {
+            parts.append(String(localized: "main.detail.copy.kept", defaultValue: "Kept \(kept) that \(target) already had."))
+        }
+        if !withoutValue.isEmpty {
+            let names = withoutValue.formatted(.list(type: .and))
+            parts.append(String(
+                localized: "main.detail.copy.withoutValue",
+                defaultValue: "Not copied, no value in FX Vault (GitHub never returns secret values): \(names). Fill them first."
+            ))
+        }
+        return parts.joined(separator: " ")
     }
 }

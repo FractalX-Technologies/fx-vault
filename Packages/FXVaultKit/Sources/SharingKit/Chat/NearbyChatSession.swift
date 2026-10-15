@@ -32,7 +32,7 @@ public actor NearbyChatSession {
     private let transport: any NearbyTransport
     private let clock: any VaultClock
     private var hasStarted = false
-    private var providers: [ChatAttachmentID: ChatAttachmentValueProvider] = [:]
+    private var providers: [ChatAttachmentID: PayloadProvider] = [:]
     private var providerTasks: [ChatAttachmentID: Task<Void, Never>] = [:]
     private var senderTask: Task<Void, Never>?
     private var receiverTask: Task<Void, Never>?
@@ -127,10 +127,37 @@ public actor NearbyChatSession {
         manifest: SharePackageModel,
         payloadProvider: @escaping ChatAttachmentValueProvider
     ) throws(ChatError) -> ChatAttachmentOfferModel {
+        guard manifest.scope == .secret else { throw .invalidAttachment }
         let (step, offer) = try machine.offerAttachment(manifest)
         apply(step)
         guard let offer else { throw .sessionFinished }
-        providers[offer.id] = payloadProvider
+        providers[offer.id] = .value(payloadProvider)
+        return offer
+    }
+
+    /// True once both Macs speak chat v2 or later (v0.4.0): ``offerConfiguration(manifest:payloadProvider:)``
+    /// is possible. False with a 0.2.x or 0.3.x peer, and before the keys exist.
+    public var acceptsConfigurationAttachments: Bool {
+        machine.acceptsConfigurationAttachments
+    }
+
+    /// Offers a whole repository or environment (v0.4.0; `manifest`: scope `repository` or
+    /// `environment`; values are stripped). Only names and counts travel now.
+    /// `payloadProvider` runs only if the peer requests it and must return the offered manifest
+    /// with its values; if it throws or returns anything else, the offer is withdrawn.
+    /// Call only after ReauthGate passed.
+    ///
+    /// - Throws: `.peerNeedsUpdate` when the peer runs chat v1 (FX Vault 0.3 or earlier).
+    @discardableResult
+    public func offerConfiguration(
+        manifest: SharePackageModel,
+        payloadProvider: @escaping ChatConfigurationPayloadProvider
+    ) throws(ChatError) -> ChatAttachmentOfferModel {
+        guard manifest.scope != .secret else { throw .invalidAttachment }
+        let (step, offer) = try machine.offerAttachment(manifest)
+        apply(step)
+        guard let offer else { throw .sessionFinished }
+        providers[offer.id] = .package(payloadProvider)
         return offer
     }
 
@@ -251,23 +278,46 @@ public actor NearbyChatSession {
 
     // MARK: - Attachments
 
+    /// What an offer's provider supplies once the peer requests it.
+    private enum PayloadProvider {
+        case value(ChatAttachmentValueProvider)
+        case package(ChatConfigurationPayloadProvider)
+    }
+
     private func providePayload(_ id: ChatAttachmentID) {
         guard let provider = providers.removeValue(forKey: id) else {
             apply(machine.withdrawAttachment(id))
             return
         }
-        providerTasks[id] = Task { [weak self] in
-            let value: SecretBytes?
-            do {
-                value = try await provider()
-            } catch {
-                value = nil
+        switch provider {
+        case .value(let provider):
+            providerTasks[id] = Task { [weak self] in
+                let value: SecretBytes?
+                do {
+                    value = try await provider()
+                } catch {
+                    value = nil
+                }
+                guard let self else {
+                    value?.wipe()
+                    return
+                }
+                await self.deliverPayload(id, value: value)
             }
-            guard let self else {
-                value?.wipe()
-                return
+        case .package(let provider):
+            providerTasks[id] = Task { [weak self] in
+                let package: SharePackageModel?
+                do {
+                    package = try await provider()
+                } catch {
+                    package = nil
+                }
+                guard let self else {
+                    package?.wipeValues()
+                    return
+                }
+                await self.deliverPayload(id, package: package)
             }
-            await self.deliverPayload(id, value: value)
         }
     }
 
@@ -281,6 +331,21 @@ public actor NearbyChatSession {
         }
         do {
             apply(try machine.sendAttachmentPayload(id, value: value))
+        } catch {
+            apply(machine.withdrawAttachment(id))
+        }
+    }
+
+    private func deliverPayload(_ id: ChatAttachmentID, package: SharePackageModel?) {
+        providerTasks[id] = nil
+        defer { package?.wipeValues() }
+        guard !machine.phase.isTerminal else { return }
+        guard let package else {
+            apply(machine.withdrawAttachment(id))
+            return
+        }
+        do {
+            apply(try machine.sendAttachmentPayload(id, package: package))
         } catch {
             apply(machine.withdrawAttachment(id))
         }

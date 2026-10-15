@@ -313,3 +313,131 @@ extension NearbyChatEvent {
         }
     }
 }
+
+// MARK: - Whole repository (v0.4.0, chat v2)
+
+extension NearbyChatConversationTests {
+    private func offerRepository(in parties: Parties) async throws -> ChatAttachmentOfferModel {
+        try await parties.sender.offerRepository(
+            try parties.world.sender.repository().id,
+            senderName: ShareWorld.senderName,
+            appVersion: ShareWorld.appVersion,
+            authorization: parties.world.authorization(.nearbySend)
+        )
+    }
+
+    /// A second repository in the receiver's vault, never imported from the sender.
+    private func otherRepository(in world: ShareWorld) throws -> RepoModel {
+        let repository = RepoModel(
+            accountLogin: SyncFixture.login,
+            githubID: "R_other_project",
+            ownerLogin: "owner-b",
+            ownerType: .organization,
+            name: "project",
+            visibility: .private,
+            isArchived: false,
+            hasAdmin: true,
+            hasPush: true,
+            origin: .imported,
+            importedAt: ShareWorld.secretUpdatedAt
+        )
+        try RepoStore(database: world.receiver.database).insert(repository)
+        return repository
+    }
+
+    @Test func aWholeRepositoryIsImportedIntoAnotherRepositoryOfTheReceiver() async throws {
+        let parties = try await parties()
+        defer { parties.world.folder.remove() }
+        try await verified(parties)
+        #expect(await parties.sender.acceptsConfigurationAttachments)
+
+        let offer = try await offerRepository(in: parties)
+        #expect(offer.isConfiguration)
+        guard case .attachmentOffered(let card) = await parties.receiverEvents.first(where: { $0.isOffer || $0.isChatTerminal }),
+              case .configuration(let summary) = card.content
+        else {
+            Issue.record("No configuration offer")
+            return
+        }
+        #expect(card.repositoryFullName == "owner-a/api")
+        #expect(summary.environmentNames == ["production"])
+        #expect(summary.secretCount == 2)
+        #expect(summary.variableCount == 2)
+        #expect(card.manifest.flattenedItems.allSatisfy { $0.item.value == nil })
+
+        try await parties.receiver.requestAttachment(card.id)
+        guard case .attachmentReceived(let id, let forwarded) = await parties.receiverEvents.first(where: { $0.isReceived || $0.isChatTerminal }) else {
+            Issue.record("No payload")
+            return
+        }
+        #expect(forwarded.flattenedItems.allSatisfy { $0.item.value == nil }, "forwarded without values")
+
+        let target = try otherRepository(in: parties.world)
+        let draft = try await parties.receiver.previewAttachment(id, into: target.id, checkGitHub: false)
+        #expect(draft.package.repository.fullName == "owner-b/project")
+        #expect(draft.plan.blockReason == nil)
+        let result = try await parties.world.receiverSharing.apply(draft, plan: draft.plan, confirmReplay: false)
+        #expect(Set(result.added) == ["FXV_S1", "FXV_V1", "production/FXV_S2", "production/FXV_V2"])
+
+        let config = parties.world.receiver.config
+        let scopes = try config.scopes(repositoryID: target.id)
+        let production = try #require(scopes.first { $0.environment?.name == "production" })
+        let records = try ConfigStore(database: parties.world.receiver.database).fetchItemRecords(repositoryID: target.id)
+        let s2 = try #require(records.first { $0.name == "FXV_S2" && $0.scope == production.scope })
+        #expect(try parties.world.receiver.value(s2.id) == "a2")
+        #expect(try parties.world.receiver.item("FXV_V1", kind: .variable).map { try parties.world.receiver.value($0.id) } == "different",
+                "the sender's own repository in the receiver's vault is untouched")
+        await parties.sender.close()
+    }
+
+    @Test func aRepositoryOfferIsWithdrawnWhenAValueChangedSince() async throws {
+        let parties = try await parties()
+        defer { parties.world.folder.remove() }
+        try await verified(parties)
+        let offer = try await offerRepository(in: parties)
+        _ = await parties.receiverEvents.first { $0.isOffer || $0.isChatTerminal }
+
+        let s1 = try #require(try parties.world.sender.item("FXV_S1", kind: .secret))
+        try parties.world.sender.config.editValue(s1.id, value: SecretBytes(utf8: "edited-after-the-offer"))
+        try await parties.receiver.requestAttachment(offer.id)
+
+        #expect(await parties.receiverEvents.first { $0 == .attachmentDeclined(offer.id) || $0.isChatTerminal }
+            == .attachmentDeclined(offer.id))
+        #expect(await parties.receiver.receivedCount == 0)
+        await parties.sender.close()
+    }
+
+    @Test func aReceivedRepositoryCanBeSavedAsAnEncryptedFileAndStillImported() async throws {
+        let parties = try await parties()
+        defer { parties.world.folder.remove() }
+        try await verified(parties)
+        let offer = try await offerRepository(in: parties)
+        _ = await parties.receiverEvents.first { $0.isOffer || $0.isChatTerminal }
+        try await parties.receiver.requestAttachment(offer.id)
+        guard case .attachmentReceived(let id, _) = await parties.receiverEvents.first(where: { $0.isReceived || $0.isChatTerminal }) else {
+            Issue.record("No payload")
+            return
+        }
+
+        let destination = parties.world.folder.url.appendingPathComponent("received.fxvault")
+        let receiverAuthorization = ShareAuthorizationModel(purpose: .fileExport, session: parties.world.receiver.session)
+        let saved = try await parties.receiver.saveAttachment(id, to: destination, authorization: receiverAuthorization)
+        defer { saved.passphrase.wipe() }
+        #expect(saved.fileURL == destination)
+        await #expect(throws: NearbyChatError.sharing(.authorizationInvalid)) {
+            _ = try await parties.receiver.saveAttachment(id, to: destination, authorization: receiverAuthorization)
+        }
+
+        let passphrase = try #require(saved.passphrase.utf8String())
+        let reopened = try await parties.world.receiverSharing.openFile(
+            parties.world.receiverSharing.readFile(at: destination),
+            passphrase: passphrase,
+            checkGitHub: false
+        )
+        #expect(reopened.package.flattenedItems.count == 4)
+        reopened.discard()
+        #expect(await parties.receiver.receivedCount == 1, "saving keeps the package for an import")
+        _ = try await parties.receiver.previewAttachment(id, checkGitHub: false)
+        await parties.sender.close()
+    }
+}

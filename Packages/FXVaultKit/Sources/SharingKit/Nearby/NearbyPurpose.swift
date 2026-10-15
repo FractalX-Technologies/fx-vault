@@ -19,6 +19,16 @@ public enum NearbyPurpose: String, Sendable, Hashable, CaseIterable {
         }
     }
 
+    /// The highest protocol version this Mac offers in HELLO for this purpose. A session runs at
+    /// `min(maxVerI, maxVerR)`, bound into the transcript (§4 step 4): share stays at 1, chat is
+    /// 2 since v0.4.0 (configuration attachments, ``NearbyChatProtocol/configurationAttachmentsVersion``).
+    var maxVersion: UInt8 {
+        switch self {
+        case .share: NearbyProtocol.maxVersion
+        case .chat: NearbyChatProtocol.maxVersion
+        }
+    }
+
     /// The domain-separation labels of this purpose.
     var labels: NearbyLabels {
         switch self {
