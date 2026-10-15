@@ -1431,7 +1431,7 @@ Report: Homebrew gh 2.102.0, `gh auth login` done and Terminal says logged in, b
 - [x] Detect GH_TOKEN/GITHUB_TOKEN presence (names only, never values) and show `env -u GH_TOKEN -u GITHUB_TOKEN gh auth login`. **Verify:** redaction test; setup-screen state tests. *Done: names only (FXV_SET flags); `env -u` guidance verified on macOS.*
 - [x] Consent-based trust for a gh owned by another non-root user (path + uid, revocable). **Verify:** locator and preferences tests; SECURITY-MODEL updated. *Done: Trust This gh (path + uid), revocable in Advanced; not the default button.*
 - [x] Copy Diagnostics on the setup screen and a `gh` section in `--diagnose` (sanitized). **Verify:** report tests; real run on this Mac. *Done: shared sanitized report; real run on this Mac recorded.*
-- [ ] Release 0.3.1. **Verify:** brew shows 0.3.1; spctl OK; `--diagnose` shows the gh section.
+- [x] Release 0.3.1. **Verify:** brew shows 0.3.1; spctl OK; `--diagnose` shows the gh section. *Done: v0.3.1 published after full tests, cask fbd645f, `brew upgrade` here shows 0.3.1, spctl Notarized; signed `--diagnose`: keychain probe passed, gh ready (interactive probe, shell gh), account ok via keyring.*
 
 ### Stretch (v1.1, not in v1 scope)
 
