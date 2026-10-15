@@ -131,7 +131,7 @@ struct DiffEditPlannerTests {
 
     // MARK: - Fill (§7.1, §7.8)
 
-    @Test func fillDefaultsToWhatGitHubHas() throws {
+    @Test func fillMatchingGitHubLeavesNothingPending() throws {
         let missing = Fx.syncedItem("DB_PASSWORD", value: nil)
         let filled = try ConfigItemEditPlanner(items: [missing]).fill(missing.id, pushOnNextSync: false, fingerprint: Self.value("p"))
         let row = try #require(filled.items.first)
@@ -145,6 +145,93 @@ struct DiffEditPlannerTests {
         let missing = Fx.syncedItem("DB_PASSWORD", value: nil)
         let filled = try ConfigItemEditPlanner(items: [missing]).fill(missing.id, pushOnNextSync: true, fingerprint: Self.value("p"))
         #expect(Self.changes(filled) == ["set_secret repo DB_PASSWORD update force"])
+    }
+
+    @Test func fillWithPushRecordsWhenTheUserAskedForIt() throws {
+        let missing = Fx.syncedItem("DB_PASSWORD", value: nil)
+        let filled = try ConfigItemEditPlanner(items: [missing])
+            .fill(missing.id, pushOnNextSync: true, requestedAt: Self.requestTime, fingerprint: Self.value("p"))
+        let row = try #require(filled.items.first)
+        #expect(row.forcePush && row.forcePushRequestedAt == Self.requestTime)
+        #expect(ConfigSyncStatus.derive(row.syncFacts) == .modified)
+        #expect(ChangeSetBuilder.build(Fx.snapshot(items: filled.items)).pendingCount == 1)
+    }
+
+    @Test func fillOfAnUnsyncedSecretIsAPlainAdd() throws {
+        let missing = Fx.item("DB_PASSWORD", value: nil)
+        let filled = try ConfigItemEditPlanner(items: [missing])
+            .fill(missing.id, pushOnNextSync: true, requestedAt: Self.requestTime, fingerprint: Self.value("p"))
+        let row = try #require(filled.items.first)
+        #expect(!row.forcePush && row.forcePushRequestedAt == nil)
+        #expect(Self.changes(filled) == ["set_secret repo DB_PASSWORD new added"])
+    }
+
+    // MARK: - Push on Next Sync (v0.1.2)
+
+    private static let requestTime = Date(timeIntervalSince1970: 1_790_000_000)
+
+    @Test func pushOnNextSyncResendsAnUnchangedSecret() throws {
+        let synced = Fx.syncedItem("API_TOKEN")
+        #expect(Self.changes(ItemEditOutcomeModel(items: [synced], mutations: [])).isEmpty)
+        let outcome = try ConfigItemEditPlanner(items: [synced]).requestPush(synced.id, requestedAt: Self.requestTime)
+        let row = try #require(outcome.items.first)
+        #expect(row.forcePush && row.forcePushRequestedAt == Self.requestTime)
+        #expect(row.valueFingerprint == synced.valueFingerprint)
+        #expect(outcome.mutations == [.update(row, value: .unchanged)])
+        #expect(Self.changes(outcome) == ["set_secret repo API_TOKEN update force"])
+        #expect(ChangeSetBuilder.build(Fx.snapshot(items: outcome.items)).pendingCount == 1)
+        #expect(ConfigSyncStatus.derive(row.syncFacts) == .willPush)
+        #expect(row.hasPendingChange)
+    }
+
+    @Test(arguments: [
+        Fx.syncedItem("API_URL", kind: .variable),
+        Fx.item("NEW_TOKEN"),
+        Fx.syncedItem("MISSING_TOKEN", value: nil),
+        Fx.item("GONE", synced: "GONE", syncedValue: "v1", deleted: true),
+    ])
+    func pushOnNextSyncIsOnlyForLiveSyncedSecretsWithAValue(_ row: ConfigItemSnapshotModel) {
+        #expect(throws: ItemEditError.pushNotApplicable) {
+            try ConfigItemEditPlanner(items: [row]).requestPush(row.id, requestedAt: Self.requestTime)
+        }
+    }
+
+    @Test func revertClearsARequestedPush() throws {
+        let synced = Fx.syncedItem("API_TOKEN")
+        let requested = try ConfigItemEditPlanner(items: [synced]).requestPush(synced.id, requestedAt: Self.requestTime)
+        let reverted = try requested.planner.revert(synced.id)
+        let row = try #require(reverted.items.first)
+        #expect(!row.forcePush && row.forcePushRequestedAt == nil)
+        #expect(ConfigSyncStatus.derive(row.syncFacts) == .synced)
+        #expect(Self.changes(reverted).isEmpty)
+    }
+
+    /// A push that ran while the value was edited keeps no synced copy (`synced_fp` set,
+    /// `synced_value_ct` nil). Editing the value back makes the row synced again; Revert of a
+    /// requested push must then keep the only local copy of the secret.
+    @Test func revertKeepsAValueThatMatchesGitHubWithoutASyncedCopy() throws {
+        var synced = Fx.syncedItem("API_TOKEN")
+        synced.hasSyncedValue = false
+        let requested = try ConfigItemEditPlanner(items: [synced]).requestPush(synced.id, requestedAt: Self.requestTime)
+        #expect(ConfigSyncStatus.derive(try #require(requested.items.first).syncFacts) == .willPush)
+
+        let reverted = try requested.planner.revert(synced.id)
+        let row = try #require(reverted.items.first)
+        #expect(row.valueFingerprint == synced.valueFingerprint && row.hasValue)
+        #expect(!row.forcePush && row.forcePushRequestedAt == nil)
+        #expect(reverted.mutations == [.update(row, value: .unchanged)])
+        #expect(ConfigSyncStatus.derive(row.syncFacts) == .synced)
+        #expect(Self.changes(reverted).isEmpty)
+    }
+
+    @Test func deletingClearsARequestedPush() throws {
+        let synced = Fx.syncedItem("API_TOKEN")
+        let deleted = try ConfigItemEditPlanner(items: [synced])
+            .requestPush(synced.id, requestedAt: Self.requestTime)
+            .planner.delete(synced.id)
+        let row = try #require(deleted.items.first)
+        #expect(row.isDeleted && !row.forcePush && row.forcePushRequestedAt == nil)
+        #expect(Self.changes(deleted) == ["delete_secret repo API_TOKEN deleted"])
     }
 
     @Test func fillRejectsARowWithAValue() {

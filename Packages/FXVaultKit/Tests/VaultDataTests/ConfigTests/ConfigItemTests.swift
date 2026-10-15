@@ -241,7 +241,7 @@ struct ConfigItemTests {
 
     // MARK: - Fill, revert, discard
 
-    @Test func fillDefaultsToAlreadyOnGitHub() async throws {
+    @Test func fillThatMatchesGitHubLeavesNothingPending() async throws {
         let harness = try await ConfigHarness.make()
         let repo = try harness.seedRepository()
         let id = try insertValueMissingSecret(harness, repo: repo, name: "DEPLOY_TOKEN")
@@ -260,16 +260,111 @@ struct ConfigItemTests {
         #expect(again == .edit(.valueNotMissing))
     }
 
-    @Test func fillCanPushOnNextSync() async throws {
+    /// v0.1.2: the vault is the source of truth, so a fill pushes by default.
+    @Test func fillPushesOnNextSyncByDefault() async throws {
         let harness = try await ConfigHarness.make()
         let repo = try harness.seedRepository()
         let id = try insertValueMissingSecret(harness, repo: repo, name: "DEPLOY_TOKEN")
         #expect(try harness.changeSet(repo).isEmpty)
+        #expect(try harness.config.pendingCounts().total == 0)
 
-        try harness.config.fillValue(id, value: SecretBytes(utf8: ConfigFixture.valueA), pushOnNextSync: true)
-        #expect(try harness.state(id).forcePush)
+        try harness.config.fillValue(id, value: SecretBytes(utf8: ConfigFixture.valueA))
+        let state = try harness.state(id)
+        #expect(state.forcePush)
+        #expect(state.forcePushRequestedAt == DatabaseTimestamp.roundTripped(harness.clock.now))
         #expect(try harness.status(id) == .modified)
+        #expect(try harness.reveal(id) == ConfigFixture.valueA)
         #expect(try harness.changeSet(repo).pendingCount == 1)
+        #expect(try harness.changeSet(repo).changes.first?.kind == .setSecret)
+        #expect(try harness.config.pendingCounts().total == 1)
+    }
+
+    // MARK: - Push on Next Sync (v0.1.2)
+
+    @Test func pushOnNextSyncMakesASyncedSecretPending() async throws {
+        let harness = try await ConfigHarness.make()
+        let repo = try harness.seedRepository()
+        let id = try harness.add(repo, "API_TOKEN", value: ConfigFixture.valueA)
+        try harness.markSynced(repo)
+        #expect(try harness.status(id) == .synced)
+        #expect(try harness.config.pendingCounts().total == 0)
+
+        try harness.config.requestPush(id)
+
+        let state = try harness.state(id)
+        #expect(state.forcePush)
+        #expect(state.forcePushRequestedAt == DatabaseTimestamp.roundTripped(harness.clock.now))
+        #expect(try harness.status(id) == .willPush)
+        #expect(try harness.reveal(id) == ConfigFixture.valueA)
+        let changes = try harness.changeSet(repo).changes
+        #expect(changes.count == 1)
+        let change = try #require(changes.first)
+        guard case .setItem(let set) = change.operation else {
+            Issue.record("expected a set")
+            return
+        }
+        #expect(set.reason == .forcePushed && !set.isNew)
+        #expect(try harness.config.pendingCounts().total == 1)
+    }
+
+    @Test func revertClearsPushOnNextSync() async throws {
+        let harness = try await ConfigHarness.make()
+        let repo = try harness.seedRepository()
+        let id = try harness.add(repo, "API_TOKEN", value: ConfigFixture.valueA)
+        try harness.markSynced(repo)
+        try harness.config.requestPush(id)
+
+        try harness.config.revertItem(id)
+
+        let state = try harness.state(id)
+        #expect(!state.forcePush && state.forcePushRequestedAt == nil)
+        #expect(try harness.status(id) == .synced)
+        #expect(try harness.reveal(id) == ConfigFixture.valueA)
+        #expect(try harness.changeSet(repo).isEmpty)
+    }
+
+    /// A push that ran while the value was edited keeps no synced copy; Revert of a later
+    /// Push on Next Sync must not erase the value (GitHub cannot return it).
+    @Test func revertOfAPushKeepsAValueThatHasNoSyncedCopy() async throws {
+        let harness = try await ConfigHarness.make()
+        let repo = try harness.seedRepository()
+        let id = try harness.add(repo, "API_TOKEN", value: ConfigFixture.valueA)
+        try harness.markSynced(repo)
+        var record = try harness.record(id)
+        record.syncedValueCiphertext = nil
+        try harness.session.write { _, tx in try harness.store.updateItem(record, in: tx) }
+        try harness.config.requestPush(id)
+        #expect(try harness.status(id) == .willPush)
+
+        try harness.config.revertItem(id)
+
+        #expect(try harness.reveal(id) == ConfigFixture.valueA)
+        #expect(try harness.status(id) == .synced)
+        #expect(!(try harness.state(id).forcePush))
+        #expect(try harness.changeSet(repo).isEmpty)
+    }
+
+    @Test func pushOnNextSyncIsOnlyForSyncedSecretsWithAValue() async throws {
+        let harness = try await ConfigHarness.make()
+        let repo = try harness.seedRepository()
+        let variable = try harness.add(repo, "API_URL", kind: .variable, value: ConfigFixture.valueA)
+        let missing = try insertValueMissingSecret(harness, repo: repo, name: "DEPLOY_TOKEN")
+        let unsynced = try harness.add(repo, "NEW_TOKEN", value: ConfigFixture.valueB)
+        #expect(configError { try harness.config.requestPush(unsynced) } == .edit(.pushNotApplicable))
+        try harness.markSynced(repo)
+
+        #expect(configError { try harness.config.requestPush(variable) } == .edit(.pushNotApplicable))
+        #expect(configError { try harness.config.requestPush(missing) } == .edit(.pushNotApplicable))
+        #expect(configError { try harness.config.requestPush(ConfigItemID()) } == .itemNotFound)
+        #expect(try harness.changeSet(repo).isEmpty)
+    }
+
+    @Test func pushOnNextSyncNeedsWriteAccess() async throws {
+        let harness = try await ConfigHarness.make()
+        let repo = try harness.seedRepository(hasAdmin: false, hasPush: false)
+        let id = try insertSyncedSecret(harness, repo: repo, name: "API_TOKEN")
+        #expect(configError { try harness.config.requestPush(id) } == .readOnly(.adminRequired))
+        #expect(try !harness.state(id).forcePush)
     }
 
     @Test func discardAllRevertsEverything() async throws {
@@ -357,6 +452,20 @@ struct ConfigItemTests {
     // MARK: - Helpers
 
     /// A synced secret whose value is missing locally, as an import stores it.
+    /// A synced secret with a value, inserted directly (works on read-only repositories).
+    private func insertSyncedSecret(_ harness: ConfigHarness, repo: RepoModel, name: String) throws -> ConfigItemID {
+        let id = try insertValueMissingSecret(harness, repo: repo, name: name)
+        try harness.session.write { keys, tx in
+            guard var record = try harness.store.fetchItemRecord(id: id, in: tx) else { throw ConfigRepositoryError.itemNotFound }
+            let value = SecretBytes(utf8: ConfigFixture.valueA)
+            defer { value.wipe() }
+            try ConfigFieldCipher.setValue(value, on: &record, keys: keys)
+            try ConfigFieldCipher.setSyncedValue(value, on: &record, keys: keys)
+            try harness.store.updateItem(record, in: tx)
+        }
+        return id
+    }
+
     private func insertValueMissingSecret(_ harness: ConfigHarness, repo: RepoModel, name: String) throws -> ConfigItemID {
         let record = ConfigItemRecord(
             repositoryID: repo.id,

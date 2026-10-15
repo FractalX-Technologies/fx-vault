@@ -20,6 +20,8 @@ struct ItemEditBatch {
     private let tx: StoreTransaction
     private let writer: ItemMutationWriter
     private let writePolicy: WriteCollaboratorPolicy
+    /// The transaction's time: when a push requested in it was requested.
+    private let now: Date
 
     init(
         repositoryID: RepoID,
@@ -39,6 +41,7 @@ struct ItemEditBatch {
         self.tx = tx
         writer = ItemMutationWriter(store: store, repositoryID: repositoryID, now: now)
         self.writePolicy = writePolicy
+        self.now = now
     }
 
     /// The current row of `id`, or nil.
@@ -100,13 +103,26 @@ struct ItemEditBatch {
         try commit(try planner.revert(id), value: nil)
     }
 
-    /// Fills a value-missing secret (§7.1, §7.8).
-    mutating func fill(_ id: ConfigItemID, value: SecretBytes, pushOnNextSync: Bool) throws {
+    /// Fills a value-missing secret (§7.1, §7.8). `isUserRequest` records the push as the
+    /// user's explicit choice (`force_push_requested_at := now`, D27); a share import passes
+    /// false.
+    mutating func fill(_ id: ConfigItemID, value: SecretBytes, pushOnNextSync: Bool, isUserRequest: Bool) throws {
         let current = try existing(id)
         try requireEditable(current.scope)
         let keys = keys
-        let outcome = try planner.fill(id, pushOnNextSync: pushOnNextSync) { keys.fingerprint(value, rowID: $0) }
+        let outcome = try planner.fill(
+            id,
+            pushOnNextSync: pushOnNextSync,
+            requestedAt: isUserRequest ? now : nil
+        ) { keys.fingerprint(value, rowID: $0) }
         try commit(outcome, value: value)
+    }
+
+    /// Push on Next Sync: the next Sync re-sends the secret's local value even if unchanged.
+    mutating func requestPush(_ id: ConfigItemID) throws {
+        let current = try existing(id)
+        try requireEditable(current.scope)
+        try commit(try planner.requestPush(id, requestedAt: now), value: nil)
     }
 
     /// Convert / Move (D11): a new row in `kind` and `scope` plus a tombstone (or removal) of the

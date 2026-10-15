@@ -2,7 +2,8 @@ import Foundation
 import GRDB
 import VaultCore
 
-/// One `config_items` row (§6 `v3_config` + `v6_sharing`), ciphertexts included.
+/// One `config_items` row (§6 `v3_config` + `v6_sharing` + `v8_force_push_requested_at`),
+/// ciphertexts included.
 ///
 /// The `*Ciphertext` and `*Fingerprint` blobs are opaque here: VaultCrypto produces them and
 /// VaultData decrypts them. Fetch this record only to read or write a value; lists, status and
@@ -31,6 +32,9 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
     /// `synced_fp`: the fingerprint of the last pushed value.
     public var syncedFingerprint: Data?
     public var forcePush: Bool
+    /// `force_push_requested_at`: when the user asked for this push (nil for a push FX Vault
+    /// scheduled itself). Cleared with ``forcePush``.
+    public var forcePushRequestedAt: Date?
     public var remoteUpdatedAt: Date?
     public var verifyState: VerifyState
     /// Verification baseline: GitHub's `updatedAt` listed right before the write (§7.3).
@@ -54,6 +58,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         syncedValueCiphertext: Data? = nil,
         syncedFingerprint: Data? = nil,
         forcePush: Bool = false,
+        forcePushRequestedAt: Date? = nil,
         remoteUpdatedAt: Date? = nil,
         verifyState: VerifyState = .verified,
         preWriteUpdatedAt: Date? = nil,
@@ -74,6 +79,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         self.syncedValueCiphertext = syncedValueCiphertext
         self.syncedFingerprint = syncedFingerprint
         self.forcePush = forcePush
+        self.forcePushRequestedAt = forcePushRequestedAt
         self.remoteUpdatedAt = remoteUpdatedAt
         self.verifyState = verifyState
         self.preWriteUpdatedAt = preWriteUpdatedAt
@@ -104,6 +110,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
             hasSyncedValue: syncedValueCiphertext != nil,
             syncedFingerprint: syncedFingerprint,
             forcePush: forcePush,
+            forcePushRequestedAt: forcePushRequestedAt,
             remoteUpdatedAt: remoteUpdatedAt,
             verifyState: verifyState,
             preWriteUpdatedAt: preWriteUpdatedAt,
@@ -132,6 +139,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         case syncedValueCiphertext = "synced_value_ct"
         case syncedFingerprint = "synced_fp"
         case forcePush = "force_push"
+        case forcePushRequestedAt = "force_push_requested_at"
         case remoteUpdatedAt = "remote_updated_at"
         case verifyState = "verify_state"
         case preWriteUpdatedAt = "pre_write_updated_at"
@@ -167,6 +175,8 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
     public var hasSyncedValue: Bool
     public var syncedFingerprint: Data?
     public var forcePush: Bool
+    /// `force_push_requested_at`.
+    public var forcePushRequestedAt: Date?
     public var remoteUpdatedAt: Date?
     public var verifyState: VerifyState
     public var preWriteUpdatedAt: Date?
@@ -188,6 +198,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
         hasSyncedValue: Bool,
         syncedFingerprint: Data?,
         forcePush: Bool,
+        forcePushRequestedAt: Date? = nil,
         remoteUpdatedAt: Date?,
         verifyState: VerifyState,
         preWriteUpdatedAt: Date?,
@@ -208,6 +219,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
         self.hasSyncedValue = hasSyncedValue
         self.syncedFingerprint = syncedFingerprint
         self.forcePush = forcePush
+        self.forcePushRequestedAt = forcePushRequestedAt
         self.remoteUpdatedAt = remoteUpdatedAt
         self.verifyState = verifyState
         self.preWriteUpdatedAt = preWriteUpdatedAt
@@ -278,6 +290,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
         case hasSyncedValue = "has_synced_value"
         case syncedFingerprint = "synced_fp"
         case forcePush = "force_push"
+        case forcePushRequestedAt = "force_push_requested_at"
         case remoteUpdatedAt = "remote_updated_at"
         case verifyState = "verify_state"
         case preWriteUpdatedAt = "pre_write_updated_at"
@@ -302,6 +315,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
             (ConfigItemRecord.CodingKeys.syncedValueCiphertext != nil).forKey(CodingKeys.hasSyncedValue.rawValue),
             CodingKeys.syncedFingerprint,
             CodingKeys.forcePush,
+            CodingKeys.forcePushRequestedAt,
             CodingKeys.remoteUpdatedAt,
             CodingKeys.verifyState,
             CodingKeys.preWriteUpdatedAt,

@@ -9,7 +9,9 @@ import VaultCore
 /// Items (compared with a fresh native re-list of their scope):
 /// - modify / force push: the remote item is gone, a secret's `updatedAt` differs from
 ///   `remote_updated_at` (``DriftDetector/isSameTimestamp(_:_:)``), or a variable's
-///   fingerprint differs from `synced_fp`;
+///   fingerprint differs from `synced_fp`. A push the user requested
+///   (`force_push_requested_at`) is blocked only by a secret change made after the request
+///   (``ConfigItemSnapshotModel/isSecretChangedOnGitHub(updatedAt:)``);
 /// - add / the new half of a rename: the name already exists on GitHub;
 /// - delete: the remote item exists and changed as above (a missing one is fine: the delete
 ///   then confirms with a re-list);
@@ -52,7 +54,7 @@ enum RemoteBaseChecker {
         guard row.verifyState != .pending else { return false }
         switch remote {
         case .secret(let secret):
-            return !DriftDetector.isSameTimestamp(secret.updatedAt, row.remoteUpdatedAt)
+            return row.isSecretChangedOnGitHub(updatedAt: secret.updatedAt)
         case .variable(let variable):
             guard let fingerprint = variable.fingerprint(for: row.id) else { return true }
             return fingerprint != row.syncedFingerprint

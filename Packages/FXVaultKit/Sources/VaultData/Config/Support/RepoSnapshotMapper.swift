@@ -21,6 +21,7 @@ public enum RepoSnapshotMapper {
             hasSyncedValue: state.hasSyncedValue,
             syncedFingerprint: state.syncedFingerprint,
             forcePush: state.forcePush,
+            forcePushRequestedAt: state.forcePushRequestedAt,
             remoteUpdatedAt: state.remoteUpdatedAt,
             verifyState: state.verifyState,
             preWriteUpdatedAt: state.preWriteUpdatedAt,

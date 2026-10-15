@@ -70,6 +70,14 @@ verification. The workflow's signed job is optional and is skipped unless the
 
 ## Cutting a release
 
+> **Never run an unreleased Release build on a Mac that uses FX Vault.** A Release build is
+> `io.fractalx.fxvault` and opens the real vault (`~/Library/Application Support/FX Vault`).
+> If its schema is newer (0.1.2 adds `v8_force_push_requested_at`), it migrates that vault and
+> the installed older version refuses to open it until the new version ships. Run, test and
+> profile with Debug ("FX Vault Dev", its own vault); the scheme's Profile action uses Debug.
+> `release-local.sh` builds and checks the release app without launching it, and
+> `FX Vault --diagnose` exits before the vault opens.
+
 Versions are `MAJOR.MINOR.PATCH`, with an optional `-suffix` such as `0.1.0-beta.1`.
 `CFBundleShortVersionString` is the numeric part, and `CFBundleVersion` is the commit
 count of `HEAD`. A version with a suffix is published as a **pre-release**. Homebrew's
@@ -167,7 +175,7 @@ release a new patch version. Never replace the assets of an existing release.
 | Profile | Installed and not expired. Team is `QYKC498D5D` and the app ID is `QYKC498D5D.io.fractalx.fxvault`. It is a macOS Developer ID profile (all devices), and its keychain groups allow the app's group |
 | Identity | A valid Developer ID Application identity of the team whose certificate is in the profile. The app and the DMG are signed with the same SHA-1 |
 | Notary | `notarytool history` works with the keychain profile (checked before the build) |
-| App | `codesign --verify --deep --strict`. Universal `arm64 x86_64`. Bundle ID and versions. Hardened runtime. `Authority=Developer ID Application … (QYKC498D5D)` with a secure timestamp. Entitlements contain `keychain-access-groups` `QYKC498D5D.io.fractalx.fxvault` and no `get-task-allow`. The embedded profile's team and UUID match |
+| App | `codesign --verify --deep --strict`. Universal `arm64 x86_64`. Bundle ID and versions. `CFBundleName` and `CFBundleDisplayName` are "FX Vault" in `Info.plist` and in any localized `InfoPlist.strings`. Hardened runtime. `Authority=Developer ID Application … (QYKC498D5D)` with a secure timestamp. Entitlements contain `keychain-access-groups` `QYKC498D5D.io.fractalx.fxvault` and no `get-task-allow`. The embedded profile's team and UUID match |
 | After notarization | `stapler validate`, `spctl -t exec` reports `source=Notarized Developer ID`, `syspolicy_check distribution` passes |
 | DMG | `hdiutil verify`, a test mount that shows `FX Vault.app` and the `Applications` link, the Developer ID signature, notarization, staple, `stapler validate`, and `spctl -a -vvv -t install` reports `source=Notarized Developer ID` |
 | Publish | The tree is clean, tag `v<version>` exists locally and on GitHub with the same SHA and points at `HEAD`, and the release does not already have the DMG |

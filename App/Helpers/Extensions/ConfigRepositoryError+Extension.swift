@@ -49,6 +49,11 @@ nonisolated extension ConfigRepositoryError {
             String(localized: "error.config.nothingToRevert", defaultValue: "There is no local change to revert.")
         case .edit(.valueNotMissing):
             String(localized: "error.config.valueNotMissing", defaultValue: "This secret already has a value. Edit it instead.")
+        case .edit(.pushNotApplicable):
+            String(
+                localized: "error.config.pushNotApplicable",
+                defaultValue: "Only a secret that is on GitHub and has a value in FX Vault can be pushed again."
+            )
         case .vault(let error):
             error.localizedMessage
         case .store, .encryptionFailed, .unexpected:

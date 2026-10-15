@@ -56,6 +56,11 @@ private struct MainToolbar: ToolbarContent {
     let viewModel: MainViewModel
 
     var body: some ToolbarContent {
+        if AppIdentity.isDevelopmentBuild {
+            ToolbarItem(placement: .navigation) {
+                DevBuildBadge()
+            }
+        }
         ToolbarItemGroup(placement: .primaryAction) {
             Button {
                 viewModel.newRepository()
@@ -90,6 +95,21 @@ private struct MainToolbar: ToolbarContent {
                 viewModel.sync()
             }
         }
+    }
+}
+
+/// "DEV" in the toolbar of Debug builds (FX Vault Dev), which use their own vault folder.
+private struct DevBuildBadge: View {
+    var body: some View {
+        StatusChip(
+            title: String(localized: "toolbar.devBuild", defaultValue: "DEV"),
+            tint: Theme.Colors.warning
+        )
+        .help(String(
+            localized: "toolbar.devBuild.help",
+            defaultValue: "Development build (FX Vault Dev). It uses the FX Vault Dev vault, not the vault of the installed FX Vault."
+        ))
+        .accessibilityLabel(String(localized: "toolbar.devBuild.accessibility", defaultValue: "Development build"))
     }
 }
 

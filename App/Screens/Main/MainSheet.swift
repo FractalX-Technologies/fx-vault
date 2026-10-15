@@ -57,7 +57,8 @@ struct ItemEditorContext: Hashable {
         case add(ConfigKind)
         /// Rename and/or replace the value (`ConfigRepository.renameItem` / `editValue`).
         case edit(ConfigItemID)
-        /// Fill a value-missing secret, with the "push on next sync" choice (§7.8).
+        /// Fill a value-missing secret: pushed on the next Sync unless it already matches GitHub
+        /// (§7.8, v0.1.2).
         case fill(ConfigItemID)
         /// "Convert/Move…" (D11): pick another kind and/or scope (`ConfigRepository.moveItem`).
         case move(ConfigItemID)
@@ -66,6 +67,9 @@ struct ItemEditorContext: Hashable {
     let repositoryID: RepoID
     let scope: ConfigScope
     let mode: Mode
+    /// Fill: start with "Already matches GitHub (don't push)" checked. Only the drift review
+    /// sets it, after "Accept GitHub" (the user chose GitHub's value).
+    var fillMatchesGitHub = false
 }
 
 /// "+ New Environment" in the scopes column.

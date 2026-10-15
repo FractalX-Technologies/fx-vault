@@ -12,6 +12,9 @@ environments and accounts, with a local encrypted vault and the GitHub CLI.
 - **Secrets and variables, repository and environment level.** Add, edit, rename, convert
   between secret and variable, move between scopes, fill values GitHub does not return, revert
   and delete. Secrets stay masked until you reveal them and re-mask after 30 seconds.
+- **The vault is the source of truth.** A secret value you fill in is pushed by the next Sync
+  (unless you check "Already matches GitHub"), and Push on Next Sync re-sends any secret so
+  GitHub matches FX Vault.
 - **Environments.** Create, rename (guided recreate on GitHub), duplicate and delete
   environments, and edit their deployment branch and tag rules.
 - **Review, then sync.** Edits stay local until you press Sync. The summary shows names and

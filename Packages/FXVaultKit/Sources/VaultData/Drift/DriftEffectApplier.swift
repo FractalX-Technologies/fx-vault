@@ -126,6 +126,7 @@ struct DriftEffectApplier {
         updated.syncedName = syncedName
         updated.remoteUpdatedAt = remoteUpdatedAt
         updated.forcePush = false
+        updated.forcePushRequestedAt = nil
         updated.verifyState = .verified
         switch record.kind {
         case .variable:
@@ -366,6 +367,7 @@ struct DriftEffectApplier {
         }
         record.isDeleted = false
         record.forcePush = false
+        record.forcePushRequestedAt = nil
         record.verifyState = .verified
     }
 
@@ -383,6 +385,7 @@ struct DriftEffectApplier {
         record.syncedFingerprint = nil
         record.remoteUpdatedAt = nil
         record.forcePush = false
+        record.forcePushRequestedAt = nil
         record.verifyState = .verified
         record.preWriteUpdatedAt = nil
     }

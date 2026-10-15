@@ -308,7 +308,7 @@ struct ConfigStoreTests {
                 syncedName: "API_TOKEN",
                 syncedFingerprint: Sample.fingerprint(),
                 forcePush: true,
-                expected: .modified
+                expected: .willPush
             ),
         ]
     }

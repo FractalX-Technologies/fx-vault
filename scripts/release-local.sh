@@ -62,6 +62,7 @@ readonly TARGET="FXVault"
 readonly PRODUCT_NAME="FXVault"
 readonly BUNDLE_ID="io.fractalx.fxvault"
 readonly APP_NAME="FX Vault.app"
+readonly DISPLAY_NAME="FX Vault"
 readonly VOLUME_NAME="FX Vault"
 readonly DMG_BASENAME="FXVault"
 readonly DEFAULT_TEAM_ID="QYKC498D5D"
@@ -593,6 +594,7 @@ gate_common() {
   [[ "$(plist_raw "$info" CFBundleVersion)" == "$build_number" ]] \
     || die "CFBundleVersion is '$(plist_raw "$info" CFBundleVersion)', expected $build_number"
   pass "Info.plist $BUNDLE_ID $marketing_version ($build_number)"
+  gate_app_name "$app"
 
   details="$WORK_DIR/codesign-details.txt"
   codesign --display --verbose=4 "$app" >"$details" 2>&1 || die "codesign --display failed"
@@ -602,6 +604,25 @@ gate_common() {
 
   codesign --display --entitlements - --xml "$app" >"$WORK_DIR/entitlements.plist" 2>/dev/null \
     || die "cannot read the app's entitlements"
+}
+
+# The menu bar and Finder show CFBundleName / CFBundleDisplayName. Xcode can add them back to
+# InfoPlist.xcstrings ("FX Vault Dev" or a literal build-setting reference), and a localized
+# value overrides the Info.plist one, so every place that can hold them must say DISPLAY_NAME.
+gate_app_name() {
+  local app="$1" key strings value
+  for key in CFBundleName CFBundleDisplayName; do
+    value="$(plist_raw "$app/Contents/Info.plist" "$key")"
+    [[ "$value" == "$DISPLAY_NAME" ]] || die "Info.plist $key is '$value', expected '$DISPLAY_NAME'"
+    for strings in "$app"/Contents/Resources/*.lproj/InfoPlist.strings; do
+      [[ -f "$strings" ]] || continue
+      plutil -extract "$key" raw -o - "$strings" >/dev/null 2>&1 || continue
+      value="$(plist_raw "$strings" "$key")"
+      [[ "$value" == "$DISPLAY_NAME" ]] \
+        || die "${strings#"$app/"} localizes $key as '$value', expected '$DISPLAY_NAME' (remove it from App/Resources/InfoPlist.xcstrings)"
+    done
+  done
+  pass "app name '$DISPLAY_NAME' (Info.plist and localized InfoPlist.strings)"
 }
 
 gate_entitlements() {

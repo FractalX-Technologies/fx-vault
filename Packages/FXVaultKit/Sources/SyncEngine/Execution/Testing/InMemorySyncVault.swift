@@ -271,7 +271,9 @@ public final class InMemorySyncVault: SyncPersisting, SyncValueProviding, Sendab
         case .itemVerificationExpired(let itemID, let forcePush):
             updateRow(itemID, in: &state) { row in
                 row.verifyState = .verified
-                if forcePush { row.forcePush = true }
+                guard forcePush else { return }
+                row.forcePush = true
+                if let baseline = row.preWriteUpdatedAt { row.remoteUpdatedAt = baseline }
             }
         case .itemDeleted(let deleted):
             applyDelete(deleted, to: &state)
@@ -343,6 +345,7 @@ public final class InMemorySyncVault: SyncPersisting, SyncValueProviding, Sendab
             row.syncedFingerprint = pushed.pushedFingerprint
             row.hasSyncedValue = pushedValue != nil
             row.forcePush = false
+            row.forcePushRequestedAt = nil
             row.verifyState = .pending
             row.preWriteUpdatedAt = pushed.preWriteUpdatedAt
             if pushed.didNormalizeValue, unchanged {

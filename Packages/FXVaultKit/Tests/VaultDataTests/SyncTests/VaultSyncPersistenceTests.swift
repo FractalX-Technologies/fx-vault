@@ -229,6 +229,26 @@ struct VaultSyncPersistenceTests {
         #expect(forced.preWriteUpdatedAt == DatabaseTimestamp.roundTripped(listedAt))
     }
 
+    /// The re-push is checked against the base the expired write was checked against.
+    @Test func expiryRebasesASecretOnItsPreWriteBaseline() async throws {
+        let harness = try await harness()
+        let secret = try harness.insertRow("FXV_SECRET", kind: .secret, value: "w", syncedValue: "w", syncedName: "FXV_SECRET")
+        let variable = try harness.insertRow("FXV_VARIABLE", kind: .variable, value: "x", syncedValue: "x", syncedName: "FXV_VARIABLE")
+        let baseline = harness.clock.now
+        let variableBase = try harness.record(variable).remoteUpdatedAt
+        try persistence(harness).commit(SyncCommitModel(effects: [
+            .itemPreWriteBaseline(itemID: secret, updatedAt: baseline),
+            .itemPreWriteBaseline(itemID: variable, updatedAt: baseline),
+            .itemVerificationExpired(itemID: secret, forcePush: true),
+            .itemVerificationExpired(itemID: variable, forcePush: false),
+        ]))
+        let forced = try harness.record(secret)
+        #expect(forced.forcePush && forced.forcePushRequestedAt == nil)
+        #expect(forced.remoteUpdatedAt == DatabaseTimestamp.roundTripped(baseline))
+        let untouched = try harness.record(variable)
+        #expect(!untouched.forcePush && untouched.remoteUpdatedAt == variableBase)
+    }
+
     // MARK: - Repositories and environments
 
     @Test func repositoryAndEnvironmentBookkeeping() async throws {

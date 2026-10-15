@@ -16,6 +16,7 @@ public enum VaultMigrator {
         case v5CreatePolicies = "v5_create_policies"
         case v6Sharing = "v6_sharing"
         case v7JournalFingerprints = "v7_journal_fingerprints"
+        case v8ForcePushRequestedAt = "v8_force_push_requested_at"
 
         /// The newest migration this build knows.
         public static var latest: Migration {
@@ -40,6 +41,7 @@ public enum VaultMigrator {
             case .v5CreatePolicies: MigrationSQL.v5CreatePolicies
             case .v6Sharing: MigrationSQL.v6Sharing
             case .v7JournalFingerprints: MigrationSQL.v7JournalFingerprints
+            case .v8ForcePushRequestedAt: MigrationSQL.v8ForcePushRequestedAt
             }
         }
     }

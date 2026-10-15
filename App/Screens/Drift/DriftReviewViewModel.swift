@@ -239,10 +239,12 @@ final class DriftReviewViewModel {
         if case .promptFillValue(let itemID)? = result.followUp, case .item(let item) = drift.subject {
             // GitHub never returns secret values: continue in the item editor (fill mode).
             finish()
+            // The user accepted GitHub's value: what they enter is taken as GitHub's, not pushed.
             dependencies.actions.present(.itemEditor(ItemEditorContext(
                 repositoryID: repositoryID,
                 scope: item.scope,
-                mode: .fill(itemID)
+                mode: .fill(itemID),
+                fillMatchesGitHub: true
             )))
         }
     }

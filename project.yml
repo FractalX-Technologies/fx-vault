@@ -38,8 +38,8 @@ targets:
     info:
       path: Config/Info.plist
       properties:
-        CFBundleName: FX Vault
-        CFBundleDisplayName: FX Vault
+        CFBundleName: $(FXVAULT_APP_NAME)          # "FX Vault", or "FX Vault Dev" in Debug
+        CFBundleDisplayName: $(FXVAULT_APP_NAME)
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.developer-tools
@@ -61,12 +61,11 @@ targets:
         CFBundleDocumentTypes:
           - CFBundleTypeName: FX Vault Share
             CFBundleTypeRole: Viewer
-            LSHandlerRank: Owner
+            LSHandlerRank: $(FXVAULT_SHARE_HANDLER_RANK)   # Owner; Alternate in Debug
             LSItemContentTypes:
               - io.fractalx.fxvault.share
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.fractalx.fxvault
         PRODUCT_NAME: FXVault
         MARKETING_VERSION: 0.1.0
         CURRENT_PROJECT_VERSION: 1
@@ -77,6 +76,18 @@ targets:
         ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOLS: YES
         ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
         COMBINE_HIDPI_IMAGES: YES
+      # Debug builds are a separate app, "FX Vault Dev", that uses the separate FX Vault Dev
+      # vault folder: they must never register with LaunchServices as the real app.
+      # scripts/release-local.sh checks the Release identity.
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: io.fractalx.fxvault.dev
+          FXVAULT_APP_NAME: FX Vault Dev
+          FXVAULT_SHARE_HANDLER_RANK: Alternate
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: io.fractalx.fxvault
+          FXVAULT_APP_NAME: FX Vault
+          FXVAULT_SHARE_HANDLER_RANK: Owner
   AppTests:
     type: bundle.unit-test
     platform: macOS
@@ -114,7 +125,7 @@ schemes:
         - package: FXVaultKit/SyncEngineTests
         - package: FXVaultKit/VaultDataTests
     profile:
-      config: Release
+      config: Debug                          # a Release build opens and migrates the real vault (RELEASING.md)
     analyze:
       config: Debug
     archive:

@@ -18,6 +18,10 @@ import VaultData
 ///   `ConfigRepository.moveItem`, and secret → variable asks for confirmation first (§5.13).
 /// - A variable that looks like a credential (`CredentialClassifier`) gets a warning that
 ///   suggests a secret.
+/// - The vault is the source of truth (v0.1.2): filling a secret that is on GitHub pushes it on
+///   the next Sync unless "Already matches GitHub (don't push)" is checked (off by default; on
+///   when the editor continues a drift "Accept GitHub"). Editing a synced secret offers "Push on
+///   Next Sync", which re-sends the value even when it did not change.
 /// - The value lives only in this view model's `value` while the sheet is open; it is dropped
 ///   after a save and on lock, and never appears in notes, warnings, alerts or logs.
 @Observable
@@ -64,8 +68,10 @@ final class ItemEditorViewModel: LockObserving {
     private(set) var isValueEdited = false
     /// True once the current secret value was decrypted into the editor ("Edit Current Value").
     private(set) var isCurrentValueLoaded = false
-    /// Fill: false = "Fill local value (already on GitHub)" (the default), true = "Push this
-    /// value on next Sync" (§7.1).
+    /// Fill: "Already matches GitHub (don't push)". Off by default, so the filled value is
+    /// pushed by the next Sync (v0.1.2).
+    var fillMatchesGitHub: Bool
+    /// Edit: "Push on Next Sync" for a synced secret, applied on Save (v0.1.2).
     var pushOnNextSync = false
     /// Convert/Move: the target kind and scope.
     var targetKind: ConfigKind
@@ -86,6 +92,7 @@ final class ItemEditorViewModel: LockObserving {
         let initialKind: ConfigKind = if case .add(let kind) = context.mode { kind } else { .secret }
         kind = initialKind
         targetKind = initialKind
+        fillMatchesGitHub = context.fillMatchesGitHub
         targetScope = context.scope
         dependencies.actions.addLockObserver(self)
     }
@@ -467,9 +474,31 @@ final class ItemEditorViewModel: LockObserving {
 
     // MARK: - Fill (§7.1, §7.8)
 
-    /// "Fill local value" applies only to a secret GitHub has; an unsynced one is a pending add.
+    /// "Already matches GitHub" applies only to a secret GitHub has; an unsynced one is a
+    /// pending add.
     var offersFillChoice: Bool {
         isFilling && item?.isSynced == true
+    }
+
+    // MARK: - Push on Next Sync (v0.1.2)
+
+    /// Offered while editing a secret that is on GitHub, has a value and has nothing pending.
+    var offersPushOnNextSync: Bool {
+        guard isEditing, let item else { return false }
+        return item.kind == .secret && item.isSynced && item.hasValue && !item.isDeleted
+            && (item.syncStatus == .synced || item.syncStatus == .unverifiedShare)
+    }
+
+    /// The secret is already marked to be pushed (Revert in the table cancels it).
+    var isPushAlreadyRequested: Bool {
+        isEditing && item?.syncStatus == .willPush
+    }
+
+    /// The save also asks for the push: the toggle is on and the item keeps its name and kind
+    /// (a rename or kind change pushes anyway).
+    private var requestsPush: Bool {
+        guard offersPushOnNextSync, pushOnNextSync, let item else { return false }
+        return !isNameChanged && kind == item.kind
     }
 
     // MARK: - Convert / Move (D11)
@@ -541,7 +570,7 @@ final class ItemEditorViewModel: LockObserving {
         case .edit:
             guard let item, isNameValid, isValueValid else { return false }
             if kind == .variable, item.kind == .secret, !item.hasValue, newValue == nil { return false }
-            return isNameChanged || newValue != nil || kind != item.kind
+            return isNameChanged || newValue != nil || kind != item.kind || requestsPush
         case .fill:
             return isValueValid
         case .move:
@@ -625,11 +654,12 @@ final class ItemEditorViewModel: LockObserving {
         didStripTrailingNewlines = result.didStripTrailingNewlines
     }
 
-    /// Rename, then the value, then the kind (an item not yet on GitHub): each step validated
-    /// up front by ``canSave``.
+    /// Rename, then the value, then the kind (an item not yet on GitHub), then Push on Next
+    /// Sync: each step validated up front by ``canSave``.
     private func edit() throws(ConfigRepositoryError) {
         guard let item else { throw .itemNotFound }
         let config = dependencies.config
+        let shouldRequestPush = requestsPush
         var id = item.id
         if isNameChanged {
             id = try config.renameItem(id, to: normalizedName)
@@ -642,6 +672,9 @@ final class ItemEditorViewModel: LockObserving {
         if kind != item.kind {
             id = try config.moveItem(id, toKind: kind, scope: item.scope)
         }
+        if shouldRequestPush {
+            try config.requestPush(id)
+        }
     }
 
     private func fill() throws(ConfigRepositoryError) {
@@ -651,7 +684,7 @@ final class ItemEditorViewModel: LockObserving {
         let result = try dependencies.config.fillValue(
             item.id,
             value: bytes,
-            pushOnNextSync: pushOnNextSync
+            pushOnNextSync: !fillMatchesGitHub
         )
         didStripTrailingNewlines = result.didStripTrailingNewlines
     }

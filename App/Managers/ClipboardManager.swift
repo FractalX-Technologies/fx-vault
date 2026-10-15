@@ -14,7 +14,10 @@ final class ClipboardManager {
         static let concealed = NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")
         static let transient = NSPasteboard.PasteboardType("org.nspasteboard.TransientType")
         static let source = NSPasteboard.PasteboardType("org.nspasteboard.source")
-        static let sourceIdentifier = "io.fractalx.fxvault"
+        /// The copying app's bundle identifier (nspasteboard.org): `.dev` in Debug builds.
+        static var sourceIdentifier: String {
+            AppIdentity.bundleIdentifier
+        }
     }
 
     private let pasteboard: NSPasteboard

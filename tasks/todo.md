@@ -1390,6 +1390,15 @@ Decisions: Touch ID keeps requiring the master password after a restart and at l
 - [x] **`--diagnose` launch argument.** Prints JSON (version, signed, keychain access group, biometry availability or reason, and an add+delete of a probe item with `.biometryCurrentSet` in the data-protection keychain) and exits without UI. Never reads a biometric item and never prints secrets. **Verify:** unit test of the report shape; run on the signed 0.1.1 build: probe add returns 0. *Done: on the signed 0.1.1 installed via Homebrew, `--diagnose` reports isSignedWithAccessGroup true, biometryAvailable true, probe add 0 / delete 0 (errSecSuccess).*
 - [x] Release 0.1.1: CHANGELOG, signed + notarized DMG, GitHub release, cask bump, `brew upgrade --cask fx-vault` on this Mac. **Verify:** `spctl` Notarized Developer ID; brew shows 0.1.1. *Done: v0.1.1 published (first archive hit an Apple timestamp-service outage; retried), cask 4acc4cb in the tap, `brew upgrade --cask fx-vault` shows 0.1.1, spctl Notarized Developer ID.*
 
+### v0.1.2: fixes from Bryan's first use (2026-10-15)
+
+Root cause of "my vault was deleted after brew upgrade": about 45 Debug copies (agents' build folders) were registered with LaunchServices as "FX Vault" / io.fractalx.fxvault; Bryan opened one at 07:42, which uses the separate `FX Vault Dev` folder (vault intact there, kept per Bryan). The release app uses `FX Vault`. Stray copies were unregistered and stale build folders removed. Publishing 0.1.2 is authorized.
+
+- [x] Debug builds are "FX Vault Dev" / io.fractalx.fxvault.dev with a visible DEV badge; Release identity unchanged. **Verify:** generated Info.plist per configuration; release gates pass. *Done: project.yml Debug identity, DEV chip, BundleIdentityTests; release gate_app_name added.*
+- [x] Filling a value-missing secret is a pending push by default ("Already matches GitHub" opt-out). **Verify:** ConfigRepository + editor tests; Sync count increments. *Done: default push; "Already matches GitHub" opt-out; 1005 package + 356 app tests.*
+- [x] "Push on Next Sync" for synced secrets (force push; Revert clears it). **Verify:** repository, change-set and view-model tests. *Done: force-push request with a 5 s clock margin; Revert keeps values (review F4).*
+- [ ] Release 0.1.2 (signed, notarized, cask, `brew upgrade`, `--diagnose`). **Verify:** brew shows 0.1.2; probe add 0.
+
 ### v0.2.0: flexible sharing, connectivity banner, nearby chat (requested by Bryan, 2026-10-15)
 
 Decisions (Bryan): chat is 1:1 and ephemeral (nothing written to disk); a secret or variable can be attached in chat and saved by the receiver through the normal share preview; publishing 0.2.0 (commit, push, tag, signed release, cask bump) is authorized for this delivery only.
@@ -1400,6 +1409,17 @@ Decisions (Bryan): chat is 1:1 and ephemeral (nothing written to disk); a secret
 - [ ] **Nearby chat (experimental).** A separate window. Only while it is open you are visible to nearby Macs under your display name. Connect, then both compare the 6-digit code (same commit-reveal X25519 handshake with a "chat" purpose bound into the transcript), then end-to-end encrypted 1:1 text. Messages live only in memory and are wiped on close, lock or disconnect. Chat-specific idle timeout and keepalive. **Verify:** protocol tests over InMemoryTransportPair (full chat, MITM relay with different codes, purpose confusion between share and chat rejected, oversize/replay/reorder aborts); view-model tests for wipe on close/lock.
 - [ ] **Attach a secret or variable in chat.** Requires Touch ID or the master password to send. The receiver sees a card (name, kind, repo/environment, never the value) with "Save to my vault", which runs the share import preview and merge, or Dismiss. **Verify:** tests for ReauthGate on send, card without value, import through ShareImportPlanner/ShareImporter.
 - [ ] Release 0.2.0: CHANGELOG, README (sharing, offline banner, nearby chat marked experimental, requirements for AWDL), signed + notarized DMG, GitHub release, cask bump, `brew upgrade --cask fx-vault` here. **Verify:** `spctl` Notarized Developer ID; `--diagnose` probe OK; brew shows 0.2.0.
+
+### v0.3.0: FractalX design language (requested by Bryan, 2026-10-15)
+
+Approved mockup: https://claude.ai/artifact/Y8NqmJi2nGx7DcGtzHmQGD (main window light/dark, lock, onboarding, sync review, icon/tokens). Source: fractalx.io (Geist Sans + Geist Mono, warm off-white #F6F5F3 / ink #0B0C0E, dark #0B0C0E / #111820, brand #0B6FA4 / #3BA3DD, pill buttons, 24 px cards, hairline borders, mono uppercase labels, 3×3 mark). Icon: dark squircle, off-white 3×3 mark, brand-blue outlined center cell. Publishing 0.3.0 is authorized. Built after 0.2.0 is merged.
+
+- [ ] Design tokens in Helpers/Theme (colors light/dark from the mockup, type scale, radii, spacing, durations 140 ms) + docs/DESIGN.md. **Verify:** token tests; no hardcoded colors outside Theme (lint).
+- [ ] Bundle Geist Sans + Geist Mono (OFL 1.1, THIRD_PARTY_NOTICES + Credits) via ATSApplicationFontsPath; fallback to system fonts. **Verify:** font registration test; Release build contains the fonts.
+- [ ] Components: pill button styles (primary/secondary/outline/ghost), section label (mono uppercase), chips, cards, inputs, segmented control, banner, table styling, window chrome background, dot-grid backdrop. **Verify:** component snapshot/view tests where practical.
+- [ ] Screens: main window (sidebar, scopes, detail table), toolbar Sync pill with count, lock, onboarding (mono step counter + side panel), preferences, every sheet (sync review, drift, editors, create repo, env import/export, sharing, nearby, chat), banners. **Verify:** view-model tests unchanged and green; manual light/dark pass.
+- [ ] App icon: 3×3 mark with blue center, all macOS sizes (generated by script). **Verify:** asset catalog complete; icon visible in Finder/Dock.
+- [ ] Release 0.3.0 (signed, notarized, cask, `brew upgrade`). **Verify:** brew shows 0.3.0; spctl OK; `--diagnose` OK.
 
 ### Stretch (v1.1, not in v1 scope)
 

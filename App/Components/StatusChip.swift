@@ -46,13 +46,14 @@ extension ConfigSyncStatus {
         case .deleted: String(localized: "status.deleted", defaultValue: "Deleted")
         case .blocked: String(localized: "status.blocked", defaultValue: "Blocked")
         case .unverifiedShare: String(localized: "status.unverifiedShare", defaultValue: "Unverified share")
+        case .willPush: String(localized: "status.willPush", defaultValue: "Will push")
         }
     }
 
     var tint: Color {
         switch self {
         case .synced: Theme.Colors.success
-        case .added, .modified: Theme.Colors.pending
+        case .added, .modified, .willPush: Theme.Colors.pending
         case .deleted, .blocked: Theme.Colors.danger
         case .unverifiedShare: Theme.Colors.warning
         }

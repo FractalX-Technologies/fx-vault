@@ -67,7 +67,9 @@ struct SyncEffectApplier {
         case .itemVerificationExpired(let itemID, let forcePush):
             try rows.updateItem(itemID) { record in
                 record.verifyState = .verified
-                if forcePush { record.forcePush = true }
+                guard forcePush else { return }
+                record.forcePush = true
+                if let baseline = record.preWriteUpdatedAt { record.remoteUpdatedAt = baseline }
             }
         case .itemDeleted(let deleted):
             try applyDelete(deleted)
@@ -145,6 +147,7 @@ struct SyncEffectApplier {
         record.syncedName = pushed.syncedName
         record.syncedFingerprint = pushed.pushedFingerprint
         record.forcePush = false
+        record.forcePushRequestedAt = nil
         record.verifyState = .pending
         record.preWriteUpdatedAt = pushed.preWriteUpdatedAt
         if let pushedValue, let syncedAAD = ConfigFieldCipher.syncedAAD(of: record) {
