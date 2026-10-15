@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FX Vault icon, color and type</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0B6FA4}a:hover{color:#08557E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 560px; box-sizing: border-box; padding: 48px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; border-radius: 14px; border: 1px solid rgba(11,12,14,0.18); background: #F6F5F3; color: #0B0C0E; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px">
+
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: #5F6874">APP ICON</span>
+    <div style="display: flex; gap: 20px; align-items: flex-end">
+      <div style="width: 160px; height: 160px; border-radius: 36px; background: #0B0C0E; display: grid; place-items: center; box-shadow: 0 12px 32px rgba(11,12,14,0.24)">
+        <svg viewBox="0 0 3 3" width="84" height="84" role="img" aria-label="FX Vault icon, dark"><g fill="#F6F5F3"><rect x="0" y="0" width="0.86" height="0.86"></rect><rect x="1.07" y="0" width="0.86" height="0.86"></rect><rect x="2.14" y="0" width="0.86" height="0.86"></rect><rect x="0" y="1.07" width="0.86" height="0.86"></rect><rect x="2.14" y="1.07" width="0.86" height="0.86"></rect><rect x="0" y="2.14" width="0.86" height="0.86"></rect><rect x="1.07" y="2.14" width="0.86" height="0.86"></rect><rect x="2.14" y="2.14" width="0.86" height="0.86"></rect></g><rect x="1.07" y="1.07" width="0.86" height="0.86" fill="none" stroke="#3BA3DD" stroke-width="0.09"></rect></svg>
+      </div>
+      <div style="width: 72px; height: 72px; border-radius: 16px; background: #F6F5F3; border: 1px solid rgba(11,12,14,0.18); display: grid; place-items: center">
+        <svg viewBox="0 0 3 3" width="38" height="38" role="img" aria-label="FX Vault icon, light"><g fill="#0B0C0E"><rect x="0" y="0" width="0.86" height="0.86"></rect><rect x="1.07" y="0" width="0.86" height="0.86"></rect><rect x="2.14" y="0" width="0.86" height="0.86"></rect><rect x="0" y="1.07" width="0.86" height="0.86"></rect><rect x="2.14" y="1.07" width="0.86" height="0.86"></rect><rect x="0" y="2.14" width="0.86" height="0.86"></rect><rect x="1.07" y="2.14" width="0.86" height="0.86"></rect><rect x="2.14" y="2.14" width="0.86" height="0.86"></rect></g><rect x="1.07" y="1.07" width="0.86" height="0.86" fill="none" stroke="#0B6FA4" stroke-width="0.09"></rect></svg>
+      </div>
+    </div>
+    <p style="margin: 0; color: #454D56; max-width: 320px">The FractalX 3×3 mark. The empty center square becomes the vault: an outlined cell in the brand blue.</p>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: #5F6874">COLOR</span>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+      <sc-for list="{{swatches}}" as="sw" hint-placeholder-count="8">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="width: 36px; height: 36px; border-radius: 10px; background: {{sw.hex}}; border: 1px solid rgba(11,12,14,0.14)" aria-hidden="true"></span>
+          <div style="display: flex; flex-direction: column; line-height: 16px">
+            <span style="font-size: 13px">{{sw.name}}</span>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; color: #5F6874">{{sw.hex}}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 18px">
+    <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: #5F6874">TYPE</span>
+    <div style="font-size: 40px; line-height: 42px; font-weight: 500; letter-spacing: -1.6px">Your secrets.<br><span style="color: #5F6874">One source of truth.</span></div>
+    <div style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid rgba(11,12,14,0.10); padding-top: 16px">
+      <div style="display: flex; justify-content: space-between"><span>Geist Sans · 500 headings, 400 text</span><span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #5F6874">-0.04em</span></div>
+      <div style="display: flex; justify-content: space-between"><span style="font-family: 'Geist Mono', ui-monospace, monospace">STRIPE_SECRET_KEY</span><span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #5F6874">names, code</span></div>
+      <div style="display: flex; justify-content: space-between"><span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em">SECTION LABEL</span><span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #5F6874">+0.08em</span></div>
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 4px">
+      <button type="button" style="height: 40px; padding: 0 20px; border-radius: 999px; border: 0; background: #0B0C0E; color: #F6F5F3; font: inherit; font-weight: 500; cursor: pointer">Primary</button>
+      <button type="button" style="height: 40px; padding: 0 20px; border-radius: 999px; border: 0; background: #E4E1DB; color: #0B0C0E; font: inherit; cursor: pointer">Secondary</button>
+      <button type="button" style="height: 40px; padding: 0 20px; border-radius: 999px; border: 1px solid rgba(11,12,14,0.18); background: transparent; color: #0B0C0E; font: inherit; cursor: pointer">Outline</button>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const swatches = [
+      { name: 'Ground', hex: '#F6F5F3' },
+      { name: 'Ink', hex: '#0B0C0E' },
+      { name: 'Surface', hex: '#EDEBE7' },
+      { name: 'Surface 2', hex: '#E4E1DB' },
+      { name: 'Muted text', hex: '#454D56' },
+      { name: 'Brand', hex: '#0B6FA4' },
+      { name: 'Dark surface', hex: '#111820' },
+      { name: 'Brand (dark)', hex: '#3BA3DD' }
+    ];
+    return { swatches };
+  }
+}
+</script>
+</body>
+</html>

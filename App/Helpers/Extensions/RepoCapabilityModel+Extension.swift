@@ -19,7 +19,7 @@ extension RepoCapabilityModel {
     var chipTint: Color {
         switch self {
         case .full: Theme.Colors.success
-        case .repoLevelOnly: Theme.Colors.pending
+        case .repoLevelOnly: Theme.Colors.brand
         case .readOnly: Theme.Colors.warning
         }
     }

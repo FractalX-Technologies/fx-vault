@@ -11,34 +11,33 @@ struct ShareReauthView: View {
 
     var body: some View {
         @Bindable var model = model
-        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            Label {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                    Text(String(localized: "share.reauth.title", defaultValue: "Confirm it's you"))
-                        .font(Theme.Typography.headline)
-                        .foregroundStyle(Theme.Colors.textPrimary)
-                    Text(message)
-                        .font(Theme.Typography.callout)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+        let passwordLabel = String(localized: "share.reauth.password", defaultValue: "Master password")
+        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
+                Text(String(localized: "share.reauth.title", defaultValue: "Confirm it's you"))
+                    .fxTextStyle(.title2)
+                    .foregroundStyle(Theme.Colors.ink)
+                    .accessibilityAddTraits(.isHeader)
+                Text(message)
+                    .fxTextStyle(.body)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
+                SectionLabel(passwordLabel)
+                    .accessibilityHidden(true)
+                HStack(spacing: Theme.Spacing.small) {
+                    SecureField(passwordLabel, text: $model.password)
+                        .focused($isPasswordFocused)
+                        .fxInputField(.pill, isFocused: isPasswordFocused)
+                        .onSubmit(submitPassword)
+                        .disabled(model.isAuthorizing)
+                    Button(String(localized: "share.reauth.continue", defaultValue: "Continue"), action: submitPassword)
+                        .fxButtonStyle(.primary, size: .large)
+                        .disabled(!model.canSubmitPassword)
                 }
-            } icon: {
-                Image(systemName: "lock.shield")
-                    .foregroundStyle(Theme.Colors.accent)
             }
-            HStack(spacing: Theme.Spacing.small) {
-                SecureField(
-                    String(localized: "share.reauth.password", defaultValue: "Master password"),
-                    text: $model.password
-                )
-                .textFieldStyle(.roundedBorder)
-                .focused($isPasswordFocused)
-                .onSubmit(submitPassword)
-                .disabled(model.isAuthorizing)
-                Button(String(localized: "share.reauth.continue", defaultValue: "Continue"), action: submitPassword)
-                    .disabled(!model.canSubmitPassword)
-            }
-            HStack {
+            HStack(spacing: Theme.Spacing.medium) {
                 if model.canUseTouchID {
                     Button {
                         Task { await onTouchID() }
@@ -48,6 +47,7 @@ struct ShareReauthView: View {
                             systemImage: "touchid"
                         )
                     }
+                    .fxButtonStyle(.secondary, size: .large)
                     .disabled(model.isAuthorizing)
                 }
                 Spacer()

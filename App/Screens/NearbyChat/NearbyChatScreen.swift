@@ -16,11 +16,17 @@ struct NearbyChatScreen: View {
         _viewModel = State(initialValue: app.makeNearbyChatViewModel())
     }
 
+    /// Shows an existing view model (previews and the visual snapshot tests).
+    init(app: AppViewModel, viewModel: NearbyChatViewModel) {
+        self.app = app
+        _viewModel = State(initialValue: viewModel)
+    }
+
     var body: some View {
         @Bindable var viewModel = viewModel
         VStack(spacing: 0) {
             NearbyChatHeader(isVisible: viewModel.isVisible, displayName: viewModel.displayName)
-            Divider()
+            HairlineDivider()
             content
         }
         .frame(
@@ -29,7 +35,7 @@ struct NearbyChatScreen: View {
             minHeight: Theme.Layout.chatWindowMinHeight,
             maxHeight: .infinity
         )
-        .background(Theme.Colors.background)
+        .background(Theme.Colors.ground)
         .background(WindowAccessor { window in
             window.isRestorable = false
         })
@@ -77,7 +83,8 @@ struct NearbyChatScreen: View {
             HStack(spacing: 0) {
                 ChatPeerListView(viewModel: viewModel)
                     .frame(width: Theme.Layout.chatPeerListWidth)
-                Divider()
+                    .background(Theme.Colors.surface)
+                HairlineDivider(axis: .vertical)
                 conversation
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -135,13 +142,14 @@ struct NearbyChatScreen: View {
         Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
             Task { await viewModel.cancelConnection() }
         }
+        .fxButtonStyle(.secondary, size: .large)
     }
 
     private var openVaultButton: some View {
         Button(String(localized: "chat.openVault", defaultValue: "Open FX Vault")) {
             app.requestMainWindow()
         }
-        .buttonStyle(.borderedProminent)
+        .fxButtonStyle(.primary, size: .large)
     }
 }
 
@@ -151,36 +159,56 @@ private struct NearbyChatHeader: View {
     let displayName: String
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.medium) {
-            ShareSheetHeader(
-                systemImage: "bubble.left.and.text.bubble.right",
+        HStack(alignment: .center, spacing: Theme.Spacing.medium) {
+            SheetHeader(
+                label: nil,
                 title: String(localized: "chat.title", defaultValue: "Nearby Chat"),
                 subtitle: String(
                     localized: "chat.subtitle",
                     defaultValue: "End-to-end encrypted, 1:1, nothing saved. Works over Wi-Fi without a shared network."
                 ),
-                isExperimental: true
+                isExperimental: true,
+                titleStyle: .title2
             )
             Spacer(minLength: Theme.Spacing.large)
             ChatVisibilityIndicator(isVisible: isVisible, displayName: displayName)
         }
         .padding(.horizontal, Theme.Spacing.xLarge)
-        .padding(.vertical, Theme.Spacing.large)
+        .padding(.vertical, Theme.Spacing.largePlus)
     }
 }
 
-/// "You're visible to nearby Macs as <name>" (green) or "Not visible to nearby Macs".
+/// "You're visible to nearby Macs as <name>" (brand dot) or "Not visible to nearby Macs"
+/// (hollow dot), in a hairline pill.
 struct ChatVisibilityIndicator: View {
     let isVisible: Bool
     let displayName: String
 
     var body: some View {
-        StatusChip(
-            title: isVisible
+        HStack(spacing: Theme.Spacing.small) {
+            Circle()
+                .fill(isVisible ? Theme.Colors.brand : Theme.Colors.ground)
+                .overlay {
+                    if !isVisible {
+                        Circle().strokeBorder(Theme.Colors.subtleText, lineWidth: Theme.Stroke.hairline)
+                    }
+                }
+                .frame(width: Theme.Layout.bannerDotSize, height: Theme.Layout.bannerDotSize)
+                .accessibilityHidden(true)
+            Text(isVisible
                 ? String(localized: "chat.visible", defaultValue: "You're visible to nearby Macs as \(displayName)")
-                : String(localized: "chat.notVisible", defaultValue: "Not visible to nearby Macs"),
-            tint: isVisible ? Theme.Colors.success : Theme.Colors.textSecondary
-        )
+                : String(localized: "chat.notVisible", defaultValue: "Not visible to nearby Macs"))
+                .fxTextStyle(.caption)
+                .foregroundStyle(isVisible ? Theme.Colors.ink : Theme.Colors.mutedText)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+        .padding(.horizontal, Theme.Layout.chipPaddingHorizontal)
+        .frame(height: Theme.Layout.chipHeight)
+        .background(Theme.Colors.card, in: .pill)
+        .overlay(Capsule.pill.strokeBorder(Theme.Colors.hairline, lineWidth: Theme.Stroke.hairline))
+        .animation(Theme.Durations.interactionAnimation, value: isVisible)
+        .accessibilityElement(children: .combine)
         .help(isVisible
             ? String(
                 localized: "chat.visible.help",
@@ -231,10 +259,10 @@ private struct ChatEndedView: View {
                 }
                 if isVaultUnlocked {
                     Button(String(localized: "chat.startAgain", defaultValue: "Start New Chat"), action: onStartAgain)
-                        .buttonStyle(.borderedProminent)
+                        .fxButtonStyle(.primary, size: .large)
                 } else {
                     Button(String(localized: "chat.openVault", defaultValue: "Open FX Vault"), action: onOpenVault)
-                        .buttonStyle(.borderedProminent)
+                        .fxButtonStyle(.primary, size: .large)
                 }
             }
         }

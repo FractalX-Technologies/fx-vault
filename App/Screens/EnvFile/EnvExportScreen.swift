@@ -18,16 +18,16 @@ struct EnvExportScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            CardHeader(
-                systemImage: "square.and.arrow.up",
+        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+            SheetHeader(
+                label: ShareSheetLabel.environmentFile,
                 title: String(localized: "envExport.title", defaultValue: "Export .env"),
                 subtitle: subtitle
             )
             content
             footer
         }
-        .padding(Theme.Spacing.xLarge)
+        .fxSheetContent()
         .frame(width: Theme.Layout.envExportSheetWidth)
         .errorAlert($viewModel.alert)
         .onDisappear { viewModel.discard() }
@@ -58,7 +58,7 @@ struct EnvExportScreen: View {
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: Theme.Spacing.mediumMinus) {
             switch viewModel.step {
             case .authenticate:
                 cancelButton
@@ -103,6 +103,7 @@ struct EnvExportScreen: View {
                 Spacer()
                 if viewModel.defaultAction == .addToGitignore {
                     Button(String(localized: "envExport.gitignore.notNow", defaultValue: "Not Now")) { dismiss() }
+                        .fxButtonStyle(.secondary, size: .large)
                         .keyboardShortcut(.cancelAction)
                     Button(String(localized: "envExport.gitignore.add", defaultValue: "Add to .gitignore")) {
                         viewModel.addGitignoreEntry()
@@ -118,6 +119,7 @@ struct EnvExportScreen: View {
 
     private var cancelButton: some View {
         Button(String(localized: "common.cancel", defaultValue: "Cancel")) { dismiss() }
+            .fxButtonStyle(.secondary, size: .large)
             .keyboardShortcut(.cancelAction)
     }
 
@@ -138,17 +140,18 @@ struct EnvExportScreen: View {
     }
 }
 
-/// Makes a button the prominent Return button when `isDefault`.
+/// Makes a button the primary Return pill when `isDefault`; otherwise a secondary pill.
 private struct DefaultActionModifier: ViewModifier {
     let isDefault: Bool
 
     func body(content: Content) -> some View {
         if isDefault {
             content
-                .buttonStyle(.borderedProminent)
+                .fxButtonStyle(.primary, size: .large)
                 .keyboardShortcut(.defaultAction)
         } else {
             content
+                .fxButtonStyle(.secondary, size: .large)
         }
     }
 }
@@ -158,15 +161,19 @@ private struct EnvExportAuthenticateView: View {
     @Bindable var viewModel: EnvExportViewModel
     @FocusState private var isPasswordFocused: Bool
 
+    private var passwordLabel: String {
+        String(localized: "envExport.auth.password", defaultValue: "Master password")
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
             if viewModel.preview == nil {
                 ProgressView()
                     .controlSize(.small)
             } else if !viewModel.hasSomethingToExport {
-                EnvExportNotice(
+                SheetCallout(
                     systemImage: "tray",
-                    tint: Theme.Colors.textSecondary,
+                    tint: Theme.Colors.subtleText,
                     text: String(
                         localized: "envExport.nothing",
                         defaultValue: "This scope has no values to export. Secrets without a value in FX Vault are never exported."
@@ -177,20 +184,21 @@ private struct EnvExportAuthenticateView: View {
                     localized: "envExport.auth.message",
                     defaultValue: "Exporting writes \(viewModel.exportedCount) values to a file in plaintext. Confirm it's you with Touch ID or your master password."
                 ))
-                .font(Theme.Typography.body)
-                .foregroundStyle(Theme.Colors.textPrimary)
+                .fxTextStyle(.body)
+                .foregroundStyle(Theme.Colors.ink)
                 .fixedSize(horizontal: false, vertical: true)
-                SecureField(
-                    String(localized: "envExport.auth.password", defaultValue: "Master password"),
-                    text: $viewModel.password
-                )
-                .textFieldStyle(.roundedBorder)
-                .focused($isPasswordFocused)
-                .onSubmit { Task { await viewModel.authenticateWithPassword() } }
+                VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
+                    SectionLabel(passwordLabel)
+                        .accessibilityHidden(true)
+                    SecureField(passwordLabel, text: $viewModel.password)
+                        .focused($isPasswordFocused)
+                        .fxInputField(.rounded, isFocused: isPasswordFocused, isInvalid: viewModel.authError != nil)
+                        .onSubmit { Task { await viewModel.authenticateWithPassword() } }
+                }
                 if let notice = viewModel.touchIDNotice {
                     Text(verbatim: notice)
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .fxTextStyle(.caption)
+                        .foregroundStyle(Theme.Colors.mutedText)
                 }
                 if let error = viewModel.authError {
                     InlineErrorView(error: error)
@@ -209,7 +217,7 @@ private struct EnvExportReviewView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            EnvExportNotice(
+            SheetCallout(
                 systemImage: "exclamationmark.triangle.fill",
                 tint: Theme.Colors.danger,
                 text: String(
@@ -257,7 +265,7 @@ private struct EnvExportCloudWarningView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            EnvExportNotice(
+            SheetCallout(
                 systemImage: "icloud.fill",
                 tint: Theme.Colors.danger,
                 text: choice.destination.cloudSyncStatus == .iCloudDesktopAndDocuments
@@ -271,8 +279,8 @@ private struct EnvExportCloudWarningView: View {
                     )
             )
             Text(verbatim: choice.fileURL.path(percentEncoded: false))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .fxTextStyle(.monoMeta)
+                .foregroundStyle(Theme.Colors.subtleText)
                 .textSelection(.enabled)
                 .lineLimit(2)
                 .truncationMode(.middle)
@@ -287,7 +295,7 @@ private struct EnvExportDoneView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            EnvExportNotice(
+            SheetCallout(
                 systemImage: "checkmark.circle.fill",
                 tint: Theme.Colors.success,
                 text: String(
@@ -297,15 +305,15 @@ private struct EnvExportDoneView: View {
             )
             HStack {
                 Text(verbatim: outcome.result.fileURL.path(percentEncoded: false))
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.monoMeta)
+                    .foregroundStyle(Theme.Colors.subtleText)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer()
                 Button(String(localized: "envExport.done.reveal", defaultValue: "Show in Finder")) {
                     NSWorkspace.shared.activateFileViewerSelecting([outcome.result.fileURL])
                 }
-                .buttonStyle(.link)
+                .fxLinkButtonStyle(isEmphasized: true)
             }
             gitStatus
         }
@@ -315,7 +323,7 @@ private struct EnvExportDoneView: View {
     private var gitStatus: some View {
         switch outcome.destination.gitExposure {
         case .tracked(_, let relativePath):
-            EnvExportNotice(
+            SheetCallout(
                 systemImage: "exclamationmark.octagon.fill",
                 tint: Theme.Colors.danger,
                 text: String(
@@ -326,7 +334,7 @@ private struct EnvExportDoneView: View {
         case .notIgnored(_, let relativePath, _):
             gitignoreOffer(relativePath: relativePath)
         case .ignored:
-            EnvExportNotice(
+            SheetCallout(
                 systemImage: "checkmark.shield",
                 tint: Theme.Colors.success,
                 text: String(localized: "envExport.git.ignored", defaultValue: "git ignores this file.")
@@ -334,7 +342,7 @@ private struct EnvExportDoneView: View {
         case .outsideRepository:
             EmptyView()
         case nil:
-            EnvExportNotice(
+            SheetCallout(
                 systemImage: "questionmark.circle",
                 tint: Theme.Colors.warning,
                 text: String(
@@ -349,7 +357,7 @@ private struct EnvExportDoneView: View {
     private func gitignoreOffer(relativePath: String) -> some View {
         switch viewModel.gitignoreState {
         case .offered(let line):
-            EnvExportNotice(
+            SheetCallout(
                 systemImage: "exclamationmark.triangle.fill",
                 tint: Theme.Colors.warning,
                 text: String(
@@ -358,19 +366,19 @@ private struct EnvExportDoneView: View {
                 )
             )
         case .added(let line):
-            EnvExportNotice(
+            SheetCallout(
                 systemImage: "checkmark.shield",
                 tint: Theme.Colors.success,
                 text: String(localized: "envExport.git.added", defaultValue: "Added \(line) to .gitignore.")
             )
         case .alreadyPresent:
-            EnvExportNotice(
+            SheetCallout(
                 systemImage: "checkmark.shield",
                 tint: Theme.Colors.success,
                 text: String(localized: "envExport.git.alreadyPresent", defaultValue: ".gitignore already lists this file.")
             )
         case .manual:
-            EnvExportNotice(
+            SheetCallout(
                 systemImage: "exclamationmark.triangle.fill",
                 tint: Theme.Colors.warning,
                 text: String(
@@ -384,28 +392,6 @@ private struct EnvExportDoneView: View {
     }
 }
 
-/// An icon and a wrapped message in a tinted box.
-private struct EnvExportNotice: View {
-    let systemImage: String
-    let tint: Color
-    let text: String
-
-    var body: some View {
-        Label {
-            Text(verbatim: text)
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        } icon: {
-            Image(systemName: systemImage)
-                .foregroundStyle(tint)
-        }
-        .padding(Theme.Spacing.medium)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(tint.opacity(Theme.Opacity.chipBackground), in: RoundedRectangle(cornerRadius: Theme.Radius.medium))
-    }
-}
-
 /// A titled, scrollable list of names (never values).
 private struct EnvExportNameList: View {
     let title: String
@@ -413,14 +399,20 @@ private struct EnvExportNameList: View {
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-            Label(title, systemImage: "exclamationmark.circle")
-                .font(Theme.Typography.callout.weight(.semibold))
-                .foregroundStyle(tint)
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            Label {
+                Text(verbatim: title)
+                    .fxTextStyle(.calloutEmphasized)
+                    .foregroundStyle(Theme.Colors.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "exclamationmark.circle")
+                    .foregroundStyle(tint)
+            }
             ScrollView {
                 Text(verbatim: names.joined(separator: ", "))
-                    .font(Theme.Typography.monospaced)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.monoMeta)
+                    .foregroundStyle(Theme.Colors.mutedText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .textSelection(.enabled)
             }

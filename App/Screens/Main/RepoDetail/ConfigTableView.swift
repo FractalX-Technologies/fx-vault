@@ -2,48 +2,55 @@ import SwiftUI
 import UniformTypeIdentifiers
 import VaultCore
 
-/// The one table of the detail column (§10): Name, Value (masked with an eye toggle, "Value
-/// missing", or plaintext for variables), Updated and Status, with the row actions Reveal, Copy,
-/// Edit, Convert/Move…, Push on Next Sync (secrets), Revert and Delete.
+/// The one table of the detail column (§10; mockup Main): Name, Value (masked with an eye
+/// toggle, "Value missing", or plaintext for variables), Updated and Status, with the row actions
+/// Reveal, Copy, Edit, Convert/Move…, Push on Next Sync (secrets), Revert and Delete.
+///
+/// A native `Table` (selection, keyboard, context menus, double-click to edit) styled with
+/// `.fxTable()`: a card with 16 pt corners, 52 pt rows, mono names and timestamps, mono
+/// uppercase column titles.
 struct ConfigTableView: View {
     @Bindable var viewModel: RepoDetailViewModel
 
     var body: some View {
         let rows = viewModel.rows
         Table(rows, selection: $viewModel.selection) {
-            TableColumn(String(localized: "main.table.name", defaultValue: "Name")) { row in
+            TableColumn(Self.header(String(localized: "main.table.name", defaultValue: "Name"))) { row in
                 VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                    Text(verbatim: row.name)
-                        .font(Theme.Typography.monospaced)
-                        .strikethrough(row.isDeleted)
-                        .lineLimit(1)
+                    TableNameText(name: row.name, isDeleted: row.isDeleted)
                     if let syncedName = row.syncedName {
                         Text(String(localized: "main.table.renamedFrom", defaultValue: "Renamed from \(syncedName)"))
                             .font(Theme.Typography.caption)
-                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .foregroundStyle(Theme.Colors.mutedText)
+                            .lineLimit(1)
                     }
                 }
+                .fxTableCell()
             }
-            .width(min: Theme.Layout.tableNameMinWidth)
-            TableColumn(String(localized: "main.table.value", defaultValue: "Value")) { row in
+            .width(min: Theme.Layout.tableNameMinWidth, ideal: Theme.Layout.tableNameIdealWidth)
+            TableColumn(Self.header(String(localized: "main.table.value", defaultValue: "Value"))) { row in
                 MaskedValueCell(
                     display: viewModel.display(for: row),
                     onToggle: row.kind == .secret && row.hasValue && !row.isDeleted
                         ? { viewModel.toggleReveal(row.id) }
                         : nil
                 )
+                .fxTableCell()
             }
             .width(min: Theme.Layout.tableValueMinWidth)
-            TableColumn(String(localized: "main.table.updated", defaultValue: "Updated")) { row in
-                Text(row.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                    .foregroundStyle(Theme.Colors.textSecondary)
+            TableColumn(Self.header(String(localized: "main.table.updated", defaultValue: "Updated"))) { row in
+                TableMetaText(Self.updatedText(row.updatedAt))
+                    .help(row.updatedAt.formatted(date: .complete, time: .shortened))
+                    .fxTableCell()
             }
-            .width(min: Theme.Layout.tableDateMinWidth)
-            TableColumn(String(localized: "main.table.status", defaultValue: "Status")) { row in
+            .width(Theme.Layout.tableDateMinWidth)
+            TableColumn(Self.header(String(localized: "main.table.status", defaultValue: "Status"))) { row in
                 StatusChip(status: row.status)
+                    .fxTableCell()
             }
-            .width(min: Theme.Layout.tableStatusMinWidth)
+            .width(Theme.Layout.tableStatusMinWidth)
         }
+        .fxTable()
         .contextMenu(forSelectionType: ConfigItemID.self) { ids in
             if let id = ids.first, ids.count == 1, let row = rows.first(where: { $0.id == id }) {
                 ConfigRowActions(row: row, viewModel: viewModel)
@@ -72,10 +79,34 @@ struct ConfigTableView: View {
                         Button(String(localized: "main.detail.pasteMultiple", defaultValue: "Paste Multiple…")) {
                             viewModel.pasteMultiple()
                         }
+                        .fxButtonStyle(.outline)
                     }
                 }
             }
         }
+    }
+
+    /// A column title in the section-label style (mono 11, uppercase, +0.08em, subtle). `Table`
+    /// takes a `Text`, so the case is applied to the string (in the current locale) rather than
+    /// with `textCase`.
+    static func header(_ title: String) -> Text {
+        let style = Theme.TextStyle.sectionLabel
+        return Text(verbatim: title.uppercased(with: .current))
+            .font(style.font)
+            .tracking(style.tracking)
+            .foregroundStyle(Theme.Colors.subtleText)
+    }
+
+    /// "Oct 15 · 10:42" (mockup Main) for this year; only the date ("Jan 1, 2001") for dates
+    /// outside the current year, so the cell fits its fixed column. The full timestamp is in the
+    /// cell's help.
+    static func updatedText(_ date: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+        guard calendar.isDate(date, equalTo: now, toGranularity: .year) else {
+            return date.formatted(.dateTime.month(.abbreviated).day().year())
+        }
+        let day = date.formatted(.dateTime.month(.abbreviated).day())
+        let time = date.formatted(date: .omitted, time: .shortened)
+        return String(localized: "main.table.updatedAt", defaultValue: "\(day) · \(time)")
     }
 }
 

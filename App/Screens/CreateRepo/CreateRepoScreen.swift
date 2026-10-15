@@ -19,6 +19,7 @@ struct CreateRepoScreen: View {
         @Bindable var viewModel = viewModel
         content
             .frame(width: Theme.Layout.createRepoSheetWidth)
+            .fxSheetBackground()
             .task {
                 await viewModel.load()
             }
@@ -59,14 +60,16 @@ struct CreateRepoScreen: View {
             loadingView
         case .loadFailed(let error):
             EmptyStateView(systemImage: "exclamationmark.triangle", title: error.title, message: error.message) {
-                HStack {
+                HStack(spacing: Theme.Spacing.mediumMinus) {
                     Button(String(localized: "common.close", defaultValue: "Close")) {
                         dismiss()
                     }
+                    .fxButtonStyle(.secondary, size: .large)
                     .keyboardShortcut(.cancelAction)
                     Button(String(localized: "createRepo.retry", defaultValue: "Try Again")) {
                         Task { await viewModel.load() }
                     }
+                    .fxButtonStyle(.primary, size: .large)
                     .keyboardShortcut(.defaultAction)
                 }
             }
@@ -91,11 +94,12 @@ struct CreateRepoScreen: View {
             ProgressView()
                 .controlSize(.small)
             Text(String(localized: "createRepo.loading", defaultValue: "Loading accounts and organizations…"))
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .fxTextStyle(.callout)
+                .foregroundStyle(Theme.Colors.mutedText)
             Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                 dismiss()
             }
+            .fxButtonStyle(.secondary, size: .large)
             .keyboardShortcut(.cancelAction)
         }
         .frame(maxWidth: .infinity)

@@ -9,37 +9,41 @@ struct CreateRepoItemsSection: View {
     let target: CreateRepoItemTargetModel
 
     var body: some View {
-        Section {
+        ConfigSheetField(String(localized: "createRepo.section.repositoryItems", defaultValue: "Repository Secrets and Variables")) {
             CreateRepoItemRows(viewModel: viewModel, target: target)
-        } header: {
-            Text(String(localized: "createRepo.section.repositoryItems", defaultValue: "Repository Secrets and Variables"))
-        } footer: {
             if viewModel.repositoryItems.isEmpty {
-                Text(String(
+                CreateRepoHint(String(
                     localized: "createRepo.items.empty",
                     defaultValue: "Optional. Values stay encrypted in your vault until Sync sends them to GitHub."
                 ))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
             }
         }
     }
 }
 
-/// The rows and the Add Secret / Add Variable buttons of one scope.
+/// The rows of one scope in a hairline card, then the Add Secret / Add Variable pills.
 struct CreateRepoItemRows: View {
     let viewModel: CreateRepoViewModel
     let target: CreateRepoItemTargetModel
 
     var body: some View {
-        ForEach(viewModel.items(in: target)) { item in
-            CreateRepoItemRow(item: item) {
-                viewModel.editItem(item.id, in: target)
-            } onRemove: {
-                viewModel.removeItem(item.id, from: target)
+        let items = viewModel.items(in: target)
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 {
+                        HairlineDivider()
+                    }
+                    CreateRepoItemRow(item: item) {
+                        viewModel.editItem(item.id, in: target)
+                    } onRemove: {
+                        viewModel.removeItem(item.id, from: target)
+                    }
+                }
             }
+            .fxCardBackground(.container)
         }
-        HStack(spacing: Theme.Spacing.medium) {
+        HStack(spacing: Theme.Spacing.small) {
             Button {
                 viewModel.addItem(kind: .secret, to: target)
             } label: {
@@ -51,11 +55,11 @@ struct CreateRepoItemRows: View {
                 Label(String(localized: "createRepo.item.addVariable", defaultValue: "Add Variable…"), systemImage: "plus")
             }
         }
-        .buttonStyle(.borderless)
+        .fxButtonStyle(.outline)
     }
 }
 
-/// One staged item: kind icon, name, kind, mask, Edit and Remove.
+/// One staged item: mono name, kind tag, mask, Edit and Remove.
 struct CreateRepoItemRow: View {
     let item: CreateRepoItemDraftModel
     let onEdit: () -> Void
@@ -64,33 +68,33 @@ struct CreateRepoItemRow: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.small) {
             Image(systemName: item.kind == .secret ? "key" : "textformat")
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .foregroundStyle(Theme.Colors.subtleText)
                 .accessibilityHidden(true)
             Text(verbatim: item.name)
-                .font(Theme.Typography.monospaced)
-                .foregroundStyle(Theme.Colors.textPrimary)
+                .fxTextStyle(.monoName)
+                .foregroundStyle(Theme.Colors.ink)
                 .lineLimit(1)
-            Text(CreateRepoText.kindTitle(item.kind))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .truncationMode(.middle)
+            StatusChip.tag(CreateRepoText.kindTitle(item.kind))
             Spacer()
             Text(verbatim: CreateRepoConstants.maskedValue)
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .fxTextStyle(.monoValue)
+                .foregroundStyle(Theme.Colors.mutedText)
                 .accessibilityLabel(String(localized: "createRepo.item.valueSet", defaultValue: "Value entered"))
             Button(action: onEdit) {
-                Image(systemName: "pencil")
+                Label(String(localized: "createRepo.item.edit", defaultValue: "Edit"), systemImage: "pencil")
             }
-            .buttonStyle(.borderless)
+            .fxIconButtonStyle(.ghost)
             .help(String(localized: "createRepo.item.edit", defaultValue: "Edit"))
-            .accessibilityLabel(String(localized: "createRepo.item.edit", defaultValue: "Edit"))
             Button(action: onRemove) {
-                Image(systemName: "minus.circle")
+                Label(String(localized: "createRepo.item.remove", defaultValue: "Remove"), systemImage: "minus.circle")
             }
-            .buttonStyle(.borderless)
+            .fxIconButtonStyle(.ghost)
             .help(String(localized: "createRepo.item.remove", defaultValue: "Remove"))
-            .accessibilityLabel(String(localized: "createRepo.item.remove", defaultValue: "Remove"))
         }
+        .padding(.leading, Theme.Spacing.large)
+        .padding(.trailing, Theme.Spacing.xSmall)
+        .padding(.vertical, Theme.Spacing.xSmall)
         .contextMenu {
             Button(String(localized: "createRepo.item.edit", defaultValue: "Edit"), action: onEdit)
             Button(String(localized: "createRepo.item.remove", defaultValue: "Remove"), role: .destructive, action: onRemove)
@@ -104,31 +108,42 @@ struct CreateRepoEnvironmentSection: View {
     let environment: CreateRepoEnvironmentDraftModel
 
     var body: some View {
-        Section {
-            LabeledContent(String(localized: "createRepo.environment.branches", defaultValue: "Deployment branches")) {
-                HStack(spacing: Theme.Spacing.small) {
-                    Text(CreateRepoText.policySummary(environment.policy))
-                    Button(String(localized: "createRepo.environment.edit", defaultValue: "Edit…")) {
-                        viewModel.editEnvironment(environment.id)
-                    }
-                    .buttonStyle(.link)
-                }
-            }
-            CreateRepoItemRows(viewModel: viewModel, target: .environment(environment.id))
-        } header: {
-            HStack {
-                Label {
-                    Text(verbatim: environment.name)
-                } icon: {
-                    Image(systemName: "square.stack.3d.up")
-                }
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
+            HStack(spacing: Theme.Spacing.small) {
+                Image(systemName: "square.stack.3d.up")
+                    .foregroundStyle(Theme.Colors.subtleText)
+                    .accessibilityHidden(true)
+                Text(verbatim: environment.name)
+                    .fxTextStyle(.monoName)
+                    .foregroundStyle(Theme.Colors.ink)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button(String(localized: "createRepo.environment.remove", defaultValue: "Remove Environment"), role: .destructive) {
                     viewModel.removeEnvironment(environment.id)
                 }
-                .buttonStyle(.borderless)
-                .font(Theme.Typography.caption)
+                .fxButtonStyle(.ghost)
             }
+            HStack(spacing: Theme.Spacing.small) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+                    Text(String(localized: "createRepo.environment.branches", defaultValue: "Deployment branches"))
+                        .fxTextStyle(.caption)
+                        .foregroundStyle(Theme.Colors.mutedText)
+                    Text(CreateRepoText.policySummary(environment.policy))
+                        .fxTextStyle(.callout)
+                        .foregroundStyle(Theme.Colors.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Button(String(localized: "createRepo.environment.edit", defaultValue: "Edit…")) {
+                    viewModel.editEnvironment(environment.id)
+                }
+                .fxButtonStyle(.outline)
+            }
+            .configSheetRowPadding()
+            .fxCardBackground(.container)
+            CreateRepoItemRows(viewModel: viewModel, target: .environment(environment.id))
         }
     }
 }

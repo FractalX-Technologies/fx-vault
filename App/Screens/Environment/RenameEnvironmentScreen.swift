@@ -11,6 +11,7 @@ import VaultCore
 struct RenameEnvironmentScreen: View {
     @State private var viewModel: RenameEnvironmentViewModel
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var isNameFocused: Bool
 
     init(context: EnvironmentContext, dependencies: FeatureDependencies) {
         _viewModel = State(initialValue: RenameEnvironmentViewModel(context: context, dependencies: dependencies))
@@ -19,6 +20,7 @@ struct RenameEnvironmentScreen: View {
     var body: some View {
         @Bindable var viewModel = viewModel
         ConfigEditorSheet(
+            eyebrow: String(localized: "environment.sheet.eyebrow", defaultValue: "Environment"),
             title: String(localized: "environment.rename.title", defaultValue: "Rename Environment"),
             subtitle: viewModel.subtitle,
             primaryTitle: String(localized: "environment.rename.submit", defaultValue: "Rename"),
@@ -28,25 +30,24 @@ struct RenameEnvironmentScreen: View {
             onPrimary: rename
         ) {
             if let error = viewModel.loadError {
-                Section {
-                    ConfigEditorNoteView(note: .error(error.message))
-                }
+                Banner(.danger, message: error.message)
             } else if !viewModel.isLoaded {
-                Section {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity)
-                }
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity)
             } else {
                 if let reason = viewModel.readOnlyReason {
-                    Section {
-                        ConfigEditorNoteView(note: .warning(reason.localizedExplanation))
-                    }
+                    Banner(.warning, message: reason.localizedExplanation, systemImage: "lock")
                 }
-                Section {
-                    TextField(String(localized: "environment.rename.field", defaultValue: "New name"), text: $viewModel.name)
-                        .autocorrectionDisabled()
-                        .disabled(!viewModel.canEdit)
+                ConfigSheetField(String(localized: "environment.rename.field", defaultValue: "New name")) {
+                    EnvironmentNameField(
+                        title: String(localized: "environment.rename.field", defaultValue: "New name"),
+                        name: $viewModel.name,
+                        prompt: nil,
+                        isInvalid: viewModel.nameStatus.note?.isError ?? false,
+                        isFocused: $isNameFocused
+                    )
+                    .disabled(!viewModel.canEdit)
                     if let note = viewModel.nameStatus.note, viewModel.nameStatus != .available {
                         ConfigEditorNoteView(note: note)
                     }
@@ -55,12 +56,15 @@ struct RenameEnvironmentScreen: View {
                     }
                 }
                 if let note = viewModel.missingValuesNote {
-                    Section {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
                         ConfigEditorNoteView(note: note)
                         Button(String(localized: "environment.rename.enterValues", defaultValue: "Enter Values…")) {
                             viewModel.enterValues()
                         }
+                        .fxButtonStyle(.outline)
                     }
+                    .configSheetRowPadding()
+                    .fxCardBackground(.container)
                 }
             }
         }

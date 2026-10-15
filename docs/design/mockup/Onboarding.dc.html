@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FX Vault onboarding, master password</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#3BA3DD}a:hover{color:#6FBDE8}
+</style>
+</helmet>
+<div style="width: 960px; height: 640px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; border-radius: 14px; border: 1px solid rgba(255,255,255,0.16); background: #0B0C0E; color: #F6F5F3; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px">
+  <header style="height: 44px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.08)" aria-hidden="true">
+    <span style="width: 12px; height: 12px; border-radius: 6px; background: #2A323C"></span>
+    <span style="width: 12px; height: 12px; border-radius: 6px; background: #2A323C"></span>
+    <span style="width: 12px; height: 12px; border-radius: 6px; background: #2A323C"></span>
+  </header>
+  <div style="flex: 1; display: flex; min-height: 0">
+    <div style="flex: 1; box-sizing: border-box; padding: 56px 64px; display: flex; flex-direction: column; gap: 28px">
+      <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.06em; color: #808B97">02 <span style="color: #4A5460">/</span> 05</span>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <h1 style="margin: 0; font-size: 36px; line-height: 40px; font-weight: 500; letter-spacing: -1.2px">Create your master password.</h1>
+        <p style="margin: 0; font-size: 16px; line-height: 25px; color: #A6B0BC; max-width: 460px">It encrypts the vault on this Mac. FX Vault can't recover it, so keep it in your password manager.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; max-width: 460px">
+        <label for="np" style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: #808B97">MASTER PASSWORD</label>
+        <input id="np" type="password" value="orbit-lantern-vapor-cedar-mosaic-ember" style="height: 46px; box-sizing: border-box; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.16); background: #111820; color: #F6F5F3; font: inherit; font-size: 15px; outline: none">
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px" aria-hidden="true">
+          <span style="height: 4px; border-radius: 2px; background: #3FB283"></span>
+          <span style="height: 4px; border-radius: 2px; background: #3FB283"></span>
+          <span style="height: 4px; border-radius: 2px; background: #3FB283"></span>
+          <span style="height: 4px; border-radius: 2px; background: #3FB283"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.06em; color: #3FB283">STRONG · 96 BITS</span>
+          <a href="#" style="font-size: 13px; text-decoration: none">Generate a passphrase</a>
+        </div>
+      </div>
+      <div style="flex: 1"></div>
+      <div style="display: flex; gap: 10px">
+        <button type="button" style="height: 42px; padding: 0 20px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.16); background: transparent; color: #F6F5F3; font: inherit; font-size: 14px; cursor: pointer">Back</button>
+        <button type="button" style="height: 42px; padding: 0 22px; border-radius: 999px; border: 0; background: #F6F5F3; color: #0B0C0E; font: inherit; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">
+          Continue
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+        </button>
+      </div>
+    </div>
+    <aside style="width: 300px; flex: none; box-sizing: border-box; padding: 56px 32px; background: #111820; border-left: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 22px">
+      <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: #808B97">SETUP</span>
+      <sc-for list="{{steps}}" as="step" hint-placeholder-count="5">
+        <div style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 18px; border-bottom: 1px solid rgba(255,255,255,0.08)">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: {{step.labelColor}}">{{step.label}}</span>
+          <span style="font-size: 14px; color: {{step.color}}">{{step.value}}</span>
+        </div>
+      </sc-for>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const done = { labelColor: '#808B97', color: '#F6F5F3' };
+    const now = { labelColor: '#3BA3DD', color: '#F6F5F3' };
+    const next = { labelColor: '#4A5460', color: '#4A5460' };
+    const steps = [
+      Object.assign({ label: '01 WELCOME', value: 'gh 2.102.0 · 2 accounts' }, done),
+      Object.assign({ label: '02 PASSWORD', value: 'In progress' }, now),
+      Object.assign({ label: '03 RECOVERY KEY', value: 'Shown once' }, next),
+      Object.assign({ label: '04 CONFIRM', value: 'Two groups' }, next),
+      Object.assign({ label: '05 TOUCH ID', value: 'Optional' }, next)
+    ];
+    return { steps };
+  }
+}
+</script>
+</body>
+</html>

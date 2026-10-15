@@ -3,6 +3,45 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.3.0
+
+### Changed
+
+- **New look: the FractalX design language.** Every window, sheet and setting is restyled, with
+  no change to what they do. Warm off-white ground and ink text in light mode, near-black in dark
+  mode, hairline borders instead of shadows, pill buttons (one black primary per view), 24 pt
+  cards, 12 pt inputs and banners, and brand blue only for accents: pending dots, links, focus
+  rings and the Modified / Will push chips.
+- **Geist type.** The interface uses Geist Sans; names of secrets and variables, values,
+  counts, timestamps and small section labels use Geist Mono. Both fonts ship inside the app
+  (SIL Open Font License 1.1, see Credits and THIRD_PARTY_NOTICES.md); if one is missing, the
+  app falls back to the system font.
+- **New app icon:** the FractalX 3×3 mark with a blue outlined center on a dark tile.
+- **Main window.** The toolbar shows the mark, the app name and the open repository's
+  `owner / repo` path, round icon buttons, the black Sync pill with its count, and search. The
+  sidebar and the scope column use their own rows (Up and Down still move the selection), the
+  detail shows the environment as a large heading with its tags and branch rules, a Secrets /
+  Variables switch with counts, and the table in a card with mono names, dates and status chips.
+  The offline and "GitHub isn't responding" banners now sit at the top of the detail column.
+- **Drift banner.** "N changes on GitHub · Review" is blue, and amber when some of those items
+  also changed in your vault.
+- **Lock screen and onboarding** follow the new boards: a dotted background with the mark and
+  "FX Vault is locked.", and onboarding with a step counter (02 / 06) and a side panel listing
+  every step.
+- **Sheets** (Sync, drift review, editors, environments, New Repository, `.env` import and
+  export, sharing, nearby and chat) share one layout: a small uppercase label, a large title, a
+  muted line, confirmations as checkbox rows, and Cancel next to one primary button. Both
+  "Codes match" and "Don't match" stay equal grey buttons, with no default.
+- **`.env` import:** the kind of each row is a chip that switches between Secret and Variable
+  when clicked (it was a menu).
+- **Settings** tabs are grouped cards with mono labels; toggles and pickers stay native.
+
+### Known limits
+
+- On macOS 14 the window keeps the system title, so the toolbar shows the mark, the path and
+  the DEV badge without the app name.
+- System sheets keep the system corner radius and shadow.
+
 ## 0.2.0
 
 ### Added

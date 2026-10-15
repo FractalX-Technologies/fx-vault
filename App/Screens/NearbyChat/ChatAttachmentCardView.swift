@@ -17,37 +17,37 @@ struct ChatAttachmentCardView: View {
             if isSent {
                 Spacer(minLength: Theme.Spacing.xxLarge)
             }
-            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            Card(padding: Theme.Spacing.largePlus, spacing: Theme.Spacing.small) {
                 HStack(spacing: Theme.Spacing.small) {
-                    Image(systemName: card.offer.kind == .secret ? "key.fill" : "textformat")
-                        .foregroundStyle(Theme.Colors.accent)
+                    SectionLabel(card.offer.kind.editorTitle)
+                    Spacer(minLength: Theme.Spacing.small)
+                    Text(card.date, style: .time)
+                        .fxTextStyle(.monoMeta)
+                        .foregroundStyle(Theme.Colors.subtleText)
+                }
+                HStack(spacing: Theme.Spacing.small) {
+                    Image(systemName: card.offer.kind == .secret ? "key" : "textformat")
+                        .font(Theme.Typography.callout)
+                        .foregroundStyle(Theme.Colors.subtleText)
                         .accessibilityHidden(true)
                     Text(verbatim: card.offer.itemName)
-                        .font(Theme.Typography.monospaced)
-                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .fxTextStyle(.mono)
+                        .foregroundStyle(Theme.Colors.ink)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                    StatusChip(title: card.offer.kind.editorTitle, tint: Theme.Colors.accent)
                 }
                 Text(verbatim: scopeLine)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.monoMeta)
+                    .foregroundStyle(Theme.Colors.subtleText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
                 Text(statusLine)
-                    .font(Theme.Typography.callout)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.callout)
+                    .foregroundStyle(Theme.Colors.mutedText)
                     .fixedSize(horizontal: false, vertical: true)
                 actions
-                Text(card.date, style: .time)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
             }
-            .padding(Theme.Spacing.medium)
             .frame(maxWidth: Theme.Layout.chatBubbleMaxWidth, alignment: .leading)
-            .background(Theme.Colors.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.large))
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.large)
-                    .stroke(Theme.Colors.textPrimary.opacity(Theme.Opacity.cardBorder))
-            )
             if !isSent {
                 Spacer(minLength: Theme.Spacing.xxLarge)
             }
@@ -102,16 +102,19 @@ struct ChatAttachmentCardView: View {
                 Button(String(localized: "chat.card.save", defaultValue: "Save to my vault")) {
                     Task { await viewModel.save(card.id) }
                 }
-                .buttonStyle(.borderedProminent)
+                .fxButtonStyle(.primary)
                 Button(String(localized: "chat.card.dismiss", defaultValue: "Dismiss")) {
                     Task { await viewModel.dismiss(card.id) }
                 }
+                .fxButtonStyle(.ghost)
             }
+            .padding(.top, Theme.Spacing.xSmall)
         } else if card.canReview {
             Button(String(localized: "chat.card.review", defaultValue: "Review…")) {
                 viewModel.review(card.id)
             }
-            .buttonStyle(.borderedProminent)
+            .fxButtonStyle(.primary)
+            .padding(.top, Theme.Spacing.xSmall)
         } else if card.status == .requested {
             ProgressView()
                 .controlSize(.small)

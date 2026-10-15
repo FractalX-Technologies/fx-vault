@@ -199,6 +199,17 @@
         }
       }
     },
+    "banner.offline.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Offline"
+          }
+        }
+      }
+    },
     "biometry.unavailable.lockout" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -459,6 +470,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Tag"
+          }
+        }
+      }
+    },
+    "brand.mark.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FractalX"
           }
         }
       }
@@ -1563,6 +1585,17 @@
         }
       }
     },
+    "chat.sheet.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby Chat"
+          }
+        }
+      }
+    },
     "chat.startAgain" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -1757,6 +1790,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "List repositories and check the open repository on GitHub again"
+          }
+        }
+      }
+    },
+    "connectivity.banner.retrying" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Retrying…"
           }
         }
       }
@@ -2076,6 +2120,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Optional. For example production with its own secrets and a branch rule."
+          }
+        }
+      }
+    },
+    "createRepo.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New repository"
           }
         }
       }
@@ -2586,6 +2641,17 @@
         }
       }
     },
+    "createRepo.staged.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ready to sync"
+          }
+        }
+      }
+    },
     "createRepo.staged.message" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2670,6 +2736,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Templates could not be loaded"
+          }
+        }
+      }
+    },
+    "createRepo.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Repository"
           }
         }
       }
@@ -2813,6 +2890,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "1 change on GitHub"
+          }
+        }
+      }
+    },
+    "drift.banner.withConflicts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
           }
         }
       }
@@ -3165,6 +3253,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Nothing changed on GitHub"
+          }
+        }
+      }
+    },
+    "drift.review.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Drift review"
           }
         }
       }
@@ -3671,6 +3770,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "The file will contain %lld values in plaintext. Anyone who can read the file can read them. Keep it out of git, synced folders and chats, and delete it when you are done."
+          }
+        }
+      }
+    },
+    "envFile.sheet.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Environment file"
           }
         }
       }
@@ -4199,6 +4309,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Secret"
+          }
+        }
+      }
+    },
+    "envImport.kind.toggle.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click to import it as a %@."
           }
         }
       }
@@ -5002,6 +5123,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%@ Settings"
+          }
+        }
+      }
+    },
+    "environment.sheet.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Environment"
           }
         }
       }
@@ -6711,6 +6843,17 @@
         }
       }
     },
+    "ghSetup.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub CLI"
+          }
+        }
+      }
+    },
     "ghSetup.login.subtitle" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6949,6 +7092,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "This item is deleted"
+          }
+        }
+      }
+    },
+    "itemEditor.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets and variables"
           }
         }
       }
@@ -7393,6 +7547,17 @@
         }
       }
     },
+    "lock.headline" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault is locked."
+          }
+        }
+      }
+    },
     "lock.password.placeholder" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7503,17 +7668,6 @@
         }
       }
     },
-    "lock.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "FX Vault is locked"
-          }
-        }
-      }
-    },
     "lock.touchID" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7536,6 +7690,17 @@
         }
       }
     },
+    "lock.useRecoveryKey" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use recovery key"
+          }
+        }
+      }
+    },
     "main.addRepo.field" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7543,6 +7708,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "owner/name"
+          }
+        }
+      }
+    },
+    "main.addRepo.fieldLabel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository"
           }
         }
       }
@@ -7800,6 +7976,17 @@
         }
       }
     },
+    "main.detail.environment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Environment"
+          }
+        }
+      }
+    },
     "main.detail.importEnvFile" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7818,6 +8005,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Kind"
+          }
+        }
+      }
+    },
+    "main.detail.kind.secrets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets"
+          }
+        }
+      }
+    },
+    "main.detail.kind.variables" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Variables"
           }
         }
       }
@@ -7921,24 +8130,13 @@
         }
       }
     },
-    "main.detail.secrets" : {
+    "main.detail.repository" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Secrets %lld"
-          }
-        }
-      }
-    },
-    "main.detail.variables" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Variables %lld"
+            "value" : "Repository"
           }
         }
       }
@@ -8075,6 +8273,17 @@
         }
       }
     },
+    "main.scopes.itemCount" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld items"
+          }
+        }
+      }
+    },
     "main.scopes.newEnvironment" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8185,6 +8394,17 @@
         }
       }
     },
+    "main.scopes.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Scopes"
+          }
+        }
+      }
+    },
     "main.scopes.valueMissing.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8203,6 +8423,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Search repositories"
+          }
+        }
+      }
+    },
+    "main.sidebar.accounts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Accounts"
           }
         }
       }
@@ -8361,6 +8592,28 @@
         }
       }
     },
+    "main.sidebar.owner.collapsed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Collapsed"
+          }
+        }
+      }
+    },
+    "main.sidebar.owner.expanded" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Expanded"
+          }
+        }
+      }
+    },
     "main.sidebar.ownerUnavailable" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8478,6 +8731,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Share…"
+          }
+        }
+      }
+    },
+    "main.sidebar.status" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlocked · Auto-lock %lld min"
           }
         }
       }
@@ -8654,6 +8918,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Updated"
+          }
+        }
+      }
+    },
+    "main.table.updatedAt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
           }
         }
       }
@@ -8911,6 +9186,17 @@
         }
       }
     },
+    "nearby.sas.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Code"
+          }
+        }
+      }
+    },
     "nearby.sas.match" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8973,6 +9259,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Waiting for the other Mac to confirm…"
+          }
+        }
+      }
+    },
+    "nearby.sheet.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby"
           }
         }
       }
@@ -9406,6 +9703,182 @@
         }
       }
     },
+    "onboarding.panel.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirm"
+          }
+        }
+      }
+    },
+    "onboarding.panel.confirm.next" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld groups to re-enter"
+          }
+        }
+      }
+    },
+    "onboarding.panel.current" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "In progress"
+          }
+        }
+      }
+    },
+    "onboarding.panel.done" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "onboarding.panel.password" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Password"
+          }
+        }
+      }
+    },
+    "onboarding.panel.password.next" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Encrypts the vault"
+          }
+        }
+      }
+    },
+    "onboarding.panel.ready" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ready"
+          }
+        }
+      }
+    },
+    "onboarding.panel.ready.next" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open your vault"
+          }
+        }
+      }
+    },
+    "onboarding.panel.recoveryKey" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Recovery key"
+          }
+        }
+      }
+    },
+    "onboarding.panel.recoveryKey.next" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shown once"
+          }
+        }
+      }
+    },
+    "onboarding.panel.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Setup"
+          }
+        }
+      }
+    },
+    "onboarding.panel.touchID" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID"
+          }
+        }
+      }
+    },
+    "onboarding.panel.touchID.next" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Optional"
+          }
+        }
+      }
+    },
+    "onboarding.panel.welcome" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome"
+          }
+        }
+      }
+    },
+    "onboarding.panel.welcome.gh" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "gh %@"
+          }
+        }
+      }
+    },
+    "onboarding.panel.welcome.next" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub CLI check"
+          }
+        }
+      }
+    },
     "onboarding.password.create" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9446,17 +9919,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Choose a master password"
-          }
-        }
-      }
-    },
-    "onboarding.progress.accessibility" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Step %1$lld of %2$lld"
           }
         }
       }
@@ -9571,6 +10033,17 @@
         }
       }
     },
+    "onboarding.welcome.gh.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub CLI"
+          }
+        }
+      }
+    },
     "onboarding.welcome.start" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9677,6 +10150,50 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "At least %lld characters. A passphrase of several words works well."
+          }
+        }
+      }
+    },
+    "password.strength.level.good" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Good"
+          }
+        }
+      }
+    },
+    "password.strength.level.strong" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Strong"
+          }
+        }
+      }
+    },
+    "password.strength.level.weak" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Weak"
+          }
+        }
+      }
+    },
+    "password.strength.status" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld bits"
           }
         }
       }
@@ -9791,6 +10308,17 @@
         }
       }
     },
+    "recoveryReset.key.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Recovery key"
+          }
+        }
+      }
+    },
     "recoveryReset.key.placeholder" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9798,6 +10326,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Recovery key (%lld characters)"
+          }
+        }
+      }
+    },
+    "recoveryReset.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Recovery"
           }
         }
       }
@@ -9923,6 +10462,17 @@
         }
       }
     },
+    "settings.accounts.account.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Account"
+          }
+        }
+      }
+    },
     "settings.accounts.copied" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10018,6 +10568,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Run these in Terminal to add the missing scopes:"
+          }
+        }
+      }
+    },
+    "settings.accounts.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Accounts"
           }
         }
       }
@@ -10209,6 +10770,17 @@
         }
       }
     },
+    "settings.general.autoLock.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Auto-lock"
+          }
+        }
+      }
+    },
     "settings.general.cloneFolder" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10253,6 +10825,17 @@
         }
       }
     },
+    "settings.general.nearby.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby"
+          }
+        }
+      }
+    },
     "settings.general.nearbyName" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10271,6 +10854,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Shown to nearby Macs while Nearby Chat is open, and to the teammate you share with nearby. Anyone nearby can see it, and it proves nothing: compare the code to know who you're talking to."
+          }
+        }
+      }
+    },
+    "settings.general.repositories.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repositories"
           }
         }
       }
@@ -10304,6 +10898,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Type %@ to confirm"
+          }
+        }
+      }
+    },
+    "settings.reset.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Vault"
           }
         }
       }
@@ -10491,6 +11096,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Master password"
+          }
+        }
+      }
+    },
+    "settings.security.sheet.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Security"
           }
         }
       }
@@ -11870,6 +12486,17 @@
         }
       }
     },
+    "share.sheet.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share"
+          }
+        }
+      }
+    },
     "share.summary.counts" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12541,6 +13168,17 @@
         }
       }
     },
+    "stepCounter.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Step %1$lld of %2$lld"
+          }
+        }
+      }
+    },
     "sync.blocked.adminRequired" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12679,7 +13317,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Review %lld Deletions…"
+            "value" : "Review ^[%lld Deletion](inflect: true)…"
           }
         }
       }
@@ -13164,6 +13802,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Workflows that still reference %@ will recreate it empty."
+          }
+        }
+      }
+    },
+    "sync.eyebrow.review" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Review before sync"
+          }
+        }
+      }
+    },
+    "sync.eyebrow.run" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync"
           }
         }
       }
@@ -14180,6 +14840,17 @@
         }
       }
     },
+    "sync.title.repository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync to %@"
+          }
+        }
+      }
+    },
     "sync.warning.foreignRules" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -14517,6 +15188,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Turn On Touch ID"
+          }
+        }
+      }
+    },
+    "touchIDOffer.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID"
           }
         }
       }

@@ -18,9 +18,9 @@ struct NearbySendScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            ShareSheetHeader(
-                systemImage: "dot.radiowaves.left.and.right",
+        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+            SheetHeader(
+                label: ShareSheetLabel.nearby,
                 title: String(localized: "nearbySend.title", defaultValue: "Share Nearby"),
                 subtitle: String(
                     localized: "nearbySend.subtitle",
@@ -31,12 +31,11 @@ struct NearbySendScreen: View {
             if let preview = viewModel.preview {
                 ShareContentSummaryView(preview: preview)
             }
-            Divider()
             content
             Spacer(minLength: 0)
             footer
         }
-        .padding(Theme.Spacing.xLarge)
+        .fxSheetContent()
         .frame(width: Theme.Layout.shareSheetWidth)
         .frame(minHeight: Theme.Layout.shareSheetMinHeight)
         .task { await viewModel.start() }
@@ -83,19 +82,23 @@ struct NearbySendScreen: View {
                 defaultValue: "Sending… Your teammate confirms the values before anything is imported."
             ))
         case .finished(let outcome):
-            ShareNoteView(systemImage: outcome == .delivered ? "checkmark.circle" : "xmark.circle", text: message(for: outcome),
-                          tint: outcome == .delivered ? Theme.Colors.success : Theme.Colors.textSecondary)
+            SheetCallout(
+                systemImage: outcome == .delivered ? "checkmark.circle" : "xmark.circle",
+                tint: outcome == .delivered ? Theme.Colors.success : Theme.Colors.subtleText,
+                text: message(for: outcome)
+            )
         case .failed:
             NearbyFailureView(abort: viewModel.abort, showsInterceptionWarning: viewModel.showsInterceptionWarning)
         }
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: Theme.Spacing.mediumMinus) {
             if viewModel.step == .failed || viewModel.isFinished {
                 Button(String(localized: "nearby.tryAgain", defaultValue: "Try Again")) {
                     viewModel.tryAgain()
                 }
+                .fxButtonStyle(.outline, size: .large)
             }
             Spacer()
             switch viewModel.step {
@@ -103,22 +106,25 @@ struct NearbySendScreen: View {
                 Button(String(localized: "common.done", defaultValue: "Done")) {
                     dismiss()
                 }
+                .fxButtonStyle(.secondary, size: .large)
                 .keyboardShortcut(.cancelAction)
             case .chooseSelection:
                 Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                     dismiss()
                 }
+                .fxButtonStyle(.secondary, size: .large)
                 .keyboardShortcut(.cancelAction)
                 Button(String(localized: "nearbySend.continue", defaultValue: "Continue")) {
                     viewModel.continueWithSelection()
                 }
-                .buttonStyle(.borderedProminent)
+                .fxButtonStyle(.primary, size: .large)
                 .keyboardShortcut(.defaultAction)
                 .disabled(!viewModel.canContinueWithSelection)
             default:
                 Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                     dismiss()
                 }
+                .fxButtonStyle(.secondary, size: .large)
                 .keyboardShortcut(.cancelAction)
             }
         }
@@ -142,17 +148,18 @@ private struct NearbySelectionView: View {
     @State private var repositoryID: RepoID?
 
     var body: some View {
+        let repositoryLabel = String(localized: "nearbySend.repository", defaultValue: "Repository")
         VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            Picker(
-                String(localized: "nearbySend.repository", defaultValue: "Repository"),
-                selection: $repositoryID
-            ) {
+            SectionLabel(repositoryLabel)
+            Picker(repositoryLabel, selection: $repositoryID) {
                 Text(String(localized: "nearbySend.repository.none", defaultValue: "Choose…"))
                     .tag(RepoID?.none)
                 ForEach(viewModel.repositories) { repository in
                     Text(verbatim: repository.fullName).tag(RepoID?.some(repository.id))
                 }
             }
+            .labelsHidden()
+            .fixedSize()
             .onChange(of: repositoryID) {
                 guard let repositoryID else { return }
                 Task { await viewModel.chooseRepository(repositoryID) }
@@ -177,53 +184,43 @@ private struct NearbyPeerListView: View {
                 Button(String(localized: "nearby.tryAgain", defaultValue: "Try Again")) {
                     viewModel.startBrowsing()
                 }
+                .fxButtonStyle(.outline)
             } else if viewModel.peers.isEmpty {
                 NearbyProgressRow(text: String(
                     localized: "nearbySend.searching",
                     defaultValue: "Looking for Macs with Receive Nearby open…"
                 ))
             } else {
-                Text(String(localized: "nearbySend.peers", defaultValue: "Nearby Macs"))
-                    .font(Theme.Typography.headline)
-                    .foregroundStyle(Theme.Colors.textPrimary)
+                SectionLabel(String(localized: "nearbySend.peers", defaultValue: "Nearby Macs"))
                 List(viewModel.peers) { peer in
-                    HStack {
+                    HStack(spacing: Theme.Spacing.small) {
                         Image(systemName: "laptopcomputer")
-                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .font(Theme.Typography.callout)
+                            .foregroundStyle(Theme.Colors.subtleText)
                             .accessibilityHidden(true)
                         Text(peer.shortLabel)
-                            .font(Theme.Typography.body)
+                            .fxTextStyle(.monoName)
+                            .foregroundStyle(Theme.Colors.ink)
+                            .lineLimit(1)
                         Spacer()
                         Button(String(localized: "nearbySend.connect", defaultValue: "Connect")) {
                             Task { await viewModel.connect(to: peer) }
                         }
+                        .fxButtonStyle(.secondary)
                     }
+                    .frame(minHeight: Theme.Layout.tableCellMinHeight)
+                    .listRowSeparator(.visible)
+                    .listRowSeparatorTint(Theme.Colors.hairline)
                 }
-                .listStyle(.inset(alternatesRowBackgrounds: false))
+                .shareListContainer()
                 .frame(height: Theme.Layout.shareListHeight)
                 Text(String(
                     localized: "nearbySend.peers.note",
                     defaultValue: "Names appear after connecting. You compare a code before anything is sent."
                 ))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
             }
-        }
-    }
-}
-
-/// A spinner with a status line.
-struct NearbyProgressRow: View {
-    let text: String
-
-    var body: some View {
-        HStack(spacing: Theme.Spacing.small) {
-            ProgressView()
-                .controlSize(.small)
-            Text(text)
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -235,21 +232,16 @@ struct NearbyFailureView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            ShareNoteView(
-                systemImage: "xmark.octagon",
-                text: abort?.localizedMessage ?? String(
+            Banner(
+                .danger,
+                message: abort?.localizedMessage ?? String(
                     localized: "nearby.abort.generic",
                     defaultValue: "The nearby share stopped. Nothing was shared."
                 ),
-                tint: Theme.Colors.danger
+                systemImage: "xmark.octagon"
             )
             if showsInterceptionWarning {
-                ShareNoteView(
-                    systemImage: "exclamationmark.shield",
-                    text: NearbyAbortModel.interceptionWarning,
-                    tint: Theme.Colors.danger
-                )
-                .font(Theme.Typography.headline)
+                Banner(.danger, message: NearbyAbortModel.interceptionWarning, systemImage: "exclamationmark.shield")
             }
         }
     }

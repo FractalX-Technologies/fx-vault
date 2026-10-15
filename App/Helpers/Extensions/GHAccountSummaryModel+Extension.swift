@@ -44,7 +44,7 @@ extension GHAccountSummaryModel {
         switch status?.scopes {
         case .ok: Theme.Colors.success
         case .missing: Theme.Colors.warning
-        case .unknown, nil: Theme.Colors.textSecondary
+        case .unknown, nil: Theme.Colors.mutedText
         }
     }
 }

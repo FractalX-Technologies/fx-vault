@@ -1,13 +1,19 @@
 import SwiftUI
 import VaultCore
 
-/// Recovery reset (§5.2, D9): recovery key and new password, then the **new** recovery key.
+/// Recovery reset (§5.2, D9): recovery key and new password, then the **new** recovery key. One
+/// card on the lock screen's dotted ground.
 struct RecoveryResetScreen: View {
     @Bindable var viewModel: RecoveryResetViewModel
     let onCancel: () -> Void
+    @FocusState private var isKeyFocused: Bool
+
+    private var sectionLabel: String {
+        String(localized: "recoveryReset.label", defaultValue: "Recovery")
+    }
 
     var body: some View {
-        CenteredCard {
+        ShellCardLayout {
             switch viewModel.step {
             case .enterKey:
                 enterKey
@@ -21,23 +27,33 @@ struct RecoveryResetScreen: View {
     }
 
     @ViewBuilder private var enterKey: some View {
-        CardHeader(
-            systemImage: "key.horizontal",
+        SheetHeader(
+            label: sectionLabel,
             title: String(localized: "recoveryReset.title", defaultValue: "Reset your master password"),
             subtitle: String(
                 localized: "recoveryReset.subtitle",
                 defaultValue: "Enter your recovery key and choose a new master password. FX Vault then replaces the vault key and gives you a new recovery key; the old one stops working."
             )
         )
-        TextField(
-            String(localized: "recoveryReset.key.placeholder", defaultValue: "Recovery key (\(Limits.recoveryKeyCharacters) characters)"),
-            text: $viewModel.recoveryKeyText,
-            axis: .vertical
-        )
-        .font(Theme.Typography.monospaced)
-        .textFieldStyle(.roundedBorder)
-        .autocorrectionDisabled()
-        .disabled(viewModel.isWorking)
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
+            SectionLabel(String(localized: "recoveryReset.key.label", defaultValue: "Recovery key"))
+                .accessibilityHidden(true)
+            TextField(
+                String(localized: "recoveryReset.key.label", defaultValue: "Recovery key"),
+                text: $viewModel.recoveryKeyText,
+                prompt: Text(String(
+                    localized: "recoveryReset.key.placeholder",
+                    defaultValue: "Recovery key (\(Limits.recoveryKeyCharacters) characters)"
+                ))
+                .foregroundStyle(Theme.Colors.subtleText),
+                axis: .vertical
+            )
+            .autocorrectionDisabled()
+            .focused($isKeyFocused)
+            .disabled(viewModel.isWorking)
+            .padding(.vertical, Theme.Spacing.medium)
+            .fxInputField(.rounded, isFocused: isKeyFocused, isMonospaced: true)
+        }
 
         NewPasswordFields(
             password: $viewModel.newPassword,
@@ -49,29 +65,26 @@ struct RecoveryResetScreen: View {
         }
         .disabled(viewModel.isWorking)
 
-        HStack {
+        ShellFooter(isWorking: viewModel.isWorking) {
             Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                 viewModel.cancel()
                 onCancel()
             }
+            .fxButtonStyle(.secondary, size: .large)
             .keyboardShortcut(.cancelAction)
-            Spacer()
-            if viewModel.isWorking {
-                ProgressView()
-                    .controlSize(.small)
-            }
             Button(String(localized: "recoveryReset.submit", defaultValue: "Reset Password")) {
                 Task { await viewModel.reset() }
             }
-            .buttonStyle(.borderedProminent)
+            .fxButtonStyle(.primary, size: .large)
             .keyboardShortcut(.defaultAction)
             .disabled(!viewModel.canReset)
         }
+        .padding(.top, Theme.Spacing.small)
     }
 
     @ViewBuilder private var showNewKey: some View {
-        CardHeader(
-            systemImage: "key.viewfinder",
+        SheetHeader(
+            label: sectionLabel,
             title: String(localized: "recoveryReset.newKey.title", defaultValue: "Save your new recovery key"),
             subtitle: String(
                 localized: "recoveryReset.newKey.subtitle",
@@ -79,29 +92,29 @@ struct RecoveryResetScreen: View {
             )
         )
         RecoveryKeyGridView(groups: viewModel.newRecoveryKeyGroups)
-        HStack {
+        HStack(spacing: Theme.Spacing.medium) {
             Button(String(localized: "recoveryReset.newKey.copy", defaultValue: "Copy")) {
                 viewModel.copyNewRecoveryKey()
             }
+            .fxButtonStyle(.outline)
             if viewModel.hasCopiedNewKey {
                 Text(String(
                     localized: "onboarding.recovery.copied",
                     defaultValue: "Copied. The clipboard clears in \(Timeouts.clipboardClear.wholeSeconds) seconds."
                 ))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
             }
         }
-        Toggle(
-            String(localized: "recoveryReset.newKey.saved", defaultValue: "I saved the new recovery key"),
+        FXCheckboxRow(
+            title: String(localized: "recoveryReset.newKey.saved", defaultValue: "I saved the new recovery key"),
             isOn: $viewModel.hasSavedNewKey
         )
-        HStack {
-            Spacer()
+        ShellFooter {
             Button(String(localized: "recoveryReset.newKey.finish", defaultValue: "Open FX Vault")) {
                 viewModel.finish()
             }
-            .buttonStyle(.borderedProminent)
+            .fxButtonStyle(.primary, size: .large)
             .keyboardShortcut(.defaultAction)
             .disabled(!viewModel.canFinish)
         }

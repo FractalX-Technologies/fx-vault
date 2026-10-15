@@ -36,6 +36,11 @@ enum SASDecision: CaseIterable, Identifiable {
     var usesProminentStyle: Bool {
         false
     }
+
+    /// The same secondary pill for both answers: equal visual weight, never the ink primary.
+    var buttonVariant: FXButtonStyle.Variant {
+        .secondary
+    }
 }
 
 /// The nearby code (`ddd ddd`, large and monospaced) with the peer's unverified name and the
@@ -54,23 +59,30 @@ struct SASCodeView: View {
                 localized: "nearby.sas.prompt",
                 defaultValue: "Check that \(sas.peerName) sees the same code."
             ))
-            .font(Theme.Typography.body)
-            .foregroundStyle(Theme.Colors.textPrimary)
+            .fxTextStyle(.body)
+            .foregroundStyle(Theme.Colors.ink)
             .multilineTextAlignment(.center)
-            Text(verbatim: sas.code)
-                .font(Theme.Typography.sasCode)
-                .foregroundStyle(Theme.Colors.textPrimary)
-                .textSelection(.disabled)
-                .accessibilityLabel(String(
-                    localized: "nearby.sas.accessibility",
-                    defaultValue: "Code \(sas.code.map(String.init).joined(separator: " "))"
-                ))
+            VStack(spacing: Theme.Spacing.small) {
+                SectionLabel(String(localized: "nearby.sas.label", defaultValue: "Code"))
+                    .accessibilityHidden(true)
+                Text(verbatim: sas.code)
+                    .fxTextStyle(.sasCode)
+                    .foregroundStyle(Theme.Colors.ink)
+                    .textSelection(.disabled)
+                    .accessibilityLabel(String(
+                        localized: "nearby.sas.accessibility",
+                        defaultValue: "Code \(sas.code.map(String.init).joined(separator: " "))"
+                    ))
+            }
+            .padding(.vertical, Theme.Spacing.largePlus)
+            .padding(.horizontal, Theme.Spacing.xxLarge)
+            .fxCardBackground(.container)
             Text(String(
                 localized: "nearby.sas.unverifiedName",
                 defaultValue: "The name is shown as the other Mac sent it. Only the code proves who it is."
             ))
-            .font(Theme.Typography.caption)
-            .foregroundStyle(Theme.Colors.textSecondary)
+            .fxTextStyle(.caption)
+            .foregroundStyle(Theme.Colors.mutedText)
             .multilineTextAlignment(.center)
             if isConfirmed {
                 HStack(spacing: Theme.Spacing.small) {
@@ -79,8 +91,8 @@ struct SASCodeView: View {
                     Text(isPeerConfirmed
                         ? String(localized: "nearby.sas.bothConfirmed", defaultValue: "Both confirmed.")
                         : String(localized: "nearby.sas.waitingPeer", defaultValue: "Waiting for the other Mac to confirm…"))
-                        .font(Theme.Typography.callout)
-                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .fxTextStyle(.callout)
+                        .foregroundStyle(Theme.Colors.mutedText)
                 }
             } else {
                 HStack(spacing: Theme.Spacing.medium) {
@@ -91,14 +103,13 @@ struct SASCodeView: View {
                             Label(decision.title, systemImage: decision.systemImage)
                                 .frame(minWidth: Theme.Layout.sasButtonMinWidth)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.large)
+                        .fxButtonStyle(decision.buttonVariant, size: .large)
                     }
                 }
                 if isPeerConfirmed {
                     Text(String(localized: "nearby.sas.peerConfirmed", defaultValue: "The other Mac confirmed the code."))
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .fxTextStyle(.caption)
+                        .foregroundStyle(Theme.Colors.mutedText)
                 }
             }
         }

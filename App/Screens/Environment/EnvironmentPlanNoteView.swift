@@ -19,7 +19,8 @@ struct EnvironmentPlanNoteView: View {
                 )))
             if let url = ExternalLinks.environmentPlans {
                 Link(String(localized: "environment.planNote.learnMore", defaultValue: "Learn more"), destination: url)
-                    .font(Theme.Typography.caption)
+                    .fxTextStyle(.calloutEmphasized)
+                    .foregroundStyle(Theme.Colors.brand)
             }
         }
     }

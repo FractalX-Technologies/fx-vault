@@ -41,47 +41,44 @@ enum ConnectivityCopy {
     }
 }
 
-/// The banner at the top of the main window: offline, or GitHub not responding with Retry.
+/// The connectivity notice at the top of the detail column (mockup MainDark): the `.offline`
+/// ``Banner`` with its OFFLINE label, or GitHub not responding with Retry.
 struct ConnectivityBannerView: View {
     let banner: ConnectivityBannerModel
     let onRetry: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.small) {
-            Image(systemName: banner.systemImage)
-                .foregroundStyle(Theme.Colors.warning)
-                .accessibilityHidden(true)
-            Text(banner.message)
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-            if case .gitHubNotResponding(let isRetrying) = banner {
-                if isRetrying {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-                Button(String(localized: "connectivity.banner.retry", defaultValue: "Retry"), action: onRetry)
-                    .disabled(isRetrying)
-                    .help(String(
-                        localized: "connectivity.banner.retry.help",
-                        defaultValue: "List repositories and check the open repository on GitHub again"
-                    ))
-            }
+        switch banner {
+        case .offline:
+            Banner(.offline, message: banner.message, systemImage: banner.systemImage)
+        case .gitHubNotResponding(let isRetrying):
+            Banner(
+                .warning,
+                message: banner.message,
+                systemImage: banner.systemImage,
+                action: .init(
+                    title: isRetrying
+                        ? String(localized: "connectivity.banner.retrying", defaultValue: "Retrying…")
+                        : String(localized: "connectivity.banner.retry", defaultValue: "Retry"),
+                    isEnabled: !isRetrying,
+                    handler: onRetry
+                )
+            )
+            .help(String(
+                localized: "connectivity.banner.retry.help",
+                defaultValue: "List repositories and check the open repository on GitHub again"
+            ))
         }
-        .padding(.horizontal, Theme.Spacing.medium)
-        .padding(.vertical, Theme.Spacing.small)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Colors.warning.opacity(Theme.Opacity.chipBackground))
-        .accessibilityElement(children: .contain)
     }
 }
 
 #Preview {
-    VStack(spacing: 0) {
+    VStack(spacing: Theme.Spacing.medium) {
         ConnectivityBannerView(banner: .offline) {}
         ConnectivityBannerView(banner: .gitHubNotResponding(isRetrying: false)) {}
         ConnectivityBannerView(banner: .gitHubNotResponding(isRetrying: true)) {}
     }
+    .padding(Theme.Spacing.xxLarge)
     .frame(width: Theme.Layout.windowDefaultWidth)
+    .background(Theme.Colors.ground)
 }

@@ -9,33 +9,50 @@ struct ShareContentSummaryView: View {
     let preview: ShareExportPreviewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-            ShareNoteView(
-                systemImage: "shippingbox",
-                text: String(
-                    localized: "share.summary.title",
-                    defaultValue: "From \(preview.repositoryFullName)"
-                )
-            )
-            ForEach(ShareSummaryLineModel.lines(for: preview.summary)) { line in
-                HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
-                    Image(systemName: line.systemImage)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                        .accessibilityHidden(true)
-                    Text(verbatim: line.scope)
-                        .font(Theme.Typography.callout.weight(.semibold))
-                        .foregroundStyle(Theme.Colors.textPrimary)
-                        .lineLimit(1)
-                    Text(line.counts)
-                        .font(Theme.Typography.callout)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                    if let policy = line.policy {
-                        Text(policy)
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(Theme.Colors.textSecondary)
+        let lines = ShareSummaryLineModel.lines(for: preview.summary)
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            Text(String(
+                localized: "share.summary.title",
+                defaultValue: "From \(preview.repositoryFullName)"
+            ))
+            .fxTextStyle(.sectionLabel)
+            .foregroundStyle(Theme.Colors.subtleText)
+            .lineLimit(1)
+            .truncationMode(.middle)
+            if !lines.isEmpty {
+                Card(.container, spacing: 0) {
+                    Grid(alignment: .topLeading, horizontalSpacing: Theme.Spacing.large, verticalSpacing: 0) {
+                        ForEach(Array(lines.enumerated()), id: \.element.id) { index, line in
+                            if index > 0 {
+                                GridRow {
+                                    HairlineDivider()
+                                        .gridCellColumns(2)
+                                }
+                            }
+                            GridRow {
+                                Text(verbatim: line.scope)
+                                    .fxTextStyle(.statusLine)
+                                    .foregroundStyle(Theme.Colors.subtleText)
+                                    .lineLimit(1)
+                                    .padding(.leading, Theme.Spacing.large)
+                                    .padding(.vertical, Theme.Spacing.medium)
+                                VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+                                    Text(line.counts)
+                                        .fxTextStyle(.calloutEmphasized)
+                                        .foregroundStyle(Theme.Colors.ink)
+                                    if let policy = line.policy {
+                                        Text(policy)
+                                            .fxTextStyle(.caption)
+                                            .foregroundStyle(Theme.Colors.mutedText)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.trailing, Theme.Spacing.large)
+                                .padding(.vertical, Theme.Spacing.medium)
+                            }
+                        }
                     }
                 }
-                .accessibilityElement(children: .combine)
             }
             if !preview.valueMissingNames.isEmpty {
                 ShareNoteView(
@@ -62,10 +79,6 @@ struct ShareSummaryLineModel: Identifiable, Equatable {
 
     var id: String {
         environmentName.map { "environment/\($0)" } ?? "repository"
-    }
-
-    var systemImage: String {
-        environmentName == nil ? "folder" : "square.stack.3d.up"
     }
 
     /// The repository level (when it has items), then every environment.

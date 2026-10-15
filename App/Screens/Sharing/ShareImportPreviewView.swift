@@ -27,31 +27,37 @@ struct ShareImportPreviewView: View {
                             ShareImportItemRow(item: item) { action in
                                 editor.select(action, for: item)
                             }
+                            .listRowSeparator(.visible)
+                            .listRowSeparatorTint(Theme.Colors.hairline)
                         }
                     } header: {
-                        HStack(spacing: Theme.Spacing.small) {
+                        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
                             Text(verbatim: section.environment?.name
                                 ?? String(localized: "share.preview.repositoryLevel", defaultValue: "Repository"))
+                                .fxTextStyle(.sectionLabel)
+                                .foregroundStyle(Theme.Colors.ink)
                             Text(ShareSummaryLineModel.counts(section.counts))
-                                .foregroundStyle(Theme.Colors.textSecondary)
+                                .fxTextStyle(.monoMeta)
+                                .foregroundStyle(Theme.Colors.subtleText)
                         }
                     }
                 }
             }
-            .listStyle(.inset(alternatesRowBackgrounds: true))
+            .shareListContainer()
             .frame(height: Theme.Layout.shareListHeight)
-            HStack {
+            HStack(spacing: Theme.Spacing.medium) {
                 Text(String(
                     localized: "share.preview.summary",
                     defaultValue: "\(editor.changedCount) changes, \(editor.pendingChangeCount) pending until you Sync"
                 ))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .fxTextStyle(.statusLine)
+                .foregroundStyle(Theme.Colors.subtleText)
                 Spacer()
                 if editor.hasDifferingItems {
                     Button(String(localized: "share.preview.overwriteAll", defaultValue: "Overwrite All")) {
                         editor.overwriteAll()
                     }
+                    .fxButtonStyle(.outline)
                     .disabled(editor.isOverwritingAll)
                     .help(String(
                         localized: "share.preview.overwriteAll.help",
@@ -99,7 +105,7 @@ struct ShareImportPreviewView: View {
     }
 
     private var replayWarning: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
             ForEach(Array(editor.plan.replayWarnings).sorted { $0.rawValue < $1.rawValue }, id: \.self) { warning in
                 ShareNoteView(
                     systemImage: "clock.badge.exclamationmark",
@@ -115,7 +121,11 @@ struct ShareImportPreviewView: View {
                 )
             )
             .toggleStyle(.checkbox)
+            .fxTextStyle(.callout)
+            .foregroundStyle(Theme.Colors.ink)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .fxCalloutBackground()
     }
 
     @ViewBuilder
@@ -185,18 +195,16 @@ private struct ShareImportItemRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
             Image(systemName: item.key.kind == .secret ? "key" : "textformat")
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .font(Theme.Typography.callout)
+                .foregroundStyle(Theme.Colors.subtleText)
                 .accessibilityLabel(item.key.kind == .secret
                     ? String(localized: "share.preview.kind.secret", defaultValue: "Secret")
                     : String(localized: "share.preview.kind.variable", defaultValue: "Variable"))
             VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                Text(verbatim: item.key.name)
-                    .font(Theme.Typography.monospaced)
-                    .foregroundStyle(Theme.Colors.textPrimary)
-                    .lineLimit(1)
+                TableNameText(name: item.key.name)
                 ForEach(Array(item.warnings).sorted { $0.rawValue < $1.rawValue }, id: \.self) { warning in
                     Text(warning.localizedMessage)
-                        .font(Theme.Typography.caption)
+                        .fxTextStyle(.caption)
                         .foregroundStyle(Theme.Colors.warning)
                 }
             }
@@ -215,11 +223,12 @@ private struct ShareImportItemRow: View {
                 .frame(width: Theme.Layout.shareActionPickerWidth)
             } else {
                 Text(item.action.localizedTitle)
-                    .font(Theme.Typography.callout)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.callout)
+                    .foregroundStyle(Theme.Colors.mutedText)
                     .frame(width: Theme.Layout.shareActionPickerWidth, alignment: .leading)
             }
         }
+        .frame(minHeight: Theme.Layout.scopeRowHeight)
     }
 }
 
@@ -236,7 +245,8 @@ private struct SharePolicyDifferenceRow: View {
                     String(localized: "share.preview.policy.title", defaultValue: "Deployment branches differ"),
                     systemImage: "arrow.triangle.branch"
                 )
-                .font(Theme.Typography.callout.weight(.semibold))
+                .fxTextStyle(.calloutEmphasized)
+                .foregroundStyle(Theme.Colors.ink)
                 Spacer()
                 Picker(
                     String(localized: "share.preview.policy.choice", defaultValue: "Policy"),
@@ -254,18 +264,16 @@ private struct SharePolicyDifferenceRow: View {
                 localized: "share.preview.policy.mine",
                 defaultValue: "Yours: \(difference.localPolicy.localizedSummary)"
             ))
-            .font(Theme.Typography.caption)
-            .foregroundStyle(Theme.Colors.textSecondary)
+            .fxTextStyle(.caption)
+            .foregroundStyle(Theme.Colors.mutedText)
             Text(String(
                 localized: "share.preview.policy.incoming",
                 defaultValue: "Incoming: \(difference.incomingPolicy.localizedSummary)"
             ))
-            .font(Theme.Typography.caption)
-            .foregroundStyle(Theme.Colors.textSecondary)
+            .fxTextStyle(.caption)
+            .foregroundStyle(Theme.Colors.mutedText)
             ForEach(difference.incomingPolicy.localizedPatterns, id: \.self) { pattern in
-                Text(verbatim: pattern)
-                    .font(Theme.Typography.caption.monospaced())
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                TableMetaText(pattern)
             }
             if difference.isWidening {
                 ShareNoteView(
@@ -295,6 +303,7 @@ struct ShareImportRepositoryButton: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
             HStack(spacing: Theme.Spacing.small) {
                 Button(title, action: action)
+                    .fxButtonStyle(.outline)
                     .disabled(isImporting || !isOnline)
                 if isImporting {
                     ProgressView()
@@ -303,8 +312,8 @@ struct ShareImportRepositoryButton: View {
             }
             if !isOnline {
                 Text(ConnectivityCopy.offlineHelp)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

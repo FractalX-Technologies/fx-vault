@@ -534,7 +534,11 @@ final class SyncViewModel: LockObserving {
         if deletionCount > 0 {
             return SyncButtonModel(
                 action: .reviewDeletions,
-                title: String(localized: "sync.button.reviewDeletions", defaultValue: "Review \(deletionCount) Deletions…"),
+                // Automatic grammar agreement: "Review 1 Deletion…", "Review 2 Deletions…".
+                title: String(AttributedString(
+                    localized: "sync.button.reviewDeletions",
+                    defaultValue: "Review ^[\(deletionCount) Deletion](inflect: true)…"
+                ).characters),
                 isDefault: true,
                 isEnabled: canProceed
             )

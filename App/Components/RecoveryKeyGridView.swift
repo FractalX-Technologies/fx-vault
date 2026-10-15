@@ -1,8 +1,8 @@
 import SwiftUI
 import VaultCore
 
-/// The recovery key as 14 numbered groups of 4 on two rows (§5.3). The window it appears in
-/// is excluded from screen capture while it is visible.
+/// The recovery key as 14 numbered groups of 4 on two rows (§5.3), in Geist Mono on a hairline
+/// container. The window it appears in is excluded from screen capture while it is visible.
 struct RecoveryKeyGridView: View {
     let groups: [String]
 
@@ -16,18 +16,18 @@ struct RecoveryKeyGridView: View {
     var body: some View {
         LazyVGrid(columns: columns, spacing: Theme.Spacing.small) {
             ForEach(Array(groups.enumerated()), id: \.offset) { index, group in
-                VStack(spacing: Theme.Spacing.xxSmall) {
+                VStack(spacing: Theme.Spacing.xSmall) {
+                    Text(verbatim: StepCounter.padded(index + 1))
+                        .fxTextStyle(.monoMeta)
+                        .foregroundStyle(Theme.Colors.subtleText)
                     Text(verbatim: group)
-                        .font(Theme.Typography.monospaced.weight(.semibold))
-                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .fxTextStyle(.mono)
+                        .foregroundStyle(Theme.Colors.ink)
                         .textSelection(.enabled)
-                    Text(verbatim: (index + 1).formatted())
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Theme.Spacing.small)
-                .background(Theme.Colors.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.small))
+                .background(Theme.Colors.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.compactRow, style: .continuous))
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(
                     String(localized: "recoveryKey.group.accessibility", defaultValue: "Group \(index + 1): \(group)")
@@ -35,7 +35,7 @@ struct RecoveryKeyGridView: View {
             }
         }
         .padding(Theme.Spacing.medium)
-        .background(Theme.Colors.background, in: RoundedRectangle(cornerRadius: Theme.Radius.medium))
+        .fxCardBackground(.container)
         .screenCaptureProtected()
     }
 }

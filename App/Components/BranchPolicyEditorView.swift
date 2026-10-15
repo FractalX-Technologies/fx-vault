@@ -3,19 +3,22 @@ import VaultCore
 import VaultData
 
 /// BranchPolicyEditor (§10 `EnvironmentSettingsScreen`, M4): which branches and tags may deploy
-/// to the environment. Form sections over a ``BranchPolicyFormModel`` binding.
+/// to the environment. Labelled blocks over a ``BranchPolicyFormModel`` binding, laid out for
+/// ``ConfigEditorSheet``: the choice as a radio group, then the rules in a hairline card with the
+/// add row (type, mono pattern field, Add Rule) under it.
 struct BranchPolicyEditorView: View {
     @Binding var form: BranchPolicyFormModel
     let isEnabled: Bool
+    @FocusState private var isPatternFocused: Bool
 
     var body: some View {
-        Section {
+        ConfigSheetField(String(localized: "branchPolicy.header", defaultValue: "Deployment Branches and Tags")) {
             Picker(selection: $form.choice) {
                 ForEach(BranchPolicyFormModel.Choice.allCases, id: \.self) { choice in
                     Text(choice.title).tag(choice)
                 }
             } label: {
-                EmptyView()
+                Text(String(localized: "branchPolicy.header", defaultValue: "Deployment Branches and Tags"))
             }
             .pickerStyle(.radioGroup)
             .labelsHidden()
@@ -23,58 +26,14 @@ struct BranchPolicyEditorView: View {
             if let warning = form.warning {
                 ConfigEditorNoteView(note: warning)
             }
-        } header: {
-            Text(String(localized: "branchPolicy.header", defaultValue: "Deployment Branches and Tags"))
         }
 
         if form.choice == .selected {
-            Section {
-                ForEach(form.patterns, id: \.self) { pattern in
-                    HStack(spacing: Theme.Spacing.small) {
-                        StatusChip(title: pattern.type.policyEditorTitle, tint: Theme.Colors.accent)
-                        Text(pattern.pattern)
-                            .font(Theme.Typography.monospaced)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Spacer()
-                        Button {
-                            form.removePattern(pattern)
-                        } label: {
-                            Image(systemName: "minus.circle")
-                        }
-                        .buttonStyle(.borderless)
-                        .disabled(!isEnabled)
-                        .help(String(localized: "branchPolicy.pattern.remove", defaultValue: "Remove this rule"))
-                        .accessibilityLabel(String(
-                            localized: "branchPolicy.pattern.remove.accessibility",
-                            defaultValue: "Remove \(pattern.pattern)"
-                        ))
-                    }
+            ConfigSheetField(String(localized: "branchPolicy.rules.header", defaultValue: "Rules")) {
+                if !form.patterns.isEmpty {
+                    patternList
                 }
-                HStack(spacing: Theme.Spacing.small) {
-                    Picker(String(localized: "branchPolicy.pattern.type", defaultValue: "Type"), selection: $form.newPatternType) {
-                        ForEach(BranchPatternType.allCases, id: \.self) { type in
-                            Text(type.policyEditorTitle).tag(type)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-                    TextField(
-                        String(localized: "branchPolicy.pattern.field", defaultValue: "Pattern"),
-                        text: $form.newPattern,
-                        prompt: Text(verbatim: "release/*")
-                    )
-                    .font(Theme.Typography.monospaced)
-                    .autocorrectionDisabled()
-                    .labelsHidden()
-                    .onSubmit { form.addPattern() }
-                    Button(String(localized: "branchPolicy.pattern.add", defaultValue: "Add Rule")) {
-                        form.addPattern()
-                    }
-                    .disabled(!form.canAddPattern)
-                }
-                .disabled(!isEnabled)
+                addRow
                 if let note = form.newPatternNote {
                     ConfigEditorNoteView(note: note)
                 } else if form.hasUnaddedPattern {
@@ -83,17 +42,75 @@ struct BranchPolicyEditorView: View {
                         defaultValue: "Press Return or Add Rule to add this rule, or clear the field."
                     )))
                 }
-            } header: {
-                Text(String(localized: "branchPolicy.rules.header", defaultValue: "Rules"))
-            } footer: {
                 Text(String(
                     localized: "branchPolicy.rules.footer",
                     defaultValue: "Patterns use fnmatch syntax, for example release/* for branches or v* for tags."
                 ))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.subtleText)
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    private var patternList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(form.patterns.enumerated()), id: \.element) { index, pattern in
+                if index > 0 {
+                    HairlineDivider()
+                }
+                HStack(spacing: Theme.Spacing.small) {
+                    StatusChip.tag(pattern.type.policyEditorTitle)
+                    Text(pattern.pattern)
+                        .fxTextStyle(.monoName)
+                        .foregroundStyle(Theme.Colors.ink)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer()
+                    Button {
+                        form.removePattern(pattern)
+                    } label: {
+                        Label(
+                            String(localized: "branchPolicy.pattern.remove.accessibility", defaultValue: "Remove \(pattern.pattern)"),
+                            systemImage: "minus.circle"
+                        )
+                    }
+                    .fxIconButtonStyle(.ghost)
+                    .disabled(!isEnabled)
+                    .help(String(localized: "branchPolicy.pattern.remove", defaultValue: "Remove this rule"))
+                }
+                .padding(.horizontal, Theme.Spacing.large)
+                .padding(.vertical, Theme.Spacing.xSmall)
+            }
+        }
+        .fxCardBackground(.container)
+    }
+
+    private var addRow: some View {
+        HStack(spacing: Theme.Spacing.small) {
+            SegmentedPill(
+                selection: $form.newPatternType,
+                segments: BranchPatternType.allCases.map { .init(value: $0, title: $0.policyEditorTitle) },
+                accessibilityLabel: String(localized: "branchPolicy.pattern.type", defaultValue: "Type")
+            )
+            .fixedSize()
+            TextField(
+                String(localized: "branchPolicy.pattern.field", defaultValue: "Pattern"),
+                text: $form.newPattern,
+                prompt: Text(verbatim: "release/*").foregroundStyle(Theme.Colors.subtleText)
+            )
+            .focused($isPatternFocused)
+            .autocorrectionDisabled()
+            .labelsHidden()
+            .onSubmit { form.addPattern() }
+            .fxInputField(.rounded, isFocused: isPatternFocused, isInvalid: form.newPatternNote?.isError ?? false, isMonospaced: true)
+            Button(String(localized: "branchPolicy.pattern.add", defaultValue: "Add Rule")) {
+                form.addPattern()
+            }
+            .fxButtonStyle(.outline)
+            .disabled(!form.canAddPattern)
+        }
+        .disabled(!isEnabled)
     }
 }
 
@@ -105,11 +122,12 @@ private struct BranchPolicyEditorPreview: View {
     ]))
 
     var body: some View {
-        Form {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
             BranchPolicyEditorView(form: $form, isEnabled: true)
         }
-        .formStyle(.grouped)
+        .padding(Theme.Spacing.xxLarge)
         .frame(width: Theme.Layout.editorSheetWidth)
+        .fxSheetBackground()
     }
 }
 

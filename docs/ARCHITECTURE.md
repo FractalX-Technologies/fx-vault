@@ -753,8 +753,11 @@ AppTests).
     accounts and catalogs loaded when gh is ready; `SidebarGrouping.sections(_:query:)` (pure)
     groups account → owner (Personal, organizations in gh's order, others by name) → repositories,
     with badges (private, archived, fork, unavailable, not on GitHub), scope warnings, SAML and
-    truncation notes and search; Import, Clone, Share…, Remove from vault (confirmed); Add
-    repository by name (`Main/AddRepository`).
+    truncation notes and search (the toolbar search field); Import, Clone, Share…, Remove from
+    vault (confirmed); Add repository by name (`Main/AddRepository`). v0.3.0 draws the sidebar
+    and scope rows itself (`.fxRowBackground`, docs/DESIGN.md) instead of a native `List`
+    selection; `MainColumnSelection` (pure) keeps Up/Down keyboard selection and owner groups
+    collapse from their mono label.
   - `ScopeListViewModel` (`Main/ScopeList`): "Repository" plus environments
     (`observeScopes`), pending dot, value-missing count, context menu Settings / Rename /
     Duplicate / Export .env / Share / Revert / Delete (confirmed), "+ New Environment" (admin).
@@ -762,15 +765,17 @@ AppTests).
     Clone, Refresh, drift banner, deployment branches with Edit, plan note on private
     repositories, read-only explanation) and `ConfigTableView` (Secrets | Variables over one
     `Table`; masked secrets with the eye toggle, "Value missing", plaintext variables; Reveal,
-    Copy, Edit / Fill Value, Convert or Move, Push on Next Sync (secrets), Revert, Delete). The
-    Add split button adds one
-    item of the tab's kind and offers Paste Multiple… and Import .env File…; ⌘V in the detail
+    Copy, Edit / Fill Value, Convert or Move, Push on Next Sync (secrets), Revert, Delete). Next
+    to the Secrets | Variables `SegmentedPill`, Add Secret / Add Variable (primary pill) adds one
+    item of the tab's kind, with Paste Multiple… (outline pill) and Import .env File… (outline
+    circle) beside it; ⌘V in the detail
     column (`onPasteCommand(of: [.plainText], validator: validatePaste)`, `handlePaste(_:)`
     reads the providers) opens the import preview prefilled. All three pass the tab's kind as `defaultKind` and the open scope as the
     target. Revealed values re-mask after
     `Timeouts.revealRemask` (injected clock), on resign active, on scope change and on lock.
     The drift check runs when a repository opens (`DriftRepository.detectOnOpen`).
-  - Connectivity (v0.2.0): `ConnectivityBannerView` above the three columns shows
+  - Connectivity (v0.2.0): `ConnectivityBannerView` (a `Banner`, at the top of the detail
+    column since v0.3.0) shows
     `MainViewModel.connectivityBanner` ("No internet connection. Your changes stay in the vault;
     sync when you're back online.", or "GitHub isn't responding. Try again in a moment." with
     Retry → `retryGitHub()`; offline wins). While offline, Sync, New Repository, Import (sidebar
@@ -785,7 +790,9 @@ AppTests).
     repository's drift check (`reconnectTask`). Sidebar, repository detail, Add by name, the
     Sync sheet, Create Repository and the drift review report their gh outcomes to
     `GitHubReachability` (decision 50).
-  - Toolbar: a DEV chip in Debug builds (decision 43), New Repository, Import .env, Share menu
+  - Toolbar: the FractalX mark, the window title and the selected `owner / repo` in mono (the
+    system title is removed on macOS 15+; macOS 14 keeps it and omits the duplicate name), a DEV
+    chip in Debug builds (decision 43), New Repository, Import .env, Share menu
     (File… / Nearby… / Receive Nearby… / Nearby Chat…, which opens the chat window), Lock,
     Sync (`SyncToolbarButton`, count in the label, disabled at 0, while locked, while syncing and
     without gh). Menu commands (`VaultCommands`): File › New Repository… (⌘N), Import .env… (⇧⌘I);
@@ -876,14 +883,25 @@ AppTests).
 **Components** (`App/Components`): `SecretValueEditor`, `MaskedValueCell` (display-only: masked /
 revealed / plain / missing, the view model owns reveal state), `CommandRow`,
 `RecoveryKeyGridView`, `PassphraseView`, `StatusChip`, `EmptyStateView`, `SyncToolbarButton`,
-`GHStatusRow`, `PasswordStrengthMeter`, `NewPasswordFields`, `CenteredCard`, `WindowAccessor`,
+`GHStatusRow`, `PasswordStrengthMeter`, `NewPasswordFields`, `WindowAccessor`,
 `View.screenCaptureProtected()`, `View.errorAlert(_:)` (`ErrorAlert`). Shared by the feature
-sheets: `ConfigEditorSheet(title:subtitle:primaryTitle:isPrimaryEnabled:isWorking:onCancel:
-onPrimary:content:)` (header, grouped form, Cancel = Esc, primary = Return) with
-`ConfigEditorNoteModel` / `ConfigEditorNoteView`; `BranchPolicyFormModel` (pure: All / Protected
-branches only / Selected patterns, `BranchPatternValidator`, at most 50 rules, `draft`,
-`isReadyToSave` waits for a typed but unadded rule) and `BranchPolicyEditorView(form:isEnabled:)`
-(form sections; used by Environment Settings, New Environment and New Repository). Helpers:
+sheets: `ConfigEditorSheet(eyebrow:title:subtitle:primaryTitle:isPrimaryEnabled:isWorking:width:
+onCancel:onPrimary:content:)` (v0.3.0 board SyncReview: eyebrow, 28 pt title and muted subtitle,
+labelled fields in a scroll view sized to its content, footer with the secondary Cancel = Esc and
+the primary pill = Return) with `ConfigEditorNoteModel` / `ConfigEditorNoteView`, and the sheet
+building blocks in the same file: `ConfigSheetFooter` (mono `.statusLine` meta or a notice, then
+the pills), `ConfigSheetField` (`SectionLabel` above a field or block) and `ConfigSheetList` (rows
+in a hairline `.container` card). The sheet header, confirmation checkbox row, callout, inline
+error, brand link and sheet content chrome are design components shared by every sheet and form
+(`App/Components/Design/SheetChrome.swift`: `SheetHeader`, `FXCheckboxRow`, `SheetCallout`,
+`InlineErrorView`, `FXLinkButtonStyle`, `.fxSheetContent`; v0.3.0 integration merged the three
+per-feature copies into them); the Sync, Drift review,
+environment, item and New Repository sheets use them. `SecretValueEditor` is framed like a 12 pt
+rounded input (brand ring while the text view is first responder). `BranchPolicyFormModel` (pure:
+All / Protected branches only / Selected patterns, `BranchPatternValidator`, at most 50 rules,
+`draft`, `isReadyToSave` waits for a typed but unadded rule) and
+`BranchPolicyEditorView(form:isEnabled:)` (labelled blocks: radio group, rules in a hairline card,
+add row; used by Environment Settings, New Environment and New Repository). Helpers:
 `TaskBag` (cancels a view model's observation tasks when it goes away), `ExternalLinks`
 (`environmentPlans`, `samlSingleSignOn`).
 
@@ -997,12 +1015,18 @@ so view-model tests construct it with a `TestHarness`.
 
 ## Design system
 
-`App/Helpers/Theme`: `Theme.Colors` (semantic asset-catalog colors with light and dark variants:
-Accent, Background, Surface, TextPrimary, TextSecondary, Success, Warning, Danger, Pending),
-`Theme.Typography` (including `sasCode`), `Theme.Spacing`, `Theme.Radius`, `Theme.Durations`,
-`Theme.Opacity` and `Theme.Layout` (windows, columns and every sheet size: `editorSheetWidth`,
-`createRepo*`, `sync*`, `drift*`, `env*`, `share*`). Views never hardcode colors, fonts or
-metrics; feature folders do not define their own tokens.
+v0.3.0 adopts the FractalX design language; tokens, components and usage rules are in
+`docs/DESIGN.md`. `App/Helpers/Theme`: `Theme.Colors` (asset-catalog color sets with light and
+dark variants: Ground, Surface, Surface2, Card, Ink, MutedText, SubtleText, FaintText, Hairline,
+HairlineStrong, Brand (also the global accent), Warning, Success, Danger, InkBadge, DotGrid,
+Shadow; the v0.2 names `accent`, `background`, `textPrimary`, `textSecondary` and `pending` are
+aliases), `Theme.Typography` (Geist Sans and Geist Mono through `FontRegistry`, which falls back
+to the system font for a missing face) and `Theme.TextStyle` (font, tracking, case; applied with
+`.fxTextStyle`), `Theme.Spacing`, `Theme.Radius`, `Theme.Durations` (140 ms, spring),
+`Theme.Opacity`, `Theme.Stroke`, `Theme.Shadow` and `Theme.Layout` (windows, columns, every sheet
+size and the design component metrics). Shared components live in `App/Components/Design`.
+Views never hardcode colors, fonts or metrics; feature folders do not define their own tokens;
+`scripts/lint.sh` fails on literal colors and fonts outside Theme and Components/Design.
 
 ## Localization
 

@@ -19,6 +19,7 @@ struct EnvironmentSettingsScreen: View {
     var body: some View {
         @Bindable var viewModel = viewModel
         ConfigEditorSheet(
+            eyebrow: String(localized: "environment.sheet.eyebrow", defaultValue: "Environment"),
             title: viewModel.title,
             subtitle: viewModel.subtitle,
             primaryTitle: String(localized: "environment.settings.save", defaultValue: "Save"),
@@ -28,27 +29,30 @@ struct EnvironmentSettingsScreen: View {
             onPrimary: save
         ) {
             if let error = viewModel.loadError {
-                Section {
-                    ConfigEditorNoteView(note: .error(error.message))
-                }
+                Banner(.danger, message: error.message)
             } else if let environment = viewModel.environment {
                 if let reason = viewModel.readOnlyReason {
-                    Section {
-                        ConfigEditorNoteView(note: .warning(reason.localizedExplanation))
-                    }
+                    Banner(.warning, message: reason.localizedExplanation, systemImage: "lock")
                 }
-                Section {
-                    LabeledContent(String(localized: "environment.name", defaultValue: "Name")) {
-                        HStack(spacing: Theme.Spacing.small) {
-                            Text(environment.name)
-                                .textSelection(.enabled)
-                            Button(String(localized: "environment.settings.rename", defaultValue: "Rename…")) {
-                                viewModel.rename()
-                            }
-                            .controlSize(.small)
-                            .disabled(!viewModel.canEdit)
+                ConfigSheetField(String(localized: "environment.name", defaultValue: "Name")) {
+                    HStack(spacing: Theme.Spacing.small) {
+                        Text(environment.name)
+                            .fxTextStyle(.mono)
+                            .foregroundStyle(Theme.Colors.ink)
+                            .textSelection(.enabled)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer()
+                        Button(String(localized: "environment.settings.rename", defaultValue: "Rename…")) {
+                            viewModel.rename()
                         }
+                        .fxButtonStyle(.outline)
+                        .disabled(!viewModel.canEdit)
                     }
+                    .padding(.leading, Theme.Spacing.large)
+                    .padding(.trailing, Theme.Spacing.xSmall)
+                    .frame(minHeight: Theme.Layout.inputHeight)
+                    .fxCardBackground(.container)
                     if let note = viewModel.syncNote {
                         ConfigEditorNoteView(note: note)
                     }
@@ -58,9 +62,7 @@ struct EnvironmentSettingsScreen: View {
                 }
                 BranchPolicyEditorView(form: $viewModel.policy, isEnabled: viewModel.canEdit)
                 if viewModel.showsPlanNote {
-                    Section {
-                        EnvironmentPlanNoteView(isPlanGated: viewModel.isPlanGated)
-                    }
+                    EnvironmentPlanNoteView(isPlanGated: viewModel.isPlanGated)
                 }
             }
         }

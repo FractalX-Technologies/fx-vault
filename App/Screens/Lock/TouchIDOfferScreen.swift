@@ -2,14 +2,15 @@ import SwiftUI
 import VaultCore
 
 /// The sheet "Unlock FX Vault with Touch ID" over the lock screen, right after a password
-/// unlock (v0.1.1). Esc is Not Now; it cannot be swiped away.
+/// unlock (v0.1.1). Esc is Not Now; it cannot be swiped away. Laid out as a FractalX sheet
+/// (board SyncReview).
 struct TouchIDOfferScreen: View {
     @Bindable var viewModel: TouchIDOfferViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            CardHeader(
-                systemImage: "touchid",
+        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+            SheetHeader(
+                label: String(localized: "touchIDOffer.label", defaultValue: "Touch ID"),
                 title: String(localized: "touchIDOffer.title", defaultValue: "Unlock FX Vault with Touch ID"),
                 subtitle: viewModel.isAfterInvalidation
                     ? String(
@@ -25,44 +26,41 @@ struct TouchIDOfferScreen: View {
                 localized: "touchIDOffer.policy",
                 defaultValue: "FX Vault still asks for the master password after a restart and at least every \(Timeouts.passwordMaxAge.wholeDays) days. You can change this later in Settings › Security."
             ))
-            .font(Theme.Typography.callout)
-            .foregroundStyle(Theme.Colors.textSecondary)
+            .fxTextStyle(.callout)
+            .foregroundStyle(Theme.Colors.mutedText)
             .fixedSize(horizontal: false, vertical: true)
 
             if let error = viewModel.error {
                 InlineErrorView(error: error)
             }
 
-            HStack {
-                Spacer()
-                if viewModel.isWorking {
-                    ProgressView()
-                        .controlSize(.small)
-                }
+            ShellFooter(isWorking: viewModel.isWorking) {
                 if viewModel.error == nil {
                     Button(String(localized: "touchIDOffer.notNow", defaultValue: "Not Now")) {
                         viewModel.notNow()
                     }
+                    .fxButtonStyle(.secondary, size: .large)
                     .keyboardShortcut(.cancelAction)
                     .disabled(viewModel.isWorking)
 
-                    Button(String(localized: "touchIDOffer.enable", defaultValue: "Turn On Touch ID")) {
+                    Button {
                         Task { await viewModel.enable() }
+                    } label: {
+                        Label(String(localized: "touchIDOffer.enable", defaultValue: "Turn On Touch ID"), systemImage: "touchid")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .fxButtonStyle(.primary, size: .large)
                     .keyboardShortcut(.defaultAction)
                     .disabled(!viewModel.canEnable)
                 } else {
                     Button(String(localized: "touchIDOffer.continue", defaultValue: "Continue")) {
                         viewModel.notNow()
                     }
-                    .buttonStyle(.borderedProminent)
+                    .fxButtonStyle(.primary, size: .large)
                     .keyboardShortcut(.defaultAction)
                 }
             }
         }
-        .padding(Theme.Spacing.xLarge)
-        .frame(width: Theme.Layout.sheetWidth)
+        .fxSheetContent(width: Theme.Layout.sheetWidth)
         .interactiveDismissDisabled()
     }
 }

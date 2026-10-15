@@ -17,10 +17,12 @@ struct DriftReviewScreen: View {
         @Bindable var viewModel = viewModel
         VStack(spacing: 0) {
             header
-            Divider()
+                .padding(.horizontal, Theme.Spacing.xxLarge)
+                .padding(.top, Theme.Spacing.xxLarge)
+                .padding(.bottom, Theme.Spacing.xLarge)
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            Divider()
+            HairlineDivider()
             footer
         }
         .frame(
@@ -30,6 +32,7 @@ struct DriftReviewScreen: View {
             minHeight: Theme.Layout.driftSheetMinHeight,
             idealHeight: Theme.Layout.driftSheetIdealHeight
         )
+        .fxSheetBackground()
         .errorAlert($viewModel.alert)
         .confirmationDialog(
             viewModel.confirmation?.title ?? "",
@@ -57,33 +60,22 @@ struct DriftReviewScreen: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.medium) {
-            Image(systemName: "exclamationmark.arrow.triangle.2.circlepath")
-                .font(Theme.Typography.title)
-                .foregroundStyle(Theme.Colors.warning)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                Text(String(localized: "drift.review.title", defaultValue: "Changes on GitHub"))
-                    .font(Theme.Typography.title)
-                    .foregroundStyle(Theme.Colors.textPrimary)
-                Text(verbatim: subtitle)
-                    .font(Theme.Typography.callout)
-                    .foregroundStyle(Theme.Colors.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer()
+        SheetHeader(
+            label: String(localized: "drift.review.eyebrow", defaultValue: "Drift review"),
+            title: String(localized: "drift.review.title", defaultValue: "Changes on GitHub"),
+            subtitle: subtitle
+        ) {
             Button {
                 Task { await viewModel.refresh() }
             } label: {
                 Label(String(localized: "drift.review.refresh", defaultValue: "Refresh"), systemImage: "arrow.clockwise")
             }
-            .buttonStyle(.borderless)
+            .fxButtonStyle(.secondary)
             .disabled(viewModel.isLoading || !viewModel.isOnline)
             .help(viewModel.isOnline
                 ? String(localized: "drift.review.refresh.help", defaultValue: "Check GitHub again")
                 : ConnectivityCopy.offlineHelp)
         }
-        .padding(Theme.Spacing.large)
     }
 
     private var subtitle: String {
@@ -103,8 +95,8 @@ struct DriftReviewScreen: View {
                     ProgressView()
                 }
                 Text(String(localized: "drift.review.loading", defaultValue: "Checking GitHub…"))
-                    .font(Theme.Typography.callout)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.callout)
+                    .foregroundStyle(Theme.Colors.mutedText)
             }
         } else if viewModel.rows.isEmpty, viewModel.notes.isEmpty {
             EmptyStateView(
@@ -118,10 +110,10 @@ struct DriftReviewScreen: View {
                 EmptyView()
             }
         } else {
-            Form {
-                if !viewModel.rows.isEmpty {
-                    Section {
-                        ForEach(viewModel.rows) { row in
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+                    if !viewModel.rows.isEmpty {
+                        ConfigSheetList(viewModel.rows) { row in
                             DriftFindingRow(
                                 row: row,
                                 isResolving: viewModel.resolving.contains(row.id),
@@ -130,44 +122,37 @@ struct DriftReviewScreen: View {
                             )
                         }
                     }
-                }
-                if !viewModel.notes.isEmpty {
-                    Section(String(localized: "drift.review.notes", defaultValue: "Not compared")) {
-                        ForEach(viewModel.notes, id: \.self) { note in
-                            Label {
-                                Text(verbatim: note)
-                                    .font(Theme.Typography.callout)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            } icon: {
-                                Image(systemName: "eye.slash")
-                                    .foregroundStyle(Theme.Colors.textSecondary)
+                    if !viewModel.notes.isEmpty {
+                        ConfigSheetField(String(localized: "drift.review.notes", defaultValue: "Not compared")) {
+                            ForEach(viewModel.notes, id: \.self) { note in
+                                Label {
+                                    Text(verbatim: note)
+                                        .fxTextStyle(.callout)
+                                        .foregroundStyle(Theme.Colors.mutedText)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                } icon: {
+                                    Image(systemName: "eye.slash")
+                                        .foregroundStyle(Theme.Colors.subtleText)
+                                }
                             }
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Theme.Spacing.xxLarge)
+                .padding(.bottom, Theme.Spacing.xLarge)
             }
-            .formStyle(.grouped)
         }
     }
 
     private var footer: some View {
-        HStack(spacing: Theme.Spacing.small) {
-            if let notice = viewModel.notice {
-                Text(verbatim: notice)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
-            } else if let checked = viewModel.checkedAtText {
-                Text(verbatim: checked)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
-            }
-            Spacer()
+        ConfigSheetFooter(meta: viewModel.checkedAtText, notice: viewModel.notice) {
             Button(String(localized: "common.done", defaultValue: "Done")) {
                 dismiss()
             }
+            .fxButtonStyle(.primary, size: .large)
             .keyboardShortcut(.cancelAction)
         }
-        .padding(Theme.Spacing.large)
     }
 }
 

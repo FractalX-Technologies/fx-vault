@@ -22,12 +22,15 @@ struct FXVaultApp: App {
 
     var body: some Scene {
         Window(Text(AppIdentity.windowTitle), id: SceneID.main) {
-            switch appDelegate.bootstrap {
-            case .ready(let viewModel):
-                RootScreen(viewModel: viewModel)
-            case .failed(let error):
-                StartupFailureScreen(error: error)
+            Group {
+                switch appDelegate.bootstrap {
+                case .ready(let viewModel):
+                    RootScreen(viewModel: viewModel)
+                case .failed(let error):
+                    StartupFailureScreen(error: error)
+                }
             }
+            .fxWindowBackground()
         }
         .defaultSize(width: Theme.Layout.windowDefaultWidth, height: Theme.Layout.windowDefaultHeight)
         .commands {
@@ -37,22 +40,28 @@ struct FXVaultApp: App {
         }
 
         Window(Text(String(localized: "chat.window.title", defaultValue: "Nearby Chat")), id: SceneID.nearbyChat) {
-            switch appDelegate.bootstrap {
-            case .ready(let viewModel):
-                NearbyChatScreen(app: viewModel)
-            case .failed(let error):
-                StartupFailureScreen(error: error)
+            Group {
+                switch appDelegate.bootstrap {
+                case .ready(let viewModel):
+                    NearbyChatScreen(app: viewModel)
+                case .failed(let error):
+                    StartupFailureScreen(error: error)
+                }
             }
+            .fxWindowBackground()
         }
         .defaultSize(width: Theme.Layout.chatWindowDefaultWidth, height: Theme.Layout.chatWindowDefaultHeight)
 
         Settings {
-            switch appDelegate.bootstrap {
-            case .ready(let viewModel):
-                PreferencesScreen(app: viewModel)
-            case .failed(let error):
-                StartupFailureScreen(error: error)
+            Group {
+                switch appDelegate.bootstrap {
+                case .ready(let viewModel):
+                    PreferencesScreen(app: viewModel)
+                case .failed(let error):
+                    StartupFailureScreen(error: error)
+                }
             }
+            .fxWindowBackground()
         }
     }
 }

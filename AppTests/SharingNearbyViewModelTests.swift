@@ -72,6 +72,17 @@ struct SharingNearbyViewModelTests {
         #expect(SASDecision.allCases.count == 2)
         #expect(SASDecision.allCases.allSatisfy { !$0.isDefaultAction && !$0.usesProminentStyle })
         #expect(Set(SASDecision.allCases.map(\.title)).count == 2)
+        // Equal visual weight: both answers are the same secondary pill, never the ink primary.
+        #expect(SASDecision.allCases.allSatisfy { $0.buttonVariant == .secondary })
+    }
+
+    @Test func importPreviewChipsUseDesignTones() {
+        #expect(ShareItemChip.new.tone == .brand)
+        #expect(ShareItemChip.fillsMissingValue.tone == .brand)
+        #expect(ShareItemChip.same.tone == .success)
+        #expect(ShareItemChip.differs.tone == .warning)
+        #expect(ShareItemChip.existsLocally.tone == .neutral)
+        #expect(ShareItemChip.deletedLocally.tone == .danger)
     }
 
     @Test func bothSidesShowTheSameCodeAndTheSenderName() async throws {

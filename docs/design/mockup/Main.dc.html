@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FX Vault main window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0B6FA4}a:hover{color:#08557E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; border-radius: 14px; border: 1px solid {{t.lineStrong}}; background: {{t.bg}}; color: {{t.fg}}; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px">
+
+  <header style="height: 56px; flex: none; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid {{t.line}}; background: {{t.bg}}">
+    <div style="display: flex; gap: 8px; align-items: center" aria-hidden="true">
+      <span style="width: 12px; height: 12px; border-radius: 6px; background: {{t.dot}}"></span>
+      <span style="width: 12px; height: 12px; border-radius: 6px; background: {{t.dot}}"></span>
+      <span style="width: 12px; height: 12px; border-radius: 6px; background: {{t.dot}}"></span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; margin-left: 8px">
+      <svg viewBox="0 0 3 3" width="18" height="18" fill="{{t.fg}}" role="img" aria-label="FractalX"><rect x="0" y="0" width="0.86" height="0.86"></rect><rect x="1.07" y="0" width="0.86" height="0.86"></rect><rect x="2.14" y="0" width="0.86" height="0.86"></rect><rect x="0" y="1.07" width="0.86" height="0.86"></rect><rect x="2.14" y="1.07" width="0.86" height="0.86"></rect><rect x="0" y="2.14" width="0.86" height="0.86"></rect><rect x="1.07" y="2.14" width="0.86" height="0.86"></rect><rect x="2.14" y="2.14" width="0.86" height="0.86"></rect></svg>
+      <span style="font-weight: 500; font-size: 15px; letter-spacing: -0.2px">FX Vault</span>
+      <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: {{t.subtle}}; margin-left: 6px">FractalX-Technologies / fx-vault</span>
+    </div>
+    <div style="flex: 1"></div>
+    <label style="display: flex; align-items: center; gap: 8px; width: 240px; height: 32px; box-sizing: border-box; padding: 0 12px; border-radius: 999px; background: {{t.surface}}; border: 1px solid {{t.line}}; color: {{t.subtle}}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+      <input type="search" placeholder="Search repositories" aria-label="Search repositories" style="border: 0; outline: 0; background: transparent; color: {{t.fg}}; font: inherit; font-size: 13px; width: 100%">
+    </label>
+    <button type="button" aria-label="New repository" style="width: 32px; height: 32px; border-radius: 999px; border: 1px solid {{t.line}}; background: transparent; color: {{t.fg}}; display: grid; place-items: center; cursor: pointer">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+    </button>
+    <button type="button" aria-label="Share" style="width: 32px; height: 32px; border-radius: 999px; border: 1px solid {{t.line}}; background: transparent; color: {{t.fg}}; display: grid; place-items: center; cursor: pointer">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7 8l5-5 5 5"></path><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path></svg>
+    </button>
+    <button type="button" aria-label="Lock vault" style="width: 32px; height: 32px; border-radius: 999px; border: 1px solid {{t.line}}; background: transparent; color: {{t.fg}}; display: grid; place-items: center; cursor: pointer">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+    </button>
+    <button type="button" style="height: 34px; padding: 0 6px 0 18px; border-radius: 999px; border: 0; background: {{t.primary}}; color: {{t.primaryFg}}; font: inherit; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; cursor: pointer; opacity: {{t.syncOpacity}}">
+      Sync
+      <span style="min-width: 24px; height: 24px; padding: 0 8px; box-sizing: border-box; border-radius: 999px; background: {{t.badge}}; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; display: grid; place-items: center">3</span>
+    </button>
+  </header>
+
+  <div style="flex: 1; display: flex; min-height: 0">
+
+    <nav aria-label="Repositories" style="width: 256px; flex: none; box-sizing: border-box; padding: 20px 12px; background: {{t.surface}}; border-right: 1px solid {{t.line}}; display: flex; flex-direction: column; gap: 4px">
+      <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: {{t.subtle}}; padding: 0 8px 8px">ACCOUNTS</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px">
+        <span style="width: 26px; height: 26px; border-radius: 999px; background: {{t.primary}}; color: {{t.primaryFg}}; font-size: 11px; font-weight: 600; display: grid; place-items: center">AF</span>
+        <div style="display: flex; flex-direction: column; line-height: 16px">
+          <span style="font-weight: 500">admin-fractalx</span>
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; color: {{t.subtle}}">repo · read:org</span>
+        </div>
+      </div>
+      <sc-for list="{{groups}}" as="group" hint-placeholder-count="2">
+        <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: {{t.subtle}}; padding: 16px 8px 6px">{{group.label}}</div>
+        <sc-for list="{{group.repos}}" as="repo" hint-placeholder-count="3">
+          <a href="#" style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 8px; border-radius: 8px; text-decoration: none; color: {{repo.color}}; background: {{repo.bg}}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"></path><path d="M4 17a2 2 0 0 1 2-2h12"></path></svg>
+            <span style="flex: 1; font-size: 13px">{{repo.name}}</span>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; color: {{repo.metaColor}}">{{repo.meta}}</span>
+          </a>
+        </sc-for>
+      </sc-for>
+      <div style="flex: 1"></div>
+      <button type="button" style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: {{t.muted}}; font: inherit; font-size: 13px; cursor: pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        Add repository by name
+      </button>
+      <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; color: {{t.subtle}}; padding: 8px 8px 0; border-top: 1px solid {{t.line}}">UNLOCKED · AUTO-LOCK 5 MIN</div>
+    </nav>
+
+    <section aria-label="Scopes" style="width: 216px; flex: none; box-sizing: border-box; padding: 20px 12px; border-right: 1px solid {{t.line}}; display: flex; flex-direction: column; gap: 2px">
+      <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: {{t.subtle}}; padding: 0 8px 8px">SCOPES</div>
+      <sc-for list="{{scopes}}" as="scope" hint-placeholder-count="3">
+        <a href="#" style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: 10px; text-decoration: none; color: {{t.fg}}; background: {{scope.bg}}; border: 1px solid {{scope.border}}">
+          <span style="flex: 1; font-size: 13px; font-weight: {{scope.weight}}">{{scope.name}}</span>
+          <span style="width: 6px; height: 6px; border-radius: 3px; background: {{scope.dot}}" aria-hidden="true"></span>
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; color: {{t.subtle}}">{{scope.count}}</span>
+        </a>
+      </sc-for>
+      <button type="button" style="margin-top: 8px; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border: 1px dashed {{t.lineStrong}}; border-radius: 10px; background: transparent; color: {{t.muted}}; font: inherit; font-size: 13px; cursor: pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        New environment
+      </button>
+    </section>
+
+    <main style="flex: 1; min-width: 0; box-sizing: border-box; padding: 28px 36px; display: flex; flex-direction: column; gap: 20px">
+      <sc-if value="{{offline}}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: {{t.surface2}}; border: 1px solid {{t.lineStrong}}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{t.warning}}" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l20 20"></path><path d="M8.5 16.5a5 5 0 0 1 7 0"></path><path d="M5 12.6a10 10 0 0 1 5.2-2.6"></path><path d="M19 12.6a10 10 0 0 0-2.4-1.7"></path><path d="M12 20h.01"></path></svg>
+          <span style="flex: 1">No internet connection. Your changes stay in the vault; sync when you're back online.</span>
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: {{t.subtle}}">OFFLINE</span>
+        </div>
+      </sc-if>
+
+      <div style="display: flex; align-items: flex-end; gap: 16px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 6px">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: {{t.subtle}}">ENVIRONMENT</span>
+          <h1 style="margin: 0; font-size: 34px; line-height: 38px; font-weight: 500; letter-spacing: -1px">production</h1>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px">
+            <span style="height: 22px; padding: 0 10px; border-radius: 999px; border: 1px solid {{t.lineStrong}}; font-size: 12px; display: flex; align-items: center">Private</span>
+            <span style="height: 22px; padding: 0 10px; border-radius: 999px; border: 1px solid {{t.lineStrong}}; font-size: 12px; display: flex; align-items: center">Admin</span>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: {{t.subtle}}; margin-left: 4px">branches: release/* · v*</span>
+          </div>
+        </div>
+        <button type="button" style="height: 34px; padding: 0 16px; border-radius: 999px; border: 1px solid {{t.lineStrong}}; background: transparent; color: {{t.fg}}; font: inherit; font-size: 13px; cursor: pointer">Clone</button>
+        <button type="button" style="height: 34px; padding: 0 16px; border-radius: 999px; border: 0; background: {{t.surface2}}; color: {{t.fg}}; font: inherit; font-size: 13px; cursor: pointer">Refresh</button>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid {{t.line}}; background: {{t.card}}">
+        <span style="width: 8px; height: 8px; border-radius: 4px; background: {{t.brand}}" aria-hidden="true"></span>
+        <span style="flex: 1">2 changes on GitHub since your last sync</span>
+        <a href="#" style="font-weight: 500; text-decoration: none; color: {{t.brand}}">Review</a>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px">
+        <div role="tablist" aria-label="Kind" style="display: flex; padding: 3px; border-radius: 999px; background: {{t.surface2}}">
+          <button type="button" role="tab" aria-selected="true" style="height: 30px; padding: 0 16px; border-radius: 999px; border: 0; background: {{t.card}}; color: {{t.fg}}; font: inherit; font-size: 13px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,12,14,0.08); cursor: pointer">Secrets <span style="font-family: 'Geist Mono', ui-monospace, monospace; color: {{t.subtle}}">5</span></button>
+          <button type="button" role="tab" aria-selected="false" style="height: 30px; padding: 0 16px; border-radius: 999px; border: 0; background: transparent; color: {{t.muted}}; font: inherit; font-size: 13px; cursor: pointer">Variables <span style="font-family: 'Geist Mono', ui-monospace, monospace">8</span></button>
+        </div>
+        <div style="flex: 1"></div>
+        <button type="button" style="height: 34px; padding: 0 16px; border-radius: 999px; border: 1px solid {{t.lineStrong}}; background: transparent; color: {{t.fg}}; font: inherit; font-size: 13px; cursor: pointer">Paste multiple</button>
+        <button type="button" style="height: 34px; padding: 0 16px; border-radius: 999px; border: 0; background: {{t.primary}}; color: {{t.primaryFg}}; font: inherit; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+          Add secret
+        </button>
+      </div>
+
+      <div style="border-radius: 16px; border: 1px solid {{t.line}}; background: {{t.card}}; overflow: hidden">
+        <div style="display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1.2fr); gap: 16px; padding: 12px 20px; border-bottom: 1px solid {{t.line}}; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: {{t.subtle}}">
+          <span>NAME</span><span>VALUE</span><span>UPDATED</span><span>STATUS</span>
+        </div>
+        <sc-for list="{{rows}}" as="row" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1.2fr); gap: 16px; align-items: center; height: 52px; padding: 0 20px; border-bottom: 1px solid {{t.line}}">
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{row.name}}</span>
+            <span style="display: flex; align-items: center; gap: 10px; color: {{t.muted}}">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; letter-spacing: 1px">{{row.value}}</span>
+              <button type="button" aria-label="Reveal value" style="border: 0; background: transparent; color: {{t.subtle}}; padding: 0; display: flex; cursor: pointer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </span>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: {{t.subtle}}">{{row.updated}}</span>
+            <span><span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; background: {{row.chipBg}}; color: {{row.chipFg}}; border: 1px solid {{row.chipBorder}}"><span style="width: 6px; height: 6px; border-radius: 3px; background: {{row.chipFg}}" aria-hidden="true"></span>{{row.status}}</span></span>
+          </div>
+        </sc-for>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"offline":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dark = this.props.dark ?? false;
+    const offline = this.props.offline ?? false;
+    const light = {
+      bg: '#F6F5F3', surface: '#EDEBE7', surface2: '#E4E1DB', card: '#FFFFFF', fg: '#0B0C0E',
+      muted: '#454D56', subtle: '#5F6874', line: 'rgba(11,12,14,0.10)', lineStrong: 'rgba(11,12,14,0.18)',
+      primary: '#0B0C0E', primaryFg: '#F6F5F3', badge: 'rgba(246,245,243,0.16)', brand: '#0B6FA4',
+      warning: '#8A6316', success: '#1F7A55', dot: '#D6D2CB'
+    };
+    const night = {
+      bg: '#0B0C0E', surface: '#111820', surface2: '#18212A', card: '#111820', fg: '#F6F5F3',
+      muted: '#A6B0BC', subtle: '#808B97', line: 'rgba(255,255,255,0.08)', lineStrong: 'rgba(255,255,255,0.16)',
+      primary: '#F6F5F3', primaryFg: '#0B0C0E', badge: 'rgba(11,12,14,0.12)', brand: '#3BA3DD',
+      warning: '#D9A441', success: '#3FB283', dot: '#2A323C'
+    };
+    const t = Object.assign({}, dark ? night : light, { syncOpacity: offline ? '0.4' : '1' });
+    const tone = (kind) => {
+      if (kind === 'brand') return { chipBg: 'transparent', chipFg: t.brand, chipBorder: t.brand };
+      if (kind === 'warning') return { chipBg: 'transparent', chipFg: t.warning, chipBorder: t.warning };
+      return { chipBg: t.surface2, chipFg: t.muted, chipBorder: 'transparent' };
+    };
+    const rows = [
+      { name: 'DATABASE_URL', value: '••••••••••••', updated: 'Oct 15 · 10:16', status: 'Synced', kind: 'neutral' },
+      { name: 'STRIPE_SECRET_KEY', value: '••••••••••••', updated: 'Oct 15 · 10:42', status: 'Modified', kind: 'brand' },
+      { name: 'SENTRY_DSN', value: '—', updated: 'Oct 14 · 18:03', status: 'Value missing', kind: 'warning' },
+      { name: 'JWT_SIGNING_KEY', value: '••••••••••••', updated: 'Oct 15 · 10:40', status: 'Will push', kind: 'brand' },
+      { name: 'OPENAI_API_KEY', value: '••••••••••••', updated: 'Oct 12 · 09:11', status: 'Synced', kind: 'neutral' }
+    ].map((r) => Object.assign({}, r, tone(r.kind)));
+    const repo = (name, meta, selected, imported) => ({
+      name, meta,
+      bg: selected ? t.surface2 : 'transparent',
+      color: imported ? t.fg : t.subtle,
+      metaColor: meta === 'Import' ? t.brand : t.subtle
+    });
+    const groups = [
+      { label: 'PERSONAL', repos: [repo('fx-vault-e2e', '2', false, true), repo('fnx-mac', '', false, true), repo('clipmindx-mac', 'Import', false, false)] },
+      { label: 'FRACTALX-TECHNOLOGIES', repos: [repo('fx-vault', '3', true, true), repo('homebrew-tap', '', false, true), repo('courtx-ios', 'Import', false, false)] }
+    ];
+    const scope = (name, count, selected, pending) => ({
+      name, count,
+      bg: selected ? t.card : 'transparent',
+      border: selected ? t.line : 'transparent',
+      weight: selected ? '500' : '400',
+      dot: pending ? t.brand : 'transparent'
+    });
+    const scopes = [scope('Repository', '4', false, false), scope('production', '13', true, true), scope('staging', '11', false, false)];
+    return { t, rows, groups, scopes, offline };
+  }
+}
+</script>
+</body>
+</html>

@@ -2,7 +2,7 @@ import SwiftUI
 import VaultCrypto
 
 /// New master password, confirmation and strength meter (onboarding, recovery reset, change
-/// password).
+/// password): labelled FractalX inputs (board Onboarding).
 struct NewPasswordFields: View {
     @Binding var password: String
     @Binding var confirmation: String
@@ -11,25 +11,31 @@ struct NewPasswordFields: View {
     var onSubmit: () -> Void = {}
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            SecureField(
-                String(localized: "password.new.placeholder", defaultValue: "Master password"),
-                text: $password
-            )
-            .textContentType(.newPassword)
-            PasswordStrengthMeter(strength: strength)
-            SecureField(
-                String(localized: "password.confirm.placeholder", defaultValue: "Confirm master password"),
-                text: $confirmation
-            )
-            .textContentType(.newPassword)
-            .onSubmit(onSubmit)
-            if showsMismatch {
-                Text(String(localized: "password.mismatch", defaultValue: "The passwords do not match."))
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.danger)
+        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
+                FXTextField(
+                    label: String(localized: "password.new.placeholder", defaultValue: "Master password"),
+                    text: $password,
+                    isSecure: true
+                )
+                .textContentType(.newPassword)
+                PasswordStrengthMeter(strength: strength)
+            }
+            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                FXTextField(
+                    label: String(localized: "password.confirm.placeholder", defaultValue: "Confirm master password"),
+                    text: $confirmation,
+                    isSecure: true,
+                    isInvalid: showsMismatch
+                )
+                .textContentType(.newPassword)
+                .onSubmit(onSubmit)
+                if showsMismatch {
+                    Text(String(localized: "password.mismatch", defaultValue: "The passwords do not match."))
+                        .fxTextStyle(.caption)
+                        .foregroundStyle(Theme.Colors.danger)
+                }
             }
         }
-        .textFieldStyle(.roundedBorder)
     }
 }

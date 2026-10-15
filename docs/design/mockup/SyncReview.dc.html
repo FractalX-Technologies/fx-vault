@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FX Vault sync review</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0B6FA4}a:hover{color:#08557E}
+</style>
+</helmet>
+<div style="width: 960px; height: 640px; box-sizing: border-box; position: relative; overflow: hidden; border-radius: 14px; border: 1px solid rgba(11,12,14,0.18); background: #E4E1DB; color: #0B0C0E; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px; display: flex; align-items: center; justify-content: center">
+  <section role="dialog" aria-labelledby="sync-title" style="width: 640px; box-sizing: border-box; border-radius: 24px; border: 1px solid rgba(11,12,14,0.18); background: #FFFFFF; padding: 32px; display: flex; flex-direction: column; gap: 22px; box-shadow: 0 24px 64px rgba(11,12,14,0.16)">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: #5F6874">REVIEW BEFORE SYNC</span>
+      <h2 id="sync-title" style="margin: 0; font-size: 28px; line-height: 32px; font-weight: 500; letter-spacing: -0.8px">5 changes to FractalX-Technologies/fx-vault</h2>
+      <p style="margin: 0; color: #454D56">Names only. Values never leave this Mac in plain text.</p>
+    </div>
+    <div style="border-radius: 16px; border: 1px solid rgba(11,12,14,0.10); overflow: hidden">
+      <sc-for list="{{scopes}}" as="scope" hint-placeholder-count="3">
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 16px; padding: 14px 18px; border-bottom: 1px solid rgba(11,12,14,0.10)">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.06em; color: #5F6874; padding-top: 2px">{{scope.label}}</span>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <span style="font-weight: 500">{{scope.summary}}</span>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #454D56">{{scope.names}}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <label style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 12px; background: #F6F5F3; border: 1px solid rgba(11,12,14,0.10)">
+      <input type="checkbox" style="width: 16px; height: 16px; accent-color: #0B0C0E">
+      <span>I understand that deleting <span style="font-family: 'Geist Mono', ui-monospace, monospace">LEGACY_TOKEN</span> from staging cannot be undone.</span>
+    </label>
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span style="flex: 1; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.06em; color: #5F6874">WRITE LIMIT THIS HOUR · 442 OF 450</span>
+      <button type="button" style="height: 40px; padding: 0 20px; border-radius: 999px; border: 0; background: #E4E1DB; color: #0B0C0E; font: inherit; font-size: 14px; cursor: pointer">Cancel</button>
+      <button type="button" style="height: 40px; padding: 0 22px; border-radius: 999px; border: 0; background: #0B0C0E; color: #F6F5F3; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer">Sync 5 changes</button>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const scopes = [
+      { label: 'REPOSITORY', summary: '1 added', names: '+ SENTRY_DSN' },
+      { label: 'PRODUCTION', summary: '1 modified · 1 will push', names: '~ STRIPE_SECRET_KEY   ↑ JWT_SIGNING_KEY' },
+      { label: 'STAGING', summary: '1 added · 1 deleted', names: '+ FEATURE_FLAGS   − LEGACY_TOKEN' }
+    ];
+    return { scopes };
+  }
+}
+</script>
+</body>
+</html>

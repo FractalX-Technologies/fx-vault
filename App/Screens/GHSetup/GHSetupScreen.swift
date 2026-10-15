@@ -2,7 +2,7 @@ import SwiftUI
 import VaultCore
 
 /// Shown after unlock when the GitHub CLI needs attention (§10.3): missing, older than the
-/// required version, untrusted, or without a logged-in account.
+/// required version, untrusted, or without a logged-in account. One card on the dotted ground.
 struct GHSetupScreen: View {
     @State private var viewModel: GHSetupViewModel
 
@@ -11,36 +11,38 @@ struct GHSetupScreen: View {
     }
 
     var body: some View {
-        CenteredCard {
-            CardHeader(systemImage: "terminal", title: title, subtitle: subtitle)
-            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                ForEach(viewModel.commands, id: \.self) { command in
-                    CommandRow(command: command) { viewModel.copy($0) }
-                }
-                if let copied = viewModel.copiedCommand {
-                    Text(String(localized: "ghSetup.copied", defaultValue: "Copied \(copied). Run it in Terminal, then check again."))
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.textSecondary)
+        ShellCardLayout {
+            SheetHeader(
+                label: String(localized: "ghSetup.label", defaultValue: "GitHub CLI"),
+                title: title,
+                subtitle: subtitle
+            )
+            if !viewModel.commands.isEmpty || viewModel.copiedCommand != nil {
+                VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                    ForEach(viewModel.commands, id: \.self) { command in
+                        CommandRow(command: command) { viewModel.copy($0) }
+                    }
+                    if let copied = viewModel.copiedCommand {
+                        Text(String(localized: "ghSetup.copied", defaultValue: "Copied \(copied). Run it in Terminal, then check again."))
+                            .fxTextStyle(.caption)
+                            .foregroundStyle(Theme.Colors.mutedText)
+                    }
                 }
             }
             GHStatusRow(status: viewModel.status)
-            HStack {
+            ShellFooter(isWorking: viewModel.isChecking) {
                 Button(String(localized: "ghSetup.notNow", defaultValue: "Not Now")) {
                     viewModel.notNow()
                 }
+                .fxButtonStyle(.secondary, size: .large)
                 .help(String(
                     localized: "ghSetup.notNow.help",
                     defaultValue: "Open your vault without GitHub. Listing, importing and syncing stay off."
                 ))
-                Spacer()
-                if viewModel.isChecking {
-                    ProgressView()
-                        .controlSize(.small)
-                }
                 Button(String(localized: "ghSetup.checkAgain", defaultValue: "Check Again")) {
                     Task { await viewModel.checkAgain() }
                 }
-                .buttonStyle(.borderedProminent)
+                .fxButtonStyle(.primary, size: .large)
                 .keyboardShortcut(.defaultAction)
                 .disabled(viewModel.isChecking)
             }

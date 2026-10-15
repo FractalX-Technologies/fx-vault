@@ -28,7 +28,7 @@ struct ShareScopeNodeModel: Identifiable, Hashable {
     let id: ShareScopeNodeID
     let title: String
     let kind: Kind
-    /// nil for leaves (items, and environments without items), so `OutlineGroup` shows no
+    /// nil for leaves (items, and environments without items), so the tree shows no
     /// disclosure triangle.
     let children: [ShareScopeNodeModel]?
 }

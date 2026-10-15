@@ -11,6 +11,7 @@ import VaultCore
 struct DuplicateEnvironmentScreen: View {
     @State private var viewModel: DuplicateEnvironmentViewModel
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var isNameFocused: Bool
 
     init(context: EnvironmentContext, dependencies: FeatureDependencies) {
         _viewModel = State(initialValue: DuplicateEnvironmentViewModel(context: context, dependencies: dependencies))
@@ -19,6 +20,7 @@ struct DuplicateEnvironmentScreen: View {
     var body: some View {
         @Bindable var viewModel = viewModel
         ConfigEditorSheet(
+            eyebrow: String(localized: "environment.sheet.eyebrow", defaultValue: "Environment"),
             title: String(localized: "environment.duplicate.title", defaultValue: "Duplicate Environment"),
             subtitle: viewModel.subtitle,
             primaryTitle: String(localized: "environment.duplicate.submit", defaultValue: "Duplicate"),
@@ -28,40 +30,39 @@ struct DuplicateEnvironmentScreen: View {
             onPrimary: duplicate
         ) {
             if let error = viewModel.loadError {
-                Section {
-                    ConfigEditorNoteView(note: .error(error.message))
-                }
+                Banner(.danger, message: error.message)
             } else if !viewModel.isLoaded {
-                Section {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity)
-                }
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity)
             } else {
                 if let reason = viewModel.readOnlyReason {
-                    Section {
-                        ConfigEditorNoteView(note: .warning(reason.localizedExplanation))
-                    }
+                    Banner(.warning, message: reason.localizedExplanation, systemImage: "lock")
                 }
-                Section {
-                    TextField(
-                        String(localized: "environment.duplicate.field", defaultValue: "New environment name"),
-                        text: $viewModel.name,
-                        prompt: Text(verbatim: "production")
+                ConfigSheetField(String(localized: "environment.duplicate.field", defaultValue: "New environment name")) {
+                    EnvironmentNameField(
+                        title: String(localized: "environment.duplicate.field", defaultValue: "New environment name"),
+                        name: $viewModel.name,
+                        prompt: "production",
+                        isInvalid: viewModel.nameStatus.note?.isError ?? false,
+                        isFocused: $isNameFocused
                     )
-                    .autocorrectionDisabled()
                     .disabled(!viewModel.canEdit)
                     if let note = viewModel.nameStatus.note {
                         ConfigEditorNoteView(note: note)
                     }
                 }
-                Section {
-                    if let summary = viewModel.summary {
-                        ConfigEditorNoteView(note: .info(summary))
+                if viewModel.summary != nil || viewModel.valueMissingNote != nil {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                        if let summary = viewModel.summary {
+                            ConfigEditorNoteView(note: .info(summary))
+                        }
+                        if let note = viewModel.valueMissingNote {
+                            ConfigEditorNoteView(note: note)
+                        }
                     }
-                    if let note = viewModel.valueMissingNote {
-                        ConfigEditorNoteView(note: note)
-                    }
+                    .configSheetRowPadding()
+                    .fxCardBackground(.container)
                 }
             }
         }

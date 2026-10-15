@@ -30,6 +30,7 @@ FXVault/
 │   │                                  # ShellResolvingRepoCloner, ShellResolvingGitignoreChecker
 │   ├── Screens/
 │   │   ├── Root/RootScreen.swift    # phase switch, onOpenURL, main-window opener
+│   │   │                            # (+ ShellLayout: centered card, dotted scroll, footer)
 │   │   ├── Onboarding/              # OnboardingScreen/ViewModel, Steps/OnboardingStepViews
 │   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel,
 │   │   │                            # TouchIDOfferScreen/ViewModel (one-time offer after a
@@ -41,6 +42,8 @@ FXVault/
 │   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel
 │   │   │   ├── ConnectivityBannerView.swift  # offline / GitHub-not-responding banner,
 │   │   │   │                        # ConnectivityBannerModel, ConnectivityCopy (offline .help)
+│   │   │   ├── MainColumnSelection.swift  # Up/Down selection of the custom-drawn sidebar and
+│   │   │   │                        # scope rows (pure helper + modifier)
 │   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel
 │   │   │   ├── ScopeList/           # ScopeListView/ViewModel ("Repository" + environments)
 │   │   │   ├── RepoDetail/          # RepoDetailScreen/ViewModel, ConfigTableView
@@ -49,7 +52,8 @@ FXVault/
 │   │   │                            # ItemEditorModels, ItemEditorError, ConfigRepository+Editor,
 │   │   │                            # ConfigKind+ItemEditor, CredentialReason+ItemEditor extensions
 │   │   ├── Environment/             # New / Settings / Rename / Duplicate Environment Screen+ViewModel,
-│   │   │                            # EnvironmentDirectoryModel, EnvironmentPlanNoteView
+│   │   │                            # EnvironmentDirectoryModel, EnvironmentPlanNoteView,
+│   │   │                            # EnvironmentNameField (mono name input)
 │   │   ├── Sync/                    # SyncScreen/ViewModel, SyncService (seam), SyncModels,
 │   │   │                            # SyncCopy, Summary/Deletions/Run/Result views, SyncIssueRow
 │   │   ├── Drift/                   # DriftReviewScreen/ViewModel, DriftService (seam), DriftCopy,
@@ -66,7 +70,7 @@ FXVault/
 │   │   │                            # Model/View (tri-state), ShareContentSummaryView,
 │   │   │                            # ShareImportPlanEditor/PreviewView, SASCodeView,
 │   │   │                            # NearbyNetworking, ShareRepositoryImporter, ShareFileDelivery,
-│   │   │                            # ShareStagingFolder, ShareLocalIdentityModel, ShareSheetHeader,
+│   │   │                            # ShareStagingFolder, ShareLocalIdentityModel, ShareSheetComponents,
 │   │   │                            # SharingError and SharingKit-type +Extension files
 │   │   ├── NearbyChat/              # Window › Nearby Chat (v0.2.0, its own scene): NearbyChatScreen/
 │   │   │                            # ViewModel, NearbyChatModels, NearbyChatNetworking, ChatPeerList,
@@ -77,11 +81,20 @@ FXVault/
 │   │   └── Preferences/             # PreferencesScreen/ViewModel, General, Security(+ViewModel),
 │   │                                # Accounts(+ViewModel), Advanced
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
-│   │                                # PassphraseView, StatusChip, EmptyStateView,
-│   │                                # SyncToolbarButton, GHStatusRow, PasswordStrengthMeter,
-│   │                                # NewPasswordFields, CenteredCard, WindowAccessor, CommandRow,
-│   │                                # ErrorAlert, ConfigEditorSheet (+ ConfigEditorNote),
-│   │                                # BranchPolicyEditorView, BranchPolicyFormModel
+│   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,
+│   │   │                            # PasswordStrengthMeter, NewPasswordFields,
+│   │   │                            # WindowAccessor, CommandRow, ErrorAlert, ConfigEditorSheet
+│   │   │                            # (+ ConfigEditorNote, ConfigSheet footer/field/list),
+│   │   │                            # BranchPolicyEditorView,
+│   │   │                            # BranchPolicyFormModel
+│   │   └── Design/                  # v0.3.0 design components (docs/DESIGN.md): FXButtonStyle
+│   │                                # (+ FXIconButtonStyle), SectionLabel, StatusChip, Card
+│   │                                # (+ HairlineDivider), FXTextField (+ fxInputField),
+│   │                                # SegmentedPill, Banner, DotGridBackground, BrandMark,
+│   │                                # StepCounter, SyncToolbarButton, TableStyling,
+│   │                                # WindowBackground, SheetChrome (SheetHeader,
+│   │                                # SheetCallout, FXCheckboxRow, InlineErrorView,
+│   │                                # FXLinkButtonStyle, fxSheetContent)
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
 │   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe,
 │   │                                # ConnectivityMonitor (NWPathMonitor, path sources),
@@ -97,9 +110,12 @@ FXVault/
 │   │   │                            # SyncRepositoryError, DriftRepositoryError; Error,
 │   │   │                            # Duration, PasswordStrengthModel, RepoCapabilityModel,
 │   │   │                            # GHAccountSummaryModel, BranchPatternType
-│   │   └── Theme/                   # Theme (+ Layout, Opacity), Colors, Typography, Spacing,
-│   │                                # Radius, Durations
-│   └── Resources/                   # Assets.xcassets (AppIcon, semantic colors),
+│   │   └── Theme/                   # Theme (+ Layout, Opacity, Stroke, Shadow), Colors,
+│   │                                # Typography (+ TextStyle, .fxTextStyle), FontRegistry,
+│   │                                # Spacing, Radius, Durations
+│   └── Resources/                   # Assets.xcassets (AppIcon, design color sets),
+│                                    # Fonts/ (Geist Sans + Mono 400/500/600, Geist-OFL.txt;
+│                                    # registered by ATSApplicationFontsPath),
 │                                    # Localizable.xcstrings, InfoPlist.xcstrings,
 │                                    # Credits.rtf (About panel: LICENSE + THIRD_PARTY_NOTICES.md;
 │                                    # regenerate with textutil when either changes)
@@ -119,6 +135,15 @@ FXVault/
 │   │                                # SyncConnectivity (Sync and drift review reporting, offline
 │   │                                # Sync sheet), SharingScopeTreeModel (tri-state tree),
 │   │                                # NearbyChat (window, picker, save preview, wipe)
+│   ├── DesignTokenTests.swift       # v0.3.0: every color set's light/dark values, Geist
+│   │                                # registration and fallback, OFL credits, AppIcon set
+│   ├── DesignComponentTests.swift   # v0.3.0: component resolution rules, light/dark render
+│   │                                # smoke tests, the 52 pt table row on a real NSTableView
+│   ├── SheetPresentationTests.swift # v0.3.0: Sync footer pills and shortcuts, drift banner
+│   │                                # tone, value editor frame, editor sheet sizing
+│   ├── MainScreenPresentationTests.swift # v0.3.0: column keyboard selection, initials, dates
+│   ├── VisualSnapshotTests.swift    # v0.3.0, opt-in (FXV_SNAPSHOTS_DIR): light/dark PNGs of the
+│   │                                # main screens for visual review (docs/DESIGN.md)
 │   └── <Feature>TestSupport.swift   # ItemEditor, Sync, Drift, EnvFile, Sharing fakes and fixtures
 ├── Packages/FXVaultKit/
 │   ├── Package.swift                # tools 6.1, macOS 14, Swift 6, MemberImportVisibility
@@ -250,11 +275,12 @@ FXVault/
 │       └── EnvToolsTests/Fixtures/sample.env     # placeholder values only
 ├── scripts/
 │   ├── ci-local.sh                  # runs the blocking CI checks locally
-│   ├── lint.sh                      # convention checks (force unwraps, print, imports, ...)
+│   ├── lint.sh                      # convention checks (force unwraps, print, imports, literal
+│   │                                # colors and fonts outside Theme and Components/Design, ...)
 │   ├── sync-strings.sh              # build, then xcstringstool sync of Localizable.xcstrings
 │   ├── check-secrets.sh             # secret scan of files git would publish
 │   ├── check-secrets-allowlist.txt  # .env keys whose values are public identifiers
-│   ├── make-icon.swift              # draws the AppIcon set
+│   ├── make-icon.swift              # draws the AppIcon set (FractalX 3x3 mark, blue center)
 │   ├── release-local.sh             # archive, sign, notarize, staple, DMG, optional publish
 │   ├── make-dmg.sh                  # DMG with an Applications link (diskutil, hdiutil fallback)
 │   └── bump-cask.sh                 # fills version and sha256 into the Homebrew cask

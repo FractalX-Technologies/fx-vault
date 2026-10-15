@@ -12,23 +12,24 @@ struct SyncRunView: View {
                 .frame(width: Theme.Layout.syncProgressWidth)
                 .accessibilityLabel(countText)
             Text(verbatim: countText)
-                .font(Theme.Typography.headline.monospacedDigit())
-                .foregroundStyle(Theme.Colors.textPrimary)
+                .fxTextStyle(.mono)
+                .monospacedDigit()
+                .foregroundStyle(Theme.Colors.ink)
             Text(verbatim: phaseText)
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .fxTextStyle(.callout)
+                .foregroundStyle(Theme.Colors.mutedText)
                 .lineLimit(1)
                 .truncationMode(.middle)
             if let writeBudgetLine {
                 Text(verbatim: writeBudgetLine)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.statusLine)
+                    .foregroundStyle(Theme.Colors.subtleText)
                     .help(SyncCopy.writeBudgetHelp)
             }
             Spacer()
         }
         .frame(maxWidth: .infinity)
-        .padding(Theme.Spacing.xLarge)
+        .padding(Theme.Spacing.xxLarge)
     }
 
     private var countText: String {

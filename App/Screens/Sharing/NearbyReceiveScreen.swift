@@ -18,9 +18,9 @@ struct NearbyReceiveScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            ShareSheetHeader(
-                systemImage: "dot.radiowaves.left.and.right",
+        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+            SheetHeader(
+                label: ShareSheetLabel.nearby,
                 title: String(localized: "nearbyReceive.title", defaultValue: "Receive Nearby"),
                 subtitle: String(
                     localized: "nearbyReceive.subtitle",
@@ -28,12 +28,11 @@ struct NearbyReceiveScreen: View {
                 ),
                 isExperimental: true
             )
-            Divider()
             content
             Spacer(minLength: 0)
             footer
         }
-        .padding(Theme.Spacing.xLarge)
+        .fxSheetContent()
         .frame(width: Theme.Layout.shareSheetWidth)
         .frame(minHeight: Theme.Layout.shareSheetMinHeight)
         .task { await viewModel.start() }
@@ -73,8 +72,9 @@ struct NearbyReceiveScreen: View {
                 ShareImportResultView(result: result)
             }
         case .declined:
-            ShareNoteView(
+            SheetCallout(
                 systemImage: "xmark.circle",
+                tint: Theme.Colors.subtleText,
                 text: String(localized: "nearbyReceive.declined", defaultValue: "Declined. Nothing was imported.")
             )
         case .failed:
@@ -87,7 +87,7 @@ struct NearbyReceiveScreen: View {
             ShareNoteView(systemImage: "info.circle", text: note)
             if let editor = viewModel.editor {
                 if let reason = editor.blockReason {
-                    ShareNoteView(systemImage: "exclamationmark.octagon", text: reason.localizedMessage, tint: Theme.Colors.danger)
+                    Banner(.danger, message: reason.localizedMessage)
                     if viewModel.needsRepositoryImport {
                         ShareImportRepositoryButton(
                             title: String(
@@ -107,11 +107,12 @@ struct NearbyReceiveScreen: View {
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: Theme.Spacing.mediumMinus) {
             if viewModel.canTryAgain {
                 Button(String(localized: "nearby.receiveAgain", defaultValue: "Receive Again")) {
                     Task { await viewModel.start() }
                 }
+                .fxButtonStyle(.outline, size: .large)
             }
             Spacer()
             switch viewModel.step {
@@ -119,32 +120,36 @@ struct NearbyReceiveScreen: View {
                 Button(String(localized: "nearbyReceive.reject", defaultValue: "Reject")) {
                     Task { await viewModel.reject() }
                 }
+                .fxButtonStyle(.secondary, size: .large)
                 .keyboardShortcut(.cancelAction)
                 Button(String(localized: "nearbyReceive.accept", defaultValue: "Accept")) {
                     Task { await viewModel.accept() }
                 }
-                .buttonStyle(.borderedProminent)
+                .fxButtonStyle(.primary, size: .large)
                 .disabled(!viewModel.canAccept)
             case .confirmingPayload, .applying:
                 Button(String(localized: "nearbyReceive.rejectValues", defaultValue: "Reject")) {
                     Task { await viewModel.rejectPayload() }
                 }
+                .fxButtonStyle(.secondary, size: .large)
                 .keyboardShortcut(.cancelAction)
                 .disabled(viewModel.step == .applying)
                 Button(String(localized: "nearbyReceive.apply", defaultValue: "Import")) {
                     Task { await viewModel.apply() }
                 }
-                .buttonStyle(.borderedProminent)
+                .fxButtonStyle(.primary, size: .large)
                 .disabled(!viewModel.canApply)
             case .done, .declined, .failed:
                 Button(String(localized: "common.done", defaultValue: "Done")) {
                     dismiss()
                 }
+                .fxButtonStyle(.secondary, size: .large)
                 .keyboardShortcut(.cancelAction)
             default:
                 Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                     dismiss()
                 }
+                .fxButtonStyle(.secondary, size: .large)
                 .keyboardShortcut(.cancelAction)
             }
         }

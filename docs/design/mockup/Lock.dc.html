@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FX Vault lock screen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0B6FA4}a:hover{color:#08557E}
+.fx-dots{background-color:#F6F5F3;background-image:radial-gradient(rgba(11,12,14,0.14) 1px, transparent 1px);background-size:22px 22px}
+</style>
+</helmet>
+<div style="width: 960px; height: 640px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; border-radius: 14px; border: 1px solid rgba(11,12,14,0.18); background: #F6F5F3; color: #0B0C0E; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px">
+  <header style="height: 44px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px" aria-hidden="true">
+    <span style="width: 12px; height: 12px; border-radius: 6px; background: #D6D2CB"></span>
+    <span style="width: 12px; height: 12px; border-radius: 6px; background: #D6D2CB"></span>
+    <span style="width: 12px; height: 12px; border-radius: 6px; background: #D6D2CB"></span>
+  </header>
+  <div class="fx-dots" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 0 64px 44px">
+    <svg viewBox="0 0 3 3" width="44" height="44" fill="#0B0C0E" role="img" aria-label="FractalX"><rect x="0" y="0" width="0.86" height="0.86"></rect><rect x="1.07" y="0" width="0.86" height="0.86"></rect><rect x="2.14" y="0" width="0.86" height="0.86"></rect><rect x="0" y="1.07" width="0.86" height="0.86"></rect><rect x="2.14" y="1.07" width="0.86" height="0.86"></rect><rect x="0" y="2.14" width="0.86" height="0.86"></rect><rect x="1.07" y="2.14" width="0.86" height="0.86"></rect><rect x="2.14" y="2.14" width="0.86" height="0.86"></rect></svg>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+      <h1 style="margin: 0; font-size: 44px; line-height: 46px; font-weight: 500; letter-spacing: -1.8px">FX Vault is locked.</h1>
+      <p style="margin: 0; font-size: 17px; line-height: 26px; color: #454D56">Your secrets stay encrypted on this Mac until you unlock.</p>
+    </div>
+    <form style="display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: 360px">
+      <label for="pw" style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: #5F6874">MASTER PASSWORD</label>
+      <div style="display: flex; gap: 8px">
+        <input id="pw" type="password" value="correct-horse" style="flex: 1; height: 44px; box-sizing: border-box; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(11,12,14,0.18); background: #FFFFFF; color: #0B0C0E; font: inherit; font-size: 15px; outline: none">
+        <button type="submit" style="height: 44px; padding: 0 22px; border-radius: 999px; border: 0; background: #0B0C0E; color: #F6F5F3; font: inherit; font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">
+          Unlock
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+        </button>
+      </div>
+      <button type="button" style="height: 44px; border-radius: 999px; border: 0; background: #E4E1DB; color: #0B0C0E; font: inherit; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6.5 7.5A7.5 7.5 0 0 1 19.5 12"></path><path d="M4.5 12a7.5 7.5 0 0 1 .6-3"></path><path d="M8 16.5A5 5 0 0 1 7 12a5 5 0 0 1 10 0v1"></path><path d="M12 12v3.5a6 6 0 0 0 1.2 3.6"></path><path d="M16.8 16a8 8 0 0 1-.6 3"></path><path d="M9.5 20a9 9 0 0 1-1-3"></path></svg>
+        Unlock with Touch ID
+      </button>
+      <div style="display: flex; justify-content: space-between; margin-top: 4px">
+        <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.06em; color: #5F6874">PASSWORD REQUIRED AFTER RESTART</span>
+        <a href="#" style="font-size: 13px; text-decoration: none">Use recovery key</a>
+      </div>
+    </form>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

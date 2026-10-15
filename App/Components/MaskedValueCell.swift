@@ -23,16 +23,17 @@ struct MaskedValueCell: View {
         case .plain(let value):
             valueText(value, isMasked: false)
         case .masked, .revealed:
-            HStack(spacing: Theme.Spacing.small) {
+            HStack(spacing: Theme.Spacing.mediumMinus) {
                 valueText(revealed ?? Self.mask, isMasked: revealed == nil)
-                Spacer(minLength: 0)
                 if let onToggle {
                     Button(action: onToggle) {
-                        Image(systemName: revealed == nil ? "eye" : "eye.slash")
+                        Label(
+                            revealed == nil ? Self.revealTitle : Self.hideTitle,
+                            systemImage: revealed == nil ? "eye" : "eye.slash"
+                        )
                     }
-                    .buttonStyle(.borderless)
+                    .fxIconButtonStyle(.ghost)
                     .help(revealed == nil ? Self.revealTitle : Self.hideTitle)
-                    .accessibilityLabel(revealed == nil ? Self.revealTitle : Self.hideTitle)
                 }
             }
         }
@@ -43,10 +44,11 @@ struct MaskedValueCell: View {
         return nil
     }
 
+    /// Masked dots in the spaced mono style (`mutedText`); values in mono `ink` (mockup Main).
     private func valueText(_ text: String, isMasked: Bool) -> some View {
         Text(verbatim: text)
-            .font(Theme.Typography.monospaced)
-            .foregroundStyle(isMasked ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
+            .fxTextStyle(isMasked ? .monoValue : .monoName)
+            .foregroundStyle(isMasked ? Theme.Colors.mutedText : Theme.Colors.ink)
             .lineLimit(1)
             .truncationMode(.tail)
             .textSelection(.disabled)
@@ -68,5 +70,6 @@ struct MaskedValueCell: View {
         MaskedValueCell(display: .plain("https://example.com"), onToggle: nil)
         MaskedValueCell(display: .missing, onToggle: nil)
     }
-    .padding()
+    .padding(Theme.Spacing.large)
+    .background(Theme.Colors.card)
 }

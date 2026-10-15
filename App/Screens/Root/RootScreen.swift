@@ -15,7 +15,7 @@ struct RootScreen: View {
                 minHeight: Theme.Layout.windowMinHeight,
                 maxHeight: .infinity
             )
-            .background(Theme.Colors.background)
+            .background(Theme.Colors.ground)
             .background(WindowAccessor { window in
                 viewModel.attachMainWindow(window)
             })
@@ -66,10 +66,10 @@ struct StartupFailureScreen: View {
             Button(String(localized: "startup.failed.quit", defaultValue: "Quit FX Vault")) {
                 NSApp.terminate(nil)
             }
-            .buttonStyle(.borderedProminent)
+            .fxButtonStyle(.primary, size: .large)
         }
         .frame(minWidth: Theme.Layout.windowMinWidth, minHeight: Theme.Layout.windowMinHeight)
-        .background(Theme.Colors.background)
+        .background(Theme.Colors.ground)
     }
 }
 

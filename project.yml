@@ -45,6 +45,9 @@ targets:
         LSApplicationCategoryType: public.app-category.developer-tools
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         NSHumanReadableCopyright: Copyright (c) 2026 FractalX. MIT License.
+        # Geist Sans and Geist Mono (OFL 1.1, App/Resources/Fonts). The synced App folder copies
+        # them flat into Contents/Resources, so the path is "." (relative to Resources).
+        ATSApplicationFontsPath: .
         NSLocalNetworkUsageDescription: FX Vault uses the local network to share configuration and chat with a nearby teammate.
         NSBonjourServices:
           - _fxvault-share._tcp
@@ -73,7 +76,7 @@ targets:
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
         SWIFT_APPROACHABLE_CONCURRENCY: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: Accent
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: Brand
         ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOLS: YES
         ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
         COMBINE_HIDPI_IMAGES: YES

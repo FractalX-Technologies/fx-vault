@@ -7,19 +7,19 @@ import VaultData
 struct ChatAttachmentPickerSheet: View {
     let viewModel: ChatAttachmentPickerViewModel
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var isSearchFocused: Bool
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            ShareSheetHeader(
-                systemImage: "paperclip",
+        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+            SheetHeader(
+                label: ShareSheetLabel.nearbyChat,
                 title: String(localized: "chat.picker.title", defaultValue: "Attach Secret or Variable"),
                 subtitle: String(
                     localized: "chat.picker.subtitle",
                     defaultValue: "Your teammate sees the name, kind and scope. The value is sent only if they save it."
                 )
             )
-            Divider()
             switch viewModel.step {
             case .authenticating:
                 ShareReauthView(
@@ -35,21 +35,22 @@ struct ChatAttachmentPickerSheet: View {
                 chooser
             }
             Spacer(minLength: 0)
-            HStack {
+            HStack(spacing: Theme.Spacing.mediumMinus) {
                 Spacer()
                 Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                     dismiss()
                 }
+                .fxButtonStyle(.secondary, size: .large)
                 .keyboardShortcut(.cancelAction)
                 Button(String(localized: "chat.picker.send", defaultValue: "Attach")) {
                     Task { await viewModel.send() }
                 }
-                .buttonStyle(.borderedProminent)
+                .fxButtonStyle(.primary, size: .large)
                 .keyboardShortcut(.defaultAction)
                 .disabled(!viewModel.canSend)
             }
         }
-        .padding(Theme.Spacing.xLarge)
+        .fxSheetContent()
         .frame(width: Theme.Layout.chatPickerWidth)
         .task { await viewModel.begin() }
         .onDisappear { viewModel.close() }
@@ -63,7 +64,8 @@ struct ChatAttachmentPickerSheet: View {
                 String(localized: "chat.picker.search", defaultValue: "Search by name, repository or environment"),
                 text: $viewModel.query
             )
-            .textFieldStyle(.roundedBorder)
+            .focused($isSearchFocused)
+            .fxInputField(.pill, isFocused: isSearchFocused)
             if let error = viewModel.loadError {
                 InlineErrorView(error: error)
             } else if viewModel.sections.isEmpty {
@@ -71,31 +73,42 @@ struct ChatAttachmentPickerSheet: View {
                     localized: "chat.picker.empty",
                     defaultValue: "No secret or variable with a value matches."
                 ))
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .fxTextStyle(.callout)
+                .foregroundStyle(Theme.Colors.mutedText)
                 .frame(maxWidth: .infinity, minHeight: Theme.Layout.chatPickerListHeight)
             } else {
                 List(selection: $viewModel.selectedID) {
                     ForEach(viewModel.sections) { section in
-                        Section(sectionTitle(section)) {
+                        Section {
                             ForEach(section.items) { item in
                                 HStack(spacing: Theme.Spacing.small) {
-                                    Image(systemName: item.kind == .secret ? "key.fill" : "textformat")
-                                        .foregroundStyle(Theme.Colors.textSecondary)
+                                    Image(systemName: item.kind == .secret ? "key" : "textformat")
+                                        .font(Theme.Typography.callout)
+                                        .foregroundStyle(Theme.Colors.onSelectionSecondary)
                                         .accessibilityHidden(true)
                                     Text(verbatim: item.name)
-                                        .font(Theme.Typography.monospaced)
+                                        .fxTextStyle(.monoName)
                                         .lineLimit(1)
+                                        .truncationMode(.middle)
                                     Spacer()
+                                    // Hierarchical styles, so the row still reads on the selection highlight.
                                     Text(item.kind.editorTitle)
-                                        .font(Theme.Typography.caption)
-                                        .foregroundStyle(Theme.Colors.textSecondary)
+                                        .fxTextStyle(.caption)
+                                        .foregroundStyle(Theme.Colors.onSelectionSecondary)
                                 }
+                                .frame(minHeight: Theme.Layout.scopeRowHeight)
                                 .tag(item.id)
                             }
+                        } header: {
+                            Text(verbatim: sectionTitle(section))
+                                .fxTextStyle(.monoMeta)
+                                .foregroundStyle(Theme.Colors.subtleText)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
                     }
                 }
+                .shareListContainer()
                 .frame(height: Theme.Layout.chatPickerListHeight)
             }
         }

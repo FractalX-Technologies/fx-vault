@@ -150,6 +150,11 @@ enum CreateRepoEditorRoute: Identifiable {
 
 /// Localized text shared by the New Repository views and view models.
 nonisolated enum CreateRepoText {
+    /// The eyebrow of the New Repository sheet and its nested editors.
+    static var eyebrow: String {
+        String(localized: "createRepo.eyebrow", defaultValue: "New repository")
+    }
+
     static func policySummary(_ policy: BranchPolicyDraftModel) -> String {
         switch policy {
         case .all:

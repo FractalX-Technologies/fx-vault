@@ -6,54 +6,88 @@ struct SyncResultView: View {
     let viewModel: SyncViewModel
 
     var body: some View {
-        Form {
-            if let stop = viewModel.stopReason {
-                Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+                if let stop = viewModel.stopReason {
                     SyncIssueRow(issue: stop, systemImage: "pause.circle", tint: Theme.Colors.warning) {
                         viewModel.perform($0)
                     }
+                    .configSheetRowPadding()
+                    .background(Theme.Colors.surface2, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
+                            .strokeBorder(Theme.Colors.hairlineStrong, lineWidth: Theme.Stroke.hairline)
+                    )
                 }
-            }
-            if !viewModel.clones.isEmpty {
-                Section(String(localized: "sync.result.clones", defaultValue: "Clones")) {
-                    ForEach(viewModel.clones) { clone in
-                        SyncCloneRow(row: clone, fix: viewModel.cloneFix(clone)) { viewModel.perform($0) }
-                    }
-                }
-            }
-            ForEach(viewModel.resultSections) { section in
-                Section {
-                    if section.kind == .succeeded {
-                        DisclosureGroup(String(
-                            localized: "sync.result.succeeded.count",
-                            defaultValue: "\(section.rows.count) changes"
-                        )) {
-                            rows(section)
+                if !viewModel.clones.isEmpty {
+                    ConfigSheetField(String(localized: "sync.result.clones", defaultValue: "Clones")) {
+                        ConfigSheetList(viewModel.clones) { clone in
+                            SyncCloneRow(row: clone, fix: viewModel.cloneFix(clone)) { viewModel.perform($0) }
                         }
-                    } else {
-                        rows(section)
                     }
-                } header: {
-                    Label(section.kind.title, systemImage: section.kind.systemImage)
-                        .foregroundStyle(section.kind.tint)
+                }
+                ForEach(viewModel.resultSections) { section in
+                    resultSection(section)
+                }
+                if !viewModel.warnings.isEmpty {
+                    ConfigSheetField(String(localized: "sync.result.warnings", defaultValue: "Good to know")) {
+                        ForEach(viewModel.warnings, id: \.self) { warning in
+                            SyncNoteRow(text: warning, systemImage: "info.circle")
+                        }
+                    }
                 }
             }
-            if !viewModel.warnings.isEmpty {
-                Section(String(localized: "sync.result.warnings", defaultValue: "Good to know")) {
-                    ForEach(viewModel.warnings, id: \.self) { warning in
-                        SyncNoteRow(text: warning, systemImage: "info.circle")
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.Spacing.xxLarge)
+            .padding(.bottom, Theme.Spacing.xLarge)
+        }
+    }
+
+    private func resultSection(_ section: SyncResultSectionModel) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
+            HStack(spacing: Theme.Spacing.smallMinus) {
+                Image(systemName: section.kind.systemImage)
+                    .foregroundStyle(section.kind.tint)
+                    .accessibilityHidden(true)
+                SectionLabel(section.kind.title)
+                if section.kind != .succeeded {
+                    Text(verbatim: "\(section.rows.count)")
+                        .fxTextStyle(.monoMeta)
+                        .foregroundStyle(Theme.Colors.subtleText)
+                        .accessibilityHidden(true)
+                }
+            }
+            if section.kind == .succeeded {
+                DisclosureGroup {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(section.rows) { issue in
+                            HairlineDivider()
+                            row(issue, in: section)
+                                .configSheetRowPadding()
+                        }
                     }
+                } label: {
+                    Text(String(
+                        localized: "sync.result.succeeded.count",
+                        defaultValue: "\(section.rows.count) changes"
+                    ))
+                    .fxTextStyle(.callout)
+                    .foregroundStyle(Theme.Colors.ink)
+                }
+                .padding(.vertical, Theme.Spacing.small)
+                .padding(.horizontal, Theme.Spacing.large)
+                .fxCardBackground(.container)
+            } else {
+                ConfigSheetList(section.rows) { issue in
+                    row(issue, in: section)
                 }
             }
         }
-        .formStyle(.grouped)
     }
 
-    private func rows(_ section: SyncResultSectionModel) -> some View {
-        ForEach(section.rows) { issue in
-            SyncIssueRow(issue: issue, systemImage: section.kind.systemImage, tint: section.kind.tint) {
-                viewModel.perform($0)
-            }
+    private func row(_ issue: SyncIssueModel, in section: SyncResultSectionModel) -> some View {
+        SyncIssueRow(issue: issue, systemImage: section.kind.systemImage, tint: section.kind.tint) {
+            viewModel.perform($0)
         }
     }
 }
@@ -66,12 +100,13 @@ private struct SyncCloneRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.small) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
                 Text(verbatim: row.fullName)
-                    .font(Theme.Typography.body)
+                    .fxTextStyle(.monoName)
+                    .foregroundStyle(Theme.Colors.ink)
                 Text(verbatim: detail)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -81,7 +116,7 @@ private struct SyncCloneRow: View {
                     .controlSize(.small)
             } else if let fix {
                 Button(SyncCopy.fixTitle(fix)) { onFix(fix) }
-                    .controlSize(.small)
+                    .fxButtonStyle(.outline)
             }
         }
     }
@@ -117,7 +152,7 @@ extension SyncResultSectionModel.Kind {
         switch self {
         case .succeeded: Theme.Colors.success
         case .failed, .blocked: Theme.Colors.danger
-        case .skipped: Theme.Colors.textSecondary
+        case .skipped: Theme.Colors.subtleText
         }
     }
 }

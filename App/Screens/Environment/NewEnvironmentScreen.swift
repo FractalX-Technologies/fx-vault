@@ -9,6 +9,7 @@ import VaultCore
 struct NewEnvironmentScreen: View {
     @State private var viewModel: NewEnvironmentViewModel
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var isNameFocused: Bool
 
     init(context: NewEnvironmentContext, dependencies: FeatureDependencies) {
         _viewModel = State(initialValue: NewEnvironmentViewModel(context: context, dependencies: dependencies))
@@ -17,6 +18,7 @@ struct NewEnvironmentScreen: View {
     var body: some View {
         @Bindable var viewModel = viewModel
         ConfigEditorSheet(
+            eyebrow: String(localized: "environment.sheet.eyebrow", defaultValue: "Environment"),
             title: String(localized: "environment.new.title", defaultValue: "New Environment"),
             subtitle: viewModel.subtitle,
             primaryTitle: String(localized: "environment.new.create", defaultValue: "Create"),
@@ -26,22 +28,19 @@ struct NewEnvironmentScreen: View {
             onPrimary: create
         ) {
             if let error = viewModel.loadError {
-                Section {
-                    ConfigEditorNoteView(note: .error(error.message))
-                }
+                Banner(.danger, message: error.message)
             } else {
                 if let reason = viewModel.readOnlyReason {
-                    Section {
-                        ConfigEditorNoteView(note: .warning(reason.localizedExplanation))
-                    }
+                    Banner(.warning, message: reason.localizedExplanation, systemImage: "lock")
                 }
-                Section {
-                    TextField(
-                        String(localized: "environment.name", defaultValue: "Name"),
-                        text: $viewModel.name,
-                        prompt: Text(verbatim: "staging")
+                ConfigSheetField(String(localized: "environment.name", defaultValue: "Name")) {
+                    EnvironmentNameField(
+                        title: String(localized: "environment.name", defaultValue: "Name"),
+                        name: $viewModel.name,
+                        prompt: "staging",
+                        isInvalid: viewModel.nameStatus.note?.isError ?? false,
+                        isFocused: $isNameFocused
                     )
-                    .autocorrectionDisabled()
                     .disabled(!viewModel.canEdit)
                     if let note = viewModel.nameStatus.note {
                         ConfigEditorNoteView(note: note)
@@ -49,9 +48,7 @@ struct NewEnvironmentScreen: View {
                 }
                 BranchPolicyEditorView(form: $viewModel.policy, isEnabled: viewModel.canEdit)
                 if viewModel.showsPlanNote {
-                    Section {
-                        EnvironmentPlanNoteView(isPlanGated: viewModel.isPlanGated)
-                    }
+                    EnvironmentPlanNoteView(isPlanGated: viewModel.isPlanGated)
                 }
             }
         }

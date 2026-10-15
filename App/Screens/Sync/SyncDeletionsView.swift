@@ -7,9 +7,9 @@ struct SyncDeletionsView: View {
     @Bindable var viewModel: SyncViewModel
 
     var body: some View {
-        Form {
-            if viewModel.deletionPreviews == nil {
-                Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+                if viewModel.deletionPreviews == nil {
                     HStack(spacing: Theme.Spacing.small) {
                         ProgressView()
                             .controlSize(.small)
@@ -17,44 +17,70 @@ struct SyncDeletionsView: View {
                             localized: "sync.deletions.loading",
                             defaultValue: "Fetching what GitHub has in the environments being deleted…"
                         ))
-                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .fxTextStyle(.callout)
+                        .foregroundStyle(Theme.Colors.mutedText)
                     }
-                }
-            } else {
-                ForEach(viewModel.deletionRows) { repository in
-                    Section {
-                        ForEach(repository.items) { item in
-                            Label(item.title, systemImage: "trash")
-                                .foregroundStyle(Theme.Colors.textPrimary)
-                        }
-                        ForEach(repository.environments) { environment in
-                            SyncDeletionEnvironmentRow(environment: environment)
-                        }
-                    } header: {
-                        Text(verbatim: repository.fullName)
-                            .font(Theme.Typography.headline)
+                } else {
+                    ForEach(viewModel.deletionRows) { repository in
+                        repositoryBlock(repository)
                     }
+                    acknowledgements
                 }
-                acknowledgementSection
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.Spacing.xxLarge)
+            .padding(.bottom, Theme.Spacing.xLarge)
         }
-        .formStyle(.grouped)
         .onKeyPress(.return) { .handled }
     }
 
-    private var acknowledgementSection: some View {
-        Section {
+    private func repositoryBlock(_ repository: SyncDeletionRepoModel) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
+            Text(verbatim: repository.fullName)
+                .fxTextStyle(.monoName)
+                .foregroundStyle(Theme.Colors.ink)
+                .accessibilityAddTraits(.isHeader)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(repository.items.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 {
+                        HairlineDivider()
+                    }
+                    Label {
+                        Text(verbatim: item.title)
+                            .fxTextStyle(.body)
+                            .foregroundStyle(Theme.Colors.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "trash")
+                            .foregroundStyle(Theme.Colors.danger)
+                    }
+                    .configSheetRowPadding()
+                }
+                ForEach(Array(repository.environments.enumerated()), id: \.element.id) { index, environment in
+                    if index > 0 || !repository.items.isEmpty {
+                        HairlineDivider()
+                    }
+                    SyncDeletionEnvironmentRow(environment: environment)
+                        .configSheetRowPadding()
+                }
+            }
+            .fxCardBackground(.container)
+        }
+    }
+
+    private var acknowledgements: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
             if viewModel.hasUnknownContents {
-                Toggle(
-                    String(
+                FXCheckboxRow(
+                    title: String(
                         localized: "sync.deletions.unknownAck",
                         defaultValue: "Delete even though FX Vault could not see what some environments contain"
                     ),
                     isOn: $viewModel.unknownContentsAcknowledged
                 )
             }
-            Toggle(
-                String(localized: "sync.deletions.ack", defaultValue: "I understand this cannot be undone"),
+            FXCheckboxRow(
+                title: String(localized: "sync.deletions.ack", defaultValue: "I understand this cannot be undone"),
                 isOn: $viewModel.deletionsAcknowledged
             )
         }
@@ -66,22 +92,24 @@ private struct SyncDeletionEnvironmentRow: View {
     let environment: SyncDeletionEnvironmentModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-            Label(
-                String(localized: "sync.deletions.environment", defaultValue: "Delete environment \(environment.name)"),
-                systemImage: "trash"
-            )
-            .font(Theme.Typography.body.weight(.medium))
-            .foregroundStyle(Theme.Colors.textPrimary)
+        VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
+            Label {
+                Text(String(localized: "sync.deletions.environment", defaultValue: "Delete environment \(environment.name)"))
+                    .fxTextStyle(.bodyEmphasized)
+                    .foregroundStyle(Theme.Colors.ink)
+            } icon: {
+                Image(systemName: "trash")
+                    .foregroundStyle(Theme.Colors.danger)
+            }
             contents
             Text(String(
                 localized: "sync.deletions.workflowWarning",
                 defaultValue: "Workflows that still reference \(environment.name) will recreate it empty."
             ))
-            .font(Theme.Typography.caption)
-            .foregroundStyle(Theme.Colors.textSecondary)
+            .fxTextStyle(.caption)
+            .foregroundStyle(Theme.Colors.mutedText)
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.vertical, Theme.Spacing.xxSmall)
     }
 
     @ViewBuilder
@@ -91,15 +119,16 @@ private struct SyncDeletionEnvironmentRow: View {
             ForEach(items) { item in
                 HStack(spacing: Theme.Spacing.small) {
                     Text(verbatim: item.title)
-                        .font(Theme.Typography.callout.monospaced())
-                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .fxTextStyle(.monoName)
+                        .foregroundStyle(Theme.Colors.ink)
+                        .textSelection(.enabled)
                     if item.willBeLost {
                         StatusChip(
                             title: String(
                                 localized: "sync.deletions.willBeLost",
                                 defaultValue: "not in your vault: will be lost"
                             ),
-                            tint: Theme.Colors.danger
+                            tone: .danger
                         )
                     }
                 }
@@ -122,7 +151,7 @@ private struct SyncDeletionEnvironmentRow: View {
         case .unknown(let reason):
             Label {
                 Text(String(localized: "sync.deletions.unknown", defaultValue: "Contents unknown. \(reason)"))
-                    .font(Theme.Typography.caption)
+                    .fxTextStyle(.caption)
                     .fixedSize(horizontal: false, vertical: true)
             } icon: {
                 Image(systemName: "questionmark.diamond")
@@ -134,8 +163,8 @@ private struct SyncDeletionEnvironmentRow: View {
 
     private func caption(_ text: String) -> some View {
         Text(verbatim: text)
-            .font(Theme.Typography.caption)
-            .foregroundStyle(Theme.Colors.textSecondary)
+            .fxTextStyle(.caption)
+            .foregroundStyle(Theme.Colors.mutedText)
             .padding(.leading, Theme.Spacing.large)
             .fixedSize(horizontal: false, vertical: true)
     }

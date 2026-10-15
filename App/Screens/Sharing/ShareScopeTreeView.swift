@@ -2,21 +2,79 @@ import SwiftUI
 
 /// The scope tree with tri-state checkboxes (§10 `ShareExportScreen`, v0.2.0): repository,
 /// repository level, environments, items. See ``ShareScopeTreeModel`` for the rules.
+///
+/// The repository row starts expanded, so its scopes fill the box; the box grows up to
+/// `shareListHeight` and gives way down to `shareListMinHeight` when the sheet is short.
 struct ShareScopeTreeView: View {
     let tree: ShareScopeTreeModel
     /// `true` checks everything under the row, `false` unchecks it.
     let onCheck: (Bool, ShareScopeNodeModel) -> Void
+    @State private var expanded: Set<ShareScopeNodeID>
+
+    init(tree: ShareScopeTreeModel, onCheck: @escaping (Bool, ShareScopeNodeModel) -> Void) {
+        self.tree = tree
+        self.onCheck = onCheck
+        _expanded = State(initialValue: [tree.root.id])
+    }
 
     var body: some View {
         List {
-            OutlineGroup(tree.root, children: \.children) { node in
-                ShareScopeTreeRow(node: node, state: tree.state(of: node)) {
-                    onCheck(tree.state(of: node) != .checked, node)
+            ShareScopeTreeNode(node: tree.root, tree: tree, expanded: $expanded, onCheck: onCheck)
+        }
+        .shareListContainer()
+        .frame(minHeight: Theme.Layout.shareListMinHeight, maxHeight: Theme.Layout.shareListHeight)
+    }
+}
+
+/// One node and, when expanded, its children (a disclosure group per node with children).
+private struct ShareScopeTreeNode: View {
+    let node: ShareScopeNodeModel
+    let tree: ShareScopeTreeModel
+    @Binding var expanded: Set<ShareScopeNodeID>
+    let onCheck: (Bool, ShareScopeNodeModel) -> Void
+
+    var body: some View {
+        if let children = node.children {
+            DisclosureGroup(isExpanded: isExpanded) {
+                ForEach(children) { child in
+                    ShareScopeTreeNode(node: child, tree: tree, expanded: $expanded, onCheck: onCheck)
                 }
+            } label: {
+                row
+            }
+        } else {
+            row
+        }
+    }
+
+    private var row: some View {
+        ShareScopeTreeRow(node: node, state: tree.state(of: node)) {
+            onCheck(tree.state(of: node) != .checked, node)
+        }
+        .listRowSeparator(.visible)
+        .listRowSeparatorTint(Theme.Colors.hairline)
+    }
+
+    private var isExpanded: Binding<Bool> {
+        Binding {
+            expanded.contains(node.id)
+        } set: { isExpanded in
+            if isExpanded {
+                expanded.insert(node.id)
+            } else {
+                expanded.remove(node.id)
             }
         }
-        .listStyle(.inset(alternatesRowBackgrounds: false))
-        .frame(height: Theme.Layout.shareListHeight)
+    }
+}
+
+extension View {
+    /// A native `List` inside the sharing sheets as a hairline container (16 pt corners, `card`
+    /// fill, no stripes), like the tables of the main window.
+    func shareListContainer() -> some View {
+        listStyle(.inset(alternatesRowBackgrounds: false))
+            .scrollContentBackground(.hidden)
+            .fxCardBackground(.container)
     }
 }
 
@@ -30,17 +88,22 @@ private struct ShareScopeTreeRow: View {
         Button(action: onToggle) {
             HStack(spacing: Theme.Spacing.small) {
                 Image(systemName: checkboxSymbol)
-                    .foregroundStyle(state == .unchecked ? Theme.Colors.textSecondary : Theme.Colors.accent)
+                    .font(Theme.Typography.body)
+                    .foregroundStyle(state == .unchecked ? Theme.Colors.subtleText : Theme.Colors.ink)
                     .accessibilityHidden(true)
                 Image(systemName: icon)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .font(Theme.Typography.callout)
+                    .foregroundStyle(Theme.Colors.subtleText)
                     .accessibilityHidden(true)
                 Text(verbatim: node.title)
-                    .font(isGroup ? Theme.Typography.body : Theme.Typography.monospaced)
-                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .fxTextStyle(isGroup ? .calloutEmphasized : .monoName)
+                    .foregroundStyle(Theme.Colors.ink)
                     .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer(minLength: Theme.Spacing.small)
                 notes
             }
+            .frame(minHeight: Theme.Layout.scopeRowHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -55,7 +118,7 @@ private struct ShareScopeTreeRow: View {
         case .secret(hasValue: false):
             StatusChip(
                 title: String(localized: "share.tree.byNameOnly", defaultValue: "Name only"),
-                tint: Theme.Colors.warning
+                tone: .warning
             )
             .help(String(
                 localized: "share.tree.byNameOnly.help",
@@ -64,7 +127,7 @@ private struct ShareScopeTreeRow: View {
         case .environment where state == .mixed:
             StatusChip(
                 title: String(localized: "share.tree.itemsOnly", defaultValue: "Selected items only"),
-                tint: Theme.Colors.textSecondary
+                tone: .neutral
             )
             .help(String(
                 localized: "share.tree.itemsOnly.help",
@@ -73,7 +136,7 @@ private struct ShareScopeTreeRow: View {
         case .environment where state == .checked:
             StatusChip(
                 title: String(localized: "share.tree.withPolicy", defaultValue: "With branch policy"),
-                tint: Theme.Colors.accent
+                tone: .brand
             )
             .help(String(
                 localized: "share.tree.withPolicy.help",

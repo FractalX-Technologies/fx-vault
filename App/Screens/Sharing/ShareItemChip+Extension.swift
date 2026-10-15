@@ -17,17 +17,18 @@ extension ShareItemChip {
         }
     }
 
-    var tint: Color {
+    /// Brand for what the import adds, success when it matches, warning when it needs a look.
+    var tone: StatusChip.Tone {
         switch self {
-        case .new, .fillsMissingValue: Theme.Colors.pending
-        case .same: Theme.Colors.success
-        case .differs, .otherKindExists, .valueNotIncluded: Theme.Colors.warning
-        case .existsLocally: Theme.Colors.textSecondary
-        case .deletedLocally: Theme.Colors.danger
+        case .new, .fillsMissingValue: .brand
+        case .same: .success
+        case .differs, .otherKindExists, .valueNotIncluded: .warning
+        case .existsLocally: .neutral
+        case .deletedLocally: .danger
         }
     }
 
     var chip: StatusChip {
-        StatusChip(title: localizedTitle, tint: tint)
+        StatusChip(title: localizedTitle, tone: tone)
     }
 }

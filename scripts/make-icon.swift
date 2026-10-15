@@ -2,10 +2,12 @@
 //
 // Usage: swift scripts/make-icon.swift App/Resources/Assets.xcassets/AppIcon.appiconset
 //
-// The icon is vector-drawn with Core Graphics (no SF Symbols, whose license excludes
-// app icons): a dark rounded square on Apple's 1024-point macOS grid with an accent
-// shield and a keyhole. Every size is rendered from the vector, not downscaled.
-// Output is deterministic, so re-running it produces identical files.
+// The approved FractalX icon (docs/design/mockup/Brand.dc.html, docs/DESIGN.md "App icon"):
+// a dark #0B0C0E rounded square on Apple's 1024-point macOS grid (824-point tile, standard
+// padding and drop shadow), the off-white #F6F5F3 FractalX 3x3 mark, and its center cell as a
+// brand-blue #3BA3DD outlined square: the vault. Vector-drawn with Core Graphics (no SF Symbols,
+// whose license excludes app icons); every size is rendered from the vector, not downscaled.
+// The mark geometry matches BrandMark.Geometry in the app. Output is deterministic.
 
 import CoreGraphics
 import Foundation
@@ -19,8 +21,19 @@ enum Grid {
     static let shadowBlur: CGFloat = 28
     static let shadowOffsetY: CGFloat = -12
     static let shadowAlpha: CGFloat = 0.3
-    static let strokeWidth: CGFloat = 2
-    static let strokeAlpha: CGFloat = 0.08
+    static let edgeStrokeWidth: CGFloat = 2
+    static let edgeStrokeAlpha: CGFloat = 0.08
+}
+
+/// The FractalX mark in the mockup's 3x3 viewBox: 0.86 cells on a 1.07 pitch, a 0.09 stroke.
+enum Mark {
+    /// The mark's side as a fraction of the tile (mockup: 84 of 160).
+    static let tileFraction: CGFloat = 84.0 / 160.0
+    static let gridUnits: CGFloat = 3
+    static let cell: CGFloat = 0.86
+    static let pitch: CGFloat = 1.07
+    static let centerStroke: CGFloat = 0.09
+    static let centerIndex = 4
 }
 
 struct RGB {
@@ -41,11 +54,9 @@ struct RGB {
 }
 
 enum Palette {
-    static let tileTop = RGB(hex: 0x24_24_2E)
-    static let tileBottom = RGB(hex: 0x0E_0E_13)
-    static let shieldTop = RGB(hex: 0x9B_9D_FA)
-    static let shieldBottom = RGB(hex: 0x5B_5B_D6)
-    static let keyhole = RGB(hex: 0x12_12_18)
+    static let tile = RGB(hex: 0x0B_0C_0E)      // Ink
+    static let mark = RGB(hex: 0xF6_F5_F3)      // Ground
+    static let center = RGB(hex: 0x3B_A3_DD)    // Brand (dark)
 }
 
 struct IconSize {
@@ -62,41 +73,25 @@ let sizes: [IconSize] = [16, 32, 128, 256, 512].flatMap { points in
     [IconSize(points: points, scale: 1), IconSize(points: points, scale: 2)]
 }
 
-/// Builds the shield outline in a top-left-origin 1024 space, flipped for Core Graphics.
-func shieldPath() -> CGPath {
-    let path = CGMutablePath()
-    func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x, y: Grid.canvas - y) }
-    path.move(to: p(512, 236))
-    path.addCurve(to: p(728, 312), control1: p(586, 290), control2: p(660, 312))
-    path.addLine(to: p(728, 500))
-    path.addCurve(to: p(512, 800), control1: p(728, 646), control2: p(628, 744))
-    path.addCurve(to: p(296, 500), control1: p(396, 744), control2: p(296, 646))
-    path.addLine(to: p(296, 312))
-    path.addCurve(to: p(512, 236), control1: p(364, 312), control2: p(438, 290))
-    path.closeSubpath()
-    return path
-}
-
-/// The keyhole as two shapes (head and stem), each filled on its own so their
-/// overlap never cancels out under the nonzero winding rule.
-func keyholePaths() -> [CGPath] {
-    func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x, y: Grid.canvas - y) }
-    let radius: CGFloat = 64
-    let head = CGPath(
-        ellipseIn: CGRect(x: 512 - radius, y: Grid.canvas - 470 - radius, width: radius * 2, height: radius * 2),
-        transform: nil
-    )
-    let stem = CGMutablePath()
-    stem.move(to: p(484, 480))
-    stem.addLine(to: p(540, 480))
-    stem.addLine(to: p(566, 652))
-    stem.addLine(to: p(458, 652))
-    stem.closeSubpath()
-    return [head, stem]
+/// The nine cells of the mark, row by row from the top, centered in `tile`.
+func markCells(in tile: CGRect) -> [CGRect] {
+    let side = tile.width * Mark.tileFraction
+    let unit = side / Mark.gridUnits
+    let origin = CGPoint(x: tile.midX - side / 2, y: tile.midY - side / 2)
+    return (0..<9).map { index in
+        let column = CGFloat(index % 3)
+        let row = CGFloat(index / 3)
+        // Core Graphics has a bottom-left origin: the first row is the top one.
+        return CGRect(
+            x: origin.x + column * Mark.pitch * unit,
+            y: origin.y + side - (row * Mark.pitch + Mark.cell) * unit,
+            width: Mark.cell * unit,
+            height: Mark.cell * unit
+        )
+    }
 }
 
 func drawIcon(in context: CGContext) {
-    let space = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
     let tileRect = CGRect(x: 0, y: 0, width: Grid.canvas, height: Grid.canvas)
         .insetBy(dx: Grid.tileInset, dy: Grid.tileInset)
     let tile = CGPath(roundedRect: tileRect, cornerWidth: Grid.tileRadius, cornerHeight: Grid.tileRadius, transform: nil)
@@ -108,42 +103,27 @@ func drawIcon(in context: CGContext) {
         color: CGColor(gray: 0, alpha: Grid.shadowAlpha)
     )
     context.addPath(tile)
-    context.setFillColor(Palette.tileBottom.cgColor())
+    context.setFillColor(Palette.tile.cgColor())
     context.fillPath()
     context.restoreGState()
 
-    func fillGradient(_ path: CGPath, top: RGB, bottom: RGB, from: CGFloat, to: CGFloat) {
-        let colors = [top.cgColor(), bottom.cgColor()] as CFArray
-        guard let gradient = CGGradient(colorsSpace: space, colors: colors, locations: [0, 1]) else { return }
-        context.saveGState()
-        context.addPath(path)
-        context.clip()
-        context.drawLinearGradient(
-            gradient,
-            start: CGPoint(x: Grid.canvas / 2, y: from),
-            end: CGPoint(x: Grid.canvas / 2, y: to),
-            options: []
-        )
-        context.restoreGState()
-    }
-
-    fillGradient(tile, top: Palette.tileTop, bottom: Palette.tileBottom, from: tileRect.maxY, to: tileRect.minY)
-
     context.saveGState()
     context.addPath(tile)
-    context.setStrokeColor(CGColor(gray: 1, alpha: Grid.strokeAlpha))
-    context.setLineWidth(Grid.strokeWidth)
+    context.setStrokeColor(CGColor(gray: 1, alpha: Grid.edgeStrokeAlpha))
+    context.setLineWidth(Grid.edgeStrokeWidth)
     context.strokePath()
     context.restoreGState()
 
-    let shield = shieldPath()
-    fillGradient(shield, top: Palette.shieldTop, bottom: Palette.shieldBottom, from: shield.boundingBox.maxY, to: shield.boundingBox.minY)
-
-    context.setFillColor(Palette.keyhole.cgColor())
-    for part in keyholePaths() {
-        context.addPath(part)
-        context.fillPath()
+    let cells = markCells(in: tileRect)
+    context.setFillColor(Palette.mark.cgColor())
+    for (index, cell) in cells.enumerated() where index != Mark.centerIndex {
+        context.fill(cell)
     }
+
+    let unit = tileRect.width * Mark.tileFraction / Mark.gridUnits
+    context.setStrokeColor(Palette.center.cgColor())
+    context.setLineWidth(Mark.centerStroke * unit)
+    context.stroke(cells[Mark.centerIndex])
 }
 
 enum IconError: Error {

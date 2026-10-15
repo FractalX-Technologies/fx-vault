@@ -10,21 +10,20 @@ struct ChatSaveSheet: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            ShareSheetHeader(
-                systemImage: "tray.and.arrow.down",
+        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+            SheetHeader(
+                label: ShareSheetLabel.nearbyChat,
                 title: String(localized: "chat.save.title", defaultValue: "Save to My Vault"),
                 subtitle: String(
                     localized: "chat.save.subtitle",
                     defaultValue: "\(viewModel.itemName), received in Nearby Chat. Review it before it is imported."
                 )
             )
-            Divider()
             content
             Spacer(minLength: 0)
             footer
         }
-        .padding(Theme.Spacing.xLarge)
+        .fxSheetContent()
         .frame(width: Theme.Layout.shareSheetWidth)
         .frame(minHeight: Theme.Layout.shareSheetMinHeight)
         .task { await viewModel.prepare() }
@@ -41,7 +40,7 @@ struct ChatSaveSheet: View {
             if let editor = viewModel.editor {
                 VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
                     if let reason = editor.blockReason {
-                        ShareNoteView(systemImage: "exclamationmark.octagon", text: reason.localizedMessage, tint: Theme.Colors.danger)
+                        Banner(.danger, message: reason.localizedMessage)
                         if viewModel.needsRepositoryImport {
                             ShareImportRepositoryButton(
                                 title: String(
@@ -66,8 +65,9 @@ struct ChatSaveSheet: View {
             if let failure = viewModel.failure {
                 InlineErrorView(error: failure)
             } else {
-                ShareNoteView(
+                SheetCallout(
                     systemImage: "xmark.circle",
+                    tint: Theme.Colors.subtleText,
                     text: String(localized: "chat.save.wiped", defaultValue: "Nothing was imported. The value was wiped.")
                 )
             }
@@ -75,24 +75,26 @@ struct ChatSaveSheet: View {
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: Theme.Spacing.mediumMinus) {
             Spacer()
             switch viewModel.step {
             case .done, .failed:
                 Button(String(localized: "common.done", defaultValue: "Done")) {
                     viewModel.finish()
                 }
+                .fxButtonStyle(.primary, size: .large)
                 .keyboardShortcut(.defaultAction)
             case .preparing, .preview, .applying:
                 Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                     viewModel.finish()
                 }
+                .fxButtonStyle(.secondary, size: .large)
                 .keyboardShortcut(.cancelAction)
                 .disabled(viewModel.step == .applying)
                 Button(String(localized: "shareImport.apply", defaultValue: "Import")) {
                     Task { await viewModel.apply() }
                 }
-                .buttonStyle(.borderedProminent)
+                .fxButtonStyle(.primary, size: .large)
                 .disabled(!viewModel.canApply)
             }
         }

@@ -5,11 +5,17 @@
 #   - try! and as!
 #   - force unwraps after a call or subscript: `)!` and `]!` (including `URL(string: ...)!`)
 #   - print( (use os.Logger; never log secret values)
+#   - Capsule() (the SDK default has continuous, flattened ends; use the `.pill` shape)
 #   - literal LAContext prompt strings: `localizedReason = "..."` or
 #     `localizedFallbackTitle = "..."` (prompts are built with String(localized:) in the app)
 #   - `import GRDB` / `import Clibsodium` outside the one module allowed to use each
 #     (the app never imports either; D2, §4.2)
 #   - `import VaultStore` in App/ or AppTests/ (the app reaches the database through VaultData)
+#   - design tokens (docs/DESIGN.md), in App/ outside App/Helpers/Theme and App/Components/Design:
+#     literal colors (Color(red:/white:/hue:), NSColor/CGColor component initializers, hex
+#     helpers, #colorLiteral, named system colors such as .foregroundColor(.red) or Color.blue)
+#     and literal fonts (Font.system(size:), .system(size:), Font.custom(, NSFont(name:),
+#     NSFont.systemFont(ofSize:))
 # Comment-only lines are ignored. Exit 0 when clean, 1 on any finding.
 set -euo pipefail
 
@@ -28,6 +34,7 @@ RULES=(
   'force-unwrapped URL(string:)|URL\(string:[^)]*\)!'
   'print( (use os.Logger)|(^|[^A-Za-z0-9_.])print\('
   'literal localizedReason / localizedFallbackTitle|localized(Reason|FallbackTitle)[[:space:]]*=[[:space:]]*"'
+  'Capsule() (use the .pill shape: circular ends; docs/DESIGN.md)|Capsule\(\)'
 )
 
 existing_dirs=()
@@ -85,6 +92,31 @@ if [[ ${#app_dirs[@]} -gt 0 ]]; then
     echo "$hits" | sed 's/^/  /'
     failures=$((failures + 1))
   fi
+fi
+
+# Design tokens: colors and fonts come from Theme (App/Helpers/Theme) and the design components
+# (App/Components/Design) only.
+DESIGN_ALLOWED='^App/(Helpers/Theme|Components/Design)/'
+NAMED_COLORS='(red|blue|green|orange|yellow|purple|pink|gray|grey|black|white|brown|cyan|indigo|mint|teal)'
+DESIGN_RULES=(
+  'literal color: Color(red:/white:/hue:) or Color(.sRGB, ...)|Color\((red|white|hue|\.sRGB|\.displayP3|\.sRGBLinear)[:,]'
+  'literal color: NSColor/CGColor component initializer|(NSColor|CGColor)\((red|white|hue|srgbRed|calibratedRed|calibratedWhite|calibratedHue|deviceRed|deviceWhite|displayP3Red|gray|genericGrayGamma2_2Gray):'
+  'literal color: hex helper|(Color|NSColor|CGColor|\.init)\(hex:|#colorLiteral'
+  "literal color: named system color|(foregroundColor|foregroundStyle|fill|stroke|strokeBorder|background|tint|accentColor|border|shadow)\\((color:[[:space:]]*)?(Color)?\\.${NAMED_COLORS}([^A-Za-z0-9_]|$)|Color\\.${NAMED_COLORS}([^A-Za-z0-9_]|$)|NSColor\\.(system)?(Red|Blue|Green|Orange|Yellow|Purple|Pink|Gray|Brown|Cyan|Indigo|Mint|Teal|red|blue|green|orange|yellow|purple|pink|gray|black|white|brown|cyan)([^A-Za-z0-9_]|$)"
+  'literal font: Font.system(size:) / .system(size:)|(Font)?\.system\(size:'
+  'literal font: Font.custom / NSFont(name:) / NSFont.systemFont(ofSize:)|Font\.custom\(|\.custom\("|NSFont\(name:|NSFont\.(monospacedSystemFont|systemFont|boldSystemFont)\(ofSize:'
+)
+if [[ -d App ]]; then
+  for rule in "${DESIGN_RULES[@]}"; do
+    name="${rule%%|*}"
+    pattern="${rule#*|}"
+    hits="$(scan "$pattern" App | grep -vE "$DESIGN_ALLOWED" || true)"
+    if [[ -n "$hits" ]]; then
+      echo "lint: $name (use Theme tokens or a design component; docs/DESIGN.md)"
+      echo "$hits" | sed 's/^/  /'
+      failures=$((failures + 1))
+    fi
+  done
 fi
 
 if [[ $failures -gt 0 ]]; then

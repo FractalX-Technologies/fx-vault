@@ -2,58 +2,67 @@ import AppKit
 import SwiftUI
 
 /// Preferences › General: clone folder, the name for nearby Macs and auto-lock (works in every
-/// phase).
+/// phase), as hairline groups (docs/DESIGN.md, "Settings").
 struct GeneralSettingsView: View {
     @Bindable var viewModel: PreferencesViewModel
+    @FocusState private var isNearbyNameFocused: Bool
 
     var body: some View {
-        Form {
-            Section {
-                LabeledContent(String(localized: "settings.general.cloneFolder", defaultValue: "Clone folder")) {
-                    HStack {
-                        Text(verbatim: viewModel.cloneFolderURL?.path(percentEncoded: false)
-                            ?? String(localized: "settings.general.cloneFolder.none", defaultValue: "Not chosen"))
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Button(String(localized: "settings.general.cloneFolder.choose", defaultValue: "Choose…")) {
-                            chooseCloneFolder()
-                        }
+        PreferencesPage {
+            PreferencesSection(String(localized: "settings.general.repositories.section", defaultValue: "Repositories")) {
+                PreferencesRow(
+                    String(localized: "settings.general.cloneFolder", defaultValue: "Clone folder"),
+                    detail: viewModel.cloneFolderURL?.path(percentEncoded: false)
+                        ?? String(localized: "settings.general.cloneFolder.none", defaultValue: "Not chosen"),
+                    isDetailMonospaced: viewModel.cloneFolderURL != nil
+                ) {
+                    Button(String(localized: "settings.general.cloneFolder.choose", defaultValue: "Choose…")) {
+                        chooseCloneFolder()
                     }
+                    .fxButtonStyle(.secondary)
                 }
             }
-            Section {
-                TextField(
-                    String(localized: "settings.general.nearbyName", defaultValue: "Name for nearby Macs"),
-                    text: $viewModel.nearbyDisplayName,
-                    prompt: Text(verbatim: viewModel.defaultNearbyDisplayName)
-                )
-                Text(String(
+            PreferencesSection(
+                String(localized: "settings.general.nearby.section", defaultValue: "Nearby"),
+                footnote: String(
                     localized: "settings.general.nearbyName.note",
                     defaultValue: "Shown to nearby Macs while Nearby Chat is open, and to the teammate you share with nearby. Anyone nearby can see it, and it proves nothing: compare the code to know who you're talking to."
-                ))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
-            }
-            Section {
-                Picker(
-                    String(localized: "settings.general.autoLock", defaultValue: "Lock after inactivity"),
-                    selection: $viewModel.autoLockMinutes
-                ) {
-                    ForEach(viewModel.autoLockOptions, id: \.self) { minutes in
-                        Text(String(localized: "settings.general.autoLock.minutes", defaultValue: "\(minutes) min"))
-                            .tag(minutes)
-                    }
+                )
+            ) {
+                PreferencesRow(String(localized: "settings.general.nearbyName", defaultValue: "Name for nearby Macs")) {
+                    TextField(
+                        String(localized: "settings.general.nearbyName", defaultValue: "Name for nearby Macs"),
+                        text: $viewModel.nearbyDisplayName,
+                        prompt: Text(verbatim: viewModel.defaultNearbyDisplayName).foregroundStyle(Theme.Colors.subtleText)
+                    )
+                    .focused($isNearbyNameFocused)
+                    .fxInputField(.rounded, isFocused: isNearbyNameFocused)
+                    .frame(maxWidth: .infinity)
                 }
-                Text(String(
+            }
+            PreferencesSection(
+                String(localized: "settings.general.autoLock.section", defaultValue: "Auto-lock"),
+                footnote: String(
                     localized: "settings.general.autoLock.note",
                     defaultValue: "FX Vault always locks when your Mac sleeps, the screen locks or the window closes. The inactivity timer pauses while a sync runs."
-                ))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                )
+            ) {
+                PreferencesRow(String(localized: "settings.general.autoLock", defaultValue: "Lock after inactivity")) {
+                    Picker(
+                        String(localized: "settings.general.autoLock", defaultValue: "Lock after inactivity"),
+                        selection: $viewModel.autoLockMinutes
+                    ) {
+                        ForEach(viewModel.autoLockOptions, id: \.self) { minutes in
+                            Text(String(localized: "settings.general.autoLock.minutes", defaultValue: "\(minutes) min"))
+                                .tag(minutes)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
             }
         }
-        .formStyle(.grouped)
     }
 
     private func chooseCloneFolder() {

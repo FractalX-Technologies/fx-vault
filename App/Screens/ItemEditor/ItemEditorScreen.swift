@@ -19,6 +19,7 @@ struct ItemEditorScreen: View {
     var body: some View {
         @Bindable var viewModel = viewModel
         ConfigEditorSheet(
+            eyebrow: String(localized: "itemEditor.eyebrow", defaultValue: "Secrets and variables"),
             title: viewModel.title,
             subtitle: viewModel.subtitle,
             primaryTitle: viewModel.primaryTitle,
@@ -29,15 +30,11 @@ struct ItemEditorScreen: View {
         ) {
             switch viewModel.loadState {
             case .loading:
-                Section {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity)
-                }
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity)
             case .unavailable(let error):
-                Section {
-                    ConfigEditorNoteView(note: .error(error.message))
-                }
+                Banner(.danger, message: error.message)
             case .ready:
                 ItemEditorForm(viewModel: viewModel)
             }
@@ -85,83 +82,98 @@ struct ItemEditorScreen: View {
     }
 }
 
-/// The form rows of a loaded editor, by mode.
+/// The labelled fields of a loaded editor, by mode.
 private struct ItemEditorForm: View {
     @Bindable var viewModel: ItemEditorViewModel
+    @FocusState private var isNameFocused: Bool
 
     var body: some View {
         if let reason = viewModel.readOnlyReason {
-            Section {
-                ConfigEditorNoteView(note: .warning(reason.localizedExplanation))
-            }
+            Banner(.warning, message: reason.localizedExplanation, systemImage: "lock")
         }
         if viewModel.isMoving {
-            moveSection
+            moveFields
         } else {
-            identitySection
-            valueSection
+            kindField
+            nameField
+            valueField
             if viewModel.offersFillChoice {
-                fillSection
+                fillField
             }
             if viewModel.offersPushOnNextSync || viewModel.isPushAlreadyRequested {
-                pushSection
+                pushField
             }
         }
     }
 
+    private static var nameLabel: String {
+        String(localized: "itemEditor.name", defaultValue: "Name")
+    }
+
+    private static var onGitHubLabel: String {
+        String(localized: "itemEditor.fill.header", defaultValue: "On GitHub")
+    }
+
     // MARK: - Kind and name
 
-    @ViewBuilder private var identitySection: some View {
-        Section {
-            Picker(String(localized: "itemEditor.kind", defaultValue: "Kind"), selection: $viewModel.kind) {
-                ForEach(ConfigKind.allCases, id: \.self) { kind in
-                    Text(kind.editorTitle).tag(kind)
-                }
-            }
-            .pickerStyle(.segmented)
+    private var kindField: some View {
+        ConfigSheetField(String(localized: "itemEditor.kind", defaultValue: "Kind")) {
+            SegmentedPill(
+                selection: $viewModel.kind,
+                segments: ConfigKind.allCases.map { .init(value: $0, title: $0.editorTitle) },
+                accessibilityLabel: String(localized: "itemEditor.kind", defaultValue: "Kind")
+            )
             .disabled(!viewModel.isKindEditable || !viewModel.canEdit)
             if let note = viewModel.kindLockNote {
                 ConfigEditorNoteView(note: note)
             }
+        }
+    }
 
+    @ViewBuilder private var nameField: some View {
+        ConfigSheetField(Self.nameLabel) {
             if viewModel.isNameEditable {
                 TextField(
-                    String(localized: "itemEditor.name", defaultValue: "Name"),
+                    Self.nameLabel,
                     text: $viewModel.name,
-                    prompt: Text(verbatim: "API_TOKEN")
+                    prompt: Text(verbatim: "API_TOKEN").foregroundStyle(Theme.Colors.subtleText)
                 )
-                .font(Theme.Typography.monospaced)
+                .focused($isNameFocused)
                 .autocorrectionDisabled()
+                .labelsHidden()
+                .fxInputField(
+                    .rounded,
+                    isFocused: isNameFocused,
+                    isInvalid: viewModel.nameNote?.isError ?? false,
+                    isMonospaced: true
+                )
                 .disabled(!viewModel.canEdit)
                 if let note = viewModel.nameNote {
                     ConfigEditorNoteView(note: note)
                 }
                 if let suggestion = viewModel.suggestedName {
-                    HStack {
+                    HStack(spacing: Theme.Spacing.small) {
                         Text(String(localized: "itemEditor.name.suggestion", defaultValue: "Suggested: \(suggestion)"))
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .fxTextStyle(.monoMeta)
+                            .foregroundStyle(Theme.Colors.mutedText)
+                            .textSelection(.enabled)
                         Spacer()
                         Button(String(localized: "itemEditor.name.useSuggestion", defaultValue: "Use Suggestion")) {
                             viewModel.applySuggestedName()
                         }
-                        .controlSize(.small)
+                        .fxButtonStyle(.outline)
                     }
                 }
             } else {
-                LabeledContent(String(localized: "itemEditor.name", defaultValue: "Name")) {
-                    Text(viewModel.item?.name ?? "")
-                        .font(Theme.Typography.monospaced)
-                        .textSelection(.enabled)
-                }
+                ItemEditorReadOnlyName(name: viewModel.item?.name ?? "")
             }
         }
     }
 
     // MARK: - Value
 
-    @ViewBuilder private var valueSection: some View {
-        Section {
+    private var valueField: some View {
+        ConfigSheetField(String(localized: "itemEditor.value", defaultValue: "Value")) {
             if viewModel.isFilling {
                 ConfigEditorNoteView(note: .info(String(
                     localized: "itemEditor.fill.explanation",
@@ -177,27 +189,24 @@ private struct ItemEditorForm: View {
                 Button(String(localized: "itemEditor.value.loadCurrent", defaultValue: "Edit Current Value")) {
                     viewModel.loadCurrentValue()
                 }
-                .controlSize(.small)
+                .fxButtonStyle(.outline)
             }
             if let warning = viewModel.credentialWarning {
                 CredentialWarningView(warning: warning) {
                     viewModel.resolveCredentialWarning()
                 }
             }
-        } header: {
-            Text(String(localized: "itemEditor.value", defaultValue: "Value"))
         }
     }
 
     // MARK: - Fill (§7.1, §7.8)
 
-    private var fillSection: some View {
-        Section {
-            Toggle(
-                String(localized: "itemEditor.fill.matchesGitHub", defaultValue: "Already matches GitHub (don't push)"),
+    private var fillField: some View {
+        ConfigSheetField(Self.onGitHubLabel) {
+            FXCheckboxRow(
+                title: String(localized: "itemEditor.fill.matchesGitHub", defaultValue: "Already matches GitHub (don't push)"),
                 isOn: $viewModel.fillMatchesGitHub
             )
-            .toggleStyle(.checkbox)
             ConfigEditorNoteView(note: .info(viewModel.fillMatchesGitHub
                 ? String(
                     localized: "itemEditor.fill.matchesGitHub.note",
@@ -207,53 +216,48 @@ private struct ItemEditorForm: View {
                     localized: "itemEditor.fill.pushes.note",
                     defaultValue: "The next Sync replaces the secret on GitHub with this value, so GitHub matches FX Vault."
                 )))
-        } header: {
-            Text(String(localized: "itemEditor.fill.header", defaultValue: "On GitHub"))
         }
     }
 
     // MARK: - Push on Next Sync (v0.1.2)
 
-    @ViewBuilder private var pushSection: some View {
-        Section {
+    private var pushField: some View {
+        ConfigSheetField(Self.onGitHubLabel) {
             if viewModel.isPushAlreadyRequested {
                 ConfigEditorNoteView(note: .info(String(
                     localized: "itemEditor.push.alreadyRequested",
                     defaultValue: "The next Sync pushes this secret to GitHub. Revert it in the table to cancel."
                 )))
             } else {
-                Toggle(
-                    String(localized: "itemEditor.push.toggle", defaultValue: "Push on Next Sync"),
+                FXCheckboxRow(
+                    title: String(localized: "itemEditor.push.toggle", defaultValue: "Push on Next Sync"),
                     isOn: $viewModel.pushOnNextSync
                 )
-                .toggleStyle(.checkbox)
                 .disabled(!viewModel.canEdit)
                 ConfigEditorNoteView(note: .info(String(
                     localized: "itemEditor.push.note",
                     defaultValue: "Sends the value in FX Vault to GitHub on the next Sync even if it did not change, so GitHub matches FX Vault."
                 )))
             }
-        } header: {
-            Text(String(localized: "itemEditor.fill.header", defaultValue: "On GitHub"))
         }
     }
 
     // MARK: - Convert / Move (D11)
 
-    @ViewBuilder private var moveSection: some View {
-        Section {
-            LabeledContent(String(localized: "itemEditor.name", defaultValue: "Name")) {
-                Text(viewModel.item?.name ?? "")
-                    .font(Theme.Typography.monospaced)
-            }
-            Picker(String(localized: "itemEditor.move.kind", defaultValue: "Kind"), selection: $viewModel.targetKind) {
-                ForEach(ConfigKind.allCases, id: \.self) { kind in
-                    Text(kind.editorTitle)
-                        .tag(kind)
-                        .selectionDisabled(!viewModel.canMove(to: kind))
-                }
-            }
-            .pickerStyle(.segmented)
+    @ViewBuilder private var moveFields: some View {
+        ConfigSheetField(Self.nameLabel) {
+            ItemEditorReadOnlyName(name: viewModel.item?.name ?? "")
+        }
+        ConfigSheetField(String(localized: "itemEditor.move.kind", defaultValue: "Kind")) {
+            SegmentedPill(
+                selection: $viewModel.targetKind,
+                segments: ConfigKind.allCases.map {
+                    .init(value: $0, title: $0.editorTitle, isEnabled: viewModel.canMove(to: $0))
+                },
+                accessibilityLabel: String(localized: "itemEditor.move.kind", defaultValue: "Kind")
+            )
+        }
+        ConfigSheetField(String(localized: "itemEditor.move.scope", defaultValue: "Scope")) {
             Picker(String(localized: "itemEditor.move.scope", defaultValue: "Scope"), selection: $viewModel.targetScope) {
                 ForEach(viewModel.scopeOptions) { option in
                     Text(option.title)
@@ -261,11 +265,33 @@ private struct ItemEditorForm: View {
                         .selectionDisabled(!option.isEditable)
                 }
             }
+            .labelsHidden()
+            .fixedSize()
             ForEach(viewModel.moveNotes, id: \.self) { note in
                 ConfigEditorNoteView(note: note)
             }
         }
     }
+}
+
+/// A name that cannot change here: mono in a quiet rounded frame, selectable.
+private struct ItemEditorReadOnlyName: View {
+    let name: String
+
+    var body: some View {
+        Text(verbatim: name)
+            .fxTextStyle(.mono)
+            .foregroundStyle(Theme.Colors.ink)
+            .textSelection(.enabled)
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .padding(.horizontal, Theme.Spacing.large)
+            .frame(maxWidth: .infinity, minHeight: Theme.Layout.inputHeight, alignment: .leading)
+            .background(Theme.Colors.surface, in: Self.shape)
+            .overlay(Self.shape.strokeBorder(Theme.Colors.hairline, lineWidth: Theme.Stroke.hairline))
+    }
+
+    private static let shape = RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
 }
 
 /// The credential-looking-variable warning (§5.13) with its "make it a secret" action.
@@ -274,15 +300,16 @@ private struct CredentialWarningView: View {
     let onAction: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
             ConfigEditorNoteView(note: .warning(String(
                 localized: "itemEditor.credential.title",
                 defaultValue: "This looks like a credential. Variable values are stored in plain text on GitHub; keep it as a secret instead."
             )))
             ForEach(warning.reasons, id: \.self) { reason in
                 Text(reason)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             if let action = warning.action {
                 Button(action == .switchToSecret
@@ -290,10 +317,16 @@ private struct CredentialWarningView: View {
                     : String(localized: "itemEditor.credential.convert", defaultValue: "Convert to Secret…")) {
                         onAction()
                     }
-                    .controlSize(.small)
+                    .fxButtonStyle(.outline)
             }
         }
+        .padding(Theme.Spacing.large)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.Colors.surface2, in: Self.shape)
+        .overlay(Self.shape.strokeBorder(Theme.Colors.hairlineStrong, lineWidth: Theme.Stroke.hairline))
     }
+
+    private static let shape = RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
 }
 
 #Preview {

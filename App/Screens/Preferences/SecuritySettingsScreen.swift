@@ -24,57 +24,74 @@ struct SecuritySettingsScreen: View {
     }
 
     private var form: some View {
-        Form {
-            Section(String(localized: "settings.security.touchID.section", defaultValue: "Touch ID")) {
-                Toggle(
-                    String(localized: "settings.security.touchID.toggle", defaultValue: "Unlock with Touch ID"),
-                    isOn: Binding(
-                        get: { viewModel.isBiometricsEnabled },
-                        set: { viewModel.requestTouchID(enabled: $0) }
+        PreferencesPage {
+            PreferencesSection(
+                String(localized: "settings.security.touchID.section", defaultValue: "Touch ID"),
+                footnote: touchIDFootnote
+            ) {
+                PreferencesRow(String(localized: "settings.security.touchID.toggle", defaultValue: "Unlock with Touch ID")) {
+                    Toggle(
+                        String(localized: "settings.security.touchID.toggle", defaultValue: "Unlock with Touch ID"),
+                        isOn: Binding(
+                            get: { viewModel.isBiometricsEnabled },
+                            set: { viewModel.requestTouchID(enabled: $0) }
+                        )
                     )
-                )
-                .disabled(!viewModel.canToggleTouchID && !viewModel.isBiometricsEnabled)
-                if let reason = viewModel.biometricsUnavailableReason {
-                    Text(reason.localizedMessage)
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                } else {
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .disabled(!viewModel.canToggleTouchID && !viewModel.isBiometricsEnabled)
+                }
+            }
+            PreferencesSection(String(localized: "settings.security.password.section", defaultValue: "Master password")) {
+                PreferencesBlock {
+                    HStack(spacing: Theme.Spacing.small) {
+                        Button(String(localized: "settings.security.changePassword", defaultValue: "Change Master Password…")) {
+                            viewModel.present(.changePassword)
+                        }
+                        .fxButtonStyle(.secondary)
+                        Button(String(localized: "settings.security.newRecoveryKey", defaultValue: "Create New Recovery Key…")) {
+                            viewModel.present(.newRecoveryKey)
+                        }
+                        .fxButtonStyle(.secondary)
+                    }
+                }
+            }
+            PreferencesSection(String(localized: "settings.security.clipboard.section", defaultValue: "Clipboard")) {
+                PreferencesBlock {
                     Text(String(
-                        localized: "settings.security.touchID.policy",
-                        defaultValue: "FX Vault still asks for the master password after a restart and at least every \(Timeouts.passwordMaxAge.wholeDays) days."
+                        localized: "settings.security.clipboard.info",
+                        defaultValue: "Copied values stay on this Mac (no Universal Clipboard), are hidden from clipboard managers, and are cleared after \(Timeouts.clipboardClear.wholeSeconds) seconds or when FX Vault locks, unless you copied something else since."
                     ))
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.callout)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
-            }
-            Section(String(localized: "settings.security.password.section", defaultValue: "Master password")) {
-                Button(String(localized: "settings.security.changePassword", defaultValue: "Change Master Password…")) {
-                    viewModel.present(.changePassword)
-                }
-                Button(String(localized: "settings.security.newRecoveryKey", defaultValue: "Create New Recovery Key…")) {
-                    viewModel.present(.newRecoveryKey)
-                }
-            }
-            Section(String(localized: "settings.security.clipboard.section", defaultValue: "Clipboard")) {
-                Text(String(
-                    localized: "settings.security.clipboard.info",
-                    defaultValue: "Copied values stay on this Mac (no Universal Clipboard), are hidden from clipboard managers, and are cleared after \(Timeouts.clipboardClear.wholeSeconds) seconds or when FX Vault locks, unless you copied something else since."
-                ))
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.textSecondary)
             }
         }
-        .formStyle(.grouped)
+    }
+
+    private var touchIDFootnote: String {
+        if let reason = viewModel.biometricsUnavailableReason {
+            return reason.localizedMessage
+        }
+        return String(
+            localized: "settings.security.touchID.policy",
+            defaultValue: "FX Vault still asks for the master password after a restart and at least every \(Timeouts.passwordMaxAge.wholeDays) days."
+        )
     }
 }
 
-/// The password-gated sheets of the Security tab.
+/// The password-gated sheets of the Security tab, laid out as FractalX sheets.
 private struct SecuritySheetView: View {
     @Bindable var viewModel: SecuritySettingsViewModel
     let sheet: SecuritySettingsViewModel.Sheet
 
+    private var sheetLabel: String {
+        String(localized: "settings.security.sheet.label", defaultValue: "Security")
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
             switch sheet {
             case .enableTouchID, .disableTouchID:
                 touchID
@@ -89,23 +106,22 @@ private struct SecuritySheetView: View {
                 InlineErrorView(error: error)
             }
         }
-        .padding(Theme.Spacing.xLarge)
-        .frame(width: sheet == .showRecoveryKey ? Theme.Layout.cardWidth : Theme.Layout.sheetWidth)
+        .fxSheetContent(width: sheet == .showRecoveryKey ? Theme.Layout.cardWidth : Theme.Layout.sheetWidth)
     }
 
     private var currentPasswordField: some View {
-        SecureField(
-            String(localized: "settings.security.currentPassword", defaultValue: "Current master password"),
-            text: $viewModel.currentPassword
+        FXTextField(
+            label: String(localized: "settings.security.currentPassword", defaultValue: "Current master password"),
+            text: $viewModel.currentPassword,
+            isSecure: true
         )
         .textContentType(.password)
-        .textFieldStyle(.roundedBorder)
     }
 
     @ViewBuilder private var touchID: some View {
         let isEnabling = sheet == .enableTouchID
-        CardHeader(
-            systemImage: "touchid",
+        SheetHeader(
+            label: sheetLabel,
             title: isEnabling
                 ? String(localized: "settings.security.touchID.enable.title", defaultValue: "Turn on Touch ID")
                 : String(localized: "settings.security.touchID.disable.title", defaultValue: "Turn off Touch ID"),
@@ -127,9 +143,10 @@ private struct SecuritySheetView: View {
     }
 
     @ViewBuilder private var changePassword: some View {
-        CardHeader(
-            systemImage: "key",
-            title: String(localized: "settings.security.changePassword.title", defaultValue: "Change master password")
+        SheetHeader(
+            label: sheetLabel,
+            title: String(localized: "settings.security.changePassword.title", defaultValue: "Change master password"),
+            subtitle: nil
         )
         currentPasswordField
         NewPasswordFields(
@@ -138,19 +155,22 @@ private struct SecuritySheetView: View {
             strength: viewModel.newPasswordStrength,
             showsMismatch: !viewModel.newPasswordConfirmation.isEmpty && !viewModel.newPasswordsMatch
         )
-        Toggle(
-            String(
-                localized: "settings.security.changePassword.rotate",
-                defaultValue: "My password may be compromised: rotate the vault key"
-            ),
-            isOn: $viewModel.rotateVaultKey
-        )
-        Text(String(
-            localized: "settings.security.changePassword.rotate.note",
-            defaultValue: "Rotating re-encrypts every value and gives you a new recovery key."
-        ))
-        .font(Theme.Typography.caption)
-        .foregroundStyle(Theme.Colors.textSecondary)
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            FXCheckboxRow(
+                title: String(
+                    localized: "settings.security.changePassword.rotate",
+                    defaultValue: "My password may be compromised: rotate the vault key"
+                ),
+                isOn: $viewModel.rotateVaultKey
+            )
+            Text(String(
+                localized: "settings.security.changePassword.rotate.note",
+                defaultValue: "Rotating re-encrypts every value and gives you a new recovery key."
+            ))
+            .fxTextStyle(.caption)
+            .foregroundStyle(Theme.Colors.mutedText)
+            .fixedSize(horizontal: false, vertical: true)
+        }
         buttons(
             title: String(localized: "settings.security.changePassword.submit", defaultValue: "Change Password"),
             isEnabled: viewModel.canChangePassword
@@ -160,8 +180,8 @@ private struct SecuritySheetView: View {
     }
 
     @ViewBuilder private var newRecoveryKey: some View {
-        CardHeader(
-            systemImage: "key.viewfinder",
+        SheetHeader(
+            label: sheetLabel,
             title: String(localized: "settings.security.newRecoveryKey.title", defaultValue: "Create a new recovery key"),
             subtitle: String(
                 localized: "settings.security.newRecoveryKey.subtitle",
@@ -179,8 +199,8 @@ private struct SecuritySheetView: View {
     }
 
     @ViewBuilder private var showRecoveryKey: some View {
-        CardHeader(
-            systemImage: "key.viewfinder",
+        SheetHeader(
+            label: sheetLabel,
             title: String(localized: "settings.security.showRecoveryKey.title", defaultValue: "Save your new recovery key"),
             subtitle: String(
                 localized: "settings.security.showRecoveryKey.subtitle",
@@ -188,34 +208,31 @@ private struct SecuritySheetView: View {
             )
         )
         RecoveryKeyGridView(groups: viewModel.recoveryKeyGroups)
-        HStack {
+        ShellFooter {
             Button(String(localized: "settings.security.showRecoveryKey.copy", defaultValue: "Copy")) {
                 viewModel.copyRecoveryKey()
             }
-            Spacer()
+            .fxButtonStyle(.outline, size: .large)
+        } buttons: {
             Button(String(localized: "settings.security.showRecoveryKey.done", defaultValue: "I Saved It")) {
                 viewModel.acknowledgeRecoveryKey()
             }
-            .buttonStyle(.borderedProminent)
+            .fxButtonStyle(.primary, size: .large)
             .keyboardShortcut(.defaultAction)
         }
     }
 
     private func buttons(title: String, isEnabled: Bool, action: @escaping () async -> Void) -> some View {
-        HStack {
+        ShellFooter(isWorking: viewModel.isWorking) {
             Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                 viewModel.dismissSheet()
             }
+            .fxButtonStyle(.secondary, size: .large)
             .keyboardShortcut(.cancelAction)
-            Spacer()
-            if viewModel.isWorking {
-                ProgressView()
-                    .controlSize(.small)
-            }
             Button(title) {
                 Task { await action() }
             }
-            .buttonStyle(.borderedProminent)
+            .fxButtonStyle(.primary, size: .large)
             .keyboardShortcut(.defaultAction)
             .disabled(!isEnabled)
         }

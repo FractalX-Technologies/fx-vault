@@ -36,9 +36,10 @@ struct AppSmokeTests {
     }
 
     /// Asset catalog color set names behind `Theme.Colors`.
+    /// (v0.3.0 renamed them; `DesignTokenTests` checks the exact values.)
     @Test(arguments: [
-        "Accent", "Background", "Surface", "TextPrimary", "TextSecondary",
-        "Success", "Warning", "Danger", "Pending",
+        "Brand", "Ground", "Surface", "Surface2", "Card", "Ink", "MutedText", "SubtleText",
+        "Hairline", "HairlineStrong", "Success", "Warning", "Danger",
     ])
     func semanticColorHasLightAndDarkVariants(_ name: String) throws {
         let color = try #require(NSColor(named: name))

@@ -19,18 +19,17 @@ struct ShareImportScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            ShareSheetHeader(
-                systemImage: "doc.badge.arrow.down",
+        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+            SheetHeader(
+                label: ShareSheetLabel.share,
                 title: String(localized: "shareImport.title", defaultValue: "Import Share"),
                 subtitle: viewModel.fileName
             )
-            Divider()
             content
             Spacer(minLength: 0)
             footer
         }
-        .padding(Theme.Spacing.xLarge)
+        .fxSheetContent()
         .frame(width: Theme.Layout.shareSheetWidth)
         .frame(minHeight: Theme.Layout.shareSheetMinHeight)
         .task { await viewModel.start() }
@@ -42,7 +41,7 @@ struct ShareImportScreen: View {
     private var content: some View {
         switch viewModel.step {
         case .reading:
-            progress(String(localized: "shareImport.reading", defaultValue: "Reading the file…"))
+            NearbyProgressRow(text: String(localized: "shareImport.reading", defaultValue: "Reading the file…"))
         case .passphrase, .opening:
             passphraseStep
         case .preview, .applying:
@@ -65,15 +64,19 @@ struct ShareImportScreen: View {
                 localized: "shareImport.passphrase.prompt",
                 defaultValue: "Enter the six-word passphrase the sender gave you."
             ))
-            .font(Theme.Typography.body)
-            .foregroundStyle(Theme.Colors.textPrimary)
+            .fxTextStyle(.body)
+            .foregroundStyle(Theme.Colors.mutedText)
             SecureField(
                 String(localized: "shareImport.passphrase.placeholder", defaultValue: "word-word-word-word-word-word"),
                 text: $viewModel.passphrase
             )
-            .textFieldStyle(.roundedBorder)
-            .font(Theme.Typography.monospaced)
             .focused($isPassphraseFocused)
+            .fxInputField(
+                .rounded,
+                isFocused: isPassphraseFocused,
+                isInvalid: viewModel.passphraseError != nil,
+                isMonospaced: true
+            )
             .disabled(viewModel.step == .opening)
             .onSubmit(open)
             .onAppear { isPassphraseFocused = true }
@@ -82,15 +85,14 @@ struct ShareImportScreen: View {
                     localized: "shareImport.passphrase.count",
                     defaultValue: "\(viewModel.typedWordCount) of \(Limits.passphraseWordCount) words"
                 ))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .monospacedDigit()
+                .fxTextStyle(.monoMeta)
+                .foregroundStyle(Theme.Colors.subtleText)
                 if viewModel.step == .opening {
                     ProgressView()
                         .controlSize(.small)
                     Text(String(localized: "shareImport.opening", defaultValue: "Decrypting…"))
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .fxTextStyle(.caption)
+                        .foregroundStyle(Theme.Colors.mutedText)
                 }
             }
             if let error = viewModel.passphraseError {
@@ -113,7 +115,7 @@ struct ShareImportScreen: View {
 
     private func blockedBanner(_ reason: ShareImportBlockReason) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            ShareNoteView(systemImage: "exclamationmark.octagon", text: reason.localizedMessage, tint: Theme.Colors.danger)
+            Banner(.danger, message: reason.localizedMessage)
             if viewModel.needsRepositoryImport {
                 ShareImportRepositoryButton(
                     title: String(
@@ -130,18 +132,19 @@ struct ShareImportScreen: View {
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: Theme.Spacing.mediumMinus) {
             Spacer()
             switch viewModel.step {
             case .done, .failed:
                 Button(String(localized: "common.done", defaultValue: "Done")) {
                     dismiss()
                 }
+                .fxButtonStyle(.primary, size: .large)
                 .keyboardShortcut(.defaultAction)
             case .reading, .passphrase, .opening:
                 cancelButton
                 Button(String(localized: "shareImport.open", defaultValue: "Open"), action: open)
-                    .buttonStyle(.borderedProminent)
+                    .fxButtonStyle(.primary, size: .large)
                     .keyboardShortcut(.defaultAction)
                     .disabled(!viewModel.canOpen)
             case .preview, .applying:
@@ -149,7 +152,7 @@ struct ShareImportScreen: View {
                 Button(String(localized: "shareImport.apply", defaultValue: "Import")) {
                     Task { await viewModel.apply() }
                 }
-                .buttonStyle(.borderedProminent)
+                .fxButtonStyle(.primary, size: .large)
                 .disabled(!viewModel.canApply)
             }
         }
@@ -159,17 +162,8 @@ struct ShareImportScreen: View {
         Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
             dismiss()
         }
+        .fxButtonStyle(.secondary, size: .large)
         .keyboardShortcut(.cancelAction)
-    }
-
-    private func progress(_ text: String) -> some View {
-        HStack(spacing: Theme.Spacing.small) {
-            ProgressView()
-                .controlSize(.small)
-            Text(text)
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.textSecondary)
-        }
     }
 
     private func open() {
@@ -182,24 +176,32 @@ struct ShareImportResultView: View {
     let result: ShareImportResultModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
             ShareNoteView(
                 systemImage: "checkmark.circle",
                 text: String(localized: "shareImport.done.title", defaultValue: "Imported into your vault"),
                 tint: Theme.Colors.success
             )
-            ForEach(lines, id: \.self) { line in
-                Text(line)
-                    .font(Theme.Typography.callout)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+            Card(.container, spacing: 0) {
+                ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                    if index > 0 {
+                        HairlineDivider()
+                    }
+                    Text(line)
+                        .fxTextStyle(.callout)
+                        .foregroundStyle(Theme.Colors.ink)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, Theme.Spacing.medium)
+                        .padding(.horizontal, Theme.Spacing.large)
+                }
             }
-            ShareNoteView(
+            SheetCallout(
                 systemImage: "questionmark.diamond",
+                tint: Theme.Colors.warning,
                 text: String(
                     localized: "shareImport.done.unverified",
                     defaultValue: "Imported values show “Unverified share” until a Sync pushes them or confirms they match GitHub. Nothing was synced."
-                ),
-                tint: Theme.Colors.warning
+                )
             )
         }
     }

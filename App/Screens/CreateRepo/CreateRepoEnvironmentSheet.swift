@@ -6,9 +6,11 @@ import VaultCore
 struct CreateRepoEnvironmentSheet: View {
     @Bindable var editor: CreateRepoEnvironmentEditorViewModel
     let onCancel: () -> Void
+    @FocusState private var isNameFocused: Bool
 
     var body: some View {
         ConfigEditorSheet(
+            eyebrow: CreateRepoText.eyebrow,
             title: editor.isNew
                 ? String(localized: "createRepo.environment.newTitle", defaultValue: "New Environment")
                 : String(localized: "createRepo.environment.editTitle", defaultValue: "Edit Environment"),
@@ -20,13 +22,14 @@ struct CreateRepoEnvironmentSheet: View {
             onCancel: onCancel,
             onPrimary: { editor.save() }
         ) {
-            Section {
-                TextField(
-                    String(localized: "createRepo.environment.name", defaultValue: "Name"),
-                    text: $editor.name,
-                    prompt: Text(verbatim: "production")
+            ConfigSheetField(String(localized: "createRepo.environment.name", defaultValue: "Name")) {
+                EnvironmentNameField(
+                    title: String(localized: "createRepo.environment.name", defaultValue: "Name"),
+                    name: $editor.name,
+                    prompt: "production",
+                    isInvalid: editor.nameError != nil,
+                    isFocused: $isNameFocused
                 )
-                .autocorrectionDisabled()
                 if let error = editor.nameError {
                     ConfigEditorNoteView(note: .error(error))
                 }

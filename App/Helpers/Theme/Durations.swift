@@ -1,13 +1,19 @@
 import SwiftUI
 
 extension Theme {
-    /// Animation timings, in seconds.
+    /// Motion and timings (docs/DESIGN.md, "Motion"). FractalX motion is short and quiet: one
+    /// 140 ms ease-out for state changes and one critically damped spring for things that move.
     enum Durations {
-        static let fast: TimeInterval = 0.15
-        static let standard: TimeInterval = 0.25
-        static let slow: TimeInterval = 0.4
+        /// 140 ms: hover, press, focus, selection, chips and banners appearing.
+        static let interaction: TimeInterval = 0.14
+        /// The default animation for state changes.
+        static let interactionAnimation = Animation.easeOut(duration: interaction)
+        /// Moving content: the selected segment, expanding rows, banners sliding in.
+        static let springResponse: TimeInterval = 0.28
+        static let spring = Animation.spring(duration: springResponse, bounce: 0)
 
-        static let standardAnimation = Animation.easeInOut(duration: standard)
+        /// Legacy name of ``interactionAnimation`` (v0.2 screens).
+        static let standardAnimation = interactionAnimation
 
         /// Pause after the last keystroke in the .env paste editor before the preview re-parses.
         static let envPasteParseDebounce: Duration = .milliseconds(300)

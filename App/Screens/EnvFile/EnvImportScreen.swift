@@ -19,16 +19,16 @@ struct EnvImportScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            CardHeader(
-                systemImage: "square.and.arrow.down",
+        VStack(alignment: .leading, spacing: Theme.Spacing.largePlus) {
+            SheetHeader(
+                label: ShareSheetLabel.environmentFile,
                 title: String(localized: "envImport.title", defaultValue: "Import .env"),
                 subtitle: subtitle
             )
             content
             footer
         }
-        .padding(Theme.Spacing.xLarge)
+        .fxSheetContent()
         .frame(width: Theme.Layout.envImportSheetWidth, height: sheetHeight, alignment: .topLeading)
         .screenCaptureProtected()
         .errorAlert($viewModel.alert)
@@ -80,47 +80,52 @@ struct EnvImportScreen: View {
         }
     }
 
+    /// Status on the left, then Cancel (secondary) and the step's primary pill (mockup SyncReview).
     private var footer: some View {
-        HStack {
+        HStack(spacing: Theme.Spacing.mediumMinus) {
             switch viewModel.step {
             case .source:
-                Button(String(localized: "common.cancel", defaultValue: "Cancel")) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
                 Spacer()
                 progress
+                cancelButton
                 Button(String(localized: "envImport.chooseFile", defaultValue: "Choose File…"), action: chooseFile)
-                    .buttonStyle(.borderedProminent)
+                    .fxButtonStyle(.primary, size: .large)
                     .keyboardShortcut(.defaultAction)
                     .disabled(viewModel.isWorking)
             case .paste:
-                Button(String(localized: "common.cancel", defaultValue: "Cancel")) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
                 Spacer()
                 progress
+                cancelButton
                 importButton
             case .review:
-                Button(String(localized: "common.cancel", defaultValue: "Cancel")) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
                 Button(String(localized: "envImport.startOver", defaultValue: "Start Over")) {
                     viewModel.startOver()
                 }
+                .fxButtonStyle(.outline, size: .large)
                 Spacer()
                 progress
+                cancelButton
                 importButton
             case .done:
                 Spacer()
                 Button(String(localized: "common.done", defaultValue: "Done")) { dismiss() }
-                    .buttonStyle(.borderedProminent)
+                    .fxButtonStyle(.primary, size: .large)
                     .keyboardShortcut(.defaultAction)
             }
         }
+    }
+
+    private var cancelButton: some View {
+        Button(String(localized: "common.cancel", defaultValue: "Cancel")) { dismiss() }
+            .fxButtonStyle(.secondary, size: .large)
+            .keyboardShortcut(.cancelAction)
     }
 
     private var importButton: some View {
         Button(String(localized: "envImport.import", defaultValue: "Import \(viewModel.includedRows.count)")) {
             viewModel.importRows()
         }
-        .buttonStyle(.borderedProminent)
+        .fxButtonStyle(.primary, size: .large)
         .keyboardShortcut(.defaultAction)
         .disabled(!viewModel.canImport)
     }
@@ -146,25 +151,26 @@ private struct EnvImportSourceView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            Picker(String(localized: "envImport.source", defaultValue: "Source"), selection: $viewModel.sourceKind) {
-                Text(String(localized: "envImport.source.file", defaultValue: "File")).tag(EnvImportSourceKind.file)
-                Text(String(localized: "envImport.source.paste", defaultValue: "Paste")).tag(EnvImportSourceKind.paste)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            SegmentedPill(
+                selection: $viewModel.sourceKind,
+                segments: [
+                    .init(value: EnvImportSourceKind.file, title: String(localized: "envImport.source.file", defaultValue: "File")),
+                    .init(value: EnvImportSourceKind.paste, title: String(localized: "envImport.source.paste", defaultValue: "Paste")),
+                ],
+                accessibilityLabel: String(localized: "envImport.source", defaultValue: "Source")
+            )
             .fixedSize()
 
             switch viewModel.sourceKind {
             case .file:
-                Label(
-                    String(
+                SheetCallout(
+                    systemImage: "doc.text",
+                    tint: Theme.Colors.subtleText,
+                    text: String(
                         localized: "envImport.source.fileHint",
                         defaultValue: "Hidden files such as .env are shown in the file picker. The file is read once and never changed."
-                    ),
-                    systemImage: "doc.text"
+                    )
                 )
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.textSecondary)
                 Spacer(minLength: 0)
             case .paste:
                 EnvPasteEditorSection(viewModel: viewModel)
@@ -182,10 +188,10 @@ private struct EnvPasteEditorSection: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
             EnvPasteEditorView(text: $viewModel.pastedText, focusesOnAppear: viewModel.focusesPasteEditor)
                 .frame(height: Theme.Layout.envPasteEditorHeight)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium))
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: Theme.Radius.medium)
-                        .strokeBorder(Theme.Colors.textSecondary.opacity(Theme.Opacity.chipBackground))
+                    RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
+                        .strokeBorder(Theme.Colors.hairlineStrong, lineWidth: Theme.Stroke.hairline)
                 )
                 .accessibilityLabel(String(localized: "envImport.paste.accessibilityLabel", defaultValue: ".env contents"))
             HStack(spacing: Theme.Spacing.small) {
@@ -193,8 +199,8 @@ private struct EnvPasteEditorSection: View {
                     localized: "envImport.paste.liveHint",
                     defaultValue: "KEY=value lines, as in a .env file. The text is cleared when you import or close this sheet."
                 ))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
                 Spacer()
                 // A user-initiated clipboard read: FX Vault never reads the pasteboard by itself.
                 PasteButton(payloadType: String.self) { @Sendable strings in
@@ -206,7 +212,7 @@ private struct EnvPasteEditorSection: View {
                 Button(String(localized: "envImport.paste.clear", defaultValue: "Clear")) {
                     viewModel.clearPastedText()
                 }
-                .controlSize(.small)
+                .fxButtonStyle(.ghost)
                 .disabled(viewModel.isPastedTextEmpty)
             }
             if let problem = viewModel.pasteProblem {
@@ -217,8 +223,8 @@ private struct EnvPasteEditorSection: View {
                     Image(systemName: "xmark.circle")
                         .foregroundStyle(Theme.Colors.danger)
                 }
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textPrimary)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.ink)
             }
         }
     }
@@ -260,10 +266,12 @@ private struct EnvImportReviewView: View {
     let viewModel: EnvImportViewModel
 
     var body: some View {
+        let targetTitle = String(localized: "envImport.target", defaultValue: "Import into")
         VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center, spacing: Theme.Spacing.medium) {
+                SectionLabel(targetTitle)
                 Picker(
-                    String(localized: "envImport.target", defaultValue: "Import into"),
+                    targetTitle,
                     selection: Binding(get: { viewModel.targetScope }, set: { viewModel.selectTarget($0) })
                 ) {
                     ForEach(viewModel.scopeOptions) { option in
@@ -272,19 +280,21 @@ private struct EnvImportReviewView: View {
                             .disabled(!option.isEditable)
                     }
                 }
+                .labelsHidden()
                 .fixedSize()
                 Spacer()
                 if viewModel.canOverwriteAll {
                     Button(String(localized: "envImport.overwriteAll", defaultValue: "Overwrite All")) {
                         viewModel.overwriteAllConflicts()
                     }
+                    .fxButtonStyle(.outline)
                     .help(String(
                         localized: "envImport.overwriteAll.help",
                         defaultValue: "Replace the existing value of every name that already exists in this scope."
                     ))
                 }
             }
-            HStack(spacing: Theme.Spacing.small) {
+            HStack(spacing: Theme.Spacing.xSmall) {
                 Button(String(localized: "envImport.includeAll", defaultValue: "Include All")) {
                     viewModel.setAllIncluded(true)
                 }
@@ -299,11 +309,9 @@ private struct EnvImportReviewView: View {
                     viewModel.markAll(as: .secret)
                 }
             }
-            .controlSize(.small)
+            .fxButtonStyle(.ghost)
             if let problem = viewModel.targetProblem {
-                Label(problem, systemImage: "lock")
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.warning)
+                Banner(.warning, message: problem, systemImage: "lock")
             }
             EnvImportTableView(viewModel: viewModel)
             if !viewModel.issues.isEmpty {
@@ -322,17 +330,15 @@ private struct EnvImportIssueList: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-            Text(String(localized: "envImport.issues.title", defaultValue: "Lines to check"))
-                .font(Theme.Typography.callout.weight(.semibold))
-                .foregroundStyle(Theme.Colors.textPrimary)
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            SectionLabel(String(localized: "envImport.issues.title", defaultValue: "Lines to check"))
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
                     ForEach(issues) { row in
                         Label {
                             Text(verbatim: "\(row.issue.localizedLocation): \(row.issue.localizedMessage)")
-                                .font(Theme.Typography.caption)
-                                .foregroundStyle(Theme.Colors.textPrimary)
+                                .fxTextStyle(.caption)
+                                .foregroundStyle(Theme.Colors.ink)
                                 .fixedSize(horizontal: false, vertical: true)
                         } icon: {
                             Image(systemName: row.issue.severity == .error ? "xmark.circle" : "exclamationmark.triangle")
@@ -368,8 +374,8 @@ private struct EnvImportResultView: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                     ForEach(Array(viewModel.summaryLines(for: result).enumerated()), id: \.offset) { _, line in
                         Text(verbatim: line)
-                            .font(Theme.Typography.body)
-                            .foregroundStyle(Theme.Colors.textPrimary)
+                            .fxTextStyle(.body)
+                            .foregroundStyle(Theme.Colors.ink)
                             .fixedSize(horizontal: false, vertical: true)
                             .textSelection(.enabled)
                     }
@@ -377,15 +383,10 @@ private struct EnvImportResultView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             if viewModel.hasPendingChanges(result) {
-                Label(
-                    String(
-                        localized: "envImport.result.syncHint",
-                        defaultValue: "These are local changes. Use Sync to push them to GitHub."
-                    ),
-                    systemImage: "arrow.triangle.2.circlepath"
-                )
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.pending)
+                Banner(.info, message: String(
+                    localized: "envImport.result.syncHint",
+                    defaultValue: "These are local changes. Use Sync to push them to GitHub."
+                ))
             }
         }
     }

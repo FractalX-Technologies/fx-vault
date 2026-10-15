@@ -10,23 +10,24 @@ struct DriftFindingRow: View {
     let onFillValue: (ItemEditorContext) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
             HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
                 Image(systemName: row.systemImage)
                     .foregroundStyle(row.isConflict ? Theme.Colors.danger : Theme.Colors.warning)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                    Text(verbatim: row.title)
-                        .font(Theme.Typography.body.weight(.medium))
-                        .foregroundStyle(Theme.Colors.textPrimary)
-                        .textSelection(.enabled)
+                VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
                     Text(verbatim: row.scope)
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .fxTextStyle(.sectionLabel)
+                        .foregroundStyle(Theme.Colors.subtleText)
+                    Text(verbatim: row.title)
+                        .fxTextStyle(.bodyEmphasized)
+                        .foregroundStyle(Theme.Colors.ink)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
                     ForEach(row.details, id: \.self) { detail in
                         Text(verbatim: detail)
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(row.isConflict ? Theme.Colors.danger : Theme.Colors.textSecondary)
+                            .fxTextStyle(.monoMeta)
+                            .foregroundStyle(row.isConflict ? Theme.Colors.danger : Theme.Colors.mutedText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -42,25 +43,25 @@ struct DriftFindingRow: View {
             }
             .padding(.leading, Theme.Spacing.xLarge)
         }
-        .padding(.vertical, Theme.Spacing.xSmall)
     }
 
     private func choiceColumn(_ choice: DriftChoiceModel) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
             Button(choice.title) {
                 onChoose(choice.option)
             }
+            .fxButtonStyle(.outline)
             .disabled(!choice.isAvailable || isResolving)
             .help(choice.explanation)
             Text(verbatim: choice.unavailableReason ?? choice.explanation)
-                .font(Theme.Typography.caption)
-                .foregroundStyle(choice.isAvailable ? Theme.Colors.textSecondary : Theme.Colors.warning)
+                .fxTextStyle(.caption)
+                .foregroundStyle(choice.isAvailable ? Theme.Colors.mutedText : Theme.Colors.warning)
                 .fixedSize(horizontal: false, vertical: true)
             if choice.option == .keepLocal, !choice.isAvailable, let fill = row.fillValue {
                 Button(String(localized: "drift.fillValue", defaultValue: "Fill Value…")) {
                     onFillValue(fill)
                 }
-                .controlSize(.small)
+                .fxButtonStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

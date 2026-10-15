@@ -6,37 +6,42 @@ import VaultCore
 struct CreateRepoItemSheet: View {
     @Bindable var editor: CreateRepoItemEditorViewModel
     let onCancel: () -> Void
+    @FocusState private var isNameFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                Text(title)
-                    .font(Theme.Typography.title)
-                    .foregroundStyle(Theme.Colors.textPrimary)
-                Text(String(localized: "createRepo.item.scope", defaultValue: "In \(editor.scopeTitle)"))
-                    .font(Theme.Typography.callout)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+        ConfigEditorSheet(
+            eyebrow: CreateRepoText.eyebrow,
+            title: title,
+            subtitle: String(localized: "createRepo.item.scope", defaultValue: "In \(editor.scopeTitle)"),
+            primaryTitle: saveTitle,
+            isPrimaryEnabled: editor.canSave,
+            isWorking: false,
+            width: Theme.Layout.createRepoEditorWidth,
+            onCancel: onCancel,
+            onPrimary: { editor.save() }
+        ) {
+            ConfigSheetField(String(localized: "createRepo.item.kind", defaultValue: "Kind")) {
+                SegmentedPill(
+                    selection: $editor.kind,
+                    segments: ConfigKind.allCases.map { .init(value: $0, title: CreateRepoText.kindTitle($0)) },
+                    accessibilityLabel: String(localized: "createRepo.item.kind", defaultValue: "Kind")
+                )
             }
-            Picker(String(localized: "createRepo.item.kind", defaultValue: "Kind"), selection: $editor.kind) {
-                ForEach(ConfigKind.allCases, id: \.self) { kind in
-                    Text(CreateRepoText.kindTitle(kind)).tag(kind)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-            VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-                Text(String(localized: "createRepo.item.name", defaultValue: "Name"))
-                    .font(Theme.Typography.callout.weight(.semibold))
+            ConfigSheetField(String(localized: "createRepo.item.name", defaultValue: "Name")) {
                 TextField(
                     String(localized: "createRepo.item.name", defaultValue: "Name"),
                     text: $editor.name,
-                    prompt: Text(verbatim: "API_TOKEN")
+                    prompt: Text(verbatim: "API_TOKEN").foregroundStyle(Theme.Colors.subtleText)
                 )
-                .textFieldStyle(.roundedBorder)
-                .font(Theme.Typography.monospaced)
+                .focused($isNameFocused)
                 .autocorrectionDisabled()
                 .labelsHidden()
+                .fxInputField(
+                    .rounded,
+                    isFocused: isNameFocused,
+                    isInvalid: editor.nameError != nil || editor.capacityError != nil,
+                    isMonospaced: true
+                )
                 if let error = editor.nameError {
                     HStack(spacing: Theme.Spacing.small) {
                         CreateRepoNoteView(text: error, detail: nil, systemImage: "exclamationmark.circle", tint: Theme.Colors.danger)
@@ -46,7 +51,7 @@ struct CreateRepoItemSheet: View {
                                 String(localized: "createRepo.name.useSuggestion", defaultValue: "Use \(suggestion)"),
                                 action: editor.applySuggestedName
                             )
-                            .buttonStyle(.link)
+                            .fxButtonStyle(.outline)
                         }
                     }
                 }
@@ -54,9 +59,7 @@ struct CreateRepoItemSheet: View {
                     CreateRepoNoteView(text: error, detail: nil, systemImage: "exclamationmark.circle", tint: Theme.Colors.danger)
                 }
             }
-            VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-                Text(String(localized: "createRepo.item.value", defaultValue: "Value"))
-                    .font(Theme.Typography.callout.weight(.semibold))
+            ConfigSheetField(String(localized: "createRepo.item.value", defaultValue: "Value")) {
                 SecretValueEditor(value: $editor.value)
                 if let error = editor.valueError {
                     CreateRepoNoteView(text: error, detail: nil, systemImage: "exclamationmark.circle", tint: Theme.Colors.danger)
@@ -74,23 +77,13 @@ struct CreateRepoItemSheet: View {
                         )
                         Spacer()
                         Button(String(localized: "createRepo.item.makeSecret", defaultValue: "Make It a Secret"), action: editor.makeSecret)
+                            .fxButtonStyle(.outline)
                     }
+                    .configSheetRowPadding()
+                    .background(Theme.Colors.surface2, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
                 }
-            }
-            HStack {
-                Button(String(localized: "common.cancel", defaultValue: "Cancel"), action: onCancel)
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button(saveTitle) {
-                    editor.save()
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!editor.canSave)
             }
         }
-        .padding(Theme.Spacing.xLarge)
-        .frame(width: Theme.Layout.createRepoEditorWidth)
         .screenCaptureProtected()
     }
 

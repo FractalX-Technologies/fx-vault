@@ -4,7 +4,8 @@ import VaultData
 
 /// The import table (§10 `EnvImportScreen`): Include, Line, Key (editable, with the KeyNormalizer
 /// fix and notes), Kind (pre-marked, editable) and Conflict (Skip/Overwrite when the name exists
-/// in the target scope). Shows names only, never values.
+/// in the target scope). Shows names only, never values. Styled like the main table
+/// (docs/DESIGN.md, "Tables and rows"): mono names, 52 pt rows, chips.
 struct EnvImportTableView: View {
     let viewModel: EnvImportViewModel
 
@@ -18,27 +19,31 @@ struct EnvImportTableView: View {
                 .toggleStyle(.checkbox)
                 .labelsHidden()
                 .disabled(!row.canInclude)
+                .fxTableCell()
             }
             .width(Theme.Layout.envImportIncludeColumnWidth)
             TableColumn(String(localized: "envImport.column.line", defaultValue: "Line")) { row in
-                Text(verbatim: "\(row.line)")
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                TableMetaText(String(row.line))
+                    .fxTableCell()
             }
             .width(Theme.Layout.envImportLineColumnWidth)
             TableColumn(String(localized: "envImport.column.key", defaultValue: "Key")) { row in
                 EnvImportKeyCell(viewModel: viewModel, row: row)
+                    .fxTableCell()
             }
             .width(min: Theme.Layout.envImportKeyColumnMinWidth)
             TableColumn(String(localized: "envImport.column.kind", defaultValue: "Kind")) { row in
                 EnvImportKindCell(viewModel: viewModel, row: row)
+                    .fxTableCell()
             }
             .width(Theme.Layout.envImportKindColumnWidth)
             TableColumn(String(localized: "envImport.column.conflict", defaultValue: "Conflict")) { row in
                 EnvImportConflictCell(viewModel: viewModel, row: row)
+                    .fxTableCell()
             }
             .width(Theme.Layout.envImportConflictColumnWidth)
         }
+        .fxTable()
         .overlay {
             if viewModel.rows.isEmpty {
                 EmptyStateView(
@@ -72,7 +77,8 @@ private struct EnvImportKeyCell: View {
                     String(localized: "envImport.column.key.placeholder", defaultValue: "NAME"),
                     text: Binding(get: { row.name }, set: { viewModel.setName($0, forRow: row.id) })
                 )
-                .font(Theme.Typography.monospaced)
+                .fxTextStyle(.monoName)
+                .foregroundStyle(Theme.Colors.ink)
                 .textFieldStyle(.plain)
                 .autocorrectionDisabled()
                 .disabled(!row.canInclude)
@@ -80,21 +86,24 @@ private struct EnvImportKeyCell: View {
                     Button {
                         viewModel.useSuggestedName(forRow: row.id)
                     } label: {
-                        Image(systemName: "wand.and.stars")
+                        Label(
+                            String(localized: "envImport.key.useSuggestion", defaultValue: "Use the suggested name"),
+                            systemImage: "wand.and.stars"
+                        )
                     }
-                    .buttonStyle(.borderless)
+                    .fxIconButtonStyle(.ghost)
                     .help(String(localized: "envImport.key.useSuggestion", defaultValue: "Use the suggested name"))
                 }
             }
             ForEach(viewModel.keyNotes(for: row), id: \.self) { note in
                 Text(verbatim: note)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
                     .lineLimit(2)
             }
             if let problem {
                 Text(verbatim: problem)
-                    .font(Theme.Typography.caption)
+                    .fxTextStyle(.caption)
                     .foregroundStyle(Theme.Colors.danger)
                     .lineLimit(2)
             }
@@ -103,28 +112,46 @@ private struct EnvImportKeyCell: View {
     }
 }
 
-/// Secret / Variable, with the credential mark, and the "credential as variable" warning badge
-/// whose click makes the row a secret.
+/// Secret / Variable as a chip that toggles the kind (filled = secret, outlined = variable),
+/// with the credential mark, and the "credential as variable" warning chip whose click makes the
+/// row a secret.
 private struct EnvImportKindCell: View {
     let viewModel: EnvImportViewModel
     let row: EnvImportRowModel
 
+    private var otherKind: ConfigKind {
+        row.kind == .secret ? .variable : .secret
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
             HStack(spacing: Theme.Spacing.xSmall) {
-                Picker(
-                    String(localized: "envImport.column.kind", defaultValue: "Kind"),
-                    selection: Binding(get: { row.kind }, set: { viewModel.setKind($0, forRow: row.id) })
-                ) {
-                    ForEach([ConfigKind.secret, ConfigKind.variable], id: \.self) { kind in
-                        Text(verbatim: kind.envImportTitle).tag(kind)
-                    }
+                Button {
+                    viewModel.setKind(otherKind, forRow: row.id)
+                } label: {
+                    StatusChip(
+                        title: row.kind.envImportTitle,
+                        tone: .neutral,
+                        fill: row.kind == .secret ? .filled : .outlined,
+                        showsDot: false
+                    )
                 }
-                .labelsHidden()
+                .buttonStyle(.plain)
                 .disabled(!row.canInclude)
+                .help(String(
+                    localized: "envImport.kind.toggle.help",
+                    defaultValue: "Click to import it as a \(otherKind.envImportTitle)."
+                ))
+                .accessibilityLabel(String(localized: "envImport.column.kind", defaultValue: "Kind"))
+                .accessibilityValue(row.kind.envImportTitle)
+                .accessibilityHint(String(
+                    localized: "envImport.kind.toggle.help",
+                    defaultValue: "Click to import it as a \(otherKind.envImportTitle)."
+                ))
                 if viewModel.kindWarning(for: row) == nil, let hint = viewModel.credentialHint(for: row) {
                     Image(systemName: "key.fill")
-                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Colors.subtleText)
                         .help(hint)
                         .accessibilityLabel(hint)
                 }
@@ -133,14 +160,12 @@ private struct EnvImportKindCell: View {
                 Button {
                     viewModel.makeSecret(forRow: row.id)
                 } label: {
-                    Label(
-                        String(localized: "envImport.kind.makeSecret", defaultValue: "Make Secret"),
-                        systemImage: "exclamationmark.triangle.fill"
+                    StatusChip(
+                        title: String(localized: "envImport.kind.makeSecret", defaultValue: "Make Secret"),
+                        tone: .warning
                     )
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.warning)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
                 .disabled(!row.canInclude)
                 .help(warning)
                 .accessibilityHint(warning)
@@ -165,14 +190,13 @@ private struct EnvImportConflictCell: View {
                 }
             }
             .labelsHidden()
+            .fixedSize()
             .help(String(
                 localized: "envImport.conflict.help",
                 defaultValue: "This name already exists in the scope. Skip keeps the existing value; Overwrite replaces it."
             ))
         } else {
-            Text(String(localized: "envImport.conflict.none", defaultValue: "New"))
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+            StatusChip(title: String(localized: "envImport.conflict.none", defaultValue: "New"), tone: .brand)
         }
     }
 }

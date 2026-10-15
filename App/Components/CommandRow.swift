@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A copyable shell command (`brew install gh`, `gh auth login`, scope fixes): monospaced,
-/// selectable, with a Copy button.
+/// A copyable shell command (`brew install gh`, `gh auth login`, scope fixes): Geist Mono,
+/// selectable, in a 12 pt quiet row with a ghost Copy button.
 struct CommandRow: View {
     let command: String
     let onCopy: (String) -> Void
@@ -9,8 +9,8 @@ struct CommandRow: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.small) {
             Text(verbatim: command)
-                .font(Theme.Typography.monospaced)
-                .foregroundStyle(Theme.Colors.textPrimary)
+                .fxTextStyle(.monoName)
+                .foregroundStyle(Theme.Colors.ink)
                 .textSelection(.enabled)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -19,14 +19,19 @@ struct CommandRow: View {
                 onCopy(command)
             } label: {
                 Label(String(localized: "command.copy", defaultValue: "Copy"), systemImage: "doc.on.doc")
-                    .labelStyle(.iconOnly)
             }
-            .buttonStyle(.borderless)
+            .fxIconButtonStyle(.ghost)
             .help(String(localized: "command.copy.help", defaultValue: "Copy the command"))
         }
-        .padding(.horizontal, Theme.Spacing.small)
+        .padding(.leading, Theme.Spacing.large)
+        .padding(.trailing, Theme.Spacing.xSmall)
         .padding(.vertical, Theme.Spacing.xSmall)
-        .background(Theme.Colors.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.small))
+        .background(Theme.Colors.surface, in: shape)
+        .overlay(shape.strokeBorder(Theme.Colors.hairline, lineWidth: Theme.Stroke.hairline))
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
     }
 }
 

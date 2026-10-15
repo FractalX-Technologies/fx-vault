@@ -13,31 +13,56 @@ import VaultCore
 struct SecretValueEditor: View {
     @Binding var value: String
     @State private var didStripTrailingNewlines = false
+    @State private var isFocused = false
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
             SecretTextViewRepresentable(text: $value) { stripped in
                 didStripTrailingNewlines = stripped
+            } onFocusChange: { focused in
+                isFocused = focused
             }
+            .padding(.horizontal, Theme.Spacing.xSmall)
+            .padding(.vertical, Theme.Spacing.xSmall)
             .frame(minHeight: Theme.Layout.secretEditorMinHeight)
-            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium))
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.medium)
-                    .strokeBorder(Theme.Colors.textSecondary.opacity(Theme.Opacity.chipBackground))
-            )
+            .background(Theme.Colors.card, in: Self.shape)
+            .clipShape(Self.shape)
+            .overlay(Self.shape.strokeBorder(
+                Self.borderColor(isFocused: isFocused && isEnabled),
+                lineWidth: Self.borderWidth(isFocused: isFocused && isEnabled)
+            ))
+            .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
+            .animation(Theme.Durations.interactionAnimation, value: isFocused)
             .accessibilityLabel(String(localized: "secretEditor.accessibilityLabel", defaultValue: "Value"))
 
             if didStripTrailingNewlines {
                 Label(Self.strippedNotice, systemImage: "return")
-                    .font(Theme.Typography.caption)
+                    .fxTextStyle(.caption)
                     .foregroundStyle(Theme.Colors.warning)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             if Self.looksLikeKey(value) {
                 Label(Self.keyHint, systemImage: "key")
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fxTextStyle(.monoMeta)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// Framed like a rounded FractalX input (`.fxInputField(.rounded)`): 12 pt corners.
+    private static let shape = RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
+
+    // MARK: - Frame (pure)
+
+    /// Hairline-strong at rest; the 2 pt brand ring while the editor has focus.
+    static func borderColor(isFocused: Bool) -> Color {
+        isFocused ? Theme.Colors.brand : Theme.Colors.hairlineStrong
+    }
+
+    static func borderWidth(isFocused: Bool) -> CGFloat {
+        isFocused ? Theme.Layout.focusRingWidth : Theme.Stroke.hairline
     }
 
     // MARK: - Commit rules (pure, tested)
@@ -74,6 +99,8 @@ struct SecretValueEditor: View {
 struct SecretTextViewRepresentable: NSViewRepresentable {
     @Binding var text: String
     let onCommit: (Bool) -> Void
+    /// Called when the text view gains (`true`) or loses (`false`) first responder.
+    var onFocusChange: (Bool) -> Void = { _ in }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text, onCommit: onCommit)
@@ -84,12 +111,17 @@ struct SecretTextViewRepresentable: NSViewRepresentable {
         if let textView = scrollView.documentView as? SecretTextView {
             textView.delegate = context.coordinator
             textView.string = text
+            textView.onFirstResponderChange = { [coordinator = context.coordinator] focused in
+                coordinator.focusChanged(focused)
+            }
         }
+        context.coordinator.onFocusChange = onFocusChange
         return scrollView
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         context.coordinator.text = $text
+        context.coordinator.onFocusChange = onFocusChange
         guard let textView = scrollView.documentView as? NSTextView, textView.string != text else { return }
         textView.string = text
     }
@@ -101,6 +133,7 @@ struct SecretTextViewRepresentable: NSViewRepresentable {
     final class Coordinator: NSObject, NSTextViewDelegate {
         var text: Binding<String>
         let onCommit: (Bool) -> Void
+        var onFocusChange: (Bool) -> Void = { _ in }
 
         init(text: Binding<String>, onCommit: @escaping (Bool) -> Void) {
             self.text = text
@@ -115,6 +148,13 @@ struct SecretTextViewRepresentable: NSViewRepresentable {
         func textDidEndEditing(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
             commit(textView)
+        }
+
+        /// Reports focus after the current AppKit event, never during a SwiftUI update.
+        func focusChanged(_ focused: Bool) {
+            Task { @MainActor [weak self] in
+                self?.onFocusChange(focused)
+            }
         }
 
         /// Applies the D32 commit rule to the view and the binding.
@@ -134,6 +174,8 @@ struct SecretTextViewRepresentable: NSViewRepresentable {
 final class SecretTextView: NSTextView {
     /// True while this view holds a secure event input request.
     private(set) var hasSecureEventInput = false
+    /// Observes first-responder changes (the SwiftUI frame draws its focus ring from it).
+    var onFirstResponderChange: ((Bool) -> Void)?
 
     /// A scroll view holding a configured ``SecretTextView``.
     static func makeScrollableEditor() -> NSScrollView {
@@ -177,7 +219,7 @@ final class SecretTextView: NSTextView {
         if #available(macOS 15.0, *) {
             writingToolsBehavior = .none
         }
-        font = .monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        font = Theme.Typography.nsMonospaced
         textColor = .labelColor
         drawsBackground = false
     }
@@ -186,6 +228,7 @@ final class SecretTextView: NSTextView {
         let accepted = super.becomeFirstResponder()
         if accepted {
             beginSecureEventInput()
+            onFirstResponderChange?(true)
         }
         return accepted
     }
@@ -194,6 +237,7 @@ final class SecretTextView: NSTextView {
         let resigned = super.resignFirstResponder()
         if resigned {
             endSecureEventInput()
+            onFirstResponderChange?(false)
         }
         return resigned
     }
