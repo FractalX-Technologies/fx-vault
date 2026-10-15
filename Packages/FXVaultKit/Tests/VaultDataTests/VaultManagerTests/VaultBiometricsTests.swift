@@ -267,6 +267,88 @@ struct VaultBiometricsTests {
         #expect(try harness.vaultRecord().biometryStateHash == Data("enrollment-b".utf8))
     }
 
+    @Test func passwordUnlockAfterAnEnrollmentChangeTurnsTouchIDOff() async throws {
+        let (harness, recoveryKey) = try await Self.enabledAndLocked()
+        defer { recoveryKey.wipe() }
+        harness.capabilities.stateHash = Data("enrollment-b".utf8)
+        #expect(try harness.manager.biometricUnlockStatus() == .passwordRequired(.biometryChanged))
+
+        // The lock screen never prompts in this state; the password unlock drops the dead item.
+        try await harness.manager.unlock(password: VaultFixture.password)
+        #expect(harness.biometrics.loadCount == 0)
+        #expect(harness.biometrics.accounts.isEmpty)
+        #expect(try !harness.manager.isBiometricsEnabled())
+        harness.manager.lock()
+        #expect(try harness.manager.biometricUnlockStatus() == .unavailable(.notEnabled))
+    }
+
+    @Test(arguments: [false, true])
+    func passwordUnlockRecordsTheTurnOffWhateverReasonTheLockScreenShowed(afterRestart: Bool) async throws {
+        let (harness, recoveryKey) = try await Self.enabledAndLocked()
+        defer { recoveryKey.wipe() }
+        #expect(!harness.manager.isBiometricsTurnedOffAutomatically)
+        harness.capabilities.stateHash = Data("enrollment-b".utf8)
+        if afterRestart {
+            // The restart rule is checked before the enrollment, so the lock screen says
+            // "After a restart", not "Fingerprints changed".
+            harness.capabilities.bootSession = "boot-after-restart"
+            #expect(try harness.manager.biometricUnlockStatus() == .passwordRequired(.restart))
+        } else {
+            harness.clock.advance(by: Timeouts.passwordMaxAge + VaultFixture.oneSecond)
+            #expect(try harness.manager.biometricUnlockStatus() == .passwordRequired(.periodic))
+        }
+
+        try await harness.manager.unlock(password: VaultFixture.password)
+        #expect(try !harness.manager.isBiometricsEnabled())
+        #expect(harness.manager.isBiometricsTurnedOffAutomatically)
+
+        harness.manager.acknowledgeBiometricsTurnedOff()
+        #expect(!harness.manager.isBiometricsTurnedOffAutomatically)
+    }
+
+    @Test func reauthAfterAnEnrollmentChangeRecordsTheTurnOff() async throws {
+        let (harness, recoveryKey) = try await VaultHarness.created()
+        defer { recoveryKey.wipe() }
+        try await harness.manager.enableBiometrics(password: VaultFixture.password)
+        harness.capabilities.stateHash = Data("enrollment-b".utf8)
+
+        let error = await vaultError {
+            try await harness.manager.reauthenticate(prompt: VaultFixture.prompt)
+        }
+        #expect(error == .passwordRequired(reason: .biometryChanged))
+        #expect(try !harness.manager.isBiometricsEnabled())
+        // Survives the lock, so the next password unlock can offer Touch ID again.
+        harness.manager.lock()
+        try await harness.manager.unlock(password: VaultFixture.password)
+        #expect(harness.manager.isBiometricsTurnedOffAutomatically)
+
+        // Enabling again settles it.
+        try await harness.manager.enableBiometrics(password: VaultFixture.password)
+        #expect(!harness.manager.isBiometricsTurnedOffAutomatically)
+    }
+
+    @Test func turningTouchIDOffOnPurposeIsNotAnAutomaticTurnOff() async throws {
+        let (harness, recoveryKey) = try await VaultHarness.created()
+        defer { recoveryKey.wipe() }
+        try await harness.manager.enableBiometrics(password: VaultFixture.password)
+        try await harness.manager.disableBiometrics(password: VaultFixture.password)
+        #expect(!harness.manager.isBiometricsTurnedOffAutomatically)
+    }
+
+    @Test func passwordUnlockKeepsTouchIDWhenTheEnrollmentIsUnchangedOrUnknown() async throws {
+        let (harness, recoveryKey) = try await Self.enabledAndLocked()
+        defer { recoveryKey.wipe() }
+        try await harness.manager.unlock(password: VaultFixture.password)
+        #expect(try harness.manager.isBiometricsEnabled())
+        harness.manager.lock()
+
+        // Touch ID unavailable right now (lid closed): no state hash, nothing is decided.
+        harness.capabilities.stateHash = nil
+        try await harness.manager.unlock(password: VaultFixture.password)
+        #expect(try harness.manager.isBiometricsEnabled())
+        #expect(harness.biometrics.accounts == [try harness.account])
+    }
+
     // MARK: - Orphans, disable, rotation
 
     @Test func enableDeletesOrphanedItemsOfOtherVaults() async throws {

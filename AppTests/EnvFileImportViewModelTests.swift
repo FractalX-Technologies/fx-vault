@@ -21,19 +21,29 @@ struct EnvFileImportViewModelTests {
             repositoryID = try await harness.stageRepository(items: items, environments: environments)
         }
 
-        func viewModel(scope: ConfigScope = .repository, fileURL: URL? = nil) -> EnvImportViewModel {
+        func viewModel(
+            scope: ConfigScope = .repository,
+            fileURL: URL? = nil,
+            defaultKind: ConfigKind? = nil,
+            start: EnvImportContext.Start = .chooser
+        ) -> EnvImportViewModel {
             EnvImportViewModel(
-                context: EnvImportContext(repositoryID: repositoryID, scope: scope, fileURL: fileURL),
+                context: EnvImportContext(
+                    repositoryID: repositoryID,
+                    scope: scope,
+                    fileURL: fileURL,
+                    defaultKind: defaultKind,
+                    start: start
+                ),
                 dependencies: harness.dependencies(recorder: recorder)
             )
         }
 
-        /// A view model in the review step over pasted `text`.
-        func reviewing(_ text: String, scope: ConfigScope = .repository) -> EnvImportViewModel {
-            let model = viewModel(scope: scope)
-            model.sourceKind = .paste
+        /// A view model whose paste editor holds `text`, parsed (the debounce ended early).
+        func reviewing(_ text: String, scope: ConfigScope = .repository, defaultKind: ConfigKind? = nil) -> EnvImportViewModel {
+            let model = viewModel(scope: scope, defaultKind: defaultKind, start: .pasteEditor)
             model.pastedText = text
-            model.reviewPastedText()
+            model.parsePastedText()
             return model
         }
     }
@@ -79,8 +89,9 @@ struct EnvFileImportViewModelTests {
             "FEATURE_FLAGS": .variable,
             "GH_TOKEN_NAME": .secret,
         ])
-        let allIsIncluded = model.rows.allSatisfy { $0.isIncluded }
-        #expect(allIsIncluded)
+        // Every row is pre-selected except those whose key had characters replaced: they need
+        // an opt-in, since such a "key" can be a fragment of a value.
+        #expect(model.rows.filter { !$0.isIncluded }.map(\.name) == ["API_BASE_URL", "SESSION_TIMEOUT"])
 
         let fixed = try Self.row(model, "API_BASE_URL")
         #expect(fixed.originalKey == "api-base-url")
@@ -118,20 +129,23 @@ struct EnvFileImportViewModelTests {
         #expect(model.alert?.title == "The .env file could not be read")
     }
 
-    @Test func pastedTextIsParsedThenClearedAndImported() async throws {
+    @Test func pastedTextIsParsedLiveThenClearedByTheImport() async throws {
         let fixture = try await Fixture()
         let model = fixture.viewModel()
         model.sourceKind = .paste
-        #expect(model.defaultAction == .reviewPastedText)
-        #expect(!model.canReviewPastedText)
+        #expect(model.step == .paste)
+        #expect(model.defaultAction == .importRows)
+        #expect(!model.canImport)
         model.pastedText = "  \n "
-        #expect(!model.canReviewPastedText)
+        model.parsePastedText()
+        #expect(model.isPastedTextEmpty)
+        #expect(!model.canImport)
 
         model.pastedText = "API_TOKEN=\(EnvFileFixtures.secretValue)\nBASE_URL=\(EnvFileFixtures.variableValue)\n"
-        model.reviewPastedText()
+        model.parsePastedText()
 
-        #expect(model.pastedText.isEmpty)
-        #expect(model.step == .review)
+        #expect(model.step == .paste)
+        #expect(!model.pastedText.isEmpty)
         #expect(model.sourceFileName == nil)
         #expect(model.rows.map(\.name) == ["API_TOKEN", "BASE_URL"])
         #expect(model.rows.map(\.kind) == [.secret, .variable])
@@ -144,6 +158,7 @@ struct EnvFileImportViewModelTests {
             return
         }
         #expect(model.defaultAction == .done)
+        #expect(model.pastedText.isEmpty)
         #expect(result.added == ["API_TOKEN", "BASE_URL"])
         #expect(model.hasPendingChanges(result))
         let allIsWiped = values.allSatisfy { $0.isWiped }
@@ -207,6 +222,9 @@ struct EnvFileImportViewModelTests {
         let model = fixture.reviewing("api-key=one\nOTHER_KEY=two")
         let first = try Self.row(model, "API_KEY")
         #expect(first.differsFromSuggestion == false)
+        // `api-key` needed a character fix, so the row waits for an opt-in.
+        #expect(!first.isIncluded)
+        model.setIncluded(true, forRow: first.id)
 
         model.setName("1BAD", forRow: first.id)
         #expect(model.nameProblem(for: try #require(model.rows.first { $0.id == first.id })) != nil)
@@ -295,7 +313,8 @@ struct EnvFileImportViewModelTests {
 
     @Test func startOverWipesTheParsedValues() async throws {
         let fixture = try await Fixture()
-        let model = fixture.reviewing("API_TOKEN=\(EnvFileFixtures.secretValue)")
+        let model = fixture.viewModel()
+        await model.loadFile(at: EnvFileFixtures.sampleEnvURL)
         let values = try #require(model.preview?.candidates.map(\.value))
 
         model.startOver()
@@ -305,6 +324,15 @@ struct EnvFileImportViewModelTests {
         #expect(model.preview == nil)
         let allIsWiped = values.allSatisfy { $0.isWiped }
         #expect(allIsWiped)
+
+        let pasted = fixture.reviewing("API_TOKEN=\(EnvFileFixtures.secretValue)")
+        let pastedValues = try #require(pasted.preview?.candidates.map(\.value))
+        pasted.startOver()
+        #expect(pasted.step == .paste)
+        #expect(pasted.pastedText.isEmpty)
+        #expect(pasted.rows.isEmpty)
+        let allPastedIsWiped = pastedValues.allSatisfy { $0.isWiped }
+        #expect(allPastedIsWiped)
     }
 
     @Test func closingTheSheetWipesValuesAndPastedText() async throws {
@@ -341,7 +369,8 @@ struct EnvFileImportViewModelTests {
 
         model.importRows()
 
-        #expect(model.step == .review)
+        #expect(model.step == .paste)
         #expect(model.alert != nil)
+        #expect(model.rows.map(\.name) == ["NEW_VAR"])
     }
 }

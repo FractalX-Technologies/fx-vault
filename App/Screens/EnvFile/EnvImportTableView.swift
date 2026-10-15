@@ -44,10 +44,15 @@ struct EnvImportTableView: View {
                 EmptyStateView(
                     systemImage: "doc.text.magnifyingglass",
                     title: String(localized: "envImport.empty.title", defaultValue: "No entries"),
-                    message: String(
-                        localized: "envImport.empty.message",
-                        defaultValue: "No KEY=value lines were found. Check the lines listed below, or start over."
-                    )
+                    message: viewModel.step == .paste
+                        ? String(
+                            localized: "envImport.empty.pasteMessage",
+                            defaultValue: "No KEY=value lines were found. Check the lines listed below, or edit the text above."
+                        )
+                        : String(
+                            localized: "envImport.empty.message",
+                            defaultValue: "No KEY=value lines were found. Check the lines listed below, or start over."
+                        )
                 )
             }
         }
@@ -98,33 +103,47 @@ private struct EnvImportKeyCell: View {
     }
 }
 
-/// Secret / Variable, with the credential mark and the "credential as variable" warning.
+/// Secret / Variable, with the credential mark, and the "credential as variable" warning badge
+/// whose click makes the row a secret.
 private struct EnvImportKindCell: View {
     let viewModel: EnvImportViewModel
     let row: EnvImportRowModel
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xSmall) {
-            Picker(
-                String(localized: "envImport.column.kind", defaultValue: "Kind"),
-                selection: Binding(get: { row.kind }, set: { viewModel.setKind($0, forRow: row.id) })
-            ) {
-                ForEach([ConfigKind.secret, ConfigKind.variable], id: \.self) { kind in
-                    Text(verbatim: kind.envImportTitle).tag(kind)
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+            HStack(spacing: Theme.Spacing.xSmall) {
+                Picker(
+                    String(localized: "envImport.column.kind", defaultValue: "Kind"),
+                    selection: Binding(get: { row.kind }, set: { viewModel.setKind($0, forRow: row.id) })
+                ) {
+                    ForEach([ConfigKind.secret, ConfigKind.variable], id: \.self) { kind in
+                        Text(verbatim: kind.envImportTitle).tag(kind)
+                    }
+                }
+                .labelsHidden()
+                .disabled(!row.canInclude)
+                if viewModel.kindWarning(for: row) == nil, let hint = viewModel.credentialHint(for: row) {
+                    Image(systemName: "key.fill")
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .help(hint)
+                        .accessibilityLabel(hint)
                 }
             }
-            .labelsHidden()
-            .disabled(!row.canInclude)
             if let warning = viewModel.kindWarning(for: row) {
-                Image(systemName: "exclamationmark.triangle.fill")
+                Button {
+                    viewModel.makeSecret(forRow: row.id)
+                } label: {
+                    Label(
+                        String(localized: "envImport.kind.makeSecret", defaultValue: "Make Secret"),
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Colors.warning)
-                    .help(warning)
-                    .accessibilityLabel(warning)
-            } else if let hint = viewModel.credentialHint(for: row) {
-                Image(systemName: "key.fill")
-                    .foregroundStyle(Theme.Colors.textSecondary)
-                    .help(hint)
-                    .accessibilityLabel(hint)
+                }
+                .buttonStyle(.borderless)
+                .disabled(!row.canInclude)
+                .help(warning)
+                .accessibilityHint(warning)
             }
         }
     }

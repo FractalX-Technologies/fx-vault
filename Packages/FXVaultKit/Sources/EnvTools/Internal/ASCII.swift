@@ -32,6 +32,10 @@ enum ASCII {
 
     /// The UTF-8 byte order mark.
     static let byteOrderMark: [UInt8] = [0xEF, 0xBB, 0xBF]
+    /// The start of a PEM begin line (`-----BEGIN CERTIFICATE-----`).
+    static let pemBegin = Array("-----BEGIN ".utf8)
+    /// The start of a PEM end line (`-----END CERTIFICATE-----`).
+    static let pemEnd = Array("-----END ".utf8)
 
     static func isHorizontalWhitespace(_ byte: UInt8) -> Bool {
         byte == space || byte == tab

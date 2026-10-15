@@ -120,7 +120,6 @@ public enum CredentialClassifier {
     }()
 
     private static let schemeSeparator = Array("://".utf8)
-    private static let pemBegin = Array("-----BEGIN ".utf8)
     private static let pemDashes = Array("-----".utf8)
     private static let jwtHeaderStart = Array("eyJ".utf8)
     private static let byteValueCount = 256
@@ -210,8 +209,8 @@ public enum CredentialClassifier {
 
     /// `-----BEGIN ` + `[A-Z0-9 ]+` + `-----`.
     static func containsPEMBlock(_ bytes: UnsafeRawBufferPointer) -> Bool {
-        ByteScanning.occurrences(of: pemBegin, in: bytes).contains { start in
-            var index = start + pemBegin.count
+        ByteScanning.occurrences(of: ASCII.pemBegin, in: bytes).contains { start in
+            var index = start + ASCII.pemBegin.count
             let labelStart = index
             while index < bytes.count,
                   ASCII.isUppercaseLetter(bytes[index]) || ASCII.isDigit(bytes[index]) || bytes[index] == ASCII.space {

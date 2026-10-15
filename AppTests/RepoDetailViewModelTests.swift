@@ -141,6 +141,109 @@ struct RepoDetailViewModelTests {
         ])
     }
 
+    // MARK: - Bulk paste (v0.1.1)
+
+    /// The import context of the last presented sheet.
+    static func importContext(_ recorder: ActionRecorder) throws -> EnvImportContext {
+        guard case .envImport(let context) = try #require(recorder.presented.last) else {
+            Issue.record("Expected the import sheet")
+            throw CancellationError()
+        }
+        return context
+    }
+
+    @Test func pasteCommandOpensThePrefilledPreviewWithTheTabsKind() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.viewModel
+        _ = try await fixture.secretRow()
+        model.kind = .variable
+        let text = "API_TOKEN=\(Self.secretValue)\nREGION=eu"
+
+        await model.handlePaste([NSItemProvider(object: text as NSString)])
+
+        let context = try Self.importContext(fixture.recorder)
+        #expect(context.repositoryID == fixture.repositoryID)
+        #expect(context.scope == .repository)
+        #expect(context.defaultKind == .variable)
+        #expect(context.fileURL == nil)
+        guard case .pasted(let buffer) = context.start else {
+            Issue.record("Expected a prefilled paste")
+            return
+        }
+        #expect(!String(describing: context).contains(Self.secretValue))
+
+        let sheet = EnvImportViewModel(context: context, dependencies: fixture.harness.dependencies(recorder: fixture.recorder))
+        #expect(!buffer.hasContents)
+        #expect(sheet.step == .paste)
+        #expect(sheet.rows.map(\.name) == ["API_TOKEN", "REGION"])
+        #expect(sheet.rows.map(\.kind) == [.variable, .variable])
+        sheet.discard()
+    }
+
+    @Test func pasteCommandIgnoresEmptyTextAndNonTextProviders() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.viewModel
+        _ = try await fixture.secretRow()
+
+        await model.handlePaste([NSItemProvider(object: " \n " as NSString)])
+        await model.handlePaste([])
+        await model.handlePaste([NSItemProvider()])
+
+        #expect(fixture.recorder.presented.isEmpty)
+    }
+
+    @Test func pasteIsEnabledOnlyWhereItemsCanBeEdited() async throws {
+        let fixture = try await Fixture()
+        _ = try await fixture.secretRow()
+        let providers = [NSItemProvider(object: "REGION=eu" as NSString)]
+        #expect(fixture.viewModel.validatePaste(providers)?.count == 1)
+
+        // No capability (for example a repository without write access): Paste is disabled.
+        let readOnly = RepoDetailViewModel(
+            repositoryID: fixture.repositoryID,
+            dependencies: fixture.harness.dependencies(recorder: fixture.recorder),
+            repository: { nil },
+            scopeSummary: { _ in nil }
+        )
+        #expect(!readOnly.canEdit)
+        #expect(readOnly.validatePaste(providers) == nil)
+        await readOnly.handlePaste(providers)
+        #expect(fixture.recorder.presented.isEmpty)
+    }
+
+    @Test func addMenuOpensPasteAndFileImportInTheOpenScope() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.viewModel
+        _ = try await fixture.secretRow()
+        let environmentID = try fixture.harness.data.config.createEnvironment(in: fixture.repositoryID, name: "staging")
+        model.select(scope: .environment(environmentID))
+        model.kind = .secret
+
+        model.pasteMultiple()
+        let paste = try Self.importContext(fixture.recorder)
+        #expect(paste == EnvImportContext(
+            repositoryID: fixture.repositoryID,
+            scope: .environment(environmentID),
+            defaultKind: .secret,
+            start: .pasteEditor
+        ))
+
+        model.kind = .variable
+        model.importEnvFile()
+        let file = try Self.importContext(fixture.recorder)
+        #expect(file == EnvImportContext(
+            repositoryID: fixture.repositoryID,
+            scope: .environment(environmentID),
+            defaultKind: .variable,
+            start: .chooser
+        ))
+
+        let sheet = EnvImportViewModel(context: paste, dependencies: fixture.harness.dependencies(recorder: fixture.recorder))
+        #expect(sheet.targetScope == .environment(environmentID))
+        #expect(sheet.focusesPasteEditor)
+        sheet.discard()
+    }
+
     @Test func deletingAnUnsyncedItemNeedsNoConfirmation() async throws {
         let fixture = try await Fixture()
         let model = fixture.viewModel

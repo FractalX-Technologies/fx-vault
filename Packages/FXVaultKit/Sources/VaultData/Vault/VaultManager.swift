@@ -39,6 +39,8 @@ public final class VaultManager: Sendable {
         var hasVault: Bool
         /// Incremented by every ``lock()``; an unlock installs keys only if it is unchanged.
         var lockEpoch: UInt64 = 0
+        /// Touch ID turned itself off (see ``VaultManager/isBiometricsTurnedOffAutomatically``).
+        var isBiometricsTurnedOffAutomatically = false
     }
 
     /// Serial queue for blocking Touch ID keychain reads (the prompt can stay up for seconds).
@@ -142,6 +144,8 @@ public final class VaultManager: Sendable {
     // MARK: - Unlock and lock
 
     /// Unlocks with the master password and records the check for the restart and 14-day rules.
+    /// When the Touch ID enrollment changed since Touch ID was enabled, the unusable item is
+    /// deleted and Touch ID turned off, so the app can offer to enable it again.
     ///
     /// - Throws: `VaultError.wrongPassword`, `.notInitialized`, `.corrupted(...)` (tampered wrap,
     ///   key-check mismatch), `.locked` if ``lock()`` ran meanwhile.
@@ -152,6 +156,7 @@ public final class VaultManager: Sendable {
             let epoch = lockEpoch
             let keys = try await unwrapWithPassword(password)
             try recordPasswordCheck()
+            dropBiometricsIfEnrollmentChanged()
             guard session.isLocked else { return }
             try install(keys, ifEpoch: epoch)
             VaultManagerConstants.log.info("Vault unlocked with the master password")
@@ -218,6 +223,21 @@ public final class VaultManager: Sendable {
     /// True when Touch ID unlock is enabled for this vault (Preferences toggle).
     public func isBiometricsEnabled() throws -> Bool {
         try records.fetchVault()?.biometryStateHash != nil
+    }
+
+    /// True when FX Vault turned Touch ID off by itself since it was last enabled, disabled or
+    /// acknowledged: a changed enrollment (seen by a password unlock, a Touch ID unlock or a
+    /// ReauthGate check), an invalidated, missing or foreign item, or a failed item replacement.
+    /// The app offers Touch ID once more after the next password unlock. Kept in memory for the
+    /// life of the process.
+    public var isBiometricsTurnedOffAutomatically: Bool {
+        lifecycle.withLock { $0.isBiometricsTurnedOffAutomatically }
+    }
+
+    /// Clears ``isBiometricsTurnedOffAutomatically`` (the offer was answered, or Touch ID was
+    /// changed in Settings).
+    public func acknowledgeBiometricsTurnedOff() {
+        lifecycle.withLock { $0.isBiometricsTurnedOffAutomatically = false }
     }
 
     /// Why Touch ID cannot be enabled on this build and Mac, or nil. `.unsignedBuild` disables the
@@ -358,6 +378,7 @@ public final class VaultManager: Sendable {
                 try? biometricStore.delete(account: account)
                 throw error
             }
+            acknowledgeBiometricsTurnedOff()
             VaultManagerConstants.log.info("Touch ID enabled")
         }
     }
@@ -378,6 +399,7 @@ public final class VaultManager: Sendable {
                 vault.biometryStateHash = nil
                 vault.recordPasswordCheck(at: clock.now, bootSession: capabilities.bootSessionID())
             }
+            acknowledgeBiometricsTurnedOff()
             VaultManagerConstants.log.info("Touch ID disabled")
         }
     }
@@ -397,7 +419,10 @@ public final class VaultManager: Sendable {
             try session.database.write { tx in
                 try records.eraseAllData(in: tx)
             }
-            lifecycle.withLock { $0.hasVault = false }
+            lifecycle.withLock { lifecycle in
+                lifecycle.hasVault = false
+                lifecycle.isBiometricsTurnedOffAutomatically = false
+            }
             checkpointAfterKeyWrite()
             if capabilities.hasKeychainAccessGroup {
                 for account in (try? biometricStore.allAccounts()) ?? [] {
@@ -656,10 +681,32 @@ public final class VaultManager: Sendable {
         return try result.get()
     }
 
-    /// Deletes the item (best effort) and clears the enablement, so the UI offers to re-enable.
+    /// After a password unlock: a `.biometryCurrentSet` item can never be read again once the
+    /// enrollment changed, so delete it and clear the enablement now. Otherwise the lock screen
+    /// would keep requiring the password ("fingerprints changed") on every lock, and Settings
+    /// would still show Touch ID as on. Skipped while Touch ID is unavailable (no state hash).
+    /// Never fails the unlock.
+    private func dropBiometricsIfEnrollmentChanged() {
+        do {
+            let vault = try loadVault()
+            guard
+                let enrolled = vault.biometryStateHash,
+                let current = capabilities.biometryStateHash(),
+                current != enrolled
+            else { return }
+            try forgetBiometrics(account: BiometricKeyAccount.name(vaultID: vault.vaultID))
+            VaultManagerConstants.log.info("Touch ID enrollment changed; Touch ID turned off")
+        } catch {
+            VaultManagerConstants.log.error("Clearing a stale Touch ID enrollment failed")
+        }
+    }
+
+    /// Deletes the item (best effort) and clears the enablement, so the UI offers to re-enable
+    /// (``isBiometricsTurnedOffAutomatically``).
     private func forgetBiometrics(account: String) throws {
         try? biometricStore.delete(account: account)
         try updateVault { $0.biometryStateHash = nil }
+        lifecycle.withLock { $0.isBiometricsTurnedOffAutomatically = true }
     }
 
     /// Deletes every item of the service whose account is not `account` (§5.5 enable).

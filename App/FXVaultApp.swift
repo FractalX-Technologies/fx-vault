@@ -5,7 +5,16 @@ enum SceneID {
     static let main = "main"
 }
 
+/// The process entry point. `--diagnose` is answered here, before SwiftUI creates the app
+/// delegate (which opens the vault database) or any window (``DiagnoseCommand``).
 @main
+enum FXVaultMain {
+    static func main() {
+        DiagnoseCommand.runIfRequested()
+        FXVaultApp.main()
+    }
+}
+
 struct FXVaultApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 

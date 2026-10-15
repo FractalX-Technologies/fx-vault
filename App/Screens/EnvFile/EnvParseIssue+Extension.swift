@@ -29,6 +29,11 @@ nonisolated extension EnvParseIssue {
             )
         case .invalidEncoding:
             String(localized: "envImport.issue.invalidEncoding", defaultValue: "The value is not valid UTF-8 text, so the line was skipped.")
+        case .unquotedMultilineValue:
+            String(
+                localized: "envImport.issue.unquotedMultiline",
+                defaultValue: "The value is a key or certificate on several lines without quotes, so it was skipped up to its END line. Wrap the value in double quotes."
+            )
         case .duplicateKey(let previousLine):
             String(
                 localized: "envImport.issue.duplicateKey",

@@ -60,14 +60,39 @@ struct EnvFileTests {
 
     // MARK: - Import
 
+    /// Selections of the candidates whose proposed name is in `names`, in file order, under
+    /// their proposed name and suggested kind (includes rows that are not pre-selected).
+    static func selections(in preview: EnvImportPreviewModel, named names: Set<String>) -> [EnvImportSelectionModel] {
+        preview.candidates.indices.compactMap { index in
+            let candidate = preview.candidates[index]
+            guard let name = candidate.proposedName, names.contains(name) else { return nil }
+            return EnvImportSelectionModel(candidateIndex: index, name: name, kind: candidate.suggestedKind, onConflict: .skip)
+        }
+    }
+
+    @Test func rowsWhoseKeyNeededACharacterFixAreNotPreSelected() async throws {
+        let fixture = try await Fixture.make()
+        defer { fixture.directory.remove() }
+        let text = "FXVfixture+chunk/ab==\n9LIVES=x\napi_url=x\nAPI_URL2=x\nGITHUB_FXV=x"
+        let preview = try fixture.files.parse(SecretBytes(utf8: text))
+        defer { preview.wipe() }
+        #expect(preview.candidates.map(\.proposedName) == ["FXVFIXTURE_CHUNK_AB", "_9LIVES", "API_URL", "API_URL2", "GH_FXV"])
+        // Character replacement and a leading-digit fix need an opt-in; case and the reserved
+        // prefix do not.
+        #expect(preview.defaultSelections.map(\.name) == ["API_URL", "API_URL2", "GH_FXV"])
+    }
+
     @Test func importPreMarksSecretsAndNormalizesValues() async throws {
         let fixture = try await Fixture.make()
         defer { fixture.directory.remove() }
         let preview = try fixture.files.parse(SecretBytes(utf8: Self.sample))
         defer { preview.wipe() }
 
-        let selections = preview.defaultSelections
-        #expect(selections.map(\.name) == ["DATABASE_URL", "API_KEY", "LOG_LEVEL", "PEM", "DB_URL"])
+        // `api-key` needed a character fix, so it is proposed as API_KEY but not pre-selected.
+        let defaults = preview.defaultSelections
+        #expect(defaults.map(\.name) == ["DATABASE_URL", "LOG_LEVEL", "PEM", "DB_URL"])
+        #expect(defaults.map(\.kind) == [.secret, .variable, .secret, .variable])
+        let selections = Self.selections(in: preview, named: ["DATABASE_URL", "API_KEY", "LOG_LEVEL", "PEM", "DB_URL"])
         #expect(selections.map(\.kind) == [.secret, .secret, .variable, .secret, .variable])
         #expect(preview.candidates.first { $0.key.originalKey == "EMPTY" }?.valueProblem == .emptyValue)
 
@@ -95,7 +120,7 @@ struct EnvFileTests {
 
         let preview = try fixture.files.parse(SecretBytes(utf8: Self.sample))
         defer { preview.wipe() }
-        let selections = preview.defaultSelections.filter { ["LOG_LEVEL", "API_KEY"].contains($0.name) }
+        let selections = Self.selections(in: preview, named: ["API_KEY", "LOG_LEVEL"])
         let conflicts = try fixture.files.conflicts(for: selections, in: preview, repositoryID: fixture.repo.id, scope: scope)
         #expect(conflicts.values.map(\.id) == [level])
 

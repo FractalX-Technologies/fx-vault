@@ -47,7 +47,7 @@ struct DotEnvParserTests {
         ParserCase("export prefix", "export A=1", [pair("A", "1", 1)]),
         ParserCase("export with tab and spaces", "export\t  A=1", [pair("A", "1", 1)]),
         ParserCase("key named export", "export=1", [pair("export", "1", 1)]),
-        ParserCase("export without assignment", "export A", [], issues: [issue(1, .missingEquals, "A")]),
+        ParserCase("export without assignment", "export A", [], issues: [issue(1, .missingEquals, nil)]),
 
         // Whitespace around keys and values
         ParserCase("spaces around equals", "A = 1", [pair("A", "1", 1)]),
@@ -134,9 +134,9 @@ struct DotEnvParserTests {
             "missing equals",
             "JUSTAKEY\nA=1",
             [pair("A", "1", 2)],
-            issues: [issue(1, .missingEquals, "JUSTAKEY")]
+            issues: [issue(1, .missingEquals, nil)]
         ),
-        ParserCase("space inside key", "MY KEY=1", [], issues: [issue(1, .missingEquals, "MY")]),
+        ParserCase("space inside key", "MY KEY=1", [], issues: [issue(1, .missingEquals, nil)]),
         ParserCase("empty key", "=value\nA=1", [pair("A", "1", 2)], issues: [issue(1, .emptyKey, nil)]),
         ParserCase("control character in key", "A\u{01}B=1", [], issues: [issue(1, .invalidKey, nil)]),
         ParserCase(
@@ -174,12 +174,69 @@ struct DotEnvParserTests {
             "X\nA=${B}\n=1",
             [pair("A", "${B}", 2)],
             issues: [
-                issue(1, .missingEquals, "X"),
+                issue(1, .missingEquals, nil),
                 issue(2, .variableExpansionNotSupported, "A"),
                 issue(3, .emptyKey, nil),
             ]
         ),
     ]
+
+    // MARK: - Unquoted multi-line PEM values
+
+    /// Synthetic key material (not a real key). Body lines end in `==`, `=` or nothing.
+    static let pemBodyLines = [
+        "FXVFIXTUREpemBODYlineONEabc+def/ghi==",
+        "FXVFIXTUREpemBODYlineTWO=",
+        "FXVFIXTUREpemBODYlineTHREE",
+    ]
+
+    @Test("unquoted PEM is skipped up to its END line", arguments: pemBodyLines)
+    func unquotedPEMIsSkipped(_ bodyLine: String) throws {
+        let text = """
+        A=1
+        JWT_KEY=-----BEGIN FXV FIXTURE KEY-----
+        FXVFIXTUREpemBODYfirstLINE
+        \(bodyLine)
+        -----END FXV FIXTURE KEY-----
+        B=2
+        """
+        let result = try DotEnvParser.parse(text)
+        #expect(result.pairsWithLines == [ParsedPair("A", "1", line: 1), ParsedPair("B", "2", line: 6)])
+        #expect(result.issues == [EnvParseIssue(line: 2, kind: .unquotedMultilineValue, key: "JWT_KEY")])
+        #expect(result.hasErrors)
+        let body = bodyLine.prefix { $0 != "=" }
+        #expect(result.issues.allSatisfy { $0.key.map { !$0.contains(body) } ?? true })
+    }
+
+    @Test func unquotedPEMWithCRLFAndIndentedEndLine() throws {
+        let text = "K=-----BEGIN CERTIFICATE-----\r\nFXVFIXTURE+abc==\r\n  -----END CERTIFICATE-----\r\nB=2"
+        let result = try DotEnvParser.parse(text)
+        #expect(result.pairsWithLines == [ParsedPair("B", "2", line: 4)])
+        #expect(result.issues == [EnvParseIssue(line: 1, kind: .unquotedMultilineValue, key: "K")])
+    }
+
+    @Test func unterminatedUnquotedPEMSkipsToTheEnd() throws {
+        let result = try DotEnvParser.parse("A=1\nK=-----BEGIN FXV FIXTURE KEY-----\nFXVFIXTURE+abc==\nNEXT=after")
+        #expect(result.pairsWithLines == [ParsedPair("A", "1", line: 1)])
+        #expect(result.issues == [EnvParseIssue(line: 2, kind: .unquotedMultilineValue, key: "K")])
+    }
+
+    @Test func singleLinePEMAndQuotedPEMAreKept() throws {
+        let oneLine = "-----BEGIN FXV FIXTURE-----AAAA-----END FXV FIXTURE-----"
+        let text = "A=\(oneLine)\nB=\"-----BEGIN FXV FIXTURE-----\nAAAA==\n-----END FXV FIXTURE-----\"\nC=3"
+        let result = try DotEnvParser.parse(text)
+        #expect(result.pairsWithLines == [
+            ParsedPair("A", oneLine, line: 1),
+            ParsedPair("B", "-----BEGIN FXV FIXTURE-----\nAAAA==\n-----END FXV FIXTURE-----", line: 2),
+            ParsedPair("C", "3", line: 5),
+        ])
+        #expect(result.issues.isEmpty)
+    }
+
+    @Test func missingEqualsNeverEchoesTheLine() throws {
+        let result = try DotEnvParser.parse("ghp_FXV_FIXTURE_TOKEN\nA=1")
+        #expect(result.issues == [EnvParseIssue(line: 1, kind: .missingEquals, key: nil)])
+    }
 
     @Test("table", arguments: cases)
     func table(_ testCase: ParserCase) throws {
@@ -220,6 +277,7 @@ struct DotEnvParserTests {
         #expect(EnvParseIssue(line: 1, kind: .unknownEscapeSequence, key: "A").severity == .warning)
         #expect(EnvParseIssue(line: 1, kind: .unterminatedQuote, key: "A").severity == .error)
         #expect(EnvParseIssue(line: 1, kind: .missingEquals, key: nil).severity == .error)
+        #expect(EnvParseIssue(line: 1, kind: .unquotedMultilineValue, key: "A").severity == .error)
     }
 
     @Test func warningsDoNotCountAsErrors() throws {

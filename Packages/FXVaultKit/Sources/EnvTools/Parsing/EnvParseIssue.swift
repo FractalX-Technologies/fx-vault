@@ -5,7 +5,8 @@
 public struct EnvParseIssue: Sendable, Hashable {
     /// What went wrong.
     public enum Kind: Sendable, Hashable {
-        /// A non-comment line has no `=` (for example `export FOO` or `hello world`).
+        /// A non-comment line has no `=` (for example `export FOO` or `hello world`). The issue
+        /// carries no key, because the line's first token may be a value.
         case missingEquals
         /// The line starts with `=`.
         case emptyKey
@@ -19,6 +20,10 @@ public struct EnvParseIssue: Sendable, Hashable {
         case unexpectedCharactersAfterQuote
         /// The value is not valid UTF-8.
         case invalidEncoding
+        /// An unquoted value starts a PEM block (`-----BEGIN ...`) that spans lines. The block,
+        /// up to its `-----END ...` line (or the end of the file), was skipped; quoting the
+        /// value fixes it.
+        case unquotedMultilineValue
         /// The key appeared before, last on `previousLine`; this later value wins.
         case duplicateKey(previousLine: Int)
         /// The value contains `${`. Variables are not expanded: the text is kept as written.
@@ -53,7 +58,7 @@ public struct EnvParseIssue: Sendable, Hashable {
     public var severity: Severity {
         switch kind {
         case .missingEquals, .emptyKey, .invalidKey, .unterminatedQuote,
-             .unexpectedCharactersAfterQuote, .invalidEncoding:
+             .unexpectedCharactersAfterQuote, .invalidEncoding, .unquotedMultilineValue:
             .error
         case .duplicateKey, .variableExpansionNotSupported, .unknownEscapeSequence:
             .warning

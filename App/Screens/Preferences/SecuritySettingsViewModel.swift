@@ -106,6 +106,8 @@ final class SecuritySettingsViewModel {
             } else {
                 try await app.container.vaultManager.disableBiometrics(password: currentPassword)
             }
+            // A choice made here answers the one-time unlock offer too: never offer it again.
+            app.recordTouchIDOfferAnswer()
             refresh()
             dismissSheet()
         }

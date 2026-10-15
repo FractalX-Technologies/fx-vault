@@ -36,17 +36,7 @@ struct RepoDetailScreen: View {
                 .labelsHidden()
                 .fixedSize()
                 Spacer()
-                Button {
-                    viewModel.add()
-                } label: {
-                    Label(
-                        viewModel.kind == .secret
-                            ? String(localized: "main.detail.addSecret", defaultValue: "Add Secret")
-                            : String(localized: "main.detail.addVariable", defaultValue: "Add Variable"),
-                        systemImage: "plus"
-                    )
-                }
-                .disabled(!viewModel.canEdit)
+                RepoDetailAddMenu(viewModel: viewModel)
             }
             ConfigTableView(viewModel: viewModel)
             if let notice = viewModel.notice {
@@ -56,6 +46,12 @@ struct RepoDetailScreen: View {
             }
         }
         .padding(Theme.Spacing.large)
+        // ⌘V anywhere in the detail column (the table, the Kind picker, the empty state): a
+        // user-initiated paste opens the import preview prefilled (never a background read).
+        // Paste is disabled in read-only scopes.
+        .onPasteCommand(of: [.plainText], validator: viewModel.validatePaste) { providers in
+            Task { await viewModel.handlePaste(providers) }
+        }
         .errorAlert($viewModel.alert)
         .confirmationDialog(
             String(localized: "main.detail.delete.title", defaultValue: "Delete this item?"),
@@ -79,6 +75,44 @@ struct RepoDetailScreen: View {
             get: { viewModel.pendingDeletion != nil },
             set: { if !$0 { viewModel.pendingDeletion = nil } }
         )
+    }
+}
+
+/// The Add split button: Add Secret / Add Variable (the tab's kind) as the primary action, plus
+/// Paste Multiple… and Import .env File… (both default every row to the tab's kind).
+private struct RepoDetailAddMenu: View {
+    let viewModel: RepoDetailViewModel
+
+    var body: some View {
+        Menu {
+            Button(addTitle) {
+                viewModel.add()
+            }
+            Divider()
+            Button(String(localized: "main.detail.pasteMultiple", defaultValue: "Paste Multiple…")) {
+                viewModel.pasteMultiple()
+            }
+            Button(String(localized: "main.detail.importEnvFile", defaultValue: "Import .env File…")) {
+                viewModel.importEnvFile()
+            }
+        } label: {
+            Label(addTitle, systemImage: "plus")
+        } primaryAction: {
+            viewModel.add()
+        }
+        .menuStyle(.button)
+        .fixedSize()
+        .disabled(!viewModel.canEdit)
+        .help(String(
+            localized: "main.detail.add.help",
+            defaultValue: "Add one item, or paste many KEY=value lines at once (⌘V on the table)"
+        ))
+    }
+
+    private var addTitle: String {
+        viewModel.kind == .secret
+            ? String(localized: "main.detail.addSecret", defaultValue: "Add Secret")
+            : String(localized: "main.detail.addVariable", defaultValue: "Add Variable")
     }
 }
 

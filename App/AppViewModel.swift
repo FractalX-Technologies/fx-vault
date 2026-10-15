@@ -206,6 +206,30 @@ final class AppViewModel {
         phase = .onboarding
     }
 
+    // MARK: - Touch ID offer (v0.1.1)
+
+    /// True when a password unlock should be followed by the one-time "Unlock FX Vault with
+    /// Touch ID" offer: the vault is unlocked, the build is signed with the keychain access group
+    /// and Touch ID can run on this Mac (`biometricsAvailability() == nil`), Touch ID is off, and
+    /// the user has not answered the offer before. Unsigned builds never qualify.
+    ///
+    /// - Parameter afterInvalidation: Touch ID was on and FX Vault turned it off by itself
+    ///   (`VaultManager.isBiometricsTurnedOffAutomatically`, usually an enrollment change); the
+    ///   offer then comes back once even if it was answered before.
+    func shouldOfferTouchID(afterInvalidation: Bool) -> Bool {
+        let manager = container.vaultManager
+        guard manager.state == .unlocked, manager.biometricsAvailability() == nil else { return false }
+        guard let isEnabled = try? manager.isBiometricsEnabled(), !isEnabled else { return false }
+        return afterInvalidation || !container.preferences.hasAnsweredTouchIDOffer
+    }
+
+    /// Remembers that the offer was answered (Enable, Not Now, or a change in Settings), which
+    /// also settles an automatic turn-off.
+    func recordTouchIDOfferAnswer() {
+        container.preferences.hasAnsweredTouchIDOffer = true
+        container.vaultManager.acknowledgeBiometricsTurnedOff()
+    }
+
     // MARK: - Launch reconciliation (§7.3)
 
     /// After every unlock: prunes the sync journal and reconciles rows a crash or quit left
@@ -370,6 +394,16 @@ final class AppViewModel {
 
     func makeOnboardingViewModel() -> OnboardingViewModel {
         OnboardingViewModel(app: self)
+    }
+
+    /// The offer after a password unlock; holds `password` only until it is answered or the vault
+    /// locks.
+    func makeTouchIDOfferViewModel(
+        password: String,
+        afterInvalidation: Bool,
+        onFinish: @escaping () -> Void
+    ) -> TouchIDOfferViewModel {
+        TouchIDOfferViewModel(app: self, password: password, afterInvalidation: afterInvalidation, onFinish: onFinish)
     }
 
     func makeLockViewModel() -> LockViewModel {

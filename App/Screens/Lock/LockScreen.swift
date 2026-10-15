@@ -23,6 +23,9 @@ struct LockScreen: View {
             }
         }
         .animation(Theme.Durations.standardAnimation, value: viewModel.isShowingRecoveryReset)
+        .sheet(item: Binding(get: { viewModel.touchIDOffer }, set: { _ in })) { offer in
+            TouchIDOfferScreen(viewModel: offer)
+        }
         .task {
             await autoPrompt()
         }
@@ -49,7 +52,7 @@ private struct LockCardView: View {
             CardHeader(
                 systemImage: "lock.fill",
                 title: String(localized: "lock.title", defaultValue: "FX Vault is locked"),
-                subtitle: String(localized: "lock.subtitle", defaultValue: "Enter your master password to unlock.")
+                subtitle: viewModel.subtitle
             )
             VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                 SecureField(
@@ -63,10 +66,7 @@ private struct LockCardView: View {
                 .onSubmit { Task { await viewModel.unlockWithPassword() } }
 
                 if let notice = viewModel.biometricNotice {
-                    Text(notice)
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    LockNoticeView(notice: notice)
                 }
             }
             if let error = viewModel.error {
@@ -79,6 +79,7 @@ private struct LockCardView: View {
                     } label: {
                         Label(String(localized: "lock.touchID", defaultValue: "Unlock with Touch ID"), systemImage: "touchid")
                     }
+                    .buttonStyle(.bordered)
                     .disabled(viewModel.isUnlocking)
                 }
                 Spacer()
@@ -108,6 +109,30 @@ private struct LockCardView: View {
         }
         .onChange(of: viewModel.passwordFocusRequest) {
             isPasswordFocused = true
+        }
+    }
+}
+
+/// A Touch ID note under the password field: the short reason in bold, then the explanation.
+private struct LockNoticeView: View {
+    let notice: LockNoticeModel
+
+    var body: some View {
+        Label {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+                if let title = notice.title {
+                    Text(title)
+                        .font(Theme.Typography.callout.weight(.semibold))
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                }
+                Text(notice.detail)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } icon: {
+            Image(systemName: "touchid")
+                .foregroundStyle(Theme.Colors.textSecondary)
         }
     }
 }

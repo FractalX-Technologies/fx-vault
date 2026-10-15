@@ -14,11 +14,28 @@ public struct EnvImportPreviewModel: Sendable {
 
     /// The table's initial rows: every candidate with a proposed name and a usable value, under
     /// its proposed name and suggested kind (credential pre-marking, §5.13), skipping conflicts.
+    ///
+    /// Candidates whose key had characters replaced or a leading digit fixed are left out, so
+    /// the user opts in: such a "key" may be a fragment of a value (a line of key material with
+    /// `=` padding), and names are plaintext on GitHub.
     public var defaultSelections: [EnvImportSelectionModel] {
         candidates.indices.compactMap { index in
             let candidate = candidates[index]
-            guard let name = candidate.proposedName, candidate.valueProblem == nil else { return nil }
+            guard let name = candidate.proposedName,
+                  candidate.valueProblem == nil,
+                  !Self.requiresOptIn(candidate.key.status)
+            else { return nil }
             return EnvImportSelectionModel(candidateIndex: index, name: name, kind: candidate.suggestedKind, onConflict: .skip)
+        }
+    }
+
+    /// True for key fixes that rewrote the key's characters (not just its case).
+    private static func requiresOptIn(_ status: KeyNormalizationModel.Status) -> Bool {
+        switch status {
+        case .needsFix(.invalidCharacter), .needsFix(.leadingDigit):
+            true
+        case .valid, .uppercased, .needsFix:
+            false
         }
     }
 

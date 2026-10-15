@@ -35,7 +35,8 @@ struct VaultPlatformTests {
 
     @Test func loadErrorMapping() {
         #expect(KeychainManager.loadError(for: errSecItemNotFound, isLockedOut: false) == .biometryInvalidated)
-        #expect(KeychainManager.loadError(for: errSecAuthFailed, isLockedOut: false) == .biometryInvalidated)
+        // A finger Touch ID did not recognize: password field, and the item stays (v0.1.1 fix).
+        #expect(KeychainManager.loadError(for: errSecAuthFailed, isLockedOut: false) == .passwordFallbackRequested)
         #expect(KeychainManager.loadError(for: errSecAuthFailed, isLockedOut: true) == .biometryUnavailable(.lockout))
         #expect(KeychainManager.loadError(for: errSecUserCanceled, isLockedOut: false) == .cancelled)
         #expect(
@@ -50,8 +51,80 @@ struct VaultPlatformTests {
         #expect(KeychainManager.loadError(for: OSStatus(Self.code(.userCancel)), isLockedOut: false) == .cancelled)
     }
 
+    @Test func addQueryCarriesAccessControlButNoAccessibleAttribute() throws {
+        let access = try #require(KeychainManager.biometricAccessControl())
+        let value = Data(repeating: 0xAB, count: Limits.dekBytes)
+        let query = KeychainManager.addQuery(
+            data: value,
+            account: "touchid-v1-00",
+            accessGroup: FakeBuildCapabilities.defaultAccessGroup,
+            access: access
+        )
+        #expect(query[kSecUseDataProtectionKeychain as String] as? Bool == true)
+        #expect(query[kSecAttrAccessGroup as String] as? String == FakeBuildCapabilities.defaultAccessGroup)
+        #expect(query[kSecAttrService as String] as? String == BiometricKeyAccount.service)
+        #expect(query[kSecAttrSynchronizable as String] as? Bool == false)
+        #expect(query[kSecValueData as String] as? Data == value)
+        #expect(query[kSecAttrAccessControl as String] != nil)
+        // The protection class lives in the access control; both together are errSecParam.
+        #expect(query[kSecAttrAccessible as String] == nil)
+        #expect(query[kSecReturnData as String] == nil)
+    }
+
+    @Test func accessControlIsBiometryCurrentSetWhenPasscodeSetThisDeviceOnly() throws {
+        let access = try #require(KeychainManager.biometricAccessControl())
+        // The access control's description lists its protection class and constraints.
+        let description = String(describing: access)
+        #expect(description.contains(String(describing: kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly)))
+    }
+
+    @Test func readQueryAsksForDataThroughThePromptContext() {
+        let manager = BiometricAuthManager()
+        let context = manager.promptContext(for: VaultFixture.prompt)
+        let query = KeychainManager.readQuery(
+            account: "touchid-v1-00",
+            accessGroup: FakeBuildCapabilities.defaultAccessGroup,
+            context: context
+        )
+        #expect(query[kSecReturnData as String] as? Bool == true)
+        #expect(query[kSecMatchLimit as String] as? String == kSecMatchLimitOne as String)
+        #expect(query[kSecUseDataProtectionKeychain as String] as? Bool == true)
+        #expect(query[kSecAttrAccessGroup as String] as? String == FakeBuildCapabilities.defaultAccessGroup)
+        let passed = query[kSecUseAuthenticationContext as String] as? LAContext
+        #expect(passed === context)
+        #expect(passed?.localizedReason == VaultFixture.prompt.reason)
+        #expect(passed?.interactionNotAllowed == false)
+        #expect(query[kSecAttrAccessControl as String] == nil)
+        manager.invalidate()
+    }
+
+    @Test func presenceAndListQueriesNeverAskForDataOrUI() {
+        let manager = BiometricAuthManager()
+        let presence = KeychainManager.presenceQuery(
+            account: "touchid-v1-00",
+            accessGroup: FakeBuildCapabilities.defaultAccessGroup,
+            context: manager.silentContext()
+        )
+        let list = KeychainManager.listQuery(
+            accessGroup: FakeBuildCapabilities.defaultAccessGroup,
+            context: manager.silentContext()
+        )
+        for query in [presence, list] {
+            #expect(query[kSecReturnData as String] == nil)
+            #expect(query[kSecReturnAttributes as String] as? Bool == true)
+            #expect(query[kSecUseDataProtectionKeychain as String] as? Bool == true)
+            #expect(query[kSecAttrAccessGroup as String] as? String == FakeBuildCapabilities.defaultAccessGroup)
+            #expect((query[kSecUseAuthenticationContext as String] as? LAContext)?.interactionNotAllowed == true)
+        }
+        #expect(presence[kSecAttrAccount as String] as? String == "touchid-v1-00")
+        #expect(presence[kSecMatchLimit as String] as? String == kSecMatchLimitOne as String)
+        #expect(list[kSecAttrAccount as String] == nil)
+        #expect(list[kSecMatchLimit as String] as? String == kSecMatchLimitAll as String)
+    }
+
     @Test func presenceMapping() throws {
         #expect(try KeychainManager.presence(for: errSecInteractionNotAllowed))
+        #expect(try KeychainManager.presence(for: errSecAuthFailed))
         #expect(try KeychainManager.presence(for: errSecSuccess))
         #expect(try !KeychainManager.presence(for: errSecItemNotFound))
         #expect(throws: VaultError.biometryUnavailable(.unsignedBuild)) {

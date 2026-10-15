@@ -38,6 +38,13 @@ struct SecuritySettingsScreen: View {
                     Text(reason.localizedMessage)
                         .font(Theme.Typography.caption)
                         .foregroundStyle(Theme.Colors.textSecondary)
+                } else {
+                    Text(String(
+                        localized: "settings.security.touchID.policy",
+                        defaultValue: "FX Vault still asks for the master password after a restart and at least every \(Timeouts.passwordMaxAge.wholeDays) days."
+                    ))
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
             Section(String(localized: "settings.security.password.section", defaultValue: "Master password")) {

@@ -94,6 +94,7 @@ final class PreferencesManager {
         static let cloneFolderPath = "preferences.cloneFolderPath"
         static let ghPathOverride = "preferences.ghPathOverride"
         static let recoveryKeyConfirmationPending = "preferences.recoveryKeyConfirmationPending"
+        static let touchIDOfferAnswered = "preferences.touchIDOfferAnswered"
     }
 
     /// Auto-lock choices offered in Preferences, in minutes (§5.7).
@@ -107,6 +108,7 @@ final class PreferencesManager {
         cloneFolderPath = store.string(forKey: Key.cloneFolderPath)
         ghPathOverride = Self.normalizedPath(store.string(forKey: Key.ghPathOverride))
         isRecoveryKeyConfirmationPending = store.bool(forKey: Key.recoveryKeyConfirmationPending)
+        hasAnsweredTouchIDOffer = store.bool(forKey: Key.touchIDOfferAnswered)
     }
 
     /// Inactivity auto-lock, in minutes. Always one of ``autoLockOptions``.
@@ -157,6 +159,14 @@ final class PreferencesManager {
     var isRecoveryKeyConfirmationPending: Bool {
         didSet {
             store.set(isRecoveryKeyConfirmationPending, forKey: Key.recoveryKeyConfirmationPending)
+        }
+    }
+
+    /// True once the user answered the one-time "Unlock FX Vault with Touch ID" offer (Enable
+    /// or Not Now) or turned Touch ID on or off in Settings, so the offer never comes back.
+    var hasAnsweredTouchIDOffer: Bool {
+        didSet {
+            store.set(hasAnsweredTouchIDOffer, forKey: Key.touchIDOfferAnswered)
         }
     }
 

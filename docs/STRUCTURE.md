@@ -16,7 +16,10 @@ FXVault/
 │   ├── FXVault.entitlements         # ad-hoc: app-sandbox = false
 │   └── FXVault-Signed.entitlements  # + keychain-access-groups
 ├── App/                             # app target (MainActor by default, everything internal)
-│   ├── FXVaultApp.swift             # @main: main Window + Settings scene, VaultCommands menus
+│   ├── FXVaultApp.swift             # @main FXVaultMain (answers --diagnose first), FXVaultApp:
+│   │                                # main Window + Settings scene, VaultCommands menus
+│   ├── Diagnostics/                 # --diagnose: DiagnoseCommand (stdout JSON, exit),
+│   │                                # DiagnosticReporter, DiagnosticReportModel
 │   ├── AppDelegate.swift            # owns AppBootstrap (startup-failure screen), .fxvault opens
 │   ├── AppContainer.swift           # composition root (live / preview / test)
 │   ├── AppViewModel.swift           # VaultPhase, two-phase lock, LockObserving, gh status,
@@ -28,7 +31,9 @@ FXVault/
 │   ├── Screens/
 │   │   ├── Root/RootScreen.swift    # phase switch, onOpenURL, main-window opener
 │   │   ├── Onboarding/              # OnboardingScreen/ViewModel, Steps/OnboardingStepViews
-│   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel
+│   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel,
+│   │   │                            # TouchIDOfferScreen/ViewModel (one-time offer after a
+│   │   │                            # password unlock), PasswordRequiredReason+Extension
 │   │   ├── GHSetup/                 # GHSetupScreen/ViewModel (install, upgrade, login, Not Now)
 │   │   ├── Main/                    # MainScreen/ViewModel (three columns, toolbar, router)
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
@@ -51,6 +56,7 @@ FXVault/
 │   │   │                            # environment editors (Sheet + ViewModel), ItemsSection,
 │   │   │                            # StagedView, CreateRepoModels
 │   │   ├── EnvFile/                 # EnvImportScreen/ViewModel/TableView, EnvImportRowModel,
+│   │   │                            # EnvPasteEditorView,
 │   │   │                            # EnvExportScreen/ViewModel, EnvFilePanels,
 │   │   │                            # EnvFileError+Extension, EnvParseIssue+Extension
 │   │   ├── Sharing/                 # ShareExport/ShareImport/NearbySend/NearbyReceive
@@ -89,13 +95,14 @@ FXVault/
 │   ├── Support/TestHarness.swift    # in-memory vault, scripted gh, temp home, ActionRecorder,
 │   │                                # TestFixtures
 │   ├── <Name>ViewModelTests.swift   # one suite per view model / manager: AppViewModel,
-│   │                                # AutoLock, Clipboard, Onboarding, Lock, RecoveryReset,
+│   │                                # AutoLock, Clipboard, Onboarding, Lock, TouchIDOffer,
+│   │                                # DiagnosticReport (--diagnose), RecoveryReset,
 │   │                                # Preferences, AccountsSettings, GHStatusProbe, MainViewModel,
 │   │                                # Sidebar, ScopeList, RepoDetail, ItemEditor, Environment
 │   │                                # (+ EnvironmentBranchPolicyForm), Sync, DriftReview,
 │   │                                # CreateRepo (+ CreateRepoEditor), EnvFileImport,
-│   │                                # EnvFileExport, SharingExport, SharingImport, SharingNearby,
-│   │                                # SecretValueEditor, AppSmoke
+│   │                                # EnvFilePaste, EnvFileExport, SharingExport, SharingImport,
+│   │                                # SharingNearby, SecretValueEditor, AppSmoke
 │   └── <Feature>TestSupport.swift   # ItemEditor, Sync, Drift, EnvFile, Sharing fakes and fixtures
 ├── Packages/FXVaultKit/
 │   ├── Package.swift                # tools 6.1, macOS 14, Swift 6, MemberImportVisibility
@@ -175,7 +182,8 @@ FXVault/
 │   │       ├── Vault/               # VaultManager, VaultState, PasswordRules, ReauthGate,
 │   │       │   │                    # ReauthTicket, Argon2idSharingDeriver, VaultManagerConstants
 │   │       │   ├── Biometrics/      # BiometricPrompt, BiometricKeyStoring, KeychainManager,
-│   │       │   │                    # BiometricAuthManager, BuildCapabilities
+│   │       │   │                    # BiometricAuthManager, BuildCapabilities, KeychainProbe
+│   │       │   │                    # (--diagnose add + delete, KeychainItemCalling seam)
 │   │       │   ├── Records/         # VaultRecord / KeyWrapRecord extensions
 │   │       │   ├── Support/         # DEKRotator, VaultOperationGate
 │   │       │   └── Testing/         # FakeBiometricKeyStore, FakeBuildCapabilities

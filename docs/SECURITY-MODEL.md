@@ -109,13 +109,34 @@ the official signed release.") and every keychain call refuses with `.unsignedBu
 - **The master password is still required** after a restart (boot session differs, or cannot be
   read: fail closed), when the last password unlock is older than 14 days (a clock moved
   backwards also requires it), and after a fingerprint enrollment change (the item is deleted and
-  `biometry_state_hash` cleared). A Touch ID unlock never refreshes the 14-day timer; password
-  unlocks, password re-authentication, password change, recovery reset and enabling or disabling
-  Touch ID do.
-- Errors: missing or invalidated item → Touch ID turned off (offer to re-enable after a password
-  unlock); cancel → nothing shown; the prompt's fallback button →
-  `VaultError.passwordFallbackRequested` (focus the password field); lockout is checked first and
-  never deletes the item.
+  `biometry_state_hash` cleared, at the latest by the next password unlock). A Touch ID unlock
+  never refreshes the 14-day timer; password unlocks, password re-authentication, password
+  change, recovery reset and enabling or disabling Touch ID do. The lock screen names the reason
+  under the password field ("Password required: After a restart", "Every 14 days",
+  "Fingerprints changed").
+- Errors: missing or invalidated item (`errSecItemNotFound`) → Touch ID turned off (offered again
+  after the password unlock); cancel → nothing shown; the prompt's fallback button and a finger
+  Touch ID did not recognize (`errSecAuthFailed` without lockout) →
+  `VaultError.passwordFallbackRequested` (focus the password field; the item stays); lockout is
+  checked first and never deletes the item.
+- **Discoverability (v0.1.1).** After a password unlock on a signed build where Touch ID can run
+  and is off, a one-time sheet offers "Unlock FX Vault with Touch ID". Enable runs the normal
+  enable flow with the password just typed, which the offer holds only until it is answered or
+  the vault locks; Not Now (and any change in Settings › Security) is remembered in UserDefaults
+  (`preferences.touchIDOfferAnswered`). Unsigned builds never show it.
+- **Keychain queries** (`KeychainManager`, checked against Apple's data-protection keychain rules
+  in v0.1.1): every query sets `kSecUseDataProtectionKeychain` and the full entitled access group
+  (`<team id>.io.fractalx.fxvault`); the protection class lives only in the `SecAccessControl`
+  (never `kSecAttrAccessible` next to it); the read passes a fresh `LAContext` through
+  `kSecUseAuthenticationContext` with the prompt as `localizedReason`; presence checks and
+  listings ask for attributes only, through a context with `interactionNotAllowed`.
+- **`--diagnose`.** `"/Applications/FX Vault.app/Contents/MacOS/FXVault" --diagnose` prints JSON
+  (version, build, signed with an access group, the group, biometry availability or reason) and
+  adds then deletes a probe item with the exact Touch ID attributes under the service
+  `io.fractalx.fxvault.diagnose` (random account, 16 random bytes), after deleting any probe item
+  an earlier run left in the group. It runs before any window,
+  vault or database opens, never reads the item (no prompt) and prints no secret; unsigned builds
+  skip the probe.
 - Disabling Touch ID, changing the password, rotating the key, a new recovery key and resetting
   the vault accept **only** the master password (`ReauthGate.authorizeWithPassword`).
 
@@ -135,7 +156,14 @@ another.
 - Values are decrypted only to reveal, copy, edit, push, export or share. A push goes from
   decryption to gh's stdin pipe, which is closed, and the buffer is wiped.
 - **Clipboard:** current host only, Concealed / Transient / source markers, cleared after 30 s,
-  on lock and on quit, but only if FX Vault still owns it; the pasteboard is never read.
+  on lock and on quit, but only if FX Vault still owns it. The pasteboard is never read in the
+  background: only a user paste (⌘V in the detail column, ⌘V or the Paste button in the import
+  editor) hands text to the `.env` import sheet. The pasted text travels as `SecretBytes` in an
+  `EnvPasteBuffer` (identity-hashed, redacted description), stays in the import editor while the
+  user edits it, and is cleared after the import, on close and on lock; it is never logged.
+  Lines of an unquoted multi-line PEM value are skipped with one error (never turned into
+  names, which are plaintext on GitHub), parse issues never echo a line without `=`, and rows
+  whose key had characters replaced are not pre-selected.
 - **Entry:** `SecretValueEditor` turns off substitutions, spelling, completion, undo and Writing
   Tools, enables secure event input while focused, and strips trailing CR/LF with a notice (D32).
 - **Display:** revealed cells re-mask after 30 s, when the app resigns active, on a scope change
@@ -220,4 +248,6 @@ non-writable locations owned by root or the user. Details: [API.md](API.md).
 - Nearby HELLO metadata (display name, versions) is cleartext on the LAN.
 - The Keychain status codes for the Touch ID fallback button, lockout and an enrollment-
   invalidated item follow Apple's documentation and still need confirmation on a signed build
-  (RELEASING.md manual checklist).
+  (RELEASING.md manual checklist). Since v0.1.1 an unexpected `errSecAuthFailed` can no longer
+  delete the item (it only focuses the password field), and an enrollment change is also caught
+  from the biometry state hash, so a wrong guess costs a password entry, not Touch ID.

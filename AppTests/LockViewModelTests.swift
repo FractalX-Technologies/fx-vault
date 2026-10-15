@@ -20,6 +20,7 @@ struct LockViewModelTests {
 
     @Test func correctPasswordUnlocks() async throws {
         let harness = try await TestHarness(vault: .locked)
+        harness.preferences.hasAnsweredTouchIDOffer = true
         let viewModel = LockViewModel(app: harness.app)
         #expect(!viewModel.canUnlockWithPassword)
         viewModel.password = testPassword
@@ -97,7 +98,8 @@ struct LockViewModelTests {
         let viewModel = LockViewModel(app: harness.app)
         #expect(!viewModel.showsTouchIDButton)
         #expect(viewModel.passwordRequiredReason == .restart)
-        #expect(viewModel.biometricNotice == PasswordRequiredReason.restart.localizedMessage)
+        #expect(viewModel.biometricNotice?.detail == PasswordRequiredReason.restart.localizedMessage)
+        #expect(viewModel.biometricNotice?.title == "Password required: After a restart")
         await viewModel.autoPromptIfAllowed(isAppActive: true, isSceneActive: true)
         #expect(harness.biometrics.loadCount == 0)
     }
@@ -123,6 +125,10 @@ struct LockViewModelTests {
         #expect(harness.app.phase == .locked)
         viewModel.password = testPassword
         await viewModel.unlockWithPassword()
+        // Touch ID turned itself off: the offer to turn it on again comes first.
+        let offer = try #require(viewModel.touchIDOffer)
+        #expect(offer.isAfterInvalidation)
+        offer.notNow()
         #expect(harness.app.phase == .unlocked)
     }
 

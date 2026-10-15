@@ -18,6 +18,18 @@ import VaultCore
 /// (`accessGroup == nil`, ad-hoc builds) every operation throws
 /// `.biometryUnavailable(.unsignedBuild)` and ``allAccounts()`` returns nothing.
 ///
+/// macOS data-protection keychain rules this type follows (checked in v0.1.1; the queries are
+/// built by the pure `…Query` functions below and unit-tested):
+/// - every query sets `kSecUseDataProtectionKeychain` and the **full** entitled access group
+///   (`<team id>.io.fractalx.fxvault`, read from the signed entitlement), never a bare suffix;
+/// - the protection class travels inside the `SecAccessControl` only: `kSecAttrAccessible` is
+///   never added next to `kSecAttrAccessControl` (`SecItemAdd` rejects the pair with
+///   `errSecParam`);
+/// - the interactive read passes a fresh `LAContext` through `kSecUseAuthenticationContext`, whose
+///   `localizedReason` is the prompt text (`kSecUseOperationPrompt` is deprecated);
+/// - presence checks and listings ask for **attributes only**, with an `LAContext` whose
+///   `interactionNotAllowed` is set, so they can never show UI or return the DEK.
+///
 /// `SecItemAdd` needs the DEK as `Data`. That copy is zeroed right after the call; the
 /// bridged dictionary may hold a short-lived reference the process cannot wipe (documented
 /// residual risk, §5.12).
@@ -40,14 +52,7 @@ public struct KeychainManager: BiometricKeyStoring {
         let group = try requireAccessGroup()
         try delete(account: account)
 
-        var accessError: Unmanaged<CFError>?
-        guard let access = SecAccessControlCreateWithFlags(
-            kCFAllocatorDefault,
-            kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-            .biometryCurrentSet,
-            &accessError
-        ) else {
-            _ = accessError?.takeRetainedValue()
+        guard let access = Self.biometricAccessControl() else {
             throw .biometryUnavailable(.notAvailable)
         }
 
@@ -65,10 +70,7 @@ public struct KeychainManager: BiometricKeyStoring {
         if let reason = authManager.unavailableReason() {
             throw .biometryUnavailable(reason)
         }
-        var query = Self.itemQuery(account: account, accessGroup: group)
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-        query[kSecUseAuthenticationContext as String] = authManager.promptContext(for: prompt)
+        let query = Self.readQuery(account: account, accessGroup: group, context: authManager.promptContext(for: prompt))
 
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -84,16 +86,9 @@ public struct KeychainManager: BiometricKeyStoring {
 
     public func contains(account: String) throws(VaultError) -> Bool {
         guard let group = accessGroup else { return false }
-        var query = Self.itemQuery(account: account, accessGroup: group)
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-        query[kSecUseAuthenticationContext as String] = authManager.silentContext()
-
+        let query = Self.presenceQuery(account: account, accessGroup: group, context: authManager.silentContext())
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-        if var data = result as? Data {
-            data.resetBytes(in: data.startIndex..<data.endIndex)
-        }
         return try Self.presence(for: status)
     }
 
@@ -108,10 +103,7 @@ public struct KeychainManager: BiometricKeyStoring {
 
     public func allAccounts() throws(VaultError) -> [String] {
         guard let group = accessGroup else { return [] }
-        var query = Self.itemQuery(account: nil, accessGroup: group)
-        query[kSecReturnAttributes as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitAll
-        query[kSecUseAuthenticationContext as String] = authManager.silentContext()
+        let query = Self.listQuery(accessGroup: group, context: authManager.silentContext())
 
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -134,11 +126,16 @@ public struct KeychainManager: BiometricKeyStoring {
     // MARK: - Internal (pure, unit-tested)
 
     /// The attributes that identify FX Vault's DEK items. `account == nil` matches every item
-    /// of the service in the access group.
-    static func itemQuery(account: String?, accessGroup: String) -> [String: Any] {
+    /// of the service in the access group. `service` is overridden only by ``KeychainProbe``,
+    /// which tests these exact attributes under its own service.
+    static func itemQuery(
+        account: String?,
+        accessGroup: String,
+        service: String = BiometricKeyAccount.service
+    ) -> [String: Any] {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: BiometricKeyAccount.service,
+            kSecAttrService as String: service,
             kSecAttrAccessGroup as String: accessGroup,
             kSecUseDataProtectionKeychain as String: true,
             kSecAttrSynchronizable as String: false,
@@ -149,14 +146,82 @@ public struct KeychainManager: BiometricKeyStoring {
         return query
     }
 
-    /// Maps a failed read (§5.5): missing or unreadable item → invalidated, user cancel →
-    /// cancelled, fallback button → password field, lockout → password, missing entitlement →
-    /// unsigned build.
+    /// `SecItemAdd` attributes: ``itemQuery(account:accessGroup:service:)`` plus the access control
+    /// and the value. No `kSecAttrAccessible`: the protection class is inside `access`.
+    static func addQuery(
+        data: Data,
+        account: String,
+        accessGroup: String,
+        access: SecAccessControl,
+        service: String = BiometricKeyAccount.service
+    ) -> [String: Any] {
+        var query = itemQuery(account: account, accessGroup: accessGroup, service: service)
+        query[kSecAttrAccessControl as String] = access
+        query[kSecValueData as String] = data
+        return query
+    }
+
+    /// The interactive read: the item's data, one match, through `context` (a fresh prompt
+    /// context whose `localizedReason` is the prompt text).
+    static func readQuery(account: String, accessGroup: String, context: LAContext) -> [String: Any] {
+        var query = itemQuery(account: account, accessGroup: accessGroup)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        query[kSecUseAuthenticationContext as String] = context
+        return query
+    }
+
+    /// The presence check: attributes only (reading attributes needs no authentication, so the
+    /// DEK is never requested), one match, through a context that never shows UI.
+    static func presenceQuery(account: String, accessGroup: String, context: LAContext) -> [String: Any] {
+        var query = itemQuery(account: account, accessGroup: accessGroup)
+        query[kSecReturnAttributes as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        query[kSecUseAuthenticationContext as String] = context
+        return query
+    }
+
+    /// Every item of the service in the access group: attributes only, without UI.
+    static func listQuery(accessGroup: String, context: LAContext) -> [String: Any] {
+        var query = itemQuery(account: nil, accessGroup: accessGroup)
+        query[kSecReturnAttributes as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitAll
+        query[kSecUseAuthenticationContext as String] = context
+        return query
+    }
+
+    /// `WhenPasscodeSetThisDeviceOnly` + `.biometryCurrentSet` (§5.5): readable only after a
+    /// Touch ID match with the fingerprints enrolled when the item was added, never synced or
+    /// restored to another Mac. Nil if Security cannot build it.
+    static func biometricAccessControl() -> SecAccessControl? {
+        var accessError: Unmanaged<CFError>?
+        let access = SecAccessControlCreateWithFlags(
+            kCFAllocatorDefault,
+            kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+            .biometryCurrentSet,
+            &accessError
+        )
+        _ = accessError?.takeRetainedValue()
+        return access
+    }
+
+    /// Maps a failed read (§5.5): missing item → invalidated, user cancel → cancelled, fallback
+    /// button → password field, failed match → password field, lockout → password, missing
+    /// entitlement → unsigned build.
+    ///
+    /// `errSecAuthFailed` is what the keychain returns when Touch ID did not recognize the
+    /// finger (`LAError.authenticationFailed`). It never means the item is gone: an item
+    /// invalidated by an enrollment change is not found (`errSecItemNotFound`), and
+    /// ``VaultManager`` also detects enrollment changes from the domain state before any read.
+    /// Treating it as invalidation would delete the item and turn Touch ID off after a few wet
+    /// fingers, so it only sends the user to the password field.
     static func loadError(for status: OSStatus, isLockedOut: Bool) -> VaultError {
         switch status {
         case errSecAuthFailed where isLockedOut:
             return .biometryUnavailable(.lockout)
-        case errSecItemNotFound, errSecAuthFailed:
+        case errSecAuthFailed:
+            return .passwordFallbackRequested
+        case errSecItemNotFound:
             return .biometryInvalidated
         case errSecUserCanceled:
             return .cancelled
@@ -176,8 +241,10 @@ public struct KeychainManager: BiometricKeyStoring {
         }
     }
 
-    /// Maps the status of the presence check (§5.5): an item that needs authentication answers
-    /// `errSecInteractionNotAllowed` (present); a missing one `errSecItemNotFound`.
+    /// Maps the status of the presence check (§5.5): an attributes-only lookup answers
+    /// `errSecSuccess` for a present item; `errSecInteractionNotAllowed` and `errSecAuthFailed`
+    /// (an item that would need authentication) also mean present; a missing one
+    /// `errSecItemNotFound`.
     static func presence(for status: OSStatus) throws(VaultError) -> Bool {
         switch status {
         case errSecSuccess, errSecInteractionNotAllowed, errSecAuthFailed:
@@ -209,9 +276,7 @@ public struct KeychainManager: BiometricKeyStoring {
     /// Runs `SecItemAdd` in its own scope so the query (and its reference to `data`) is gone
     /// before the caller zeroes `data`.
     private static func add(data: Data, account: String, accessGroup: String, access: SecAccessControl) -> OSStatus {
-        var query = itemQuery(account: account, accessGroup: accessGroup)
-        query[kSecAttrAccessControl as String] = access
-        query[kSecValueData as String] = data
+        let query = addQuery(data: data, account: account, accessGroup: accessGroup, access: access)
         return SecItemAdd(query as CFDictionary, nil)
     }
 }

@@ -98,13 +98,78 @@ struct CreateRepoContext: Hashable {
     let ownerLogin: String?
 }
 
-/// Import .env (⇧⌘I) into the selected scope.
+/// Import .env (⇧⌘I, the toolbar, or the detail table's Add menu and ⌘V) into a scope.
 struct EnvImportContext: Hashable {
+    /// How the sheet opens.
+    enum Start: Hashable {
+        /// The file chooser, with Paste one click away (toolbar Import .env, "Import .env File…").
+        case chooser
+        /// The paste editor, focused and empty ("Paste Multiple…").
+        case pasteEditor
+        /// The paste editor prefilled with text the user pasted (⌘V on the detail table). The
+        /// sheet takes the text out of the buffer once.
+        case pasted(EnvPasteBuffer)
+    }
+
     let repositoryID: RepoID
+    /// The target scope the sheet preselects (the scope that is open); still changeable.
     let scope: ConfigScope
     /// A file chosen before the sheet opened (drag and drop); nil lets the sheet offer a file
     /// picker or paste.
     let fileURL: URL?
+    /// The kind every row starts as (the detail table's tab); nil keeps `CredentialClassifier`'s
+    /// suggestion per row (toolbar Import .env).
+    let defaultKind: ConfigKind?
+    let start: Start
+
+    init(
+        repositoryID: RepoID,
+        scope: ConfigScope,
+        fileURL: URL? = nil,
+        defaultKind: ConfigKind? = nil,
+        start: Start = .chooser
+    ) {
+        self.repositoryID = repositoryID
+        self.scope = scope
+        self.fileURL = fileURL
+        self.defaultKind = defaultKind
+        self.start = start
+    }
+}
+
+/// Text the user pasted on the detail table, handed to the import sheet without putting the value
+/// in the router's state: contexts compare and hash the buffer by identity, and its description
+/// never shows the text. ``take()`` hands the bytes over once; bytes never taken are wiped by
+/// `SecretBytes` when the buffer goes away.
+final class EnvPasteBuffer: Hashable, CustomStringConvertible {
+    private var contents: SecretBytes?
+
+    init(_ contents: SecretBytes) {
+        self.contents = contents
+    }
+
+    /// The pasted bytes, once (the caller wipes them); nil afterwards.
+    func take() -> SecretBytes? {
+        defer { contents = nil }
+        return contents
+    }
+
+    /// True until ``take()`` handed the bytes over.
+    var hasContents: Bool {
+        contents != nil
+    }
+
+    var description: String {
+        "EnvPasteBuffer(<redacted>)"
+    }
+
+    static func == (lhs: EnvPasteBuffer, rhs: EnvPasteBuffer) -> Bool {
+        lhs === rhs
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(self))
+    }
 }
 
 /// Export .env… of one scope.

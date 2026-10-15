@@ -9,7 +9,7 @@ public enum VaultError: Error, Sendable, Hashable {
     case locked
     /// Stored vault data failed an integrity check.
     case corrupted(VaultCorruption)
-    /// The Touch ID item was invalidated (enrollment change, -25300/-25293); it was deleted.
+    /// The Touch ID item was invalidated or is missing (enrollment change, -25300); it was deleted.
     case biometryInvalidated
     /// Touch ID cannot be used.
     case biometryUnavailable(BiometryUnavailableReason)

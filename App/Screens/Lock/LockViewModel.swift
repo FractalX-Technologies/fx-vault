@@ -7,10 +7,16 @@ import VaultData
 /// Touch ID auto-prompts at most once per lock, only while FX Vault is the active app and its
 /// scene is active, and only when Touch ID is available (enabled, signed build, no restart or
 /// 14-day password requirement, §5.5).
+///
+/// After a password unlock the vault is unlocked at once; when
+/// ``AppViewModel/shouldOfferTouchID(afterInvalidation:)`` allows it, the one-time Touch ID offer
+/// (``touchIDOffer``) is answered first and the main window follows (v0.1.1).
 @Observable
 final class LockViewModel: LockObserving {
     var password = ""
     private(set) var isUnlocking = false
+    /// The Touch ID offer on screen after a password unlock, or nil.
+    private(set) var touchIDOffer: TouchIDOfferViewModel?
     private(set) var error: ErrorPresentationModel?
     private(set) var biometricStatus: BiometricUnlockStatus = .unavailable(.notEnabled)
     private(set) var hasAutoPrompted = false
@@ -46,19 +52,34 @@ final class LockViewModel: LockObserving {
         return nil
     }
 
-    /// A Touch ID state worth explaining under the password field (lockout, missing sensor), or
-    /// nil when there is nothing to say (not enabled, unsigned build).
-    var biometricNotice: String? {
+    /// A Touch ID state worth explaining under the password field, or nil when there is nothing
+    /// to say (not enabled, unsigned build). While Touch ID is on but the password is required,
+    /// the title is the short reason ("Password required: After a restart") and the detail
+    /// explains it; lockout and a missing sensor show the detail only.
+    var biometricNotice: LockNoticeModel? {
         if let passwordRequiredReason {
-            return passwordRequiredReason.localizedMessage
+            return LockNoticeModel(
+                title: String(
+                    localized: "lock.passwordRequired.title",
+                    defaultValue: "Password required: \(passwordRequiredReason.localizedShortTitle)"
+                ),
+                detail: passwordRequiredReason.localizedMessage
+            )
         }
         guard case .unavailable(let reason) = biometricStatus else { return nil }
         switch reason {
         case .lockout, .notAvailable, .notEnrolled, .passcodeNotSet:
-            return reason.localizedMessage
+            return LockNoticeModel(title: nil, detail: reason.localizedMessage)
         case .notEnabled, .unsignedBuild:
             return nil
         }
+    }
+
+    /// The card's subtitle: mentions Touch ID when it can unlock right now.
+    var subtitle: String {
+        showsTouchIDButton
+            ? String(localized: "lock.subtitle.touchID", defaultValue: "Use Touch ID or enter your master password.")
+            : String(localized: "lock.subtitle", defaultValue: "Enter your master password to unlock.")
     }
 
     func refreshBiometricStatus() {
@@ -72,22 +93,42 @@ final class LockViewModel: LockObserving {
     // MARK: - Unlock
 
     func unlockWithPassword() async {
-        guard canUnlockWithPassword else { return }
+        guard canUnlockWithPassword, touchIDOffer == nil else { return }
         isUnlocking = true
         error = nil
         defer { isUnlocking = false }
         do {
             try await app.container.vaultManager.unlock(password: password)
+            // Read after the unlock: it turns Touch ID off when the enrollment changed, whatever
+            // reason (restart, 14 days) the lock screen showed. Earlier turn-offs (a Touch ID
+            // attempt, a ReauthGate check while unlocked) are recorded there too.
+            let afterInvalidation = app.container.vaultManager.isBiometricsTurnedOffAutomatically
+            let typed = password
             password = ""
-            app.didUnlock()
+            if app.shouldOfferTouchID(afterInvalidation: afterInvalidation) {
+                touchIDOffer = app.makeTouchIDOfferViewModel(
+                    password: typed,
+                    afterInvalidation: afterInvalidation
+                ) { [weak self] in
+                    self?.touchIDOfferDidFinish()
+                }
+            } else {
+                app.didUnlock()
+            }
         } catch {
             self.error = error.presentation
             refreshBiometricStatus()
         }
     }
 
+    /// The offer was answered: show the main window.
+    private func touchIDOfferDidFinish() {
+        touchIDOffer = nil
+        app.didUnlock()
+    }
+
     func unlockWithTouchID() async {
-        guard showsTouchIDButton, !isUnlocking else { return }
+        guard showsTouchIDButton, !isUnlocking, touchIDOffer == nil else { return }
         isUnlocking = true
         error = nil
         defer { isUnlocking = false }
@@ -100,6 +141,12 @@ final class LockViewModel: LockObserving {
             switch error {
             case VaultError.passwordFallbackRequested:
                 passwordFocusRequest += 1
+            case VaultError.biometryInvalidated:
+                self.error = error.presentation
+            case VaultError.passwordRequired(reason: .biometryChanged):
+                // The enrollment changed after the lock screen last looked: Touch ID was just
+                // turned off, so the button and the notice go away. Say why.
+                self.error = VaultError.biometryInvalidated.presentation
             case VaultError.cancelled, VaultError.locked, VaultError.passwordRequired, VaultError.biometryUnavailable:
                 // Cancel leaves the password field as it is; requirements show as a notice.
                 break
@@ -111,7 +158,7 @@ final class LockViewModel: LockObserving {
 
     /// Prompts for Touch ID once per lock, when the rules allow it (§10.2).
     func autoPromptIfAllowed(isAppActive: Bool, isSceneActive: Bool) async {
-        guard isAppActive, isSceneActive, !hasAutoPrompted, !isUnlocking else { return }
+        guard isAppActive, isSceneActive, !hasAutoPrompted, !isUnlocking, touchIDOffer == nil else { return }
         refreshBiometricStatus()
         guard showsTouchIDButton else { return }
         hasAutoPrompted = true
@@ -135,6 +182,8 @@ final class LockViewModel: LockObserving {
     func vaultDidLock() {
         password = ""
         error = nil
+        touchIDOffer?.discard()
+        touchIDOffer = nil
         hasAutoPrompted = false
         isShowingRecoveryReset = false
         refreshBiometricStatus()

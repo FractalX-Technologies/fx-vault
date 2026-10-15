@@ -297,6 +297,59 @@ final class RepoDetailViewModel: LockObserving {
         present(.add(kind))
     }
 
+    // MARK: - Import and paste (v0.1.1)
+
+    /// "Paste Multiple…": the import sheet in paste mode, focused, rows defaulting to the tab's
+    /// kind and the target defaulting to the open scope.
+    func pasteMultiple() {
+        presentImport(.pasteEditor)
+    }
+
+    /// "Import .env File…" from the Add menu: the file chooser, rows defaulting to the tab's kind.
+    func importEnvFile() {
+        presentImport(.chooser)
+    }
+
+    /// The ⌘V validator: the providers while this scope can be edited, nil (Paste disabled)
+    /// otherwise.
+    func validatePaste(_ providers: [NSItemProvider]) -> [NSItemProvider]? {
+        canEdit ? providers : nil
+    }
+
+    /// ⌘V in the detail column (`onPasteCommand`, a user action: the pasteboard is never read in the
+    /// background). Reads the pasted plain text from the providers and opens the import preview
+    /// prefilled with it, even for a single KEY=value line. Nothing is logged.
+    func handlePaste(_ providers: [NSItemProvider]) async {
+        guard canEdit, let text = await Self.plainText(from: providers) else { return }
+        paste(text)
+    }
+
+    /// Opens the import preview prefilled with `text` (whitespace-only text is ignored).
+    func paste(_ text: String) {
+        guard canEdit, !text.allSatisfy(\.isWhitespace) else { return }
+        presentImport(.pasted(EnvPasteBuffer(SecretBytes(utf8: text))))
+    }
+
+    private func presentImport(_ start: EnvImportContext.Start) {
+        guard canEdit else { return }
+        dependencies.actions.present(.envImport(EnvImportContext(
+            repositoryID: repositoryID,
+            scope: scope,
+            defaultKind: kind,
+            start: start
+        )))
+    }
+
+    /// The first provider's plain text, or nil.
+    private static func plainText(from providers: [NSItemProvider]) async -> String? {
+        guard let provider = providers.first(where: { $0.canLoadObject(ofClass: String.self) }) else { return nil }
+        return await withCheckedContinuation { continuation in
+            _ = provider.loadObject(ofClass: String.self) { @Sendable text, _ in
+                continuation.resume(returning: text)
+            }
+        }
+    }
+
     /// Edit, or Fill Value for a value-missing secret (§7.8).
     func edit(_ row: ConfigRowModel) {
         guard canEdit, !row.isDeleted else { return }

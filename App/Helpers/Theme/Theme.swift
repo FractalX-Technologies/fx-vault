@@ -88,7 +88,10 @@ enum Theme {
         static let envImportSheetWidth: CGFloat = 760
         static let envImportSheetHeight: CGFloat = 560
         static let envExportSheetWidth: CGFloat = 520
-        static let envPasteEditorHeight: CGFloat = 240
+        /// Height of the paste editor above the live preview.
+        static let envPasteEditorHeight: CGFloat = 150
+        /// The paste mode shows the editor above the live preview, so the sheet is taller.
+        static let envImportPasteSheetHeight: CGFloat = 660
         /// Height of the parse issue list under the import table.
         static let envIssueListMaxHeight: CGFloat = 96
         /// Height of a name list in the export warnings ("Skipped: …").

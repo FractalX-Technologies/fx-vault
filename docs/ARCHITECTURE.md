@@ -203,12 +203,16 @@ See [API.md](API.md) for the command catalog.
 
 - **Parsing:** `DotEnvParser.parse(SecretBytes)` → `DotEnvParseResult` (entries in
   first-appearance order, last value wins; `EnvParseIssue` errors skip the line, warnings keep
-  the entry; 8 MiB limit). `DotEnvSerializer.serialize(_:headerComments:)` picks the plainest
+  the entry; 8 MiB limit). An unquoted value that starts a PEM block (`-----BEGIN `) not closed
+  on its line is an error (`.unquotedMultilineValue`): the block up to `-----END ` is skipped,
+  so key material never becomes keys. A line without `=` (`.missingEquals`) carries no key,
+  because its first token may be a value. `DotEnvSerializer.serialize(_:headerComments:)` picks the plainest
   quoting that reads back exactly (`parse(serialize(x)) == x`, property-tested).
 - **Import:** `KeyNormalizer`, `CredentialClassifier.assess(key:value:)` (key patterns, URL
   userinfo, PEM, JWT, token prefixes, single-token entropy), `EnvImportPlanner.plan(_:)` →
   `EnvImportCandidateModel` (proposed name unique within the file, suggested kind, normalized
-  value).
+  value). `EnvImportPreviewModel.defaultSelections` (VaultData) leaves out candidates whose
+  key had characters replaced or a leading digit fixed: the user opts in to those rows.
 - **Files:** `SecureFileWriter.write(_:to:existingFile:)` (0600 from creation, refuses
   symlinks, exclusive rename, `F_FULLFSYNC`), `CloudSyncDetector.status(for:)`.
 - **Git:** `protocol GitignoreChecker` (VaultData implements it over `GitService`),
@@ -376,7 +380,11 @@ them with `await`). Packages ship no user-facing text: the app maps every error.
   `biometricUnlockStatus()`, `isBiometricsEnabled()`, `biometricsAvailability()`,
   `changePassword(current:new:rotate:)`, `resetWithRecoveryKey(_:newPassword:)` (always
   rotates), `rotateDEK(password:)`, `newRecoveryKey(password:)`, `enableBiometrics(password:)`,
-  `disableBiometrics(password:)`, `resetVault(password:)`. Argon2id work is `@concurrent`. A weak
+  `disableBiometrics(password:)`, `resetVault(password:)`,
+  `isBiometricsTurnedOffAutomatically` / `acknowledgeBiometricsTurnedOff()` (in memory: Touch ID
+  turned itself off through an enrollment change, an invalidated, missing or foreign item, or a
+  failed replacement; set wherever that is detected, including ReauthGate checks while unlocked;
+  cleared by enable, disable, reset and an answered offer). Argon2id work is `@concurrent`. A weak
   new password throws `PasswordPolicyError.tooWeak`.
 - `ReauthGate` (D30): `authorize(.export | .share | .nearbySend, with: .biometrics(prompt) |
   .password(String))`, `authorizeWithPassword(.newRecoveryKey | .changePassword |
@@ -388,7 +396,15 @@ them with `await`). Packages ship no user-facing text: the app maps every error.
   `protocol BiometricKeyStoring`, `KeychainManager(accessGroup:authManager:)`,
   `BiometricAuthManager`, `protocol BuildCapabilitiesProviding` / `BuildCapabilities`,
   `BiometricKeyAccount`. Prompt outcomes: `VaultError.cancelled` (nothing to show) and
-  `.passwordFallbackRequested` ("Use Master Password": focus the password field).
+  `.passwordFallbackRequested` ("Use Master Password", or a finger Touch ID did not recognize:
+  focus the password field). `unlock(password:)` also turns Touch ID off when the enrollment
+  changed since it was enabled (the item can never be read again).
+- `--diagnose` probe: `protocol KeychainProbing` / `KeychainProbe(calls:)` (`run(accessGroup:) ->
+  KeychainProbeResultModel{addStatus, deleteStatus, passed}`, `statusName(_:)`), over
+  `protocol KeychainItemCalling` (add and delete only; `SystemKeychainItemCalls` is live). It
+  adds and deletes one item with `KeychainManager`'s exact attributes under the service
+  `io.fractalx.fxvault.diagnose`, after deleting every item of that service in the group
+  (leftovers of an earlier run whose delete failed or was interrupted).
 - Fakes in Sources (tests and previews): `FakeBiometricKeyStore`, `FakeBuildCapabilities`.
 - `Argon2idSharingDeriver: KeyDeriving` (use with `FxVaultFileCodec`).
 
@@ -541,9 +557,21 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 30 | M4 | The plan note shows for private repositories and for repositories GitHub already refused on plan grounds (`isEnvPlanGated`) |
 | 31 | M4 | New Repository with "Clone to my Mac" on needs a clone folder before Create; the owner picker shows "(Personal)" / "(Organization)" (no organization role is available) |
 | 32 | §5.12 | `.env` export runs the git checks once before writing and shows them after the write (the iCloud warning must come before it); a failed write uses up the Touch ID / password authorization |
-| 33 | §5.12 | Pasted `.env` text is cleared as soon as it is parsed; Start Over returns to an empty paste box |
+| 33 | §5.12 | Pasted `.env` text is cleared as soon as it is parsed; Start Over returns to an empty paste box. **Superseded in v0.1.1:** paste mode parses live and keeps the text in the editor until the import, close or lock (bulk paste) |
 | 34 | §9 | The share scope tree checks one node at a time (a package holds exactly one scope); checking a node includes everything under it |
 | 35 | §7.3 | Clone in the Sync result is always offered for a failed or not-attempted clone; without a clone folder it asks for one (`ClonePanel`) |
+
+### As built in v0.1.1 (bulk paste and Touch ID)
+
+| # | Area | Decision |
+|---|---|---|
+| 36 | Bulk paste | ⌘V uses `onPasteCommand(of: [.plainText], validator:)` on the whole detail column (Paste is disabled in read-only scopes) and reads only the providers SwiftUI hands over; the empty table also shows a Paste Multiple… button. Paste Multiple… opens an empty, focused editor. Both open `.envImport` with `defaultKind` = the open tab and the open scope as target |
+| 37 | Bulk paste | The pasted text reaches the sheet in `EnvPasteBuffer` (identity-hashed, redacted, taken once): the only context that carries a value (see UI feature contract) |
+| 38 | Bulk paste | Paste mode has no Review step: the editor is parsed `Theme.Durations.envPasteParseDebounce` (300 ms) after the last edit on the injected `VaultClock`, off the main actor (a generation counter drops stale results), and Import waits for a pending parse. Explicit actions (prefill, Paste button, Clear) parse at once. Row edits are keyed by key-as-written plus occurrence so they survive re-parses; Mark All also applies to rows added later. Changing the target scope resets every conflict choice to Skip. The editor has its own coordinator (no D32 strip on focus loss, nothing written back after it is dismantled) |
+| 39 | Bulk paste | A detail-table import starts every row as the tab's kind and only badges credential-looking variables ("Make Secret"); the toolbar Import .env (no `defaultKind`) keeps `CredentialClassifier`'s suggestion |
+| 40 | Touch ID | The one-time offer is a sheet over the lock screen, answered before `didUnlock()` shows the main window, so it never competes with the main window's sheets (a pending `.fxvault` import). It is not offered after onboarding or a recovery reset |
+| 41 | Touch ID | `errSecAuthFailed` without lockout maps to `.passwordFallbackRequested` (keeps the item); only `errSecItemNotFound` means invalidated. Enrollment changes are also caught from `biometry_state_hash`: a password unlock deletes the stale item and clears the enablement. The re-offer after a password unlock follows `VaultManager.isBiometricsTurnedOffAutomatically`, not the reason the lock screen showed (restart and 14 days are checked before the enrollment) |
+| 42 | Touch ID | `--diagnose` is answered by `FXVaultMain` (the `@main` entry) before `FXVaultApp.main()`, so the app delegate never opens the database. The probe adds and deletes with `KeychainManager.addQuery` under its own service; it has no read path. Unsigned builds skip it |
 
 
 ## App shell
@@ -568,7 +596,13 @@ AppTests).
   `takeNextPendingImport()`, `setMainWindowOpener(_:)` / `requestMainWindow()`,
   `lastReconciliation` (launch reconciliation after each unlock, after the gh probe),
   `lock(trigger:)`, `didUnlock()`, `completeOnboarding()`, `didResetVault()`,
-  `applicationWillTerminate()` and `make…ViewModel()` factories.
+  `applicationWillTerminate()`, `shouldOfferTouchID(afterInvalidation:)` /
+  `recordTouchIDOfferAnswer()` (the one-time Touch ID offer) and `make…ViewModel()` factories.
+- `FXVaultMain` (`FXVaultApp.swift`) is the `@main` entry: `DiagnoseCommand.runIfRequested()`
+  answers `--diagnose` (JSON on stdout, then `exit(0)`) before `FXVaultApp.main()` creates the app
+  delegate, so no window, vault or database opens. `App/Diagnostics`: `DiagnosticReporter`
+  (`makeReport(infoDictionary:capabilities:probe:)`, pure) and `DiagnosticReportModel` (explicit
+  `null`s, sorted keys).
 - `SyncActivity`: holds the auto-lock `SyncActivityAssertion` and drives the Sync button's
   progress. `end()` is idempotent; a lock ends every activity.
 - `protocol LockObserving: AnyObject { func vaultDidLock() }` (held weakly; register with
@@ -590,7 +624,7 @@ AppTests).
   after 30 s if still owned), `copyCommand(_:)` (plain text such as `brew install gh`, never
   cleared), `clearIfOwned()`; never reads the pasteboard.
 - `@Observable PreferencesManager(store:)`: `autoLockMinutes` / `autoLockTimeout`, clone folder,
-  `ghPathOverride`, `isRecoveryKeyConfirmationPending`; `UserDefaultsPreferencesStore` (live) or
+  `ghPathOverride`, `isRecoveryKeyConfirmationPending`, `hasAnsweredTouchIDOffer`; `UserDefaultsPreferencesStore` (live) or
   `InMemoryPreferencesStore`.
 - `DockBadgeDisplaying` (`DockBadgeManager`, `RecordedDockBadge`).
 - `GHStatusProbing`: `GitHubEnvironmentStatusProbe(github:overridePath:)` (`detectGH` then
@@ -599,7 +633,14 @@ AppTests).
   `.noAccounts(version:path:)`, `.failed`; `needsSetup`, `isReady`.
 
 **Screens** (`App/Screens`, each `[Name]Screen` + `@Observable [Name]ViewModel`).
-- `Onboarding`, `Lock` / `RecoveryReset` (both with `GHStatusRow`), unchanged.
+- `Onboarding`, `Lock` / `RecoveryReset` (both with `GHStatusRow`). The lock screen shows
+  "Unlock with Touch ID" (SF Symbol `touchid`) when Touch ID can run, and otherwise names why the
+  password is required under the password field (`LockNoticeModel`: "Password required: After a
+  restart" / "Every 14 days" / "Fingerprints changed"). After a password unlock the vault is
+  unlocked at once; when `AppViewModel.shouldOfferTouchID` allows it, `TouchIDOfferScreen`
+  (a sheet over the lock screen, `TouchIDOfferViewModel`) is answered before the main window
+  appears: Turn On Touch ID (`enableBiometrics` with the password just typed) or Not Now
+  (remembered in `PreferencesManager.hasAnsweredTouchIDOffer`). A lock discards it unanswered.
 - `GHSetup` (§10.3): after unlock while `ghStatus.needsSetup`; kinds install / upgrade (found
   version and why 2.97 is required) / untrusted / login / failed; copyable `brew install gh`,
   `brew upgrade gh`, `gh auth login`; **Check Again**; **Not Now** (work without gh until the next
@@ -621,7 +662,11 @@ AppTests).
     Clone, Refresh, drift banner, deployment branches with Edit, plan note on private
     repositories, read-only explanation) and `ConfigTableView` (Secrets | Variables over one
     `Table`; masked secrets with the eye toggle, "Value missing", plaintext variables; Reveal,
-    Copy, Edit / Fill Value, Convert or Move, Revert, Delete). Revealed values re-mask after
+    Copy, Edit / Fill Value, Convert or Move, Revert, Delete). The Add split button adds one
+    item of the tab's kind and offers Paste Multiple… and Import .env File…; ⌘V in the detail
+    column (`onPasteCommand(of: [.plainText], validator: validatePaste)`, `handlePaste(_:)`
+    reads the providers) opens the import preview prefilled. All three pass the tab's kind as `defaultKind` and the open scope as the
+    target. Revealed values re-mask after
     `Timeouts.revealRemask` (injected clock), on resign active, on scope change and on lock.
     The drift check runs when a repository opens (`DriftRepository.detectOnOpen`).
   - Toolbar: New Repository, Import .env, Share menu (File… / Nearby… / Receive Nearby…), Lock,
@@ -664,9 +709,17 @@ AppTests).
     `BranchPolicyEditorView`) and items (`SecretValueEditor`), "Clone to my Mac" (needs a clone
     folder; warns without an SSH alias). After Create it selects the repository in the sidebar
     (`actions.select`) and offers Sync Now… (`.sync([id])`).
-  - `EnvFile` (§5.12, M5): import (file or paste → table with key fix, kind, conflict Skip /
-    Overwrite and target scope → `EnvFileRepository.applyImport`; pasted text cleared once
-    parsed; values wiped on Start Over, close and lock) and export (`ReauthGate` first →
+  - `EnvFile` (§5.12, M5, v0.1.1): import (file or paste → table with key fix, kind, conflict
+    Skip / Overwrite plus Overwrite All, and target scope, preselected to the open scope →
+    `EnvFileRepository.applyImport`). Paste mode shows the editor (`EnvPasteEditorView`, the
+    shared `SecretTextView`, focused for Paste Multiple…, with a SwiftUI `PasteButton`) above
+    the preview, parsed live `Theme.Durations.envPasteParseDebounce` after the last edit (Import
+    waits for it); issues with line numbers and an empty state; row edits survive re-parses.
+    Kinds start as `defaultKind` (the detail tab) or, without one (toolbar Import .env),
+    `CredentialClassifier`'s suggestion; a credential-looking variable shows a "Make Secret"
+    warning badge; Mark All as Variable / Secret also applies to rows added later. Parsed
+    values are wiped on every re-parse, Start Over, close and lock; the pasted text is cleared
+    after the import, on switching to File, on close and on lock) and export (`ReauthGate` first →
     plaintext, skipped and unverified-share warnings → save panel → iCloud confirmation before
     any write → 0600 write → git tracked / not ignored / ignored / unknown, with the `.gitignore`
     offer). One authorization per write; a failed write uses it up.
@@ -728,7 +781,7 @@ another route replaces the sheet; closing it sets `activeSheet` to nil (and open
 | `.sync` | `Sync/` | `SyncScreen` | `SyncContext(repositoryIDs: Set<RepoID>?)` (nil: every repository with pending changes) |
 | `.driftReview` | `Drift/` | `DriftReviewScreen` | `DriftReviewContext(repositoryID)` |
 | `.createRepository` | `CreateRepo/` | `CreateRepoScreen` | `CreateRepoContext(accountLogin: String?, ownerLogin: String?)` (preselection only) |
-| `.envImport` | `EnvFile/` | `EnvImportScreen` | `EnvImportContext(repositoryID, scope, fileURL: URL?)` |
+| `.envImport` | `EnvFile/` | `EnvImportScreen` | `EnvImportContext(repositoryID, scope, fileURL: URL? = nil, defaultKind: ConfigKind? = nil, start: .chooser / .pasteEditor / .pasted(EnvPasteBuffer) = .chooser)` |
 | `.envExport` | `EnvFile/` | `EnvExportScreen` | `EnvExportContext(repositoryID, scope)` |
 | `.shareExport` | `Sharing/` | `ShareExportScreen` | `ShareExportContext(selection: ShareSelectionModel)` |
 | `.shareImport` | `Sharing/` | `ShareImportScreen` | `ShareImportContext(fileURL)` |
@@ -741,7 +794,10 @@ FeatureDependencies) }` (all `App/Screens/<Folder>/<XScreen>.swift`). The one no
 `Drift/DriftBannerView: init(report: DriftReportModel, onReview: @escaping () -> Void)`, shown by
 `RepoDetailScreen` when the last drift check found something; `onReview` presents
 `.driftReview`. Contexts carry ids only (never values or names that could go stale): re-read
-through the repositories.
+through the repositories. The one exception is `EnvImportContext.Start.pasted`, which carries
+the text the user pasted on the detail table in an `EnvPasteBuffer` (a class compared and
+hashed by identity, `SecretBytes` inside, redacted description); the import view model takes the
+bytes out once.
 
 **Dependencies (the only mechanism).** `FeatureDependencies`
 (`App/Screens/Main/FeatureDependencies.swift`), built by `MainViewModel.featureDependencies` from

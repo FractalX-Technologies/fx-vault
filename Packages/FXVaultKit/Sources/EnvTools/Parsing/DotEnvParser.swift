@@ -9,6 +9,9 @@ import VaultCore
 /// - **Unquoted** values run to the end of the line, minus trailing spaces and tabs. A `#`
 ///   starts an inline comment only when the character before it is a space or tab, so
 ///   `KEY=a#b` keeps `a#b` and `KEY=a #b` gives `a`.
+/// - An unquoted value that starts a PEM block (`-----BEGIN ...`) without ending it on the same
+///   line is an error: the block's lines up to `-----END ...` are skipped and no entry is made,
+///   so lines of key material never become keys. Multi-line values must be quoted.
 /// - **Single-quoted** values are literal (no escapes) and may span lines.
 /// - **Double-quoted** values may span lines and understand `\n \r \t \" \\` and `\$`. Any
 ///   other escape is kept as written, with a warning.
@@ -103,7 +106,9 @@ private struct DotEnvScanner {
         skipHorizontalWhitespace()
 
         guard current == ASCII.equals else {
-            report(.missingEquals, line: startLine, key: decodeKey(keyRange))
+            // No key: the first token of a line without `=` is often a value (a pasted token or
+            // a line of key material), and issues never carry values.
+            report(.missingEquals, line: startLine, key: nil)
             skipRestOfLine()
             return
         }
@@ -131,6 +136,11 @@ private struct DotEnvScanner {
     // MARK: - Values
 
     private mutating func parseUnquotedValue(key: String, startLine: Int) {
+        if startsUnquotedMultilinePEM() {
+            skipUnquotedPEMBlock()
+            report(.unquotedMultilineValue, line: startLine, key: key)
+            return
+        }
         let valueStart = position
         while !isAtLineEnd {
             // `position > valueStart` is not required: the byte before the value is `=` or
@@ -156,6 +166,31 @@ private struct DotEnvScanner {
         var warnings: [EnvParseIssue.Kind] = []
         if hasExpansion { warnings.append(.variableExpansionNotSupported) }
         finishEntry(key: key, length: length, startLine: startLine, warnings: warnings)
+    }
+
+    /// True when the unquoted value starts a PEM block whose end is not on this line
+    /// (`KEY=-----BEGIN CERTIFICATE-----` followed by the key's lines). Only quoted values may
+    /// span lines, so reading on would turn each line of key material into its own entry.
+    private func startsUnquotedMultilinePEM() -> Bool {
+        guard ByteScanning.matches(ASCII.pemBegin, in: input, at: position) else { return false }
+        var index = position + ASCII.pemBegin.count
+        while index < input.count, input[index] != ASCII.lineFeed {
+            if ByteScanning.matches(ASCII.pemEnd, in: input, at: index) { return false }
+            index += 1
+        }
+        return true
+    }
+
+    /// Moves past an unquoted PEM block: the begin line and every line up to and including the
+    /// first `-----END ` line, or to the end of the input when the block is never closed.
+    private mutating func skipUnquotedPEMBlock() {
+        skipRestOfLine()
+        while position < input.count {
+            skipHorizontalWhitespace()
+            let isEndLine = ByteScanning.matches(ASCII.pemEnd, in: input, at: position)
+            skipRestOfLine()
+            if isEndLine { return }
+        }
     }
 
     private mutating func parseQuotedValue(key: String, startLine: Int) {

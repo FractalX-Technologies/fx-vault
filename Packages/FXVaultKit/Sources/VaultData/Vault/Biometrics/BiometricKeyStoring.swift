@@ -13,7 +13,8 @@ import VaultStore
 /// Errors are `VaultError`:
 /// - `.biometryInvalidated`: the item is gone or no longer usable (enrollment changed);
 /// - `.cancelled`: the user cancelled;
-/// - `.passwordFallbackRequested`: the user chose the password fallback button;
+/// - `.passwordFallbackRequested`: the user chose the password fallback button, or Touch ID did
+///   not recognize the finger (the item stays);
 /// - `.biometryUnavailable(reason)`: Touch ID or the keychain cannot be used now.
 public protocol BiometricKeyStoring: Sendable {
     /// Creates (or replaces) the item for `account` holding `dek`. Never prompts. The caller

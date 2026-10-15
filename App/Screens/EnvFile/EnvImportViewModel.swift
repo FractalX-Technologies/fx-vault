@@ -14,9 +14,11 @@ enum EnvImportSourceKind: Hashable, CaseIterable {
 
 /// The import sheet's steps.
 enum EnvImportStep: Equatable {
-    /// Choose a file or paste text.
+    /// Choose a file.
     case source
-    /// The parsed table with Key, Kind, Conflict and the Target scope picker.
+    /// The paste editor above the live preview table (parsed as you type, no Review step).
+    case paste
+    /// The parsed file's table with Key, Kind, Conflict and the Target scope picker.
     case review
     /// What the import changed (names only).
     case done(EnvImportResultModel)
@@ -25,29 +27,72 @@ enum EnvImportStep: Equatable {
 /// The button Return triggers on each step.
 enum EnvImportDefaultAction: Equatable {
     case chooseFile
-    case reviewPastedText
     case importRows
     case done
 }
 
-/// `EnvImportScreen` (§10, M5): file or pasted text → table of Key (with KeyNormalizer fixes),
-/// Kind (pre-marked by CredentialClassifier, editable), Conflict (Skip/Overwrite when the name
-/// exists) and Target scope → `EnvFileRepository.applyImport` in one transaction.
+/// What survives a re-parse of the paste editor: the user's own changes to one row, keyed by
+/// the row's key as written and its occurrence (``EnvImportRowKey``).
+private struct EnvImportRowOverrideModel {
+    var name: String?
+    var kind: ConfigKind?
+    var onConflict: EnvImportConflictChoice?
+    var isIncluded: Bool?
+}
+
+/// A row's identity across re-parses: the key as written and how many earlier lines used it.
+private struct EnvImportRowKey: Hashable {
+    let originalKey: String
+    let occurrence: Int
+}
+
+/// `EnvImportScreen` (§10, M5, v0.1.1): file or pasted text → table of Key (with KeyNormalizer
+/// fixes), Kind (the detail tab's kind, or pre-marked by CredentialClassifier from the toolbar;
+/// editable, with bulk marking), Conflict (Skip/Overwrite when the name exists, Overwrite All)
+/// and Target scope (the open scope first) → `EnvFileRepository.applyImport` in one transaction.
 ///
-/// Values: the parsed values live only in the preview's `SecretBytes`, which are wiped after the
-/// import, on Start Over, when the sheet closes and on lock. Pasted text is a `String` (the
-/// editor needs one) and is cleared as soon as it is parsed, and on close and lock. Rows,
-/// issues and summaries hold names and line numbers only.
+/// Paste mode parses the editor's text live (``Theme/Durations/envPasteParseDebounce`` after the
+/// last edit) and keeps the user's row changes across re-parses.
+///
+/// Values: the parsed values live only in the preview's `SecretBytes`, which are wiped on every
+/// re-parse, after the import, on Start Over, when the sheet closes and on lock. Pasted text is a
+/// `String` (the editor needs one); it stays in the editor while the user edits it and is
+/// cleared after the import, when switching to File, when the sheet closes and on lock. Values
+/// are never logged. Rows, issues and summaries hold names and line numbers only.
 @Observable
 final class EnvImportViewModel: LockObserving {
     let repositoryID: RepoID
-    private(set) var step: EnvImportStep = .source
-    var sourceKind: EnvImportSourceKind
-    /// The pasted `.env` text (secure editor binding).
-    var pastedText = ""
+    private(set) var step: EnvImportStep
+    var sourceKind: EnvImportSourceKind {
+        didSet {
+            if sourceKind != oldValue {
+                sourceKindDidChange()
+            }
+        }
+    }
+    /// The pasted `.env` text (secure editor binding); re-parsed after a short pause.
+    var pastedText = "" {
+        didSet {
+            if pastedText != oldValue {
+                pastedTextDidChange()
+            }
+        }
+    }
+    /// The kind every row starts as (the detail tab), or nil for CredentialClassifier's suggestion.
+    let defaultKind: ConfigKind?
+    /// The kind chosen with Mark All; new rows from later edits follow it too.
+    private(set) var bulkKind: ConfigKind?
+    /// True when the paste editor should take focus as the sheet opens.
+    let focusesPasteEditor: Bool
+    /// The editor changed and the preview has not caught up yet (Import waits for it).
+    private(set) var isParsePending = false
+    /// Why the pasted text could not be parsed at all (shown inline, not as an alert).
+    private(set) var pasteProblem: ErrorPresentationModel?
     /// The chosen file's name, or nil for pasted text.
     private(set) var sourceFileName: String?
-    private(set) var rows: [EnvImportRowModel] = []
+    private(set) var rows: [EnvImportRowModel] = [] {
+        didSet { cachedDuplicateRowIDs = nil }
+    }
     /// Parse issues in line order.
     private(set) var issues: [EnvParseIssue] = []
     private(set) var scopeOptions: [EnvImportScopeOptionModel] = []
@@ -59,20 +104,56 @@ final class EnvImportViewModel: LockObserving {
 
     /// The parsed file: candidates with their values. Wiped by ``discardPreview()``.
     @ObservationIgnored private(set) var preview: EnvImportPreviewModel?
+    /// The pending debounced parse (internal so tests can await it).
+    @ObservationIgnored private(set) var parseTask: Task<Void, Never>?
     @ObservationIgnored private let envFiles: EnvFileRepository
     @ObservationIgnored private let config: ConfigRepository
+    @ObservationIgnored private let clock: any VaultClock
+    /// The user's row changes, kept across re-parses of the paste editor.
+    @ObservationIgnored private var overrides: [EnvImportRowKey: EnvImportRowOverrideModel] = [:]
+    /// Each row's identity across re-parses, by candidate index.
+    @ObservationIgnored private var rowKeys: [Int: EnvImportRowKey] = [:]
     /// Set once the sheet closed or the vault locked; late file reads are wiped on arrival.
     @ObservationIgnored private var isDiscarded = false
+    /// Bumped by every parse of the paste editor; a background parse applies only if it is
+    /// still the newest.
+    @ObservationIgnored private var parseGeneration = 0
+    /// ``duplicateRowIDs`` for the current rows, computed once per change of `rows`.
+    @ObservationIgnored private var cachedDuplicateRowIDs: Set<Int>?
     @ObservationIgnored private let tasks = TaskBag()
 
     init(context: EnvImportContext, dependencies: FeatureDependencies) {
         repositoryID = context.repositoryID
         targetScope = context.scope
+        defaultKind = context.defaultKind
         envFiles = dependencies.envFiles
         config = dependencies.config
-        sourceKind = .file
+        clock = dependencies.clock
+        var prefill: SecretBytes?
+        // A file passed in the context wins over any paste start.
+        let start = context.fileURL == nil ? context.start : .chooser
+        switch start {
+        case .chooser:
+            sourceKind = .file
+            step = .source
+            focusesPasteEditor = false
+        case .pasteEditor:
+            sourceKind = .paste
+            step = .paste
+            focusesPasteEditor = true
+        case .pasted(let buffer):
+            sourceKind = .paste
+            step = .paste
+            focusesPasteEditor = true
+            prefill = buffer.take()
+        }
         dependencies.actions.addLockObserver(self)
         loadScopeOptions()
+        if let prefill {
+            pastedText = prefill.utf8String() ?? ""
+            prefill.wipe()
+            parsePastedText()
+        }
         if let fileURL = context.fileURL {
             tasks.set("load", Task { [weak self] in
                 await self?.loadFile(at: fileURL)
@@ -82,16 +163,17 @@ final class EnvImportViewModel: LockObserving {
 
     // MARK: - Source
 
-    var canReviewPastedText: Bool {
-        step == .source && !isWorking && !pastedText.allSatisfy(\.isWhitespace)
-    }
-
     var defaultAction: EnvImportDefaultAction {
         switch step {
-        case .source: sourceKind == .file ? .chooseFile : .reviewPastedText
-        case .review: .importRows
+        case .source: .chooseFile
+        case .paste, .review: .importRows
         case .done: .done
         }
+    }
+
+    /// True when the paste editor holds nothing but whitespace.
+    var isPastedTextEmpty: Bool {
+        pastedText.allSatisfy(\.isWhitespace)
     }
 
     /// Reads and plans the file off the main actor, then shows the table.
@@ -110,32 +192,110 @@ final class EnvImportViewModel: LockObserving {
             }
             sourceFileName = url.lastPathComponent
             apply(preview)
+            step = .review
         } catch {
             alert = error.presentation
         }
     }
 
-    /// Parses the pasted text and clears it (the parsed values now live in the preview).
-    func reviewPastedText() {
-        guard canReviewPastedText else { return }
+    /// Parses the paste editor's text now (ends the debounce early). The preview replaces the
+    /// previous one, whose values are wiped; the user's row changes carry over.
+    func parsePastedText() {
+        parseTask?.cancel()
+        parseTask = nil
+        isParsePending = false
+        parseGeneration += 1
+        guard step == .paste, !isDiscarded else { return }
+        pasteProblem = nil
+        guard !isPastedTextEmpty else {
+            clearPreview()
+            return
+        }
         let contents = SecretBytes(utf8: pastedText)
         defer { contents.wipe() }
         do {
-            let preview = try envFiles.parse(contents)
-            pastedText = ""
-            sourceFileName = nil
-            apply(preview)
+            showParsedPaste(.success(try envFiles.parse(contents)))
         } catch {
-            alert = error.presentation
+            showParsedPaste(.failure(error))
         }
     }
 
-    /// Back to the source step; the parsed values are wiped.
+    /// The debounced parse: parses and plans off the main actor (large pastes would block it),
+    /// then shows the result unless the text changed, the sheet closed or another parse ran
+    /// meanwhile; a stale preview is wiped.
+    private func parsePastedTextInBackground() async {
+        guard step == .paste, !isDiscarded, !isPastedTextEmpty else {
+            parsePastedText()
+            return
+        }
+        parseGeneration += 1
+        let generation = parseGeneration
+        let contents = SecretBytes(utf8: pastedText)
+        let envFiles = envFiles
+        let result = await Task.detached { () -> Result<EnvImportPreviewModel, any Error> in
+            defer { contents.wipe() }
+            do {
+                return .success(try envFiles.parse(contents))
+            } catch {
+                return .failure(error)
+            }
+        }.value
+        guard !Task.isCancelled, generation == parseGeneration, step == .paste, !isDiscarded else {
+            if case .success(let preview) = result {
+                preview.wipe()
+            }
+            return
+        }
+        parseTask = nil
+        isParsePending = false
+        showParsedPaste(result)
+    }
+
+    /// Shows a parse of the paste editor, or why the text could not be parsed at all.
+    private func showParsedPaste(_ result: Result<EnvImportPreviewModel, any Error>) {
+        pasteProblem = nil
+        switch result {
+        case .success(let preview):
+            sourceFileName = nil
+            apply(preview)
+        case .failure(let error):
+            clearPreview()
+            pasteProblem = error.presentation
+        }
+    }
+
+    /// Fills the paste editor from the clipboard (SwiftUI `PasteButton`, a user action) and
+    /// parses at once. Text already in the editor is kept and the paste goes after it.
+    func pasteFromClipboard(_ strings: [String]) {
+        let pasted = strings.joined(separator: "\n")
+        guard step == .paste, !pasted.isEmpty else { return }
+        if isPastedTextEmpty {
+            pastedText = pasted
+        } else {
+            let separator = pastedText.hasSuffix("\n") ? "" : "\n"
+            pastedText += separator + pasted
+        }
+        parsePastedText()
+    }
+
+    /// Empties the paste editor and the preview.
+    func clearPastedText() {
+        pastedText = ""
+        overrides = [:]
+        bulkKind = nil
+        parsePastedText()
+    }
+
+    /// Back to an empty source (the file chooser, or an empty paste editor); the parsed values
+    /// are wiped.
     func startOver() {
-        discardPreview()
-        rows = []
-        issues = []
-        conflictingRowIDs = []
+        if sourceKind == .paste {
+            clearPastedText()
+            return
+        }
+        clearPreview()
+        overrides = [:]
+        bulkKind = nil
         sourceFileName = nil
         step = .source
     }
@@ -165,7 +325,7 @@ final class EnvImportViewModel: LockObserving {
     }
 
     var canImport: Bool {
-        guard step == .review, !isWorking, targetProblem == nil else { return false }
+        guard step == .review || step == .paste, !isWorking, !isParsePending, targetProblem == nil else { return false }
         let included = includedRows
         return !included.isEmpty && included.allSatisfy { nameProblem(for: $0) == nil && $0.canInclude }
     }
@@ -174,45 +334,93 @@ final class EnvImportViewModel: LockObserving {
         issues.lazy.filter { $0.severity == .error }.count
     }
 
+    /// Changes the target scope. Overwrite choices were made for the old scope's items, so
+    /// every row goes back to Skip and conflicts are reviewed again for the new scope.
     func selectTarget(_ scope: ConfigScope) {
         guard scope != targetScope else { return }
         targetScope = scope
+        for key in overrides.keys {
+            overrides[key]?.onConflict = nil
+        }
+        for index in rows.indices where rows[index].onConflict != .skip {
+            rows[index].onConflict = .skip
+        }
         refreshConflicts()
     }
 
     func setName(_ name: String, forRow id: Int) {
-        update(id) { $0.name = name }
+        update(id) { row, override in
+            row.name = name
+            override.name = name
+        }
         refreshConflicts()
     }
 
     func useSuggestedName(forRow id: Int) {
-        update(id) { row in
+        update(id) { row, override in
             if let suggestion = row.suggestedName {
                 row.name = suggestion
+                override.name = nil
             }
         }
         refreshConflicts()
     }
 
     func setKind(_ kind: ConfigKind, forRow id: Int) {
-        update(id) { $0.kind = kind }
+        update(id) { row, override in
+            row.kind = kind
+            override.kind = kind
+        }
+        refreshConflicts()
+    }
+
+    /// The warning badge's one-click fix: a credential-looking variable becomes a secret.
+    func makeSecret(forRow id: Int) {
+        setKind(.secret, forRow: id)
+    }
+
+    /// "Mark All as Variable / Secret": every row, and the rows later edits add, take `kind`.
+    func markAll(as kind: ConfigKind) {
+        bulkKind = kind
+        for key in overrides.keys {
+            overrides[key]?.kind = nil
+        }
+        for index in rows.indices {
+            rows[index].kind = kind
+        }
         refreshConflicts()
     }
 
     func setConflictChoice(_ choice: EnvImportConflictChoice, forRow id: Int) {
-        update(id) { $0.onConflict = choice }
+        update(id) { row, override in
+            row.onConflict = choice
+            override.onConflict = choice
+        }
+    }
+
+    /// True when at least one included row would skip an existing item ("Overwrite All").
+    var canOverwriteAll: Bool {
+        rows.contains { $0.isIncluded && $0.onConflict == .skip && conflictingRowIDs.contains($0.id) }
+    }
+
+    /// "Overwrite All": every row that collides with an existing item replaces it.
+    func overwriteAllConflicts() {
+        for row in rows where conflictingRowIDs.contains(row.id) {
+            setConflictChoice(.overwrite, forRow: row.id)
+        }
     }
 
     func setIncluded(_ isIncluded: Bool, forRow id: Int) {
-        update(id) { row in
+        update(id) { row, override in
             row.isIncluded = isIncluded && row.canInclude
+            override.isIncluded = isIncluded
         }
     }
 
     /// Includes or excludes every importable row.
     func setAllIncluded(_ isIncluded: Bool) {
-        for index in rows.indices {
-            rows[index].isIncluded = isIncluded && rows[index].canInclude
+        for row in rows {
+            setIncluded(isIncluded, forRow: row.id)
         }
     }
 
@@ -286,7 +494,8 @@ final class EnvImportViewModel: LockObserving {
         return String(localized: "envImport.credential.hint", defaultValue: "Looks like a credential. \(reasons)")
     }
 
-    /// A warning when a credential-looking row is imported as a variable (plaintext on GitHub).
+    /// The warning badge when a credential-looking row is imported as a variable (plaintext on
+    /// GitHub); ``makeSecret(forRow:)`` is its one-click fix.
     func kindWarning(for row: EnvImportRowModel) -> String? {
         guard row.kind == .variable, row.looksLikeCredential else { return nil }
         return String(
@@ -303,10 +512,10 @@ final class EnvImportViewModel: LockObserving {
         defer { isWorking = false }
         do {
             let result = try envFiles.applyImport(preview, selections: selections, repositoryID: repositoryID, scope: targetScope)
-            discardPreview()
-            rows = []
-            conflictingRowIDs = []
+            clearPreview()
+            overrides = [:]
             step = .done(result)
+            pastedText = ""
         } catch {
             alert = error.presentation
         }
@@ -359,8 +568,12 @@ final class EnvImportViewModel: LockObserving {
     func discard() {
         isDiscarded = true
         tasks.cancelAll()
+        parseTask?.cancel()
+        parseTask = nil
+        isParsePending = false
         discardPreview()
         pastedText = ""
+        overrides = [:]
         rows = []
         issues = []
     }
@@ -371,6 +584,8 @@ final class EnvImportViewModel: LockObserving {
 
     // MARK: - Private
 
+    /// Shows `preview` (wiping the previous one): the tab's or bulk kind first, then the user's
+    /// row changes from earlier parses.
     private func apply(_ preview: EnvImportPreviewModel) {
         discardPreview()
         self.preview = preview
@@ -379,11 +594,36 @@ final class EnvImportViewModel: LockObserving {
             preview.defaultSelections.map { ($0.candidateIndex, $0) },
             uniquingKeysWith: { first, _ in first }
         )
+        var occurrences: [String: Int] = [:]
+        var keys: [Int: EnvImportRowKey] = [:]
         rows = preview.candidates.indices.map { index in
-            EnvImportRowModel(candidateIndex: index, candidate: preview.candidates[index], selection: defaults[index])
+            var row = EnvImportRowModel(candidateIndex: index, candidate: preview.candidates[index], selection: defaults[index])
+            let occurrence = occurrences[row.originalKey, default: 0]
+            occurrences[row.originalKey] = occurrence + 1
+            let key = EnvImportRowKey(originalKey: row.originalKey, occurrence: occurrence)
+            keys[index] = key
+            if let kind = bulkKind ?? defaultKind {
+                row.kind = kind
+            }
+            if let override = overrides[key] {
+                row.name = override.name ?? row.name
+                row.kind = override.kind ?? row.kind
+                row.onConflict = override.onConflict ?? row.onConflict
+                row.isIncluded = (override.isIncluded ?? row.isIncluded) && row.canInclude
+            }
+            return row
         }
-        step = .review
+        rowKeys = keys
         refreshConflicts()
+    }
+
+    /// Wipes the preview and empties the table.
+    private func clearPreview() {
+        discardPreview()
+        rows = []
+        rowKeys = [:]
+        issues = []
+        conflictingRowIDs = []
     }
 
     private func discardPreview() {
@@ -391,13 +631,66 @@ final class EnvImportViewModel: LockObserving {
         preview = nil
     }
 
-    private func update(_ id: Int, _ change: (inout EnvImportRowModel) -> Void) {
-        guard let index = rows.firstIndex(where: { $0.id == id }) else { return }
-        change(&rows[index])
+    /// Changes one row and records the change so it survives the next re-parse.
+    private func update(_ id: Int, _ change: (inout EnvImportRowModel, inout EnvImportRowOverrideModel) -> Void) {
+        // Rows are built in candidate order, so a row's id is usually its index.
+        let directIndex = rows.indices.contains(id) && rows[id].id == id ? id : nil
+        guard let index = directIndex ?? rows.firstIndex(where: { $0.id == id }) else { return }
+        var override = rowKeys[id].flatMap { overrides[$0] } ?? EnvImportRowOverrideModel()
+        change(&rows[index], &override)
+        if let key = rowKeys[id] {
+            overrides[key] = override
+        }
     }
 
-    /// Included rows that repeat an earlier included row's name and kind.
+    /// Schedules the live parse ``Theme/Durations/envPasteParseDebounce`` after the last edit.
+    private func pastedTextDidChange() {
+        guard step == .paste, !isDiscarded else { return }
+        isParsePending = true
+        parseTask?.cancel()
+        let clock = clock
+        parseTask = Task { [weak self] in
+            do {
+                try await clock.sleep(for: Theme.Durations.envPasteParseDebounce)
+            } catch {
+                return
+            }
+            await self?.parsePastedTextInBackground()
+        }
+    }
+
+    /// File ↔ Paste: switching away from Paste clears the editor and wipes its preview.
+    private func sourceKindDidChange() {
+        switch (sourceKind, step) {
+        case (.paste, .source):
+            step = .paste
+        case (.file, .paste):
+            step = .source
+            parseTask?.cancel()
+            parseTask = nil
+            isParsePending = false
+            pasteProblem = nil
+            pastedText = ""
+            overrides = [:]
+            bulkKind = nil
+            clearPreview()
+        default:
+            break
+        }
+    }
+
+    /// Included rows that repeat an earlier included row's name and kind. Computed once per
+    /// change of `rows` (``nameProblem(for:)`` runs for every row on every render).
     private var duplicateRowIDs: Set<Int> {
+        if let cachedDuplicateRowIDs {
+            return cachedDuplicateRowIDs
+        }
+        let duplicates = Self.duplicateRowIDs(in: rows)
+        cachedDuplicateRowIDs = duplicates
+        return duplicates
+    }
+
+    private static func duplicateRowIDs(in rows: [EnvImportRowModel]) -> Set<Int> {
         var seen: Set<String> = []
         var duplicates: Set<Int> = []
         for row in rows where row.isIncluded {

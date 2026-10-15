@@ -21,6 +21,12 @@ environments and accounts, with a local encrypted vault and the GitHub CLI.
   repository; keep yours or accept GitHub's.
 - **New repositories.** Stage a repository with its environments, secrets and variables, create
   everything in one Sync, and clone it through your SSH alias.
+- **Paste many at once.** Copy a whole `.env` and press ⌘V on the secrets or variables table
+  (or choose **Paste Multiple…** in the Add menu): a live preview lists every `KEY=value` as
+  you edit, with line numbers for problem lines. Rows start as the tab's kind (Variables or
+  Secrets), credential-looking variables get a "Make Secret" badge, and Mark All and Overwrite
+  All handle the rest. The target is the repository or environment you have open. FX Vault
+  reads the clipboard only when you paste.
 - **`.env` import and export.** Import with key fixes and credential detection; export after
   Touch ID or your master password, with iCloud and git-exposure warnings.
 - **Sharing.** Send a scope to a teammate as an encrypted `.fxvault` file protected by a
@@ -62,8 +68,34 @@ After installing, run `gh auth login` once if you have not used the GitHub CLI b
    is the only way back in if you forget the password. Losing both means losing the vault.
 3. **Connect gh.** FX Vault looks for `gh` and its logged-in accounts. If it asks, run
    `gh auth login`, or `brew upgrade gh`, then choose **Check Again**.
-4. **Optional: turn on Touch ID** in **Settings › Security**. Only the signed release can use
-   Touch ID; ad-hoc builds use the master password.
+4. **Optional: turn on Touch ID** (see [Touch ID](#touch-id)).
+
+### Touch ID
+
+The signed release can unlock the vault with Touch ID. After a password unlock, FX Vault offers
+once to turn it on (**Turn On Touch ID** / **Not Now**); you can change it any time in
+**Settings › Security**.
+
+Touch ID is a convenience, not a replacement for the master password. FX Vault still asks for
+the password:
+
+- after every restart of the Mac,
+- at least every 14 days (a Touch ID unlock does not reset the timer),
+- after fingerprints are added or removed (Touch ID turns itself off; FX Vault offers to turn
+  it on again after the password unlock).
+
+The lock screen says which of these applies. Ad-hoc builds cannot use Touch ID (it needs the
+signed release's keychain entitlement).
+
+To check Touch ID support on an installed copy, run:
+
+```sh
+"/Applications/FX Vault.app/Contents/MacOS/FXVault" --diagnose
+```
+
+It prints a JSON report (version, signing, keychain access group, Touch ID availability and a
+keychain probe that adds and deletes a throwaway item) and exits without opening a window. It
+never reads your vault or a keychain item and prints no secret.
 
 ### Verify a download
 

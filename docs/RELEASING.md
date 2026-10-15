@@ -142,6 +142,18 @@ names.
    brew audit --cask --online fractalx-technologies/tap/fx-vault
    ```
 
+8. **Run the diagnostic on the installed app** (no window opens, nothing is read from the vault):
+
+   ```sh
+   "/Applications/FX Vault.app/Contents/MacOS/FXVault" --diagnose
+   ```
+
+   The JSON must show `"version"` as the new version, `"isSignedWithAccessGroup": true`,
+   `"keychainAccessGroup": "QYKC498D5D.io.fractalx.fxvault"` and a probe with `"add": 0`, <!-- gitleaks:allow (public team-prefixed access group, not a key) -->
+   `"delete": 0` and `"passed": true`. Any other probe status means Touch ID items cannot be
+   stored by this build: stop and check the profile and entitlements before announcing the
+   release (manual check 29).
+
    Then work through the [manual checklist](#manual-checklist-125).
 
 Published releases are immutable. If something is wrong after publishing, fix it, then
@@ -208,6 +220,10 @@ screenshot as evidence, saved with the release notes or in the Review section of
 | 26 | New Repository and clone | Create with environments, rules and items, Clone on; Sync Now; then Clone from the Sync result without a clone folder set | Nothing reaches GitHub before Sync; the new repository is selected in the sidebar; Sync creates and clones it; Clone asks for a folder when none is set |
 | 27 | Screen capture | Start a screen recording while the item editor, the New Repository item editor, the .env import sheet, a share passphrase or the recovery key is on screen | Those windows are blank in the recording (a value revealed in the main table is not protected) |
 | 28 | Live write E2E | With approval for each repository: `FXV_LIVE_E2E=1 FXV_LIVE_E2E_WRITE=1 FXV_LIVE_E2E_FREE_ORG=<org> FXV_LIVE_E2E_REPORT=<file> swift test --package-path Packages/FXVaultKit --filter LiveE2E` | Passes; the report fills the open Q6 facts in API.md; delete the two `fx-vault-e2e*` repositories by hand afterwards |
+| 29 | Touch ID: `--diagnose` | In Terminal: `"/Applications/FX Vault.app/Contents/MacOS/FXVault" --diagnose` | JSON only, no window or prompt: `isSignedWithAccessGroup` true, `keychainAccessGroup` `QYKC498D5D.io.fractalx.fxvault`, `biometryAvailable` true, `probe.add` 0 and `probe.delete` 0 (`passed` true). On an ad-hoc build: `probe.skipped` true, `skippedReason` `unsignedBuild` |
+| 30 | Touch ID: unlock offer | With Touch ID off and the offer never answered (`defaults delete io.fractalx.fxvault preferences.touchIDOfferAnswered`), lock and unlock with the password; choose Not Now; lock and unlock again; then delete the key again, unlock with the password and choose Turn On Touch ID | The sheet "Unlock FX Vault with Touch ID" appears after the password unlock, Not Now is not asked again, Turn On enables Touch ID and the next lock shows "Unlock with Touch ID". Never shown on an ad-hoc build |
+| 31 | Touch ID: reason on the lock screen | With Touch ID on: restart the Mac, open FX Vault; set the clock 15 days ahead and lock | "Password required: After a restart" and "Password required: Every 14 days" under the password field, no Touch ID button |
+| 32 | Bulk paste | Copy a `.env` with several lines (one invalid). On the Variables tab press ⌘V on the table; on the Secrets tab choose Add › Paste Multiple… and press ⌘V in the editor; also try the editor's Paste button and Clear; on an environment, paste a name that already exists | ⌘V opens the preview filled with the text; Paste Multiple… opens with the cursor in the editor; rows start as the tab's kind; a credential-looking variable shows Make Secret; the invalid line is listed with its line number; edits update the table without a Review step; the target is the open environment; Overwrite All switches every conflict; nothing is read from the clipboard until you paste |
 
 ## CI (`release.yml`)
 

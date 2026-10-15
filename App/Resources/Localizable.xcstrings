@@ -2718,6 +2718,17 @@
         }
       }
     },
+    "envImport.empty.pasteMessage" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No KEY=value lines were found. Check the lines listed below, or edit the text above."
+          }
+        }
+      }
+    },
     "envImport.empty.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2861,6 +2872,17 @@
         }
       }
     },
+    "envImport.issue.unquotedMultiline" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The value is a key or certificate on several lines without quotes, so it was skipped up to its END line. Wrap the value in double quotes."
+          }
+        }
+      }
+    },
     "envImport.issue.unterminatedQuote" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2982,6 +3004,17 @@
         }
       }
     },
+    "envImport.kind.makeSecret" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Make Secret"
+          }
+        }
+      }
+    },
     "envImport.kind.secret" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -3004,6 +3037,28 @@
         }
       }
     },
+    "envImport.markAllSecret" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mark All as Secret"
+          }
+        }
+      }
+    },
+    "envImport.markAllVariable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mark All as Variable"
+          }
+        }
+      }
+    },
     "envImport.name.duplicate" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -3011,6 +3066,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Another included row imports this name as the same kind."
+          }
+        }
+      }
+    },
+    "envImport.overwriteAll" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Overwrite All"
+          }
+        }
+      }
+    },
+    "envImport.overwriteAll.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Replace the existing value of every name that already exists in this scope."
           }
         }
       }
@@ -3059,13 +3136,57 @@
         }
       }
     },
-    "envImport.paste.hint" : {
+    "envImport.paste.clear" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "KEY=value lines, as in a .env file. The text is cleared as soon as it is parsed."
+            "value" : "Clear"
+          }
+        }
+      }
+    },
+    "envImport.paste.empty.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paste or type KEY=value lines above. Each line becomes a row here."
+          }
+        }
+      }
+    },
+    "envImport.paste.empty.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paste your .env"
+          }
+        }
+      }
+    },
+    "envImport.paste.liveHint" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "KEY=value lines, as in a .env file. The text is cleared when you import or close this sheet."
+          }
+        }
+      }
+    },
+    "envImport.paste.noEntries.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No KEY=value lines were found in the text above."
           }
         }
       }
@@ -3132,17 +3253,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "These are local changes. Use Sync to push them to GitHub."
-          }
-        }
-      }
-    },
-    "envImport.review" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Review"
           }
         }
       }
@@ -3242,6 +3352,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "The import is saved in the vault."
+          }
+        }
+      }
+    },
+    "envImport.subtitle.paste" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paste or type KEY=value lines. The preview updates as you type; nothing is saved until you import."
           }
         }
       }
@@ -6106,6 +6227,50 @@
         }
       }
     },
+    "lock.passwordRequired.short.biometryChanged" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Fingerprints changed"
+          }
+        }
+      }
+    },
+    "lock.passwordRequired.short.periodic" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Every %lld days"
+          }
+        }
+      }
+    },
+    "lock.passwordRequired.short.restart" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "After a restart"
+          }
+        }
+      }
+    },
+    "lock.passwordRequired.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Password required: %@"
+          }
+        }
+      }
+    },
     "lock.subtitle" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6113,6 +6278,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Enter your master password to unlock."
+          }
+        }
+      }
+    },
+    "lock.subtitle.touchID" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use Touch ID or enter your master password."
           }
         }
       }
@@ -6293,6 +6469,17 @@
         }
       }
     },
+    "main.detail.add.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add one item, or paste many KEY=value lines at once (⌘V on the table)"
+          }
+        }
+      }
+    },
     "main.detail.addSecret" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6403,6 +6590,17 @@
         }
       }
     },
+    "main.detail.importEnvFile" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import .env File…"
+          }
+        }
+      }
+    },
     "main.detail.kind" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6443,6 +6641,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Created by the next Sync"
+          }
+        }
+      }
+    },
+    "main.detail.pasteMultiple" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paste Multiple…"
           }
         }
       }
@@ -7074,13 +7283,13 @@
         }
       }
     },
-    "main.table.empty.message" : {
+    "main.table.empty.pasteMessage" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Add one, or import a .env file."
+            "value" : "Add one, paste KEY=value lines with ⌘V, or import a .env file."
           }
         }
       }
@@ -9105,6 +9314,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Turn on Touch ID"
+          }
+        }
+      }
+    },
+    "settings.security.touchID.policy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault still asks for the master password after a restart and at least every %lld days."
           }
         }
       }
@@ -12801,6 +13021,83 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "unlock your FX Vault"
+          }
+        }
+      }
+    },
+    "touchIDOffer.continue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "touchIDOffer.enable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Turn On Touch ID"
+          }
+        }
+      }
+    },
+    "touchIDOffer.notNow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not Now"
+          }
+        }
+      }
+    },
+    "touchIDOffer.policy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault still asks for the master password after a restart and at least every %lld days. You can change this later in Settings › Security."
+          }
+        }
+      }
+    },
+    "touchIDOffer.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use your fingerprint instead of typing the master password."
+          }
+        }
+      }
+    },
+    "touchIDOffer.subtitle.reenable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The fingerprints on this Mac changed, so Touch ID was turned off. Turn it on again to unlock with your finger."
+          }
+        }
+      }
+    },
+    "touchIDOffer.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock FX Vault with Touch ID"
           }
         }
       }

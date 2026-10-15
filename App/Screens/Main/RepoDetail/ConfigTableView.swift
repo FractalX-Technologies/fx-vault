@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import VaultCore
 
 /// The one table of the detail column (§10): Name, Value (masked with an eye toggle, "Value
@@ -52,6 +53,7 @@ struct ConfigTableView: View {
                 viewModel.edit(row)
             }
         }
+        // ⌘V is handled by the whole detail column (RepoDetailScreen), not only the table.
         .overlay {
             if rows.isEmpty {
                 EmptyStateView(
@@ -60,9 +62,18 @@ struct ConfigTableView: View {
                         ? String(localized: "main.table.empty.secrets", defaultValue: "No secrets")
                         : String(localized: "main.table.empty.variables", defaultValue: "No variables"),
                     message: viewModel.canEdit
-                        ? String(localized: "main.table.empty.message", defaultValue: "Add one, or import a .env file.")
+                        ? String(
+                            localized: "main.table.empty.pasteMessage",
+                            defaultValue: "Add one, paste KEY=value lines with ⌘V, or import a .env file."
+                        )
                         : String(localized: "main.table.empty.readOnly", defaultValue: "Nothing in this scope.")
-                )
+                ) {
+                    if viewModel.canEdit {
+                        Button(String(localized: "main.detail.pasteMultiple", defaultValue: "Paste Multiple…")) {
+                            viewModel.pasteMultiple()
+                        }
+                    }
+                }
             }
         }
     }
