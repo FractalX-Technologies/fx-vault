@@ -186,7 +186,7 @@ enum PackageFactory {
             packageID: packageID,
             createdAt: createdAt,
             producer: ShareProducerModel(version: "1.0.0"),
-            sender: ShareSenderModel(displayName: "Bryan"),
+            sender: ShareSenderModel(displayName: "Sam"),
             scope: scope,
             repository: ShareRepositoryModel(
                 owner: owner,

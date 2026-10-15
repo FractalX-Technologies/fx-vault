@@ -35,3 +35,15 @@ Patterns and rules learned from corrections during this project. Read at the sta
 ## 2026-10-15 - No real identifiers in public fixtures or tests
 **Pattern:** Tests used the real org, account and SSH alias names as sample data.
 **Rule:** Use `owner-a`, `user-a`, `Example-Org`, `github-personal`. The GitHubKit fixture denylist test holds only SHA-256 digests of the names.
+
+## 2026-10-15 - notarytool profile lookup
+**Pattern:** `notarytool store-credentials` without `--keychain` worked once, then `--keychain-profile` lookups failed hours later ("No Keychain password item found").
+**Rule:** always store and read the notary profile with `--keychain ~/Library/Keychains/login.keychain-db`; release-local.sh defaults to it.
+
+## 2026-10-15 - Parallel feature agents duplicate shared UI
+**Pattern:** Feature agents working in parallel each built their own branch-rule editor and sheet-size tokens (CreateRepo copied Environment's policy editor; four folders defined `Theme.Layout` extensions or local layout enums) because they could not edit shared folders.
+**Rule:** Before parallel UI work, put shared editors and tokens in `App/Components` and `Helpers/Theme` first; the integrator merges any feature-local copy before release.
+
+## 2026-10-15 - Shared scratchpad between agents
+**Pattern:** Agents sharing one session scratchpad overwrote each other's generic build scripts (`snapbuild.sh`), so one agent briefly built another agent's snapshot.
+**Rule:** Each agent keeps scratch files in its own subfolder (`<scratchpad>/<agent-name>/`) and names build dirs `.build-<agent-name>-*`.

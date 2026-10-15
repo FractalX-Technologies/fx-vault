@@ -3,7 +3,7 @@ import AppKit
 /// AppKit lifecycle hooks SwiftUI does not expose.
 ///
 /// Owns the app's dependencies (``bootstrap``), so both scenes and the terminate hook share one
-/// ``AppViewModel``. Later milestones add opening `.fxvault` files (pending imports).
+/// ``AppViewModel``.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Built once, when SwiftUI creates the delegate (before any scene body runs).
     let bootstrap = AppBootstrap.forCurrentProcess()
@@ -11,6 +11,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// FX Vault keeps running when its window closes; closing the window locks the vault (D16).
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    /// `.fxvault` files opened from Finder, AirDrop or `open` (§10 Scenes): queued in
+    /// ``AppViewModel/pendingImports``; the main window comes back, unlocks first if needed, then
+    /// shows the share import sheet. Also runs at launch, before any window exists.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        bootstrap.viewModel?.openShareFiles(urls)
     }
 
     /// Clears FX Vault's clipboard contents, drops the keys and checkpoints the database (§5.9).

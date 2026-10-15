@@ -32,6 +32,9 @@ public enum APIResponseParser {
     private static let crlfcrlf = Data("\r\n\r\n".utf8)
     private static let lflf = Data("\n\n".utf8)
     private static let statusDigitCount = 3
+    private static let errorsKey = "errors"
+    private static let messageKey = "message"
+    private static let detailFieldKeys = ["resource", "field", "code"]
 
     /// Parses the head (status line and headers) and the body. Accepts `\r\n` or `\n` line
     /// endings (gh writes the status line with `\n` and headers with `\r\n`).
@@ -69,6 +72,35 @@ public enum APIResponseParser {
         guard let firstLineEnd = output.firstIndex(of: UInt8(ascii: "\n")) else { return nil }
         let line = String(decoding: output[output.startIndex..<firstLineEnd], as: UTF8.self)
         return statusCode(from: line.trimmingCharacters(in: CharacterSet(charactersIn: "\r")))
+    }
+
+    /// The `errors[]` entries of a failed `gh api -i` response body (§8 E).
+    ///
+    /// gh prints only the body's top-level `message` on stderr (`gh: Validation Failed (HTTP
+    /// 422)`); the details GitHub puts in `errors` (strings, or objects with a `message`, or
+    /// `resource`/`field`/`code`) reach stdout only. Returns at most
+    /// `GHConstants.maxErrorDetailCount` entries, each capped at
+    /// `GHConstants.maxErrorMessageLength`; empty when there is no parsable body.
+    public static func errorDetails(in output: Data) -> [String] {
+        guard let response = try? parse(output),
+              !response.body.isEmpty,
+              let object = try? JSONSerialization.jsonObject(with: response.body) as? [String: Any],
+              let errors = object[errorsKey] as? [Any]
+        else { return [] }
+        let details = errors.compactMap { entry -> String? in
+            let text: String? = switch entry {
+            case let text as String:
+                text
+            case let fields as [String: Any]:
+                (fields[messageKey] as? String).flatMap { $0.isEmpty ? nil : $0 }
+                    ?? detailFieldKeys.compactMap { fields[$0] as? String }.joined(separator: " ")
+            default:
+                nil
+            }
+            guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
+            return String(text.prefix(GHConstants.maxErrorMessageLength))
+        }
+        return Array(details.prefix(GHConstants.maxErrorDetailCount))
     }
 
     /// Decodes `--paginate --slurp` output: a JSON array with one element per page.

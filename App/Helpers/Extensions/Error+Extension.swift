@@ -1,3 +1,4 @@
+import GitHubKit
 import VaultCore
 import VaultData
 
@@ -11,12 +12,38 @@ nonisolated struct ErrorPresentationModel: Equatable, Identifiable {
     }
 }
 
+/// An error type a feature maps to text itself (UI feature contract): conform it in the
+/// feature's folder (`[Type]+Extension.swift`) and ``Swift/Error/presentation`` uses it. VaultData
+/// errors without a mapping here (`EnvFileError`, `SharingError`) get the generic message until
+/// their feature conforms them.
+protocol PresentableError: Error {
+    nonisolated var errorPresentation: ErrorPresentationModel { get }
+}
+
 nonisolated extension Error {
     /// The localized presentation of any error the vault layers throw. Package errors carry no
     /// text (D24); unknown errors get a generic message and are never shown raw, because a raw
     /// description could include a path or a name.
     var presentation: ErrorPresentationModel {
         switch self {
+        case let error as any PresentableError:
+            error.errorPresentation
+        case let error as GHError:
+            error.presentation
+        case let error as GitError:
+            error.presentation
+        case let error as GitHubEnvironmentError:
+            error.presentation
+        case let error as RepoCatalogError:
+            error.presentation
+        case let error as ConfigRepositoryError:
+            error.presentation
+        case let error as RepoCreationError:
+            error.presentation
+        case let error as SyncRepositoryError:
+            error.presentation
+        case let error as DriftRepositoryError:
+            error.presentation
         case let error as VaultError:
             ErrorPresentationModel(title: error.localizedTitle, message: error.localizedMessage)
         case let error as ValidationError:

@@ -1,19 +1,15 @@
-import AppKit
 import SwiftUI
-import VaultCore
 
-/// A table cell that shows a value masked, reveals it on demand and masks it again (§5.11).
+/// A value cell (§5.11): a masked secret with an eye toggle, a revealed secret, a variable in
+/// plaintext, or the "Value missing" chip.
 ///
-/// - The value is fetched (decrypted) only when the eye is clicked, through `reveal`.
-/// - It is masked again after ``Timeouts/revealRemask``, when FX Vault stops being the active
-///   app, and when the cell disappears (a lock removes every cell).
+/// The cell holds no value of its own: the view model decrypts on toggle and decides when to
+/// mask again (after `Timeouts.revealRemask`, on resign active, on lock), so the rules are
+/// tested in one place (`RepoDetailViewModel`).
 struct MaskedValueCell: View {
     let display: ConfigValueDisplayModel
-    /// Decrypts the value; returns nil when it cannot be revealed (locked, failed).
-    let reveal: () async -> String?
-
-    @State private var revealedValue: String?
-    @State private var remaskTask: Task<Void, Never>?
+    /// Reveals or hides the value; nil hides the eye (for example while locked).
+    let onToggle: (() -> Void)?
 
     /// Dots in the mask. Fixed, so the mask leaks nothing about the value's length.
     private static let maskLength = 8
@@ -24,70 +20,53 @@ struct MaskedValueCell: View {
         switch display {
         case .missing:
             StatusChip.valueMissing
-        case .masked:
+        case .plain(let value):
+            valueText(value, isMasked: false)
+        case .masked, .revealed:
             HStack(spacing: Theme.Spacing.small) {
-                Text(verbatim: revealedValue ?? Self.mask)
-                    .font(Theme.Typography.monospaced)
-                    .foregroundStyle(revealedValue == nil ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .textSelection(.disabled)
+                valueText(revealed ?? Self.mask, isMasked: revealed == nil)
                 Spacer(minLength: 0)
-                Button {
-                    toggle()
-                } label: {
-                    Image(systemName: revealedValue == nil ? "eye" : "eye.slash")
+                if let onToggle {
+                    Button(action: onToggle) {
+                        Image(systemName: revealed == nil ? "eye" : "eye.slash")
+                    }
+                    .buttonStyle(.borderless)
+                    .help(revealed == nil ? Self.revealTitle : Self.hideTitle)
+                    .accessibilityLabel(revealed == nil ? Self.revealTitle : Self.hideTitle)
                 }
-                .buttonStyle(.borderless)
-                .help(revealedValue == nil ? Self.revealTitle : Self.hideTitle)
-                .accessibilityLabel(revealedValue == nil ? Self.revealTitle : Self.hideTitle)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
-                remask()
-            }
-            .onDisappear {
-                remask()
             }
         }
     }
 
-    private func toggle() {
-        guard revealedValue == nil else {
-            remask()
-            return
-        }
-        remaskTask?.cancel()
-        remaskTask = Task {
-            guard let value = await reveal(), !Task.isCancelled else { return }
-            revealedValue = value
-            do {
-                try await Task.sleep(for: Timeouts.revealRemask)
-            } catch {
-                return
-            }
-            revealedValue = nil
-        }
+    private var revealed: String? {
+        if case .revealed(let value) = display { return value }
+        return nil
     }
 
-    private func remask() {
-        remaskTask?.cancel()
-        remaskTask = nil
-        revealedValue = nil
+    private func valueText(_ text: String, isMasked: Bool) -> some View {
+        Text(verbatim: text)
+            .font(Theme.Typography.monospaced)
+            .foregroundStyle(isMasked ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .textSelection(.disabled)
     }
 
-    private static var revealTitle: String {
+    static var revealTitle: String {
         String(localized: "value.reveal", defaultValue: "Reveal value")
     }
 
-    private static var hideTitle: String {
+    static var hideTitle: String {
         String(localized: "value.hide", defaultValue: "Hide value")
     }
 }
 
 #Preview {
-    VStack {
-        MaskedValueCell(display: .masked) { nil }
-        MaskedValueCell(display: .missing) { nil }
+    VStack(alignment: .leading) {
+        MaskedValueCell(display: .masked) {}
+        MaskedValueCell(display: .revealed("example-value")) {}
+        MaskedValueCell(display: .plain("https://example.com"), onToggle: nil)
+        MaskedValueCell(display: .missing, onToggle: nil)
     }
     .padding()
 }

@@ -104,6 +104,41 @@ struct GHCommandServiceTests {
         }
     }
 
+    /// gh api prints `gh: Validation Failed (HTTP 422)` only; a plan reason in the body's
+    /// `errors[]` must still classify as plan-gated (§8 E), and a plain detail enriches the
+    /// validation message.
+    @Test func responseBodyDetailsReachTheClassifier() async throws {
+        let head = "HTTP/2.0 422 Unprocessable Entity\nContent-Type: application/json\r\n\r\n"
+        let planBody = #"{"message":"Validation Failed","errors":[{"message":"Not available for this repository's billing plan."}]}"#
+        let runner = FakeCommandRunner()
+        runner.enqueue(.failure(stderr: "gh: Validation Failed (HTTP 422)\n", stdout: head + planBody))
+        runner.enqueue(FakeCommandRunner.Response(
+            exitCode: 1,
+            stdout: try Fixture.data("api/validation-422-errors.txt"),
+            stderr: "gh: Validation Failed (HTTP 422)\n"
+        ))
+        let service = TestValues.service(runner)
+        let upsert = try GHEnvironmentsAPI.upsert(repo: try TestValues.repo(), environment: "prod", branchPolicy: GitHubBranchPolicyFlagsModel(protectedBranches: false, customBranchPolicies: true))
+        await #expect(throws: GHError.planGated) {
+            try await service.execute(upsert, token: TestValues.secret(TestValues.token))
+        }
+        await #expect(throws: GHError.validation("gh: Validation Failed (HTTP 422): Search q missing")) {
+            try await service.execute(upsert, token: TestValues.secret(TestValues.token))
+        }
+    }
+
+    /// Reads (no `-i`) never look at stdout: B5's recorded 404 body stays a plain not-found.
+    @Test func branchPolicyListOf404IsNotFound() async throws {
+        let runner = FakeCommandRunner()
+        runner.enqueue(.failure(stderr: "gh: Not Found (HTTP 404)\n", stdout: try Fixture.string("api/branch-policies-404-slurp.json")))
+        await #expect(throws: GHError.notFound) {
+            try await TestValues.service(runner).execute(
+                try GHEnvironmentsAPI.listBranchPolicies(repo: try TestValues.repo(), environment: "prod"),
+                token: TestValues.secret(TestValues.token)
+            )
+        }
+    }
+
     @Test func bare303OnBranchPolicyAddIsSuccess() async throws {
         let runner = FakeCommandRunner()
         runner.enqueue(FakeCommandRunner.Response(

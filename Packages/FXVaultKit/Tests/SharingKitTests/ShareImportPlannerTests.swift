@@ -466,7 +466,7 @@ struct ShareImportPlannerTests {
     @Test func originCarriesPackageAndSender() throws {
         let package = Self.single(PackageFactory.item("API_KEY", value: "a"))
         let plan = try Self.plan(package, Local())
-        #expect(plan.origin == ShareOriginModel(packageID: package.packageID, senderName: "Bryan"))
+        #expect(plan.origin == ShareOriginModel(packageID: package.packageID, senderName: "Sam"))
         #expect(plan.packageID == package.packageID)
         #expect(ShareItemOutcome.filled(pending: false).setsShareProvenance)
         #expect(ShareItemOutcome.addedWithoutValue.setsShareProvenance)

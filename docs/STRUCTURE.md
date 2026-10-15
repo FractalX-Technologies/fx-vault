@@ -1,6 +1,6 @@
 # FX Vault - Repository structure
 
-Current state after the domain-stage integration. The planned full tree is in `tasks/todo.md` §3.
+Current state after the UI-stage integration. The planned full tree is in `tasks/todo.md` §3.
 
 ```
 FXVault/
@@ -15,34 +15,86 @@ FXVault/
 │   ├── Info.plist                   # generated from project.yml `info:`
 │   ├── FXVault.entitlements         # ad-hoc: app-sandbox = false
 │   └── FXVault-Signed.entitlements  # + keychain-access-groups
-├── App/
-│   ├── FXVaultApp.swift             # @main: main Window + Settings scene, Vault menu
-│   ├── AppDelegate.swift            # owns AppBootstrap (startup-failure screen)
+├── App/                             # app target (MainActor by default, everything internal)
+│   ├── FXVaultApp.swift             # @main: main Window + Settings scene, VaultCommands menus
+│   ├── AppDelegate.swift            # owns AppBootstrap (startup-failure screen), .fxvault opens
 │   ├── AppContainer.swift           # composition root (live / preview / test)
-│   ├── AppViewModel.swift           # VaultPhase, two-phase lock, LockObserving, Sync count
+│   ├── AppViewModel.swift           # VaultPhase, two-phase lock, LockObserving, gh status,
+│   │                                # pending count + Dock badge, SyncActivity, pending imports
+│   ├── Composition/
+│   │   ├── VaultDataComponents.swift  # every VaultData repository built once (make / makeOffline)
+│   │   └── ShellResolvingGit.swift    # git on first use with the login-shell environment:
+│   │                                  # ShellResolvingRepoCloner, ShellResolvingGitignoreChecker
 │   ├── Screens/
-│   │   ├── Root/RootScreen.swift    # phase switch
+│   │   ├── Root/RootScreen.swift    # phase switch, onOpenURL, main-window opener
 │   │   ├── Onboarding/              # OnboardingScreen/ViewModel, Steps/OnboardingStepViews
 │   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel
-│   │   ├── Main/                    # MainScreen/ViewModel (three columns, MainContentSource)
+│   │   ├── GHSetup/                 # GHSetupScreen/ViewModel (install, upgrade, login, Not Now)
+│   │   ├── Main/                    # MainScreen/ViewModel (three columns, toolbar, router)
+│   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
+│   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
+│   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel
+│   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel
+│   │   │   ├── ScopeList/           # ScopeListView/ViewModel ("Repository" + environments)
+│   │   │   ├── RepoDetail/          # RepoDetailScreen/ViewModel, ConfigTableView
+│   │   │   └── AddRepository/       # AddRepositorySheet/ViewModel (Add repository by name)
+│   │   ├── ItemEditor/              # ItemEditorScreen/ViewModel (add, edit, fill, convert/move),
+│   │   │                            # ItemEditorModels, ItemEditorError, ConfigRepository+Editor,
+│   │   │                            # ConfigKind+ItemEditor, CredentialReason+ItemEditor extensions
+│   │   ├── Environment/             # New / Settings / Rename / Duplicate Environment Screen+ViewModel,
+│   │   │                            # EnvironmentDirectoryModel, EnvironmentPlanNoteView
+│   │   ├── Sync/                    # SyncScreen/ViewModel, SyncService (seam), SyncModels,
+│   │   │                            # SyncCopy, Summary/Deletions/Run/Result views, SyncIssueRow
+│   │   ├── Drift/                   # DriftReviewScreen/ViewModel, DriftService (seam), DriftCopy,
+│   │   │                            # DriftFindingRow, DriftBannerView
+│   │   ├── CreateRepo/              # CreateRepoScreen/ViewModel, CreateRepoFormView, item and
+│   │   │                            # environment editors (Sheet + ViewModel), ItemsSection,
+│   │   │                            # StagedView, CreateRepoModels
+│   │   ├── EnvFile/                 # EnvImportScreen/ViewModel/TableView, EnvImportRowModel,
+│   │   │                            # EnvExportScreen/ViewModel, EnvFilePanels,
+│   │   │                            # EnvFileError+Extension, EnvParseIssue+Extension
+│   │   ├── Sharing/                 # ShareExport/ShareImport/NearbySend/NearbyReceive
+│   │   │                            # Screen+ViewModel, ShareReauthModel/View, ShareScopeTree
+│   │   │                            # Model/View, ShareImportPlanEditor/PreviewView, SASCodeView,
+│   │   │                            # NearbyNetworking, ShareRepositoryImporter, ShareFileDelivery,
+│   │   │                            # ShareStagingFolder, ShareLocalIdentityModel, ShareSheetHeader,
+│   │   │                            # SharingError and SharingKit-type +Extension files
 │   │   └── Preferences/             # PreferencesScreen/ViewModel, General, Security(+ViewModel),
-│   │                                # Accounts, Advanced
+│   │                                # Accounts(+ViewModel), Advanced
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
 │   │                                # PassphraseView, StatusChip, EmptyStateView,
 │   │                                # SyncToolbarButton, GHStatusRow, PasswordStrengthMeter,
-│   │                                # NewPasswordFields, CenteredCard, WindowAccessor
+│   │                                # NewPasswordFields, CenteredCard, WindowAccessor, CommandRow,
+│   │                                # ErrorAlert, ConfigEditorSheet (+ ConfigEditorNote),
+│   │                                # BranchPolicyEditorView, BranchPolicyFormModel
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
 │   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe
 │   ├── Helpers/
 │   │   ├── AppLog.swift             # os.Logger categories
-│   │   ├── Extensions/              # Error, VaultError, ValidationError, PasswordStrengthModel,
-│   │   │                            # Duration (+Extension: localized error text)
-│   │   └── Theme/                   # Theme, Colors, Typography, Spacing, Radius, Durations
+│   │   ├── TaskBag.swift            # cancels a view model's tasks when it goes away
+│   │   ├── ExternalLinks.swift      # GitHub documentation links ("Learn more")
+│   │   ├── Extensions/              # localized error text (+Extension) for VaultError,
+│   │   │                            # ValidationError, GHError, GitError, GitHubEnvironmentError,
+│   │   │                            # RepoCatalogError, ConfigRepositoryError, RepoCreationError,
+│   │   │                            # SyncRepositoryError, DriftRepositoryError; Error,
+│   │   │                            # Duration, PasswordStrengthModel, RepoCapabilityModel,
+│   │   │                            # GHAccountSummaryModel, BranchPatternType
+│   │   └── Theme/                   # Theme (+ Layout, Opacity), Colors, Typography, Spacing,
+│   │                                # Radius, Durations
 │   └── Resources/                   # Assets.xcassets (AppIcon, semantic colors),
 │                                    # Localizable.xcstrings, InfoPlist.xcstrings
-├── AppTests/                        # Swift Testing, hosted by the app (runs in .preview mode):
-│                                    # one file per view model / manager, SecretValueEditor,
-│   └── Support/TestHarness.swift    # in-memory vault, fakes, hand-driven lock sources
+├── AppTests/                        # Swift Testing, hosted by the app (runs in .preview mode)
+│   ├── Support/TestHarness.swift    # in-memory vault, scripted gh, temp home, ActionRecorder,
+│   │                                # TestFixtures
+│   ├── <Name>ViewModelTests.swift   # one suite per view model / manager: AppViewModel,
+│   │                                # AutoLock, Clipboard, Onboarding, Lock, RecoveryReset,
+│   │                                # Preferences, AccountsSettings, GHStatusProbe, MainViewModel,
+│   │                                # Sidebar, ScopeList, RepoDetail, ItemEditor, Environment
+│   │                                # (+ EnvironmentBranchPolicyForm), Sync, DriftReview,
+│   │                                # CreateRepo (+ CreateRepoEditor), EnvFileImport,
+│   │                                # EnvFileExport, SharingExport, SharingImport, SharingNearby,
+│   │                                # SecretValueEditor, AppSmoke
+│   └── <Feature>TestSupport.swift   # ItemEditor, Sync, Drift, EnvFile, Sharing fakes and fixtures
 ├── Packages/FXVaultKit/
 │   ├── Package.swift                # tools 6.1, macOS 14, Swift 6, MemberImportVisibility
 │   ├── Package.resolved             # committed: GRDB.swift 7.11.1, swift-sodium 0.11.0
@@ -153,7 +205,9 @@ FXVault/
 │       │                                         # ExecutionTests/
 │       ├── VaultDataTests/                       # VaultManagerTests/, AccountsTests/, CatalogTests/,
 │       │                                         # ConfigTests/, EnvFilesTests/, SyncTests/ (+Support/),
-│       │                                         # CreationTests/, DriftTests/, SharingTests/
+│       │                                         # CreationTests/, DriftTests/, SharingTests/,
+│       │                                         # Live/ (opt-in live E2E: FXV_LIVE_E2E*, plus a
+│       │                                         # GitHubSimulator dry run that always runs)
 │       ├── VaultCryptoTests/Fixtures/kat/        # generate_kat.py + kat_vectors.json
 │       ├── SharingKitTests/Fixtures/             # nearby_kat.json, kat/ (crosscheck.py, reference)
 │       ├── GitHubKitTests/Fixtures/              # gh/, api/, ssh/, shell/ (sanitized)

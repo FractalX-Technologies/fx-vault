@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import SyncEngine
 import VaultCore
 import VaultData
 
@@ -19,23 +20,76 @@ protocol LockObserving: AnyObject {
     func vaultDidLock()
 }
 
-/// App-wide state shared by every scene: the vault phase, the lock procedure, gh status and the
-/// pending-change count shown on the Sync button and the Dock.
+/// Held by the sync sheet for the whole run (§5.7, D16): it suspends the inactivity auto-lock
+/// (every other trigger still locks) and makes the Sync button show progress.
+///
+/// Call ``end()`` when the run finishes, fails or is cancelled (a `defer` in the task that awaits
+/// the run's outcome). A lock ends every activity.
+final class SyncActivity {
+    private var assertion: SyncActivityAssertion?
+    private let onEnd: (SyncActivity) -> Void
+
+    fileprivate init(assertion: SyncActivityAssertion?, onEnd: @escaping (SyncActivity) -> Void) {
+        self.assertion = assertion
+        self.onEnd = onEnd
+    }
+
+    /// An activity no ``AppViewModel`` tracks and that holds no assertion (SwiftUI previews).
+    static func untracked() -> SyncActivity {
+        SyncActivity(assertion: nil) { _ in }
+    }
+
+    var isActive: Bool {
+        assertion != nil
+    }
+
+    /// Releases the auto-lock assertion. Idempotent.
+    func end() {
+        guard let assertion else { return }
+        assertion.release()
+        self.assertion = nil
+        onEnd(self)
+    }
+}
+
+/// App-wide state shared by every scene: the vault phase, the lock procedure, gh status, the
+/// pending-change count shown on the Sync button and the Dock, running syncs and the `.fxvault`
+/// files waiting to be imported.
 @Observable
 final class AppViewModel {
     private(set) var phase: VaultPhase
     private(set) var ghStatus: GHStatusModel = .checking
+    /// True while a gh probe runs (the first one also shows ``GHStatusModel/checking``).
+    private(set) var isCheckingGH = false
     /// Pending changes across all repositories (Sync button label and Dock badge).
     private(set) var pendingChangeCount = 0
-    /// True while a sync runs (Sync button shows progress; arrives with Milestone 3).
+    /// Pending and blocked counts per repository (live, from `ConfigRepository`).
+    private(set) var pendingCounts: PendingCountsModel = .empty
+    /// True while at least one ``SyncActivity`` is active (the Sync button shows progress).
     private(set) var isSyncing = false
     /// Incremented by every lock that dropped keys or left a phase.
     private(set) var lockCount = 0
     private(set) var lastLockTrigger: LockTrigger?
+    /// `.fxvault` files opened from Finder or AirDrop, oldest first (§10 Scenes). The main
+    /// window imports them one by one after unlock.
+    private(set) var pendingImports: [URL] = []
+    /// The user chose "Not Now" on ``GHSetupScreen`` for this launch.
+    private(set) var isGHSetupDeferred = false
+    /// The result of the launch reconciliation after the last unlock (§7.3), nil until it ran.
+    private(set) var lastReconciliation: SyncReconciliationModel?
 
     @ObservationIgnored let container: AppContainer
     @ObservationIgnored private var lockObservers: [WeakLockObserver] = []
-    @ObservationIgnored private var ghProbeTask: Task<Void, Never>?
+    @ObservationIgnored private var syncActivities: [WeakSyncActivity] = []
+    @ObservationIgnored private(set) var ghProbeTask: Task<Void, Never>?
+    @ObservationIgnored private(set) var reconciliationTask: Task<Void, Never>?
+    @ObservationIgnored private var pendingCountsTask: Task<Void, Never>?
+    /// Opens (or brings back) the main window; set by the main window's root view, which has the
+    /// SwiftUI `openWindow` action.
+    @ObservationIgnored private var mainWindowOpener: (() -> Void)?
+
+    /// The file extension of share files (§9.1; UTType `io.fractalx.fxvault.share`).
+    static let shareFileExtension = "fxvault"
 
     init(container: AppContainer) {
         self.container = container
@@ -50,6 +104,10 @@ final class AppViewModel {
         ghProbeTask = Task { [weak self] in
             await self?.refreshGHStatus()
         }
+        observePendingCounts()
+        if phase == .unlocked {
+            startReconciliation()
+        }
     }
 
     // MARK: - Lock procedure (§5.8)
@@ -57,8 +115,9 @@ final class AppViewModel {
     /// Locks the vault. Phase A runs synchronously before anything can suspend: the keyring is
     /// dropped (VaultManager also purges the gh token cache and invalidates the Touch ID
     /// context), then ``phase`` becomes `.locked`, which removes every screen that shows
-    /// values. Phase B follows: observers dismiss sheets, the clipboard is cleared if FX Vault
-    /// still owns it, a modal panel is aborted, and the WAL is checkpointed off the main actor.
+    /// values. Phase B follows: observers dismiss sheets, running syncs are cancelled, drift
+    /// state is reset, the clipboard is cleared if FX Vault still owns it, a modal panel is
+    /// aborted, and the WAL is checkpointed off the main actor.
     func lock(trigger: LockTrigger) {
         let manager = container.vaultManager
         let state = manager.state
@@ -81,9 +140,18 @@ final class AppViewModel {
         for entry in lockObservers {
             entry.observer?.vaultDidLock()
         }
+        endAllSyncActivities()
+        reconciliationTask?.cancel()
+        reconciliationTask = nil
         container.clipboard.clearIfOwned()
         if container.hasSideEffects, NSApp.modalWindow != nil {
             NSApp.abortModal()
+        }
+        let sync = container.data.sync
+        let drift = container.data.drift
+        Task {
+            await sync.currentRun?.cancel()
+            await drift.reset()
         }
         let manager = container.vaultManager
         Task.detached(priority: .utility) {
@@ -111,6 +179,7 @@ final class AppViewModel {
         }
         container.autoLock.recordInteraction()
         phase = .unlocked
+        startReconciliation()
     }
 
     /// Called when onboarding's Done step closes.
@@ -123,6 +192,7 @@ final class AppViewModel {
         case .unlocked:
             container.autoLock.recordInteraction()
             phase = .unlocked
+            startReconciliation()
         }
     }
 
@@ -130,25 +200,147 @@ final class AppViewModel {
     func didResetVault() {
         container.preferences.isRecoveryKeyConfirmationPending = false
         setPendingChangeCount(0)
+        pendingImports.removeAll()
         lockCount += 1
         runLockPhaseB()
         phase = .onboarding
     }
 
-    // MARK: - Sync count
+    // MARK: - Launch reconciliation (§7.3)
 
-    /// Updates the Sync button count and the Dock badge (set by the sync repository later).
+    /// After every unlock: prunes the sync journal and reconciles rows a crash or quit left
+    /// `in_flight` or `indeterminate`, by re-listing on GitHub. Waits for gh detection first, so
+    /// the per-account queues exist; rows of unavailable accounts stay for the next unlock.
+    private func startReconciliation() {
+        reconciliationTask?.cancel()
+        let probe = ghProbeTask
+        let sync = container.data.sync
+        reconciliationTask = Task { [weak self] in
+            await probe?.value
+            guard !Task.isCancelled else { return }
+            do {
+                let result = try await sync.prepareAfterUnlock()
+                self?.lastReconciliation = result
+            } catch {
+                AppLog.vault.error("Launch reconciliation failed")
+            }
+        }
+    }
+
+    // MARK: - Sync count and activity
+
+    /// Updates the Sync button count and the Dock badge.
     func setPendingChangeCount(_ count: Int) {
         pendingChangeCount = max(0, count)
         container.dockBadge.showBadge(count: pendingChangeCount)
     }
 
+    /// Follows `ConfigRepository.observePendingCounts()` for the whole app lifetime. The stream
+    /// needs no keys, so the Dock badge stays right while locked.
+    private func observePendingCounts() {
+        let config = container.data.config
+        pendingCountsTask = Task { [weak self] in
+            do {
+                for try await counts in config.observePendingCounts() {
+                    guard let self else { return }
+                    pendingCounts = counts
+                    setPendingChangeCount(counts.total)
+                }
+            } catch {
+                AppLog.vault.error("Pending count observation ended")
+            }
+        }
+    }
+
+    /// Starts a sync activity (the sync sheet holds it for the whole run).
+    func beginSyncActivity() -> SyncActivity {
+        let activity = SyncActivity(assertion: container.autoLock.beginSyncActivity()) { [weak self] ended in
+            self?.syncActivityDidEnd(ended)
+        }
+        syncActivities.removeAll { $0.activity == nil }
+        syncActivities.append(WeakSyncActivity(activity: activity))
+        isSyncing = true
+        return activity
+    }
+
+    private func syncActivityDidEnd(_ activity: SyncActivity) {
+        syncActivities.removeAll { $0.activity == nil || $0.activity === activity }
+        isSyncing = syncActivities.contains { $0.activity?.isActive == true }
+    }
+
+    private func endAllSyncActivities() {
+        let activities = syncActivities.compactMap(\.activity)
+        for activity in activities {
+            activity.end()
+        }
+        syncActivities.removeAll()
+        isSyncing = false
+    }
+
     // MARK: - gh status
 
-    /// Runs the gh probe (A1–A3). Never blocks onboarding or unlock.
+    /// Runs the gh probe (A1–A3). Never blocks onboarding or unlock. The last known status stays
+    /// in place while a re-check runs (``isCheckingGH``), so ``GHSetupScreen`` does not flicker
+    /// away during **Check Again**; only the first probe shows `.checking`.
     func refreshGHStatus() async {
-        ghStatus = .checking
+        isCheckingGH = true
+        defer { isCheckingGH = false }
         ghStatus = await container.ghStatusProbe.probe()
+        if ghStatus.isReady {
+            isGHSetupDeferred = false
+        }
+    }
+
+    /// True when ``GHSetupScreen`` replaces the main window (after unlock, gh needs attention,
+    /// and the user did not choose "Not Now").
+    var showsGHSetup: Bool {
+        phase == .unlocked && ghStatus.needsSetup && !isGHSetupDeferred
+    }
+
+    /// "Not Now" on ``GHSetupScreen``: work offline until the next launch or Check Again.
+    func deferGHSetup() {
+        isGHSetupDeferred = true
+    }
+
+    // MARK: - Share files (§10 Scenes)
+
+    /// Queues `.fxvault` files opened from Finder, AirDrop or a URL, and brings the main window
+    /// back. Other URLs are ignored. The main window imports them after unlock.
+    func openShareFiles(_ urls: [URL]) {
+        var added = false
+        for url in urls where Self.isShareFile(url) {
+            let standardized = url.standardizedFileURL
+            guard !pendingImports.contains(standardized) else { continue }
+            pendingImports.append(standardized)
+            added = true
+        }
+        guard added else { return }
+        requestMainWindow()
+    }
+
+    /// Removes and returns the oldest pending import, once the vault is unlocked.
+    func takeNextPendingImport() -> URL? {
+        guard phase == .unlocked, !pendingImports.isEmpty else { return nil }
+        return pendingImports.removeFirst()
+    }
+
+    static func isShareFile(_ url: URL) -> Bool {
+        url.isFileURL && url.pathExtension.lowercased() == shareFileExtension
+    }
+
+    // MARK: - Main window
+
+    /// Called by the main window's root view with its `openWindow` action.
+    func setMainWindowOpener(_ opener: @escaping () -> Void) {
+        mainWindowOpener = opener
+    }
+
+    /// Activates FX Vault and opens the main window if it was closed.
+    func requestMainWindow() {
+        if container.hasSideEffects {
+            NSApp.activate()
+        }
+        mainWindowOpener?()
     }
 
     // MARK: - App lifecycle
@@ -157,6 +349,7 @@ final class AppViewModel {
     func applicationWillTerminate() {
         container.clipboard.clearIfOwned()
         container.autoLock.stop()
+        pendingCountsTask?.cancel()
         guard container.vaultManager.state != .noVault else { return }
         container.vaultManager.lock()
         do {
@@ -191,11 +384,19 @@ final class AppViewModel {
         PreferencesViewModel(app: self)
     }
 
+    func makeGHSetupViewModel() -> GHSetupViewModel {
+        GHSetupViewModel(app: self)
+    }
+
     func makeMainViewModel() -> MainViewModel {
-        MainViewModel(app: self, content: EmptyMainContentSource())
+        MainViewModel(app: self)
     }
 }
 
 private struct WeakLockObserver {
     weak var observer: (any LockObserving)?
+}
+
+private struct WeakSyncActivity {
+    weak var activity: SyncActivity?
 }

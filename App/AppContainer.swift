@@ -10,9 +10,14 @@ import VaultData
 ///
 /// - `live`: the real vault under `~/Library/Application Support`, the keychain and gh.
 /// - `preview`: in-memory and side-effect free: an in-memory database, fake Touch ID, a private
-///   pasteboard, in-memory preferences and inert lock sources. SwiftUI previews use it, and so
-///   does the app while it hosts the test bundle (nothing under `~/Library`, no shell probe).
-/// - `test`: unit tests pass their own fakes to ``init(mode:vaultManager:preferences:clipboard:autoLock:ghStatusProbe:dockBadge:passphraseGenerator:vaultDirectory:)``.
+///   pasteboard, in-memory preferences, inert lock sources and a scripted gh
+///   (``VaultDataComponents/makeOffline(session:runner:clock:sandbox:)``). SwiftUI previews use
+///   it, and so does the app while it hosts the test bundle (nothing under `~/Library`, no shell
+///   probe, no gh).
+/// - `test`: unit tests pass their own fakes to ``init(mode:vaultManager:data:preferences:clipboard:autoLock:ghStatusProbe:dockBadge:passphraseGenerator:vaultDirectory:clock:)``.
+///
+/// Order matters: the session first, then the repositories (``data``), then `VaultManager`,
+/// whose `onLock` purges the token cache of ``VaultDataComponents/github`` (§5.8 Phase A).
 final class AppContainer {
     enum Mode: Equatable {
         case live
@@ -32,6 +37,10 @@ final class AppContainer {
 
     let mode: Mode
     let vaultManager: VaultManager
+    /// Every VaultData repository (one instance each for the process).
+    let data: VaultDataComponents
+    /// Re-authentication before exports, shares and nearby sends (D30).
+    let reauth: ReauthGate
     let preferences: PreferencesManager
     let clipboard: ClipboardManager
     let autoLock: AutoLockManager
@@ -41,20 +50,26 @@ final class AppContainer {
     let passphraseGenerator: PassphraseGenerator?
     /// The vault folder for Preferences › Advanced › Reveal; nil for in-memory vaults.
     let vaultDirectory: URL?
+    /// The clock every timer of the UI uses (reveal re-mask, clipboard clear).
+    let clock: any VaultClock
 
     init(
         mode: Mode,
         vaultManager: VaultManager,
+        data: VaultDataComponents,
         preferences: PreferencesManager,
         clipboard: ClipboardManager,
         autoLock: AutoLockManager,
         ghStatusProbe: any GHStatusProbing,
         dockBadge: any DockBadgeDisplaying,
         passphraseGenerator: PassphraseGenerator?,
-        vaultDirectory: URL?
+        vaultDirectory: URL?,
+        clock: any VaultClock
     ) {
         self.mode = mode
         self.vaultManager = vaultManager
+        self.data = data
+        reauth = ReauthGate(manager: vaultManager)
         self.preferences = preferences
         self.clipboard = clipboard
         self.autoLock = autoLock
@@ -62,6 +77,7 @@ final class AppContainer {
         self.dockBadge = dockBadge
         self.passphraseGenerator = passphraseGenerator
         self.vaultDirectory = vaultDirectory
+        self.clock = clock
     }
 
     /// Whether this container may touch the disk, the keychain or spawn processes.
@@ -79,12 +95,19 @@ final class AppContainer {
         }
     }
 
-    /// The real vault, keychain, pasteboard and system lock signals.
+    /// The real vault, keychain, pasteboard, gh and system lock signals.
     static func live() throws -> AppContainer {
         let session = try VaultSession.openLive()
         let capabilities = BuildCapabilities()
-        let tokenCache = GHTokenCache()
         let clock = SystemClock()
+        let data = VaultDataComponents.make(
+            session: session,
+            runner: ProcessRunner(clock: clock),
+            identity: .current(),
+            workingDirectory: try EmptyWorkingDirectory.prepareDefault(),
+            clock: clock
+        )
+        let github = data.github
         let vaultManager = try VaultManager(
             session: session,
             policy: .production,
@@ -94,12 +117,13 @@ final class AppContainer {
             ),
             capabilities: capabilities,
             clock: clock,
-            onLock: { tokenCache.purge() }
+            onLock: { github.purgeTokens() }
         )
         let preferences = PreferencesManager(store: UserDefaultsPreferencesStore())
         return AppContainer(
             mode: .live,
             vaultManager: vaultManager,
+            data: data,
             preferences: preferences,
             clipboard: ClipboardManager(pasteboard: .general, clock: clock),
             autoLock: AutoLockManager(
@@ -109,10 +133,14 @@ final class AppContainer {
                 ticker: DispatchInactivityTicker(),
                 timeout: { preferences.autoLockTimeout }
             ),
-            ghStatusProbe: PendingGHStatusProbe(),
+            ghStatusProbe: GitHubEnvironmentStatusProbe(
+                github: github,
+                overridePath: { preferences.ghPathOverride }
+            ),
             dockBadge: DockBadgeManager(),
             passphraseGenerator: try? PassphraseGenerator.bundled(),
-            vaultDirectory: session.databaseDirectory
+            vaultDirectory: session.databaseDirectory,
+            clock: clock
         )
     }
 
@@ -122,18 +150,23 @@ final class AppContainer {
         ghStatus: GHStatusModel = .ready(version: Limits.minimumGHVersion, path: previewGHPath)
     ) throws -> AppContainer {
         let clock = SystemClock()
+        let session = try VaultSession.inMemory()
+        let data = VaultDataComponents.makeOffline(session: session, clock: clock)
+        let github = data.github
         let vaultManager = try VaultManager(
-            session: VaultSession.inMemory(),
+            session: session,
             policy: .testing,
             biometricStore: FakeBiometricKeyStore(),
             capabilities: capabilities,
-            clock: clock
+            clock: clock,
+            onLock: { github.purgeTokens() }
         )
         let preferences = PreferencesManager(store: InMemoryPreferencesStore())
         let inert = InertLockSources()
         return AppContainer(
             mode: .preview,
             vaultManager: vaultManager,
+            data: data,
             preferences: preferences,
             clipboard: ClipboardManager(pasteboard: NSPasteboard(name: previewPasteboardName), clock: clock),
             autoLock: AutoLockManager(
@@ -146,7 +179,8 @@ final class AppContainer {
             ghStatusProbe: FixedGHStatusProbe(ghStatus),
             dockBadge: RecordedDockBadge(),
             passphraseGenerator: try? PassphraseGenerator.bundled(),
-            vaultDirectory: nil
+            vaultDirectory: nil,
+            clock: clock
         )
     }
 

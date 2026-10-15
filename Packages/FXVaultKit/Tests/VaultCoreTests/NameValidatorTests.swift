@@ -122,11 +122,11 @@ struct HostAndPatternValidatorTests {
 @Suite("DisplayNameSanitizer")
 struct DisplayNameSanitizerTests {
     @Test(arguments: [
-        ("Bryan", "Bryan"),
-        ("  Bryan  ", "Bryan"),
-        ("Bry\u{202E}an", "Bryan"),
-        ("Bry\u{200B}an\n", "Bryan"),
-        ("Bry\u{0}an", "Bryan"),
+        ("Alex", "Alex"),
+        ("  Alex  ", "Alex"),
+        ("Al\u{202E}ex", "Alex"),
+        ("Al\u{200B}ex\n", "Alex"),
+        ("Al\u{0}ex", "Alex"),
         ("Jose\u{301}", "Jos\u{E9}"),
         ("\u{2066}\u{2069}", ""),
     ])

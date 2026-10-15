@@ -146,9 +146,11 @@ negated and unsafe host entries.
 ## E. Error classification (`GHStderrClassifier.classify`)
 
 Input: operation, exit code, stderr with token patterns redacted (values are redacted only for
-display), and the `-i` status when present. Status sources: native `HTTP (\d{3}): ` anywhere in
-stderr; `gh api`'s `^gh: (.*) \(HTTP (\d{3})\)$` or `^gh: HTTP (\d{3})$`; `GraphQL:` messages
-by fragment; the `-i` status line. Rules, in order:
+display), the `-i` status when present, and for `gh api -i` calls the `errors[]` details of the
+response body (`APIResponseParser.errorDetails`, at most `GHConstants.maxErrorDetailCount`): gh
+prints only the body's top-level `message` on stderr (see Observed behavior). Status sources:
+native `HTTP (\d{3}): ` anywhere in stderr; `gh api`'s `^gh: (.*) \(HTTP (\d{3})\)$` or
+`^gh: HTTP (\d{3})$`; `GraphQL:` messages by fragment; the `-i` status line. Rules, in order:
 
 1. 401 or "Bad credentials" → `.tokenRevoked` (before rule 2, because a native 401 also prints a
    `gh auth login` hint)
@@ -169,11 +171,16 @@ by fragment; the `-i` status line. Rules, in order:
 13. Runner timeout: on a write → `.indeterminate`, on a read → `.timeout`
 14. Anything else → `.unexpected(exitCode:)`
 
+When stderr alone gives `.validation` or `.unexpected` and the body has details, the rules run
+again on stderr plus the details; only a plan, admin, write-access, scope, SAML, rate-limit or
+org-policy result from that second pass replaces the first (a detail can never turn a 422 into
+`.notFound`). A `.validation` message then reads `<first stderr line>: <detail>; <detail>`.
+
 Also from the service layer: a missing executable (ENOENT for the binary) → `.notInstalled`; a
 missing working directory or other spawn failure → `.launchFailed`; truncated stdout →
 `.outputTooLarge`; undecodable output → `.malformedOutput`; task cancellation → `.cancelled`.
 
-The classifier table is `Tests/GitHubKitTests/Fixtures/gh/stderr-cases.json` (41 cases). Cases
+The classifier table is `Tests/GitHubKitTests/Fixtures/gh/stderr-cases.json` (48 cases). Cases
 marked `"synthetic": true` (org policy on create, plan gating, secondary and GraphQL rate limits,
 the scope message, the GraphQL SAML link, the native 422) are educated guesses until the M3 write
 spike re-records them.
@@ -209,3 +216,85 @@ case-insensitive, seeded once from the journal's write start times over the last
 - Tests use `FakeCommandRunner` (unmatched calls exit `unmatchedExitCode` with
   `unmatchedStderr`) and the stateful `GitHubSimulator` in the test-only `FXVaultTestSupport`
   target, which answers unscripted calls from simulated GitHub state in gh's output formats.
+
+## Observed behavior
+
+Recorded on 2026-10-15 with gh 2.102.0 on macOS 27 against github.com (API version
+2026-03-10). Names are placeholders: `owner-a` is the gh account, `Example-Org` its Free-plan
+organization. Only **read** calls were made; the write facts below are still open (see
+"Pending: write spike").
+
+**Discovery (A1–A3, A5, B1).**
+- A Finder-like launch (`PATH=/usr/bin:/bin`, no shell variables) finds gh through the Homebrew
+  fallback: `/opt/homebrew/bin/gh` is a symlink into `/opt/homebrew/Cellar/gh/<v>/bin/gh`
+  (`drwxr-xr-x <user>:admin`; `/opt/homebrew/bin` is `drwxrwxr-x <user>:admin`), accepted by
+  the trust checks. The zsh login-shell probe (A2) returns an all-absolute PATH that resolves to
+  the same binary.
+- `gh --version` prints `gh version 2.102.0 (2026-09-30)` plus a release URL line.
+- `gh auth status --json hosts`: each account has `state`, `active`, `host`, `login`,
+  `tokenSource` (`keyring`), `scopes` (`"gist, read:org, repo"`: comma plus space) and
+  `gitProtocol`. No token is printed.
+- `gh org list` prints one login per line. B1 rows carry exactly the 13 requested fields; `id` is
+  a GraphQL node id (`R_kgDO…`), `owner` is `{id, login}`, `defaultBranchRef` `{name}`.
+
+**Reads (B2–B9).**
+- An unknown repository (B2): `GraphQL: Could not resolve to a Repository with the name
+  '<o>/<r>'. (repository)`, exit 1.
+- Empty scopes: `gh secret list` and `gh variable list` print `[]`; B3 prints
+  `[{"total_count":0,"environments":[]}]`.
+- **B5 on an environment whose policy is not custom** (`deployment_branch_policy: null`) is a
+  404 exactly like a missing environment (`gh: Not Found (HTTP 404)`; with `--paginate --slurp`
+  stdout still holds the error body wrapped in the slurp array,
+  `[{"message":"Not Found",…,"status":"404"}]`). FX Vault reads B5 only for custom policies, and
+  the executor treats a B5 404 as "no patterns".
+- B7/B9 for a missing environment: `failed to get secrets: HTTP 404: Not Found
+  (https://api.github.com/repos/<o>/<r>/environments/<e>/secrets?per_page=100)` (same for
+  variables), exit 1.
+- B6/B8 on a public repository without rights: `HTTP 403: You must have repository read
+  permissions or have the repository secrets fine-grained permission.` (`variables` for B8) →
+  `.writeAccessRequired`; an import records both scopes as unreadable and drift reports nothing
+  for them.
+- `updatedAt` and `createdAt` of secrets and variables have **whole seconds** (`…T08:47:32Z`),
+  at repository and environment level. Two writes of one secret within the same second can list
+  the same `updatedAt`, which the secret verification (`updatedAt != pre_write_updated_at`) and
+  drift (`isSameTimestamp`, 1 ms) cannot tell apart: such a push stays pending until the
+  pending-verification pass gives up and re-pushes it. A residual risk only for writes less than
+  a second apart.
+- Free-plan organization, **private** repository: B3, B4, B7 and B9 read normally (existing
+  environments with `deployment_branch_policy: null`, environment secrets and variables listed).
+  Reads are not plan-gated.
+
+**`gh api -i` output and errors.**
+- Framing: the status line ends in `\n`, every header in `\r\n`, then `\r\n` and the body
+  (`APIResponseParser` accepts both).
+- **A failed `gh api` call prints only the body's top-level `message` on stderr**
+  (`gh: Validation Failed (HTTP 422)`), with or without `-i`. The `errors[]` details GitHub adds
+  (for example `[{"resource":"Search","field":"q","code":"missing"}]`) are only in the body on
+  stdout. Before this was recorded the classifier saw stderr only, so a plan or permission reason
+  given in `errors[]` of a C2/C3/C4/C9 failure was classified as `.validation`; the service now
+  passes the details (section E). Fixture: `api/validation-422-errors.txt` (recorded on a read
+  call; the shape is GitHub's generic validation error).
+
+**Clone and `.env` (D1–D6).**
+- `ssh -G github.com` resolves to github.com and `ssh -T git@github.com` authenticates as the
+  account (D2 `.authenticated`), from a Finder-like environment with the agent socket only.
+- D3 through the alias gives `origin` = `git@<alias>:<O>/<N>.git` and leaves no
+  `.<N>.fxvault-clone-*` directory; a second clone into the same folder fails with
+  `.destinationExists` before git runs.
+- D4–D6 in a temporary repository under `/var/folders` (a symlink to `/private/var`):
+  `rev-parse --show-toplevel` answers with the `/private` path and the relative path is still
+  found; `.env` listed in `.gitignore` is `.ignored`, `.env.production` is `.notIgnored` with
+  the suggested line `/.env.production`, and after `addGitignoreEntry` it is `.ignored`. The
+  exported file is mode 0600.
+
+**Pending: write spike (Q6).** Not run: creating repositories and writing to GitHub needs
+the maintainer's approval of each repository (tasks/todo.md §13 Q6). The opt-in suite
+`Tests/VaultDataTests/Live` records every open fact when run with
+`FXV_LIVE_E2E=1 FXV_LIVE_E2E_WRITE=1 FXV_LIVE_E2E_FREE_ORG=<org>
+FXV_LIVE_E2E_REPORT=<file.json> swift test --filter LiveE2E`: identical-value `gh secret set` and
+`gh variable set` and `updatedAt`; trailing CRLF, double LF, inner LF and surrounding spaces of
+a variable through gh; empty values; C3 POST of an existing pattern; whether a PUT without
+`reviewers` keeps them; whether DELETE removes an environment's secrets; a 422 PUT; 404 deletes;
+and on the Free organization's private repository the stderr of an environment PUT with a
+custom policy, a branch-policy POST and environment secret and variable sets, with how
+`GHStderrClassifier` reads each. The report replaces the account and organization names.

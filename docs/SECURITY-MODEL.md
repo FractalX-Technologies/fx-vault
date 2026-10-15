@@ -137,11 +137,17 @@ another.
   on lock and on quit, but only if FX Vault still owns it; the pasteboard is never read.
 - **Entry:** `SecretValueEditor` turns off substitutions, spelling, completion, undo and Writing
   Tools, enables secure event input while focused, and strips trailing CR/LF with a notice (D32).
-- **Display:** revealed cells re-mask after 30 s and when the app resigns active; windows are
-  not restorable; recovery-key and passphrase views are excluded from screen capture.
+- **Display:** revealed cells re-mask after 30 s, when the app resigns active, on a scope change
+  and on lock; windows are not restorable; recovery-key and passphrase views, the item editors
+  and the `.env` import sheet are excluded from screen capture. Sheets that hold typed or
+  decrypted values (`LockObserving`) wipe them on lock and on close.
 - **Files:** `.env` and `.fxvault` exports are written 0600 from creation (exclusive create, no
   symlinks, `F_FULLFSYNC`, atomic rename), with iCloud-sync and git-exposure warnings and a
   `.gitignore` offer.
+- **Share staging:** a `.fxvault` export is first written (ciphertext only) to
+  `$TMPDIR/io.fractalx.fxvault.shares/<uuid>/` (folder 0700, file 0600), then copied by Save…
+  (written again 0600) or handed to AirDrop. The staging folder is removed when the sheet closes
+  or when a running AirDrop hand-off ends.
 
 ## 8. Child processes
 

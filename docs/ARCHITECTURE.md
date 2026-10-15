@@ -1,12 +1,16 @@
 # FX Vault - Architecture
 
-Status: domain stage integrated (Milestones 1–6 package layers plus the app shell).
+Status: domain and UI stages integrated (Milestones 1–6 package layers and every app screen).
 Every package module is implemented and tested: VaultCore, VaultCrypto, VaultStore, GitHubKit,
 EnvTools, SharingKit, **SyncEngine** (pure change model plus execution) and **VaultData** (vault
 core plus the accounts, catalog, config, `.env`, sync, creation, drift and sharing repositories).
-The app has its shell (composition root, phases, lock, onboarding, lock screen, recovery reset,
-Preferences, an empty three-column main window); the feature screens that use the repositories
-are the next stage. The full design is in `tasks/todo.md` §4–§9; related documents:
+The app builds every repository in `AppContainer`, detects gh, shows `GHSetupScreen`, and runs the
+three-column main window on live data (sidebar, scopes, detail table, toolbar and menu commands,
+Preferences › Accounts, `.fxvault` open handling), and every feature sheet (item editor,
+environments, sync, drift review, create repository, `.env` import/export, file and nearby
+sharing) plugs in through one contract ("UI feature contract" below). Everything is verified by
+view-model tests; the runtime checks a human must do are in [RELEASING.md](RELEASING.md). The
+full design is in `tasks/todo.md` §4–§10; related documents:
 [DATABASE.md](DATABASE.md), [API.md](API.md), [SECURITY-MODEL.md](SECURITY-MODEL.md),
 [SHARING-PROTOCOL.md](SHARING-PROTOCOL.md), [RELEASING.md](RELEASING.md).
 
@@ -185,6 +189,11 @@ See [API.md](API.md) for the command catalog.
 - **Errors:** `GHError` (§8 E plus `untrustedBinary`, `invalidInput`, `forbiddenArgument`,
   `malformedOutput`, `outputTooLarge`, `writeBudgetExhausted`, `launchFailed`, `cancelled`;
   `logCode`, `isTransient`), `GitError`, `GHStderrClassifier`, `StderrRedactor`.
+  `GHFailureContext.responseDetails` carries the `errors[]` details of a failed `gh api -i`
+  body (gh prints only the top-level message on stderr; `APIResponseParser.errorDetails(in:)`,
+  token-redacted, at most `GHConstants.maxErrorDetailCount`). They can only upgrade a
+  `.validation` / `.unexpected` classification (plan, admin, write access, scope, SAML, rate
+  limit, org policy), never turn a 422 into `.notFound`.
 - Design notes: `posix_spawn` with its own process group and `CLOEXEC_DEFAULT`;
   `waitid(WNOWAIT)` before signalling; `GHCommand` can only be built inside GitHubKit.
 - Deviation to confirm: `GHLocator` accepts a group-writable gh directory only for the `wheel`
@@ -445,27 +454,31 @@ checkGitHub:)`, `apply(_:plan:confirmReplay:)` (re-plans inside the transaction;
 `makeNearbyReceiver(transport:localName:clock:)` (`NearbyShareSender` / `NearbyShareReceiver`
 actors; the UI never receives values).
 
-**Composition (AppContainer, next stage).**
+**Composition (`AppContainer`, `App/Composition/VaultDataComponents.swift`).**
 
 ```swift
-let session = try VaultSession.openLive()            // .inMemory() for previews and tests
-let tokenCache = GHTokenCache()
-let github = GitHubEnvironmentRepository(database: session.database, runner: ProcessRunner(),
-    identity: .current(), workingDirectory: try EmptyWorkingDirectory.prepareDefault(),
-    tokenCache: tokenCache)
-let vault = try VaultManager(session: session, policy: .production,
-    biometricStore: KeychainManager(accessGroup: caps.keychainAccessGroup, authManager: auth),
-    capabilities: caps, onLock: { github.purgeTokens() })
-let catalog = RepoCatalogRepository(session: session, schedulers: github)
-let config = ConfigRepository(session: session)
-let envFiles = EnvFileRepository(session: session, gitignoreChecker: GitServiceGitignoreChecker(git: git))
-let creation = RepoCreationRepository(session: session, schedulers: github, git: git)
-let sync = SyncRepository(session: session, schedulers: github, cloner: creation)
-let drift = DriftRepository(session: session, schedulers: github)
-let sharing = SharingRepository(session: session, schedulers: github)
-// After unlock: try await sync.prepareAfterUnlock()
-// Lock Phase B: currentRun?.cancel(), await drift.reset(), cancel nearby sessions, checkpoint.
+let session = try VaultSession.openLive()                 // .inMemory() for previews and tests
+let data = VaultDataComponents.make(session: session, runner: ProcessRunner(clock: clock),
+    identity: .current(), workingDirectory: try EmptyWorkingDirectory.prepareDefault(), clock: clock)
+// data.github owns the token cache; every other repository gets data.github as GHSchedulerProviding.
+let vault = try VaultManager(session: session, policy: .production, biometricStore: keychain,
+    capabilities: caps, clock: clock, onLock: { data.github.purgeTokens() })   // §5.8 Phase A
+let reauth = ReauthGate(manager: vault)
+// After every unlock (AppViewModel): await the gh probe, then try await data.sync.prepareAfterUnlock()
+// Lock Phase B (AppViewModel): end SyncActivity, await data.sync.currentRun?.cancel(),
+//   await data.drift.reset(), clear the clipboard, abort modals, checkpoint.
 ```
+
+- One instance of each repository for the process (`VaultDataComponents`): `github`, `catalog`,
+  `config`, `envFiles`, `sync`, `creation`, `cloner`, `drift`, `sharing`.
+- git needs the probed login-shell environment (PATH, `SSH_AUTH_SOCK`). `GitServiceProvider`
+  resolves it on first use through `github.shellEnvironment()`; `ShellResolvingRepoCloner`
+  (`RepoCloning`, also `sync`'s cloner) and `ShellResolvingGitignoreChecker` (`envFiles`) use it.
+  `creation` is built with `git: nil` (staging, owners, templates, availability only): **clone
+  through `cloner`**.
+- `.preview` and `.test` use `VaultDataComponents.makeOffline(session:runner:clock:sandbox:)`: an
+  in-memory session, a `FakeCommandRunner`, a home folder under the temporary directory (no
+  `~/.ssh` read), never a real process.
 
 ### Integration rules
 
@@ -486,7 +499,7 @@ let sharing = SharingRepository(session: session, schedulers: github)
 - `.env` export needs `ReauthGate.authorizeEnvExport`; `.fxvault` export and nearby send need
   `ReauthGate.authorizeShare`.
 
-### Decisions to confirm (from the domain stage)
+### Decisions to confirm (domain and UI stages)
 
 These depart from or refine the plan text (`tasks/todo.md`) and are implemented as described.
 
@@ -511,32 +524,56 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 17 | M4 | Staged repositories record the viewer as admin until the next Sync confirms it; by-name owners not known as organizations are stored as `User` |
 | 18 | §5.5 | `LAError.userFallback` maps to the new `VaultError.passwordFallbackRequested` (focus the password field) instead of `.cancelled` |
 | 19 | §10 | A lock before a new recovery key is confirmed as saved wipes it and sets a persistent reminder banner; a recovery reset keeps the phase `.locked` until "I saved the new recovery key"; Reset vault is offered while locked and unlocked |
+| 20 | §10.3 | `GHSetupScreen` offers **Not Now** (work on the local vault without gh until the next launch or until gh becomes ready); also shown for an untrusted gh binary and a failed probe |
+| 21 | §10 Toolbar | Sync and New Repository are also disabled while gh is not ready (a run would fail at the first command) |
+| 22 | §10.4 | Variables are decrypted for the visible scope so the table shows them in plaintext (§10); they are dropped on lock and scope change. Secrets stay masked until revealed |
+| 23 | §5.10 | git (clone, `.env` export checks) uses the login-shell environment probed by the gh repository, resolved on first use; `RepoCreationRepository` is built without git and every clone goes through `ShellResolvingRepoCloner` |
+| 24 | §10 | An empty "Personal" group is hidden until gh lists the account; accounts known only from the vault (gh no longer lists them) keep their repositories in the sidebar |
+| 25 | §7.1 | Editing a secret starts with an empty field (empty keeps the current value); "Edit Current Value" decrypts it only on request. Variables open with their value |
+| 26 | §7.1 | Convert or Move preselects the opposite kind; a secret with no value can only move as a secret |
+| 27 | §7.1 | The fill choice is a two-option radio group with both labels ("Fill local value (already on GitHub)" default, "Push this value on next Sync"), shown only for secrets already on GitHub |
+| 28 | §7.6 | Rename Environment is blocked in the sheet while a secret has no value (the repository would accept it and Sync would block later); "Enter Values…" opens the fill editor |
+| 29 | M4 | Save in every branch policy editor (Environment Settings, New Environment, New Repository) waits for a typed but unadded rule, and Selected needs at least one rule in New Repository |
+| 30 | M4 | The plan note shows for private repositories and for repositories GitHub already refused on plan grounds (`isEnvPlanGated`) |
+| 31 | M4 | New Repository with "Clone to my Mac" on needs a clone folder before Create; the owner picker shows "(Personal)" / "(Organization)" (no organization role is available) |
+| 32 | §5.12 | `.env` export runs the git checks once before writing and shows them after the write (the iCloud warning must come before it); a failed write uses up the Touch ID / password authorization |
+| 33 | §5.12 | Pasted `.env` text is cleared as soon as it is parsed; Start Over returns to an empty paste box |
+| 34 | §9 | The share scope tree checks one node at a time (a package holds exactly one scope); checking a node includes everything under it |
+| 35 | §7.3 | Clone in the Sync result is always offered for a failed or not-attempted clone; without a clone folder it asks for one (`ClonePanel`) |
 
 
 ## App shell
 
 App target `FXVault`, `MainActor` by default; everything is internal (`@testable import` in
-AppTests). Feature screens of the next stage plug into these types.
+AppTests).
 
-**Composition and state** (`App/`).
+**Composition and state** (`App/`, `App/Composition/`).
 - `AppContainer` (`Mode` `.live` / `.preview` / `.test`; `.preview` while hosting tests, so the
-  test host never touches `~/Library`, the keychain or gh). `live()` opens
-  `VaultSession.openLive()` with `KDFPolicy.production`, `KeychainManager`, `BuildCapabilities`,
-  the general pasteboard and real lock sources; `preview()` uses `VaultSession.inMemory()`,
-  `.testing`, the fakes, a private pasteboard, in-memory preferences and inert lock sources.
-  Properties: `vaultManager`, `preferences`, `clipboard`, `autoLock`, `ghStatusProbe`,
-  `dockBadge`, `passphraseGenerator`, `vaultDirectory`, `hasSideEffects`. Later stages add the
-  VaultData repositories here, built from `vaultManager.session`.
+  test host never touches `~/Library`, the keychain or gh). Properties: `vaultManager`, `data:
+  VaultDataComponents`, `reauth: ReauthGate`, `preferences`, `clipboard`, `autoLock`,
+  `ghStatusProbe`, `dockBadge`, `passphraseGenerator`, `vaultDirectory`, `clock`,
+  `hasSideEffects`. `live()` uses `GitHubEnvironmentStatusProbe`; `preview()` a
+  `FixedGHStatusProbe`.
 - `AppBootstrap` (`.ready(AppViewModel)` / `.failed(ErrorPresentationModel)`), owned by
   `AppDelegate`: a startup-failure screen, never a fallback to an empty vault.
-- `@Observable AppViewModel`: `phase: VaultPhase` (`onboarding`, `locked`, `unlocked`),
-  `ghStatus`, `pendingChangeCount` / `setPendingChangeCount(_:)` (Sync label and Dock badge),
-  `isSyncing`, `lock(trigger:)` (Phase A synchronous: `vaultManager.lock()` then `.locked`;
-  Phase B: `LockObserving.vaultDidLock()` observers, `clipboard.clearIfOwned()`, modal abort in
-  live mode, detached `checkpoint()`), `didUnlock()`, `completeOnboarding()`, `didResetVault()`,
-  `refreshGHStatus()`, `applicationWillTerminate()`, and `make…ViewModel()` factories.
+- `@Observable AppViewModel`: `phase: VaultPhase`, `ghStatus` / `isCheckingGH` /
+  `refreshGHStatus()` (the last status stays while re-checking), `showsGHSetup` /
+  `deferGHSetup()`, `pendingChangeCount` and `pendingCounts` (observed from
+  `ConfigRepository.observePendingCounts()`; also the Dock badge), `isSyncing` /
+  `beginSyncActivity() -> SyncActivity`, `pendingImports` / `openShareFiles(_:)` /
+  `takeNextPendingImport()`, `setMainWindowOpener(_:)` / `requestMainWindow()`,
+  `lastReconciliation` (launch reconciliation after each unlock, after the gh probe),
+  `lock(trigger:)`, `didUnlock()`, `completeOnboarding()`, `didResetVault()`,
+  `applicationWillTerminate()` and `make…ViewModel()` factories.
+- `SyncActivity`: holds the auto-lock `SyncActivityAssertion` and drives the Sync button's
+  progress. `end()` is idempotent; a lock ends every activity.
 - `protocol LockObserving: AnyObject { func vaultDidLock() }` (held weakly; register with
   `app.addLockObserver(_:)`).
+- `.fxvault` files: `AppDelegate.application(_:open:)` and `RootScreen.onOpenURL` call
+  `openShareFiles` (only `.fxvault` file URLs, each once), which brings the main window back
+  (`NSApp.activate()` plus the `openWindow` action `RootScreen` registered). The vault unlocks
+  first; `MainViewModel.presentNextPendingImport()` then opens `.shareImport` for the oldest file,
+  and the next one when that sheet closes.
 
 **Managers** (`App/Managers`).
 - `AutoLockManager(clock:idleSource:signalSource:ticker:timeout:)`: `start(onLock:)`, `stop()`,
@@ -545,46 +582,223 @@ AppTests). Feature screens of the next stage plug into these types.
   (`IdleEventSource`, `LockSignalSource`, `InactivityTicker`) with live implementations
   (`LocalEventIdleSource`, `SystemLockSignalSource`, `DispatchInactivityTicker`) and
   `InertLockSources`.
-- `ClipboardManager(pasteboard:clock:clearDelay:)`: `copy(_:)` (§5.9 markers, clear after 30 s
-  if still owned), `clearIfOwned()`; never reads the pasteboard.
+- `ClipboardManager(pasteboard:clock:clearDelay:)`: `copy(_:)` (values: §5.9 markers, cleared
+  after 30 s if still owned), `copyCommand(_:)` (plain text such as `brew install gh`, never
+  cleared), `clearIfOwned()`; never reads the pasteboard.
 - `@Observable PreferencesManager(store:)`: `autoLockMinutes` / `autoLockTimeout`, clone folder,
   `ghPathOverride`, `isRecoveryKeyConfirmationPending`; `UserDefaultsPreferencesStore` (live) or
   `InMemoryPreferencesStore`.
-- `DockBadgeDisplaying` (`DockBadgeManager`, `RecordedDockBadge`); `GHStatusProbing`
-  (`PendingGHStatusProbe` placeholder returning `.unknown`, `FixedGHStatusProbe`) with
-  `GHStatusModel`. **Next stage:** replace `PendingGHStatusProbe` with a probe over
-  `GitHubEnvironmentRepository.detectGH`.
+- `DockBadgeDisplaying` (`DockBadgeManager`, `RecordedDockBadge`).
+- `GHStatusProbing`: `GitHubEnvironmentStatusProbe(github:overridePath:)` (`detectGH` then
+  `accounts()`) and `FixedGHStatusProbe`. `GHStatusModel`: `.checking`, `.unknown`,
+  `.ready(version:path:)`, `.notInstalled`, `.outdated(found:required:)`, `.untrusted(path:)`,
+  `.noAccounts(version:path:)`, `.failed`; `needsSetup`, `isReady`.
 
 **Screens** (`App/Screens`, each `[Name]Screen` + `@Observable [Name]ViewModel`).
-- `Onboarding` (welcome with gh row, password with strength meter and 6-word passphrase,
-  recovery key grid, confirm 2 random groups, Touch ID on signed builds only, done).
-- `Lock` (password, Touch ID button and auto-prompt once per lock while active, password-required
-  notices, focus on the password field after the prompt's fallback button) and `RecoveryReset`
-  (shows the new recovery key; finishes only after "I saved it").
-- `Preferences` (General, Security, Accounts placeholder, Advanced; phase-aware) with
-  `SecuritySettingsViewModel` (Touch ID toggle, change password with rotate, new recovery key).
-- `Main`: three-column skeleton over `protocol MainContentSource` (`EmptyMainContentSource`
-  today), toolbar Lock and Sync, Vault menu (⌃⌘L, ⇧⌘S placeholder). **Next stage:** implement
-  `MainContentSource` over `ConfigRepository` / `RepoCatalogRepository` and wire Sync.
+- `Onboarding`, `Lock` / `RecoveryReset` (both with `GHStatusRow`), unchanged.
+- `GHSetup` (§10.3): after unlock while `ghStatus.needsSetup`; kinds install / upgrade (found
+  version and why 2.97 is required) / untrusted / login / failed; copyable `brew install gh`,
+  `brew upgrade gh`, `gh auth login`; **Check Again**; **Not Now** (work without gh until the next
+  launch or until gh is ready).
+- `Preferences`: General, Security, **Accounts** (`AccountsSettingsViewModel`: gh path and
+  version, per account token state, scopes with copyable fix commands, SSH alias picker from
+  `~/.ssh/config`, **Test** "Authenticates as <login>", **Re-check**), Advanced.
+- `Main` (§10.4), `MainViewModel` owns:
+  - `SidebarViewModel` (`Main/Sidebar`): vault repositories observed (work without gh), gh
+    accounts and catalogs loaded when gh is ready; `SidebarGrouping.sections(_:query:)` (pure)
+    groups account → owner (Personal, organizations in gh's order, others by name) → repositories,
+    with badges (private, archived, fork, unavailable, not on GitHub), scope warnings, SAML and
+    truncation notes and search; Import, Clone, Share…, Remove from vault (confirmed); Add
+    repository by name (`Main/AddRepository`).
+  - `ScopeListViewModel` (`Main/ScopeList`): "Repository" plus environments
+    (`observeScopes`), pending dot, value-missing count, context menu Settings / Rename /
+    Duplicate / Export .env / Share / Revert / Delete (confirmed), "+ New Environment" (admin).
+  - `RepoDetailViewModel` (`Main/RepoDetail`): header (owner/name, visibility, capability chip,
+    Clone, Refresh, drift banner, deployment branches with Edit, plan note on private
+    repositories, read-only explanation) and `ConfigTableView` (Secrets | Variables over one
+    `Table`; masked secrets with the eye toggle, "Value missing", plaintext variables; Reveal,
+    Copy, Edit / Fill Value, Convert or Move, Revert, Delete). Revealed values re-mask after
+    `Timeouts.revealRemask` (injected clock), on resign active, on scope change and on lock.
+    The drift check runs when a repository opens (`DriftRepository.detectOnOpen`).
+  - Toolbar: New Repository, Import .env, Share menu (File… / Nearby… / Receive Nearby…), Lock,
+    Sync (`SyncToolbarButton`, count in the label, disabled at 0, while locked, while syncing and
+    without gh). Menu commands (`VaultCommands`): File › New Repository… (⌘N), Import .env… (⇧⌘I);
+    Vault › Lock (⌃⌘L), Sync (⇧⌘S), Share. Commands reach the window through
+    `FocusedValues.mainViewModel`.
+- Feature sheets (all presented by the router below; each `XScreen` + `@Observable XViewModel`):
+  - `ItemEditor` (§7.1, M3): `ItemEditorViewModel` (`LockObserving`) adds, edits, fills and
+    converts or moves one item through `ConfigRepository`. Kind is locked once on GitHub; names
+    are uppercased (ASCII only) and checked live with `GitHubNameValidator` plus a fold-key
+    duplicate check; values only through `SecretValueEditor` (trailing-newline notice, size and
+    empty checks). Editing a secret starts empty ("Edit Current Value" decrypts on request).
+    Credential-looking variables (`CredentialClassifier`) get "Make It a Secret" / "Convert to
+    Secret…". Fill defaults to "Fill local value (already on GitHub)". Secret → variable asks
+    first (Cancel is the default). The typed value is wiped after save, on close and on lock.
+  - `Environment` (§7.6, M4–M5): New / Settings / Rename / Duplicate, over
+    `EnvironmentDirectoryModel` (fold-key name status: taken, reserved by a pending change,
+    restores a deleted one). Settings edits the policy with `BranchPolicyEditorView` and shows
+    GitHub's extra protection rules and the plan note. Rename predicts local / letter-case-only /
+    recreate on GitHub and is blocked while a secret has no value ("Enter Values…" opens the fill
+    editor). Duplicate shows counts only.
+  - `Sync` (§7.2–§7.5): `SyncViewModel` over the `SyncServicing` seam (`LiveSyncService(sync:
+    github:cloner:)`): Summary (scope lines with names only, blocked changes with fixes, drift
+    routed to review, "FX Vault write limit this hour: X of 450", credential confirmation) →
+    Deletions (live fetch, "will be lost" marks, foreign rules, "I understand this cannot be
+    undone", no default button) → Progress (holds a `SyncActivity`, Cancel after the call in
+    flight, not dismissable, a lock cancels) → Result (Failed / Blocked / Skipped / Succeeded
+    with fixes, stop reason, warnings, clones). Clone from the result asks for a folder through
+    `ClonePanel.folder(preferences:)` when none is set. Afterwards it requests `.drift(id)` and,
+    for a created repository, `.catalog`.
+  - `Drift` (§7.7): `DriftReviewViewModel` over `DriftServicing` (`LiveDriftService`): findings
+    in the plan's wording, Keep Local / Accept GitHub (no default), confirmation before removing
+    local data, a secret's Accept GitHub chains to the item editor in fill mode, stale findings
+    re-check. `DriftBannerView` ("N changes on GitHub") in the detail column.
+  - `CreateRepo` (M4): `CreateRepoViewModel` (`LockObserving`) stages through
+    `RepoCreationRepository.stage` (one transaction; nothing reaches GitHub before Sync). Owner
+    picker from `creation.owners`, `RepoNameValidator` plus a 500 ms debounced availability
+    check on the injected clock, templates, inline staged environments (shared
+    `BranchPolicyEditorView`) and items (`SecretValueEditor`), "Clone to my Mac" (needs a clone
+    folder; warns without an SSH alias). After Create it selects the repository in the sidebar
+    (`actions.select`) and offers Sync Now… (`.sync([id])`).
+  - `EnvFile` (§5.12, M5): import (file or paste → table with key fix, kind, conflict Skip /
+    Overwrite and target scope → `EnvFileRepository.applyImport`; pasted text cleared once
+    parsed; values wiped on Start Over, close and lock) and export (`ReauthGate` first →
+    plaintext, skipped and unverified-share warnings → save panel → iCloud confirmation before
+    any write → 0600 write → git tracked / not ignored / ignored / unknown, with the `.gitignore`
+    offer). One authorization per write; a failed write uses it up.
+  - `Sharing` (§9, M6): file export (`ReauthGate.authorizeShare(.fileExport)` → one-node scope
+    tree → `exportFile` into `$TMPDIR/io.fractalx.fxvault.shares/<uuid>/` (0700 / 0600) →
+    passphrase shown once → Save… (0600) or AirDrop…; the staged file is removed on close or when
+    AirDrop ends), import (header before passphrase; one message for wrong passphrase / damaged
+    file; chips, Keep mine default, widening-policy and replay confirmations; one-click import of
+    a missing repository through `ShareRepositoryImporter`), and nearby send / receive
+    (experimental; `NearbyNetworking` over `NWNearbyBrowser` / `NWNearbyTransport`;
+    `SASCodeView` with no default button; re-authentication before the manifest; advertising
+    only while the receive sheet is open; no automatic retry). Re-authentication sheets use
+    `ShareReauthModel` / `ShareReauthView`.
 
-**Components** (`App/Components`): `SecretValueEditor` (NSTextView with every substitution,
-undo and Writing Tools off, secure event input, D32 strip on commit), `MaskedValueCell`,
+**Components** (`App/Components`): `SecretValueEditor`, `MaskedValueCell` (display-only: masked /
+revealed / plain / missing, the view model owns reveal state), `CommandRow`,
 `RecoveryKeyGridView`, `PassphraseView`, `StatusChip`, `EmptyStateView`, `SyncToolbarButton`,
 `GHStatusRow`, `PasswordStrengthMeter`, `NewPasswordFields`, `CenteredCard`, `WindowAccessor`,
-`View.screenCaptureProtected()`.
+`View.screenCaptureProtected()`, `View.errorAlert(_:)` (`ErrorAlert`). Shared by the feature
+sheets: `ConfigEditorSheet(title:subtitle:primaryTitle:isPrimaryEnabled:isWorking:onCancel:
+onPrimary:content:)` (header, grouped form, Cancel = Esc, primary = Return) with
+`ConfigEditorNoteModel` / `ConfigEditorNoteView`; `BranchPolicyFormModel` (pure: All / Protected
+branches only / Selected patterns, `BranchPatternValidator`, at most 50 rules, `draft`,
+`isReadyToSave` waits for a typed but unadded rule) and `BranchPolicyEditorView(form:isEnabled:)`
+(form sections; used by Environment Settings, New Environment and New Repository). Helpers:
+`TaskBag` (cancels a view model's observation tasks when it goes away), `ExternalLinks`
+(`environmentPlans`, `samlSingleSignOn`).
 
 **Errors** (`App/Helpers/Extensions`): `ErrorPresentationModel`, `Error.presentation`,
-`Error.isCancellation` (cancel and password fallback), localized `VaultError`,
-`VaultCorruption`, `BiometryUnavailableReason`, `PasswordRequiredReason`, `ValidationError`,
-`NameRule`, `PasswordStrengthModel`, `PasswordWeakness`, `PasswordPolicyError` text.
+`Error.isCancellation`; localized `VaultError`, `ValidationError`, `PasswordPolicyError`,
+`GHError` (keys `error.gh.*`), `GitError`, `GitHubEnvironmentError`, `RepoCatalogError`,
+`ConfigRepositoryError`, `RepoCreationError`, `SyncRepositoryError`, `DriftRepositoryError`.
+Feature-owned and feature-only errors conform to `PresentableError` (`errorPresentation`) in the
+feature's folder: `EnvFileError` (`EnvFile/EnvFileError+Extension.swift`), `SharingError`
+(`Sharing/SharingError+Extension.swift`, one "Wrong passphrase or damaged file" message for a
+wrong passphrase, a damaged file and an invalid package), `ItemEditorError`,
+`ShareRepositoryImportError`. Anything else gets the generic message.
 `AppLog.ui` / `AppLog.vault` are the loggers.
+
+## UI feature contract
+
+The feature sheets plug into the main window through one router and one dependency struct
+(as built: every route opens its real feature screen). Each feature owns its folder; the init
+signatures, `MainSheet`, the contexts, `FeatureDependencies` and `MainActions` are shared and
+change only together with every caller.
+
+**Router.** `MainViewModel.activeSheet: MainSheet?` (`App/Screens/Main/MainSheet.swift`).
+`MainScreen` presents it with `.sheet(item:)` and maps each case to the entry view below. Setting
+another route replaces the sheet; closing it sets `activeSheet` to nil (and opens the next pending
+`.fxvault` import, if any). A lock sets it to nil and removes the main window.
+
+| `MainSheet` case | Folder | Entry view | Context |
+|---|---|---|---|
+| `.itemEditor` | `ItemEditor/` | `ItemEditorScreen` | `ItemEditorContext(repositoryID, scope, mode: .add(ConfigKind) / .edit(id) / .fill(id) / .move(id))` |
+| `.newEnvironment` | `Environment/` | `NewEnvironmentScreen` | `NewEnvironmentContext(repositoryID)` |
+| `.environmentSettings` | `Environment/` | `EnvironmentSettingsScreen` | `EnvironmentContext(repositoryID, environmentID)` |
+| `.renameEnvironment` | `Environment/` | `RenameEnvironmentScreen` | `EnvironmentContext` |
+| `.duplicateEnvironment` | `Environment/` | `DuplicateEnvironmentScreen` | `EnvironmentContext` |
+| `.sync` | `Sync/` | `SyncScreen` | `SyncContext(repositoryIDs: Set<RepoID>?)` (nil: every repository with pending changes) |
+| `.driftReview` | `Drift/` | `DriftReviewScreen` | `DriftReviewContext(repositoryID)` |
+| `.createRepository` | `CreateRepo/` | `CreateRepoScreen` | `CreateRepoContext(accountLogin: String?, ownerLogin: String?)` (preselection only) |
+| `.envImport` | `EnvFile/` | `EnvImportScreen` | `EnvImportContext(repositoryID, scope, fileURL: URL?)` |
+| `.envExport` | `EnvFile/` | `EnvExportScreen` | `EnvExportContext(repositoryID, scope)` |
+| `.shareExport` | `Sharing/` | `ShareExportScreen` | `ShareExportContext(selection: ShareSelectionModel)` |
+| `.shareImport` | `Sharing/` | `ShareImportScreen` | `ShareImportContext(fileURL)` |
+| `.nearbySend` | `Sharing/` | `NearbySendScreen` | `NearbySendContext(selection: ShareSelectionModel?)` |
+| `.nearbyReceive` | `Sharing/` | `NearbyReceiveScreen` | `NearbyReceiveContext()` |
+| `.addRepositoryByName` | `Main/AddRepository/` | `AddRepositorySheet` (main window's own) | `AddRepositoryContext(accountLogin)` |
+
+Every entry view is `struct XScreen: View { init(context: XContext, dependencies:
+FeatureDependencies) }` (all `App/Screens/<Folder>/<XScreen>.swift`). The one non-sheet entry is
+`Drift/DriftBannerView: init(report: DriftReportModel, onReview: @escaping () -> Void)`, shown by
+`RepoDetailScreen` when the last drift check found something; `onReview` presents
+`.driftReview`. Contexts carry ids only (never values or names that could go stale): re-read
+through the repositories.
+
+**Dependencies (the only mechanism).** `FeatureDependencies`
+(`App/Screens/Main/FeatureDependencies.swift`), built by `MainViewModel.featureDependencies` from
+`AppContainer`; no environment values, no singletons. Build the feature's `@Observable` view model
+in the entry view's init (`_viewModel = State(initialValue: XViewModel(context:dependencies:))`)
+so view-model tests construct it with a `TestHarness`.
+
+| Member | Use |
+|---|---|
+| `session` | The vault session (`authorizeEnvExport` / `authorizeShare` need it). |
+| `config`, `catalog`, `github`, `sync`, `drift`, `envFiles`, `sharing`, `creation` | The VaultData repositories (one instance each). |
+| `cloner` | Clone (`RepoCloning`); never `creation.clone`. |
+| `reauth` | `ReauthGate`. |
+| `clipboard` | `ClipboardManager` (values: `copy`, commands: `copyCommand`). |
+| `preferences` | Clone folder, gh override. |
+| `passphraseGenerator` | 6-word passphrases (nil if the wordlist failed its check). |
+| `clock` | `any VaultClock` for every timer (tests use `ManualClock`). |
+| `actions` | `MainActions` (below). |
+| `copyValue(of:)` | Decrypt, copy with the privacy markers, wipe. |
+| `FeatureDependencies.reauthPrompt(for:)` | The Touch ID prompt for `.export`, `.share`, `.nearbySend`. |
+| `touchIDStatus()` | The vault's `BiometricUnlockStatus` without a prompt (nil if unreadable). Re-authentication sheets offer Touch ID only when `.available`. |
+| `syncService`, `driftService` | The live `SyncServicing` / `DriftServicing` seams (feature extensions in `Sync/`, `Drift/`). |
+| `FeatureDependencies.preview()` | Dependencies over `AppContainer.preview()` with inert actions (SwiftUI previews only). |
+
+`MainActions`:
+- **Dismiss:** `@Environment(\.dismiss)` in the sheet (the router clears `activeSheet`).
+- **Chain to another sheet:** `actions.present(MainSheet)` (for example drift review → item
+  editor `.fill(id)` for the `promptFillValue` follow-up).
+- **Refresh the main window:** local edits need nothing (every column observes the database).
+  For gh-backed data call `actions.refresh(.catalog)` (re-list accounts and repositories, for
+  example after a create), `.repository(id)` (re-read permissions and flags), `.drift(id)` (run
+  the drift check of the open repository again, for example after a sync or a resolution).
+- **Sync activity:** `let activity = actions.beginSyncActivity()` before `sync.startRun`, and
+  `activity.end()` when `outcome()` returns, the run fails or the sheet closes (use `defer`). It
+  suspends only the inactivity auto-lock and shows progress on the Sync button; a lock ends it.
+- **Lock:** a lock removes the main window and its sheets. A view model holding typed passwords,
+  passphrases or decrypted values outside SwiftUI state conforms to `LockObserving` and calls
+  `actions.addLockObserver(self)` to wipe them in `vaultDidLock()`.
+- **gh availability:** `actions.isGitHubReady()` before offering gh-backed actions.
+- **Select a repository:** `actions.select(repoID)` selects it in the sidebar, at once or as soon
+  as the vault observation lists it (New Repository uses it after staging).
+- **Re-authentication:** `try await dependencies.reauth.authorizeEnvExport(with:
+  .biometrics(FeatureDependencies.reauthPrompt(for: .export)), session: dependencies.session)` or
+  `.password(text)`; for shares `authorizeShare(.fileExport / .nearbySend, with:session:)`. Treat
+  `VaultError.cancelled` silently and offer the password field on `.passwordFallbackRequested`
+  (`error.isCancellation`).
+- **Copy:** `try dependencies.copyValue(of: itemID)`, or `dependencies.clipboard.copy(text)` for
+  a value already decrypted for display; commands with `copyCommand`.
+- **Errors:** `alert = error.presentation` (`View.errorAlert`); conform new error types to
+  `PresentableError` in the feature folder.
+- **Values:** entry only through `SecretValueEditor`; never log or keep values beyond the screen
+  that shows them; sheets that reveal values may use `.screenCaptureProtected()`.
 
 ## Design system
 
 `App/Helpers/Theme`: `Theme.Colors` (semantic asset-catalog colors with light and dark variants:
 Accent, Background, Surface, TextPrimary, TextSecondary, Success, Warning, Danger, Pending),
-`Theme.Typography`, `Theme.Spacing`, `Theme.Radius`, `Theme.Durations` and `Theme.Layout`.
-Views never hardcode colors, fonts or metrics.
+`Theme.Typography` (including `sasCode`), `Theme.Spacing`, `Theme.Radius`, `Theme.Durations`,
+`Theme.Opacity` and `Theme.Layout` (windows, columns and every sheet size: `editorSheetWidth`,
+`createRepo*`, `sync*`, `drift*`, `env*`, `share*`). Views never hardcode colors, fonts or
+metrics; feature folders do not define their own tokens.
 
 ## Localization
 

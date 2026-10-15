@@ -5,10 +5,33 @@ environments and accounts, with a local encrypted vault and the GitHub CLI.
 
 **Status: Beta.** Under active development; expect breaking changes before 1.0.
 
+## Features
+
+- **One vault for every account.** Every `gh` account you are logged in to, its organizations
+  and their repositories in one sidebar, with search, badges and scope warnings.
+- **Secrets and variables, repository and environment level.** Add, edit, rename, convert
+  between secret and variable, move between scopes, fill values GitHub does not return, revert
+  and delete. Secrets stay masked until you reveal them and re-mask after 30 seconds.
+- **Environments.** Create, rename (guided recreate on GitHub), duplicate and delete
+  environments, and edit their deployment branch and tag rules.
+- **Review, then sync.** Edits stay local until you press Sync. The summary shows names and
+  counts only, explains blocked changes with a fix, and asks before anything is deleted on
+  GitHub.
+- **Drift detection.** Changes a teammate made on GitHub since your last sync are listed per
+  repository; keep yours or accept GitHub's.
+- **New repositories.** Stage a repository with its environments, secrets and variables, create
+  everything in one Sync, and clone it through your SSH alias.
+- **`.env` import and export.** Import with key fixes and credential detection; export after
+  Touch ID or your master password, with iCloud and git-exposure warnings.
+- **Sharing.** Send a scope to a teammate as an encrypted `.fxvault` file protected by a
+  6-word passphrase.
+- **Experimental: nearby sharing.** Send directly to a Mac on the same network after both
+  people compare a 6-digit code. Marked experimental in the app.
+
 ## Requirements
 
 - macOS 14 Sonoma or later
-- [GitHub CLI](https://cli.github.com) (`gh`) 2.97.0 or later
+- [GitHub CLI](https://cli.github.com) (`gh`) 2.97.0 or later, logged in (`gh auth login`)
 
 ## Install
 
@@ -20,6 +43,8 @@ brew install --cask fractalx-technologies/tap/fx-vault
 
 Or download `FXVault-<version>.dmg` from the GitHub Releases page, open it and drag
 **FX Vault** to Applications.
+
+After installing, run `gh auth login` once if you have not used the GitHub CLI before.
 
 ### Verify a download
 
@@ -35,19 +60,55 @@ xcrun stapler validate FXVault-<version>.dmg
 `gh attestation verify` works only for releases built by the CI release workflow; releases
 published from a maintainer's Mac carry no build attestation.
 
-After installing, run `gh auth login` once if you have not used the GitHub CLI before.
+### Opening an ad-hoc build
+
+Builds from source, forks and the CI verification DMG are ad-hoc signed, not notarized, so
+Gatekeeper blocks the first launch. Either open **System Settings › Privacy & Security** and
+click **Open Anyway** next to the FX Vault message, or remove the quarantine attribute:
+
+```sh
+xattr -dr com.apple.quarantine "/Applications/FX Vault.app"   # or wherever you put the app
+```
+
+Ad-hoc builds cannot use Touch ID (it needs the signed release's keychain entitlement); they
+use the master password instead.
+
+## Security model
+
+- Values are encrypted field by field with AES-256-GCM under a random data key, which is
+  wrapped by a key derived from your master password with Argon2id (256 MiB) and by a one-time
+  recovery key you keep offline.
+- The vault locks on sleep, screen lock, inactivity and window close, and the clipboard is
+  cleared 30 seconds after a copy.
+- `.env` export and every share need a fresh Touch ID or master-password check.
+- Every GitHub operation goes through `gh` with values passed on stdin, never as arguments.
+- Nothing leaves your Mac except what Sync sends to GitHub and what you choose to share.
+
+The full model, threat model and residual risks are in
+[docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md).
 
 ## Building from source
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+```sh
+git clone <this repository> && cd FXVault
+swift test --package-path Packages/FXVaultKit          # package tests
+xcodebuild -project FXVault.xcodeproj -scheme FXVault -destination 'platform=macOS' \
+  CODE_SIGN_IDENTITY=- build test                     # app build and tests, ad-hoc signed
+```
+
+Requires Xcode 26.6 or later. See [CONTRIBUTING.md](CONTRIBUTING.md) for XcodeGen, linting and
+the local CI script, and [docs/RELEASING.md](docs/RELEASING.md) for signed builds.
 
 ## Documentation
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): modules, layers and public APIs
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): modules, layers, public APIs and the UI
+- [docs/STRUCTURE.md](docs/STRUCTURE.md): repository layout
+- [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md): keys, lock, Touch ID, threat model
 - [docs/DATABASE.md](docs/DATABASE.md): the local encrypted vault schema
 - [docs/API.md](docs/API.md): every gh, git and ssh command the app runs
 - [docs/SHARING-PROTOCOL.md](docs/SHARING-PROTOCOL.md): `.fxvault` files and nearby sharing
-- [docs/RELEASING.md](docs/RELEASING.md): signing, notarization and the Homebrew cask
+- [docs/RELEASING.md](docs/RELEASING.md): signing, notarization, the Homebrew cask and the
+  manual release checklist
 
 ## Security
 

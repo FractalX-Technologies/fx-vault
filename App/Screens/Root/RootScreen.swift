@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// Chooses the screen for the current vault phase (§10). Changing ``AppViewModel/phase`` to
-/// `.locked` removes the onboarding and main screens, and with them every value on screen.
+/// `.locked` removes the onboarding and main screens, and with them every value on screen. After
+/// unlock, ``GHSetupScreen`` replaces the main window while gh needs attention (§10.3).
 struct RootScreen: View {
     let viewModel: AppViewModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         content
@@ -17,6 +19,15 @@ struct RootScreen: View {
             .background(WindowAccessor { window in
                 viewModel.attachMainWindow(window)
             })
+            .onAppear {
+                // Lets the app delegate bring the window back for a `.fxvault` file (§10 Scenes).
+                viewModel.setMainWindowOpener { [openWindow] in
+                    openWindow(id: SceneID.main)
+                }
+            }
+            .onOpenURL { url in
+                viewModel.openShareFiles([url])
+            }
     }
 
     @ViewBuilder
@@ -29,7 +40,11 @@ struct RootScreen: View {
             LockScreen(app: viewModel)
                 .id(viewModel.lockCount)
         case .unlocked:
-            MainScreen(app: viewModel)
+            if viewModel.showsGHSetup {
+                GHSetupScreen(app: viewModel)
+            } else {
+                MainScreen(app: viewModel)
+            }
         }
     }
 }

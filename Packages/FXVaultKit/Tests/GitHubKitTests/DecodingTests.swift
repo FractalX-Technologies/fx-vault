@@ -225,6 +225,21 @@ struct DecodingTests {
         #expect(try GHEnvironmentsAPI.decodeAddedBranchPolicy(try apiOutput(.branchPolicyAdd, fixture: "api/branch-policy-add-303.txt")) == nil)
     }
 
+    /// gh prints only the body's `message` on stderr; `errors[]` is read from the `-i` body.
+    @Test func errorDetailsComeFromTheResponseBody() throws {
+        #expect(APIResponseParser.errorDetails(in: try Fixture.data("api/validation-422-errors.txt")) == ["Search q missing"])
+        let mixed = Data("""
+        HTTP/2.0 422 Unprocessable Entity\r\nContent-Type: application/json\r\n\r\n\
+        {"message":"Validation Failed","errors":["plain text",{"message":"with message","code":"custom"},{"code":"invalid"},{},7]}
+        """.utf8)
+        #expect(APIResponseParser.errorDetails(in: mixed) == ["plain text", "with message", "invalid"])
+        let many = "{\"errors\":[" + Array(repeating: "\"e\"", count: 9).joined(separator: ",") + "]}"
+        #expect(APIResponseParser.errorDetails(in: Data("HTTP/2.0 422 X\n\n\(many)".utf8)).count == GHConstants.maxErrorDetailCount)
+        #expect(APIResponseParser.errorDetails(in: try Fixture.data("api/environment-get-404.txt")).isEmpty)
+        #expect(APIResponseParser.errorDetails(in: try Fixture.data("api/delete-204.txt")).isEmpty)
+        #expect(APIResponseParser.errorDetails(in: Data("not http".utf8)).isEmpty)
+    }
+
     @Test func parserAcceptsLFOnlyAndRejectsGarbage() throws {
         let response = try APIResponseParser.parse(Data("HTTP/1.1 201 Created\nLocation: https://x\n\n{}".utf8))
         #expect(response.status == 201)
@@ -247,6 +262,7 @@ struct GHStderrClassifierTests {
         let didTimeOut: Bool?
         let samlURL: String?
         let scopes: [String]?
+        let responseDetails: [String]?
         let synthetic: Bool
 
         var testDescription: String {
@@ -268,7 +284,8 @@ struct GHStderrClassifierTests {
                 exitCode: sample.exitCode,
                 stderr: sample.stderr,
                 responseStatus: sample.responseStatus,
-                didTimeOut: sample.didTimeOut ?? false
+                didTimeOut: sample.didTimeOut ?? false,
+                responseDetails: sample.responseDetails ?? []
             ))
             #expect(error.logCode == sample.expected, "\(sample.name)")
             if let expectedURL = sample.samlURL {

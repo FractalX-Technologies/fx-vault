@@ -1,114 +1,136 @@
+import AppKit
 import Foundation
 import Observation
 import VaultCore
+import VaultData
 
-/// A repository in the sidebar (column 1).
-struct SidebarRepoModel: Identifiable, Hashable {
-    let id: RepoID
-    let fullName: String
-    let isPrivate: Bool
-    let isImported: Bool
-}
-
-/// An owner group (account or organization) in the sidebar.
-struct SidebarOwnerModel: Identifiable, Hashable {
-    let id: String
-    let login: String
-    let repos: [SidebarRepoModel]
-}
-
-/// A scope row in column 2: the repository itself or one environment.
-struct ScopeRowModel: Identifiable, Hashable {
-    let id: String
-    let title: String
-    let hasPendingChanges: Bool
-    let missingValueCount: Int
-}
-
-/// How a value cell starts out: masked until revealed, or the "Value missing" chip.
-enum ConfigValueDisplayModel: Hashable {
-    case masked
-    case missing
-}
-
-/// One row of the Secrets | Variables table (column 3). Never holds a value: values are
-/// decrypted on demand by the reveal action.
-struct ConfigRowModel: Identifiable, Hashable {
-    let id: ConfigItemID
-    let name: String
-    let value: ConfigValueDisplayModel
-    let updatedAt: Date?
-    let status: ConfigSyncStatus
-}
-
-/// Supplies the main window's content. Repositories arrive with Milestones 2 and 3; until then
-/// ``EmptyMainContentSource`` keeps the three columns empty.
-protocol MainContentSource: AnyObject {
-    func owners(matching query: String) -> [SidebarOwnerModel]
-    func scopes(for repo: RepoID) -> [ScopeRowModel]
-    func rows(for repo: RepoID, scopeID: ScopeRowModel.ID, kind: ConfigKind) -> [ConfigRowModel]
-}
-
-/// The placeholder source: no accounts, no repositories.
-final class EmptyMainContentSource: MainContentSource {
-    func owners(matching query: String) -> [SidebarOwnerModel] {
-        []
-    }
-
-    func scopes(for repo: RepoID) -> [ScopeRowModel] {
-        []
-    }
-
-    func rows(for repo: RepoID, scopeID: ScopeRowModel.ID, kind: ConfigKind) -> [ConfigRowModel] {
-        []
-    }
-}
-
-/// The three-column main window (§10.4): sidebar, scope list, detail table and the toolbar.
+/// The three-column main window (§10.4): it owns the column view models, the toolbar and menu
+/// commands, and the sheet router of the UI feature contract (``activeSheet``).
 @Observable
-final class MainViewModel {
-    var searchText = ""
-    var selectedRepoID: RepoID?
-    var selectedScopeID: ScopeRowModel.ID?
-    var selectedKind: ConfigKind = .secret
-    var selectedRowIDs: Set<ConfigItemID> = []
-    var isShowingSync = false
+final class MainViewModel: LockObserving {
+    let sidebar: SidebarViewModel
+    /// The scopes column of the selected imported repository.
+    private(set) var scopeList: ScopeListViewModel?
+    /// The detail column of the selected imported repository.
+    private(set) var detail: RepoDetailViewModel?
+    /// The sheet on screen (``MainSheet``). Setting another route replaces it.
+    var activeSheet: MainSheet? {
+        didSet {
+            if activeSheet == nil {
+                presentNextPendingImport()
+            }
+        }
+    }
 
-    @ObservationIgnored private let app: AppViewModel
-    @ObservationIgnored private let content: any MainContentSource
+    @ObservationIgnored let app: AppViewModel
 
-    init(app: AppViewModel, content: any MainContentSource) {
+    init(app: AppViewModel) {
         self.app = app
-        self.content = content
+        sidebar = SidebarViewModel(app: app)
+        sidebar.onChange = { [weak self] in
+            self?.followSelection()
+        }
+        app.addLockObserver(self)
     }
 
-    // MARK: - Columns
-
-    var owners: [SidebarOwnerModel] {
-        content.owners(matching: searchText)
+    /// Dependencies handed to every feature entry view (UI feature contract).
+    var featureDependencies: FeatureDependencies {
+        FeatureDependencies(container: app.container, actions: actions)
     }
 
-    var scopes: [ScopeRowModel] {
-        guard let selectedRepoID else { return [] }
-        return content.scopes(for: selectedRepoID)
+    private var actions: MainActions {
+        MainActions(
+            present: { [weak self] sheet in self?.present(sheet) },
+            refresh: { [weak self] request in self?.refresh(request) },
+            beginSyncActivity: { [app] in app.beginSyncActivity() },
+            addLockObserver: { [app] observer in app.addLockObserver(observer) },
+            isGitHubReady: { [app] in app.ghStatus.isReady },
+            select: { [weak self] id in self?.sidebar.select(repositoryID: id) }
+        )
     }
 
-    var rows: [ConfigRowModel] {
-        guard let selectedRepoID, let selectedScopeID else { return [] }
-        return content.rows(for: selectedRepoID, scopeID: selectedScopeID, kind: selectedKind)
-    }
+    // MARK: - Selection
 
     var selectedRepo: SidebarRepoModel? {
-        owners.lazy.flatMap(\.repos).first { $0.id == selectedRepoID }
+        sidebar.selectedRepo
     }
 
-    /// Shows the "recovery key not confirmed" banner (the vault locked during onboarding or a
-    /// recovery reset before the key was saved).
-    var showsRecoveryKeyReminder: Bool {
-        app.container.preferences.isRecoveryKeyConfirmationPending
+    /// The vault row of the selected repository, when it is imported.
+    var selectedVaultRepo: RepoModel? {
+        selectedRepo?.importedRepoID.flatMap(sidebar.vaultRepository)
     }
 
-    // MARK: - Toolbar
+    /// Rebuilds the scopes and detail columns when the selected repository changes (or becomes
+    /// imported, or is removed).
+    private func followSelection() {
+        let repoID = selectedRepo?.importedRepoID
+        guard scopeList?.repositoryID != repoID else { return }
+        detail = nil
+        scopeList = nil
+        guard let repoID else { return }
+        let dependencies = featureDependencies
+        let sidebar = sidebar
+        let scopes = ScopeListViewModel(repositoryID: repoID, dependencies: dependencies) {
+            sidebar.vaultRepository(repoID)
+        }
+        let detail = RepoDetailViewModel(
+            repositoryID: repoID,
+            dependencies: dependencies,
+            repository: { sidebar.vaultRepository(repoID) },
+            scopeSummary: { [weak scopes] scope in scopes?.scopes.first { $0.scope == scope } }
+        )
+        scopes.onSelectionChange = { [weak scopes, weak detail] in
+            guard let scope = scopes?.selectedScope?.scope else { return }
+            detail?.select(scope: scope)
+        }
+        scopeList = scopes
+        self.detail = detail
+        detail.checkDriftOnOpen()
+    }
+
+    // MARK: - Sheets
+
+    func present(_ sheet: MainSheet) {
+        guard app.phase == .unlocked else { return }
+        activeSheet = sheet
+    }
+
+    /// Opens the share import sheet for the oldest `.fxvault` file waiting (§10 Scenes), unless
+    /// another sheet is on screen (it follows when that one closes).
+    func presentNextPendingImport() {
+        guard activeSheet == nil, let url = app.takeNextPendingImport() else { return }
+        activeSheet = .shareImport(ShareImportContext(fileURL: url))
+    }
+
+    /// The share selection for the current column selection: the environment, or the
+    /// repository.
+    var currentShareSelection: ShareSelectionModel? {
+        guard selectedVaultRepo != nil, let scopeList, let scope = scopeList.selectedScope else { return nil }
+        return scopeList.shareSelection(for: scope)
+    }
+
+    // MARK: - Refresh
+
+    func refresh(_ request: MainRefreshRequest) {
+        switch request {
+        case .catalog:
+            Task { await sidebar.reload() }
+        case .repository(let id):
+            let catalog = app.container.data.catalog
+            Task {
+                do {
+                    try await catalog.refreshRepository(id)
+                } catch {
+                    AppLog.ui.error("Repository refresh failed")
+                }
+            }
+        case .drift(let id):
+            guard let detail, detail.repositoryID == id else { return }
+            Task { await detail.refreshDrift() }
+        }
+    }
+
+    // MARK: - Toolbar and commands (§10 Toolbar)
 
     var pendingChangeCount: Int {
         app.pendingChangeCount
@@ -118,17 +140,93 @@ final class MainViewModel {
         app.isSyncing
     }
 
+    private var isUnlocked: Bool {
+        app.phase == .unlocked
+    }
+
     /// Disabled at 0, while locked and while a sync runs (§10 Toolbar).
     var canSync: Bool {
-        pendingChangeCount > 0 && app.phase == .unlocked && !isSyncing
+        pendingChangeCount > 0 && isUnlocked && !isSyncing && app.ghStatus.isReady
     }
 
     func sync() {
         guard canSync else { return }
-        isShowingSync = true
+        present(.sync(SyncContext(repositoryIDs: nil)))
+    }
+
+    var canCreateRepository: Bool {
+        isUnlocked && app.ghStatus.isReady
+    }
+
+    /// New Repository (⌘N), with the selected account and owner preselected.
+    func newRepository() {
+        guard canCreateRepository else { return }
+        present(.createRepository(CreateRepoContext(
+            accountLogin: selectedRepo?.accountLogin,
+            ownerLogin: selectedRepo?.ownerLogin
+        )))
+    }
+
+    /// Import .env (⇧⌘I) needs a selected scope whose items can change.
+    var canImportEnv: Bool {
+        isUnlocked && scopeList?.selectedScope != nil && detail?.canEdit == true
+    }
+
+    func importEnv() {
+        guard canImportEnv, let repo = selectedVaultRepo, let scope = scopeList?.selectedScope else { return }
+        present(.envImport(EnvImportContext(repositoryID: repo.id, scope: scope.scope, fileURL: nil)))
+    }
+
+    var canShareFile: Bool {
+        isUnlocked && currentShareSelection != nil
+    }
+
+    /// Share › File… for the selected scope.
+    func shareFile() {
+        guard canShareFile, let selection = currentShareSelection else { return }
+        present(.shareExport(ShareExportContext(selection: selection)))
+    }
+
+    /// Share › Nearby… (the sheet asks what to send when nothing is selected).
+    func shareNearby() {
+        guard isUnlocked else { return }
+        present(.nearbySend(NearbySendContext(selection: currentShareSelection)))
+    }
+
+    /// Share › Receive Nearby….
+    func receiveNearby() {
+        guard isUnlocked else { return }
+        present(.nearbyReceive(NearbyReceiveContext()))
+    }
+
+    func addRepositoryByName(accountLogin: String) {
+        present(.addRepositoryByName(AddRepositoryContext(accountLogin: accountLogin)))
     }
 
     func lock() {
         app.lock(trigger: .manual)
+    }
+
+    /// Shows the "recovery key not confirmed" banner (the vault locked during onboarding or a
+    /// recovery reset before the key was saved).
+    var showsRecoveryKeyReminder: Bool {
+        app.container.preferences.isRecoveryKeyConfirmationPending
+    }
+
+    // MARK: - Clone
+
+    /// The folder new clones go to, or nil until one is chosen (Preferences › General).
+    var cloneFolderURL: URL? {
+        app.container.preferences.cloneFolderURL
+    }
+
+    func setCloneFolder(_ url: URL) {
+        app.container.preferences.setCloneFolder(url)
+    }
+
+    // MARK: - LockObserving
+
+    func vaultDidLock() {
+        activeSheet = nil
     }
 }

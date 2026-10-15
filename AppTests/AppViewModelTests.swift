@@ -1,3 +1,4 @@
+import SyncEngine
 import Testing
 import VaultCore
 import VaultData
@@ -61,18 +62,30 @@ struct AppViewModelTests {
         #expect(!harness.container.autoLock.isRunning)
     }
 
-    @Test func mainViewModelSyncButtonRules() async throws {
+    @Test func lockPurgesTheTokenCacheTheGitHubRepositoryUses() async throws {
         let harness = try await TestHarness(vault: .unlocked)
-        let main = harness.app.makeMainViewModel()
-        #expect(!main.canSync)
-        main.sync()
-        #expect(!main.isShowingSync)
-        harness.app.setPendingChangeCount(3)
-        #expect(main.canSync)
-        #expect(SyncToolbarButton.title(count: 3) == "Sync 3")
-        #expect(SyncToolbarButton.title(count: 0) == "Sync")
-        main.lock()
-        #expect(!main.canSync)
-        #expect(harness.app.phase == .locked)
+        let cache = harness.data.github.tokenCache
+        cache.store(SecretBytes(utf8: TestFixtures.token), for: TestFixtures.account)
+        #expect(cache.count == 1)
+        harness.app.lock(trigger: .manual)
+        #expect(cache.count == 0)
+    }
+
+    @Test func unlockRunsLaunchReconciliation() async throws {
+        let harness = try await TestHarness(vault: .locked)
+        #expect(harness.app.lastReconciliation == nil)
+        try await harness.vaultManager.unlock(password: testPassword)
+        harness.app.didUnlock()
+        await harness.app.reconciliationTask?.value
+        #expect(harness.app.lastReconciliation == SyncReconciliationModel())
+    }
+
+    @Test func pendingCountFollowsTheVault() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        #expect(harness.app.pendingChangeCount == 0)
+        try await harness.stageRepository(items: [TestFixtures.item(.variable, "BASE_URL", "https://example.com")])
+        let updated = await TestFixtures.eventually { harness.app.pendingChangeCount > 0 }
+        #expect(updated)
+        #expect(harness.dockBadge.count == harness.app.pendingChangeCount)
     }
 }

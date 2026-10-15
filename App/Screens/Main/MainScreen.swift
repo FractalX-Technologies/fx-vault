@@ -1,8 +1,9 @@
+import AppKit
 import SwiftUI
 import VaultCore
 
-/// The main window (§10.4): a three-column split view (sidebar, scopes, detail table) and the
-/// toolbar with Lock and the Sync button.
+/// The main window (§10.4): a three-column split view (sidebar, scopes, detail), the toolbar and
+/// the sheet router of the UI feature contract.
 struct MainScreen: View {
     @State private var viewModel: MainViewModel
 
@@ -12,226 +13,208 @@ struct MainScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
+        @Bindable var sidebar = viewModel.sidebar
         NavigationSplitView {
-            SidebarView(viewModel: viewModel)
+            SidebarView(main: viewModel)
                 .navigationSplitViewColumnWidth(min: Theme.Layout.sidebarMinWidth, ideal: Theme.Layout.sidebarIdealWidth)
         } content: {
-            ScopeListView(viewModel: viewModel)
+            ScopeColumnView(main: viewModel)
                 .navigationSplitViewColumnWidth(min: Theme.Layout.scopeListMinWidth, ideal: Theme.Layout.scopeListIdealWidth)
         } detail: {
-            RepoDetailPlaceholderView(viewModel: viewModel)
+            DetailColumnView(main: viewModel)
                 .frame(minWidth: Theme.Layout.detailMinWidth)
         }
         .searchable(
-            text: $viewModel.searchText,
+            text: $sidebar.searchText,
             placement: .sidebar,
             prompt: Text(String(localized: "main.search.prompt", defaultValue: "Search repositories"))
         )
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    viewModel.lock()
-                } label: {
-                    Label(String(localized: "toolbar.lock", defaultValue: "Lock"), systemImage: "lock")
-                }
-                .help(String(localized: "toolbar.lock.help", defaultValue: "Lock FX Vault (⌃⌘L)"))
-
-                SyncToolbarButton(
-                    count: viewModel.pendingChangeCount,
-                    isSyncing: viewModel.isSyncing,
-                    isEnabled: viewModel.canSync
-                ) {
-                    viewModel.sync()
-                }
-            }
+            MainToolbar(viewModel: viewModel)
         }
-        .sheet(isPresented: $viewModel.isShowingSync) {
-            EmptyStateView(
-                systemImage: "arrow.triangle.2.circlepath",
-                title: String(localized: "sync.placeholder.title", defaultValue: "Sync"),
-                message: String(
-                    localized: "sync.placeholder.message",
-                    defaultValue: "The sync summary appears here."
-                )
+        .sheet(item: $viewModel.activeSheet) { sheet in
+            MainSheetContent(sheet: sheet, main: viewModel)
+        }
+        .focusedSceneValue(\.mainViewModel, viewModel)
+        .task(id: viewModel.app.ghStatus) {
+            await viewModel.sidebar.reload()
+        }
+        .onAppear {
+            viewModel.presentNextPendingImport()
+        }
+        .onChange(of: viewModel.app.pendingImports) {
+            viewModel.presentNextPendingImport()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
+            viewModel.detail?.remaskAll()
+        }
+    }
+}
+
+/// The toolbar (§10 Toolbar): New Repository, Import .env, Share, Lock and the prominent Sync.
+private struct MainToolbar: ToolbarContent {
+    let viewModel: MainViewModel
+
+    var body: some ToolbarContent {
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button {
+                viewModel.newRepository()
+            } label: {
+                Label(String(localized: "toolbar.newRepository", defaultValue: "New Repository"), systemImage: "plus.rectangle.on.folder")
+            }
+            .help(String(localized: "toolbar.newRepository.help", defaultValue: "New Repository (⌘N)"))
+            .disabled(!viewModel.canCreateRepository)
+
+            Button {
+                viewModel.importEnv()
+            } label: {
+                Label(String(localized: "toolbar.importEnv", defaultValue: "Import .env"), systemImage: "square.and.arrow.down")
+            }
+            .help(String(localized: "toolbar.importEnv.help", defaultValue: "Import a .env file into the selected scope (⇧⌘I)"))
+            .disabled(!viewModel.canImportEnv)
+
+            ShareMenu(viewModel: viewModel)
+
+            Button {
+                viewModel.lock()
+            } label: {
+                Label(String(localized: "toolbar.lock", defaultValue: "Lock"), systemImage: "lock")
+            }
+            .help(String(localized: "toolbar.lock.help", defaultValue: "Lock FX Vault (⌃⌘L)"))
+
+            SyncToolbarButton(
+                count: viewModel.pendingChangeCount,
+                isSyncing: viewModel.isSyncing,
+                isEnabled: viewModel.canSync
             ) {
-                Button(String(localized: "common.close", defaultValue: "Close")) {
-                    viewModel.isShowingSync = false
-                }
-                .keyboardShortcut(.cancelAction)
-            }
-            .frame(width: Theme.Layout.sheetWidth)
-        }
-    }
-}
-
-/// Column 1: accounts, owners and repositories.
-struct SidebarView: View {
-    @Bindable var viewModel: MainViewModel
-
-    var body: some View {
-        let owners = viewModel.owners
-        VStack(spacing: 0) {
-            if viewModel.showsRecoveryKeyReminder {
-                RecoveryKeyReminderView()
-            }
-            if owners.isEmpty {
-                EmptyStateView(
-                    systemImage: "person.crop.circle.badge.questionmark",
-                    title: String(localized: "main.sidebar.empty.title", defaultValue: "No repositories yet"),
-                    message: String(
-                        localized: "main.sidebar.empty.message",
-                        defaultValue: "Repositories of your GitHub CLI accounts appear here."
-                    )
-                )
-            } else {
-                List(selection: $viewModel.selectedRepoID) {
-                    ForEach(owners) { owner in
-                        Section(owner.login) {
-                            ForEach(owner.repos) { repo in
-                                Label(repo.fullName, systemImage: repo.isPrivate ? "lock" : "book.closed")
-                                    .opacity(repo.isImported ? 1 : Theme.Opacity.disabled)
-                                    .tag(repo.id)
-                            }
-                        }
-                    }
-                }
-                .listStyle(.sidebar)
+                viewModel.sync()
             }
         }
     }
 }
 
-/// The reminder shown when a recovery key was never confirmed as saved.
-private struct RecoveryKeyReminderView: View {
-    var body: some View {
-        Label {
-            Text(String(
-                localized: "main.recoveryReminder",
-                defaultValue: "Your recovery key was not saved. Create a new one in Settings › Security."
-            ))
-            .font(Theme.Typography.caption)
-            .fixedSize(horizontal: false, vertical: true)
-        } icon: {
-            Image(systemName: "exclamationmark.triangle.fill")
-        }
-        .foregroundStyle(Theme.Colors.warning)
-        .padding(Theme.Spacing.medium)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Colors.warning.opacity(Theme.Opacity.chipBackground))
-    }
-}
-
-/// Column 2: "Repository" and one row per environment.
-struct ScopeListView: View {
-    @Bindable var viewModel: MainViewModel
+/// Share › File… / Nearby… / Receive Nearby….
+private struct ShareMenu: View {
+    let viewModel: MainViewModel
 
     var body: some View {
-        let scopes = viewModel.scopes
-        VStack(spacing: 0) {
-            if scopes.isEmpty {
-                EmptyStateView(
-                    systemImage: "square.stack.3d.up",
-                    title: String(localized: "main.scopes.empty.title", defaultValue: "No repository selected"),
-                    message: String(
-                        localized: "main.scopes.empty.message",
-                        defaultValue: "Select a repository to see its environments."
-                    )
-                )
-            } else {
-                List(selection: $viewModel.selectedScopeID) {
-                    ForEach(scopes) { scope in
-                        HStack {
-                            Text(scope.title)
-                            Spacer()
-                            if scope.missingValueCount > 0 {
-                                Text(verbatim: scope.missingValueCount.formatted())
-                                    .font(Theme.Typography.caption)
-                                    .foregroundStyle(Theme.Colors.warning)
-                            }
-                            if scope.hasPendingChanges {
-                                Circle()
-                                    .fill(Theme.Colors.pending)
-                                    .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
-                            }
-                        }
-                        .tag(scope.id)
-                    }
-                }
+        Menu {
+            Button(String(localized: "toolbar.share.file", defaultValue: "File…")) {
+                viewModel.shareFile()
+            }
+            .disabled(!viewModel.canShareFile)
+            Button(String(localized: "toolbar.share.nearby", defaultValue: "Nearby…")) {
+                viewModel.shareNearby()
             }
             Divider()
-            HStack {
-                Button {
-                } label: {
-                    Label(String(localized: "main.scopes.newEnvironment", defaultValue: "New Environment"), systemImage: "plus")
-                }
-                .buttonStyle(.borderless)
-                .disabled(true)
-                Spacer()
+            Button(String(localized: "toolbar.share.receive", defaultValue: "Receive Nearby…")) {
+                viewModel.receiveNearby()
             }
-            .padding(Theme.Spacing.small)
+        } label: {
+            Label(String(localized: "toolbar.share", defaultValue: "Share"), systemImage: "square.and.arrow.up")
+        }
+        .help(String(localized: "toolbar.share.help", defaultValue: "Share configuration with a teammate"))
+    }
+}
+
+/// Maps a ``MainSheet`` route to its feature entry view (UI feature contract).
+private struct MainSheetContent: View {
+    let sheet: MainSheet
+    let main: MainViewModel
+
+    var body: some View {
+        let dependencies = main.featureDependencies
+        switch sheet {
+        case .itemEditor(let context):
+            ItemEditorScreen(context: context, dependencies: dependencies)
+        case .newEnvironment(let context):
+            NewEnvironmentScreen(context: context, dependencies: dependencies)
+        case .environmentSettings(let context):
+            EnvironmentSettingsScreen(context: context, dependencies: dependencies)
+        case .renameEnvironment(let context):
+            RenameEnvironmentScreen(context: context, dependencies: dependencies)
+        case .duplicateEnvironment(let context):
+            DuplicateEnvironmentScreen(context: context, dependencies: dependencies)
+        case .sync(let context):
+            SyncScreen(context: context, dependencies: dependencies)
+        case .driftReview(let context):
+            DriftReviewScreen(context: context, dependencies: dependencies)
+        case .createRepository(let context):
+            CreateRepoScreen(context: context, dependencies: dependencies)
+        case .envImport(let context):
+            EnvImportScreen(context: context, dependencies: dependencies)
+        case .envExport(let context):
+            EnvExportScreen(context: context, dependencies: dependencies)
+        case .shareExport(let context):
+            ShareExportScreen(context: context, dependencies: dependencies)
+        case .shareImport(let context):
+            ShareImportScreen(context: context, dependencies: dependencies)
+        case .nearbySend(let context):
+            NearbySendScreen(context: context, dependencies: dependencies)
+        case .nearbyReceive(let context):
+            NearbyReceiveScreen(context: context, dependencies: dependencies)
+        case .addRepositoryByName(let context):
+            AddRepositorySheet(viewModel: AddRepositoryViewModel(
+                context: context,
+                catalog: dependencies.catalog
+            ) { [weak sidebar = main.sidebar] repo in
+                sidebar?.didAddRepository(repo, accountLogin: context.accountLogin)
+            })
         }
     }
 }
 
-/// Column 3: header, the Secrets | Variables picker and one table (§10.4).
-struct RepoDetailPlaceholderView: View {
-    @Bindable var viewModel: MainViewModel
+/// Column 2: the scopes of the selected imported repository, or an empty state.
+private struct ScopeColumnView: View {
+    let main: MainViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            HStack {
-                Text(viewModel.selectedRepo?.fullName
-                    ?? String(localized: "main.detail.noSelection", defaultValue: "No repository selected"))
-                    .font(Theme.Typography.title)
-                    .foregroundStyle(Theme.Colors.textPrimary)
-                Spacer()
-            }
-            Picker(String(localized: "main.detail.kind", defaultValue: "Kind"), selection: $viewModel.selectedKind) {
-                Text(String(localized: "main.detail.secrets", defaultValue: "Secrets")).tag(ConfigKind.secret)
-                Text(String(localized: "main.detail.variables", defaultValue: "Variables")).tag(ConfigKind.variable)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
+        if let scopeList = main.scopeList {
+            ScopeListView(viewModel: scopeList)
+        } else {
+            EmptyStateView(
+                systemImage: "square.stack.3d.up",
+                title: String(localized: "main.scopes.empty.title", defaultValue: "No repository selected"),
+                message: String(
+                    localized: "main.scopes.empty.message",
+                    defaultValue: "Select an imported repository to see its environments."
+                )
+            )
+        }
+    }
+}
 
-            Table(viewModel.rows, selection: $viewModel.selectedRowIDs) {
-                TableColumn(String(localized: "main.table.name", defaultValue: "Name")) { row in
-                    Text(verbatim: row.name)
-                        .font(Theme.Typography.monospaced)
-                }
-                .width(min: Theme.Layout.tableNameMinWidth)
-                TableColumn(String(localized: "main.table.value", defaultValue: "Value")) { row in
-                    MaskedValueCell(display: row.value) { nil }
-                }
-                .width(min: Theme.Layout.tableValueMinWidth)
-                TableColumn(String(localized: "main.table.updated", defaultValue: "Updated")) { row in
-                    Text(row.updatedAt?.formatted(date: .abbreviated, time: .shortened) ?? "")
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                }
-                .width(min: Theme.Layout.tableDateMinWidth)
-                TableColumn(String(localized: "main.table.status", defaultValue: "Status")) { row in
-                    StatusChip(status: row.status)
-                }
-                .width(min: Theme.Layout.tableStatusMinWidth)
-            }
-            .overlay {
-                if viewModel.rows.isEmpty {
-                    EmptyStateView(
-                        systemImage: viewModel.selectedKind == .secret ? "key" : "textformat",
-                        title: viewModel.selectedKind == .secret
-                            ? String(localized: "main.table.empty.secrets", defaultValue: "No secrets")
-                            : String(localized: "main.table.empty.variables", defaultValue: "No variables"),
-                        message: String(
-                            localized: "main.table.empty.message",
-                            defaultValue: "Select a repository and a scope to see its items."
-                        )
+/// Column 3: the repository detail, the Import prompt for a repository not in the vault, or an
+/// empty state.
+private struct DetailColumnView: View {
+    let main: MainViewModel
+
+    var body: some View {
+        Group {
+            if let detail = main.detail {
+                RepoDetailScreen(viewModel: detail, main: main)
+            } else if let repo = main.selectedRepo {
+                RepoImportPromptView(repo: repo, sidebar: main.sidebar)
+            } else {
+                EmptyStateView(
+                    systemImage: "key.horizontal",
+                    title: String(localized: "main.detail.noSelection", defaultValue: "No repository selected"),
+                    message: String(
+                        localized: "main.detail.noSelection.message",
+                        defaultValue: "Select a repository in the sidebar to see its secrets and variables."
                     )
-                }
+                )
             }
         }
-        .padding(Theme.Spacing.large)
         .background(Theme.Colors.background)
     }
+}
+
+// MARK: - Focused value (menu commands)
+
+extension FocusedValues {
+    /// The main window's view model, for the menu commands (⌘N, ⇧⌘I, Share, Sync).
+    @Entry var mainViewModel: MainViewModel?
 }
 
 #Preview {

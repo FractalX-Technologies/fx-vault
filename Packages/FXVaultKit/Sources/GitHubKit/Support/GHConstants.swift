@@ -26,6 +26,8 @@ public enum GHConstants {
     public static let sshPath = "/usr/bin/ssh"
     /// Longest message kept from stderr in ``GHError/validation(_:)``.
     public static let maxErrorMessageLength = 500
+    /// Most `errors[]` entries kept from a failed `gh api -i` response body (§8 E).
+    public static let maxErrorDetailCount = 5
     /// Logging subsystem (§4.5).
     public static let logSubsystem = "io.fractalx.fxvault"
     /// The placeholder that replaces redacted text.

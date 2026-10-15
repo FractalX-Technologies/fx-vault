@@ -36,11 +36,28 @@ struct FXVaultApp: App {
     }
 }
 
-/// The Vault menu: Lock (⌃⌘L) and Sync (⇧⌘S) (§10 Toolbar).
+/// The menu commands (§10 Toolbar): File › New Repository (⌘N) and Import .env (⇧⌘I), and the
+/// Vault menu with Lock (⌃⌘L), Sync (⇧⌘S) and Share. Commands that act on the main window reach
+/// it through the focused scene value (``FocusedValues/mainViewModel``).
 struct VaultCommands: Commands {
     let viewModel: AppViewModel
+    @FocusedValue(\.mainViewModel) private var main
 
     var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button(String(localized: "menu.file.newRepository", defaultValue: "New Repository…")) {
+                main?.newRepository()
+            }
+            .keyboardShortcut("n", modifiers: .command)
+            .disabled(main?.canCreateRepository != true)
+
+            Button(String(localized: "menu.file.importEnv", defaultValue: "Import .env…")) {
+                main?.importEnv()
+            }
+            .keyboardShortcut("i", modifiers: [.shift, .command])
+            .disabled(main?.canImportEnv != true)
+        }
+
         CommandMenu(String(localized: "menu.vault", defaultValue: "Vault")) {
             Button(String(localized: "menu.vault.lock", defaultValue: "Lock FX Vault")) {
                 viewModel.lock(trigger: .manual)
@@ -48,10 +65,28 @@ struct VaultCommands: Commands {
             .keyboardShortcut("l", modifiers: [.control, .command])
             .disabled(viewModel.phase != .unlocked)
 
-            // Placeholder: the sync flow (and this command's action) arrives with Milestone 3.
-            Button(SyncToolbarButton.title(count: viewModel.pendingChangeCount)) {}
-                .keyboardShortcut("s", modifiers: [.shift, .command])
-                .disabled(true)
+            Button(SyncToolbarButton.title(count: viewModel.pendingChangeCount)) {
+                main?.sync()
+            }
+            .keyboardShortcut("s", modifiers: [.shift, .command])
+            .disabled(main?.canSync != true)
+
+            Divider()
+
+            Menu(String(localized: "menu.vault.share", defaultValue: "Share")) {
+                Button(String(localized: "toolbar.share.file", defaultValue: "File…")) {
+                    main?.shareFile()
+                }
+                .disabled(main?.canShareFile != true)
+                Button(String(localized: "toolbar.share.nearby", defaultValue: "Nearby…")) {
+                    main?.shareNearby()
+                }
+                .disabled(main == nil)
+                Button(String(localized: "toolbar.share.receive", defaultValue: "Receive Nearby…")) {
+                    main?.receiveNearby()
+                }
+                .disabled(main == nil)
+            }
         }
     }
 }

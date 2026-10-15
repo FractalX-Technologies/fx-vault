@@ -1,0 +1,8 @@
+HTTP/2.0 422 Unprocessable Entity
+Content-Type: application/json; charset=utf-8
+Date: Thu, 01 Jan 2026 00:00:00 GMT
+Server: github.com
+X-Github-Api-Version-Selected: 2026-03-10
+X-Github-Media-Type: github.v3; format=json
+
+{"message":"Validation Failed","errors":[{"resource":"Search","field":"q","code":"missing"}],"documentation_url":"https://docs.github.com/v3/search","status":"422"}

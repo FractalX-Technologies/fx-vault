@@ -11,19 +11,25 @@ public struct GHFailureContext: Sendable, Hashable {
     public var responseStatus: Int?
     /// True when the runner terminated the process after its timeout.
     public var didTimeOut: Bool
+    /// The `errors[]` details of a failed `gh api -i` response body
+    /// (``APIResponseParser/errorDetails(in:)``), token patterns redacted. gh never prints
+    /// them on stderr.
+    public var responseDetails: [String]
 
     public init(
         operation: GHOperation,
         exitCode: Int32,
         stderr: String,
         responseStatus: Int? = nil,
-        didTimeOut: Bool = false
+        didTimeOut: Bool = false,
+        responseDetails: [String] = []
     ) {
         self.operation = operation
         self.exitCode = exitCode
         self.stderr = stderr
         self.responseStatus = responseStatus
         self.didTimeOut = didTimeOut
+        self.responseDetails = responseDetails
     }
 }
 
@@ -85,8 +91,29 @@ public enum GHStderrClassifier {
     static let missingScopesPrefix = "missing required scopes ["
 
     /// Classifies a failure with the §8 E rules, in priority order.
+    ///
+    /// A `gh api` failure whose stderr alone reads as `.validation` or `.unexpected` is checked
+    /// again with the response body's `errors[]` details appended: a plan, permission, SAML,
+    /// scope or rate-limit reason found only there wins. Any other class from the details is
+    /// ignored (a 422 whose detail says "not found" stays a validation error).
     public static func classify(_ context: GHFailureContext) -> GHError {
-        let text = context.stderr
+        let base = classify(context, text: context.stderr)
+        guard !context.responseDetails.isEmpty else { return base }
+        switch base {
+        case .validation, .unexpected: break
+        default: return base
+        }
+        let detailed = classify(context, text: context.stderr + "\n" + context.responseDetails.joined(separator: "\n"))
+        switch detailed {
+        case .planGated, .adminRequired, .writeAccessRequired, .missingScopes, .samlRequired, .rateLimited,
+             .orgPolicyForbidsCreate:
+            return detailed
+        default:
+            return base
+        }
+    }
+
+    private static func classify(_ context: GHFailureContext, text: String) -> GHError {
         let lower = text.lowercased()
         let status = context.responseStatus ?? nativeStatus(in: text) ?? apiStatus(in: text)
 
@@ -275,13 +302,19 @@ public enum GHStderrClassifier {
         return found
     }
 
-    /// The first non-empty stderr line, trimmed and capped (already redacted).
-    static func message(from text: String) -> String {
+    /// The first non-empty stderr line, followed by the response body's details when there are
+    /// any (`gh: Validation Failed (HTTP 422): <detail>; <detail>`), trimmed and capped. Both
+    /// must already be redacted.
+    static func message(from text: String, details: [String] = []) -> String {
         let line = text.split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .first { !$0.isEmpty } ?? ""
-        return String(line.prefix(GHConstants.maxErrorMessageLength))
+        let message = details.isEmpty ? line : line + detailSeparator + details.joined(separator: detailJoiner)
+        return String(message.prefix(GHConstants.maxErrorMessageLength))
     }
+
+    private static let detailSeparator = ": "
+    private static let detailJoiner = "; "
 
     private static func containsAny(_ text: String, _ fragments: [String]) -> Bool {
         fragments.contains { text.contains($0) }

@@ -32,12 +32,14 @@ final class PreferencesViewModel: LockObserving {
     private(set) var resetError: ErrorPresentationModel?
 
     let security: SecuritySettingsViewModel
+    let accounts: AccountsSettingsViewModel
 
     @ObservationIgnored private let app: AppViewModel
 
     init(app: AppViewModel) {
         self.app = app
         security = SecuritySettingsViewModel(app: app)
+        accounts = AccountsSettingsViewModel(app: app)
         app.addLockObserver(self)
     }
 

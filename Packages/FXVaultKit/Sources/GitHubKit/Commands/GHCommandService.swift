@@ -115,9 +115,16 @@ public struct GHCommandService: Sendable {
             return try success(command: command, result: result, stderr: stderr)
         }
 
-        let responseStatus = operation.includesResponseHead
-            ? result.stdout.withUnsafeBytes { APIResponseParser.statusIfPresent(in: Data($0)) }
-            : nil
+        // `gh api -i` (environments and branch policies, never values): the status line, and the
+        // body's `errors[]` details, which gh does not print on stderr (§8 E).
+        var responseStatus: Int?
+        var responseDetails: [String] = []
+        if operation.includesResponseHead {
+            var data = result.stdout.withUnsafeBytes { Data($0) }
+            responseStatus = APIResponseParser.statusIfPresent(in: data)
+            responseDetails = APIResponseParser.errorDetails(in: data)
+            data.secureWipe()
+        }
         if let responseStatus, operation.acceptedNonZeroExitStatuses.contains(responseStatus), !result.didTimeOut {
             // C3: a bare 303 (gh exits 1 with `gh: HTTP 303`) counts as success (§8 C3).
             return try success(command: command, result: result, stderr: stderr)
@@ -131,10 +138,12 @@ public struct GHCommandService: Sendable {
             exitCode: result.exitCode,
             stderr: StderrRedactor.redactTokenPatterns(in: result.stderr),
             responseStatus: responseStatus,
-            didTimeOut: result.didTimeOut
+            didTimeOut: result.didTimeOut,
+            responseDetails: responseDetails.map(StderrRedactor.redactTokenPatterns(in:))
         ))
         if case .validation = error {
-            error = .validation(GHStderrClassifier.message(from: stderr))
+            let details = responseDetails.map { StderrRedactor.redact($0, secrets: secrets) }
+            error = .validation(GHStderrClassifier.message(from: stderr, details: details))
         }
         GHLog.gh.error(
             "gh \(command.logTemplate, privacy: .public) exit=\(result.exitCode, privacy: .public) timedOut=\(result.didTimeOut, privacy: .public) error=\(error.logCode, privacy: .public)"

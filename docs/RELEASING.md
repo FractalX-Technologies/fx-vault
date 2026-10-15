@@ -54,8 +54,13 @@ verification. The workflow's signed job is optional and is skipped unless the
 
    ```sh
    xcrun notarytool store-credentials fxvault-notary \
-     --key /path/to/AuthKey_<KEY_ID>.p8 --key-id <KEY_ID> --issuer <ISSUER_UUID>
+     --key /path/to/AuthKey_<KEY_ID>.p8 --key-id <KEY_ID> --issuer <ISSUER_UUID> \
+     --keychain ~/Library/Keychains/login.keychain-db
    ```
+
+   Pass `--keychain` explicitly: without it notarytool may store the profile where a later
+   `--keychain-profile` lookup cannot find it. `release-local.sh` reads the profile from the
+   login keychain by default.
 
    The key ID, issuer and `.p8` never go into the repo. Delete the `.p8` file afterwards,
    or keep it outside the project.
@@ -186,6 +191,18 @@ screenshot as evidence, saved with the release notes or in the Review section of
 | 14 | Sonoma smoke | macOS 14 VM: install with Homebrew, then onboarding, gh detection, import, sync on the spike repo | Everything works; `depends_on macos: :sonoma` allows the install |
 | 15 | Spike repos | Import, edit, sync and drift review on the spike repos | Matches the M3/M5 verify notes |
 | 16 | Touch ID: status codes | On the signed build, trigger a lockout (5 failed fingers) and an enrollment change while Touch ID is on | Lockout asks for the password and keeps the item; the enrollment change turns Touch ID off and asks to re-enable (confirms the Keychain status mapping in SECURITY-MODEL.md §5) |
+| 17 | Re-authentication | Export .env, Share › File… and Share › Nearby… with Touch ID on; cancel once, choose "Use Master Password" once; repeat on an ad-hoc build | Each prompt names its purpose; cancel shows no error; the fallback focuses the password field; the ad-hoc build offers only the password |
+| 18 | gh setup | Launch with gh missing, with gh older than 2.97, and logged out; then Check Again and Not Now | `GHSetupScreen` shows the matching kind with copyable commands; Check Again does not flicker; Not Now works offline until gh is ready; Sync and New Repository stay disabled without gh |
+| 19 | Main window | Sidebar with several accounts and organizations, search, Import, Clone, Remove from vault, Add repository by name; ⌘N, ⇧⌘I, ⌃⌘L, ⇧⌘S and the Share menu with and without a selection | Groups and badges as in §10; menu items enable and disable with the selection and the lock; the Dock badge and Sync label show the pending count |
+| 20 | Reveal and re-mask | Reveal a secret, then wait 30 s; reveal, switch to another app; reveal, change scope; reveal, lock | The value is masked again in each case; variables show in plain text |
+| 21 | Sheet keyboard rules | Return and Esc in: Sync deletions review, drift review, nearby code check, share import preview, .env export iCloud warning, item editor (value field) | Return does nothing in the deletions review and the code check, never imports a share, picks "Choose Another Location" on the iCloud warning; Esc cancels |
+| 22 | `.fxvault` open | With the vault locked, double-click two `.fxvault` files in Finder (and receive one by AirDrop) | The window comes back, unlock comes first, then one import sheet per file, one at a time |
+| 23 | Share as file | Share › File…, copy the passphrase, Save… and AirDrop…; import the file on a second Mac | The passphrase copy clears after 30 s; the saved file is 0600; the staging folder under `$TMPDIR/io.fractalx.fxvault.shares/` is gone after the sheet closes or AirDrop ends; the import preview matches |
+| 24 | Nearby (experimental) | Two signed builds on one network: send and receive, "Don't match" once, deny Local Network once, close the receive sheet | Same 6-digit code on both; mismatch stops both with nothing sent; denial shows the System Settings guidance; a closed receive sheet is no longer discoverable; the first HELLO is delivered (the sender starts the connection right before the session sends it) |
+| 25 | .env files | Import: open panel shows `.env`, edit a key and kind in the table, pick an environment. Export: save into an iCloud Drive folder, then into a git repository that does not ignore `.env` | Hidden files are listed; table edits stick; the iCloud warning comes before any write; the `.gitignore` offer adds the line; the file is 0600 |
+| 26 | New Repository and clone | Create with environments, rules and items, Clone on; Sync Now; then Clone from the Sync result without a clone folder set | Nothing reaches GitHub before Sync; the new repository is selected in the sidebar; Sync creates and clones it; Clone asks for a folder when none is set |
+| 27 | Screen capture | Start a screen recording while the item editor, the New Repository item editor, the .env import sheet, a share passphrase or the recovery key is on screen | Those windows are blank in the recording (a value revealed in the main table is not protected) |
+| 28 | Live write E2E | With approval for each repository: `FXV_LIVE_E2E=1 FXV_LIVE_E2E_WRITE=1 FXV_LIVE_E2E_FREE_ORG=<org> FXV_LIVE_E2E_REPORT=<file> swift test --package-path Packages/FXVaultKit --filter LiveE2E` | Passes; the report fills the open Q6 facts in API.md; delete the two `fx-vault-e2e*` repositories by hand afterwards |
 
 ## CI (`release.yml`)
 

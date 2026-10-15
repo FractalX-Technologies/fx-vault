@@ -41,7 +41,7 @@
 #   --build-number <n>       CFBundleVersion (default: git commit count of HEAD)
 #   --team-id <id>           expected Apple team (default: QYKC498D5D)
 #   --notary-profile <name>  notarytool keychain profile (default: fxvault-notary)
-#   --notary-keychain <path> keychain holding that profile (default: login keychain)
+#   --notary-keychain <path> keychain holding that profile (default: ~/Library/Keychains/login.keychain-db)
 #   --output-dir <dir>       where the DMG and .sha256 go (default: dist)
 #   --repo <owner/name>      GitHub repository for --publish
 #                            (default: FractalX-Technologies/fx-vault)
@@ -106,7 +106,7 @@ identity_arg=""
 build_number=""
 team_id="$DEFAULT_TEAM_ID"
 notary_profile="$DEFAULT_NOTARY_PROFILE"
-notary_keychain=""
+notary_keychain="$HOME/Library/Keychains/login.keychain-db"   # explicit: notarytool may not find profiles without it
 output_dir="$ROOT/dist"
 repo="$DEFAULT_REPO"
 version=""

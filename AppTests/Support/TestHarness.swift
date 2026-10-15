@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import GitHubKit
 import SharingKit
 import VaultCore
 import VaultCrypto
@@ -78,8 +79,9 @@ enum TestVaultState {
 }
 
 /// An `AppViewModel` over an in-memory vault, fake Touch ID, a manual clock, a private
-/// pasteboard, in-memory preferences and hand-driven lock sources. No test touches the real
-/// vault, keychain, clipboard or `~/Library`.
+/// pasteboard, in-memory preferences, hand-driven lock sources and a scripted gh
+/// (`FakeCommandRunner` plus an optional fake gh file in a temporary folder). No test touches the
+/// real vault, keychain, clipboard, gh or `~/Library`.
 @MainActor
 final class TestHarness {
     let app: AppViewModel
@@ -87,6 +89,10 @@ final class TestHarness {
     let clock: ManualClock
     let biometrics: FakeBiometricKeyStore
     let capabilities: FakeBuildCapabilities
+    /// Scripted gh, git and ssh.
+    let runner = FakeCommandRunner()
+    /// A per-harness temporary folder (fake gh, offline home); removed in `deinit`.
+    let sandbox: URL
     /// Released in `deinit` (nonisolated); NSPasteboard is safe to release from any thread.
     nonisolated(unsafe) let pasteboard: NSPasteboard
     let idle = FakeIdleSource()
@@ -96,20 +102,31 @@ final class TestHarness {
     /// The recovery key issued when the harness created its vault (nil for `.none`).
     let recoveryKey: RecoveryKey?
 
-    init(vault: TestVaultState = .none, signed: Bool = true, ghStatus: GHStatusModel = .unknown) async throws {
+    /// - Parameters:
+    ///   - ghStatus: the fixed gh status, or nil to use the live probe over the scripted gh
+    ///     (call ``installFakeGH(version:)`` first).
+    init(vault: TestVaultState = .none, signed: Bool = true, ghStatus: GHStatusModel? = .unknown) async throws {
         clock = ManualClock()
         biometrics = FakeBiometricKeyStore()
         capabilities = FakeBuildCapabilities()
         if !signed {
             capabilities.accessGroup = nil
         }
+        sandbox = FileManager.default.temporaryDirectory
+            .appendingPathComponent("fxvault-apptests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: sandbox, withIntermediateDirectories: true)
         pasteboard = NSPasteboard(name: NSPasteboard.Name("io.fractalx.fxvault.tests.\(UUID().uuidString)"))
+        let session = try VaultSession.inMemory()
+        let data = VaultDataComponents.makeOffline(session: session, runner: runner, clock: clock, sandbox: sandbox)
+        let github = data.github
         let manager = try VaultManager(
-            session: VaultSession.inMemory(),
+            session: session,
             policy: .testing,
             biometricStore: biometrics,
             capabilities: capabilities,
-            clock: clock
+            clock: clock,
+            onLock: { github.purgeTokens() }
         )
         switch vault {
         case .none:
@@ -128,18 +145,26 @@ final class TestHarness {
             ticker: ticker,
             timeout: { preferences.autoLockTimeout }
         )
+        let probe: any GHStatusProbing = if let ghStatus {
+            FixedGHStatusProbe(ghStatus)
+        } else {
+            GitHubEnvironmentStatusProbe(github: github, overridePath: { preferences.ghPathOverride })
+        }
         container = AppContainer(
             mode: .test,
             vaultManager: manager,
+            data: data,
             preferences: preferences,
             clipboard: ClipboardManager(pasteboard: pasteboard, clock: clock),
             autoLock: autoLock,
-            ghStatusProbe: FixedGHStatusProbe(ghStatus),
+            ghStatusProbe: probe,
             dockBadge: dockBadge,
             passphraseGenerator: try? PassphraseGenerator.bundled(),
-            vaultDirectory: nil
+            vaultDirectory: nil,
+            clock: clock
         )
         app = AppViewModel(container: container)
+        await app.ghProbeTask?.value
     }
 
     var vaultManager: VaultManager {
@@ -148,6 +173,10 @@ final class TestHarness {
 
     var preferences: PreferencesManager {
         container.preferences
+    }
+
+    var data: VaultDataComponents {
+        container.data
     }
 
     /// The string on the private pasteboard (tests may read it; the app never does).
@@ -160,8 +189,142 @@ final class TestHarness {
         try await vaultManager.enableBiometrics(password: testPassword)
     }
 
+    // MARK: - Scripted gh
+
+    /// Writes an executable placeholder `gh` in the sandbox, points the gh override at it and
+    /// scripts `gh --version`. The file is never run: the fake runner answers every call.
+    @discardableResult
+    func installFakeGH(version: String = Limits.minimumGHVersion) throws -> String {
+        let directory = sandbox.appendingPathComponent("bin", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let gh = directory.appendingPathComponent("gh", isDirectory: false)
+        try Data("#!/bin/sh\nexit 1\n".utf8).write(to: gh)
+        try FileManager.default.setAttributes([.posixPermissions: TestFixtures.executableMode], ofItemAtPath: gh.path)
+        try FileManager.default.setAttributes([.posixPermissions: TestFixtures.directoryMode], ofItemAtPath: directory.path)
+        runner.stub(
+            argumentsPrefix: ["--version"],
+            with: .success("gh version \(version) (2026-09-01)\nhttps://github.com/cli/cli/releases/tag/v\(version)\n")
+        )
+        preferences.ghPathOverride = gh.path
+        return gh.path
+    }
+
+    /// Scripts `gh auth status --json hosts` (every call).
+    func stubAuthStatus(_ json: String) {
+        runner.stub(argumentsPrefix: ["auth", "status"], with: .success(json))
+    }
+
+    /// Scripts `gh auth token` (every call).
+    func stubToken() {
+        runner.stub(argumentsPrefix: ["auth", "token"], with: .success(TestFixtures.token + "\n"))
+    }
+
+    /// Stages a repository with items in the vault (no gh needed; the vault must be unlocked).
+    @discardableResult
+    func stageRepository(
+        owner: String = TestFixtures.owner,
+        name: String = TestFixtures.repoName,
+        visibility: RepoVisibility = .private,
+        items: [RepoCreationItemDraftModel] = [],
+        environments: [RepoCreationEnvironmentDraftModel] = []
+    ) async throws -> RepoID {
+        let result = try await data.creation.stage(RepoCreationDraftModel(
+            accountLogin: TestFixtures.account,
+            ownerLogin: owner,
+            ownerType: owner == TestFixtures.account ? .user : .organization,
+            name: name,
+            visibility: visibility,
+            spec: RepoCreateSpecModel(autoInit: true, cloneAfter: false),
+            items: items,
+            environments: environments
+        ))
+        return result.repositoryID
+    }
+
     deinit {
         recoveryKey?.wipe()
         pasteboard.releaseGlobally()
+        try? FileManager.default.removeItem(at: sandbox)
+    }
+}
+
+/// Sample data for AppTests (synthetic names only, lessons.md).
+enum TestFixtures {
+    static let account = "user-a"
+    static let otherAccount = "user-b"
+    static let owner = "Example-Org"
+    static let repoName = "example-repo"
+    static let token = "fake-token-apptests"
+    static let executableMode = 0o755
+    static let directoryMode = 0o755
+
+    static let authStatusTwoAccounts = """
+    {"hosts":{"github.com":[
+     {"state":"success","active":true,"host":"github.com","login":"user-a","tokenSource":"keyring","scopes":"gist, read:org, repo","gitProtocol":"ssh"},
+     {"state":"success","active":false,"host":"github.com","login":"user-b","tokenSource":"keyring","scopes":"gist","gitProtocol":"ssh"}
+    ]}}
+    """
+
+    static let authStatusNoAccounts = """
+    {"hosts":{}}
+    """
+
+    /// One `gh repo view` / `gh repo list` entry (`--json` fields FX Vault requests).
+    static func repoJSON(owner: String, name: String, permission: String = "WRITE") -> String {
+        """
+        {"createdAt":"2026-01-02T03:04:05Z","defaultBranchRef":{"name":"main"},"id":"R_\(owner)_\(name)",\
+        "isArchived":false,"isFork":false,"isPrivate":true,"name":"\(name)","nameWithOwner":"\(owner)/\(name)",\
+        "owner":{"id":"O_\(owner)","login":"\(owner)"},"sshUrl":"git@github.com:\(owner)/\(name).git",\
+        "viewerCanAdminister":\(permission == "ADMIN"),"viewerPermission":"\(permission)","visibility":"PRIVATE"}
+        """
+    }
+
+    static func item(_ kind: ConfigKind, _ name: String, _ value: String) -> RepoCreationItemDraftModel {
+        RepoCreationItemDraftModel(kind: kind, name: name, value: SecretBytes(utf8: value))
+    }
+
+    /// Waits until `condition` holds, yielding to the observation tasks (database streams
+    /// deliver on their own schedule). Returns false after `timeout`.
+    @MainActor
+    static func eventually(
+        timeout: Duration = .seconds(5),
+        _ condition: @MainActor () -> Bool
+    ) async -> Bool {
+        let clock = ContinuousClock()
+        let deadline = clock.now + timeout
+        while clock.now < deadline {
+            if condition() { return true }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return condition()
+    }
+}
+
+/// Records what features asked the main window to do.
+@MainActor
+final class ActionRecorder {
+    var presented: [MainSheet] = []
+    var refreshes: [MainRefreshRequest] = []
+    var selections: [RepoID] = []
+}
+
+extension TestHarness {
+    /// Feature dependencies over this harness with recording actions.
+    func dependencies(recorder: ActionRecorder, isGitHubReady: Bool = false) -> FeatureDependencies {
+        FeatureDependencies(container: container, actions: MainActions(
+            present: { recorder.presented.append($0) },
+            refresh: { recorder.refreshes.append($0) },
+            beginSyncActivity: { [app] in app.beginSyncActivity() },
+            addLockObserver: { [app] observer in app.addLockObserver(observer) },
+            isGitHubReady: { isGitHubReady },
+            select: { recorder.selections.append($0) }
+        ))
+    }
+}
+
+extension TestHarness {
+    /// The vault row of a repository, read now.
+    func repository(_ id: RepoID) -> RepoModel? {
+        try? data.config.changeSet(repositoryID: id)?.repository
     }
 }

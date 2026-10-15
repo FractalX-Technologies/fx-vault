@@ -50,6 +50,66 @@ enum Theme {
         static let chipVerticalPadding: CGFloat = 2
         static let emptyStateIconSize: CGFloat = 32
         static let emptyStateMaxWidth: CGFloat = 360
+
+        // MARK: Editor sheets (item editor, environment sheets)
+
+        /// Wider than `sheetWidth`: a grouped form with the value editor or the branch rules.
+        static let editorSheetWidth: CGFloat = 520
+
+        // MARK: New Repository sheet
+
+        /// A full form: owner, name, contents, environments and items.
+        static let createRepoSheetWidth: CGFloat = 560
+        static let createRepoSheetHeight: CGFloat = 640
+        /// Height of the loading and failure states.
+        static let createRepoStatusHeight: CGFloat = 320
+        /// Width of the nested item and environment editors.
+        static let createRepoEditorWidth: CGFloat = 480
+
+        // MARK: Sync sheet
+
+        /// Wide enough for "Delete N Items on GitHub" next to the other footer buttons and for a
+        /// scope line with its item names.
+        static let syncSheetWidth: CGFloat = 620
+        static let syncSheetMinHeight: CGFloat = 360
+        static let syncSheetIdealHeight: CGFloat = 520
+        /// The progress bar's width in the progress step.
+        static let syncProgressWidth: CGFloat = 360
+
+        // MARK: Drift review sheet
+
+        static let driftSheetWidth: CGFloat = 600
+        static let driftSheetMinHeight: CGFloat = 360
+        static let driftSheetIdealHeight: CGFloat = 480
+
+        // MARK: .env import and export sheets
+
+        /// The import sheet holds a five-column table.
+        static let envImportSheetWidth: CGFloat = 760
+        static let envImportSheetHeight: CGFloat = 560
+        static let envExportSheetWidth: CGFloat = 520
+        static let envPasteEditorHeight: CGFloat = 240
+        /// Height of the parse issue list under the import table.
+        static let envIssueListMaxHeight: CGFloat = 96
+        /// Height of a name list in the export warnings ("Skipped: …").
+        static let envNameListMaxHeight: CGFloat = 88
+        static let envImportIncludeColumnWidth: CGFloat = 28
+        static let envImportLineColumnWidth: CGFloat = 40
+        static let envImportKeyColumnMinWidth: CGFloat = 220
+        static let envImportKindColumnWidth: CGFloat = 130
+        static let envImportConflictColumnWidth: CGFloat = 130
+
+        // MARK: Sharing sheets
+
+        /// Width of every sharing sheet (export, import, nearby send and receive).
+        static let shareSheetWidth: CGFloat = 560
+        static let shareSheetMinHeight: CGFloat = 420
+        /// Height of the scope tree, the import preview and the nearby peer list.
+        static let shareListHeight: CGFloat = 260
+        /// Width of the per-item action picker in the import preview.
+        static let shareActionPickerWidth: CGFloat = 150
+        /// Minimum width of each SAS decision button ("Codes match" / "Don't match").
+        static let sasButtonMinWidth: CGFloat = 160
     }
 
     /// Opacity levels for tinted backgrounds and dimmed content.

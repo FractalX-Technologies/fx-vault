@@ -66,6 +66,20 @@ final class ClipboardManager {
         }
     }
 
+    /// Copies a non-secret text such as a command (`brew install gh`, a scope fix command): a
+    /// plain string, not concealed, never cleared. A value FX Vault still owns is replaced, so
+    /// it is no longer tracked.
+    func copyCommand(_ text: String) {
+        pendingClear?.cancel()
+        pendingClear = nil
+        ownedChangeCount = nil
+        pasteboard.prepareForNewContents(with: .currentHostOnly)
+        guard pasteboard.setString(text, forType: .string) else {
+            AppLog.ui.error("Pasteboard write failed")
+            return
+        }
+    }
+
     /// Clears the pasteboard if it still holds our last copy (lock, terminate, timer).
     func clearIfOwned() {
         pendingClear?.cancel()

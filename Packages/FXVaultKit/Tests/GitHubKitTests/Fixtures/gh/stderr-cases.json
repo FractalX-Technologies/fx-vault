@@ -340,5 +340,77 @@
   "stderr": "something odd happened\n",
   "expected": "unexpected(1)",
   "synthetic": false
+ },
+ {
+  "name": "gh api 422 details only in the body (recorded)",
+  "operation": "C2",
+  "exitCode": 1,
+  "stderr": "gh: Validation Failed (HTTP 422)\n",
+  "expected": "validation",
+  "synthetic": false,
+  "responseStatus": 422,
+  "responseDetails": [
+   "Search q missing"
+  ]
+ },
+ {
+  "name": "plan gating only in the body",
+  "operation": "C2",
+  "exitCode": 1,
+  "stderr": "gh: Validation Failed (HTTP 422)\n",
+  "expected": "planGated",
+  "synthetic": true,
+  "responseStatus": 422,
+  "responseDetails": [
+   "Deployment branch policies are not available for this repository's billing plan."
+  ]
+ },
+ {
+  "name": "admin rights only in the body",
+  "operation": "C3",
+  "exitCode": 1,
+  "stderr": "gh: Forbidden (HTTP 403)\n",
+  "expected": "adminRequired",
+  "synthetic": true,
+  "responseStatus": 403,
+  "responseDetails": [
+   "Must have admin rights to Repository."
+  ]
+ },
+ {
+  "name": "a body detail never turns a 422 into not found",
+  "operation": "C3",
+  "exitCode": 1,
+  "stderr": "gh: Validation Failed (HTTP 422)\n",
+  "expected": "validation",
+  "synthetic": true,
+  "responseStatus": 422,
+  "responseDetails": [
+   "Branch not found"
+  ]
+ },
+ {
+  "name": "B5 on an environment without a custom policy (recorded)",
+  "operation": "B5",
+  "exitCode": 1,
+  "stderr": "gh: Not Found (HTTP 404)\n",
+  "expected": "notFound",
+  "synthetic": false
+ },
+ {
+  "name": "environment secrets of a missing environment (recorded)",
+  "operation": "B6",
+  "exitCode": 1,
+  "stderr": "failed to get secrets: HTTP 404: Not Found (https://api.github.com/repos/owner-a/repo-a/environments/env-z/secrets?per_page=100)\n",
+  "expected": "notFound",
+  "synthetic": false
+ },
+ {
+  "name": "environment variables of a missing environment (recorded)",
+  "operation": "B8",
+  "exitCode": 1,
+  "stderr": "failed to get variables: HTTP 404: Not Found (https://api.github.com/repos/owner-a/repo-a/environments/env-z/variables?per_page=100)\n",
+  "expected": "notFound",
+  "synthetic": false
  }
 ]

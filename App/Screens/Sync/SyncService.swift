@@ -1,0 +1,89 @@
+import Foundation
+import GitHubKit
+import SyncEngine
+import VaultCore
+import VaultData
+
+/// A running sync as the Sync sheet drives it: progress events, Cancel and the final outcome.
+/// `SyncRunHandle` is the live implementation; tests script their own run.
+nonisolated protocol SyncRunControlling: AnyObject, Sendable {
+    /// Progress events; ends after `.finished`.
+    var progress: AsyncStream<SyncProgressEventModel> { get }
+    /// Stops the run after the gh command in flight.
+    func cancel()
+    /// Waits for the run and the clones it requested.
+    func outcome() async -> SyncRunOutcomeModel
+}
+
+nonisolated extension SyncRunHandle: SyncRunControlling {}
+
+/// What ``SyncViewModel`` needs from VaultData (`SyncRepository`, the account scope status and
+/// `RepoCloning`). The live implementation is ``LiveSyncService``; view-model tests use a fake.
+nonisolated protocol SyncServicing: Sendable {
+    /// §7.3 preflight of `repositoryIDs` (nil: every repository with pending changes).
+    func preflight(repositoryIDs: [RepoID]?) async throws(SyncRepositoryError) -> SyncReviewModel
+    /// §7.5 live contents of every environment being deleted. Never throws.
+    func deletionPreview(for review: SyncReviewModel) async -> [RepoDeletionPreviewModel]
+    /// Plans and starts the run (§7.3, §7.4).
+    func startRun(
+        _ review: SyncReviewModel,
+        includeDeletions: Bool,
+        cloneFolder: URL?
+    ) async throws(SyncRepositoryError) -> any SyncRunControlling
+    /// Clones a repository a run created (retry, or a clone folder chosen afterwards).
+    func clone(_ repositoryID: RepoID, into folder: URL) async throws(RepoCreationError) -> URL
+}
+
+/// ``SyncServicing`` over the app's single `SyncRepository`, `GitHubEnvironmentRepository` and
+/// cloner (UI feature contract: clone only through `FeatureDependencies.cloner`).
+nonisolated struct LiveSyncService: SyncServicing {
+    let sync: SyncRepository
+    let github: GitHubEnvironmentRepository
+    let cloner: any RepoCloning
+
+    func preflight(repositoryIDs: [RepoID]?) async throws(SyncRepositoryError) -> SyncReviewModel {
+        let scopeStatus = await scopeStatus()
+        return try await sync.preflight(repositoryIDs: repositoryIDs, scopeStatus: scopeStatus)
+    }
+
+    func deletionPreview(for review: SyncReviewModel) async -> [RepoDeletionPreviewModel] {
+        await sync.deletionPreview(for: review)
+    }
+
+    func startRun(
+        _ review: SyncReviewModel,
+        includeDeletions: Bool,
+        cloneFolder: URL?
+    ) async throws(SyncRepositoryError) -> any SyncRunControlling {
+        try await sync.startRun(review, includeDeletions: includeDeletions, cloneFolder: cloneFolder)
+    }
+
+    func clone(_ repositoryID: RepoID, into folder: URL) async throws(RepoCreationError) -> URL {
+        try await cloner.clone(repositoryID, into: folder)
+    }
+
+    /// Each logged-in account's token scope status (A3), keyed by login. When gh cannot list the
+    /// accounts, preflight treats every account as `.ok` and gh's own errors block the changes.
+    private func scopeStatus() async -> [String: ScopeStatus] {
+        let accounts: [GHAccountSummaryModel]
+        do {
+            accounts = try await github.accounts()
+        } catch {
+            AppLog.ui.error("Sync preflight could not read the gh accounts")
+            return [:]
+        }
+        var status: [String: ScopeStatus] = [:]
+        for account in accounts {
+            guard let listed = account.status else { continue }
+            status[listed.login] = listed.scopes
+        }
+        return status
+    }
+}
+
+extension FeatureDependencies {
+    /// The live sync service over these dependencies.
+    var syncService: any SyncServicing {
+        LiveSyncService(sync: sync, github: github, cloner: cloner)
+    }
+}
