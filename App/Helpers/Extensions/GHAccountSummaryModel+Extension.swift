@@ -63,7 +63,7 @@ extension SSHAliasTestResultModel {
                 )
                 : String(
                     localized: "accounts.ssh.test.notInGH",
-                    defaultValue: "Authenticates as \(login), which is not logged into gh"
+                    defaultValue: "Authenticates as \(login), which is not logged in to the GitHub CLI. Log it in with gh auth login, then pick this alias for that account."
                 )
         case .notGitHub(let hostName):
             String(localized: "accounts.ssh.test.notGitHub", defaultValue: "This alias points to \(hostName), not github.com")

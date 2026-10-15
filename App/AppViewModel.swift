@@ -60,6 +60,8 @@ final class SyncActivity {
 final class AppViewModel {
     private(set) var phase: VaultPhase
     private(set) var ghStatus: GHStatusModel = .checking
+    /// Bumped by ``accountsDidChange()``; the main window reloads its accounts when it changes.
+    private(set) var accountsRevision = 0
     /// True while a gh probe runs (the first one also shows ``GHStatusModel/checking``).
     private(set) var isCheckingGH = false
     /// Pending changes across all repositories (Sync button label and Dock badge).
@@ -342,6 +344,12 @@ final class AppViewModel {
     /// "Not Now" on ``GHSetupScreen``: work offline until the next launch or Check Again.
     func deferGHSetup() {
         isGHSetupDeferred = true
+    }
+
+    /// Settings › Accounts read gh's accounts again (Check Again): the main window lists them
+    /// again too, so an account logged in from Terminal appears without a relaunch.
+    func accountsDidChange() {
+        accountsRevision += 1
     }
 
     // MARK: - Share files (§10 Scenes)

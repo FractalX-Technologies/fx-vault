@@ -1,5 +1,7 @@
+import AppKit
 import Foundation
 import GitHubKit
+import SwiftUI
 import Testing
 import VaultCore
 import VaultData
@@ -137,5 +139,62 @@ struct AccountsSettingsViewModelTests {
         await accounts.load()
         #expect(accounts.installation == nil)
         #expect(accounts.error == GHError.notInstalled.presentation)
+    }
+
+    // MARK: - SSH aliases without an account (v0.3.2)
+
+    /// The key of an account that is not logged in to gh had no place on the tab: its alias was
+    /// only a choice in the other accounts' menus. GitHub aliases no account uses are listed.
+    @Test func githubAliasesNoAccountUsesAreListed() async throws {
+        let harness = try await Self.ready()
+        let accounts = AccountsSettingsViewModel(app: harness.app)
+        await accounts.load()
+        #expect(accounts.unmappedAliases.map(\.alias) == [Self.alias])
+
+        await accounts.setAlias(Self.alias, for: try #require(accounts.accounts.first))
+        #expect(accounts.unmappedAliases.isEmpty)
+    }
+
+    /// The aliases do not need gh: they are listed while gh cannot be found.
+    @Test func aliasesLoadWithoutGH() async throws {
+        let harness = try await Self.ready()
+        harness.preferences.ghPathOverride = harness.sandbox.appendingPathComponent("absent/gh").path
+        let accounts = AccountsSettingsViewModel(app: harness.app)
+        await accounts.load()
+        #expect(accounts.error == GHError.notInstalled.presentation)
+        #expect(accounts.unmappedAliases.map(\.alias) == [Self.alias])
+    }
+
+    /// **Check Again** lists an account logged in from Terminal, in the tab and in the main
+    /// window's sidebar.
+    @Test func checkAgainListsANewAccountInTheTabAndTheSidebar() async throws {
+        let harness = try await Self.ready()
+        harness.stubAuthStatus("""
+        {"hosts":{"github.com":[
+         {"state":"success","active":true,"host":"github.com","login":"user-a","tokenSource":"keyring","scopes":"repo, read:org","gitProtocol":"ssh"}
+        ]}}
+        """)
+        harness.stubToken()
+        harness.runner.stub(argumentsPrefix: ["org", "list"], with: .success(""))
+        harness.runner.stub(argumentsPrefix: ["repo", "list"], with: .success("[]"))
+        await harness.app.refreshGHStatus()
+        let main = harness.app.makeMainViewModel()
+        await main.sidebar.reload()
+        #expect(main.sidebar.sections.map(\.login) == ["user-a"])
+        let window = NSWindow(contentViewController: NSHostingController(rootView: MainScreen(viewModel: main)))
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        window.layoutIfNeeded()
+
+        let accounts = AccountsSettingsViewModel(app: harness.app)
+        await accounts.load()
+        #expect(accounts.accounts.map(\.account.login) == ["user-a"])
+
+        harness.stubAuthStatus(TestFixtures.authStatusTwoAccounts)
+        let revision = harness.app.accountsRevision
+        await accounts.checkAgain()
+        #expect(accounts.accounts.map(\.account.login) == ["user-a", "user-b"])
+        #expect(harness.app.accountsRevision == revision + 1)
+        #expect(await TestFixtures.eventually { main.sidebar.sections.map(\.login) == ["user-a", "user-b"] })
     }
 }

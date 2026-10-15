@@ -76,6 +76,9 @@ private struct AccountsSettingsContent: View {
             ForEach(viewModel.accounts) { account in
                 AccountSection(account: account, viewModel: viewModel)
             }
+            if !viewModel.unmappedAliases.isEmpty {
+                UnmappedAliasesSection(aliases: viewModel.unmappedAliases, viewModel: viewModel)
+            }
             if !viewModel.unusableAccounts.isEmpty {
                 UnusableAccountsSection(accounts: viewModel.unusableAccounts)
             }
@@ -113,6 +116,48 @@ private struct TokenVariableNote: View {
                     .foregroundStyle(Theme.Colors.mutedText)
             }
             CommandRow(command: GHSetupViewModel.environmentLoginCommand, onCopy: onCopy)
+        }
+    }
+}
+
+/// The GitHub aliases in `~/.ssh/config` that no account uses (v0.3.2), usually the key of an
+/// account that is not logged in to gh: log it in, Check Again, then pick the alias in its menu.
+private struct UnmappedAliasesSection: View {
+    let aliases: [SSHHostEntryModel]
+    let viewModel: AccountsSettingsViewModel
+
+    var body: some View {
+        PreferencesSection(String(localized: "settings.accounts.unmapped.section", defaultValue: "SSH aliases without an account")) {
+            ForEach(aliases) { host in
+                PreferencesBlock(spacing: Theme.Spacing.xxSmall) {
+                    Text(verbatim: host.alias)
+                        .fxTextStyle(.mono)
+                        .foregroundStyle(Theme.Colors.ink)
+                        .textSelection(.enabled)
+                    if let hostName = host.hostName {
+                        Text(verbatim: hostName)
+                            .fxTextStyle(.caption)
+                            .foregroundStyle(Theme.Colors.mutedText)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+                HairlineDivider()
+            }
+            PreferencesBlock {
+                Text(String(
+                    localized: "settings.accounts.unmapped.message",
+                    defaultValue: "No account here uses these aliases. If one is the key of a GitHub account that is not logged in to the GitHub CLI, log that account in, choose Check Again, then pick the alias in that account's SSH alias menu. gh keeps your other accounts; the new one becomes gh's active account in Terminal (gh auth switch changes it back)."
+                ))
+                .fxTextStyle(.callout)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+                CommandRow(command: GHSetupViewModel.loginCommand) { viewModel.copy($0) }
+                Button(String(localized: "settings.accounts.unmapped.checkAgain", defaultValue: "Check Again")) {
+                    Task { await viewModel.checkAgain() }
+                }
+                .fxButtonStyle(.secondary)
+                .disabled(viewModel.isLoading)
+            }
         }
     }
 }

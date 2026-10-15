@@ -29,27 +29,7 @@ struct RepoDetailScreen: View {
                     .foregroundStyle(Theme.Colors.mutedText)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            HStack(spacing: Theme.Spacing.medium) {
-                SegmentedPill(
-                    selection: $viewModel.kind,
-                    segments: [
-                        .init(
-                            value: ConfigKind.secret,
-                            title: String(localized: "main.detail.kind.secrets", defaultValue: "Secrets"),
-                            count: viewModel.count(of: .secret)
-                        ),
-                        .init(
-                            value: ConfigKind.variable,
-                            title: String(localized: "main.detail.kind.variables", defaultValue: "Variables"),
-                            count: viewModel.count(of: .variable)
-                        ),
-                    ],
-                    accessibilityLabel: String(localized: "main.detail.kind", defaultValue: "Kind")
-                )
-                .fixedSize()
-                Spacer(minLength: 0)
-                RepoDetailAddActions(viewModel: viewModel)
-            }
+            RepoDetailControls(viewModel: viewModel)
             ConfigTableView(viewModel: viewModel)
             if let notice = viewModel.notice {
                 Text(notice)
@@ -89,6 +69,46 @@ struct RepoDetailScreen: View {
             get: { viewModel.pendingDeletion != nil },
             set: { if !$0 { viewModel.pendingDeletion = nil } }
         )
+    }
+}
+
+/// The Secrets | Variables pill with the add actions on its right, or under it when the column is
+/// too narrow for one row, so the actions never spill under the scope column.
+private struct RepoDetailControls: View {
+    @Bindable var viewModel: RepoDetailViewModel
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Theme.Spacing.medium) {
+                kindPill
+                Spacer(minLength: 0)
+                RepoDetailAddActions(viewModel: viewModel)
+            }
+            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
+                kindPill
+                RepoDetailAddActions(viewModel: viewModel)
+            }
+        }
+    }
+
+    private var kindPill: some View {
+        SegmentedPill(
+            selection: $viewModel.kind,
+            segments: [
+                .init(
+                    value: ConfigKind.secret,
+                    title: String(localized: "main.detail.kind.secrets", defaultValue: "Secrets"),
+                    count: viewModel.count(of: .secret)
+                ),
+                .init(
+                    value: ConfigKind.variable,
+                    title: String(localized: "main.detail.kind.variables", defaultValue: "Variables"),
+                    count: viewModel.count(of: .variable)
+                ),
+            ],
+            accessibilityLabel: String(localized: "main.detail.kind", defaultValue: "Kind")
+        )
+        .fixedSize()
     }
 }
 
@@ -134,28 +154,45 @@ private struct RepoDetailAddActions: View {
 }
 
 /// The header (mockup Main): ENVIRONMENT or REPOSITORY, the scope's name in the large title,
-/// visibility and capability tags, the branch rules in mono, then Clone and Refresh.
+/// visibility and capability tags, the branch rules in mono, then Clone and Refresh on the right,
+/// or under the title when the column is too narrow for both.
 private struct RepoDetailHeader: View {
     let viewModel: RepoDetailViewModel
     let main: MainViewModel
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: Theme.Spacing.large) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
-                SectionLabel(isEnvironment
-                    ? String(localized: "main.detail.environment", defaultValue: "Environment")
-                    : String(localized: "main.detail.repository", defaultValue: "Repository"))
-                Text(verbatim: title)
-                    .fxTextStyle(.largeTitle)
-                    .foregroundStyle(Theme.Colors.ink)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
-                    .help(viewModel.repository?.fullName ?? "")
-                RepoDetailChips(viewModel: viewModel)
-                    .padding(.top, Theme.Spacing.xSmall)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .bottom, spacing: Theme.Spacing.large) {
+                details
+                Spacer(minLength: 0)
+                actions
             }
-            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
+                details
+                actions
+            }
+        }
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
+            SectionLabel(isEnvironment
+                ? String(localized: "main.detail.environment", defaultValue: "Environment")
+                : String(localized: "main.detail.repository", defaultValue: "Repository"))
+            Text(verbatim: title)
+                .fxTextStyle(.largeTitle)
+                .foregroundStyle(Theme.Colors.ink)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
+                .help(viewModel.repository?.fullName ?? "")
+            RepoDetailChips(viewModel: viewModel)
+                .padding(.top, Theme.Spacing.xSmall)
+        }
+    }
+
+    private var actions: some View {
+        HStack(spacing: Theme.Spacing.large) {
             Button(String(localized: "main.detail.clone", defaultValue: "Clone")) {
                 guard let folder = ClonePanel.folder(for: main), let repo = main.selectedRepo else { return }
                 Task { await main.sidebar.clone(repo, into: folder) }
@@ -197,46 +234,52 @@ private struct RepoDetailHeader: View {
 }
 
 /// The tags under the title ("Private", "Admin"), "Created by the next Sync" and the drift-check
-/// error; for an environment, "Deployment branches: …" in mono with Edit on its own row below, so
-/// the policy gets the full column width.
+/// error, in one row or stacked when the column is too narrow; for an environment, "Deployment
+/// branches: …" in mono with Edit on its own row below, so the policy gets the full column width.
 private struct RepoDetailChips: View {
     let viewModel: RepoDetailViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-            chips
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Theme.Spacing.small) {
+                    chips
+                }
+                VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+                    chips
+                }
+            }
             if viewModel.scope.level == .environment, let policy = viewModel.branchPolicy {
                 branchPolicyRow(policy)
             }
         }
     }
 
+    @ViewBuilder
     private var chips: some View {
-        HStack(spacing: Theme.Spacing.small) {
-            if let repository = viewModel.repository {
-                StatusChip.tag(repository.visibility.localizedTitle)
-                if !repository.existsOnGitHub {
-                    StatusChip(
-                        title: String(localized: "main.detail.notOnGitHub", defaultValue: "Created by the next Sync"),
-                        tone: .brand
-                    )
-                }
+        if let repository = viewModel.repository {
+            StatusChip.tag(repository.visibility.localizedTitle)
+            if !repository.existsOnGitHub {
+                StatusChip(
+                    title: String(localized: "main.detail.notOnGitHub", defaultValue: "Created by the next Sync"),
+                    tone: .brand
+                )
             }
-            if let capability = viewModel.capability {
-                if case .full = capability {
-                    StatusChip.tag(capability.chipTitle)
-                } else {
-                    StatusChip(title: capability.chipTitle, tint: capability.chipTint)
-                }
+        }
+        if let capability = viewModel.capability {
+            if case .full = capability {
+                StatusChip.tag(capability.chipTitle)
+            } else {
+                StatusChip(title: capability.chipTitle, tint: capability.chipTint)
             }
-            if let error = viewModel.driftError {
-                Label(error.title, systemImage: "exclamationmark.triangle")
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Colors.mutedText)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .help(error.message)
-            }
+        }
+        if let error = viewModel.driftError {
+            Label(error.title, systemImage: "exclamationmark.triangle")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .lineLimit(1)
+                .fixedSize()
+                .help(error.message)
         }
     }
 

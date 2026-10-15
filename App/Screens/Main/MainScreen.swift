@@ -29,6 +29,9 @@ struct MainScreen: View {
             .task(id: viewModel.app.ghStatus) {
                 await viewModel.sidebar.reload()
             }
+            .onChange(of: viewModel.app.accountsRevision) {
+                Task { await viewModel.sidebar.reload() }
+            }
             .onAppear {
                 viewModel.presentNextPendingImport()
             }
@@ -40,24 +43,40 @@ struct MainScreen: View {
             }
     }
 
-    /// The three columns (sidebar, scopes, detail).
+    /// The three columns (sidebar, scopes, detail), each as tall as the window
+    /// (`mainColumnHeight()`).
     private var splitView: some View {
         @Bindable var sidebar = viewModel.sidebar
         return NavigationSplitView {
             SidebarView(main: viewModel)
+                .mainColumnHeight()
                 .navigationSplitViewColumnWidth(min: Theme.Layout.sidebarMinWidth, ideal: Theme.Layout.sidebarIdealWidth)
         } content: {
             ScopeColumnView(main: viewModel)
+                .mainColumnHeight()
                 .navigationSplitViewColumnWidth(min: Theme.Layout.scopeListMinWidth, ideal: Theme.Layout.scopeListIdealWidth)
         } detail: {
             DetailColumnView(main: viewModel)
                 .frame(minWidth: Theme.Layout.detailMinWidth)
+                .mainColumnHeight()
         }
         .searchable(
             text: $sidebar.searchText,
             placement: .toolbar,
             prompt: Text(String(localized: "main.search.prompt", defaultValue: "Search repositories"))
         )
+    }
+}
+
+private extension View {
+    /// Lets a column of the main split view take any height the window gives it. AppKit sizes the
+    /// split view from each column's minimum height, which SwiftUI measures at zero width, where
+    /// an empty state's wrapping message is about 1,000 pt tall. The split view then grew taller
+    /// than the window and was centered in it: the top of every column slid under the title bar
+    /// (traffic lights, sidebar toggle) and the sidebar footer dropped below the window. Each
+    /// column scrolls or centers its own content; the window keeps its minimum size (RootScreen).
+    func mainColumnHeight() -> some View {
+        frame(minHeight: 0, maxHeight: .infinity)
     }
 }
 

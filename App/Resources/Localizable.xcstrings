@@ -84,7 +84,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Authenticates as %@, which is not logged into gh"
+            "value" : "Authenticates as %@, which is not logged in to the GitHub CLI. Log it in with gh auth login, then pick this alias for that account."
           }
         }
       }
@@ -10876,6 +10876,39 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Your shell sets %@. gh in Terminal uses that token instead of the accounts listed here; FX Vault ignores it and uses only the accounts gh stores. To store one, run:"
+          }
+        }
+      }
+    },
+    "settings.accounts.unmapped.checkAgain" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check Again"
+          }
+        }
+      }
+    },
+    "settings.accounts.unmapped.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No account here uses these aliases. If one is the key of a GitHub account that is not logged in to the GitHub CLI, log that account in, choose Check Again, then pick the alias in that account's SSH alias menu. gh keeps your other accounts; the new one becomes gh's active account in Terminal (gh auth switch changes it back)."
+          }
+        }
+      }
+    },
+    "settings.accounts.unmapped.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "SSH aliases without an account"
           }
         }
       }

@@ -677,6 +677,8 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 66 | Accounts | No stored account and an exported `GH_TOKEN` / `GITHUB_TOKEN` is `GHStatusModel.environmentToken`: the setup screen explains it and offers `env -u GH_TOKEN -u GITHUB_TOKEN gh auth login` (BSD `env -u`, tested on macOS). Settings › Accounts shows a note while a token variable is exported. Unusable accounts take precedence over the token note |
 | 67 | Diagnostics | **Copy Diagnostics** (setup screen) and the `gh` section of `--diagnose` render one `GHDiagnosticsModel`: candidates (path, source, resolved path, version, accepted / rejected / notFound, reason, owner uid and name, consent, chosen), shell path and probe mode, variable names, override and trusted gh, accounts (login, state code, token source only when one of gh's known names, scopes, missing scopes), unusable accounts, A3 error code. `--diagnose` collects it before the app starts (a detached task the entry point waits for; no database, no token fetch). The copied text is fixed English, like the JSON keys: a support artifact, not interface text |
 | 68 | Status | `GHStatusModel` gains `.foreignOwner(path:owner:isHomebrew:)`, `.environmentToken(version:path:variables:)`, `.unusableAccounts(version:path:accounts:)`; `.outdated` carries the checked path and `.untrusted` the rejection, so the texts say what is wrong |
+| 69 | Layout | Every column of the main split view takes the window's height (`mainColumnHeight()`: `frame(minHeight: 0, maxHeight: .infinity)`). AppKit sizes the split view from each column's minimum height, which SwiftUI measures at zero width; a wrapped empty-state message measured about 1,000 pt, so the split view outgrew the window and was centered (sidebar under the title bar, footer below the window). The detail fits its narrowest column with `ViewThatFits` rows (header actions, tags, kind pill and add actions); the table scrolls sideways. `MainWindowLayoutTests` |
+| 70 | Accounts | FX Vault lists only gh's accounts, so an SSH alias whose key belongs to an account not logged in to gh had no place in Settings › Accounts. GitHub aliases that no account uses are listed with the `gh auth login` command and Check Again; mapping stays manual (no automatic `ssh -T` suggestions, v1.1 stretch) |
 
 ## App shell
 
@@ -790,7 +792,11 @@ AppTests).
 - `Preferences`: General, Security, **Accounts** (`AccountsSettingsViewModel`: gh path and
   version, per account token state, scopes with copyable fix commands, SSH alias picker from
   `~/.ssh/config`, **Test** "Authenticates as <login>", **Re-check**; v0.3.1: a note with the
-  `env -u` command while the shell exports a token variable, and "Accounts FX Vault can't use"),
+  `env -u` command while the shell exports a token variable, and "Accounts FX Vault can't use";
+  v0.3.2: "SSH aliases without an account" lists the GitHub aliases no account uses, with the
+  `gh auth login` command and **Check Again**, which reloads the tab and, through
+  `AppViewModel.accountsDidChange()` / `accountsRevision`, the main window's sidebar; the aliases
+  load before gh detection, so they show while gh is missing),
   Advanced (v0.3.1: the trusted gh with its owner and **Revoke**).
 - `Main` (§10.4), `MainViewModel` owns:
   - `SidebarViewModel` (`Main/Sidebar`): vault repositories observed (work without gh), gh

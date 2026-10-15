@@ -317,6 +317,18 @@ foreground color, so `.primary` text still turns white on selected rows.
   (Secrets / Variables) with outline + primary actions; the table with `.fxTable()`.
 - Dark appearance and offline are the same layout (MainDark): only tokens change; offline adds
   `Banner(.offline)` and disables the Sync pill.
+- Columns take the window's height: each column of the split view has
+  `.frame(minHeight: 0, maxHeight: .infinity)` (`mainColumnHeight()` in MainScreen.swift).
+  AppKit sizes the split view from each column's minimum height, which SwiftUI measures at zero
+  width, where a wrapped empty-state message is about 1,000 pt tall; the split view then
+  outgrew the window and was centered in it, so the sidebar's first rows sat under the traffic
+  lights and its footer fell below the window. A column scrolls or centers its own content.
+- The detail fits its narrowest column (`Theme.Layout.detailMinWidth`): Clone and Refresh move
+  under the title, the tags stack, and the add actions move under the Secrets / Variables pill
+  when a row does not fit (`ViewThatFits`); the table scrolls sideways inside its card. Nothing
+  spills under the scope column or past the window edge. `MainWindowLayoutTests` checks both.
+- On macOS 26+ the sidebar's rows scroll under the traffic lights and the sidebar button with the
+  system's soft scroll-edge effect, as in Finder; at rest they start below the title bar.
 
 ### Sheets (board SyncReview)
 

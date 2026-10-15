@@ -8,7 +8,8 @@ import VaultData
 /// missing with copyable fix commands, or unknown), the gh path and version, the SSH alias picker
 /// from `~/.ssh/config`, **Test** ("Authenticates as <login>") and **Re-check**. Since v0.3.1
 /// also the accounts gh lists that FX Vault cannot use (with why), and a note when the user's
-/// shell exports `GH_TOKEN` or `GITHUB_TOKEN`.
+/// shell exports `GH_TOKEN` or `GITHUB_TOKEN`. Since v0.3.2 the GitHub aliases no account uses,
+/// with how to log their account in to gh.
 ///
 /// Needs the vault unlocked (the tab shows "Unlock FX Vault…" otherwise); a lock clears it.
 @Observable
@@ -49,13 +50,14 @@ final class AccountsSettingsViewModel: LockObserving {
 
     // MARK: - Loading
 
-    /// Reads the gh installation (detecting it if needed), the accounts with their scopes and
-    /// the SSH hosts.
+    /// Reads the SSH hosts, the gh installation (detecting it if needed) and the accounts with
+    /// their scopes. The hosts come first: they do not need gh.
     func load() async {
         guard isAvailable, !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         error = nil
+        sshHosts = github.sshHostEntries()
         do {
             tokenVariables = try await github.shellEnvironment().exportedTokenVariables
         } catch {
@@ -83,7 +85,13 @@ final class AccountsSettingsViewModel: LockObserving {
         }
         unusableAccounts = await github.unusableAccounts
         await loadFixCommands()
-        sshHosts = github.sshHostEntries()
+    }
+
+    /// **Check Again**: reads gh's accounts again (an account just logged in from Terminal) and
+    /// has the main window list them too.
+    func checkAgain() async {
+        await load()
+        app.accountsDidChange()
     }
 
     private func loadFixCommands() async {
@@ -138,6 +146,14 @@ final class AccountsSettingsViewModel: LockObserving {
             if lhs.looksLikeGitHub != rhs.looksLikeGitHub { return lhs.looksLikeGitHub }
             return lhs.alias.localizedCaseInsensitiveCompare(rhs.alias) == .orderedAscending
         }
+    }
+
+    /// GitHub aliases that no account uses, typically the key of an account that is not logged in
+    /// to gh: FX Vault lists only gh's accounts, so such an alias was only a choice in the other
+    /// accounts' menus, with nothing saying why its account was missing.
+    var unmappedAliases: [SSHHostEntryModel] {
+        let mapped = Set(accounts.compactMap(\.account.sshHostAlias))
+        return aliasChoices.filter { $0.looksLikeGitHub && !mapped.contains($0.alias) }
     }
 
     private func perform(_ account: GHAccountSummaryModel, _ body: () async throws -> Void) async {

@@ -3,6 +3,27 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.3.2
+
+### Fixed
+
+- **The sidebar no longer starts under the window buttons.** With no repository selected, the
+  first account sat behind the close, minimize and zoom buttons, the ACCOUNTS label was hidden
+  and the status line at the bottom of the sidebar was missing: the empty "No repository
+  selected" message made the three columns taller than the window, so they were cut off at the
+  top and the bottom. Each column now takes the window's height.
+- **Nothing overlaps in a narrow window.** When the window, or the space left by the sidebar and
+  scope columns, is narrow, Clone and Refresh move under the title, the tags stack, and Paste
+  Multiple and Add move under the Secrets / Variables switch; the table scrolls sideways. Before,
+  the header and the buttons were drawn under the scope column and cut off at the window edge.
+- **SSH aliases of accounts that are not logged in to the GitHub CLI are shown.** FX Vault lists
+  only the accounts gh knows, so the alias of a second GitHub identity (`Host github-work` in
+  `~/.ssh/config`) only appeared as a choice in the other accounts' menus, with nothing saying
+  why its account was missing. Settings › Accounts now lists **SSH aliases without an account**
+  with the `gh auth login` command and **Check Again**, which also updates the sidebar, so the
+  new account appears without relaunching. The aliases are listed even while gh is not found,
+  and the alias Test explains how to add the account it authenticates as.
+
 ## 0.3.1
 
 ### Fixed
