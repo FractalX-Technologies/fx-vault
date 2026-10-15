@@ -165,6 +165,31 @@ struct RepoCatalogTests {
         #expect(refreshed.hasAdmin)
     }
 
+    /// v0.3.1: an Enterprise Managed User (`handle_shortcode`, synthetic) lists its personal
+    /// repositories as a user owner, and can add another managed user's repository by name.
+    @Test func managedUserAccountListsItsOwnRepositories() async throws {
+        let harness = try await ConfigHarness.make()
+        let provider = FakeSchedulerProvider()
+        let runner = provider.runner
+        let catalog = RepoCatalogRepository(session: harness.session, schedulers: provider, clock: harness.clock)
+        runner.enqueue(.success("Example-Org\n"), matching: { $0.starts(with: ["org", "list"]) })
+        runner.enqueue(.success(GHFixtures.repoList(owner: "user1_acme", names: ["dotfiles"])), matching: GHArgv.isRepoList("user1_acme"))
+        runner.enqueue(.success("[]"), matching: GHArgv.isRepoList("Example-Org"))
+
+        let result = try await catalog.catalog(accountLogin: "user1_acme")
+        #expect(result.owners.map(\.login) == ["user1_acme", "Example-Org"])
+        #expect(result.owners.map(\.ownerType) == [.user, .organization])
+        #expect(result.owners[0].repositories.map(\.ref.fullName) == ["user1_acme/dotfiles"])
+
+        runner.enqueue(
+            .success(GHFixtures.repoJSON(owner: "user1-e_acme", name: "shared", permission: "WRITE")),
+            matching: GHArgv.isRepoView("user1-e_acme/shared")
+        )
+        let added = try await catalog.lookUpRepository(fullName: "user1-e_acme/shared", accountLogin: "user1_acme")
+        #expect(added.ref.owner == "user1-e_acme")
+        #expect(runner.invocations.contains { $0.arguments == ["auth", "token", "--hostname", "github.com", "--user=user1_acme"] })
+    }
+
     @Test func addByName() async throws {
         let harness = try await ConfigHarness.make()
         let provider = FakeSchedulerProvider()

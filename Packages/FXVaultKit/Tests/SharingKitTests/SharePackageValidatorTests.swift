@@ -335,4 +335,16 @@ struct SharePackageValidatorTests {
         let package = PackageFactory.package(secrets: [PackageFactory.item("A")], githubRepoID: nil)
         #expect(SharePackageValidator.violation(in: package, mode: .payload) == nil)
     }
+
+    /// Repositories owned by an Enterprise Managed User (`handle_shortcode`) can be shared
+    /// (v0.3.1; synthetic logins). A leading underscore is still rejected.
+    @Test(arguments: ["user1_acme", "user1-e_acme", "1234567_acme"])
+    func acceptsManagedUserOwners(owner: String) {
+        var package = PackageFactory.sample()
+        package.repository.owner = owner
+        #expect(SharePackageValidator.violation(in: package, mode: .payload) == nil)
+        #expect(SharePackageValidator.violation(in: package.manifest(), mode: .manifest) == nil)
+        package.repository.owner = "_" + owner
+        #expect(SharePackageValidator.violation(in: package, mode: .payload) == .invalidOwner(.invalidFirstCharacter))
+    }
 }

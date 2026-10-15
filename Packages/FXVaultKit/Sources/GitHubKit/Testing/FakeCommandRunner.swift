@@ -61,8 +61,17 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
     public typealias Matcher = @Sendable ([String]) -> Bool
 
     private struct Entry: Sendable {
+        /// Matches only calls of this executable when set.
+        var executablePath: String?
+        /// The argv prefix of a stub made with a prefix (so ``replaceStub(argumentsPrefix:with:)``
+        /// can find it).
+        var prefix: [String]?
         let matcher: Matcher
         let response: Response
+
+        func matches(_ spec: CommandSpec) -> Bool {
+            (executablePath == nil || executablePath == spec.executableURL.path) && matcher(spec.arguments)
+        }
     }
 
     private struct State: Sendable {
@@ -85,10 +94,34 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
         state.withLock { $0.queued.append(Entry(matcher: matcher, response: response)) }
     }
 
-    /// Adds a persistent response for every call whose argv starts with `prefix`.
+    /// Adds a persistent response for every call whose argv starts with `prefix`. When several
+    /// stubs match, the first one added wins; use ``replaceStub(argumentsPrefix:with:)`` to change
+    /// a response later in a test.
     public func stub(argumentsPrefix prefix: [String], with response: Response) {
         state.withLock { state in
-            state.stubs.append(Entry(matcher: { Array($0.prefix(prefix.count)) == prefix }, response: response))
+            state.stubs.append(Entry(prefix: prefix, matcher: { Array($0.prefix(prefix.count)) == prefix }, response: response))
+        }
+    }
+
+    /// Replaces every stub made with exactly `prefix` (for any executable) by `response`.
+    public func replaceStub(argumentsPrefix prefix: [String], with response: Response) {
+        state.withLock { state in
+            state.stubs.removeAll { $0.executablePath == nil && $0.prefix == prefix }
+            state.stubs.insert(Entry(prefix: prefix, matcher: { Array($0.prefix(prefix.count)) == prefix }, response: response), at: 0)
+        }
+    }
+
+    /// Adds a persistent response for calls of `executablePath` whose argv starts with `prefix`
+    /// (several gh binaries in one test). Checked before the stubs that match any executable.
+    public func stub(executablePath: String, argumentsPrefix prefix: [String], with response: Response) {
+        state.withLock { state in
+            let entry = Entry(
+                executablePath: executablePath,
+                prefix: prefix,
+                matcher: { Array($0.prefix(prefix.count)) == prefix },
+                response: response
+            )
+            state.stubs.insert(entry, at: 0)
         }
     }
 
@@ -110,10 +143,10 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
         )
         let response = state.withLock { state -> Response? in
             state.invocations.append(invocation)
-            if let index = state.queued.firstIndex(where: { $0.matcher(spec.arguments) }) {
+            if let index = state.queued.firstIndex(where: { $0.matches(spec) }) {
                 return state.queued.remove(at: index).response
             }
-            return state.stubs.first(where: { $0.matcher(spec.arguments) })?.response
+            return state.stubs.first(where: { $0.matches(spec) })?.response
         }
         guard let response else {
             return CommandResult(exitCode: Self.unmatchedExitCode, stdout: SecretBytes(count: 0), stderr: Self.unmatchedStderr)

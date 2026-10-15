@@ -8,9 +8,13 @@ import VaultStore
 /// per-account gh queues and tokens, and the SSH alias of each account (§2, §5.10, §8 A, D1–D2;
 /// D5, D19; M2).
 ///
-/// - **gh detection** (``detectGH(overridePath:)``): the login-shell probe (A2, once, cached) then
-///   `GHLocator` (override path, Homebrew, shell PATH, MacPorts/Nix/`~/.local`, trust checks,
-///   version floor 2.97.0).
+/// - **gh detection** (``detectGH(overridePath:trustedBinary:)``): the shell probe (A2, once,
+///   cached; ``shellEnvironment(refresh:)`` probes again) then `GHLocator` (override path, the
+///   shell's `command -v gh`, Homebrew, shell PATH, MacPorts/Nix/`~/.local`; the first existing
+///   candidate decides; trust checks with the user's consented trust; version floor 2.97.0).
+///   ``lastDetection`` keeps the report of every candidate (v0.3.1).
+/// - **Diagnostics** (``diagnostics(overridePath:trustedBinary:)``, v0.3.1): shell facts, every
+///   candidate with its version, and the accounts gh lists; no token, no database.
 /// - **Accounts** (``accounts()``): A3 through `GHAuthService`, persisted to `accounts` (new
 ///   logins inserted, presence updated, rows kept for their repositories) with each token's
 ///   `ScopeStatus`.
@@ -31,9 +35,17 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
     private let clock: any VaultClock
     private let shellPath: String?
     private let sshParser: SSHConfigParser
+    private let fileInspector: any GHFileInspecting
     private var shell: ShellEnvironmentModel?
-    /// The gh binary found by the last successful ``detectGH(overridePath:)``.
+    /// The gh binary found by the last successful ``detectGH(overridePath:trustedBinary:)``.
     public private(set) var installation: GHInstallationModel?
+    /// The locator report of the last ``detectGH(overridePath:trustedBinary:)``: every candidate,
+    /// the one that decided, and why it was used or rejected (setup screen details, v0.3.1).
+    public private(set) var lastDetection: GHLocatorReportModel?
+    /// The github.com accounts the last ``accounts()`` could not use (their login fails
+    /// `OwnerLoginValidator`), with the reason. Never persisted; shown by the setup screen,
+    /// Preferences › Accounts and the diagnostics (v0.3.1: never dropped silently).
+    public private(set) var unusableAccounts: [GHUnusableAccountModel] = []
     private var schedulers: [String: GHCommandScheduler] = [:]
     private var lastStatuses: [GHAccountStatusModel] = []
 
@@ -44,6 +56,7 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
     ///   - workingDirectory: `EmptyWorkingDirectory.prepareDefault()`.
     ///   - shellPath: the login shell to probe; nil reads it from the password database.
     ///   - sshConfigParser: nil reads `~/.ssh/config` of `identity`.
+    ///   - fileInspector: what the gh trust check reads (`FakeGHFileInspector` in tests).
     public init(
         database: VaultDatabase,
         runner: any CommandRunning,
@@ -52,7 +65,8 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
         clock: any VaultClock = SystemClock(),
         tokenCache: GHTokenCache = GHTokenCache(),
         shellPath: String? = nil,
-        sshConfigParser: SSHConfigParser? = nil
+        sshConfigParser: SSHConfigParser? = nil,
+        fileInspector: any GHFileInspecting = SystemGHFileInspector()
     ) {
         self.database = database
         self.runner = runner
@@ -62,12 +76,13 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
         self.tokenCache = tokenCache
         self.shellPath = shellPath
         sshParser = sshConfigParser ?? SSHConfigParser.forUser(identity)
+        self.fileInspector = fileInspector
     }
 
     // MARK: - gh detection
 
-    /// The allowlisted login-shell environment (A2), probed once and cached. Pass `refresh` to
-    /// probe again (Preferences › Advanced "Check again").
+    /// The allowlisted shell environment (A2), probed once and cached. Pass `refresh` to probe
+    /// again (every **Check Again**, so a fixed `~/.zshrc` is seen without a relaunch).
     public func shellEnvironment(refresh: Bool = false) async throws(GitHubEnvironmentError) -> ShellEnvironmentModel {
         if let shell, !refresh { return shell }
         let resolver = ShellEnvironmentResolver(
@@ -86,26 +101,50 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
     }
 
     /// Finds a trusted gh at or above the 2.97.0 floor (D5). A changed binary drops the cached
-    /// queues, which are rebuilt (and re-seeded) on next use.
+    /// queues, which are rebuilt (and re-seeded) on next use. ``lastDetection`` keeps the report.
     ///
+    /// - Parameter trustedBinary: the gh the user trusted although another user owns it
+    ///   (Preferences › Advanced).
     /// - Throws: `.github(.notInstalled)`, `.github(.untrustedBinary(path:))`,
     ///   `.github(.versionTooOld(found:required:))`, `.github(.malformedOutput)`.
     @discardableResult
-    public func detectGH(overridePath: String? = nil) async throws(GitHubEnvironmentError) -> GHInstallationModel {
+    public func detectGH(
+        overridePath: String? = nil,
+        trustedBinary: GHTrustedBinaryModel? = nil
+    ) async throws(GitHubEnvironmentError) -> GHInstallationModel {
         let shell = try await shellEnvironment()
-        let locator = GHLocator(runner: runner, identity: identity, workingDirectory: workingDirectory)
-        do {
-            let found = try await locator.locate(overridePath: overridePath, shell: shell)
+        let report = await locator().inspect(overridePath: overridePath, shell: shell, trustedBinary: trustedBinary)
+        lastDetection = report
+        switch report.outcome {
+        case .success(let found):
             if installation?.resolvedPath != found.resolvedPath {
                 schedulers.removeAll()
             }
             installation = found
             return found
-        } catch {
+        case .failure(let error):
             installation = nil
             schedulers.removeAll()
             throw .github(error)
         }
+    }
+
+    /// The gh diagnostics (v0.3.1): the shell probe's facts, every gh candidate with its trust
+    /// result and version, and the accounts gh lists (A3, no token). Leaves ``installation``,
+    /// ``lastDetection``, the queues and the accounts table alone (it runs the shell probe only if
+    /// it never ran) and never touches the database.
+    public func diagnostics(
+        overridePath: String?,
+        trustedBinary: GHTrustedBinaryModel?
+    ) async -> GHDiagnosticsModel {
+        let shell = (try? await shellEnvironment()) ?? .empty
+        let collector = GHDiagnosticsCollector(
+            runner: runner,
+            identity: identity,
+            workingDirectory: workingDirectory,
+            fileInspector: fileInspector
+        )
+        return await collector.collect(shell: shell, overridePath: overridePath, trustedBinary: trustedBinary)
     }
 
     // MARK: - Accounts
@@ -115,13 +154,16 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
     /// ``GHAccountSummaryModel/status``) for their repositories.
     public func accounts() async throws(GitHubEnvironmentError) -> [GHAccountSummaryModel] {
         let auth = try authService()
-        let statuses: [GHAccountStatusModel]
+        let listing: GHAccountListingModel
         do {
-            statuses = try await auth.accounts()
+            listing = try await auth.listing()
         } catch {
+            unusableAccounts = []
             throw .github(error)
         }
+        let statuses = listing.accounts
         lastStatuses = statuses
+        unusableAccounts = listing.unusable
         let now = clock.now
         let store = AccountStore(database: database)
         let stored: [AccountModel]
@@ -158,6 +200,12 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
         return ScopeChecker.fixCommands(login: login, previousActiveLogin: active)
     }
 
+    /// The account name of a file owner (`GHBinaryOwnerModel`, a trusted gh's owner) from the
+    /// user database, through the same inspector the trust check uses.
+    public nonisolated func ownerName(for uid: UInt32) -> String? {
+        fileInspector.userName(for: uid)
+    }
+
     /// Wipes every cached token. Synchronous: call it from the lock path (§5.8 Phase A).
     public nonisolated func purgeTokens() {
         tokenCache.purge()
@@ -168,7 +216,7 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
     /// The account's serial gh queue (D12), created on first use and seeded with the journal's
     /// writes of the last hour.
     ///
-    /// - Throws: `.notInstalled` until ``detectGH(overridePath:)`` succeeded.
+    /// - Throws: `.notInstalled` until ``detectGH(overridePath:trustedBinary:)`` succeeded.
     public func scheduler(for accountLogin: String) async throws(GHError) -> GHCommandScheduler {
         let key = OwnerLoginValidator.foldKey(accountLogin)
         if let existing = schedulers[key] { return existing }
@@ -240,6 +288,10 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
     }
 
     // MARK: - Private
+
+    private func locator() -> GHLocator {
+        GHLocator(runner: runner, identity: identity, workingDirectory: workingDirectory, fileInspector: fileInspector)
+    }
 
     private func commandService() throws(GHError) -> GHCommandService {
         guard let installation else { throw .notInstalled }

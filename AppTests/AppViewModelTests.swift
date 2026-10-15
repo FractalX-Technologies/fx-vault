@@ -47,7 +47,7 @@ struct AppViewModelTests {
     }
 
     @Test func ghStatusComesFromTheProbe() async throws {
-        let status = GHStatusModel.outdated(found: "2.90.0", required: Limits.minimumGHVersion)
+        let status = GHStatusModel.outdated(found: "2.90.0", required: Limits.minimumGHVersion, path: nil)
         let harness = try await TestHarness(ghStatus: status)
         await harness.app.refreshGHStatus()
         #expect(harness.app.ghStatus == status)

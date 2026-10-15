@@ -22,6 +22,7 @@ struct FixturesBundleTests {
             "27a65e66023ac5352761e5a0db80610c1580ab00f412208b22207f641140d374",
             "177ff24b4b08dbfb272041d7775e0f9aa7c348febdd2218020c6da095366479d",
             "f263381b69af1d6ae42178afb730c406f53075505873c5437293234376d39e21",
+            "042a431f39823bc59bc43aa001c29e0d5a91989b39cb7d006ea91e02a43b294a",
         ]
         let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)?
             .compactMap { $0 as? URL } ?? []

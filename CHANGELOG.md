@@ -3,6 +3,47 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.3.1
+
+### Fixed
+
+- **Accounts from GitHub Enterprise Managed Users (logins with an underscore) were ignored.**
+  EMU logins are your handle, an underscore and the enterprise short code (`mona-cat_acme`). FX
+  Vault rejected the underscore, dropped those accounts without a word and showed "Log in to
+  GitHub" although `gh auth status` listed them. They now work everywhere: accounts, tokens,
+  personal repositories of managed users, import, Sync (`--repo=mona-cat_acme/app`), sharing and
+  the SSH alias Test.
+- **Never drops an account silently again.** An account gh lists that FX Vault cannot use is
+  shown with the reason on the setup screen and in Settings › Accounts, and in the diagnostics.
+- **Settings from `~/.zshrc` are seen.** FX Vault now asks your shell the way Terminal does
+  (an interactive login shell first, the login shell only as a fallback), so PATH additions,
+  `GH_CONFIG_DIR` and `XDG_CONFIG_HOME` set only in `~/.zshrc` reach gh. **Check Again** asks
+  the shell again, so a changed start-up file counts without a relaunch.
+- **The same gh as Terminal.** FX Vault uses the gh your shell finds (`command -v gh`) before
+  looking in Homebrew, MacPorts and Nix folders, and the first gh it finds decides: it never falls
+  back to another (possibly older) gh behind a rejected one. "Update the GitHub CLI" now names
+  the gh it checked.
+
+### Added
+
+- **Explains `GH_TOKEN`.** When gh stores no account and your shell exports `GH_TOKEN` or
+  `GITHUB_TOKEN` (Terminal's gh then uses the token, and `gh auth login` refuses to save an
+  account), the setup screen says so and offers `env -u GH_TOKEN -u GITHUB_TOKEN gh auth login`,
+  then Check Again. Settings › Accounts shows a note while such a variable is set. FX Vault reads
+  only whether the variables are set, never their values.
+- **Trust This gh.** When another user owns the gh FX Vault would run (typically another
+  administrator installed Homebrew), the setup screen names that user, explains that anyone who
+  can sign in as them could replace gh and see the values FX Vault sends to it, and offers Trust
+  This gh. FX Vault then accepts that exact path while that user still owns it and no one else can
+  write to it. Settings › Advanced lists it with Revoke. A gh that others can write to is never
+  trusted.
+- **Copy Diagnostics** on the GitHub CLI setup screen, and a `gh` section in `--diagnose`: the gh
+  candidates with their versions and why each was used or rejected (with the owner's name), your
+  shell and how it answered, the names of `GH_TOKEN`, `GITHUB_TOKEN`, `GH_CONFIG_DIR`,
+  `XDG_CONFIG_HOME` and `GH_HOST` if set, and each account's login, state, token source and
+  scopes. Never a token, a secret or a variable's value.
+- README: "Troubleshooting: FX Vault doesn't see my gh login".
+
 ## 0.3.0
 
 ### Changed

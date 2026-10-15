@@ -37,17 +37,27 @@ public struct GHAuthService: Sendable {
 
     // MARK: - Operations
 
-    /// The github.com accounts with their login state and scope status (A3).
+    /// The usable github.com accounts with their login state and scope status (A3).
     public func accounts() async throws(GHError) -> [GHAccountStatusModel] {
+        try await listing().accounts
+    }
+
+    /// Every github.com account of A3: the usable ones and those FX Vault cannot use, with why.
+    public func listing() async throws(GHError) -> GHAccountListingModel {
         let output = try await service.execute(try Self.statusCommand(), token: nil)
-        return try Self.decodeAccounts(output)
+        return try Self.decodeListing(output)
+    }
+
+    /// Decodes A3 (usable accounts only) and wipes stdout.
+    public static func decodeAccounts(_ output: GHCommandOutput) throws(GHError) -> [GHAccountStatusModel] {
+        try decodeListing(output).accounts
     }
 
     /// Decodes A3 and wipes stdout.
-    public static func decodeAccounts(_ output: GHCommandOutput) throws(GHError) -> [GHAccountStatusModel] {
+    public static func decodeListing(_ output: GHCommandOutput) throws(GHError) -> GHAccountListingModel {
         defer { output.wipe() }
         let dto = try GHJSONDecoding.decode(AuthStatusDTO.self, from: output.stdout)
-        return GHAccountStatusModel.accounts(from: dto)
+        return GHAccountListingModel(dto: dto)
     }
 
     /// A copy of `login`'s token: from the cache, else from A4 (then cached).

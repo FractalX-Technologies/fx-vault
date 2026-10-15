@@ -1,0 +1,24 @@
+{
+  "hosts": {
+    "github.com": [
+      {
+        "state": "success",
+        "active": true,
+        "host": "github.com",
+        "login": "user1_acme",
+        "tokenSource": "keyring",
+        "scopes": "admin:public_key, gist, read:org, repo",
+        "gitProtocol": "https"
+      },
+      {
+        "state": "success",
+        "active": false,
+        "host": "github.com",
+        "login": "user1-e_acme",
+        "tokenSource": "keyring",
+        "scopes": "admin:public_key, gist, read:org, repo",
+        "gitProtocol": "https"
+      }
+    ]
+  }
+}

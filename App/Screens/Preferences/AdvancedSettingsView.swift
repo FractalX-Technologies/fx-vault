@@ -2,8 +2,9 @@ import AppKit
 import SwiftUI
 import VaultCore
 
-/// Preferences › Advanced: gh path and override, telemetry note, vault folder, Reset vault, as
-/// hairline groups (docs/DESIGN.md, "Settings").
+/// Preferences › Advanced: gh path and override, the gh trusted although another user owns it
+/// (with Revoke, v0.3.1), telemetry note, vault folder, Reset vault, as hairline groups
+/// (docs/DESIGN.md, "Settings").
 struct AdvancedSettingsView: View {
     @Bindable var viewModel: PreferencesViewModel
     @FocusState private var isOverrideFocused: Bool
@@ -53,6 +54,23 @@ struct AdvancedSettingsView: View {
                             chooseGH()
                         }
                         .fxButtonStyle(.secondary)
+                    }
+                }
+                if let trusted = viewModel.trustedGHBinary, let owner = viewModel.trustedGHOwner {
+                    HairlineDivider()
+                    PreferencesRow(
+                        String(localized: "settings.advanced.gh.trusted", defaultValue: "Trusted gh, owned by \(owner.displayName)"),
+                        detail: trusted.path,
+                        isDetailMonospaced: true
+                    ) {
+                        Button(String(localized: "settings.advanced.gh.revoke", defaultValue: "Revoke")) {
+                            Task { await viewModel.revokeTrustedGH() }
+                        }
+                        .fxButtonStyle(.secondary)
+                        .help(String(
+                            localized: "settings.advanced.gh.revoke.help",
+                            defaultValue: "Stop running this gh. FX Vault asks again the next time it finds it."
+                        ))
                     }
                 }
             }

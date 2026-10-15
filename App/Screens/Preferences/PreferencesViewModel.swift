@@ -1,4 +1,5 @@
 import Foundation
+import GitHubKit
 import Observation
 import VaultCore
 import VaultData
@@ -93,8 +94,26 @@ final class PreferencesViewModel: LockObserving {
         app.ghStatus
     }
 
+    /// **Check Again**: probes the shell again, then detects gh.
     func recheckGH() async {
-        await app.refreshGHStatus()
+        await app.refreshGHStatus(refreshingShell: true)
+    }
+
+    /// The gh the user trusted although another user owns it (v0.3.1), or nil.
+    var trustedGHBinary: GHTrustedBinaryModel? {
+        app.container.preferences.trustedGHBinary
+    }
+
+    /// The owner of ``trustedGHBinary``, as the user database names it.
+    var trustedGHOwner: GHBinaryOwnerModel? {
+        trustedGHBinary.map {
+            GHBinaryOwnerModel(uid: $0.ownerUID, name: app.container.data.github.ownerName(for: $0.ownerUID))
+        }
+    }
+
+    /// **Revoke**: FX Vault stops running the trusted gh and asks again when it finds it.
+    func revokeTrustedGH() async {
+        await app.revokeTrustedGHBinary()
     }
 
     /// The vault folder, or nil for an in-memory vault (previews, tests).

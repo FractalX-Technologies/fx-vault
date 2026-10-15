@@ -1,4 +1,5 @@
 import AppKit
+import GitHubKit
 import Observation
 import SyncEngine
 import VaultCore
@@ -307,13 +308,29 @@ final class AppViewModel {
     /// Runs the gh probe (A1–A3). Never blocks onboarding or unlock. The last known status stays
     /// in place while a re-check runs (``isCheckingGH``), so ``GHSetupScreen`` does not flicker
     /// away during **Check Again**; only the first probe shows `.checking`.
-    func refreshGHStatus() async {
+    ///
+    /// - Parameter refreshingShell: probe the user's shell again first (every **Check Again**),
+    ///   so a changed `~/.zshrc` (PATH, `GH_CONFIG_DIR`, a removed `GH_TOKEN`) counts at once.
+    func refreshGHStatus(refreshingShell: Bool = false) async {
         isCheckingGH = true
         defer { isCheckingGH = false }
-        ghStatus = await container.ghStatusProbe.probe()
+        ghStatus = await container.ghStatusProbe.probe(refreshingShell: refreshingShell)
         if ghStatus.isReady {
             isGHSetupDeferred = false
         }
+    }
+
+    /// **Trust This gh** (§5.10 consented trust): records the gh's path and owner, then detects
+    /// again.
+    func trustGHBinary(_ binary: GHTrustedBinaryModel) async {
+        container.preferences.trustGHBinary(binary)
+        await refreshGHStatus()
+    }
+
+    /// **Revoke** (Preferences › Advanced): forgets the trusted gh, then detects again.
+    func revokeTrustedGHBinary() async {
+        container.preferences.revokeTrustedGHBinary()
+        await refreshGHStatus()
     }
 
     /// True when ``GHSetupScreen`` replaces the main window (after unlock, gh needs attention,

@@ -6700,6 +6700,17 @@
         }
       }
     },
+    "gh.owner.unnamed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "with ID %u"
+          }
+        }
+      }
+    },
     "gh.status.checking" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6711,6 +6722,17 @@
         }
       }
     },
+    "gh.status.environmentToken" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub CLI %1$@ has no stored account. Your shell's %2$@ works only in Terminal."
+          }
+        }
+      }
+    },
     "gh.status.failed" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6718,6 +6740,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "FX Vault could not check the GitHub CLI."
+          }
+        }
+      }
+    },
+    "gh.status.foreignOwner" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The GitHub CLI at %1$@ belongs to the user %2$@. FX Vault runs it only after you trust it."
           }
         }
       }
@@ -6777,6 +6810,50 @@
         }
       }
     },
+    "gh.status.untrusted.notExecutable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is not an executable file, so FX Vault cannot run it."
+          }
+        }
+      }
+    },
+    "gh.status.untrusted.owners" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The GitHub CLI at %@ belongs to other users, so FX Vault does not run it."
+          }
+        }
+      }
+    },
+    "gh.status.unusableAccounts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub CLI %@ is logged in with accounts FX Vault can't use."
+          }
+        }
+      }
+    },
+    "gh.unusableAccount.unnamed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "(an account without a readable name)"
+          }
+        }
+      }
+    },
     "ghSetup.checkAgain" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6795,6 +6872,61 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Copied %@. Run it in Terminal, then check again."
+          }
+        }
+      }
+    },
+    "ghSetup.copyDiagnostics" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy Diagnostics"
+          }
+        }
+      }
+    },
+    "ghSetup.copyDiagnostics.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy a report of which gh FX Vault found and why, for support. It contains no tokens or values."
+          }
+        }
+      }
+    },
+    "ghSetup.diagnostics.copied" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied the diagnostics: paths, versions and account names, never tokens or values. Paste them into your message to FractalX."
+          }
+        }
+      }
+    },
+    "ghSetup.environmentToken.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your shell sets %@, so gh in Terminal uses that token and shows you as logged in, and gh auth login refuses to save an account. FX Vault never uses these variables: it needs an account gh stores. Run this in Terminal, then choose Check Again."
+          }
+        }
+      }
+    },
+    "ghSetup.environmentToken.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Store your GitHub login in gh"
           }
         }
       }
@@ -6898,6 +7030,83 @@
         }
       }
     },
+    "ghSetup.trust.button" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trust This gh"
+          }
+        }
+      }
+    },
+    "ghSetup.trust.consequence" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If you trust it, FX Vault runs this gh only while the user %@ owns it and no one else can change it. You can revoke this in Settings › Advanced."
+          }
+        }
+      }
+    },
+    "ghSetup.trust.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ belongs to the user %2$@; anyone who can sign in as %3$@ could replace gh and see the values FX Vault sends to it."
+          }
+        }
+      }
+    },
+    "ghSetup.trust.subtitle.homebrew" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Homebrew on this Mac belongs to the user %1$@; anyone who can sign in as %2$@ could replace gh and see the values FX Vault sends to it."
+          }
+        }
+      }
+    },
+    "ghSetup.trust.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The GitHub CLI belongs to another user"
+          }
+        }
+      }
+    },
+    "ghSetup.untrusted.notExecutable.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is not an executable file, so FX Vault cannot run it. Reinstall gh with Homebrew, or set its path in Settings › Advanced."
+          }
+        }
+      }
+    },
+    "ghSetup.untrusted.owners.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ or its folder belongs to other users, so FX Vault does not run it. Reinstall gh with Homebrew, or set the path of your own gh in Settings › Advanced."
+          }
+        }
+      }
+    },
     "ghSetup.untrusted.subtitle" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6920,6 +7129,28 @@
         }
       }
     },
+    "ghSetup.unusableAccounts.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "gh is logged in, but FX Vault does not accept these account names. Log in with another account, or copy the diagnostics and send them to FractalX."
+          }
+        }
+      }
+    },
+    "ghSetup.unusableAccounts.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault can't use these GitHub accounts"
+          }
+        }
+      }
+    },
     "ghSetup.upgrade.subtitle" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6927,6 +7158,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Found gh %1$@. FX Vault needs %2$@ or later: earlier versions put environment names into GitHub URLs without escaping them when they set, list or delete secrets and variables, and miss security fixes."
+          }
+        }
+      }
+    },
+    "ghSetup.upgrade.subtitle.path" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found gh %1$@ at %2$@, the gh your shell runs. FX Vault needs %3$@ or later: earlier versions put environment names into GitHub URLs without escaping them when they set, list or delete secrets and variables, and miss security fixes."
           }
         }
       }
@@ -10627,6 +10869,39 @@
         }
       }
     },
+    "settings.accounts.tokenVariable.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your shell sets %@. gh in Terminal uses that token instead of the accounts listed here; FX Vault ignores it and uses only the accounts gh stores. To store one, run:"
+          }
+        }
+      }
+    },
+    "settings.accounts.unusable.footnote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "gh lists these accounts, but FX Vault does not accept their names, so their repositories are not shown."
+          }
+        }
+      }
+    },
+    "settings.accounts.unusable.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Accounts FX Vault can't use"
+          }
+        }
+      }
+    },
     "settings.advanced.gh.choose" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10682,6 +10957,28 @@
         }
       }
     },
+    "settings.advanced.gh.revoke" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Revoke"
+          }
+        }
+      }
+    },
+    "settings.advanced.gh.revoke.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Stop running this gh. FX Vault asks again the next time it finds it."
+          }
+        }
+      }
+    },
     "settings.advanced.gh.section" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10700,6 +10997,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "FX Vault disables gh telemetry for its own calls."
+          }
+        }
+      }
+    },
+    "settings.advanced.gh.trusted" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trusted gh, owned by %@"
           }
         }
       }

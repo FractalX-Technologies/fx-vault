@@ -215,6 +215,28 @@ struct CommandBuilderTests {
         #expect(throws: GHError.self) { try GHVariablesCommands.delete(name: name, repo: repo) }
     }
 
+    /// Enterprise Managed User accounts (`handle_shortcode`) own personal repositories: every
+    /// argv builder accepts them (v0.3.1; synthetic logins).
+    @Test func managedUserOwnersAndAccounts() throws {
+        let repo = try GHRepoRef(owner: "user1_acme", name: "some-repo")
+        #expect(repo.repoFlag == "--repo=user1_acme/some-repo")
+        #expect(repo.foldKey == "user1_acme/some-repo")
+        #expect(try GHRepoRef(fullName: "user1-e_acme/some-repo").owner == "user1-e_acme")
+        #expect(try GHRepoRef(repositoryURL: "https://github.com/user1_acme/new-repo\n").fullName == "user1_acme/new-repo")
+        #expect(try GHReposCommands.list(owner: "user1_acme").arguments.prefix(3) == ["repo", "list", "user1_acme"])
+        #expect(try GHReposCommands.view(repo).arguments.prefix(3) == ["repo", "view", "user1_acme/some-repo"])
+        #expect(try GHAuthService.tokenCommand(login: "user1-e_acme").arguments
+            == ["auth", "token", "--hostname", "github.com", "--user=user1-e_acme"])
+        #expect(try GHSecretsCommands.list(repo: repo).arguments.contains("--repo=user1_acme/some-repo"))
+        #expect(try GHEnvironmentsAPI.list(repo: repo).arguments.last == "repos/user1_acme/some-repo/environments?per_page=100")
+        #expect(ScopeChecker.fixCommands(login: "user1-e_acme", previousActiveLogin: "user1_acme") == [
+            "gh auth switch -h github.com -u user1-e_acme",
+            "gh auth refresh -h github.com -s repo,read:org",
+            "gh auth switch -h github.com -u user1_acme",
+        ])
+        #expect(throws: GHError.self) { try GHRepoRef(owner: "_user1", name: "repo") }
+    }
+
     @Test func invalidOwnersAndRepositoriesAreRejected() {
         #expect(throws: GHError.self) { try GHRepoRef(owner: "-oProxyCommand", name: "repo") }
         #expect(throws: GHError.self) { try GHRepoRef(owner: "owner", name: "..") }

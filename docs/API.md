@@ -71,18 +71,25 @@ GH_BROWSER`.
 
 | Op | argv (`logTemplate`) | Builder | Notes |
 |---|---|---|---|
-| A1 version | `gh --version` | `GHLocator.versionCommand()` | `^gh version (\d+)\.(\d+)\.(\d+)`. Below `GHVersion.minimum` (2.97.0) is `.versionTooOld`. No token. |
-| A2 shell probe | `<login shell> -l -c '<script>'`, then `-i -l -c`; csh/tcsh get `-c`, then `-i -c` | `ShellEnvironmentResolver` | One shell-agnostic script made only of absolute `/usr/bin/printf` and `/usr/bin/printenv` calls separated by `;`, between the markers `__FXV_B__` and `__FXV_E__`. Captures only `PATH GH_CONFIG_DIR XDG_CONFIG_HOME XDG_CACHE_HOME XDG_STATE_HOME SSH_AUTH_SOCK`; PATH keeps absolute directories only, the others must be absolute paths. Environment `FXVAULT_RESOLVING_ENV=1`, 5 s. Falls back to `ShellEnvironmentModel.empty`. |
-| A3 accounts | `gh auth status --hostname github.com --json hosts` | `GHAuthService.statusCommand()` | No token. `state` `success` is ok, `timeout` is offline; `error` is offline for network fragments, re-login for `HTTP 401`/`Bad credentials`, otherwise unexpected. `scopes` is split on `,` and trimmed; an absent or empty value is `.unknown`. |
+| A1 version | `gh --version` | `GHLocator.versionCommand()` | `^gh version (\d+)\.(\d+)\.(\d+)`. Below `GHVersion.minimum` (2.97.0) is `.versionTooOld`. No token. Runs only on a trusted candidate: the decisive one, or every trusted one for diagnostics. |
+| A2 shell probe | `<login shell> -i -l -c '<script>'`, then `-l -c`; csh/tcsh get `-i -c`, then `-c` (v0.3.1: interactive first) | `ShellEnvironmentResolver` | One shell-agnostic script made of absolute `/usr/bin/printf` and `/usr/bin/printenv` calls and one `/bin/sh -c '<report>'`, separated by `;`, between the markers `__FXV_B__` and `__FXV_E__`. Captures only `PATH GH_CONFIG_DIR XDG_CONFIG_HOME XDG_CACHE_HOME XDG_STATE_HOME SSH_AUTH_SOCK`; PATH keeps absolute directories only, the others must be absolute paths. The report prints `FXV_GH=` + `command -v gh` (kept only as an absolute path ending in `/gh`) and `FXV_SET=<NAME>` for each of `GH_TOKEN GITHUB_TOKEN GH_CONFIG_DIR XDG_CONFIG_HOME GH_HOST` that is set and non-empty (sh's `[ -n ]` builtin: never a value). The second attempt runs on a timeout or missing markers. Environment `FXVAULT_RESOLVING_ENV=1`, `TERM=dumb`, empty stdin, 5 s per attempt. Records `probeMode` (`interactive`, `login`, `failed`) and the shell path; a failure captures nothing. Observed on macOS 27: `tcsh -i -c` does not set `prompt`, so `if ($?prompt)` blocks in `~/.tcshrc` stay unread (tcsh reads the rest of the file in both attempts). |
+| A3 accounts | `gh auth status --hostname github.com --json hosts` | `GHAuthService.statusCommand()` | No token. `state` `success` is ok, `timeout` is offline; `error` is offline for network fragments, re-login for `HTTP 401`/`Bad credentials`, otherwise unexpected. `scopes` is split on `,` and trimmed; an absent or empty value is `.unknown`. `tokenSource` is kept (`keyring`, `oauth_token`, or a variable name). Logins must pass `OwnerLoginValidator`, which accepts Enterprise Managed User logins (`handle_shortcode`); any other entry is returned as a `GHUnusableAccountModel` with its `NameRule`, never dropped silently (v0.3.1). |
 | A4 token | `gh auth token --hostname github.com --user={login}` | `GHAuthService.tokenCommand(login:)` | No token. Trimmed and cached in `GHTokenCache` (memory only, `purge()` on lock). |
 | A5 orgs | `gh org list --limit 300` | `GHOrgsCommands.list()` | One login per line; each validated. Needs `read:org`, otherwise the list can be silently incomplete. |
 
-`GHLocator.locate(overridePath:shell:)` picks the binary: the override, then Homebrew
-(`/opt/homebrew/bin`, `/usr/local/bin`), the shell PATH, MacPorts, Nix and `~/.local/bin`. A
-candidate must be a regular executable file, owned by root or the user, not world-writable,
+`GHLocator.locate(overridePath:shell:trustedBinary:)` picks the binary
+(`inspect(...)` returns the full `GHLocatorReportModel`): the override alone when set; otherwise
+the gh the shell finds (`command -v gh` from A2, the gh Terminal runs), then Homebrew
+(`/opt/homebrew/bin`, `/usr/local/bin`), the shell PATH, MacPorts, Nix and `~/.local/bin`. **The
+first candidate that exists decides** (v0.3.1): it is used when it passes the trust check and the
+version floor, otherwise detection fails with its reason; FX Vault never falls back to a gh behind
+it. A candidate must be a regular executable file, owned by root or the user, not world-writable,
 in a directory that is not world-writable. Group write is accepted only for the `wheel` and
-`admin` groups (Homebrew's `/opt/homebrew/bin` is `drwxrwxr-x root:admin`). Symlinks are
-resolved; `GHInstallationModel.hasChanged(fromResolvedPath:)` detects a changed binary.
+`admin` groups (Homebrew's `/opt/homebrew/bin` is `drwxrwxr-x root:admin`). When one other
+non-root user owns the file or its folders and nothing else is wrong, the user may trust it:
+`GHTrustedBinaryModel{path, ownerUID}` (Settings, UserDefaults) makes that exact path acceptable
+while every foreign owner is that uid. Symlinks are resolved;
+`GHInstallationModel.hasChanged(fromResolvedPath:)` detects a changed binary.
 
 ## B. Read
 
@@ -225,6 +232,13 @@ organization. Only **read** calls were made; the write facts below are still ope
 "Pending: write spike").
 
 **Discovery (A1–A3, A5, B1).**
+- **Enterprise Managed Users** (reported 2026-10-15 for 0.3.0, gh 2.102.0): `gh auth status`
+  lists managed users as `<normalized handle>_<short code>` (two accounts of one teammate, both
+  `tokenSource` `keyring`, scopes `admin:public_key, gist, read:org, repo`). GitHub documents the
+  handle as letters, digits and single inner hyphens, the short code as 3–8 letters and digits,
+  the setup user as `<short code>_admin`, and 39 characters for the whole login. 0.3.0's
+  validator rejected the underscore and A3 dropped both accounts; fixture
+  `gh/auth-status-emu.json` uses synthetic logins of that shape.
 - A Finder-like launch (`PATH=/usr/bin:/bin`, no shell variables) finds gh through the Homebrew
   fallback: `/opt/homebrew/bin/gh` is a symlink into `/opt/homebrew/Cellar/gh/<v>/bin/gh`
   (`drwxr-xr-x <user>:admin`; `/opt/homebrew/bin` is `drwxrwxr-x <user>:admin`), accepted by

@@ -92,6 +92,44 @@ struct AccountsSettingsViewModelTests {
         #expect(accounts.fixCommands.isEmpty)
     }
 
+    /// v0.3.1: Enterprise Managed User accounts are listed with their scopes and fix commands.
+    @Test func managedUserAccountsAreListed() async throws {
+        let harness = try await Self.ready()
+        harness.stubAuthStatus(TestFixtures.authStatusManagedUsers)
+        let accounts = AccountsSettingsViewModel(app: harness.app)
+        await accounts.load()
+        #expect(accounts.error == nil)
+        #expect(Set(accounts.accounts.map(\.account.login)) == ["user1_acme", "user1-e_acme"])
+        #expect(accounts.accounts.allSatisfy { $0.scopesTitle == "OK" })
+        #expect(accounts.unusableAccounts.isEmpty)
+        #expect(accounts.tokenVariables.isEmpty)
+    }
+
+    /// v0.3.1: the token-variable note and the accounts FX Vault cannot use.
+    @Test func tokenVariableNoteAndUnusableAccounts() async throws {
+        let harness = try await Self.ready()
+        harness.stubShellProbe(TestFixtures.shellProbeOutput(ghPath: nil, variables: ["GITHUB_TOKEN", "GH_CONFIG_DIR"]))
+        harness.stubAuthStatus("""
+        {"hosts":{"github.com":[
+         {"state":"success","active":true,"host":"github.com","login":"user1_acme","tokenSource":"keyring","scopes":"repo, read:org"},
+         {"state":"success","active":false,"host":"github.com","login":"user3.acme","tokenSource":"keyring"}
+        ]}}
+        """)
+        await harness.app.refreshGHStatus(refreshingShell: true)
+        let accounts = AccountsSettingsViewModel(app: harness.app)
+        await accounts.load()
+        #expect(accounts.tokenVariables == [.githubToken])
+        #expect(accounts.accounts.map(\.account.login) == ["user1_acme"])
+        #expect(accounts.unusableAccounts == [
+            GHUnusableAccountModel(displayLogin: "user3.acme", violation: .invalidCharacter, isActive: false),
+        ])
+        accounts.copy(GHSetupViewModel.environmentLoginCommand)
+        #expect(harness.pasteboardString == "env -u GH_TOKEN -u GITHUB_TOKEN gh auth login")
+
+        harness.app.lock(trigger: .manual)
+        #expect(accounts.unusableAccounts.isEmpty)
+    }
+
     @Test func missingGHIsReported() async throws {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: nil)
         harness.preferences.ghPathOverride = harness.sandbox.appendingPathComponent("absent/gh").path

@@ -1,3 +1,4 @@
+import GitHubKit
 import SwiftUI
 import VaultData
 
@@ -54,6 +55,10 @@ private struct AccountsSettingsContent: View {
                         InlineErrorView(error: error)
                     }
                 }
+                if !viewModel.tokenVariables.isEmpty {
+                    HairlineDivider()
+                    TokenVariableNote(variables: viewModel.tokenVariables) { viewModel.copy($0) }
+                }
             }
             if viewModel.accounts.isEmpty, !viewModel.isLoading {
                 PreferencesSection(String(localized: "settings.accounts.section", defaultValue: "Accounts")) {
@@ -71,6 +76,9 @@ private struct AccountsSettingsContent: View {
             ForEach(viewModel.accounts) { account in
                 AccountSection(account: account, viewModel: viewModel)
             }
+            if !viewModel.unusableAccounts.isEmpty {
+                UnusableAccountsSection(accounts: viewModel.unusableAccounts)
+            }
             if let copied = viewModel.copiedCommand {
                 Text(String(localized: "settings.accounts.copied", defaultValue: "Copied \(copied). Run it in Terminal, then Re-check."))
                     .fxTextStyle(.caption)
@@ -80,6 +88,62 @@ private struct AccountsSettingsContent: View {
         }
         .task {
             await viewModel.load()
+        }
+    }
+}
+
+/// The gentle note when the user's shell exports `GH_TOKEN` or `GITHUB_TOKEN` (v0.3.1): gh in
+/// Terminal uses that token, FX Vault only the accounts gh stores.
+private struct TokenVariableNote: View {
+    let variables: [ShellVariableName]
+    let onCopy: (String) -> Void
+
+    var body: some View {
+        PreferencesBlock {
+            Label {
+                Text(String(
+                    localized: "settings.accounts.tokenVariable.note",
+                    defaultValue: "Your shell sets \(variables.localizedList). gh in Terminal uses that token instead of the accounts listed here; FX Vault ignores it and uses only the accounts gh stores. To store one, run:"
+                ))
+                .fxTextStyle(.callout)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(Theme.Colors.mutedText)
+            }
+            CommandRow(command: GHSetupViewModel.environmentLoginCommand, onCopy: onCopy)
+        }
+    }
+}
+
+/// The accounts gh lists that FX Vault cannot use, each with the reason (v0.3.1).
+private struct UnusableAccountsSection: View {
+    let accounts: [GHUnusableAccountModel]
+
+    var body: some View {
+        PreferencesSection(
+            String(localized: "settings.accounts.unusable.section", defaultValue: "Accounts FX Vault can't use"),
+            footnote: String(
+                localized: "settings.accounts.unusable.footnote",
+                defaultValue: "gh lists these accounts, but FX Vault does not accept their names, so their repositories are not shown."
+            )
+        ) {
+            ForEach(accounts.indices, id: \.self) { index in
+                if index > 0 {
+                    HairlineDivider()
+                }
+                PreferencesBlock(spacing: Theme.Spacing.xxSmall) {
+                    Text(verbatim: accounts[index].displayTitle)
+                        .fxTextStyle(.mono)
+                        .foregroundStyle(Theme.Colors.ink)
+                        .textSelection(.enabled)
+                    Text(accounts[index].reasonText)
+                        .fxTextStyle(.caption)
+                        .foregroundStyle(Theme.Colors.mutedText)
+                }
+                .accessibilityElement(children: .combine)
+            }
         }
     }
 }

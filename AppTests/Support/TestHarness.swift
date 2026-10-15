@@ -131,7 +131,14 @@ final class TestHarness {
     /// - Parameters:
     ///   - ghStatus: the fixed gh status, or nil to use the live probe over the scripted gh
     ///     (call ``installFakeGH(version:)`` first).
-    init(vault: TestVaultState = .none, signed: Bool = true, ghStatus: GHStatusModel? = .unknown) async throws {
+    ///   - fileInspector: what the gh trust check reads; a `FakeGHFileInspector` models a gh that
+    ///     another user owns. Nil uses the real file system (the sandboxed fake gh).
+    init(
+        vault: TestVaultState = .none,
+        signed: Bool = true,
+        ghStatus: GHStatusModel? = .unknown,
+        fileInspector: (any GHFileInspecting)? = nil
+    ) async throws {
         clock = ManualClock()
         biometrics = FakeBiometricKeyStore()
         capabilities = FakeBuildCapabilities()
@@ -144,7 +151,13 @@ final class TestHarness {
         try FileManager.default.createDirectory(at: sandbox, withIntermediateDirectories: true)
         pasteboard = NSPasteboard(name: NSPasteboard.Name("io.fractalx.fxvault.tests.\(UUID().uuidString)"))
         let session = try VaultSession.inMemory()
-        let data = VaultDataComponents.makeOffline(session: session, runner: runner, clock: clock, sandbox: sandbox)
+        let data = VaultDataComponents.makeOffline(
+            session: session,
+            runner: runner,
+            clock: clock,
+            sandbox: sandbox,
+            fileInspector: fileInspector ?? SystemGHFileInspector()
+        )
         let github = data.github
         let manager = try VaultManager(
             session: session,
@@ -174,7 +187,7 @@ final class TestHarness {
         let probe: any GHStatusProbing = if let ghStatus {
             FixedGHStatusProbe(ghStatus)
         } else {
-            GitHubEnvironmentStatusProbe(github: github, overridePath: { preferences.ghPathOverride })
+            GitHubEnvironmentStatusProbe(github: github, preferences: preferences)
         }
         container = AppContainer(
             mode: .test,
@@ -236,14 +249,25 @@ final class TestHarness {
         return gh.path
     }
 
-    /// Scripts `gh auth status --json hosts` (every call).
+    /// Scripts `gh auth status --json hosts` (every call; replaces an earlier script).
     func stubAuthStatus(_ json: String) {
-        runner.stub(argumentsPrefix: ["auth", "status"], with: .success(json))
+        runner.replaceStub(argumentsPrefix: ["auth", "status"], with: .success(json))
     }
 
     /// Scripts `gh auth token` (every call).
     func stubToken() {
         runner.stub(argumentsPrefix: ["auth", "token"], with: .success(TestFixtures.token + "\n"))
+    }
+
+    /// Scripts the interactive shell probe (`/bin/zsh -i -l -c …`, every call; replaces an
+    /// earlier script).
+    func stubShellProbe(_ output: String) {
+        runner.replaceStub(argumentsPrefix: ["-i", "-l", "-c"], with: .success(output))
+    }
+
+    /// How many times the shell probe ran.
+    var shellProbeCount: Int {
+        runner.invocations.filter { $0.executablePath == VaultDataComponents.OfflineSandbox.shellPath }.count
     }
 
     /// Stages a repository with items in the vault (no gh needed; the vault must be unlocked).
@@ -295,6 +319,28 @@ enum TestFixtures {
     static let authStatusNoAccounts = """
     {"hosts":{}}
     """
+
+    /// Two Enterprise Managed User accounts (`handle_shortcode`, synthetic), both in the keyring:
+    /// the v0.3.1 root cause, which 0.3.0 dropped as invalid logins.
+    static let authStatusManagedUsers = """
+    {"hosts":{"github.com":[
+     {"state":"success","active":true,"host":"github.com","login":"user1_acme","tokenSource":"keyring","scopes":"admin:public_key, gist, read:org, repo","gitProtocol":"https"},
+     {"state":"success","active":false,"host":"github.com","login":"user1-e_acme","tokenSource":"keyring","scopes":"admin:public_key, gist, read:org, repo","gitProtocol":"https"}
+    ]}}
+    """
+
+    /// What the shell probe prints: `ghPath` from `command -v gh`, the variables the shell sets
+    /// (names), and `GH_CONFIG_DIR` with `configDir` as its value.
+    static func shellProbeOutput(ghPath: String?, variables: [String] = [], configDir: String? = nil) -> String {
+        var entries = ["__FXV_B__PATH=/opt/homebrew/bin:/usr/bin:/bin\n"]
+        if let configDir {
+            entries.append("GH_CONFIG_DIR=\(configDir)\n")
+        }
+        entries.append("FXV_GH=\(ghPath ?? "")\n")
+        entries += variables.map { "FXV_SET=\($0)" }
+        entries.append("__FXV_E__")
+        return entries.joined(separator: "\0")
+    }
 
     /// One `gh repo view` / `gh repo list` entry (`--json` fields FX Vault requests).
     static func repoJSON(owner: String, name: String, permission: String = "WRITE") -> String {

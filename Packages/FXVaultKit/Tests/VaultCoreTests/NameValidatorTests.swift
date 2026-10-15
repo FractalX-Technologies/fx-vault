@@ -66,10 +66,37 @@ struct OwnerLoginValidatorTests {
         #expect(try OwnerLoginValidator.validate(login) == login)
     }
 
+    /// Enterprise Managed User logins: `<normalized handle>_<short code>` (synthetic examples in
+    /// the documented shapes, including digit-only handles and the `-e` style handle suffix),
+    /// and the setup user `<short code>_admin`.
+    @Test(arguments: [
+        "octocat_octo", "mona-cat_acme", "name-e_shortcode", "user1_acme", "user1-e_acme",
+        "1234567_acme", "1234567-e_acme", "acme_admin", "USER1_ACME",
+    ])
+    func acceptsEnterpriseManagedUserLogins(login: String) throws {
+        #expect(try OwnerLoginValidator.validate(login) == login)
+        #expect(PathSegmentValidator.isValid(login), "valid logins stay safe path segments")
+    }
+
+    @Test func managedUserLoginsShareTheThirtyNineCharacterLimit() {
+        let shortCode = "_acme"
+        let longest = String(repeating: "a", count: Limits.maxOwnerLoginLength - shortCode.count) + shortCode
+        #expect(longest.count == Limits.maxOwnerLoginLength)
+        #expect(OwnerLoginValidator.isValid(longest))
+        #expect(OwnerLoginValidator.violation(in: "a" + longest) == .tooLong(maxLength: Limits.maxOwnerLoginLength))
+    }
+
+    @Test func foldKeysOfManagedUserLoginsAreCaseInsensitive() {
+        #expect(OwnerLoginValidator.foldKey("User1-E_Acme") == OwnerLoginValidator.foldKey("user1-e_ACME"))
+        #expect(OwnerLoginValidator.foldKey("User1_Acme") != OwnerLoginValidator.foldKey("user1-acme"))
+    }
+
     @Test(arguments: [
         ("", NameRule.empty),
         ("-octocat", .invalidFirstCharacter),
-        ("octo_cat", .invalidCharacter),
+        ("_octocat", .invalidFirstCharacter),
+        ("_", .invalidFirstCharacter),
+        ("octo/cat_acme", .invalidCharacter),
         ("octo.cat", .invalidCharacter),
         ("octo cat", .invalidCharacter),
         ("ñandú", .invalidCharacter),

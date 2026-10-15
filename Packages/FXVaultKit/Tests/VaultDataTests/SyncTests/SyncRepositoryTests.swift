@@ -73,6 +73,38 @@ struct SyncRepositoryTests {
         #expect(report.entries.allSatisfy { $0.itemName.map { !$0.contains("example") } ?? true })
     }
 
+    /// v0.3.1: a personal repository of an Enterprise Managed User (`handle_shortcode`,
+    /// synthetic) imports and syncs; every gh call names it `user1_acme/api` and the token is
+    /// fetched for that login.
+    @Test func managedUserRepositoryImportsAndSyncs() async throws {
+        let owner = "user1_acme"
+        let github = GitHubSimulator(owner: owner, name: SyncFixture.repoName)
+        github.addSecret("FXV_API_TOKEN")
+        let harness = try await SyncHarness.make(github: github)
+        let imported = try await harness.catalog.importRepository(
+            try GHRepoRef(owner: owner, name: SyncFixture.repoName),
+            accountLogin: owner
+        ).repository
+        #expect(imported.ownerLogin == owner)
+        #expect(imported.accountLogin == owner)
+        #expect(try harness.store.fetchItemStates(repositoryID: imported.id).map(\.name) == ["FXV_API_TOKEN"])
+
+        try harness.config.addItem(
+            repositoryID: imported.id,
+            scope: .repository,
+            kind: .secret,
+            name: "FXV_NEW_SECRET",
+            value: SecretBytes(utf8: "fixture-secret-emu")
+        )
+        let outcome = try await harness.runSync()
+        #expect(outcome.result.stopReason == nil)
+        #expect(outcome.result.failed.isEmpty)
+        #expect(github.secret("FXV_NEW_SECRET")?.value == "fixture-secret-emu")
+        #expect(github.writes.contains { $0.starts(with: ["secret", "set", "FXV_NEW_SECRET"]) && $0.contains("--repo=user1_acme/api") })
+        #expect(github.calls.contains(["auth", "token", "--hostname", "github.com", "--user=user1_acme"]))
+        #expect(try harness.sync.pendingSummary().pendingCount == 0)
+    }
+
     @Test func declinedDeletionStaysPending() async throws {
         let harness = try await importedHarness()
         let token = try #require(try harness.item("FXV_API_TOKEN", kind: .secret))

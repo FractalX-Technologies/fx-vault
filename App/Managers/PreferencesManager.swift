@@ -1,4 +1,6 @@
+import Darwin
 import Foundation
+import GitHubKit
 import Observation
 import VaultCore
 
@@ -93,6 +95,8 @@ final class PreferencesManager {
         static let autoLockMinutes = "preferences.autoLockMinutes"
         static let cloneFolderPath = "preferences.cloneFolderPath"
         static let ghPathOverride = "preferences.ghPathOverride"
+        static let trustedGHPath = "preferences.trustedGHPath"
+        static let trustedGHOwnerUID = "preferences.trustedGHOwnerUID"
         static let recoveryKeyConfirmationPending = "preferences.recoveryKeyConfirmationPending"
         static let touchIDOfferAnswered = "preferences.touchIDOfferAnswered"
         static let nearbyDisplayName = "preferences.nearbyDisplayName"
@@ -108,6 +112,10 @@ final class PreferencesManager {
         autoLockMinutes = Self.validatedAutoLockMinutes(store.integer(forKey: Key.autoLockMinutes))
         cloneFolderPath = store.string(forKey: Key.cloneFolderPath)
         ghPathOverride = Self.normalizedPath(store.string(forKey: Key.ghPathOverride))
+        trustedGHBinary = Self.validatedTrustedBinary(
+            path: store.string(forKey: Key.trustedGHPath),
+            ownerUID: store.integer(forKey: Key.trustedGHOwnerUID)
+        )
         isRecoveryKeyConfirmationPending = store.bool(forKey: Key.recoveryKeyConfirmationPending)
         hasAnsweredTouchIDOffer = store.bool(forKey: Key.touchIDOfferAnswered)
         nearbyDisplayName = store.string(forKey: Key.nearbyDisplayName)
@@ -156,6 +164,27 @@ final class PreferencesManager {
         }
     }
 
+    /// The gh the user chose to trust although another (non-root) user owns it (§5.10 consented
+    /// trust, v0.3.1): its path and that owner's uid, in UserDefaults. `GHLocator` accepts that
+    /// exact path only while the owner is unchanged and nothing is writable by others.
+    /// Preferences › Advanced lists it with Revoke. Holds no secret.
+    private(set) var trustedGHBinary: GHTrustedBinaryModel?
+
+    /// "Trust This gh" on the setup screen.
+    func trustGHBinary(_ binary: GHTrustedBinaryModel) {
+        guard let valid = Self.validatedTrustedBinary(path: binary.path, ownerUID: Int(binary.ownerUID)) else { return }
+        trustedGHBinary = valid
+        store.set(valid.path, forKey: Key.trustedGHPath)
+        store.set(Int(valid.ownerUID), forKey: Key.trustedGHOwnerUID)
+    }
+
+    /// Revoke (Preferences › Advanced).
+    func revokeTrustedGHBinary() {
+        trustedGHBinary = nil
+        store.set(nil as String?, forKey: Key.trustedGHPath)
+        store.set(Self.noOwnerUID, forKey: Key.trustedGHOwnerUID)
+    }
+
     /// True after a vault was created and its recovery key was not yet confirmed (for example,
     /// the vault locked during onboarding). Cleared by a confirmation or a new recovery key.
     var isRecoveryKeyConfirmationPending: Bool {
@@ -195,6 +224,19 @@ final class PreferencesManager {
     static func validatedAutoLockMinutes(_ minutes: Int?) -> Int {
         guard let minutes, autoLockOptions.contains(minutes) else { return Timeouts.autoLockDefaultMinutes }
         return minutes
+    }
+
+    /// A uid no trusted gh can have (root never needs consent): written on revoke.
+    private static let noOwnerUID = 0
+
+    /// An absolute path and a uid that is neither root nor the current user (they never need
+    /// consent); anything else, for example a hand-edited defaults file, is ignored.
+    static func validatedTrustedBinary(path: String?, ownerUID: Int?) -> GHTrustedBinaryModel? {
+        guard let path = normalizedPath(path), path.hasPrefix("/"),
+              let ownerUID, let uid = UInt32(exactly: ownerUID),
+              Int(uid) != noOwnerUID, uid != getuid()
+        else { return nil }
+        return GHTrustedBinaryModel(path: path, ownerUID: uid)
     }
 
     private static func normalizedName(_ name: String?) -> String? {

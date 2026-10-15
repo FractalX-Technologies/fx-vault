@@ -109,9 +109,10 @@ To check Touch ID support on an installed copy, run:
 "/Applications/FX Vault.app/Contents/MacOS/FXVault" --diagnose
 ```
 
-It prints a JSON report (version, signing, keychain access group, Touch ID availability and a
-keychain probe that adds and deletes a throwaway item) and exits without opening a window. It
-never reads your vault or a keychain item and prints no secret.
+It prints a JSON report (version, signing, keychain access group, Touch ID availability, a
+keychain probe that adds and deletes a throwaway item, and since 0.3.1 the GitHub CLI it finds;
+see [Troubleshooting](#troubleshooting-fx-vault-doesnt-see-my-gh-login)) and exits without
+opening a window. It never reads your vault or a keychain item and prints no secret.
 
 ### Nearby without internet
 
@@ -161,6 +162,65 @@ xattr -dr com.apple.quarantine "/Applications/FX Vault.app"   # or wherever you 
 
 Ad-hoc builds cannot use Touch ID (it needs the signed release's keychain entitlement); they
 use the master password instead.
+
+## Troubleshooting: FX Vault doesn't see my gh login
+
+Terminal says you are logged in, but FX Vault shows "Log in to GitHub", "Update the GitHub
+CLI" or "The GitHub CLI is not trusted". FX Vault runs the same `gh` your shell runs, without
+your Terminal's environment, and only uses the accounts gh **stores**. First update to FX Vault
+0.3.1 or later, then work through these checks.
+
+1. **Enterprise Managed User accounts (logins with an underscore).** EMU logins look like
+   `mona-cat_acme` (your handle, an underscore, your enterprise's short code). FX Vault 0.3.0
+   and earlier ignored them and asked you to log in although gh was logged in; 0.3.1 accepts
+   them. If an account still cannot be used, the setup screen and **Settings › Accounts** name it
+   with the reason.
+
+2. **`GH_TOKEN` or `GITHUB_TOKEN` in your shell.** If `~/.zshrc` (or another start-up file)
+   exports one of them, gh in Terminal uses that token and `gh auth login` refuses to save an
+   account. FX Vault never passes these variables to gh, so it sees no account. Check where
+   Terminal's token comes from:
+
+   ```sh
+   gh auth status          # "(GH_TOKEN)" or "(GITHUB_TOKEN)" after the login means the variable
+   ```
+
+   Store the account in gh without the variables, then choose **Check Again** in FX Vault (you
+   can keep the variable in your shell):
+
+   ```sh
+   env -u GH_TOKEN -u GITHUB_TOKEN gh auth login
+   ```
+
+   `gh auth status` should then list the account with `(keyring)`.
+
+3. **A different gh, or Homebrew owned by another user.** FX Vault uses the gh your shell finds
+   (it starts your shell the way Terminal does, so `~/.zshrc` counts) and never falls back to
+   another one behind it. Compare:
+
+   ```sh
+   which -a gh                     # every gh on your PATH, the first one is Terminal's
+   ls -l /opt/homebrew/bin/gh      # who owns Homebrew's gh (/usr/local/bin/gh on Intel Macs)
+   whoami                          # who you are
+   ```
+
+   If the owner is another user (another administrator installed Homebrew), FX Vault explains
+   what that means and offers **Trust This gh**: anyone who can sign in as that user could
+   replace gh and see the values FX Vault sends to it. Trust it only if you trust that user; you
+   can revoke it in **Settings › Advanced**. A gh that other users can write to is never trusted.
+   You can also point **Settings › Advanced › gh path override** at a gh you own.
+
+**Diagnostics.** **Copy Diagnostics** on the GitHub CLI setup screen copies a plain-text report:
+which gh FX Vault found and why, your shell and whether the probe ran interactively, the
+**names** of `GH_TOKEN`, `GITHUB_TOKEN`, `GH_CONFIG_DIR`, `XDG_CONFIG_HOME` and `GH_HOST` if your
+shell sets them, and each account's login, state, token source and scopes. The same report is the
+`gh` section of:
+
+```sh
+"/Applications/FX Vault.app/Contents/MacOS/FXVault" --diagnose
+```
+
+Neither contains a token, a secret, or the value of an environment variable.
 
 ## Security model
 

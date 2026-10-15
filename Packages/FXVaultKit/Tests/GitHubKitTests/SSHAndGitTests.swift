@@ -132,6 +132,15 @@ struct SSHAliasResolverTests {
         #expect(Resolver.parseLogin(fromGreeting: "Hi -evil! You've successfully authenticated") == nil)
         #expect(Resolver.parseHostName(fromSSHConfigDump: "user git\nport 22\n") == nil)
     }
+
+    /// Enterprise Managed User logins greet with their underscore (synthetic logins, v0.3.1).
+    @Test(arguments: ["user1_acme", "user1-e_acme", "1234567_acme"])
+    func managedUserGreetingsNameTheLogin(login: String) {
+        let greeting = "Hi \(login)! You've successfully authenticated, but GitHub does not provide shell access."
+        #expect(SSHAliasResolver.parseLogin(fromGreeting: greeting) == login)
+        #expect(SSHAliasResolver.classifyVerification(exitCode: 1, stderr: greeting, didTimeOut: false) == .authenticated(login: login))
+        #expect(SSHAliasResolver.parseLogin(fromGreeting: "Hi _\(login)! You've successfully authenticated") == nil)
+    }
 }
 
 @Suite("GitService")

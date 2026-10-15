@@ -94,7 +94,9 @@ even when it is its environment's only item, until the user changes the checks.
 `SharePackageValidator` (modes `.manifest` and `.payload`) rejects, among others: a schema or
 version other than the above (§1.1); a missing policy in a v1 document, in an `environment`-scope
 document or on an environment without items (`branchPolicyRequired`); producer or sender fields that are not already sanitized; a host
-other than `github.com`; invalid owner or repository names (`.`, `..`, `*.git`); a `githubRepoId`
+other than `github.com`; invalid owner or repository names (owners: `OwnerLoginValidator`, ASCII
+letters, digits, `-` and, since v0.3.1, `_` for Enterprise Managed User owners such as
+`mona-cat_acme`, never first, at most 39 characters; repositories: `.`, `..`, `*.git`); a `githubRepoId`
 over 128 characters; environment names that fail `EnvironmentNameValidator` (NFC, no C0/C1,
 bidi, zero-width or edge whitespace, no `/`, no dot segments); item names that are not already
 uppercase GitHub names; duplicate environments, items (per kind and level) or entry ids; more

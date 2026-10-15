@@ -1,3 +1,4 @@
+import GitHubKit
 import SwiftUI
 import VaultCore
 
@@ -40,6 +41,27 @@ struct GHStatusRow: View {
         return attributed
     }
 
+    /// The untrusted line for a trust-check failure (§5.10).
+    private static func untrustedText(path: String, reason: GHBinaryRejection?) -> String {
+        switch reason {
+        case .untrustedOwner:
+            String(
+                localized: "gh.status.untrusted.owners",
+                defaultValue: "The GitHub CLI at \(path) belongs to other users, so FX Vault does not run it."
+            )
+        case .notExecutable, .notRegularFile:
+            String(
+                localized: "gh.status.untrusted.notExecutable",
+                defaultValue: "\(path) is not an executable file, so FX Vault cannot run it."
+            )
+        case .writableFile, .writableDirectory, .notFound, nil:
+            String(
+                localized: "gh.status.untrusted",
+                defaultValue: "The GitHub CLI at \(path) is writable by other users, so FX Vault does not run it."
+            )
+        }
+    }
+
     private static let installCommand = "brew install gh"
     private static let upgradeCommand = "brew upgrade gh"
     private static let loginCommand = "gh auth login"
@@ -67,7 +89,7 @@ struct GHStatusRow: View {
                 ),
                 [Self.installCommand]
             )
-        case .outdated(let found, let required):
+        case .outdated(let found, let required, _):
             (
                 "exclamationmark.triangle.fill",
                 Theme.Colors.warning,
@@ -77,13 +99,15 @@ struct GHStatusRow: View {
                 ),
                 [Self.upgradeCommand]
             )
-        case .untrusted(let path):
+        case .untrusted(let path, let reason):
+            ("exclamationmark.shield.fill", Theme.Colors.danger, Self.untrustedText(path: path, reason: reason), [path])
+        case .foreignOwner(let path, let owner, _):
             (
-                "exclamationmark.shield.fill",
-                Theme.Colors.danger,
+                "person.crop.circle.badge.questionmark",
+                Theme.Colors.warning,
                 String(
-                    localized: "gh.status.untrusted",
-                    defaultValue: "The GitHub CLI at \(path) is writable by other users, so FX Vault does not run it."
+                    localized: "gh.status.foreignOwner",
+                    defaultValue: "The GitHub CLI at \(path) belongs to the user \(owner.displayName). FX Vault runs it only after you trust it."
                 ),
                 [path]
             )
@@ -96,6 +120,26 @@ struct GHStatusRow: View {
                     defaultValue: "GitHub CLI \(version) has no account logged in. Run: gh auth login"
                 ),
                 [Self.loginCommand]
+            )
+        case .environmentToken(let version, _, let variables):
+            (
+                "person.crop.circle.badge.exclamationmark",
+                Theme.Colors.warning,
+                String(
+                    localized: "gh.status.environmentToken",
+                    defaultValue: "GitHub CLI \(version) has no stored account. Your shell's \(variables.localizedList) works only in Terminal."
+                ),
+                variables.map(\.rawValue)
+            )
+        case .unusableAccounts(let version, _, _):
+            (
+                "person.crop.circle.badge.exclamationmark",
+                Theme.Colors.warning,
+                String(
+                    localized: "gh.status.unusableAccounts",
+                    defaultValue: "GitHub CLI \(version) is logged in with accounts FX Vault can't use."
+                ),
+                []
             )
         case .failed:
             (

@@ -243,6 +243,55 @@ struct GHAuthServiceTests {
         let accounts = try await auth(runner).accounts()
         #expect(accounts.count == 6)
         #expect(accounts.first(where: \.isActive)?.login == "user-a")
+        #expect(accounts.allSatisfy { $0.tokenSource == "keyring" })
+    }
+
+    /// The v0.3.1 root cause: two Enterprise Managed User accounts (`handle_shortcode`, both in
+    /// the keyring) were dropped, so FX Vault showed "Log in to GitHub". Synthetic logins.
+    @Test func managedUserAccountsAreListed() async throws {
+        let runner = FakeCommandRunner()
+        runner.stub(argumentsPrefix: ["auth", "status"], with: .success(try Fixture.string("gh/auth-status-emu.json")))
+        let listing = try await auth(runner).listing()
+        #expect(listing.accounts.map(\.login) == ["user1_acme", "user1-e_acme"])
+        #expect(listing.unusable.isEmpty)
+        #expect(listing.accounts.allSatisfy { $0.scopes == .ok && $0.state == .ok && $0.tokenSource == "keyring" })
+        #expect(listing.accounts.first?.isActive == true)
+        #expect(listing.accounts.first?.scopeList == ["admin:public_key", "gist", "read:org", "repo"])
+        #expect(listing.accounts.map(\.id) == ["user1_acme", "user1-e_acme"])
+    }
+
+    /// An account FX Vault cannot use is reported with the rule it broke, never dropped silently.
+    @Test func unusableAccountsAreReportedNotDropped() async throws {
+        let runner = FakeCommandRunner()
+        let json = #"""
+        {"hosts":{"github.com":[
+         {"state":"success","active":false,"host":"github.com","login":"user1_acme","tokenSource":"keyring","scopes":"repo, read:org"},
+         {"state":"success","active":true,"host":"github.com","login":"_user2","tokenSource":"keyring"},
+         {"state":"success","active":false,"host":"github.com","login":"user3.acme","tokenSource":"keyring"},
+         {"state":"success","active":false,"host":"github.com","login":"user4‮emca","tokenSource":"keyring"}
+        ]}}
+        """#
+        runner.stub(argumentsPrefix: ["auth", "status"], with: .success(json))
+        let service = auth(runner)
+        let listing = try await service.listing()
+        #expect(listing.accounts.map(\.login) == ["user1_acme"])
+        #expect(listing.unusable == [
+            GHUnusableAccountModel(displayLogin: "_user2", violation: .invalidFirstCharacter, isActive: true),
+            GHUnusableAccountModel(displayLogin: "user3.acme", violation: .invalidCharacter, isActive: false),
+            GHUnusableAccountModel(displayLogin: "user4emca", violation: .bidiCharacter, isActive: false),
+        ], "the display login drops the bidi override")
+        #expect(try await service.accounts().map(\.login) == ["user1_acme"])
+    }
+
+    @Test func managedUserTokensAreFetchedWithTheirLogin() async throws {
+        let runner = FakeCommandRunner()
+        runner.stub(argumentsPrefix: ["auth", "token"], with: .success("\(TestValues.token)\n"))
+        let service = auth(runner)
+        let token = try await service.token(for: "user1-e_acme")
+        defer { token.wipe() }
+        #expect(token.utf8String() == TestValues.token)
+        #expect(service.tokenCache.token(for: "USER1-E_ACME")?.utf8String() == TestValues.token, "cache keys fold case")
+        #expect(runner.invocations.last?.arguments == ["auth", "token", "--hostname", "github.com", "--user=user1-e_acme"])
     }
 
     @Test func tokensAreFetchedOnceAndCached() async throws {

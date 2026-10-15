@@ -160,7 +160,8 @@ names.
    `"keychainAccessGroup": "QYKC498D5D.io.fractalx.fxvault"` and a probe with `"add": 0`, <!-- gitleaks:allow (public team-prefixed access group, not a key) -->
    `"delete": 0` and `"passed": true`. Any other probe status means Touch ID items cannot be
    stored by this build: stop and check the profile and entitlements before announcing the
-   release (manual check 29).
+   release (manual check 29). Its `gh` section must show `"result": "ready"`, the gh Terminal
+   runs as `chosenPath`, and your accounts (manual check 40).
 
    Then work through the [manual checklist](#manual-checklist-125).
 
@@ -239,6 +240,7 @@ screenshot as evidence, saved with the release notes or in the Review section of
 | 37 | Nearby Chat ends and wipes | During a chat, on one Mac at a time: close the chat window; End Chat; ⌃⌘L; sleep (`pmset sleepnow`); screen lock (⌃⌘Q); walk out of range (or turn Wi-Fi off); leave the chat idle for 10 minutes; close the main window | Every case ends the chat on both Macs with "Conversation ended. Nothing was saved." and an empty transcript; reopening the window starts at the people list; the window is not restored after relaunch; the Window menu lists Nearby Chat |
 | 38 | Nearby Chat availability and permissions | Turn Wi-Fi off with the chat window open; turn it on without joining a network; from a fresh macOS user, open Nearby Chat first (before any share) and deny Local Network once, then allow it in System Settings | Wi-Fi off: "Turn on Wi-Fi to chat nearby"; Wi-Fi on without a network: available; no internet never blocks it. The Local Network prompt shows the text that mentions chat; denial shows the System Settings guidance and Try Again works after allowing |
 | 39 | Nearby with the firewall | On the receiving Mac turn on the macOS firewall, then "Block all incoming connections"; try Receive Nearby and being listed in Nearby Chat | With the firewall on, FX Vault can receive (allowed when the firewall asks, or automatically for the signed app); with "Block all incoming connections" the other Mac cannot connect and reports a failed connection, as the README says |
+| 40 | gh login detection (v0.3.1) | (a) An Enterprise Managed User account (`name_code`) logged in to gh; (b) `export GH_TOKEN=…` in `~/.zshrc` with no stored account, then `env -u GH_TOKEN -u GITHUB_TOKEN gh auth login`; (c) a test user whose Homebrew belongs to another administrator; (d) `GH_CONFIG_DIR` set only in `~/.zshrc`. Each time: Copy Diagnostics and `--diagnose` | (a) Ready, the account in Settings › Accounts; (b) the setup screen explains `GH_TOKEN`, Check Again is ready after the login, Settings › Accounts shows the note; (c) the owner is named, Trust This gh works, Settings › Advanced lists it and Revoke asks again; (d) the accounts of that config dir appear. The reports name the gh, shell, probe mode and variables, and contain no token or variable value |
 
 ## CI (`release.yml`)
 

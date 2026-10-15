@@ -1,8 +1,11 @@
 import Foundation
+import GitHubKit
 import Security
 
-/// What `FX Vault --diagnose` prints (v0.1.1): build facts, Touch ID availability and a keychain
-/// probe. It never holds a secret: the probe value is random and never read back.
+/// What `FX Vault --diagnose` prints (v0.1.1): build facts, Touch ID availability, a keychain
+/// probe and, since v0.3.1, the GitHub CLI (`gh`: `GHDiagnosticsModel`). It never holds a secret:
+/// the probe value is random and never read back, and the gh section holds paths, versions,
+/// variable names and account logins only.
 ///
 /// JSON (keys sorted; absent values are `null`, never omitted):
 /// ```json
@@ -10,6 +13,8 @@ import Security
 ///   "biometryAvailable": true,
 ///   "biometryUnavailableReason": null,
 ///   "build": "2",
+///   "gh": { "accounts": [...], "candidates": [...], "chosenPath": "/opt/homebrew/bin/gh",
+///           "result": "ready", "shell": {...}, ... },
 ///   "isSignedWithAccessGroup": true,
 ///   "keychainAccessGroup": "<team id>.io.fractalx.fxvault",
 ///   "probe": {
@@ -29,6 +34,8 @@ nonisolated struct DiagnosticReportModel: Encodable, Equatable {
     /// `BiometryUnavailableReason.rawValue` (for example `notEnrolled`), or nil when available.
     let biometryUnavailableReason: String?
     let probe: DiagnosticProbeModel
+    /// The GitHub CLI: shell probe, every gh candidate, the accounts gh lists (v0.3.1).
+    let gh: GHDiagnosticsModel
 
     private enum CodingKeys: String, CodingKey {
         case version
@@ -38,6 +45,7 @@ nonisolated struct DiagnosticReportModel: Encodable, Equatable {
         case biometryAvailable
         case biometryUnavailableReason
         case probe
+        case gh
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -49,6 +57,7 @@ nonisolated struct DiagnosticReportModel: Encodable, Equatable {
         try container.encode(biometryAvailable, forKey: .biometryAvailable)
         try container.encode(biometryUnavailableReason, forKey: .biometryUnavailableReason)
         try container.encode(probe, forKey: .probe)
+        try container.encode(gh, forKey: .gh)
     }
 
     /// Pretty-printed JSON with sorted keys and unescaped slashes, plus a trailing newline.

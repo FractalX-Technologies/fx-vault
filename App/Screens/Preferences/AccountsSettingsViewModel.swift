@@ -6,7 +6,9 @@ import VaultData
 
 /// Preferences › Accounts (§10, M2): every gh account with its token state and scopes (OK, or
 /// missing with copyable fix commands, or unknown), the gh path and version, the SSH alias picker
-/// from `~/.ssh/config`, **Test** ("Authenticates as <login>") and **Re-check**.
+/// from `~/.ssh/config`, **Test** ("Authenticates as <login>") and **Re-check**. Since v0.3.1
+/// also the accounts gh lists that FX Vault cannot use (with why), and a note when the user's
+/// shell exports `GH_TOKEN` or `GITHUB_TOKEN`.
 ///
 /// Needs the vault unlocked (the tab shows "Unlock FX Vault…" otherwise); a lock clears it.
 @Observable
@@ -24,6 +26,11 @@ final class AccountsSettingsViewModel: LockObserving {
     private(set) var error: ErrorPresentationModel?
     /// The command copied last (shows "Copied").
     private(set) var copiedCommand: String?
+    /// Accounts gh lists on github.com that FX Vault cannot use, with the reason.
+    private(set) var unusableAccounts: [GHUnusableAccountModel] = []
+    /// The token variables the user's shell exports (names only): gh in Terminal uses them,
+    /// FX Vault never does.
+    private(set) var tokenVariables: [ShellVariableName] = []
 
     @ObservationIgnored private let app: AppViewModel
 
@@ -49,11 +56,20 @@ final class AccountsSettingsViewModel: LockObserving {
         isLoading = true
         defer { isLoading = false }
         error = nil
+        do {
+            tokenVariables = try await github.shellEnvironment().exportedTokenVariables
+        } catch {
+            tokenVariables = []
+        }
         if let current = await github.installation {
             installation = current
         } else {
+            let preferences = app.container.preferences
             do {
-                installation = try await github.detectGH(overridePath: app.container.preferences.ghPathOverride)
+                installation = try await github.detectGH(
+                    overridePath: preferences.ghPathOverride,
+                    trustedBinary: preferences.trustedGHBinary
+                )
             } catch {
                 installation = nil
                 self.error = error.presentation
@@ -65,6 +81,7 @@ final class AccountsSettingsViewModel: LockObserving {
         } catch {
             self.error = error.presentation
         }
+        unusableAccounts = await github.unusableAccounts
         await loadFixCommands()
         sshHosts = github.sshHostEntries()
     }
@@ -142,6 +159,7 @@ final class AccountsSettingsViewModel: LockObserving {
 
     func vaultDidLock() {
         accounts = []
+        unusableAccounts = []
         fixCommands = [:]
         testResults = [:]
         copiedCommand = nil

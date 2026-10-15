@@ -52,7 +52,9 @@ public enum Limits {
     public static let maxEnvironmentNameLength = 255
     /// Longest repository name (GitHub).
     public static let maxRepoNameLength = 100
-    /// Longest GitHub user or organization login.
+    /// Longest GitHub user or organization login on github.com. Enterprise Managed User logins
+    /// (`handle_shortcode`) share it: GitHub counts the underscore and the short code toward the
+    /// 39 characters ("Username considerations for external authentication").
     public static let maxOwnerLoginLength = 39
     /// Longest deployment branch or tag pattern, in Unicode scalars.
     public static let maxBranchPatternLength = 255

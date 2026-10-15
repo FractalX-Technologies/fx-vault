@@ -45,6 +45,8 @@ struct VaultDataComponents {
     ///   - workingDirectory: the empty working directory of child processes (§5.10).
     ///   - shellPath: the login shell to probe; nil reads it from the password database.
     ///   - sshConfigParser: nil reads `~/.ssh/config` of `identity`.
+    ///   - fileInspector: what the gh trust check reads (a `FakeGHFileInspector` in tests that
+    ///     model a gh owned by another user).
     static func make(
         session: VaultSession,
         runner: any CommandRunning,
@@ -53,6 +55,7 @@ struct VaultDataComponents {
         clock: any VaultClock,
         shellPath: String? = nil,
         sshConfigParser: SSHConfigParser? = nil,
+        fileInspector: any GHFileInspecting = SystemGHFileInspector(),
         deriver: any KeyDeriving = Argon2idSharingDeriver(),
         writePolicy: WriteCollaboratorPolicy = .default
     ) -> VaultDataComponents {
@@ -64,7 +67,8 @@ struct VaultDataComponents {
             clock: clock,
             tokenCache: GHTokenCache(),
             shellPath: shellPath,
-            sshConfigParser: sshConfigParser
+            sshConfigParser: sshConfigParser,
+            fileInspector: fileInspector
         )
         let gitProvider = GitServiceProvider(
             github: github,
@@ -109,7 +113,8 @@ struct VaultDataComponents {
         runner: FakeCommandRunner = FakeCommandRunner(),
         clock: any VaultClock,
         sandbox: URL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(OfflineSandbox.directoryName, isDirectory: true)
+            .appendingPathComponent(OfflineSandbox.directoryName, isDirectory: true),
+        fileInspector: any GHFileInspecting = SystemGHFileInspector()
     ) -> VaultDataComponents {
         let home = sandbox.appendingPathComponent(OfflineSandbox.homeName, isDirectory: true)
         let identity = ProcessIdentityModel(
@@ -127,7 +132,8 @@ struct VaultDataComponents {
             sshConfigParser: SSHConfigParser(
                 sshDirectory: home.appendingPathComponent(OfflineSandbox.sshDirectoryName, isDirectory: true),
                 homeDirectory: home
-            )
+            ),
+            fileInspector: fileInspector
         )
     }
 

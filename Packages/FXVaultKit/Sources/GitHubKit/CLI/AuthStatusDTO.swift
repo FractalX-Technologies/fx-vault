@@ -36,6 +36,17 @@ public enum GHAccountState: Sendable, Hashable {
     case reloginRequired
     /// Any other error (the redacted message).
     case unexpected(String)
+
+    /// A stable, value-free identifier (diagnostics): `ok`, `offline`, `reloginRequired` or
+    /// `unexpected` (the message is left out).
+    public var code: String {
+        switch self {
+        case .ok: "ok"
+        case .offline: "offline"
+        case .reloginRequired: "reloginRequired"
+        case .unexpected: "unexpected"
+        }
+    }
 }
 
 /// One gh account on github.com, as `gh auth status` reports it.
@@ -47,6 +58,10 @@ public struct GHAccountStatusModel: Sendable, Hashable, Identifiable {
     /// The parsed scope list; nil when unknown.
     public let scopeList: [String]?
     public let gitProtocol: String?
+    /// Where gh found the token (`keyring`, `oauth_token` for the config file, or the name of an
+    /// environment variable), as gh names it. Never the token. FX Vault never passes `GH_TOKEN`
+    /// or `GITHUB_TOKEN` to `gh auth status`, so for its own calls this is a stored credential.
+    public let tokenSource: String?
 
     public init(
         login: String,
@@ -54,7 +69,8 @@ public struct GHAccountStatusModel: Sendable, Hashable, Identifiable {
         state: GHAccountState,
         scopes: ScopeStatus,
         scopeList: [String]?,
-        gitProtocol: String?
+        gitProtocol: String?,
+        tokenSource: String? = nil
     ) {
         self.login = login
         self.isActive = isActive
@@ -62,6 +78,7 @@ public struct GHAccountStatusModel: Sendable, Hashable, Identifiable {
         self.scopes = scopes
         self.scopeList = scopeList
         self.gitProtocol = gitProtocol
+        self.tokenSource = tokenSource
     }
 
     /// The lowercase login.
@@ -72,19 +89,23 @@ public struct GHAccountStatusModel: Sendable, Hashable, Identifiable {
     private static let successState = "success"
     private static let timeoutState = "timeout"
 
-    /// Maps the github.com entries; entries with invalid logins are skipped.
+    /// The usable github.com accounts (logins that pass `OwnerLoginValidator`). Entries with
+    /// other logins are in ``GHAccountListingModel/unusable``; never drop them without showing
+    /// them (v0.3.1).
     public static func accounts(from dto: AuthStatusDTO) -> [GHAccountStatusModel] {
-        dto.gitHubEntries.compactMap { entry in
-            guard OwnerLoginValidator.isValid(entry.login) else { return nil }
-            return GHAccountStatusModel(
-                login: entry.login,
-                isActive: entry.active,
-                state: state(of: entry),
-                scopes: ScopeChecker.check(entry.scopes),
-                scopeList: ScopeChecker.parse(entry.scopes),
-                gitProtocol: entry.gitProtocol
-            )
-        }
+        GHAccountListingModel(dto: dto).accounts
+    }
+
+    static func make(from entry: AuthStatusDTO.EntryDTO) -> GHAccountStatusModel {
+        GHAccountStatusModel(
+            login: entry.login,
+            isActive: entry.active,
+            state: state(of: entry),
+            scopes: ScopeChecker.check(entry.scopes),
+            scopeList: ScopeChecker.parse(entry.scopes),
+            gitProtocol: entry.gitProtocol,
+            tokenSource: entry.tokenSource
+        )
     }
 
     static func state(of entry: AuthStatusDTO.EntryDTO) -> GHAccountState {
@@ -100,4 +121,56 @@ public struct GHAccountStatusModel: Sendable, Hashable, Identifiable {
             return .unexpected(GHStderrClassifier.message(from: message))
         }
     }
+}
+
+/// An account gh lists on github.com whose login FX Vault cannot use (v0.3.1). Before 0.3.1 such
+/// accounts were dropped silently, which hid every Enterprise Managed User account (`name_code`)
+/// and showed "Log in to GitHub" although gh was logged in. They are now shown with the reason.
+public struct GHUnusableAccountModel: Sendable, Hashable {
+    /// The login as gh printed it, cleaned for display: token patterns redacted
+    /// (``StderrRedactor``), then control, bidi and invisible characters removed and cut to
+    /// `Limits.maxDisplayNameBytes` (``DisplayNameSanitizer``). May be empty.
+    public let displayLogin: String
+    /// The ``OwnerLoginValidator`` rule the login broke.
+    public let violation: NameRule
+    public let isActive: Bool
+
+    public init(displayLogin: String, violation: NameRule, isActive: Bool) {
+        self.displayLogin = displayLogin
+        self.violation = violation
+        self.isActive = isActive
+    }
+}
+
+/// Every github.com account of one `gh auth status` (A3): the ones FX Vault can use and the ones
+/// it cannot, with the reason.
+public struct GHAccountListingModel: Sendable, Hashable {
+    public let accounts: [GHAccountStatusModel]
+    public let unusable: [GHUnusableAccountModel]
+
+    public init(accounts: [GHAccountStatusModel], unusable: [GHUnusableAccountModel] = []) {
+        self.accounts = accounts
+        self.unusable = unusable
+    }
+
+    /// Splits the github.com entries by ``OwnerLoginValidator``.
+    public init(dto: AuthStatusDTO) {
+        var accounts: [GHAccountStatusModel] = []
+        var unusable: [GHUnusableAccountModel] = []
+        for entry in dto.gitHubEntries {
+            if let violation = OwnerLoginValidator.violation(in: entry.login) {
+                unusable.append(GHUnusableAccountModel(
+                    displayLogin: DisplayNameSanitizer.sanitize(StderrRedactor.redactTokenPatterns(in: entry.login)),
+                    violation: violation,
+                    isActive: entry.active
+                ))
+            } else {
+                accounts.append(GHAccountStatusModel.make(from: entry))
+            }
+        }
+        self.init(accounts: accounts, unusable: unusable)
+    }
+
+    /// No account at all.
+    public static let empty = GHAccountListingModel(accounts: [])
 }

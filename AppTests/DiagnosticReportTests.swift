@@ -1,4 +1,5 @@
 import Foundation
+import GitHubKit
 import os
 import Security
 import Testing
@@ -47,8 +48,61 @@ struct DiagnosticReportTests {
     private static let info: [String: String] = ["CFBundleShortVersionString": "0.1.1", "CFBundleVersion": "2"]
     private static let topLevelKeys: Set<String> = [
         "version", "build", "isSignedWithAccessGroup", "keychainAccessGroup",
-        "biometryAvailable", "biometryUnavailableReason", "probe",
+        "biometryAvailable", "biometryUnavailableReason", "probe", "gh",
     ]
+
+    /// A `GH_CONFIG_DIR` value the shell probe captured: the report names the variable only.
+    private static let configDirValue = "/Users/user-a/.config/gh-private-marker"
+
+    /// A gh section: the shell's Homebrew gh in use, one missing candidate, one usable managed
+    /// user account and one account FX Vault cannot use (synthetic names).
+    static let sampleGH: GHDiagnosticsModel = {
+        let installation = GHInstallationModel(
+            path: "/opt/homebrew/bin/gh",
+            resolvedPath: "/opt/homebrew/Cellar/gh/2.102.0/bin/gh",
+            version: GHVersion(major: 2, minor: 102, patch: 0)
+        )
+        return GHDiagnosticsModel(
+            shell: ShellEnvironmentModel(
+                path: "/opt/homebrew/bin:/usr/bin",
+                ghConfigDir: configDirValue,
+                ghPath: installation.path,
+                setVariables: [.ghToken, .ghConfigDir],
+                probeMode: .interactive,
+                shellPath: "/bin/zsh"
+            ),
+            overridePath: nil,
+            trustedBinary: nil,
+            trustedOwnerName: nil,
+            report: GHLocatorReportModel(
+                candidates: [
+                    GHCandidateReportModel(
+                        path: installation.path,
+                        source: .shell,
+                        resolvedPath: installation.resolvedPath,
+                        rejection: nil,
+                        version: installation.version
+                    ),
+                    GHCandidateReportModel(path: "/opt/local/bin/gh", source: .fallback, resolvedPath: nil, rejection: .notFound),
+                ],
+                decisiveIndex: 0,
+                outcome: .success(installation)
+            ),
+            listing: GHAccountListingModel(
+                accounts: [GHAccountStatusModel(
+                    login: "user1_acme",
+                    isActive: true,
+                    state: .ok,
+                    scopes: .ok,
+                    scopeList: ["repo", "read:org"],
+                    gitProtocol: "https",
+                    tokenSource: "keyring"
+                )],
+                unusable: [GHUnusableAccountModel(displayLogin: "_user2", violation: .invalidFirstCharacter, isActive: false)]
+            ),
+            accountsError: nil
+        )
+    }()
     private static let probeKeys: Set<String> = [
         "add", "addName", "delete", "deleteName", "passed", "skipped", "skippedReason",
     ]
@@ -64,7 +118,8 @@ struct DiagnosticReportTests {
         let report = DiagnosticReporter.makeReport(
             infoDictionary: Self.info,
             capabilities: FakeBuildCapabilities(),
-            probe: KeychainProbe(calls: calls)
+            probe: KeychainProbe(calls: calls),
+            gh: Self.sampleGH
         )
         let object = try json(report)
         #expect(Set(object.keys) == Self.topLevelKeys)
@@ -95,7 +150,8 @@ struct DiagnosticReportTests {
         let report = DiagnosticReporter.makeReport(
             infoDictionary: Self.info,
             capabilities: capabilities,
-            probe: KeychainProbe(calls: calls)
+            probe: KeychainProbe(calls: calls),
+            gh: Self.sampleGH
         )
         let object = try json(report)
         #expect(Set(object.keys) == Self.topLevelKeys)
@@ -121,7 +177,8 @@ struct DiagnosticReportTests {
         let report = DiagnosticReporter.makeReport(
             infoDictionary: Self.info,
             capabilities: FakeBuildCapabilities(),
-            probe: KeychainProbe(calls: ScriptedKeychainCalls(add: status, delete: errSecItemNotFound))
+            probe: KeychainProbe(calls: ScriptedKeychainCalls(add: status, delete: errSecItemNotFound)),
+            gh: Self.sampleGH
         )
         #expect(report.probe.add == status)
         #expect(report.probe.addName == name)
@@ -135,7 +192,8 @@ struct DiagnosticReportTests {
         let report = DiagnosticReporter.makeReport(
             infoDictionary: Self.info,
             capabilities: FakeBuildCapabilities(),
-            probe: KeychainProbe(calls: ScriptedKeychainCalls(add: OSStatus(-1)))
+            probe: KeychainProbe(calls: ScriptedKeychainCalls(add: OSStatus(-1))),
+            gh: Self.sampleGH
         )
         let probe = try #require(try json(report)["probe"] as? [String: Any])
         #expect(probe["add"] as? Int == -1)
@@ -149,7 +207,8 @@ struct DiagnosticReportTests {
         let report = DiagnosticReporter.makeReport(
             infoDictionary: Self.info,
             capabilities: capabilities,
-            probe: KeychainProbe(calls: calls)
+            probe: KeychainProbe(calls: calls),
+            gh: Self.sampleGH
         )
         let object = try json(report)
         #expect(object["biometryAvailable"] as? Bool == false)
@@ -173,7 +232,8 @@ struct DiagnosticReportTests {
         let report = DiagnosticReporter.makeReport(
             infoDictionary: nil,
             capabilities: FakeBuildCapabilities(),
-            probe: KeychainProbe(calls: ScriptedKeychainCalls())
+            probe: KeychainProbe(calls: ScriptedKeychainCalls()),
+            gh: Self.sampleGH
         )
         #expect(report.version == DiagnosticReporter.unknownValue)
         #expect(report.build == DiagnosticReporter.unknownValue)
@@ -186,11 +246,80 @@ struct DiagnosticReportTests {
         #expect(!DiagnoseCommand.isRequested(arguments: ["FXVault", "-NSDocumentRevisionsDebugMode", "YES"]))
     }
 
+    @Test func theGHSectionIsInTheReportWithExplicitNulls() throws {
+        let report = DiagnosticReporter.makeReport(
+            infoDictionary: Self.info,
+            capabilities: FakeBuildCapabilities(),
+            probe: KeychainProbe(calls: ScriptedKeychainCalls()),
+            gh: Self.sampleGH
+        )
+        let object = try json(report)
+        let gh = try #require(object["gh"] as? [String: Any])
+        #expect(Set(gh.keys) == [
+            "shell", "overridePath", "trustedBinary", "candidates", "chosenPath", "result",
+            "accountsChecked", "accounts", "unusableAccounts", "accountsError",
+        ])
+        #expect(gh["result"] as? String == "ready")
+        #expect(gh["chosenPath"] as? String == "/opt/homebrew/bin/gh")
+        #expect(gh["overridePath"] is NSNull)
+        #expect(gh["trustedBinary"] is NSNull)
+        let shell = try #require(gh["shell"] as? [String: Any])
+        #expect(shell["probeMode"] as? String == "interactive")
+        #expect(shell["ghPath"] as? String == "/opt/homebrew/bin/gh")
+        #expect(shell["variablesSet"] as? [String] == ["GH_CONFIG_DIR", "GH_TOKEN"])
+        let accounts = try #require(gh["accounts"] as? [[String: Any]])
+        #expect(accounts.first?["login"] as? String == "user1_acme")
+        #expect(accounts.first?["tokenSource"] as? String == "keyring")
+        #expect(accounts.first?["scopes"] as? String == "ok")
+        let unusable = try #require(gh["unusableAccounts"] as? [[String: Any]])
+        #expect(unusable.first?["reason"] as? String == "invalidFirstCharacter")
+        let text = try #require(String(data: try report.jsonData(), encoding: .utf8))
+        #expect(!text.contains(Self.configDirValue), "variables are named, never valued")
+    }
+
+    @Test func theCopiedTextReportIsStableAndValueFree() {
+        let text = GHDiagnosticsTextRenderer.render(Self.sampleGH, version: "0.3.1", build: "7")
+        #expect(text == """
+        FX Vault GitHub CLI diagnostics: FX Vault 0.3.1 (7)
+        Paths, versions, variable names and account names only: no tokens, secrets or variable values.
+
+        Result: ready
+        Chosen gh: /opt/homebrew/bin/gh
+        gh path override: none
+        Trusted gh: none
+
+        Shell: /bin/zsh (probe: interactive)
+        Shell gh (command -v gh): /opt/homebrew/bin/gh
+        Shell variables set: GH_CONFIG_DIR, GH_TOKEN
+
+        Candidates:
+        * /opt/homebrew/bin/gh [shell] -> /opt/homebrew/Cellar/gh/2.102.0/bin/gh: accepted (gh 2.102.0) [chosen]
+        - not found: /opt/local/bin/gh
+
+        Accounts (github.com): 1
+        - user1_acme: state ok, active, token source keyring, scopes ok
+        Accounts FX Vault cannot use:
+        - _user2: invalidFirstCharacter
+
+        """)
+        #expect(!text.contains(Self.configDirValue))
+    }
+
+    @Test func aFailedDetectionStillRendersEverySection() {
+        let model = GHDiagnosticsModel.unavailable(.launchFailed, overridePath: "/Users/user-a/bin/gh", trustedBinary: nil)
+        let text = GHDiagnosticsTextRenderer.render(model, version: "0.3.1", build: "7")
+        #expect(text.contains("Result: launchFailed"))
+        #expect(text.contains("gh path override: /Users/user-a/bin/gh"))
+        #expect(text.contains("Shell: none (probe: failed)"))
+        #expect(text.contains("Accounts: not checked (no usable gh)"))
+    }
+
     @Test func reportNeverContainsTheProbeValueOrAccount() throws {
         let report = DiagnosticReporter.makeReport(
             infoDictionary: Self.info,
             capabilities: FakeBuildCapabilities(),
-            probe: KeychainProbe(calls: ScriptedKeychainCalls())
+            probe: KeychainProbe(calls: ScriptedKeychainCalls()),
+            gh: Self.sampleGH
         )
         let text = try #require(String(data: try report.jsonData(), encoding: .utf8))
         #expect(!text.contains("probe-"))

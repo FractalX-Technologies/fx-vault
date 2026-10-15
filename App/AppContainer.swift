@@ -140,10 +140,7 @@ final class AppContainer {
                 ticker: DispatchInactivityTicker(),
                 timeout: { preferences.autoLockTimeout }
             ),
-            ghStatusProbe: GitHubEnvironmentStatusProbe(
-                github: github,
-                overridePath: { preferences.ghPathOverride }
-            ),
+            ghStatusProbe: GitHubEnvironmentStatusProbe(github: github, preferences: preferences),
             dockBadge: DockBadgeManager(),
             passphraseGenerator: try? PassphraseGenerator.bundled(),
             vaultDirectory: session.databaseDirectory,
@@ -196,6 +193,8 @@ final class AppContainer {
     static let previewPasteboardName = NSPasteboard.Name("io.fractalx.fxvault.preview")
     /// The gh path shown in previews.
     static let previewGHPath = "/opt/homebrew/bin/gh"
+    /// The uid of the other administrator in the "owned by another user" preview.
+    static let previewOtherOwnerUID: UInt32 = 502
 }
 
 /// The result of building the app's dependencies at launch.

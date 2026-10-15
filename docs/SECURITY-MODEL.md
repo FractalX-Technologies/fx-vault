@@ -140,7 +140,11 @@ the official signed release.") and every keychain call refuses with `.unsignedBu
   `io.fractalx.fxvault.diagnose` (random account, 16 random bytes), after deleting any probe item
   an earlier run left in the group. It runs before any window,
   vault or database opens, never reads the item (no prompt) and prints no secret; unsigned builds
-  skip the probe.
+  skip the probe. Since v0.3.1 it also prints a `gh` section (§8): it runs the shell probe,
+  `gh --version` of each trusted candidate and `gh auth status --json hosts` (no token is fetched
+  or printed) and reports paths, versions, owner names, the **names** of the token and config
+  variables the shell sets, and account logins, states, token sources and scopes. The setup
+  screen's **Copy Diagnostics** copies the same report as plain text.
 - Disabling Touch ID, changing the password, rotating the key, a new recovery key and resetting
   the vault accept **only** the master password (`ReauthGate.authorizeWithPassword`).
 
@@ -189,7 +193,29 @@ another.
 gh, git and ssh run with absolute executables, an argv array (no shell), an exact environment
 allowlist, an empty working directory and closed descriptors. Values and JSON bodies go only
 through stdin; forbidden flags are rejected by the builders. gh binaries are accepted only from
-non-writable locations owned by root or the user. Details: [API.md](API.md).
+non-writable locations owned by root or the user, or by one other user the user explicitly
+trusted for that path (below). Details: [API.md](API.md).
+
+- **Shell probe (A2).** The only shell FX Vault runs is the user's own login shell, with a
+  constant script, an identity-only environment and empty stdin, for 5 s per attempt. Since
+  v0.3.1 it starts as an interactive login shell first (it reads `~/.zshrc` like Terminal), then
+  as a login shell. It reports the gh its PATH finds and whether `GH_TOKEN`, `GITHUB_TOKEN`,
+  `GH_CONFIG_DIR`, `XDG_CONFIG_HOME` and `GH_HOST` are set: sh's `[ -n ]` builtin tests the
+  values, which never reach stdout, an argv, a log or a file; the parser keeps only names. FX Vault
+  still never passes `GH_TOKEN` or `GITHUB_TOKEN` to gh (its own `GH_TOKEN` is the account token
+  it fetched, for write commands only).
+- **Which gh.** The gh the shell finds comes first, then fixed folders; the first gh that exists
+  decides, and FX Vault never runs another one when that one is rejected, so it cannot silently
+  run a different (older or planted) gh than Terminal. A rejected gh is never executed, not even
+  for `--version`.
+- **Consented trust (v0.3.1).** When the only problem is that one other non-root user owns the
+  gh file or its folders (typically another administrator installed Homebrew), the setup screen
+  names that user and explains that anyone who can sign in as them could replace gh and see the
+  values FX Vault sends to it. **Trust This gh** stores `{path, owner uid}` in UserDefaults; the
+  locator then accepts exactly that path while every foreign owner is still that uid and nothing
+  is writable by others (world, or a group other than `wheel` / `admin`). Writable binaries and
+  binaries owned by several other users are never offered. A changed owner asks again;
+  Settings › Advanced lists the trust with Revoke.
 
 ## 9. Sync integrity
 
@@ -281,6 +307,16 @@ attempt on the other Mac like any cancelled chat (pending a product decision).
 - Ad-hoc builds have no Touch ID and unstable privacy (TCC) grants.
 - We trust the gh and git binaries we resolve. gh receives secret **and** variable plaintext on
   stdin and seals secrets itself, so a replaced gh binary could read values.
+- **Accepted, user-consented: a gh owned by another user** (v0.3.1). After **Trust This gh**,
+  the owner of that gh (and anyone who can act as that account, for example with its password or
+  an administrator who can become it) could replace the binary between two checks and read every
+  value FX Vault pushes, and every token FX Vault passes to it. FX Vault accepts this only after
+  the user's explicit consent for that exact path and owner, re-checks ownership and write
+  permissions before each detection, and keeps the consent visible and revocable in
+  Settings › Advanced. The safer fix is a gh the user owns (reinstall, or the gh path override).
+- The shell probe runs the user's interactive start-up files (`~/.zshrc`), as Terminal does.
+  Code there already runs as the user (out of scope, §10); a start-up file that waits for input
+  or never finishes costs at most the 5 s timeout per attempt before the login-shell fallback.
 - Secret verification accepts a write as ours when `updatedAt` changed from the pre-write value.
   A write by someone else between a scope's pre-write re-list and its verification re-list is
   either silently overwritten (before our write; `gh secret set` is unconditional) or accepted

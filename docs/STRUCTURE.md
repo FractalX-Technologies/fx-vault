@@ -18,8 +18,9 @@ FXVault/
 ├── App/                             # app target (MainActor by default, everything internal)
 │   ├── FXVaultApp.swift             # @main FXVaultMain (answers --diagnose first), FXVaultApp:
 │   │                                # main Window + Settings scene, VaultCommands menus
-│   ├── Diagnostics/                 # --diagnose: DiagnoseCommand (stdout JSON, exit),
-│   │                                # DiagnosticReporter, DiagnosticReportModel
+│   ├── Diagnostics/                 # --diagnose: DiagnoseCommand (stdout JSON with the gh
+│   │                                # section, exit), DiagnosticReporter, DiagnosticReportModel,
+│   │                                # GHDiagnosticsTextRenderer (Copy Diagnostics text)
 │   ├── AppDelegate.swift            # owns AppBootstrap (startup-failure screen), .fxvault opens
 │   ├── AppContainer.swift           # composition root (live / preview / test)
 │   ├── AppViewModel.swift           # VaultPhase, two-phase lock, LockObserving, gh status,
@@ -35,7 +36,9 @@ FXVault/
 │   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel,
 │   │   │                            # TouchIDOfferScreen/ViewModel (one-time offer after a
 │   │   │                            # password unlock), PasswordRequiredReason+Extension
-│   │   ├── GHSetup/                 # GHSetupScreen/ViewModel (install, upgrade, login, Not Now)
+│   │   ├── GHSetup/                 # GHSetupScreen/ViewModel (install, upgrade, untrusted, Trust
+│   │   │                            # This gh, login, GH_TOKEN, unusable accounts, Copy
+│   │   │                            # Diagnostics, Check Again, Not Now)
 │   │   ├── Main/                    # MainScreen/ViewModel (three columns, toolbar, router)
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
@@ -174,8 +177,9 @@ FXVault/
 │   │   │   ├── Process/             # CommandRunning, CommandSpec, StdinPayload, ProcessRunner,
 │   │   │   │                        # EmptyWorkingDirectory
 │   │   │   ├── Environment/         # ProcessEnvironmentBuilder, ShellEnvironmentResolver
-│   │   │   ├── CLI/                 # GHLocator, GHVersion, GHAuthService, GHTokenCache,
-│   │   │   │                        # AuthStatusDTO, ScopeChecker
+│   │   │   ├── CLI/                 # GHLocator (+ GHLocatorReportModel, GHFileInspector),
+│   │   │   │                        # GHVersion, GHAuthService, GHTokenCache, AuthStatusDTO
+│   │   │   │                        # (account listing, unusable accounts), ScopeChecker
 │   │   │   ├── Commands/            # GHCommand (GHOperation, GHArgumentPolicy), GHCommandService,
 │   │   │   │                        # GHCommandScheduler(+Extension), GHRepoRef, argv builders
 │   │   │   ├── API/                 # GHEnvironmentsAPI, GitHubPath, APIResponseParser, JSONValue
@@ -184,8 +188,9 @@ FXVault/
 │   │   │   ├── Errors/              # GHError, GHStderrClassifier, StderrRedactor
 │   │   │   ├── SSH/                 # SSHConfigParser, SSHAliasResolver, SSHAliasValidator
 │   │   │   ├── Git/                 # GitService, GitError
+│   │   │   ├── Diagnostics/         # GHDiagnosticsModel, GHDiagnosticsCollector (v0.3.1)
 │   │   │   ├── Support/             # GHConstants, Data+Extension
-│   │   │   └── Testing/             # FakeCommandRunner (tests and previews)
+│   │   │   └── Testing/             # FakeCommandRunner, FakeGHFileInspector (tests and previews)
 │   │   ├── EnvTools/                # EnvToolsLimits
 │   │   │   ├── Parsing/             # DotEnvParser, DotEnvSerializer, DotEnvEntryModel, EnvParseIssue
 │   │   │   ├── Keys/                # KeyNormalizer

@@ -24,38 +24,54 @@ public struct GHInstallationModel: Sendable, Hashable, Codable {
     }
 }
 
-/// Why a gh candidate was not trusted (§5.10 gh binary trust).
-public enum GHBinaryRejection: Sendable, Hashable {
+/// Why a gh candidate was not trusted (§5.10 gh binary trust). The raw value is a stable,
+/// value-free code (diagnostics).
+public enum GHBinaryRejection: String, Sendable, Hashable, Codable {
     case notFound
     case notRegularFile
     case notExecutable
-    /// The file is group- or world-writable.
+    /// The file is world-writable, or group-writable by a group other than `wheel` / `admin`.
     case writableFile
-    /// The file's directory (or the symlink's directory) is group- or world-writable.
+    /// The file's folder (or the symlink's folder) is world-writable, or group-writable by a
+    /// group other than `wheel` / `admin`.
     case writableDirectory
-    /// The file or a directory is owned by someone other than the user or root.
+    /// The file or a folder is owned by someone other than the user or root (and the user has
+    /// not trusted that owner for this path).
     case untrustedOwner
 }
 
-/// Finds a trusted gh ≥ 2.97.0 (tasks/todo.md §5.10, §8 A1; D5).
+/// Finds a trusted gh ≥ 2.97.0 (tasks/todo.md §5.10, §8 A1; D5; v0.3.1).
 ///
-/// Candidates, in order: the user's override, Homebrew (`/opt/homebrew/bin`,
-/// `/usr/local/bin`), each directory of the login-shell PATH, MacPorts (`/opt/local/bin`), Nix
-/// (`~/.nix-profile/bin`, `/run/current-system/sw/bin`, `/nix/var/nix/profiles/default/bin`)
+/// Candidates, in order: the user's override (then the only one); the gh the user's shell finds
+/// (`command -v gh` from the shell probe, the gh Terminal runs); Homebrew (`/opt/homebrew/bin`,
+/// `/usr/local/bin`); each directory of the shell PATH; MacPorts (`/opt/local/bin`); Nix
+/// (`~/.nix-profile/bin`, `/run/current-system/sw/bin`, `/nix/var/nix/profiles/default/bin`);
 /// and `~/.local/bin`.
 ///
-/// A candidate is rejected when the file or its directory (and, for a symlink, the link's
-/// directory) is not owned by the user or root, is world-writable, or is group-writable by a
-/// group other than `wheel` or `admin`. Homebrew creates `/opt/homebrew/bin` as `rwxrwxr-x`
+/// **The first candidate that exists decides.** It is used when it passes the trust check and
+/// the version floor; otherwise detection fails with its reason. FX Vault never falls back to
+/// another gh behind it, so it can never silently run a different (older) gh than Terminal:
+/// the other candidates appear only in the report (diagnostics).
+///
+/// A candidate is rejected when the file or its folder (and, for a symlink, the link's folder)
+/// is world-writable, is group-writable by a group other than `wheel` or `admin`, or is owned
+/// by someone other than the user or root. Homebrew creates `/opt/homebrew/bin` as `rwxrwxr-x`
 /// with group `admin`; members of `admin` can already become root, so that group write grants
 /// no extra power and is accepted (a deviation from the plan's literal "group-writable" rule).
+/// When the only problem is that one other (non-root) user owns them, typically because another
+/// administrator installed Homebrew, the user can trust that owner for that path
+/// (``GHTrustedBinaryModel``): the candidate is then accepted while the owner is unchanged and
+/// nothing is writable by others.
 public struct GHLocator: Sendable {
     private let runner: any CommandRunning
     private let identity: ProcessIdentityModel
     private let workingDirectory: URL
+    private let fileInspector: any GHFileInspecting
 
     static let executableName = "gh"
     static let homebrewDirectories = ["/opt/homebrew/bin", "/usr/local/bin"]
+    /// A path component of every file Homebrew installs (`…/Cellar/gh/<version>/bin/gh`).
+    static let homebrewCellarComponent = "/Cellar/"
 
     /// MacPorts, Nix and `~/.local/bin`, searched after the shell PATH.
     static func fallbackDirectories(home: String) -> [String] {
@@ -68,59 +84,88 @@ public struct GHLocator: Sendable {
         ]
     }
     private static let rootUID: uid_t = 0
-    private static let rootGID: gid_t = 0
-    private static let adminGroupName = "admin"
     private static let otherWritable = mode_t(S_IWOTH)
     private static let groupWritable = mode_t(S_IWGRP)
-    private static let fileTypeMask = mode_t(S_IFMT)
-    private static let regularFileType = mode_t(S_IFREG)
 
-    public init(runner: any CommandRunning, identity: ProcessIdentityModel, workingDirectory: URL) {
+    public init(
+        runner: any CommandRunning,
+        identity: ProcessIdentityModel,
+        workingDirectory: URL,
+        fileInspector: any GHFileInspecting = SystemGHFileInspector()
+    ) {
         self.runner = runner
         self.identity = identity
         self.workingDirectory = workingDirectory
+        self.fileInspector = fileInspector
     }
 
     /// Resolves gh and checks its version.
     ///
     /// - With an `overridePath`, only that path is considered: missing → ``GHError/notInstalled``,
     ///   untrusted → ``GHError/untrustedBinary(path:)``.
-    /// - Otherwise the first existing trusted candidate wins. If candidates exist but none is
-    ///   trusted, the first is reported as untrusted.
+    /// - Otherwise the first candidate that exists decides (see the type documentation).
     /// - Below the floor → ``GHError/versionTooOld(found:required:)``.
-    public func locate(overridePath: String?, shell: ShellEnvironmentModel) async throws(GHError)
-        -> GHInstallationModel
-    {
-        let candidates: [String]
-        if let overridePath, !overridePath.isEmpty {
-            candidates = [Self.expandingTilde(overridePath, home: identity.home)]
-        } else {
-            candidates = Self.candidatePaths(shellPATH: shell.path, home: identity.home)
+    public func locate(
+        overridePath: String?,
+        shell: ShellEnvironmentModel,
+        trustedBinary: GHTrustedBinaryModel? = nil
+    ) async throws(GHError) -> GHInstallationModel {
+        try await inspect(overridePath: overridePath, shell: shell, trustedBinary: trustedBinary).outcome.get()
+    }
+
+    /// Every candidate with its trust result, the one that decided, and the outcome. Only the
+    /// decisive candidate's `gh --version` runs, unless `checksEveryVersion` (diagnostics) asks
+    /// for every trusted one. An untrusted binary is never run.
+    public func inspect(
+        overridePath: String?,
+        shell: ShellEnvironmentModel,
+        trustedBinary: GHTrustedBinaryModel? = nil,
+        checksEveryVersion: Bool = false
+    ) async -> GHLocatorReportModel {
+        var reports = Self.candidates(overridePath: overridePath, shell: shell, home: identity.home).map {
+            Self.evaluate(path: $0.path, source: $0.source, consent: trustedBinary, inspector: fileInspector)
         }
-        var firstUntrusted: String?
-        for candidate in candidates {
-            switch Self.trust(of: candidate) {
-            case .success(let resolved):
-                let version = try await version(of: resolved, shell: shell)
-                guard version.isSupported else {
-                    throw .versionTooOld(found: version, required: .minimum)
-                }
-                return GHInstallationModel(path: candidate, resolvedPath: resolved, version: version)
-            case .failure(.notFound):
-                continue
-            case .failure:
-                firstUntrusted = firstUntrusted ?? candidate
+        guard let decisiveIndex = reports.firstIndex(where: \.isFound) else {
+            return GHLocatorReportModel(candidates: reports, decisiveIndex: nil, outcome: .failure(.notInstalled))
+        }
+        let outcome: Result<GHInstallationModel, GHError>
+        if reports[decisiveIndex].isAccepted {
+            let checked = await check(reports[decisiveIndex], shell: shell)
+            reports[decisiveIndex] = checked.report
+            outcome = checked.outcome
+        } else {
+            outcome = .failure(.untrustedBinary(path: reports[decisiveIndex].path))
+        }
+        if checksEveryVersion {
+            for index in reports.indices where index != decisiveIndex && reports[index].isAccepted {
+                reports[index] = await check(reports[index], shell: shell).report
             }
         }
-        if let firstUntrusted {
-            throw .untrustedBinary(path: firstUntrusted)
-        }
-        throw .notInstalled
+        return GHLocatorReportModel(candidates: reports, decisiveIndex: decisiveIndex, outcome: outcome)
     }
 
     /// A1: `gh --version` (no `GH_TOKEN`).
     public static func versionCommand() throws(GHError) -> GHCommand {
         try GHCommand(operation: .version, arguments: ["--version"], logTemplate: "--version")
+    }
+
+    /// Runs `gh --version` on an accepted candidate.
+    private func check(_ candidate: GHCandidateReportModel, shell: ShellEnvironmentModel) async
+        -> (report: GHCandidateReportModel, outcome: Result<GHInstallationModel, GHError>)
+    {
+        var report = candidate
+        guard let resolved = candidate.resolvedPath else { return (report, .failure(.notInstalled)) }
+        do {
+            let version = try await version(of: resolved, shell: shell)
+            report.version = version
+            guard version.isSupported else {
+                return (report, .failure(.versionTooOld(found: version, required: .minimum)))
+            }
+            return (report, .success(GHInstallationModel(path: candidate.path, resolvedPath: resolved, version: version)))
+        } catch {
+            report.versionFailure = error
+            return (report, .failure(error))
+        }
     }
 
     private func version(of path: String, shell: ShellEnvironmentModel) async throws(GHError) -> GHVersion {
@@ -138,71 +183,110 @@ public struct GHLocator: Sendable {
         return version
     }
 
-    /// The candidate paths in search order, without duplicates.
-    public static func candidatePaths(shellPATH: String?, home: String) -> [String] {
-        var directories = homebrewDirectories
-        if let shellPATH {
-            directories += shellPATH.split(separator: ":").map(String.init).filter { $0.hasPrefix("/") }
+    /// The candidates in search order, without duplicates (the first source of a path wins).
+    public static func candidates(overridePath: String?, shell: ShellEnvironmentModel, home: String)
+        -> [(path: String, source: GHCandidateSource)]
+    {
+        if let overridePath, !overridePath.isEmpty {
+            return [(expandingTilde(overridePath, home: home), .override)]
         }
-        directories += fallbackDirectories(home: home)
+        var entries: [(path: String, source: GHCandidateSource)] = []
+        if let ghPath = shell.ghPath {
+            entries.append((ghPath, .shell))
+        }
+        let shellDirectories = shell.path.map { path in
+            path.split(separator: ":").map(String.init).filter { $0.hasPrefix("/") }
+        } ?? []
+        let directories = homebrewDirectories.map { ($0, GHCandidateSource.homebrew) }
+            + shellDirectories.map { ($0, GHCandidateSource.shellPATH) }
+            + fallbackDirectories(home: home).map { ($0, GHCandidateSource.fallback) }
+        for (directory, source) in directories {
+            entries.append(((directory as NSString).appendingPathComponent(executableName), source))
+        }
         var seen: Set<String> = []
-        var paths: [String] = []
-        for directory in directories {
-            let path = (directory as NSString).appendingPathComponent(executableName)
-            if seen.insert(path).inserted {
-                paths.append(path)
-            }
-        }
-        return paths
+        return entries.filter { seen.insert($0.path).inserted }
     }
 
-    /// Checks one candidate. On success returns the resolved (symlink-free) path.
+    /// The candidate paths in search order without a shell gh, without duplicates.
+    public static func candidatePaths(shellPATH: String?, home: String) -> [String] {
+        candidates(overridePath: nil, shell: ShellEnvironmentModel(path: shellPATH), home: home).map(\.path)
+    }
+
+    /// Checks one candidate on the real file system. On success returns the resolved
+    /// (symlink-free) path.
     public static func trust(of path: String) -> Result<String, GHBinaryRejection> {
-        var linkInfo = stat()
-        guard lstat(path, &linkInfo) == 0 else { return .failure(.notFound) }
-        guard let resolvedPointer = realpath(path, nil) else { return .failure(.notFound) }
-        let resolved = String(cString: resolvedPointer)
-        free(resolvedPointer)
-
-        var info = stat()
-        guard stat(resolved, &info) == 0 else { return .failure(.notFound) }
-        guard info.st_mode & fileTypeMask == regularFileType else { return .failure(.notRegularFile) }
-        guard access(resolved, X_OK) == 0 else { return .failure(.notExecutable) }
-        guard isTrustedOwner(info.st_uid) else { return .failure(.untrustedOwner) }
-        guard !isWritableByOthers(info) else { return .failure(.writableFile) }
-
-        var directories = [(resolved as NSString).deletingLastPathComponent]
-        let linkDirectory = (path as NSString).deletingLastPathComponent
-        if linkDirectory != directories[0] {
-            directories.append(linkDirectory)
+        let report = evaluate(path: path, source: .override, consent: nil, inspector: SystemGHFileInspector())
+        if let rejection = report.rejection {
+            return .failure(rejection)
         }
-        for directory in directories {
-            var directoryInfo = stat()
-            guard stat(directory, &directoryInfo) == 0 else { return .failure(.notFound) }
-            guard isTrustedOwner(directoryInfo.st_uid) else { return .failure(.untrustedOwner) }
-            guard !isWritableByOthers(directoryInfo) else { return .failure(.writableDirectory) }
-        }
-        return .success(resolved)
+        return .success(report.resolvedPath ?? path)
     }
 
-    private static func isTrustedOwner(_ uid: uid_t) -> Bool {
-        uid == getuid() || uid == rootUID
+    /// The trust check of one candidate (§5.10). Writable by others always rejects; files and
+    /// folders owned by another (non-root) user reject unless `consent` names this exact path
+    /// and that owner. Never runs anything.
+    public static func evaluate(
+        path: String,
+        source: GHCandidateSource,
+        consent: GHTrustedBinaryModel?,
+        inspector: any GHFileInspecting
+    ) -> GHCandidateReportModel {
+        func rejected(_ reason: GHBinaryRejection, resolved: String?, owner: GHBinaryOwnerModel? = nil) -> GHCandidateReportModel {
+            GHCandidateReportModel(path: path, source: source, resolvedPath: resolved, rejection: reason, foreignOwner: owner)
+        }
+        guard inspector.exists(atPath: path),
+              let resolved = inspector.resolvedPath(path),
+              let file = inspector.status(atPath: resolved)
+        else { return rejected(.notFound, resolved: nil) }
+        guard file.isRegularFile else { return rejected(.notRegularFile, resolved: resolved) }
+        guard inspector.isExecutable(atPath: resolved) else { return rejected(.notExecutable, resolved: resolved) }
+
+        var folders = [(resolved as NSString).deletingLastPathComponent]
+        let linkFolder = (path as NSString).deletingLastPathComponent
+        if linkFolder != folders[0] {
+            folders.append(linkFolder)
+        }
+        var folderStatuses: [GHFileStatusModel] = []
+        for folder in folders {
+            guard let status = inspector.status(atPath: folder) else { return rejected(.notFound, resolved: nil) }
+            folderStatuses.append(status)
+        }
+        let privileged = inspector.privilegedGroupIDs
+        if isWritableByOthers(file, privilegedGroups: privileged) {
+            return rejected(.writableFile, resolved: resolved)
+        }
+        if folderStatuses.contains(where: { isWritableByOthers($0, privilegedGroups: privileged) }) {
+            return rejected(.writableDirectory, resolved: resolved)
+        }
+
+        let trustedOwners: Set<uid_t> = [inspector.currentUserID, rootUID]
+        let foreignOwners = Set(([file] + folderStatuses).map(\.ownerID)).subtracting(trustedOwners)
+        guard let foreignUID = foreignOwners.first else {
+            return GHCandidateReportModel(path: path, source: source, resolvedPath: resolved, rejection: nil)
+        }
+        guard foreignOwners.count == 1 else {
+            // Several other users: nothing a single consent could name.
+            return rejected(.untrustedOwner, resolved: resolved)
+        }
+        let owner = GHBinaryOwnerModel(uid: foreignUID, name: inspector.userName(for: foreignUID))
+        if let consent, consent.path == path, consent.ownerUID == foreignUID {
+            return GHCandidateReportModel(
+                path: path,
+                source: source,
+                resolvedPath: resolved,
+                rejection: nil,
+                foreignOwner: owner,
+                isTrustedByConsent: true
+            )
+        }
+        return rejected(.untrustedOwner, resolved: resolved, owner: owner)
     }
 
     /// World-writable, or group-writable by a group whose members cannot already become root.
-    static func isWritableByOthers(_ info: stat) -> Bool {
-        if info.st_mode & otherWritable != 0 { return true }
-        guard info.st_mode & groupWritable != 0 else { return false }
-        return !privilegedGroupIDs.contains(info.st_gid)
-    }
-
-    /// `wheel` and `admin`: their members can already obtain root.
-    static var privilegedGroupIDs: Set<gid_t> {
-        var groups: Set<gid_t> = [rootGID]
-        if let admin = getgrnam(adminGroupName) {
-            groups.insert(admin.pointee.gr_gid)
-        }
-        return groups
+    static func isWritableByOthers(_ status: GHFileStatusModel, privilegedGroups: Set<gid_t>) -> Bool {
+        if status.mode & otherWritable != 0 { return true }
+        guard status.mode & groupWritable != 0 else { return false }
+        return !privilegedGroups.contains(status.groupID)
     }
 
     private static func expandingTilde(_ path: String, home: String) -> String {

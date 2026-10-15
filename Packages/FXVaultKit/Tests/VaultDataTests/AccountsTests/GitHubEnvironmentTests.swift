@@ -82,6 +82,67 @@ struct GitHubEnvironmentTests {
         #expect(missing == .github(.notInstalled))
     }
 
+    // MARK: - The shell's gh, consented trust, diagnostics (v0.3.1)
+
+    static let otherAdmin: uid_t = 502
+    static let homebrewGH = "/opt/homebrew/bin/gh"
+    static let homebrewResolved = "/opt/homebrew/Cellar/gh/2.102.0/bin/gh"
+
+    /// A repository whose shell finds Homebrew's gh, which another administrator owns.
+    static func foreignHomebrew() throws -> (GitHubEnvironmentRepository, FakeCommandRunner, ConfigTempDirectory) {
+        let directory = try ConfigTempDirectory()
+        let files = FakeGHFileInspector()
+        files.setUserName("admin-b", for: otherAdmin)
+        files.addHomebrewGH(owner: otherAdmin)
+        let runner = FakeCommandRunner()
+        let probe = "__FXV_B__PATH=/opt/homebrew/bin:/usr/bin\n\0FXV_GH=\(homebrewGH)\n\0FXV_SET=GH_TOKEN\0__FXV_E__"
+        runner.stub(argumentsPrefix: ["-i", "-l", "-c"], with: .success(probe))
+        runner.stub(executablePath: homebrewResolved, argumentsPrefix: ["--version"], with: .success("gh version 2.102.0 (2026-09-30)\n"))
+        runner.stub(argumentsPrefix: ["auth", "status"], with: .success(GitHubEnvironmentTests.managedUsers))
+        let repository = GitHubEnvironmentRepository(
+            database: try DatabaseFactory.inMemory(),
+            runner: runner,
+            identity: GHFixtures.identity,
+            workingDirectory: GHFixtures.workingDirectory,
+            shellPath: "/bin/zsh",
+            sshConfigParser: SSHConfigParser(sshDirectory: directory.url, homeDirectory: directory.url),
+            fileInspector: files
+        )
+        return (repository, runner, directory)
+    }
+
+    @Test func detectionKeepsTheReportAndHonorsConsentedTrust() async throws {
+        let (repository, runner, directory) = try Self.foreignHomebrew()
+        defer { directory.remove() }
+        let error = await environmentError { _ = try await repository.detectGH() }
+        #expect(error == .github(.untrustedBinary(path: Self.homebrewGH)))
+        let blocked = try #require(await repository.lastDetection?.decisive)
+        #expect(blocked.source == .shell)
+        #expect(blocked.foreignOwner == GHBinaryOwnerModel(uid: Self.otherAdmin, name: "admin-b"))
+        let consent = try #require(blocked.trustConsent)
+        #expect(try await repository.shellEnvironment().exportedTokenVariables == [.ghToken])
+
+        let installation = try await repository.detectGH(trustedBinary: consent)
+        #expect(installation.path == Self.homebrewGH)
+        #expect(await repository.lastDetection?.decisive?.isTrustedByConsent == true)
+        #expect(try await repository.accounts().count == 2)
+        #expect(!runner.invocations.contains { $0.arguments.contains("--show-token") })
+    }
+
+    @Test func diagnosticsChangeNothingAndHoldNoToken() async throws {
+        let (repository, runner, directory) = try Self.foreignHomebrew()
+        defer { directory.remove() }
+        let consent = GHTrustedBinaryModel(path: Self.homebrewGH, ownerUID: Self.otherAdmin)
+        let model = await repository.diagnostics(overridePath: nil, trustedBinary: consent)
+        #expect(model.result == "ready")
+        #expect(model.shell.variablesSet == ["GH_TOKEN"])
+        #expect(model.shell.probeMode == .interactive)
+        #expect(model.accounts.map(\.login) == ["user1_acme", "user1-e_acme"])
+        #expect(model.trustedBinary?.ownerName == "admin-b")
+        #expect(await repository.installation == nil, "diagnostics do not install a gh")
+        #expect(!runner.invocations.contains { $0.arguments.starts(with: ["auth", "token"]) })
+    }
+
     // MARK: - Accounts and tokens
 
     @Test func accountsArePersistedWithScopes() async throws {
@@ -109,6 +170,60 @@ struct GitHubEnvironmentTests {
         #expect(again[1].account.isPresent == false)
         #expect(try AccountStore(database: fixture.database).fetch(login: "USER-B")?.isPresent == false)
     }
+
+    /// v0.3.1 root cause: Enterprise Managed User accounts (`handle_shortcode`, synthetic) were
+    /// dropped, so FX Vault reported no account. They are persisted and get a queue and a token.
+    @Test func managedUserAccountsArePersistedAndUsable() async throws {
+        let fixture = try Fixture()
+        defer { fixture.directory.remove() }
+        try await fixture.repository.detectGH(overridePath: fixture.ghPath)
+        fixture.runner.enqueue(.success(Self.managedUsers), matching: { $0.starts(with: ["auth", "status"]) })
+
+        let accounts = try await fixture.repository.accounts()
+        #expect(accounts.map(\.account.login) == ["user1-e_acme", "user1_acme"], "stored rows come back sorted by login")
+        #expect(accounts.allSatisfy { $0.isLoggedIn && $0.status?.scopes == .ok })
+        #expect(accounts.first { $0.status?.isActive == true }?.account.login == "user1_acme")
+        #expect(await fixture.repository.unusableAccounts.isEmpty)
+        #expect(try AccountStore(database: fixture.database).fetch(login: "USER1-E_ACME")?.isPresent == true)
+
+        let scheduler = try await fixture.repository.scheduler(for: "user1-e_acme")
+        #expect(try await fixture.repository.scheduler(for: "USER1-E_ACME") === scheduler)
+        // A read that needs the account's token fetches it with the managed user's login.
+        fixture.runner.enqueue(.success("Example-Org\n"), matching: { $0.starts(with: ["org", "list"]) })
+        #expect(try await scheduler.listOrganizations() == ["Example-Org"])
+        #expect(fixture.runner.invocations.contains { $0.arguments == ["auth", "token", "--hostname", "github.com", "--user=user1-e_acme"] })
+        let cached = fixture.repository.tokenCache.token(for: "user1-e_acme")
+        #expect(cached != nil)
+        cached?.wipe()
+        #expect(await fixture.repository.scopeFixCommands(for: "user1-e_acme").first == "gh auth switch -h github.com -u user1-e_acme")
+    }
+
+    /// An account whose login FX Vault cannot use is kept out of the database but reported.
+    @Test func unusableAccountsAreReportedButNotStored() async throws {
+        let fixture = try Fixture()
+        defer { fixture.directory.remove() }
+        try await fixture.repository.detectGH(overridePath: fixture.ghPath)
+        let json = """
+        {"hosts":{"github.com":[
+         {"state":"success","active":true,"host":"github.com","login":"_user2","tokenSource":"keyring","scopes":"repo, read:org"},
+         {"state":"success","active":false,"host":"github.com","login":"user1_acme","tokenSource":"keyring","scopes":"repo, read:org"}
+        ]}}
+        """
+        fixture.runner.enqueue(.success(json), matching: { $0.starts(with: ["auth", "status"]) })
+        let accounts = try await fixture.repository.accounts()
+        #expect(accounts.map(\.account.login) == ["user1_acme"])
+        #expect(await fixture.repository.unusableAccounts == [
+            GHUnusableAccountModel(displayLogin: "_user2", violation: .invalidFirstCharacter, isActive: true),
+        ])
+        #expect(try AccountStore(database: fixture.database).fetchAll().map(\.login) == ["user1_acme"])
+    }
+
+    static let managedUsers = """
+    {"hosts":{"github.com":[
+     {"state":"success","active":true,"host":"github.com","login":"user1_acme","tokenSource":"keyring","scopes":"admin:public_key, gist, read:org, repo","gitProtocol":"https"},
+     {"state":"success","active":false,"host":"github.com","login":"user1-e_acme","tokenSource":"keyring","scopes":"admin:public_key, gist, read:org, repo","gitProtocol":"https"}
+    ]}}
+    """
 
     @Test func schedulersArePerAccountAndTokensPurgeSynchronously() async throws {
         let fixture = try Fixture()

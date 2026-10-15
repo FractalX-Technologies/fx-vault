@@ -176,16 +176,30 @@ See [API.md](API.md) for the command catalog.
 
 - **Process:** `CommandRunning` (`ProcessRunner`, `FakeCommandRunner`), `CommandSpec`,
   `CommandResult`, `StdinPayload`, `EmptyWorkingDirectory`.
-- **Environment:** `ShellEnvironmentResolver.resolve()`, `ProcessEnvironmentBuilder.gh/git/ssh`,
-  `ProcessIdentityModel`, `ShellEnvironmentModel`.
-- **gh:** `GHLocator.locate(overridePath:shell:) -> GHInstallationModel`, `GHVersion`,
-  `GHAuthService` (`accounts()`, `token(for:)`, `refreshToken`), `GHTokenCache` (`purge()` on
-  lock), `ScopeChecker`, `GHCommandService.execute`, `GHCommandScheduler` (typed operations for
+- **Environment:** `ShellEnvironmentResolver.resolve()` (interactive shell first, then login;
+  v0.3.1), `ProcessEnvironmentBuilder.gh/git/ssh`, `ProcessIdentityModel`, `ShellEnvironmentModel`
+  (plus `ghPath` from `command -v gh`, `setVariables: Set<ShellVariableName>` (names only),
+  `probeMode: ShellProbeMode` `.interactive` / `.login` / `.failed`, `shellPath`,
+  `exportedTokenVariables`).
+- **gh:** `GHLocator.locate(overridePath:shell:trustedBinary:) -> GHInstallationModel` and
+  `inspect(overridePath:shell:trustedBinary:checksEveryVersion:) -> GHLocatorReportModel`
+  (v0.3.1: every candidate as `GHCandidateReportModel` with `GHCandidateSource`, rejection,
+  `foreignOwner: GHBinaryOwnerModel`, version; the decisive candidate; the outcome), over
+  `protocol GHFileInspecting` (`SystemGHFileInspector`; `FakeGHFileInspector` in `Testing/`),
+  `GHTrustedBinaryModel` (consented trust), `GHVersion`, `GHAuthService` (`accounts()`,
+  `listing() -> GHAccountListingModel` with `unusable: [GHUnusableAccountModel]`, `token(for:)`,
+  `refreshToken`), `GHAccountStatusModel.tokenSource`, `GHTokenCache` (`purge()` on lock),
+  `ScopeChecker`, `GHCommandService.execute`, `GHCommandScheduler` (typed operations for
   every §8 A–C row; serial per account; throttled; retries), `GHRepoRef`, `GHRepoCreateRequest`,
   DTOs (`GHRepoDTO`, `GHSecretDTO`, `GHVariableListingModel`, `GHEnvironmentDTO`,
   `GHBranchPolicyDTO`, `GHLicenseTemplateModel`), `GHWriteRecordModel` (throttle seed).
 - **ssh/git:** `SSHConfigParser`, `SSHAliasValidator`, `SSHAliasResolver` (D1, D2),
   `GitService` (D3 clone, D4–D6).
+- **Diagnostics** (v0.3.1): `GHDiagnosticsCollector(runner:identity:workingDirectory:fileInspector:)
+  .collect(shell:overridePath:trustedBinary:) -> GHDiagnosticsModel` (Encodable, explicit nulls;
+  runs only `gh --version` and A3; no token, no variable values), `GHDiagnosticsModel.unavailable`.
+- **Testing:** `FakeCommandRunner` (`stub(executablePath:argumentsPrefix:with:)` for several gh
+  binaries, `replaceStub`), `FakeGHFileInspector` (files, folders, symlinks, owners, `addHomebrewGH`).
 - **Errors:** `GHError` (§8 E plus `untrustedBinary`, `invalidInput`, `forbiddenArgument`,
   `malformedOutput`, `outputTooLarge`, `writeBudgetExhausted`, `launchFailed`, `cancelled`;
   `logCode`, `isTransient`), `GitError`, `GHStderrClassifier`, `StderrRedactor`.
@@ -437,11 +451,14 @@ them with `await`). Packages ship no user-facing text: the app maps every error.
 - `Argon2idSharingDeriver: KeyDeriving` (use with `FxVaultFileCodec`).
 
 **Accounts** (`Accounts/`). `actor GitHubEnvironmentRepository(database:runner:identity:
-workingDirectory:clock:tokenCache:shellPath:sshConfigParser:)` is the `GHSchedulerProviding`
-for every other repository: `shellEnvironment()`, `detectGH(overridePath:)`, `accounts()`,
-`recheck(login:)`, `scopeFixCommands(for:)`, `purgeTokens()` (synchronous), `scheduler(for:)`
-(one per account, seeded from the journal), `sshHostEntries()`, `mapSSHAlias(_:to:)`,
-`testSSHAlias(_:for:)`. Errors: `GitHubEnvironmentError`.
+workingDirectory:clock:tokenCache:shellPath:sshConfigParser:fileInspector:)` is the
+`GHSchedulerProviding` for every other repository: `shellEnvironment(refresh:)`,
+`detectGH(overridePath:trustedBinary:)` (keeps `lastDetection: GHLocatorReportModel?`),
+`accounts()` (keeps `unusableAccounts: [GHUnusableAccountModel]`, never stored),
+`diagnostics(overridePath:trustedBinary:) -> GHDiagnosticsModel` (no state change, no database),
+`ownerName(for:)`, `recheck(login:)`, `scopeFixCommands(for:)`, `purgeTokens()` (synchronous),
+`scheduler(for:)` (one per account, seeded from the journal), `sshHostEntries()`,
+`mapSSHAlias(_:to:)`, `testSSHAlias(_:for:)`. Errors: `GitHubEnvironmentError`.
 
 **Catalog** (`Catalog/`). `actor RepoCatalogRepository(session:schedulers:clock:)`:
 `catalog(accountLogin:) -> AccountCatalogModel` (account → organizations → other owners; a SAML
@@ -647,6 +664,19 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 58 | Chat | Flood limits: more than 100 TEXT/offer/request/decline/PING frames in 10 s, or more than 32 offers per chat, abort with `unexpectedMessage`; the window keeps 1,000 messages. Text and names drop every invisible character (`UnicodeScalarPolicy.isInvisible`); chat text keeps one blank line in a row and four combining marks per character. Messages are not selectable: Copy goes through `ClipboardManager`. Late async results (send, offer, request, a save preview) of a chat that ended are dropped. An offer's value provider refuses a value whose `value_fp` changed since the offer. Discovery uses the `local.` domain and filters this Mac by its registered name |
 | 59 | Sharing | A missing partial environment whose items are all skipped is not created (`ShareEnvironmentPlanModel.createsEnvironment`); a nearby DECISION carries such an environment's id only with an accepted item. A tree opened for one item keeps sharing that item even if it is its environment's only item, until the checks change. Share import previews read GitHub only when online (`FeatureDependencies.checksGitHub`), and their "Import repository" button, the drift review's Refresh and resolutions, and Create Repository's Sync Now… are disabled offline with `ConnectivityCopy.offlineHelp`. The connectivity debounce is not restarted by more updates of the same transition; a reconnect cancels the previous one and re-lists drift only when the last check failed, never ran or was skipped offline |
 
+### As built in v0.3.1 (gh login detection)
+
+| # | Area | Decision |
+|---|---|---|
+| 60 | Logins | Root cause of "gh is logged in but FX Vault says Log in": Enterprise Managed User logins (`handle_shortcode`) failed `OwnerLoginValidator` and A3 dropped them silently. The one owner validator now accepts `_` anywhere but first (`^[A-Za-z0-9][A-Za-z0-9_-]{0,38}$`), because EMU users own personal repositories. GitHub counts the underscore and short code toward the same 39 characters, so `Limits.maxOwnerLoginLength` stays 39. Organization lists accept underscores too (GitHub never prints one). No schema change: no CHECK constrains login characters |
+| 61 | Logins | A3 splits accounts into usable ones and `GHUnusableAccountModel`s (display login with token patterns redacted and invisible characters removed, the `NameRule`, active). Unusable accounts are never persisted; the setup screen (`GHStatusModel.unusableAccounts` when none is usable), Settings › Accounts and the diagnostics show them |
+| 62 | Shell probe | The interactive login shell runs first (`-i -l -c`; csh `-i -c`), the login shell is the fallback on a timeout or missing markers, each 5 s. Interactive shells read `~/.zshrc` like Terminal; 0.3.0 missed PATH, `GH_CONFIG_DIR` and `XDG_CONFIG_HOME` set there. Every **Check Again** probes again (`refreshGHStatus(refreshingShell:)`); the launch probe is cached |
+| 63 | Shell probe | The script adds one `/bin/sh -c '<report>'` (POSIX, so every shell can start it with what it exports): `FXV_GH=` + `command -v gh`, then `FXV_SET=<NAME>` for each of `GH_TOKEN`, `GITHUB_TOKEN`, `GH_CONFIG_DIR`, `XDG_CONFIG_HOME`, `GH_HOST` that is set and non-empty, tested with sh's `[` builtin. No value reaches stdout, an argv or a file; the parser keeps only an absolute `…/gh` path and exact names as enum cases. Real zsh, bash, sh and tcsh are tested with a synthetic token that must never appear in stdout |
+| 64 | Locator | Candidates: override (alone), the shell's gh, Homebrew, shell PATH, MacPorts/Nix/`~/.local`. The first candidate that exists decides: used when trusted and new enough, otherwise detection fails with its reason. FX Vault never falls back to a gh behind it (0.3.0 skipped a rejected Homebrew gh and could run an older `/usr/local/bin/gh`). Only the decisive gh's `--version` runs (diagnostics run every trusted one); an untrusted binary never runs |
+| 65 | Locator | Consented trust: when the only problem is that one other non-root user owns the file or its folders (never writable by others, never several owners), the setup screen names the owner and offers **Trust This gh**. `PreferencesManager.trustedGHBinary` stores `{path, owner uid}` (candidate path, so `brew upgrade gh` keeps it); `GHLocator` accepts exactly that path while every foreign owner is that uid. Settings › Advanced lists it with Revoke. The trust check reads the file system through `GHFileInspecting` so tests can model other owners |
+| 66 | Accounts | No stored account and an exported `GH_TOKEN` / `GITHUB_TOKEN` is `GHStatusModel.environmentToken`: the setup screen explains it and offers `env -u GH_TOKEN -u GITHUB_TOKEN gh auth login` (BSD `env -u`, tested on macOS). Settings › Accounts shows a note while a token variable is exported. Unusable accounts take precedence over the token note |
+| 67 | Diagnostics | **Copy Diagnostics** (setup screen) and the `gh` section of `--diagnose` render one `GHDiagnosticsModel`: candidates (path, source, resolved path, version, accepted / rejected / notFound, reason, owner uid and name, consent, chosen), shell path and probe mode, variable names, override and trusted gh, accounts (login, state code, token source only when one of gh's known names, scopes, missing scopes), unusable accounts, A3 error code. `--diagnose` collects it before the app starts (a detached task the entry point waits for; no database, no token fetch). The copied text is fixed English, like the JSON keys: a support artifact, not interface text |
+| 68 | Status | `GHStatusModel` gains `.foreignOwner(path:owner:isHomebrew:)`, `.environmentToken(version:path:variables:)`, `.unusableAccounts(version:path:accounts:)`; `.outdated` carries the checked path and `.untrusted` the rejection, so the texts say what is wrong |
 
 ## App shell
 
@@ -680,8 +710,10 @@ AppTests).
 - `FXVaultMain` (`FXVaultApp.swift`) is the `@main` entry: `DiagnoseCommand.runIfRequested()`
   answers `--diagnose` (JSON on stdout, then `exit(0)`) before `FXVaultApp.main()` creates the app
   delegate, so no window, vault or database opens. `App/Diagnostics`: `DiagnosticReporter`
-  (`makeReport(infoDictionary:capabilities:probe:)`, pure) and `DiagnosticReportModel` (explicit
-  `null`s, sorted keys).
+  (`makeReport(infoDictionary:capabilities:probe:gh:)`, pure; `versionAndBuild`),
+  `DiagnosticReportModel` (explicit `null`s, sorted keys; `gh` section since v0.3.1, collected by
+  `DiagnoseCommand.collectGHDiagnostics` with the real shell and gh) and
+  `GHDiagnosticsTextRenderer` (the Copy Diagnostics text).
 - `SyncActivity`: holds the auto-lock `SyncActivityAssertion` and drives the Sync button's
   progress. `end()` is idempotent; a lock ends every activity.
 - `protocol LockObserving: AnyObject { func vaultDidLock() }` (held weakly; register with
@@ -703,7 +735,9 @@ AppTests).
   after 30 s if still owned), `copyCommand(_:)` (plain text such as `brew install gh`, never
   cleared), `clearIfOwned()`; never reads the pasteboard.
 - `@Observable PreferencesManager(store:)`: `autoLockMinutes` / `autoLockTimeout`, clone folder,
-  `ghPathOverride`, `isRecoveryKeyConfirmationPending`, `hasAnsweredTouchIDOffer`,
+  `ghPathOverride`, `trustedGHBinary` / `trustGHBinary(_:)` / `revokeTrustedGHBinary()` (v0.3.1,
+  `preferences.trustedGHPath` and `preferences.trustedGHOwnerUID`, validated on read),
+  `isRecoveryKeyConfirmationPending`, `hasAnsweredTouchIDOffer`,
   `nearbyDisplayName` / `nearbyName` (v0.2.0: the name nearby Macs see, Preferences › General;
   nil uses the macOS full name); `UserDefaultsPreferencesStore` (live) or
   `InMemoryPreferencesStore`.
@@ -727,10 +761,14 @@ AppTests).
   (404, 422, 401, rate limit, 5xx, SAML) means responding; local failures say nothing.
   `Error.gitHubFailure` unwraps the `GHError` inside VaultData and SyncEngine errors. Retry runs
   the main window's own calls again and clears the state when none of them reported anything.
-- `GHStatusProbing`: `GitHubEnvironmentStatusProbe(github:overridePath:)` (`detectGH` then
-  `accounts()`) and `FixedGHStatusProbe`. `GHStatusModel`: `.checking`, `.unknown`,
-  `.ready(version:path:)`, `.notInstalled`, `.outdated(found:required:)`, `.untrusted(path:)`,
-  `.noAccounts(version:path:)`, `.failed`; `needsSetup`, `isReady`.
+- `GHStatusProbing.probe(refreshingShell:)`: `GitHubEnvironmentStatusProbe(github:preferences:)`
+  (`detectGH` with the override and trusted gh, then `accounts()`; maps the locator report) and
+  `FixedGHStatusProbe`. `GHStatusModel`: `.checking`, `.unknown`, `.ready(version:path:)`,
+  `.notInstalled`, `.outdated(found:required:path:)`, `.untrusted(path:reason:)`,
+  `.foreignOwner(path:owner:isHomebrew:)`, `.noAccounts(version:path:)`,
+  `.environmentToken(version:path:variables:)`, `.unusableAccounts(version:path:accounts:)`,
+  `.failed`; `needsSetup`, `isReady`. `AppViewModel.refreshGHStatus(refreshingShell:)`,
+  `trustGHBinary(_:)`, `revokeTrustedGHBinary()`.
 
 **Screens** (`App/Screens`, each `[Name]Screen` + `@Observable [Name]ViewModel`).
 - `Onboarding`, `Lock` / `RecoveryReset` (both with `GHStatusRow`). The lock screen shows
@@ -742,12 +780,18 @@ AppTests).
   appears: Turn On Touch ID (`enableBiometrics` with the password just typed) or Not Now
   (remembered in `PreferencesManager.hasAnsweredTouchIDOffer`). A lock discards it unanswered.
 - `GHSetup` (§10.3): after unlock while `ghStatus.needsSetup`; kinds install / upgrade (found
-  version and why 2.97 is required) / untrusted / login / failed; copyable `brew install gh`,
-  `brew upgrade gh`, `gh auth login`; **Check Again**; **Not Now** (work without gh until the next
+  version, the checked path, and why 2.97 is required) / untrusted (reason-specific text) /
+  trustOwner (v0.3.1: the owner, the risk, **Trust This gh** as an outline button, never the
+  default) / login / environmentToken (v0.3.1: `env -u GH_TOKEN -u GITHUB_TOKEN gh auth login`) /
+  unusableAccounts (v0.3.1: each login with its reason) / failed; copyable `brew install gh`,
+  `brew upgrade gh`, `gh auth login`; **Copy Diagnostics** (ghost, footer leading; plain-text
+  copy); **Check Again** (probes the shell again); **Not Now** (work without gh until the next
   launch or until gh is ready).
 - `Preferences`: General, Security, **Accounts** (`AccountsSettingsViewModel`: gh path and
   version, per account token state, scopes with copyable fix commands, SSH alias picker from
-  `~/.ssh/config`, **Test** "Authenticates as <login>", **Re-check**), Advanced.
+  `~/.ssh/config`, **Test** "Authenticates as <login>", **Re-check**; v0.3.1: a note with the
+  `env -u` command while the shell exports a token variable, and "Accounts FX Vault can't use"),
+  Advanced (v0.3.1: the trusted gh with its owner and **Revoke**).
 - `Main` (§10.4), `MainViewModel` owns:
   - `SidebarViewModel` (`Main/Sidebar`): vault repositories observed (work without gh), gh
     accounts and catalogs loaded when gh is ready; `SidebarGrouping.sections(_:query:)` (pure)
