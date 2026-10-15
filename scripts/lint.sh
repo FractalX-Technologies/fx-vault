@@ -9,6 +9,7 @@
 #     `localizedFallbackTitle = "..."` (prompts are built with String(localized:) in the app)
 #   - `import GRDB` / `import Clibsodium` outside the one module allowed to use each
 #     (the app never imports either; D2, §4.2)
+#   - `import VaultStore` in App/ or AppTests/ (the app reaches the database through VaultData)
 # Comment-only lines are ignored. Exit 0 when clean, 1 on any finding.
 set -euo pipefail
 
@@ -71,6 +72,20 @@ check_import() {
 }
 check_import GRDB Packages/FXVaultKit/Sources/VaultStore
 check_import Clibsodium Packages/FXVaultKit/Sources/VaultCrypto
+
+# The app target and its tests never import VaultStore (VaultSession.openLive/inMemory instead).
+app_dirs=()
+for dir in App AppTests; do
+  [[ -d "$dir" ]] && app_dirs+=("$dir")
+done
+if [[ ${#app_dirs[@]} -gt 0 ]]; then
+  hits="$(scan '^[[:space:]]*(@[A-Za-z_]+[[:space:]]+)*import[[:space:]]+(class |struct |enum |func |var |let )?VaultStore([[:space:]]|\.|$)' "${app_dirs[@]}")"
+  if [[ -n "$hits" ]]; then
+    echo "lint: import VaultStore is not allowed in App/ or AppTests/ (use VaultData)"
+    echo "$hits" | sed 's/^/  /'
+    failures=$((failures + 1))
+  fi
+fi
 
 if [[ $failures -gt 0 ]]; then
   echo "lint: $failures rule(s) failed"

@@ -24,11 +24,15 @@ public struct SharePackageStore: Sendable {
 
     /// Every imported package, most recent import first.
     public func fetchAll() throws -> [ImportedSharePackageRecord] {
-        try database.read { tx in
-            try ImportedSharePackageRecord
-                .order(ImportedSharePackageRecord.CodingKeys.importedAt.desc)
-                .fetchAll(tx.db)
-        }
+        try database.read { try fetchAll(in: $0) }
+    }
+
+    /// Use inside the share importer's transaction, so the replay check and the recorded import
+    /// see the same state (§9.5).
+    public func fetchAll(in tx: StoreTransaction) throws -> [ImportedSharePackageRecord] {
+        try ImportedSharePackageRecord
+            .order(ImportedSharePackageRecord.CodingKeys.importedAt.desc)
+            .fetchAll(tx.db)
     }
 
     /// Records an import. A package imported again after the user confirmed the replay warning

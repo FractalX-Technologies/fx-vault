@@ -2,12 +2,8 @@ import Foundation
 import Testing
 import SyncEngine
 
-@Suite("SyncEngine skeleton")
-struct SyncEngineModuleTests {
-    @Test func moduleLinks() {
-        #expect(SyncEngineModule.name == "SyncEngine")
-    }
-
+@Suite("SyncEngine test bundle")
+struct FixturesBundleTests {
     @Test func fixturesAreBundled() {
         #expect(Bundle.module.url(forResource: "Fixtures", withExtension: nil) != nil)
     }

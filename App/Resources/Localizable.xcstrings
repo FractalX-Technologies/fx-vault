@@ -12,18 +12,535 @@
         }
       }
     },
-    "root.locked.message" : {
+    "biometry.unavailable.lockout" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Unlock it with your master password."
+            "value" : "Touch ID is locked after too many attempts. Use your master password."
           }
         }
       }
     },
-    "root.locked.title" : {
+    "biometry.unavailable.notAvailable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This Mac has no Touch ID sensor available right now."
+          }
+        }
+      }
+    },
+    "biometry.unavailable.notEnabled" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID is not turned on for this vault."
+          }
+        }
+      }
+    },
+    "biometry.unavailable.notEnrolled" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a fingerprint in System Settings › Touch ID & Password first."
+          }
+        }
+      }
+    },
+    "biometry.unavailable.passcodeNotSet" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID needs a login password on this Mac."
+          }
+        }
+      }
+    },
+    "biometry.unavailable.unsignedBuild" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID requires the official signed release."
+          }
+        }
+      }
+    },
+    "common.cancel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "common.close" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "error.generic.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Try again. If it keeps happening, quit and reopen FX Vault."
+          }
+        }
+      }
+    },
+    "error.generic.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Something went wrong"
+          }
+        }
+      }
+    },
+    "error.name.bidiCharacter" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The name contains a text-direction character."
+          }
+        }
+      }
+    },
+    "error.name.controlCharacter" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The name contains a control character."
+          }
+        }
+      }
+    },
+    "error.name.dotName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The name cannot be . or .."
+          }
+        }
+      }
+    },
+    "error.name.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter a name."
+          }
+        }
+      }
+    },
+    "error.name.gitSuffix" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The name cannot end with .git"
+          }
+        }
+      }
+    },
+    "error.name.invalidCharacter" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The name contains a character that is not allowed."
+          }
+        }
+      }
+    },
+    "error.name.invalidFirstCharacter" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The name cannot start with this character."
+          }
+        }
+      }
+    },
+    "error.name.leadingDigit" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The name cannot start with a digit."
+          }
+        }
+      }
+    },
+    "error.name.notNormalized" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The name uses an unusual Unicode form."
+          }
+        }
+      }
+    },
+    "error.name.reservedPrefix" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Names starting with GITHUB_ are reserved by GitHub."
+          }
+        }
+      }
+    },
+    "error.name.tooLong" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use at most %lld characters."
+          }
+        }
+      }
+    },
+    "error.name.whitespace" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The name cannot start or end with a space."
+          }
+        }
+      }
+    },
+    "error.name.zeroWidthCharacter" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The name contains an invisible character."
+          }
+        }
+      }
+    },
+    "error.password.tooWeak.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Password too weak"
+          }
+        }
+      }
+    },
+    "error.validation.duplicateName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Another item already uses this name."
+          }
+        }
+      }
+    },
+    "error.validation.emptyValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter a value. GitHub does not store empty values."
+          }
+        }
+      }
+    },
+    "error.validation.invalidHost" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only github.com is supported."
+          }
+        }
+      }
+    },
+    "error.validation.invalidPathSegment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This name contains characters that cannot be used in a path."
+          }
+        }
+      }
+    },
+    "error.validation.lockedAfterSync" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The kind and scope cannot change after the item is on GitHub."
+          }
+        }
+      }
+    },
+    "error.validation.nameReservedByPendingChange" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This name is still used by a pending rename or deletion. Sync or revert that change first."
+          }
+        }
+      }
+    },
+    "error.validation.scopeFull" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This scope already holds the maximum of %lld items."
+          }
+        }
+      }
+    },
+    "error.validation.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check this field"
+          }
+        }
+      }
+    },
+    "error.validation.valueTooLarge" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The value is larger than GitHub's limit of %lld bytes."
+          }
+        }
+      }
+    },
+    "error.vault.alreadyInitialized.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock the existing vault, or reset it in Settings › Advanced."
+          }
+        }
+      }
+    },
+    "error.vault.alreadyInitialized.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A vault already exists"
+          }
+        }
+      }
+    },
+    "error.vault.biometryInvalidated.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID changed on this Mac, so FX Vault turned it off. Unlock with your master password, then turn Touch ID on again in Settings."
+          }
+        }
+      }
+    },
+    "error.vault.biometryInvalidated.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID was turned off"
+          }
+        }
+      }
+    },
+    "error.vault.biometryUnavailable.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID is not available"
+          }
+        }
+      }
+    },
+    "error.vault.cancelled.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nothing was changed."
+          }
+        }
+      }
+    },
+    "error.vault.cancelled.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cancelled"
+          }
+        }
+      }
+    },
+    "error.vault.corrupted.fieldDecryptionFailed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A stored value could not be decrypted. It may have been modified outside FX Vault."
+          }
+        }
+      }
+    },
+    "error.vault.corrupted.generic" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The vault's key data is damaged. Restore the vault folder from a backup, or reset the vault."
+          }
+        }
+      }
+    },
+    "error.vault.corrupted.keyCheckMismatch" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The unlocked key does not match this vault. Unlock with your master password."
+          }
+        }
+      }
+    },
+    "error.vault.corrupted.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The vault failed an integrity check"
+          }
+        }
+      }
+    },
+    "error.vault.corrupted.unsupportedFormatVersion" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This vault was written by a newer version of FX Vault. Update FX Vault to open it."
+          }
+        }
+      }
+    },
+    "error.vault.invalidRecoveryKey.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check that you entered all %lld characters of the current recovery key."
+          }
+        }
+      }
+    },
+    "error.vault.invalidRecoveryKey.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Recovery key not accepted"
+          }
+        }
+      }
+    },
+    "error.vault.locked.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The vault locked before the operation finished. Unlock it and try again."
+          }
+        }
+      }
+    },
+    "error.vault.locked.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
@@ -34,18 +551,744 @@
         }
       }
     },
-    "root.onboarding.message" : {
+    "error.vault.notInitialized.message" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Create a vault to manage your GitHub secrets and variables."
+            "value" : "Create a vault first."
           }
         }
       }
     },
-    "root.onboarding.title" : {
+    "error.vault.notInitialized.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No vault yet"
+          }
+        }
+      }
+    },
+    "error.vault.passwordFallback.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter your master password to continue."
+          }
+        }
+      }
+    },
+    "error.vault.passwordFallback.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use your master password"
+          }
+        }
+      }
+    },
+    "error.vault.passwordRequired.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Master password required"
+          }
+        }
+      }
+    },
+    "error.vault.wrongPassword.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check the master password and try again."
+          }
+        }
+      }
+    },
+    "error.vault.wrongPassword.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Incorrect password"
+          }
+        }
+      }
+    },
+    "gh.status.checking" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Looking for the GitHub CLI…"
+          }
+        }
+      }
+    },
+    "gh.status.notInstalled" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub CLI not found. Install it with: brew install gh"
+          }
+        }
+      }
+    },
+    "gh.status.outdated" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub CLI %1$@ is too old; FX Vault needs %2$@ or later. Run: brew upgrade gh"
+          }
+        }
+      }
+    },
+    "gh.status.ready" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub CLI %1$@ at %2$@"
+          }
+        }
+      }
+    },
+    "lock.forgot" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Forgot password? Use recovery key"
+          }
+        }
+      }
+    },
+    "lock.password.placeholder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Master password"
+          }
+        }
+      }
+    },
+    "lock.passwordRequired.biometryChanged" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID fingerprints changed. Enter your master password, then turn Touch ID on again in Settings."
+          }
+        }
+      }
+    },
+    "lock.passwordRequired.periodic" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault asks for your master password at least every %lld days."
+          }
+        }
+      }
+    },
+    "lock.passwordRequired.restart" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your Mac restarted, so FX Vault needs your master password once before Touch ID works again."
+          }
+        }
+      }
+    },
+    "lock.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter your master password to unlock."
+          }
+        }
+      }
+    },
+    "lock.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault is locked"
+          }
+        }
+      }
+    },
+    "lock.touchID" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock with Touch ID"
+          }
+        }
+      }
+    },
+    "lock.unlock" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock"
+          }
+        }
+      }
+    },
+    "main.detail.kind" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kind"
+          }
+        }
+      }
+    },
+    "main.detail.noSelection" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No repository selected"
+          }
+        }
+      }
+    },
+    "main.detail.secrets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets"
+          }
+        }
+      }
+    },
+    "main.detail.variables" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Variables"
+          }
+        }
+      }
+    },
+    "main.recoveryReminder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your recovery key was not saved. Create a new one in Settings › Security."
+          }
+        }
+      }
+    },
+    "main.scopes.empty.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Select a repository to see its environments."
+          }
+        }
+      }
+    },
+    "main.scopes.empty.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No repository selected"
+          }
+        }
+      }
+    },
+    "main.scopes.newEnvironment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Environment"
+          }
+        }
+      }
+    },
+    "main.search.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search repositories"
+          }
+        }
+      }
+    },
+    "main.sidebar.empty.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repositories of your GitHub CLI accounts appear here."
+          }
+        }
+      }
+    },
+    "main.sidebar.empty.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No repositories yet"
+          }
+        }
+      }
+    },
+    "main.table.empty.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Select a repository and a scope to see its items."
+          }
+        }
+      }
+    },
+    "main.table.empty.secrets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No secrets"
+          }
+        }
+      }
+    },
+    "main.table.empty.variables" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No variables"
+          }
+        }
+      }
+    },
+    "main.table.name" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "main.table.status" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Status"
+          }
+        }
+      }
+    },
+    "main.table.updated" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Updated"
+          }
+        }
+      }
+    },
+    "main.table.value" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Value"
+          }
+        }
+      }
+    },
+    "menu.vault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Vault"
+          }
+        }
+      }
+    },
+    "menu.vault.lock" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Lock FX Vault"
+          }
+        }
+      }
+    },
+    "onboarding.confirm.back" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show Key Again"
+          }
+        }
+      }
+    },
+    "onboarding.confirm.continue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirm"
+          }
+        }
+      }
+    },
+    "onboarding.confirm.group" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Group %lld"
+          }
+        }
+      }
+    },
+    "onboarding.confirm.mismatch" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "That does not match your recovery key. Check the groups or go back to the key."
+          }
+        }
+      }
+    },
+    "onboarding.confirm.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter the requested groups from the key you saved."
+          }
+        }
+      }
+    },
+    "onboarding.confirm.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirm your recovery key"
+          }
+        }
+      }
+    },
+    "onboarding.done.open" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open FX Vault"
+          }
+        }
+      }
+    },
+    "onboarding.done.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault locks when your Mac sleeps, the screen locks, the window closes, or after a few idle minutes."
+          }
+        }
+      }
+    },
+    "onboarding.done.subtitleTouchID" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID is on. FX Vault locks when your Mac sleeps, the screen locks, the window closes, or after a few idle minutes."
+          }
+        }
+      }
+    },
+    "onboarding.done.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your vault is ready"
+          }
+        }
+      }
+    },
+    "onboarding.password.create" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "onboarding.password.generate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Generate Passphrase"
+          }
+        }
+      }
+    },
+    "onboarding.password.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It encrypts everything in your vault. FX Vault cannot recover it for you; your recovery key is the only way back in."
+          }
+        }
+      }
+    },
+    "onboarding.password.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose a master password"
+          }
+        }
+      }
+    },
+    "onboarding.progress.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Step %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "onboarding.recovery.copied" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied. The clipboard clears in %lld seconds."
+          }
+        }
+      }
+    },
+    "onboarding.recovery.copy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "onboarding.recovery.saved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "I Saved It"
+          }
+        }
+      }
+    },
+    "onboarding.recovery.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If you forget your master password, this key is the only way to open your vault. Store it in a password manager. FX Vault never stores it and will not show it again."
+          }
+        }
+      }
+    },
+    "onboarding.recovery.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your recovery key"
+          }
+        }
+      }
+    },
+    "onboarding.recovery.warning" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Anyone with this key can reset your master password."
+          }
+        }
+      }
+    },
+    "onboarding.touchID.enable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Turn On Touch ID"
+          }
+        }
+      }
+    },
+    "onboarding.touchID.skip" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not Now"
+          }
+        }
+      }
+    },
+    "onboarding.touchID.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use your fingerprint instead of typing the master password. FX Vault still asks for the password after a restart and at least every %lld days."
+          }
+        }
+      }
+    },
+    "onboarding.touchID.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock with Touch ID"
+          }
+        }
+      }
+    },
+    "onboarding.welcome.start" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create Vault"
+          }
+        }
+      }
+    },
+    "onboarding.welcome.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep your GitHub Actions secrets and variables in an encrypted vault on this Mac, and sync them to GitHub through the GitHub CLI."
+          }
+        }
+      }
+    },
+    "onboarding.welcome.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
@@ -56,35 +1299,1179 @@
         }
       }
     },
-    "root.unlocked.message" : {
+    "passphrase.copy" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Your repositories will appear here."
+            "value" : "Copy"
           }
         }
       }
     },
-    "root.unlocked.title" : {
+    "passphrase.note" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Vault unlocked"
+            "value" : "Write it down or save it in a password manager before you continue."
           }
         }
       }
     },
-    "settings.placeholder" : {
+    "password.confirm.placeholder" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Settings will appear here."
+            "value" : "Confirm master password"
+          }
+        }
+      }
+    },
+    "password.mismatch" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The passwords do not match."
+          }
+        }
+      }
+    },
+    "password.new.placeholder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Master password"
+          }
+        }
+      }
+    },
+    "password.strength.acceptable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Good password."
+          }
+        }
+      }
+    },
+    "password.strength.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "At least %lld characters. A passphrase of several words works well."
+          }
+        }
+      }
+    },
+    "password.strength.strong" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Strong password."
+          }
+        }
+      }
+    },
+    "password.weakness.commonWord" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Avoid common passwords and words."
+          }
+        }
+      }
+    },
+    "password.weakness.generic" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose a stronger master password."
+          }
+        }
+      }
+    },
+    "password.weakness.keyboardPattern" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Avoid keyboard patterns such as qwerty."
+          }
+        }
+      }
+    },
+    "password.weakness.lowEstimatedStrength" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Too easy to guess. Add more words or characters, or generate a passphrase."
+          }
+        }
+      }
+    },
+    "password.weakness.repetition" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Avoid repeated characters."
+          }
+        }
+      }
+    },
+    "password.weakness.sequence" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Avoid sequences such as 1234 or abcd."
+          }
+        }
+      }
+    },
+    "password.weakness.tooShort" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use at least %lld characters."
+          }
+        }
+      }
+    },
+    "password.weakness.year" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Avoid years and dates."
+          }
+        }
+      }
+    },
+    "recoveryKey.group.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Group %1$lld: %2$@"
+          }
+        }
+      }
+    },
+    "recoveryReset.key.placeholder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Recovery key (%lld characters)"
+          }
+        }
+      }
+    },
+    "recoveryReset.newKey.copy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "recoveryReset.newKey.finish" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open FX Vault"
+          }
+        }
+      }
+    },
+    "recoveryReset.newKey.saved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "I saved the new recovery key"
+          }
+        }
+      }
+    },
+    "recoveryReset.newKey.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your master password was changed and the vault key replaced. Your old recovery key no longer works."
+          }
+        }
+      }
+    },
+    "recoveryReset.newKey.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your new recovery key"
+          }
+        }
+      }
+    },
+    "recoveryReset.submit" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reset Password"
+          }
+        }
+      }
+    },
+    "recoveryReset.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter your recovery key and choose a new master password. FX Vault then replaces the vault key and gives you a new recovery key; the old one stops working."
+          }
+        }
+      }
+    },
+    "recoveryReset.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reset your master password"
+          }
+        }
+      }
+    },
+    "secretEditor.accessibilityLabel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Value"
+          }
+        }
+      }
+    },
+    "secretEditor.hint.key" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub stores keys without the final newline. Workflows usually add it back, for example: echo \"$KEY\" > key"
+          }
+        }
+      }
+    },
+    "secretEditor.notice.strippedNewlines" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trailing line breaks were removed. GitHub removes them too, so FX Vault stores the value as GitHub will."
+          }
+        }
+      }
+    },
+    "settings.accounts.empty.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Accounts logged in to the GitHub CLI appear here, with their scopes and SSH aliases."
+          }
+        }
+      }
+    },
+    "settings.accounts.empty.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No GitHub accounts yet"
+          }
+        }
+      }
+    },
+    "settings.advanced.gh.choose" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose…"
+          }
+        }
+      }
+    },
+    "settings.advanced.gh.override" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "gh path override"
+          }
+        }
+      }
+    },
+    "settings.advanced.gh.override.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Automatic"
+          }
+        }
+      }
+    },
+    "settings.advanced.gh.recheck" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check Again"
+          }
+        }
+      }
+    },
+    "settings.advanced.gh.requirement" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault requires gh %@ or later."
+          }
+        }
+      }
+    },
+    "settings.advanced.gh.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub CLI"
+          }
+        }
+      }
+    },
+    "settings.advanced.gh.telemetry" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault disables gh telemetry for its own calls."
+          }
+        }
+      }
+    },
+    "settings.advanced.vault.reset" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reset Vault…"
+          }
+        }
+      }
+    },
+    "settings.advanced.vault.reveal" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reveal Vault Folder in Finder"
+          }
+        }
+      }
+    },
+    "settings.advanced.vault.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Vault"
+          }
+        }
+      }
+    },
+    "settings.general.autoLock" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Lock after inactivity"
+          }
+        }
+      }
+    },
+    "settings.general.autoLock.minutes" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld min"
+          }
+        }
+      }
+    },
+    "settings.general.autoLock.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault always locks when your Mac sleeps, the screen locks or the window closes. The inactivity timer pauses while a sync runs."
+          }
+        }
+      }
+    },
+    "settings.general.cloneFolder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clone folder"
+          }
+        }
+      }
+    },
+    "settings.general.cloneFolder.choose" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose…"
+          }
+        }
+      }
+    },
+    "settings.general.cloneFolder.none" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not chosen"
+          }
+        }
+      }
+    },
+    "settings.general.cloneFolder.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose"
+          }
+        }
+      }
+    },
+    "settings.locked.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "These settings are stored in your encrypted vault."
+          }
+        }
+      }
+    },
+    "settings.locked.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock FX Vault to change these settings"
+          }
+        }
+      }
+    },
+    "settings.reset.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Type %@ to confirm"
+          }
+        }
+      }
+    },
+    "settings.reset.password" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Master password"
+          }
+        }
+      }
+    },
+    "settings.reset.submit" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Erase Vault"
+          }
+        }
+      }
+    },
+    "settings.reset.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This permanently erases every repository, secret and variable stored in FX Vault on this Mac, and turns off Touch ID. Nothing on GitHub changes. This cannot be undone."
+          }
+        }
+      }
+    },
+    "settings.reset.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reset vault?"
+          }
+        }
+      }
+    },
+    "settings.security.changePassword" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Change Master Password…"
+          }
+        }
+      }
+    },
+    "settings.security.changePassword.rotate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "My password may be compromised: rotate the vault key"
+          }
+        }
+      }
+    },
+    "settings.security.changePassword.rotate.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rotating re-encrypts every value and gives you a new recovery key."
+          }
+        }
+      }
+    },
+    "settings.security.changePassword.submit" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Change Password"
+          }
+        }
+      }
+    },
+    "settings.security.changePassword.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Change master password"
+          }
+        }
+      }
+    },
+    "settings.security.clipboard.info" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied values stay on this Mac (no Universal Clipboard), are hidden from clipboard managers, and are cleared after %lld seconds or when FX Vault locks, unless you copied something else since."
+          }
+        }
+      }
+    },
+    "settings.security.clipboard.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clipboard"
+          }
+        }
+      }
+    },
+    "settings.security.currentPassword" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Current master password"
+          }
+        }
+      }
+    },
+    "settings.security.newRecoveryKey" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create New Recovery Key…"
+          }
+        }
+      }
+    },
+    "settings.security.newRecoveryKey.submit" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create Key"
+          }
+        }
+      }
+    },
+    "settings.security.newRecoveryKey.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your current recovery key stops working. Enter your master password to continue."
+          }
+        }
+      }
+    },
+    "settings.security.newRecoveryKey.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create a new recovery key"
+          }
+        }
+      }
+    },
+    "settings.security.password.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Master password"
+          }
+        }
+      }
+    },
+    "settings.security.showRecoveryKey.copy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "settings.security.showRecoveryKey.done" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "I Saved It"
+          }
+        }
+      }
+    },
+    "settings.security.showRecoveryKey.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Store it in a password manager. FX Vault will not show it again, and your previous recovery key no longer works."
+          }
+        }
+      }
+    },
+    "settings.security.showRecoveryKey.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your new recovery key"
+          }
+        }
+      }
+    },
+    "settings.security.touchID.disable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Turn Off"
+          }
+        }
+      }
+    },
+    "settings.security.touchID.disable.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Turn off Touch ID"
+          }
+        }
+      }
+    },
+    "settings.security.touchID.enable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Turn On"
+          }
+        }
+      }
+    },
+    "settings.security.touchID.enable.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Turn on Touch ID"
+          }
+        }
+      }
+    },
+    "settings.security.touchID.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID"
+          }
+        }
+      }
+    },
+    "settings.security.touchID.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter your master password to continue."
+          }
+        }
+      }
+    },
+    "settings.security.touchID.toggle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock with Touch ID"
+          }
+        }
+      }
+    },
+    "settings.tab.accounts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Accounts"
+          }
+        }
+      }
+    },
+    "settings.tab.advanced" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Advanced"
+          }
+        }
+      }
+    },
+    "settings.tab.general" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "General"
+          }
+        }
+      }
+    },
+    "settings.tab.security" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Security"
+          }
+        }
+      }
+    },
+    "startup.failed.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check that your user account can read Application Support/FX Vault, then quit and reopen FX Vault. %@"
+          }
+        }
+      }
+    },
+    "startup.failed.quit" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Quit FX Vault"
+          }
+        }
+      }
+    },
+    "startup.failed.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault could not open your vault"
+          }
+        }
+      }
+    },
+    "status.added" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Added"
+          }
+        }
+      }
+    },
+    "status.blocked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Blocked"
+          }
+        }
+      }
+    },
+    "status.deleted" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Deleted"
+          }
+        }
+      }
+    },
+    "status.modified" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Modified"
+          }
+        }
+      }
+    },
+    "status.synced" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Synced"
+          }
+        }
+      }
+    },
+    "status.unverifiedShare" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unverified share"
+          }
+        }
+      }
+    },
+    "status.valueMissing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Value missing"
+          }
+        }
+      }
+    },
+    "sync.placeholder.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The sync summary appears here."
+          }
+        }
+      }
+    },
+    "sync.placeholder.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync"
+          }
+        }
+      }
+    },
+    "toolbar.lock" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Lock"
+          }
+        }
+      }
+    },
+    "toolbar.lock.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Lock FX Vault (⌃⌘L)"
+          }
+        }
+      }
+    },
+    "toolbar.sync.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync %lld pending changes"
+          }
+        }
+      }
+    },
+    "toolbar.sync.help.none" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No pending changes"
+          }
+        }
+      }
+    },
+    "toolbar.sync.help.pending" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Push %lld pending changes to GitHub"
+          }
+        }
+      }
+    },
+    "toolbar.sync.help.running" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A sync is running"
+          }
+        }
+      }
+    },
+    "toolbar.sync.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync"
+          }
+        }
+      }
+    },
+    "toolbar.sync.titleCount" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync %lld"
+          }
+        }
+      }
+    },
+    "touchID.prompt.fallback" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use Master Password"
+          }
+        }
+      }
+    },
+    "touchID.prompt.unlock" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "unlock your FX Vault"
+          }
+        }
+      }
+    },
+    "value.hide" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide value"
+          }
+        }
+      }
+    },
+    "value.reveal" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reveal value"
           }
         }
       }

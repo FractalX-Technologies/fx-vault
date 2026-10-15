@@ -176,3 +176,33 @@ unverified sender name, and recording the package in `imported_share_packages`).
 - **Environments:** missing ones are created (pending unless GitHub already lists them). A
   different branch policy is its own row, defaulting to keep mine. Widening (anything → all,
   custom → protected, or a new pattern containing `*`, `?` or `[`) needs a second confirmation.
+
+## 6. VaultData integration (`SharingRepository`)
+
+SharingKit stays pure; VaultData's `SharingRepository` connects it to the vault.
+
+- **Authorization.** `.fxvault` export needs `ReauthGate.authorizeShare(.fileExport, …)` and a
+  nearby MANIFEST needs `.nearbySend`. Each authorization is single-use and invalidated by any
+  lock, unlock or key rotation (SECURITY-MODEL.md §6).
+- **Export.** The selection (`ShareSelectionModel` item, environment or repository) is built
+  into a `SharePackageModel` with values decrypted inside `VaultSession.read`, sealed with a
+  fresh 6-word passphrase by `FxVaultFileCodec(deriver: Argon2idSharingDeriver())` and written
+  0600 by `SecureFileWriter`. The passphrase is returned once (`SecretBytes`) and never stored.
+  Value-missing secrets travel by name only.
+- **Import.** `readFile(at:)` checks the header before any passphrase is asked for;
+  `openFile(_:passphrase:checkGitHub:)` normalizes the typed passphrase, decrypts, validates and
+  plans against local state (keyed fingerprints, optional GitHub listing) into a
+  `ShareImportDraftModel` that owns a copy of the values and wipes it on apply, discard or
+  deinit. Every read failure is the single `.invalidFile` error.
+- **Apply.** `apply(_:plan:confirmReplay:)` re-plans inside the write transaction and refuses
+  with `.planOutdated` if the result differs from what the user saw. Rows are re-encrypted with
+  the receiver's keys under new row ids, carry `provenance = share` (package id plus the
+  unverified sender name) and the package id is recorded in `imported_share_packages`, all in
+  one transaction. Replays need `confirmReplay`.
+- **Implementation choices:** an incoming variable without a value is skipped and reported (a
+  variable row must hold a value); an environment GitHub already lists is created as synced; an
+  add GitHub already has is imported as synced.
+- **Nearby.** `makeNearbySender` / `makeNearbyReceiver` wrap `NearbySession` over a
+  `NearbyTransport` (`NWNearbyTransport` in the app, `InMemoryTransportPair` in tests). The
+  receiver previews the manifest, decides, previews the payload and applies through the same
+  importer; events forwarded to the UI never carry values.

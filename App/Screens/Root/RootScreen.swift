@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// Chooses the screen for the current vault phase.
-///
-/// Placeholder: Onboarding, Lock and Main screens replace the phase cards in M1.
+/// Chooses the screen for the current vault phase (§10). Changing ``AppViewModel/phase`` to
+/// `.locked` removes the onboarding and main screens, and with them every value on screen.
 struct RootScreen: View {
     let viewModel: AppViewModel
 
@@ -15,60 +14,52 @@ struct RootScreen: View {
                 maxHeight: .infinity
             )
             .background(Theme.Colors.background)
+            .background(WindowAccessor { window in
+                viewModel.attachMainWindow(window)
+            })
     }
 
     @ViewBuilder
     private var content: some View {
         switch viewModel.phase {
         case .onboarding:
-            PhasePlaceholderView(
-                systemImage: "sparkles",
-                title: String(localized: "root.onboarding.title", defaultValue: "Welcome to FX Vault"),
-                message: String(
-                    localized: "root.onboarding.message",
-                    defaultValue: "Create a vault to manage your GitHub secrets and variables."
-                )
-            )
+            OnboardingScreen(app: viewModel)
+                .id(viewModel.lockCount)
         case .locked:
-            PhasePlaceholderView(
-                systemImage: "lock.fill",
-                title: String(localized: "root.locked.title", defaultValue: "FX Vault is locked"),
-                message: String(localized: "root.locked.message", defaultValue: "Unlock it with your master password.")
-            )
+            LockScreen(app: viewModel)
+                .id(viewModel.lockCount)
         case .unlocked:
-            PhasePlaceholderView(
-                systemImage: "lock.open.fill",
-                title: String(localized: "root.unlocked.title", defaultValue: "Vault unlocked"),
-                message: String(localized: "root.unlocked.message", defaultValue: "Your repositories will appear here.")
-            )
+            MainScreen(app: viewModel)
         }
     }
 }
 
-/// A centered icon, title and message for a phase that has no screen yet.
-private struct PhasePlaceholderView: View {
-    let systemImage: String
-    let title: String
-    let message: String
+/// Shown when the vault database cannot be opened at launch. FX Vault never falls back to an
+/// empty vault, which could make the user create a second vault over the first.
+struct StartupFailureScreen: View {
+    let error: ErrorPresentationModel
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.medium) {
-            Image(systemName: systemImage)
-                .font(.system(size: Theme.Layout.placeholderIconSize))
-                .foregroundStyle(Theme.Colors.accent)
-                .accessibilityHidden(true)
-            Text(title)
-                .font(Theme.Typography.title)
-                .foregroundStyle(Theme.Colors.textPrimary)
-            Text(message)
-                .font(Theme.Typography.body)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .multilineTextAlignment(.center)
+        EmptyStateView(
+            systemImage: "externaldrive.badge.exclamationmark",
+            title: String(localized: "startup.failed.title", defaultValue: "FX Vault could not open your vault"),
+            message: String(
+                localized: "startup.failed.message",
+                defaultValue: "Check that your user account can read Application Support/FX Vault, then quit and reopen FX Vault. \(error.message)"
+            )
+        ) {
+            Button(String(localized: "startup.failed.quit", defaultValue: "Quit FX Vault")) {
+                NSApp.terminate(nil)
+            }
+            .buttonStyle(.borderedProminent)
         }
-        .padding(Theme.Spacing.xxLarge)
+        .frame(minWidth: Theme.Layout.windowMinWidth, minHeight: Theme.Layout.windowMinHeight)
+        .background(Theme.Colors.background)
     }
 }
 
 #Preview {
-    RootScreen(viewModel: AppViewModel(container: .preview))
+    if let container = try? AppContainer.preview() {
+        RootScreen(viewModel: AppViewModel(container: container))
+    }
 }

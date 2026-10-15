@@ -1,6 +1,6 @@
 # FX Vault - Repository structure
 
-Current state after the foundation integration. The planned full tree is in `tasks/todo.md` §3.
+Current state after the domain-stage integration. The planned full tree is in `tasks/todo.md` §3.
 
 ```
 FXVault/
@@ -16,15 +16,33 @@ FXVault/
 │   ├── FXVault.entitlements         # ad-hoc: app-sandbox = false
 │   └── FXVault-Signed.entitlements  # + keychain-access-groups
 ├── App/
-│   ├── FXVaultApp.swift             # @main: main Window + Settings scene
-│   ├── AppDelegate.swift
+│   ├── FXVaultApp.swift             # @main: main Window + Settings scene, Vault menu
+│   ├── AppDelegate.swift            # owns AppBootstrap (startup-failure screen)
 │   ├── AppContainer.swift           # composition root (live / preview / test)
-│   ├── AppViewModel.swift           # VaultPhase
-│   ├── Screens/Root/RootScreen.swift
-│   ├── Helpers/Theme/               # Theme, Colors, Typography, Spacing, Radius, Durations
+│   ├── AppViewModel.swift           # VaultPhase, two-phase lock, LockObserving, Sync count
+│   ├── Screens/
+│   │   ├── Root/RootScreen.swift    # phase switch
+│   │   ├── Onboarding/              # OnboardingScreen/ViewModel, Steps/OnboardingStepViews
+│   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel
+│   │   ├── Main/                    # MainScreen/ViewModel (three columns, MainContentSource)
+│   │   └── Preferences/             # PreferencesScreen/ViewModel, General, Security(+ViewModel),
+│   │                                # Accounts, Advanced
+│   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
+│   │                                # PassphraseView, StatusChip, EmptyStateView,
+│   │                                # SyncToolbarButton, GHStatusRow, PasswordStrengthMeter,
+│   │                                # NewPasswordFields, CenteredCard, WindowAccessor
+│   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
+│   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe
+│   ├── Helpers/
+│   │   ├── AppLog.swift             # os.Logger categories
+│   │   ├── Extensions/              # Error, VaultError, ValidationError, PasswordStrengthModel,
+│   │   │                            # Duration (+Extension: localized error text)
+│   │   └── Theme/                   # Theme, Colors, Typography, Spacing, Radius, Durations
 │   └── Resources/                   # Assets.xcassets (AppIcon, semantic colors),
 │                                    # Localizable.xcstrings, InfoPlist.xcstrings
-├── AppTests/                        # Swift Testing, hosted by the app (runs in .preview mode)
+├── AppTests/                        # Swift Testing, hosted by the app (runs in .preview mode):
+│                                    # one file per view model / manager, SecretValueEditor,
+│   └── Support/TestHarness.swift    # in-memory vault, fakes, hand-driven lock sources
 ├── Packages/FXVaultKit/
 │   ├── Package.swift                # tools 6.1, macOS 14, Swift 6, MemberImportVisibility
 │   ├── Package.resolved             # committed: GRDB.swift 7.11.1, swift-sodium 0.11.0
@@ -84,9 +102,58 @@ FXVault/
 │   │   │   ├── Import/              # ShareImportPlanner, ShareImportPlanModel
 │   │   │   ├── Extensions/          # Data+Extension
 │   │   │   └── Resources/           # eff_large_wordlist.txt
-│   │   ├── SyncEngine/              # placeholder (SyncEngineModule)
-│   │   └── VaultData/               # placeholder (VaultDataModule)
+│   │   ├── SyncEngine/
+│   │   │   ├── Model/               # SyncEngineConstants, RemoteKeyModels, ConfigItemSnapshotModel,
+│   │   │   │                        # RepoSnapshotModel, RemoteSnapshotModel, ConfigChangeModel,
+│   │   │   │                        # ChangeSetModel, ChangeSummaryModel, DriftModel
+│   │   │   ├── Diff/                # ChangeSetBuilder, ChangeSetNormalizer, ChangeSummaryBuilder,
+│   │   │   │                        # ChangeSummaryRenderer, ConfigItemEditPlanner
+│   │   │   ├── Drift/               # DriftDetector
+│   │   │   └── Execution/           # SyncPersisting (seams), SyncJournalModels,
+│   │   │       │                    # SyncStateEffectModel, SyncPreflight(+Model), RemoteBaseChecker,
+│   │   │       │                    # SyncPlanner(+PlanModel), SyncExecutor(+Environments, +Items),
+│   │   │       │                    # WriteVerifier, SyncReconciler, DeletionPreviewLoader,
+│   │   │       │                    # RepositoryAdoption, SyncJournalWriter, SyncResultModel,
+│   │   │       │                    # SyncError, SyncExecutionConstants
+│   │   │       └── Testing/         # InMemorySyncVault (reference fake for the seams)
+│   │   └── VaultData/
+│   │       ├── Session/             # VaultSession (+Extension: openLive / inMemory)
+│   │       ├── Vault/               # VaultManager, VaultState, PasswordRules, ReauthGate,
+│   │       │   │                    # ReauthTicket, Argon2idSharingDeriver, VaultManagerConstants
+│   │       │   ├── Biometrics/      # BiometricPrompt, BiometricKeyStoring, KeychainManager,
+│   │       │   │                    # BiometricAuthManager, BuildCapabilities
+│   │       │   ├── Records/         # VaultRecord / KeyWrapRecord extensions
+│   │       │   ├── Support/         # DEKRotator, VaultOperationGate
+│   │       │   └── Testing/         # FakeBiometricKeyStore, FakeBuildCapabilities
+│   │       ├── Accounts/            # GitHubEnvironmentRepository (+Models)
+│   │       ├── Catalog/             # RepoCatalogRepository (+Models), RemoteConfigReader,
+│   │       │                        # RepoImportWriter
+│   │       ├── Config/              # ConfigRepository, ConfigRepositoryError
+│   │       │   ├── Models/          # BranchPolicyDraftModel, ConfigScopeSummaryModel,
+│   │       │   │                    # ItemWriteResultModel
+│   │       │   └── Support/         # ConfigFieldCipher, EnvironmentEditor, ItemEditBatch,
+│   │       │                        # ItemMutationWriter, ObservationMapper, RepoSnapshotMapper
+│   │       ├── EnvFiles/            # EnvFileRepository, EnvFileError, EnvExportAuthorizationModel,
+│   │       │   │                    # ReauthGate+EnvExport, GitServiceGitignoreChecker
+│   │       │   └── Models/          # EnvExportModels, EnvImportModels
+│   │       ├── Sync/                # SyncRepository (+Models, +Error)
+│   │       │   ├── Persistence/     # VaultSyncPersistence, SyncEffectApplier, SyncJournalMapper
+│   │       │   └── Support/         # SyncRowWriter
+│   │       ├── Creation/            # RepoCreationRepository (+Models, +Error)
+│   │       ├── Drift/               # DriftRepository (+Models), DriftEffectApplier,
+│   │       │                        # DriftRemoteInputs
+│   │       └── Sharing/             # SharingRepository (+Models, +Error), ShareAuthorizationModel,
+│   │           │                    # ReauthGate+Share, ShareExportBuilder, ShareImportPlanning,
+│   │           │                    # ShareImporter
+│   │           └── Nearby/          # NearbyShareSender, NearbyShareReceiver
 │   └── Tests/<Module>Tests/         # one Swift Testing target per module, each with Fixtures/
+│       ├── FXVaultTestSupport/                   # test-only target (no product): GitHubSimulator
+│       │                                         # (+ GHMatch), SteppingClock
+│       ├── SyncEngineTests/                      # Diff/, Drift/, ExecutionTesting/ (ExecWorld),
+│       │                                         # ExecutionTests/
+│       ├── VaultDataTests/                       # VaultManagerTests/, AccountsTests/, CatalogTests/,
+│       │                                         # ConfigTests/, EnvFilesTests/, SyncTests/ (+Support/),
+│       │                                         # CreationTests/, DriftTests/, SharingTests/
 │       ├── VaultCryptoTests/Fixtures/kat/        # generate_kat.py + kat_vectors.json
 │       ├── SharingKitTests/Fixtures/             # nearby_kat.json, kat/ (crosscheck.py, reference)
 │       ├── GitHubKitTests/Fixtures/              # gh/, api/, ssh/, shell/ (sanitized)
@@ -94,6 +161,7 @@ FXVault/
 ├── scripts/
 │   ├── ci-local.sh                  # runs the blocking CI checks locally
 │   ├── lint.sh                      # convention checks (force unwraps, print, imports, ...)
+│   ├── sync-strings.sh              # build, then xcstringstool sync of Localizable.xcstrings
 │   ├── check-secrets.sh             # secret scan of files git would publish
 │   ├── check-secrets-allowlist.txt  # .env keys whose values are public identifiers
 │   ├── make-icon.swift              # draws the AppIcon set
@@ -112,6 +180,7 @@ FXVault/
 │   ├── STRUCTURE.md                 # this file
 │   ├── DATABASE.md                  # migrations, tables, transactions
 │   ├── API.md                       # gh / git / ssh command catalog
+│   ├── SECURITY-MODEL.md            # keys, rotation, lock, Touch ID, threat model, residual risks
 │   ├── SHARING-PROTOCOL.md          # payload, .fxvault, nearby protocol, merge rules
 │   └── RELEASING.md                 # signing, notarization, cask, manual checklist
 ├── tasks/                           # todo.md (plan), lessons.md

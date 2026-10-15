@@ -165,7 +165,25 @@ CREATE INDEX sync_journal_account_time ON sync_journal(account_login, started_at
 ```
 
 - An `in_flight` row is appended before each gh write; its outcome and the item bookkeeping are
-  committed together in one transaction afterwards.
+  committed together in one transaction afterwards (`SyncPersisting.commit`, implemented by
+  VaultData's `VaultSyncPersistence`).
+- Column values (SyncEngine owns them):
+
+  | Column | Values |
+  |---|---|
+  | `op` | `ConfigChangeKind` raw value: `create_repository`, `upsert_environment`, `rename_environment`, `reconcile_branch_patterns`, `delete_environment`, `set_variable`, `set_secret`, `delete_variable`, `delete_secret` |
+  | `command` | `SyncJournalCommand` raw value: `repo.create`, `repo.view`, `api.env.put`, `api.env.delete`, `api.policy.post`, `api.policy.delete`, `secret.set`, `secret.delete`, `variable.set`, `variable.delete` |
+  | `scope_label` | `repository`, or the environment's remote name |
+  | `target_key` | `ChangeTargetModel.journalKey`: `repo`, `env\|<foldkey>`, `item\|<kind>\|<NAME>\|repo`, `item\|<kind>\|<NAME>\|env\|<foldkey>` |
+  | `error_code` | `GHError.logCode`, or `remoteChanged`, `createConflict`, `notConfirmed`, `renameTargetIsSource` (`SyncExecutionConstants`) |
+
+- The preflight B2 lookup before creating a repository (`repo.view`) is journaled as a **read**
+  row (`is_write = 0`): launch reconciliation adopts a timed-out create only when the journal
+  shows that lookup ("name is free") followed by the create attempt.
+- Drift review hides our own recent deletions: `fetchSucceeded(repositoryID:commands:since:)`
+  with the deletion commands, whose `target_key`s feed `DriftSuppressionModel`.
+- Pending-verification miss counts (`Limits.pendingVerifyChecks`) are **not** stored; they live
+  in memory (`DriftRepository`) and restart after a relaunch.
 - Retention (`pruneExpired(now:)`): rows older than `Timeouts.syncJournalRetention` (24 h) are
   deleted, **except** the latest run (highest row id, so wall-clock jumps cannot change it) and
   every `in_flight` row (launch reconciliation must still find them).
@@ -221,6 +239,24 @@ CREATE TABLE imported_share_packages (
   method, `read`, `write` or `checkpointTruncate()` there traps (GRDB access is not reentrant).
 - After a key write made through an `in:` variant (DEK rotation, password change), call
   `checkpointTruncate()` once the transaction has returned.
+- **Ciphertext goes through `VaultSession`.** Repositories write `value_ct`, `value_fp` and the
+  `synced_*` columns only inside `VaultSession.write { keys, tx in }`, whose keys are checked
+  against the stored `vaults` row (so a concurrent DEK rotation can never mix keys), and decrypt
+  only inside `VaultSession.read`. Plain bookkeeping without keys uses `VaultDatabase.write`.
+- **Re-seal on identity change.** `value_ct` (and `synced_value_ct`) is re-encrypted whenever a
+  row's name, scope or kind changes, because the field AAD binds them; fingerprints are
+  recomputed for the target row id. Item edits go through `ItemMutationWriter`, which applies
+  SyncEngine's `ConfigItemEditPlanner` mutations in one transaction.
+- **Imports store values as listed.** An imported variable's value and synced value are the
+  listed bytes, trailing CR/LF included (D32 normalizes at push time); imported secrets are
+  value-missing with `remote_updated_at` = GitHub's `updatedAt`. Listed rows share one shape
+  (`SyncRowWriter.insertListedItem`).
+- **Sync outcomes** are one transaction of journal outcomes plus row effects. A push re-seals
+  `synced_value_ct` (and, when the value was normalized, `value_ct`) only if the value did not
+  change during the run; a rename's detached tombstone is re-sealed and re-fingerprinted for its
+  own row id. Only pushes need the keys, so other bookkeeping is still recorded after a lock.
+- **Share imports** re-plan, write the rows (re-encrypted with the receiver's keys under new row
+  ids, `provenance = share`) and record `imported_share_packages` in the same transaction.
 - Database errors become `StoreError` (`notFound`, `constraintViolation(StoreConstraint)`,
   `busy`, `corruptDatabase`, `database(code:)`, ...) with no SQL or SQLite message text. Errors
   thrown by the caller's own body pass through unchanged.

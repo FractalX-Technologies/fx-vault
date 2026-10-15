@@ -1,0 +1,56 @@
+import Foundation
+import VaultCore
+
+/// Stores the DEK in a Touch ID-protected keychain item (§5.5, D14).
+///
+/// ``KeychainManager`` is the live implementation (data-protection keychain,
+/// `.biometryCurrentSet`); ``FakeBiometricKeyStore`` stands in for tests and previews, so no test
+/// ever shows a real Touch ID prompt. Every method is synchronous; ``load(account:prompt:)``
+/// blocks while the prompt is on screen, so ``VaultManager`` calls it off the main actor on a
+/// dispatch queue.
+///
+/// Errors are `VaultError`:
+/// - `.biometryInvalidated`: the item is gone or no longer usable (enrollment changed);
+/// - `.cancelled`: the user cancelled;
+/// - `.passwordFallbackRequested`: the user chose the password fallback button;
+/// - `.biometryUnavailable(reason)`: Touch ID or the keychain cannot be used now.
+public protocol BiometricKeyStoring: Sendable {
+    /// Creates (or replaces) the item for `account` holding `dek`. Never prompts. The caller
+    /// wipes `dek`.
+    func store(_ dek: SecretBytes, account: String) throws(VaultError)
+
+    /// Reads the item for `account`, showing the Touch ID prompt. The caller wipes the result.
+    func load(account: String, prompt: BiometricPrompt) throws(VaultError) -> SecretBytes
+
+    /// True when an item exists for `account`, checked without any UI (§5.5 presence check).
+    func contains(account: String) throws(VaultError) -> Bool
+
+    /// Deletes the item for `account`. Deleting a missing item succeeds.
+    func delete(account: String) throws(VaultError)
+
+    /// The accounts of every item of the FX Vault DEK service, for orphan cleanup.
+    func allAccounts() throws(VaultError) -> [String]
+
+    /// Invalidates the authentication context of a pending or finished prompt (every lock,
+    /// §5.5). Synchronous and safe to call from any thread.
+    func invalidateAuthentication()
+}
+
+/// Names of the Touch ID keychain items (§5.5).
+public enum BiometricKeyAccount {
+    /// Keychain service of the DEK items.
+    public static let service = "io.fractalx.fxvault.dek"
+    /// Prefix of every account name; the vault id follows in lowercase hex.
+    public static let prefix = "touchid-v1-"
+
+    /// `touchid-v1-<vault_id hex>`.
+    public static func name(vaultID: Data) -> String {
+        prefix + vaultID.map { byte in
+            let hex = String(byte, radix: hexRadix)
+            return hex.count < hexDigitsPerByte ? "0" + hex : hex
+        }.joined()
+    }
+
+    private static let hexRadix = 16
+    private static let hexDigitsPerByte = 2
+}

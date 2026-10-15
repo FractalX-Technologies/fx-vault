@@ -33,6 +33,10 @@ func module(
     ]
 }
 
+/// Test helpers shared by several test targets (a stateful GitHub simulator over
+/// `FakeCommandRunner`, a stepping clock). No product contains it, so it never ships in the app.
+let testSupport: Target.Dependency = .target(name: "FXVaultTestSupport")
+
 let package = Package(
     name: "FXVaultKit",
     defaultLocalization: "en",
@@ -61,7 +65,11 @@ let package = Package(
         + module("GitHubKit", dependencies: ["VaultCore"])
         + module("EnvTools", dependencies: ["VaultCore"])
         + module("SharingKit", dependencies: ["VaultCore"], resources: [.process("Resources")])
-        + module("SyncEngine", dependencies: ["VaultCore", "VaultCrypto", "GitHubKit"])
+        + module(
+            "SyncEngine",
+            dependencies: ["VaultCore", "VaultCrypto", "GitHubKit"],
+            testDependencies: [testSupport]
+        )
         + module(
             "VaultData",
             dependencies: [
@@ -72,7 +80,26 @@ let package = Package(
                 "EnvTools",
                 "SharingKit",
                 "SyncEngine",
+            ],
+            // Every module the tests import, listed explicitly instead of reached transitively.
+            testDependencies: [
+                "VaultCore",
+                "VaultCrypto",
+                "VaultStore",
+                "GitHubKit",
+                "EnvTools",
+                "SharingKit",
+                "SyncEngine",
+                testSupport,
             ]
-        ),
+        )
+        + [
+            .target(
+                name: "FXVaultTestSupport",
+                dependencies: ["VaultCore", "GitHubKit"],
+                path: "Tests/FXVaultTestSupport",
+                swiftSettings: swiftSettings
+            ),
+        ],
     swiftLanguageModes: [.v6]
 )

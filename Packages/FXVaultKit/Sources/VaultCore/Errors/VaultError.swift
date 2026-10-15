@@ -17,6 +17,9 @@ public enum VaultError: Error, Sendable, Hashable {
     case passwordRequired(reason: PasswordRequiredReason)
     /// The user cancelled an authentication prompt.
     case cancelled
+    /// The user chose the password fallback ("Use Master Password") in a Touch ID prompt
+    /// (`LAError.userFallback`, §5.5). Nothing failed: show and focus the password field.
+    case passwordFallbackRequested
     /// No vault exists yet (onboarding has not run).
     case notInitialized
     /// A vault already exists, so it cannot be created again.

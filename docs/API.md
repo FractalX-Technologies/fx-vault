@@ -181,3 +181,31 @@ spike re-records them.
 `GHError.logCode` is the value-free code written to `sync_journal.error_code` and the log.
 `StderrRedactor` masks classic (`ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_`) and fine-grained
 (`github_pat_`) token patterns, plus any plaintext value passed to it.
+
+## F. Who runs what (SyncEngine and VaultData)
+
+The builders above are only called through `GHCommandScheduler` operations; no caller builds
+argv. Schedulers come from `GitHubEnvironmentRepository.scheduler(for:)` (one per account,
+case-insensitive, seeded once from the journal's write start times over the last hour).
+
+| Caller | Commands | Notes |
+|---|---|---|
+| `GitHubEnvironmentRepository` | A1–A4, D1, D2 | gh detection (shell probe, `GHLocator`, 2.97.0 floor), accounts and scopes, token cache (`purgeTokens()` on lock), SSH alias test (D1 must resolve to github.com, then D2) |
+| `RepoCatalogRepository` | A5, B1, B2; import: B2, B3, B5, B6–B9 | One owner failing (SAML, not found) marks only that owner unavailable. An import read failing for permission, SAML or plan reasons marks only that scope unreadable; token, network and rate-limit failures stop the import |
+| `SyncPreflight` | B2 (repository to create, journaled as a read), B3–B9 for every touched scope | D27 base checks; the pending-verification pass runs on the same re-list |
+| `SyncExecutor` | C1–C9, then B-row re-lists | Order: C1, C2 upserts, C3/C4 patterns, guided renames, scope writes (repository first, variables before secrets), item deletes, C9. Before a scope's writes it re-lists the scope (D27 re-check, `pre_write_updated_at`); after them it verifies by re-listing every `Timeouts.verifyRetryInterval` (2 s) for up to `verifyRetryWindow` (60 s) |
+| `SyncExecutor` (new repository) | B2 after C1 | Within `Timeouts.freshRepoWindow` (90 s) after C1, "not found" is retried every `freshRepoRetryInterval` (1 s) for up to `freshRepoRetryWindow` (60 s) and never classified as plan-gated |
+| `SyncReconciler` | B2, B3–B9 | Launch reconciliation of `in_flight` / `indeterminate` journal rows by re-list; never by the local clock. A timed-out C1 is adopted only after the journaled "name is free" lookup and a B2 showing the expected owner and visibility |
+| `DeletionPreviewLoader` | B4, B5, B7, B9 | §7.5 live contents of each environment to delete; "unknown" on failure |
+| `DriftRepository` | B2–B9 | Full re-list on open (debounced `Timeouts.driftDebounce`, 2 min); a resolution re-reads the subject's scope and fails with `.stale` when it changed again |
+| `RepoCreationRepository` | B2, B10g, B10l, D3 | Name availability, owner and template pickers (templates cached per account), clone through the mapped SSH alias |
+| `SharingRepository` | B3, B5, B6–B9 (optional, `RemoteConfigReader`) | Lets the import plan show what GitHub already lists |
+
+- **404 on deletes.** C6, C8 and C9 count a `.notFound` as done only after a successful re-list
+  of the same scope (B3 for C9); a failed re-list leaves the change pending.
+- **Status 303 on C3** counts as success; the executor re-lists B5 and records the policy ids.
+- **One token refresh** per run on `.tokenRevoked`; rate limits back off twice, then the run
+  stops with the rest pending (`SyncStopReason.rateLimited`).
+- Tests use `FakeCommandRunner` (unmatched calls exit `unmatchedExitCode` with
+  `unmatchedStderr`) and the stateful `GitHubSimulator` in the test-only `FXVaultTestSupport`
+  target, which answers unscripted calls from simulated GitHub state in gh's output formats.

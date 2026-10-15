@@ -7,18 +7,21 @@ import Testing
 @MainActor
 @Suite("App shell")
 struct AppSmokeTests {
-    @Test func hostedTestsRunSideEffectFree() {
-        let container = AppContainer.forCurrentProcess()
-        #expect(container == .preview)
-        #expect(!container.hasSideEffects)
+    @Test func hostedTestsRunSideEffectFree() throws {
+        #expect(AppContainer.Mode.forCurrentProcess() == .preview)
+        let viewModel = try #require(AppBootstrap.forCurrentProcess().viewModel)
+        #expect(viewModel.container.mode == .preview)
+        #expect(!viewModel.container.hasSideEffects)
+        #expect(viewModel.container.vaultDirectory == nil)
+        #expect(viewModel.container.vaultManager.state == .noVault)
     }
 
     @Test func liveContainerOutsideTests() {
-        #expect(AppContainer.forCurrentProcess(environment: [:]) == .live)
+        #expect(AppContainer.Mode.forCurrentProcess(environment: [:]) == .live)
     }
 
-    @Test func newViewModelStartsInOnboarding() {
-        let viewModel = AppViewModel(container: .test)
+    @Test func previewContainerStartsInOnboarding() throws {
+        let viewModel = AppViewModel(container: try AppContainer.preview())
         #expect(viewModel.phase == .onboarding)
     }
 

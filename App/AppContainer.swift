@@ -1,37 +1,178 @@
+import AppKit
 import Foundation
+import GitHubKit
+import SharingKit
+import VaultCore
+import VaultCrypto
+import VaultData
 
-/// Composition root: builds the repositories and managers that view models depend on.
+/// Composition root: builds the managers and repositories that view models depend on.
 ///
-/// Placeholder: repositories arrive with their milestones. Only the mode exists today.
-/// - `live`: the real vault, keychain and gh.
-/// - `preview`: in-memory and side-effect free; used by SwiftUI previews and by the
-///   app when it hosts the test bundle (nothing under Application Support, no shell probe).
-/// - `test`: for unit tests that inject their own fakes.
-struct AppContainer: Equatable {
+/// - `live`: the real vault under `~/Library/Application Support`, the keychain and gh.
+/// - `preview`: in-memory and side-effect free: an in-memory database, fake Touch ID, a private
+///   pasteboard, in-memory preferences and inert lock sources. SwiftUI previews use it, and so
+///   does the app while it hosts the test bundle (nothing under `~/Library`, no shell probe).
+/// - `test`: unit tests pass their own fakes to ``init(mode:vaultManager:preferences:clipboard:autoLock:ghStatusProbe:dockBadge:passphraseGenerator:vaultDirectory:)``.
+final class AppContainer {
     enum Mode: Equatable {
         case live
         case preview
         case test
+
+        /// Set by XCTest in the host app's environment while it runs the test bundle.
+        static let xcTestConfigurationKey = "XCTestConfigurationFilePath"
+
+        /// The mode for this process: `preview` while hosting tests, otherwise `live`.
+        static func forCurrentProcess(
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Mode {
+            environment[xcTestConfigurationKey] == nil ? .live : .preview
+        }
     }
 
-    /// Set by XCTest in the host app's environment while it runs the test bundle.
-    private static let xcTestConfigurationKey = "XCTestConfigurationFilePath"
-
-    static let live = AppContainer(mode: .live)
-    static let preview = AppContainer(mode: .preview)
-    static let test = AppContainer(mode: .test)
-
     let mode: Mode
+    let vaultManager: VaultManager
+    let preferences: PreferencesManager
+    let clipboard: ClipboardManager
+    let autoLock: AutoLockManager
+    let ghStatusProbe: any GHStatusProbing
+    let dockBadge: any DockBadgeDisplaying
+    /// Generates 6-word passphrases; nil if the bundled wordlist failed its integrity check.
+    let passphraseGenerator: PassphraseGenerator?
+    /// The vault folder for Preferences › Advanced › Reveal; nil for in-memory vaults.
+    let vaultDirectory: URL?
+
+    init(
+        mode: Mode,
+        vaultManager: VaultManager,
+        preferences: PreferencesManager,
+        clipboard: ClipboardManager,
+        autoLock: AutoLockManager,
+        ghStatusProbe: any GHStatusProbing,
+        dockBadge: any DockBadgeDisplaying,
+        passphraseGenerator: PassphraseGenerator?,
+        vaultDirectory: URL?
+    ) {
+        self.mode = mode
+        self.vaultManager = vaultManager
+        self.preferences = preferences
+        self.clipboard = clipboard
+        self.autoLock = autoLock
+        self.ghStatusProbe = ghStatusProbe
+        self.dockBadge = dockBadge
+        self.passphraseGenerator = passphraseGenerator
+        self.vaultDirectory = vaultDirectory
+    }
 
     /// Whether this container may touch the disk, the keychain or spawn processes.
     var hasSideEffects: Bool {
         mode == .live
     }
 
-    /// The container for this process: `preview` while hosting tests, otherwise `live`.
-    static func forCurrentProcess(
-        environment: [String: String] = ProcessInfo.processInfo.environment
-    ) -> AppContainer {
-        environment[xcTestConfigurationKey] == nil ? .live : .preview
+    // MARK: - Factories
+
+    /// The container for `mode`.
+    static func make(mode: Mode) throws -> AppContainer {
+        switch mode {
+        case .live: try live()
+        case .preview, .test: try preview()
+        }
+    }
+
+    /// The real vault, keychain, pasteboard and system lock signals.
+    static func live() throws -> AppContainer {
+        let session = try VaultSession.openLive()
+        let capabilities = BuildCapabilities()
+        let tokenCache = GHTokenCache()
+        let clock = SystemClock()
+        let vaultManager = try VaultManager(
+            session: session,
+            policy: .production,
+            biometricStore: KeychainManager(
+                accessGroup: capabilities.keychainAccessGroup,
+                authManager: BiometricAuthManager()
+            ),
+            capabilities: capabilities,
+            clock: clock,
+            onLock: { tokenCache.purge() }
+        )
+        let preferences = PreferencesManager(store: UserDefaultsPreferencesStore())
+        return AppContainer(
+            mode: .live,
+            vaultManager: vaultManager,
+            preferences: preferences,
+            clipboard: ClipboardManager(pasteboard: .general, clock: clock),
+            autoLock: AutoLockManager(
+                clock: clock,
+                idleSource: LocalEventIdleSource(),
+                signalSource: SystemLockSignalSource(),
+                ticker: DispatchInactivityTicker(),
+                timeout: { preferences.autoLockTimeout }
+            ),
+            ghStatusProbe: PendingGHStatusProbe(),
+            dockBadge: DockBadgeManager(),
+            passphraseGenerator: try? PassphraseGenerator.bundled(),
+            vaultDirectory: session.databaseDirectory
+        )
+    }
+
+    /// An in-memory vault with fakes (SwiftUI previews and the test host).
+    static func preview(
+        capabilities: FakeBuildCapabilities = FakeBuildCapabilities(),
+        ghStatus: GHStatusModel = .ready(version: Limits.minimumGHVersion, path: previewGHPath)
+    ) throws -> AppContainer {
+        let clock = SystemClock()
+        let vaultManager = try VaultManager(
+            session: VaultSession.inMemory(),
+            policy: .testing,
+            biometricStore: FakeBiometricKeyStore(),
+            capabilities: capabilities,
+            clock: clock
+        )
+        let preferences = PreferencesManager(store: InMemoryPreferencesStore())
+        let inert = InertLockSources()
+        return AppContainer(
+            mode: .preview,
+            vaultManager: vaultManager,
+            preferences: preferences,
+            clipboard: ClipboardManager(pasteboard: NSPasteboard(name: previewPasteboardName), clock: clock),
+            autoLock: AutoLockManager(
+                clock: clock,
+                idleSource: inert,
+                signalSource: inert,
+                ticker: inert,
+                timeout: { preferences.autoLockTimeout }
+            ),
+            ghStatusProbe: FixedGHStatusProbe(ghStatus),
+            dockBadge: RecordedDockBadge(),
+            passphraseGenerator: try? PassphraseGenerator.bundled(),
+            vaultDirectory: nil
+        )
+    }
+
+    /// A private pasteboard, so previews and the test host never touch the user's clipboard.
+    static let previewPasteboardName = NSPasteboard.Name("io.fractalx.fxvault.preview")
+    /// The gh path shown in previews.
+    static let previewGHPath = "/opt/homebrew/bin/gh"
+}
+
+/// The result of building the app's dependencies at launch.
+enum AppBootstrap {
+    case ready(AppViewModel)
+    /// The vault database could not be opened (permissions, corruption, disk full). The app shows
+    /// ``StartupFailureScreen``; it never falls back to an empty vault.
+    case failed(ErrorPresentationModel)
+
+    var viewModel: AppViewModel? {
+        if case .ready(let viewModel) = self { viewModel } else { nil }
+    }
+
+    static func forCurrentProcess(mode: AppContainer.Mode = .forCurrentProcess()) -> AppBootstrap {
+        do {
+            return .ready(AppViewModel(container: try AppContainer.make(mode: mode)))
+        } catch {
+            AppLog.vault.error("Vault database could not be opened")
+            return .failed(error.presentation)
+        }
     }
 }

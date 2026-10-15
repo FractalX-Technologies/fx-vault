@@ -73,6 +73,9 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
 
     /// The exit code for calls nothing matched.
     public static let unmatchedExitCode: Int32 = 1
+    /// The stderr of an unmatched call. Wrappers (a stateful GitHub simulator) match it, together
+    /// with ``unmatchedExitCode``, to tell an unscripted call from a scripted failure.
+    public static let unmatchedStderr = "fake: no stub"
     private let state = OSAllocatedUnfairLock(initialState: State())
 
     public init() {}
@@ -113,7 +116,7 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
             return state.stubs.first(where: { $0.matcher(spec.arguments) })?.response
         }
         guard let response else {
-            return CommandResult(exitCode: Self.unmatchedExitCode, stdout: SecretBytes(count: 0), stderr: "fake: no stub")
+            return CommandResult(exitCode: Self.unmatchedExitCode, stdout: SecretBytes(count: 0), stderr: Self.unmatchedStderr)
         }
         if let error = response.error {
             throw error

@@ -172,19 +172,20 @@ screenshot as evidence, saved with the release notes or in the Review section of
 |---|------|-------|----------|
 | 1 | Touch ID: enable | Settings > Security > enable Touch ID (asks for the master password) | The toggle is on, and the next unlock offers Touch ID |
 | 2 | Touch ID: unlock | Lock the vault, then unlock with a finger | Unlocks; no password asked |
-| 3 | Touch ID: cancel | Lock, then cancel the Touch ID sheet | Falls back to the password field; the vault stays locked |
+| 3 | Touch ID: cancel and fallback | Lock, then cancel the Touch ID sheet. Lock again and choose "Use Master Password" | Cancel: no error, the vault stays locked. Fallback: the password field is focused. Touch ID stays enabled in both cases |
 | 4 | Touch ID: re-enrollment | Add or remove a fingerprint in System Settings, then unlock | The master password is required, and Touch ID offers to re-enable |
 | 5 | Touch ID: restart | Restart the Mac, then open FX Vault | The master password is required once after the restart |
-| 6 | Lock on sleep | Sleep the Mac, then wake it | The vault is locked |
+| 6 | Lock on sleep | `pmset sleepnow` (or Apple menu > Sleep), then wake the Mac | The vault is locked |
 | 7 | Lock on screen lock | ⌃⌘Q, then log back in | The vault is locked |
 | 8 | Lock when idle | Set auto-lock to 1 minute, then leave the Mac untouched | Locks within about 1 minute 15 s (checked every 15 s) |
 | 9 | Lock on window close | Close the main window, then reopen it | The vault is locked |
 | 10 | Clipboard clearing | Copy a secret value, then wait 30 s. Also: copy, then lock or quit | The clipboard is cleared, unless something else was copied since |
-| 11 | Layout | macOS 14 and 27, narrowest and widest window, light and dark | Nothing clipped or overlapping |
+| 11 | Layout | macOS 14 and 27, narrowest and widest window, light and dark: Onboarding (every step), Lock, Recovery reset, Preferences (each tab, locked and unlocked), the main window | Nothing clipped or overlapping; one screenshot per screen and OS |
 | 12 | Local Network prompt | A fresh macOS user account, Nearby share | The system prompt shows the `NSLocalNetworkUsageDescription` text |
 | 13 | Gatekeeper | Download the DMG in Safari and open it | Only the standard "downloaded from the Internet" dialog; `spctl -a -vvv -t install` reports Notarized Developer ID |
 | 14 | Sonoma smoke | macOS 14 VM: install with Homebrew, then onboarding, gh detection, import, sync on the spike repo | Everything works; `depends_on macos: :sonoma` allows the install |
 | 15 | Spike repos | Import, edit, sync and drift review on the spike repos | Matches the M3/M5 verify notes |
+| 16 | Touch ID: status codes | On the signed build, trigger a lockout (5 failed fingers) and an enrollment change while Touch ID is on | Lockout asks for the password and keeps the item; the enrollment change turns Touch ID off and asks to re-enable (confirms the Keychain status mapping in SECURITY-MODEL.md §5) |
 
 ## CI (`release.yml`)
 
