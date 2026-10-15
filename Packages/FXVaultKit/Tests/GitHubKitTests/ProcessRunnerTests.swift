@@ -10,6 +10,12 @@ import VaultCore
 struct ProcessRunnerTests {
     let runner = ProcessRunner()
 
+    /// The longest a timed-out or cancelled run of `sleep 60` may take: far below the 60 s the
+    /// child sleeps, so it was stopped and not waited for, and far above the runner's latency,
+    /// because a hosted CI runner can stall the whole test process (on 2026-10-15 every test
+    /// running at that moment took about 6 s, pure validation tests included).
+    private static let stoppedEarlyBound: Duration = .seconds(30)
+
     private func spec(
         _ executable: String,
         _ arguments: [String] = [],
@@ -63,7 +69,7 @@ struct ProcessRunnerTests {
         #expect(result.didTimeOut)
         #expect(result.terminationSignal == SIGTERM)
         #expect(!result.isSuccess)
-        #expect(elapsed < .seconds(5))
+        #expect(elapsed < Self.stoppedEarlyBound)
     }
 
     @Test func timeoutEscalatesToSIGKILLWhenTermIsIgnored() async throws {
@@ -149,7 +155,7 @@ struct ProcessRunnerTests {
         await #expect(throws: CommandRunnerError.cancelled) {
             try await task.value
         }
-        #expect(clock.now - start < .seconds(5))
+        #expect(clock.now - start < Self.stoppedEarlyBound)
     }
 
     @Test func descriptionsHideEnvironmentAndArguments() {

@@ -63,3 +63,7 @@ Patterns and rules learned from corrections during this project. Read at the sta
 ## 2026-10-15 - Everything the user configured needs a visible place
 **Pattern:** An SSH alias whose key belongs to an account not logged in to gh was parsed correctly but only appeared as a choice in another account's menu, so "I don't see my second SSH identity" had no explanation in the app. The first hypotheses were parser bugs; running the real parser on the user's config ruled them out in minutes.
 **Rule:** When a user-configured item (alias, account, path) can be orphaned, list it with its state and the next step. For "FX Vault doesn't show X", run the real code path on the user's actual input before theorizing, and check `gh auth status` logins.
+
+## 2026-10-15 - Wall-clock bounds in tests and the session-start CI check
+**Pattern:** `main` had been red since the previous release's plan commit: two ProcessRunner tests required a run to finish in < 5 s, and the hosted macos-26 runner took 6.2–6.4 s (the whole test process stalls there). The session started work without checking CI, so the red `main` was found only at release time.
+**Rule:** Check the latest CI run on `main` at session start (`gh run list --branch main --limit 3`). A wall-clock bound in a test proves only what it must (for example "well before the child's natural exit"), never runner latency.
