@@ -300,8 +300,7 @@ empty body. The executor now classifies a C3 404 on a visible repository as `.pl
 (test `a404OnAPatternPostOfAVisibleRepositoryIsPlanGated`). The facts below that the suite did
 not assert explicitly stay open.
 
-**Pending: write spike (Q6).** Not run: creating repositories and writing to GitHub needs
-the maintainer's approval of each repository (tasks/todo.md §13 Q6). Until it confirms that a
+**Still open from the write spike (Q6).** The write run above did not record these facts explicitly. Until a run confirms that a
 C2 PUT without `reviewers`/`wait_timer` keeps them, preflight blocks a policy change on any
 existing environment that B3 lists with rules other than `branch_policy`
 (`SyncBlockReason.protectionRulesPresent`); new environments and guided-rename targets are not
