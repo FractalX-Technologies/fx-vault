@@ -188,6 +188,17 @@
         }
       }
     },
+    "app.window.title.dev" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault Dev"
+          }
+        }
+      }
+    },
     "biometry.unavailable.lockout" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -5116,6 +5127,17 @@
         }
       }
     },
+    "error.config.pushNotApplicable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only a secret that is on GitHub and has a value in FX Vault can be pushed again."
+          }
+        }
+      }
+    },
     "error.config.repositoryNotFound" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6953,46 +6975,35 @@
         }
       }
     },
-    "itemEditor.fill.local" : {
+    "itemEditor.fill.matchesGitHub" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Fill local value (already on GitHub)"
+            "value" : "Already matches GitHub (don't push)"
           }
         }
       }
     },
-    "itemEditor.fill.local.note" : {
+    "itemEditor.fill.matchesGitHub.note" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Use this when the value is what GitHub already has. Nothing is pushed."
+            "value" : "Only when you are sure GitHub has exactly this value. Nothing is pushed."
           }
         }
       }
     },
-    "itemEditor.fill.push" : {
+    "itemEditor.fill.pushes.note" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Push this value on next Sync"
-          }
-        }
-      }
-    },
-    "itemEditor.fill.push.note" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "The next Sync replaces the secret on GitHub with this value."
+            "value" : "The next Sync replaces the secret on GitHub with this value, so GitHub matches FX Vault."
           }
         }
       }
@@ -7158,6 +7169,39 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Use Suggestion"
+          }
+        }
+      }
+    },
+    "itemEditor.push.alreadyRequested" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The next Sync pushes this secret to GitHub. Revert it in the table to cancel."
+          }
+        }
+      }
+    },
+    "itemEditor.push.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sends the value in FX Vault to GitHub on the next Sync even if it did not change, so GitHub matches FX Vault."
+          }
+        }
+      }
+    },
+    "itemEditor.push.toggle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Push on Next Sync"
           }
         }
       }
@@ -7840,6 +7884,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Learn more"
+          }
+        }
+      }
+    },
+    "main.detail.pushOnNextSync.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The next Sync pushes %@ to GitHub. Revert cancels it."
           }
         }
       }
@@ -8544,6 +8599,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Name"
+          }
+        }
+      }
+    },
+    "main.table.pushOnNextSync" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Push on Next Sync"
           }
         }
       }
@@ -12464,6 +12530,17 @@
         }
       }
     },
+    "status.willPush" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Will push"
+          }
+        }
+      }
+    },
     "sync.blocked.adminRequired" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -14132,6 +14209,39 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Trailing line breaks were removed from %@ before it was pushed."
+          }
+        }
+      }
+    },
+    "toolbar.devBuild" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "DEV"
+          }
+        }
+      }
+    },
+    "toolbar.devBuild.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Development build"
+          }
+        }
+      }
+    },
+    "toolbar.devBuild.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Development build (FX Vault Dev). It uses the FX Vault Dev vault, not the vault of the installed FX Vault."
           }
         }
       }

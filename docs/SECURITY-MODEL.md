@@ -104,7 +104,8 @@ the official signed release.") and every keychain call refuses with `.unsignedBu
 
 - The DEK is stored in a data-protection keychain item: service `io.fractalx.fxvault.dek`
   (`io.fractalx.fxvault.dek.dev` in Debug builds, whose vault is `FX Vault Dev`, so a signed
-  Debug build never touches the release vault's item), account `touchid-v1-<vault_id hex>`, `WhenPasscodeSetThisDeviceOnly` with
+  Debug build never touches the release vault's item; since v0.1.2 Debug builds are the
+  separate app `io.fractalx.fxvault.dev` and stay ad-hoc unless given their own profile), account `touchid-v1-<vault_id hex>`, `WhenPasscodeSetThisDeviceOnly` with
   `.biometryCurrentSet`, not synchronizable. Enabling it requires the master password and first
   deletes items of other vaults (orphans).
 - Each unlock uses a fresh `LAContext` with no reuse window; the prompt strings come from the

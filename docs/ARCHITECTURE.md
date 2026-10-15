@@ -47,7 +47,7 @@ SharingKit are pure domain services called by repositories.
 |---|---|---|---|
 | `VaultCore` | none | done | Models, typed ids, validation, `SecretBytes`, `VaultClock`, `Limits`, `Timeouts`, errors |
 | `VaultCrypto` | VaultCore, Clibsodium | done | Argon2id, field encryption, key wrap, recovery key, keyring, password strength |
-| `VaultStore` | VaultCore, GRDB | done | Database factory, migrations v1–v6, records, stores, observation. Stores blobs only |
+| `VaultStore` | VaultCore, GRDB | done | Database factory, migrations v1–v8, records, stores, observation. Stores blobs only |
 | `GitHubKit` | VaultCore | done | Process runner, shell probe, gh locator/auth, command builders, scheduler, gh api for environments, ssh and git |
 | `EnvTools` | VaultCore | done | .env parsing/serialization, key normalization, credential heuristics, secure file writes, iCloud and gitignore checks |
 | `SharingKit` | VaultCore (+ CryptoKit, Network) | done | Share payload, `.fxvault` codec, passphrases, nearby protocol and transport, import planner. Key derivation is injected (`KeyDeriving`), so no VaultCrypto dependency |
@@ -112,8 +112,8 @@ This is the contract for the next stage (the feature screens). Everything listed
   .custom([BranchPatternModel])` with `gitHubFlags`, `BranchPatternModel`, `ConfigItemModel`
   (never holds a value; `valueState`, `verifyState`, `provenance`, `shareOrigin`, `syncStatus`),
   `ConfigKind`, `ConfigScope` `.repository | .environment(EnvironmentID)`,
-  `ConfigSyncStatus.derive(Facts)` (priority: deleted, blocked, added, modified,
-  unverifiedShare, synced).
+  `ConfigSyncStatus.derive(Facts)` (priority: deleted, blocked, added, modified (`willPush`
+  when only `force_push` is set, v0.1.2), unverifiedShare, synced).
 - **Validation** (all `throws(ValidationError)`): `PathSegmentValidator` (rejects `.`, `..`,
   `/`, `\`, control/bidi/zero-width characters and percent-encoded forms up to 4 levels),
   `GitHubNameValidator` (uppercases; `GITHUB_` prefix reserved; `suggestedFix`),
@@ -304,8 +304,11 @@ noted. Folders: `Model/`, `Diff/`, `Drift/`, `Execution/` (+ `Execution/Testing/
   and that no key is both set and deleted.
 
 **Editing rules (§7.1).** `ConfigItemEditPlanner(items:)`: `add`, `editValue`, `delete`,
-`rename` (into a tombstone revives it), `revert`, `discardAll`, `fill(_:pushOnNextSync:)`,
-`move(_:kind:scope:)` (Convert/Move). Each returns `ItemEditOutcomeModel{items, mutations:
+`rename` (into a tombstone revives it), `revert`, `discardAll`,
+`fill(_:pushOnNextSync:requestedAt:)`, `requestPush(_:requestedAt:)` (Push on Next Sync, live
+synced secrets with a value only, else `.pushNotApplicable`), `move(_:kind:scope:)`
+(Convert/Move). Revert, Discard all and a deletion clear `force_push` and
+`forcePushRequestedAt`. Each returns `ItemEditOutcomeModel{items, mutations:
 [ItemMutationModel .insert/.update/.remove], planner}` and a value source per row
 (`ItemValueSourceModel` `.unchanged`, `.newValue`, `.newValueAsSynced`, `.syncedValue`,
 `.movedFrom(id)`); throws `ItemEditError`.
@@ -356,7 +359,10 @@ text) because packages ship no user-facing text.
   scopeStatus:) -> SyncPreflightModel` (capability, name and value rules, scope capacity, the
   256 KB repository-variable warning, write budget, the pending-verification pass, D27 base
   checks via `RemoteBaseChecker`, and `.protectionRulesPresent` for a policy change on an
-  existing environment that B3 lists with reviewers, wait timers or app rules). Throws only
+  existing environment that B3 lists with reviewers, wait timers or app rules). A secret push
+  the user requested (`forcePushRequestedAt`) is blocked only by a GitHub change after the
+  request (`ConfigItemSnapshotModel.isSecretChangedOnGitHub`, also used by `DriftDetector`).
+  Throws only
   `.locked` / `.persistenceFailed`; gh failures become
   `SyncBlockedChangeModel{change, reason: SyncBlockReason}`.
 - `SyncPlanner.plan(_:includeDeletions:) -> SyncPlanModel` with ordered `SyncStepModel`s:
@@ -451,7 +457,8 @@ one `VaultSession.write` and throws `ConfigRepositoryError`.
   `deleteEnvironment(_:)`, `updateBranchPolicy(_:to:)`, `revertEnvironment(_:)`,
   `duplicateEnvironment(_:as:)`.
 - Items: `addItem`, `editValue`, `renameItem`, `deleteItem`, `revertItem`,
-  `fillValue(_:value:pushOnNextSync:)`, `moveItem(_:toKind:scope:)`, `discardAll(repositoryID:)`,
+  `fillValue(_:value:pushOnNextSync:)` (`pushOnNextSync` defaults to true since v0.1.2),
+  `requestPush(_:)` (Push on Next Sync), `moveItem(_:toKind:scope:)`, `discardAll(repositoryID:)`,
   `reveal(_:) -> SecretBytes` (caller wipes). Values are normalized on entry (D32;
   `ItemWriteResultModel.didStripTrailingNewlines`).
 - Reads and streams: `changeSet(repositoryID:)`, `scopes(repositoryID:)`, `pendingCounts()`,
@@ -591,7 +598,7 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 24 | §10 | An empty "Personal" group is hidden until gh lists the account; accounts known only from the vault (gh no longer lists them) keep their repositories in the sidebar |
 | 25 | §7.1 | Editing a secret starts with an empty field (empty keeps the current value); "Edit Current Value" decrypts it only on request. Variables open with their value |
 | 26 | §7.1 | Convert or Move preselects the opposite kind; a secret with no value can only move as a secret |
-| 27 | §7.1 | The fill choice is a two-option radio group with both labels ("Fill local value (already on GitHub)" default, "Push this value on next Sync"), shown only for secrets already on GitHub |
+| 27 | §7.1 | The fill choice is a two-option radio group with both labels ("Fill local value (already on GitHub)" default, "Push this value on next Sync"), shown only for secrets already on GitHub. **Superseded in v0.1.2** (decision 45) |
 | 28 | §7.6 | Rename Environment is blocked in the sheet while a secret has no value (the repository would accept it and Sync would block later); "Enter Values…" opens the fill editor |
 | 29 | M4 | Save in every branch policy editor (Environment Settings, New Environment, New Repository) waits for a typed but unadded rule, and Selected needs at least one rule in New Repository |
 | 30 | M4 | The plan note shows for private repositories and for repositories GitHub already refused on plan grounds (`isEnvPlanGated`) |
@@ -613,22 +620,32 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 41 | Touch ID | `errSecAuthFailed` without lockout maps to `.passwordFallbackRequested` (keeps the item); only `errSecItemNotFound` means invalidated. Enrollment changes are also caught from `biometry_state_hash`: a password unlock deletes the stale item and clears the enablement. The re-offer after a password unlock follows `VaultManager.isBiometricsTurnedOffAutomatically`, not the reason the lock screen showed (restart and 14 days are checked before the enrollment) |
 | 42 | Touch ID | `--diagnose` is answered by `FXVaultMain` (the `@main` entry) before `FXVaultApp.main()`, so the app delegate never opens the database. The probe adds and deletes with `KeychainManager.addQuery` under its own service; it has no read path. Unsigned builds skip it |
 
+### As built in v0.1.2 (build identities, the vault as source of truth)
+
+| # | Area | Decision |
+|---|---|---|
+| 43 | Build identities | Debug is the separate app **FX Vault Dev**: `PRODUCT_BUNDLE_IDENTIFIER` `io.fractalx.fxvault.dev`, `CFBundleName` / `CFBundleDisplayName` from `FXVAULT_APP_NAME`, set per configuration in `project.yml`; Release stays `io.fractalx.fxvault` / "FX Vault" (`release-local.sh` gate). `InfoPlist.xcstrings` must not hold the two names (a localized value would override the build setting). The main window title is "FX Vault Dev" and the toolbar shows a DEV chip (`AppIdentity`). `Signed.xcconfig` keeps Debug ad-hoc (`[config=Debug]`), because the Developer ID profile is for the release App ID only; signing Debug needs its own App ID and profile |
+| 44 | Build identities | Identifiers per use: the clipboard source marker follows `Bundle.main.bundleIdentifier`; constant in both builds are the logging subsystem (one `log stream` filter), the Touch ID keychain services (already split by vault flavor: `…dek` / `…dek.dev`), the keychain access group, the diagnose probe service, the `.fxvault` UTType and share schema (one file format), the caches and staging folder names. Both builds declare the same exported UTType; Debug ranks its document type `Alternate` (`FXVAULT_SHARE_HANDLER_RANK`), so Finder opens `.fxvault` files with the installed app |
+| 45 | §7.1 | The vault is the source of truth: filling a secret that is on GitHub makes it a pending push (`force_push`, status Modified) unless "Already matches GitHub (don't push)" is checked (a checkbox, off by default). The drift review's "Accept GitHub" follow-up opens the fill with it checked (`ItemEditorContext.fillMatchesGitHub`); its "Fill Value…" for an unavailable Keep Local keeps the default. Share-import fills are unchanged (provenance unverified, no push request) |
+| 46 | §7.1 | **Push on Next Sync** (table context menu, and a checkbox in the item editor applied on Save) sets `force_push` on a live synced secret with a value and nothing pending; the row shows "Will push" (`ConfigSyncStatus.willPush`), the pending count and the Sync button follow the observation stream, Revert clears it. Not offered for variables: their values are compared with GitHub's, so a difference is already a pending change or drift. A rename or kind change in the same save pushes anyway, so the request is skipped then |
+| 47 | D27 | A push the user requested records when (`config_items.force_push_requested_at`, migration v8). D27 (preflight and the executor's per-scope re-check) and drift detection treat a GitHub change made clearly before that instant as covered: the push goes through and no drift is shown. A change after it, or within `SyncEngineConstants.requestedPushClockMargin` (5 s) of the request's whole second (GitHub lists whole seconds; clocks drift), still blocks (`.remoteChanged`, resolved in Drift review). An expired verification rebases the secret on its `pre_write_updated_at`, so the re-push keeps the request's effect. Revert keeps a value that already equals the synced one (it can lack a synced copy), so cancelling a push never erases a secret. Pushes FX Vault schedules itself (Keep Local, an expired verification) and share-import fills record no time and keep the strict rule. |
+
 ### As built in v0.2.0 (flexible sharing, connectivity banner, nearby chat)
 
 | # | Area | Decision |
 |---|---|---|
-| 43 | Sharing | The scope values stay `secret` / `environment` / `repository`; any mix is `repository`. Schema v2 exists only for partial environments (`deploymentBranchPolicy: null`) and is written only when one is present (lowest-version rule), so whole environments, the whole repository and repository-level selections stay readable by 0.1.x (SHARING-PROTOCOL.md §1.1) |
-| 44 | Sharing | A branch policy travels only with a fully checked environment. A partial environment never changes the receiver's policy; when it is missing on the receiver it is created with GitHub's policy and patterns if GitHub lists it (synced), else with all branches (pending create). `.item` on an environment item is now a partial environment (supersedes decision 34) |
-| 45 | Connectivity | `ConnectivityMonitor` applies the first path at once and later changes after 2 s on the injected clock; Low Data Mode is online, requires-connection is offline. `GitHubReachability` makes no calls of its own: the sidebar, repository detail, Add by name, the Sync sheet (preflight, start, and the last change of a run that says anything about GitHub), Create Repository (owners and templates) and the drift review report their gh outcomes |
-| 46 | Connectivity | Nearby share and Nearby Chat are never gated by `isOnline` (peer-to-peer Wi-Fi works with no internet route, and a Mac with Wi-Fi on but joined to no network reports no connection). Nearby Chat is disabled only by `hasNetworkInterface == false`. Clone is disabled offline too; the toolbar Import .env stays enabled (local only). A Sync sheet left open when the Mac goes offline cannot start a run or review deletions and says why in its footer |
-| 47 | Nearby | Listener, browser and connection set `includePeerToPeer` (AWDL); the protocol bytes and KATs are unchanged. 0.1.x does not use AWDL, so 0.1.x and 0.2.0 Macs meet only on a shared network |
-| 48 | Chat | Chat is domain-separated from share by its Bonjour type (`_fxvault-chat._tcp`) and label prefix (`fxvault/chat/v1`); the handshake moved, unchanged, into the internal `NearbyKeyExchange` used by both. Chat KATs are cross-checked with Python like the share KATs |
-| 49 | Chat | Ephemeral by construction: the session keeps no history, the window's transcript lives in the view model only, and close, lock, sleep, screen lock, disconnect, timeout and End Chat wipe it. Idle 10 min, keepalive PING every 30 s (abort after 2 unanswered), no overall limit; the responder waits for a connection without a timer |
-| 50 | Chat | Attaching asks ReauthGate before the picker opens and reuses `ShareAuthorizationPurpose.nearbySend` (its Touch ID prompt). The offer carries a manifest only; the value is decrypted when the peer asks and only if the item still has the offered name, kind and scope. "Save to my vault" goes through the share import preview and `SharingRepository.apply` |
-| 51 | Chat | The chat window needs an unlocked vault; closing the main window locks the vault (D16) and so ends the chat. A responder whose unverified peer drops before HELLO, or leaves before the code is shown, re-advertises and returns to the people list without an "ended" screen or a failed-handshake count; only listener failures (no connection accepted) count, 3 in a row at most. `incomingConnection` clears the "visible" chip. There is no accept/decline step before the code comparison (open product question) |
-| 52 | Nearby | Chat advertises the user's sanitized display name (Preferences › General › "Name for nearby Macs", else the macOS full name) as its Bonjour instance name. Nearby share and receive use the same name in HELLO (`ShareLocalIdentityModel.nearby(preferences:)`) but keep random Bonjour instance names |
-| 53 | Chat | Flood limits: more than 100 TEXT/offer/request/decline/PING frames in 10 s, or more than 32 offers per chat, abort with `unexpectedMessage`; the window keeps 1,000 messages. Text and names drop every invisible character (`UnicodeScalarPolicy.isInvisible`); chat text keeps one blank line in a row and four combining marks per character. Messages are not selectable: Copy goes through `ClipboardManager`. Late async results (send, offer, request, a save preview) of a chat that ended are dropped. An offer's value provider refuses a value whose `value_fp` changed since the offer. Discovery uses the `local.` domain and filters this Mac by its registered name |
-| 54 | Sharing | A missing partial environment whose items are all skipped is not created (`ShareEnvironmentPlanModel.createsEnvironment`); a nearby DECISION carries such an environment's id only with an accepted item. A tree opened for one item keeps sharing that item even if it is its environment's only item, until the checks change. Share import previews read GitHub only when online (`FeatureDependencies.checksGitHub`), and their "Import repository" button, the drift review's Refresh and resolutions, and Create Repository's Sync Now… are disabled offline with `ConnectivityCopy.offlineHelp`. The connectivity debounce is not restarted by more updates of the same transition; a reconnect cancels the previous one and re-lists drift only when the last check failed, never ran or was skipped offline |
+| 48 | Sharing | The scope values stay `secret` / `environment` / `repository`; any mix is `repository`. Schema v2 exists only for partial environments (`deploymentBranchPolicy: null`) and is written only when one is present (lowest-version rule), so whole environments, the whole repository and repository-level selections stay readable by 0.1.x (SHARING-PROTOCOL.md §1.1) |
+| 49 | Sharing | A branch policy travels only with a fully checked environment. A partial environment never changes the receiver's policy; when it is missing on the receiver it is created with GitHub's policy and patterns if GitHub lists it (synced), else with all branches (pending create). `.item` on an environment item is now a partial environment (supersedes decision 34) |
+| 50 | Connectivity | `ConnectivityMonitor` applies the first path at once and later changes after 2 s on the injected clock; Low Data Mode is online, requires-connection is offline. `GitHubReachability` makes no calls of its own: the sidebar, repository detail, Add by name, the Sync sheet (preflight, start, and the last change of a run that says anything about GitHub), Create Repository (owners and templates) and the drift review report their gh outcomes |
+| 51 | Connectivity | Nearby share and Nearby Chat are never gated by `isOnline` (peer-to-peer Wi-Fi works with no internet route, and a Mac with Wi-Fi on but joined to no network reports no connection). Nearby Chat is disabled only by `hasNetworkInterface == false`. Clone is disabled offline too; the toolbar Import .env stays enabled (local only). A Sync sheet left open when the Mac goes offline cannot start a run or review deletions and says why in its footer |
+| 52 | Nearby | Listener, browser and connection set `includePeerToPeer` (AWDL); the protocol bytes and KATs are unchanged. 0.1.x does not use AWDL, so 0.1.x and 0.2.0 Macs meet only on a shared network |
+| 53 | Chat | Chat is domain-separated from share by its Bonjour type (`_fxvault-chat._tcp`) and label prefix (`fxvault/chat/v1`); the handshake moved, unchanged, into the internal `NearbyKeyExchange` used by both. Chat KATs are cross-checked with Python like the share KATs |
+| 54 | Chat | Ephemeral by construction: the session keeps no history, the window's transcript lives in the view model only, and close, lock, sleep, screen lock, disconnect, timeout and End Chat wipe it. Idle 10 min, keepalive PING every 30 s (abort after 2 unanswered), no overall limit; the responder waits for a connection without a timer |
+| 55 | Chat | Attaching asks ReauthGate before the picker opens and reuses `ShareAuthorizationPurpose.nearbySend` (its Touch ID prompt). The offer carries a manifest only; the value is decrypted when the peer asks and only if the item still has the offered name, kind and scope. "Save to my vault" goes through the share import preview and `SharingRepository.apply` |
+| 56 | Chat | The chat window needs an unlocked vault; closing the main window locks the vault (D16) and so ends the chat. A responder whose unverified peer drops before HELLO, or leaves before the code is shown, re-advertises and returns to the people list without an "ended" screen or a failed-handshake count; only listener failures (no connection accepted) count, 3 in a row at most. `incomingConnection` clears the "visible" chip. There is no accept/decline step before the code comparison (open product question) |
+| 57 | Nearby | Chat advertises the user's sanitized display name (Preferences › General › "Name for nearby Macs", else the macOS full name) as its Bonjour instance name. Nearby share and receive use the same name in HELLO (`ShareLocalIdentityModel.nearby(preferences:)`) but keep random Bonjour instance names |
+| 58 | Chat | Flood limits: more than 100 TEXT/offer/request/decline/PING frames in 10 s, or more than 32 offers per chat, abort with `unexpectedMessage`; the window keeps 1,000 messages. Text and names drop every invisible character (`UnicodeScalarPolicy.isInvisible`); chat text keeps one blank line in a row and four combining marks per character. Messages are not selectable: Copy goes through `ClipboardManager`. Late async results (send, offer, request, a save preview) of a chat that ended are dropped. An offer's value provider refuses a value whose `value_fp` changed since the offer. Discovery uses the `local.` domain and filters this Mac by its registered name |
+| 59 | Sharing | A missing partial environment whose items are all skipped is not created (`ShareEnvironmentPlanModel.createsEnvironment`); a nearby DECISION carries such an environment's id only with an accepted item. A tree opened for one item keeps sharing that item even if it is its environment's only item, until the checks change. Share import previews read GitHub only when online (`FeatureDependencies.checksGitHub`), and their "Import repository" button, the drift review's Refresh and resolutions, and Create Repository's Sync Now… are disabled offline with `ConnectivityCopy.offlineHelp`. The connectivity debounce is not restarted by more updates of the same transition; a reconnect cancels the previous one and re-lists drift only when the last check failed, never ran or was skipped offline |
 
 
 ## App shell
@@ -745,7 +762,8 @@ AppTests).
     Clone, Refresh, drift banner, deployment branches with Edit, plan note on private
     repositories, read-only explanation) and `ConfigTableView` (Secrets | Variables over one
     `Table`; masked secrets with the eye toggle, "Value missing", plaintext variables; Reveal,
-    Copy, Edit / Fill Value, Convert or Move, Revert, Delete). The Add split button adds one
+    Copy, Edit / Fill Value, Convert or Move, Push on Next Sync (secrets), Revert, Delete). The
+    Add split button adds one
     item of the tab's kind and offers Paste Multiple… and Import .env File…; ⌘V in the detail
     column (`onPasteCommand(of: [.plainText], validator: validatePaste)`, `handlePaste(_:)`
     reads the providers) opens the import preview prefilled. All three pass the tab's kind as `defaultKind` and the open scope as the
@@ -766,9 +784,9 @@ AppTests).
     they never loaded or failed (`SidebarViewModel.needsReload`) and re-runs the open
     repository's drift check (`reconnectTask`). Sidebar, repository detail, Add by name, the
     Sync sheet, Create Repository and the drift review report their gh outcomes to
-    `GitHubReachability` (decision 45).
-  - Toolbar: New Repository, Import .env, Share menu (File… / Nearby… / Receive Nearby… /
-    Nearby Chat…, which opens the chat window), Lock,
+    `GitHubReachability` (decision 50).
+  - Toolbar: a DEV chip in Debug builds (decision 43), New Repository, Import .env, Share menu
+    (File… / Nearby… / Receive Nearby… / Nearby Chat…, which opens the chat window), Lock,
     Sync (`SyncToolbarButton`, count in the label, disabled at 0, while locked, while syncing and
     without gh). Menu commands (`VaultCommands`): File › New Repository… (⌘N), Import .env… (⇧⌘I);
     Vault › Lock (⌃⌘L), Sync (⇧⌘S), Share. Commands reach the window through
@@ -780,8 +798,10 @@ AppTests).
     duplicate check; values only through `SecretValueEditor` (trailing-newline notice, size and
     empty checks). Editing a secret starts empty ("Edit Current Value" decrypts on request).
     Credential-looking variables (`CredentialClassifier`) get "Make It a Secret" / "Convert to
-    Secret…". Fill defaults to "Fill local value (already on GitHub)". Secret → variable asks
-    first (Cancel is the default). The typed value is wiped after save, on close and on lock.
+    Secret…". Fill pushes on the next Sync unless "Already matches GitHub (don't push)" is
+    checked; editing a synced secret offers "Push on Next Sync" (decisions 45–46). Secret →
+    variable asks first (Cancel is the default). The typed value is wiped after save, on close
+    and on lock.
   - `Environment` (§7.6, M4–M5): New / Settings / Rename / Duplicate, over
     `EnvironmentDirectoryModel` (fold-key name status: taken, reserved by a pending change,
     restores a deleted one). Settings edits the policy with `BranchPolicyEditorView` and shows
@@ -892,7 +912,7 @@ another route replaces the sheet; closing it sets `activeSheet` to nil (and open
 
 | `MainSheet` case | Folder | Entry view | Context |
 |---|---|---|---|
-| `.itemEditor` | `ItemEditor/` | `ItemEditorScreen` | `ItemEditorContext(repositoryID, scope, mode: .add(ConfigKind) / .edit(id) / .fill(id) / .move(id))` |
+| `.itemEditor` | `ItemEditor/` | `ItemEditorScreen` | `ItemEditorContext(repositoryID, scope, mode: .add(ConfigKind) / .edit(id) / .fill(id) / .move(id), fillMatchesGitHub = false)` |
 | `.newEnvironment` | `Environment/` | `NewEnvironmentScreen` | `NewEnvironmentContext(repositoryID)` |
 | `.environmentSettings` | `Environment/` | `EnvironmentSettingsScreen` | `EnvironmentContext(repositoryID, environmentID)` |
 | `.renameEnvironment` | `Environment/` | `RenameEnvironmentScreen` | `EnvironmentContext` |
@@ -1005,6 +1025,9 @@ Signing settings live only in `Config/*.xcconfig`:
 - `Tests.xcconfig`: the test bundle inherits the app's identity but no entitlements or profile.
 
 Ad-hoc builds cannot use Touch ID (the keychain access group needs the provisioning profile).
+Debug builds are "FX Vault Dev" (`io.fractalx.fxvault.dev`) and stay ad-hoc even with
+`Local.xcconfig`: `Signed.xcconfig` resets the signing settings for `[config=Debug]` because the
+Developer ID profile is for `io.fractalx.fxvault` only (decision 43).
 Release builds are universal (arm64 + x86_64); see [RELEASING.md](RELEASING.md).
 
 ## CI

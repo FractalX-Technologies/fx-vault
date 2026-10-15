@@ -121,8 +121,9 @@ struct DriftReviewViewModelTests {
         #expect(fixture.recorder.presented == [.itemEditor(ItemEditorContext(
             repositoryID: DriftFixtures.repositoryID,
             scope: .environment(DriftFixtures.environmentID),
-            mode: .fill(itemID)
-        ))])
+            mode: .fill(itemID),
+            fillMatchesGitHub: true
+        ))], "the user chose GitHub's value: the fill starts as already matching GitHub")
 
         // Closing the sheet does not refresh a second time.
         model.finish()

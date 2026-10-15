@@ -55,6 +55,8 @@ struct ShareFileTests {
         let s2 = try #require(try receiver.item("FXV_S2", kind: .secret, scope: .environment(environment.id)))
         #expect(try receiver.value(s2.id) == "a2")
         #expect(s2.model.syncStatus == .unverifiedShare)
+        // v0.1.2 keeps share fills as designed: unverified, never a requested push.
+        #expect(!s2.forcePush && s2.forcePushRequestedAt == nil)
         #expect(try receiver.pendingCount() == 2)
         #expect(draft.isClosedForApply)
         await #expect(throws: SharingError.draftClosed) {

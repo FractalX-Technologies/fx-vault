@@ -19,8 +19,8 @@ public struct ConfigItemModel: Sendable, Hashable, Identifiable {
     public var syncedName: String?
     /// Tombstone: pending deletion on GitHub.
     public var isDeleted: Bool
-    /// Set by "Keep local" drift resolution or a failed verification; cleared after a verified
-    /// push.
+    /// Set by Push on Next Sync, a fill that pushes, "Keep local" drift resolution or a failed
+    /// verification; cleared by a push and by Revert.
     public var forcePush: Bool
     /// GitHub's `updatedAt` recorded at the last verification.
     public var remoteUpdatedAt: Date?
@@ -136,6 +136,9 @@ public enum ConfigSyncStatus: String, Sendable, Hashable, Codable, CaseIterable 
     case blocked
     /// Synced, but the local value came from a share and has not been confirmed on GitHub.
     case unverifiedShare
+    /// Synced and unchanged, but the next Sync re-sends the local value (`force_push`: Push on
+    /// Next Sync, drift "Keep local", an expired verification). Pending like ``modified``.
+    case willPush
 
     /// Local facts the status is derived from. Fingerprints stay in the repository layer; it
     /// passes only whether they differ.
@@ -175,7 +178,8 @@ public enum ConfigSyncStatus: String, Sendable, Hashable, Codable, CaseIterable 
     /// Derives the status from local facts, following the §7.1 change table.
     ///
     /// Priority: deleted, then blocked (a change that needs the missing value), then added,
-    /// then modified, then unverified share, then synced. A missing secret value with no pending
+    /// then modified (a changed value; ``willPush`` when only `force_push` is set), then
+    /// unverified share, then synced. A missing secret value with no pending
     /// change is ``synced`` (the value is on GitHub; the UI shows the "Value missing" chip).
     /// A tombstone that was never synced is not a valid stored state (the row is removed
     /// instead, §7.1 coalescing) and derives as ``synced`` (nothing to push).
@@ -194,7 +198,7 @@ public enum ConfigSyncStatus: String, Sendable, Hashable, Codable, CaseIterable 
             return .added
         }
         if isModify {
-            return .modified
+            return facts.isValueChanged ? .modified : .willPush
         }
         if facts.provenance == .share {
             return .unverifiedShare

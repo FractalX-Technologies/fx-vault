@@ -3,8 +3,8 @@ import VaultCore
 
 /// ConfigItemEditorScreen (§10 Sheets): kind (locked once synced), name (auto-uppercase with
 /// live validation and a suggested fix), value in `SecretValueEditor` (D32 notice, SSH/PEM
-/// hint), the credential warning for variables, the fill-or-push choice for value-missing
-/// secrets, and Convert/Move.
+/// hint), the credential warning for variables, "Already matches GitHub" for value-missing
+/// secrets, "Push on Next Sync" for synced secrets, and Convert/Move.
 ///
 /// UI feature contract entry view (ARCHITECTURE.md): presented by `MainScreen` for
 /// `MainSheet.itemEditor`. The init signature is fixed. Dismiss with `@Environment(\.dismiss)`.
@@ -103,6 +103,9 @@ private struct ItemEditorForm: View {
             if viewModel.offersFillChoice {
                 fillSection
             }
+            if viewModel.offersPushOnNextSync || viewModel.isPushAlreadyRequested {
+                pushSection
+            }
         }
     }
 
@@ -190,28 +193,46 @@ private struct ItemEditorForm: View {
 
     private var fillSection: some View {
         Section {
-            Picker(selection: $viewModel.pushOnNextSync) {
-                Text(String(
-                    localized: "itemEditor.fill.local",
-                    defaultValue: "Fill local value (already on GitHub)"
-                ))
-                .tag(false)
-                Text(String(localized: "itemEditor.fill.push", defaultValue: "Push this value on next Sync"))
-                    .tag(true)
-            } label: {
-                EmptyView()
-            }
-            .pickerStyle(.radioGroup)
-            .labelsHidden()
-            ConfigEditorNoteView(note: .info(viewModel.pushOnNextSync
+            Toggle(
+                String(localized: "itemEditor.fill.matchesGitHub", defaultValue: "Already matches GitHub (don't push)"),
+                isOn: $viewModel.fillMatchesGitHub
+            )
+            .toggleStyle(.checkbox)
+            ConfigEditorNoteView(note: .info(viewModel.fillMatchesGitHub
                 ? String(
-                    localized: "itemEditor.fill.push.note",
-                    defaultValue: "The next Sync replaces the secret on GitHub with this value."
+                    localized: "itemEditor.fill.matchesGitHub.note",
+                    defaultValue: "Only when you are sure GitHub has exactly this value. Nothing is pushed."
                 )
                 : String(
-                    localized: "itemEditor.fill.local.note",
-                    defaultValue: "Use this when the value is what GitHub already has. Nothing is pushed."
+                    localized: "itemEditor.fill.pushes.note",
+                    defaultValue: "The next Sync replaces the secret on GitHub with this value, so GitHub matches FX Vault."
                 )))
+        } header: {
+            Text(String(localized: "itemEditor.fill.header", defaultValue: "On GitHub"))
+        }
+    }
+
+    // MARK: - Push on Next Sync (v0.1.2)
+
+    @ViewBuilder private var pushSection: some View {
+        Section {
+            if viewModel.isPushAlreadyRequested {
+                ConfigEditorNoteView(note: .info(String(
+                    localized: "itemEditor.push.alreadyRequested",
+                    defaultValue: "The next Sync pushes this secret to GitHub. Revert it in the table to cancel."
+                )))
+            } else {
+                Toggle(
+                    String(localized: "itemEditor.push.toggle", defaultValue: "Push on Next Sync"),
+                    isOn: $viewModel.pushOnNextSync
+                )
+                .toggleStyle(.checkbox)
+                .disabled(!viewModel.canEdit)
+                ConfigEditorNoteView(note: .info(String(
+                    localized: "itemEditor.push.note",
+                    defaultValue: "Sends the value in FX Vault to GitHub on the next Sync even if it did not change, so GitHub matches FX Vault."
+                )))
+            }
         } header: {
             Text(String(localized: "itemEditor.fill.header", defaultValue: "On GitHub"))
         }

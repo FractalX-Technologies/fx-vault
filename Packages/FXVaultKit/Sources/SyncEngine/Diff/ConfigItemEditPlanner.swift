@@ -13,6 +13,8 @@ public enum ItemEditError: Error, Sendable, Hashable {
     case nothingToRevert
     /// Fill is only for a secret whose value is missing.
     case valueNotMissing
+    /// Push on Next Sync is only for a live secret that is on GitHub and has a local value.
+    case pushNotApplicable
 }
 
 /// Where the new local value of a row comes from. VaultData seals it under the row's AAD
@@ -168,8 +170,10 @@ public struct ConfigItemEditPlanner: Sendable {
 
     // MARK: - Revert
 
-    /// Restores `value := synced value`, `name := synced_name`, and clears `is_deleted` and
-    /// `force_push`. An unsynced row has nothing to return to and is removed.
+    /// Restores `value := synced value`, `name := synced_name`, and clears `is_deleted`,
+    /// `force_push` and `force_push_requested_at`. A value that already equals the synced one
+    /// (`value_fp = synced_fp`) is kept, so cancelling a requested push never erases it. An
+    /// unsynced row has nothing to return to and is removed.
     public func revert(_ id: ConfigItemID) throws(ItemEditError) -> ItemEditOutcomeModel {
         var draft = Draft(items: items)
         let row = try draft.existing(id)
@@ -193,12 +197,19 @@ public struct ConfigItemEditPlanner: Sendable {
 
     // MARK: - Fill (value-missing secrets, §7.1, §7.8)
 
-    /// Fills a value-missing secret. By default the value is taken as what GitHub already has
-    /// (`synced_* := same`, nothing pending); with `pushOnNextSync` it is pushed on the next
-    /// Sync (`force_push := 1`).
+    /// Fills a value-missing secret. With `pushOnNextSync` (the app's default since v0.1.2: the
+    /// vault is the source of truth) a synced secret is pushed by the next Sync
+    /// (`force_push := 1`, `force_push_requested_at := requestedAt`); without it the value is
+    /// taken as what GitHub already has (`synced_* := same`, nothing pending). An unsynced row
+    /// is a pending add either way.
+    ///
+    /// - Parameter requestedAt: when the user asked for the push (D27 lets it replace GitHub
+    ///   changes made before then). Nil when the push was not the user's explicit choice (a
+    ///   share import), which keeps the strict D27 rule.
     public func fill(
         _ id: ConfigItemID,
         pushOnNextSync: Bool,
+        requestedAt: Date? = nil,
         fingerprint: (ConfigItemID) -> Data
     ) throws(ItemEditError) -> ItemEditOutcomeModel {
         var draft = Draft(items: items)
@@ -209,12 +220,30 @@ public struct ConfigItemEditPlanner: Sendable {
         guard row.isSynced, !pushOnNextSync else {
             // An unsynced row is a pending add anyway; a synced one is pushed as a modify.
             row.forcePush = row.isSynced
+            row.forcePushRequestedAt = row.isSynced ? requestedAt : nil
             draft.update(row, value: .newValue)
             return draft.outcome
         }
         row.syncedFingerprint = value
         row.hasSyncedValue = true
         draft.update(row, value: .newValueAsSynced)
+        return draft.outcome
+    }
+
+    // MARK: - Push on Next Sync (v0.1.2)
+
+    /// "Push on Next Sync": the next Sync re-sends the local value of a synced secret even when
+    /// it did not change (`force_push := 1`, `force_push_requested_at := requestedAt`). Revert
+    /// clears it. Variables are compared by value, so they never need it.
+    ///
+    /// - Throws: `.pushNotApplicable` unless the row is a live secret on GitHub with a value.
+    public func requestPush(_ id: ConfigItemID, requestedAt: Date) throws(ItemEditError) -> ItemEditOutcomeModel {
+        var draft = Draft(items: items)
+        var row = try draft.existing(id)
+        guard row.kind == .secret, row.isSynced, row.hasValue, !row.isDeleted else { throw .pushNotApplicable }
+        row.forcePush = true
+        row.forcePushRequestedAt = requestedAt
+        draft.update(row, value: .unchanged)
         return draft.outcome
     }
 
@@ -338,6 +367,7 @@ private struct Draft {
         var tombstone = row
         tombstone.isDeleted = true
         tombstone.forcePush = false
+        tombstone.forcePushRequestedAt = nil
         if holder(scope: row.scope, kind: row.kind, name: syncedName, excluding: row.id) == nil {
             tombstone.name = syncedName
         }
@@ -357,6 +387,13 @@ private struct Draft {
         reverted.name = syncedName
         reverted.isDeleted = false
         reverted.forcePush = false
+        reverted.forcePushRequestedAt = nil
+        // A value equal to what GitHub has stays: the synced copy can be missing (a value edited
+        // during its push keeps none), and GitHub never returns a secret's value.
+        if row.hasValue, !row.isValueChanged {
+            update(reverted, value: .unchanged)
+            return
+        }
         reverted.valueFingerprint = row.hasSyncedValue ? row.syncedFingerprint : nil
         update(reverted, value: .syncedValue)
     }

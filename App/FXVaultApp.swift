@@ -21,7 +21,7 @@ struct FXVaultApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        Window(Text(String(localized: "app.window.title", defaultValue: "FX Vault")), id: SceneID.main) {
+        Window(Text(AppIdentity.windowTitle), id: SceneID.main) {
             switch appDelegate.bootstrap {
             case .ready(let viewModel):
                 RootScreen(viewModel: viewModel)

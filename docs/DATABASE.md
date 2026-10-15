@@ -40,6 +40,13 @@ AES-256-GCM blobs (`value_ct`, `synced_value_ct`) encrypted by VaultCrypto with 
 `VaultMigrator.Migration`. `eraseDatabaseOnSchemaChange` is never used. Opening a file written
 by a newer build throws `StoreError.schemaNewerThanBuild`.
 
+Migration ids are shared by every branch. "Newer" means the file lists any id this build does
+not know (GRDB's `hasBeenSuperseded`), so a branch that lacks one of main's ids cannot open a
+vault main has migrated, even if it adds its own migration with the same number. Merge main's
+migrations into a branch before that branch adds a migration or builds a release. Debug builds
+of every branch and worktree share the `FX Vault Dev` vault, so the first Debug run of a build
+with a new migration locks older branches' Debug builds out of it.
+
 `MigrationTests.stepByStepFrom` migrates up to each version, inserts rows valid at that version,
 migrates the rest of the way, and checks that the schema equals a fresh database's and that the
 rows still read back.
@@ -131,7 +138,7 @@ CREATE TABLE config_items (
   is_deleted INTEGER NOT NULL DEFAULT 0,
   synced_name TEXT,                                -- NULL = never pushed (pending add)
   synced_value_ct BLOB, synced_fp BLOB,
-  force_push INTEGER NOT NULL DEFAULT 0,           -- "Keep local" drift resolution
+  force_push INTEGER NOT NULL DEFAULT 0,           -- re-send on next Sync (Push on Next Sync, a pushing fill, "Keep local")
   remote_updated_at TEXT,
   verify_state TEXT NOT NULL DEFAULT 'verified' CHECK (verify_state IN ('verified','pending')),
   pre_write_updated_at TEXT,                       -- verification baseline
@@ -234,6 +241,27 @@ ALTER TABLE sync_journal ADD COLUMN did_normalize_value INTEGER CHECK (did_norma
 - A DEK rotation recomputes `config_items` fingerprints but not these. A row reconciled after a
   rotation therefore never matches `value_fp`, so the value stays pending and is pushed again
   (the safe direction).
+
+### v8_force_push_requested_at (v0.1.2)
+
+```sql
+ALTER TABLE config_items ADD COLUMN force_push_requested_at TEXT;  -- when the user asked for the push
+```
+
+- Set with `force_push = 1` when the user asks for a secret's push: a fill without "Already
+  matches GitHub" (`ConfigRepository.fillValue`) or Push on Next Sync
+  (`ConfigRepository.requestPush`). The time is the injected clock's at the edit.
+- NULL for pushes FX Vault schedules itself (drift "Keep local", an expired verification) and
+  for share-import fills. Cleared wherever `force_push` is cleared: a push (`itemPushed`),
+  Revert, Discard all, a deletion, and the drift resolutions that take GitHub's state.
+- D27 and drift detection (`ConfigItemSnapshotModel.isSecretChangedOnGitHub`): while
+  `force_push = 1`, a GitHub `updatedAt` earlier than this time's whole second minus
+  `SyncEngineConstants.requestedPushClockMargin` (5 s) is covered by the request and does not
+  block the push; any later one does. GitHub lists whole seconds and its clock can differ from
+  the Mac's, so a change whose order is unclear blocks and goes to the drift review.
+- An expired verification (`itemVerificationExpired`) of a secret sets
+  `remote_updated_at := pre_write_updated_at`, the base the write was checked against, so the
+  re-push is not blocked by a GitHub change the request already replaced.
 
 ## Tables at a glance
 

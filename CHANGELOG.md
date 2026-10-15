@@ -45,6 +45,42 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - The Local Network permission text now mentions chat.
 - Nearby share, receive and chat use the name from Settings › General when one is set.
 
+## 0.1.2
+
+### Fixed
+
+- **Debug builds no longer look like the real app.** A development build is now a separate
+  app, **FX Vault Dev** (`io.fractalx.fxvault.dev`), with a DEV badge in the toolbar. Before,
+  it registered as "FX Vault" with the release bundle identifier, so Spotlight or the Dock could
+  open it instead of the installed app. A development build keeps its vault in the separate
+  `FX Vault Dev` folder, so an account created in such a copy never reached the installed app's
+  vault, and the installed app correctly showed no vault after an upgrade. Upgrading does not
+  delete a vault. A vault created by a development build is intact in
+  `~/Library/Application Support/FX Vault Dev/vault.sqlite`; it opens only in a development build
+  (now "FX Vault Dev") and is not merged into the installed app's vault. The installed app is
+  unchanged (`io.fractalx.fxvault`, "FX Vault"), and `.fxvault` files open in it, not in a
+  development build.
+- **Filled secrets now sync.** GitHub never returns secret values, so after importing a
+  repository you fill them in. A filled value used to be recorded as already on GitHub, so Sync
+  stayed disabled. It is now pushed by the next Sync, so GitHub matches your vault; check
+  "Already matches GitHub (don't push)" when you are sure it is the same value. After a drift
+  review's "Accept GitHub" the box starts checked.
+
+### Added
+
+- **Push on Next Sync.** Right-click a secret (or open it in the editor) to send its value to
+  GitHub on the next Sync even when it did not change. The row shows "Will push", the Sync
+  button counts it, and Revert cancels it. Variables do not need it: FX Vault compares their
+  values with GitHub's.
+- A push you asked for (Push on Next Sync, or a fill that pushes) is not blocked by a change
+  made on GitHub before you asked; a change made after it, or within a few seconds of it, still
+  stops the push and is listed in the drift review.
+
+### Changed
+
+- The vault database gains one column (migration `v8_force_push_requested_at`). Older versions
+  of FX Vault refuse to open a vault that 0.1.2 has opened.
+
 ## 0.1.1
 
 ### Added

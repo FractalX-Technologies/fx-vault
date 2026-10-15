@@ -185,20 +185,37 @@ public struct ConfigRepository: Sendable {
         }
     }
 
-    /// Fills a value-missing secret (§7.1, §7.8). By default the value is taken as what GitHub
-    /// already has (nothing pending); with `pushOnNextSync` it is pushed by the next Sync.
+    /// Fills a value-missing secret (§7.1, §7.8). By default (v0.1.2) the vault is the source
+    /// of truth: a secret on GitHub becomes a pending push (`force_push`, requested now, so a
+    /// GitHub change made before this moment does not block it, D27). With
+    /// `pushOnNextSync: false` ("Already matches GitHub") the value is taken as what GitHub
+    /// already has and nothing is pending.
     @discardableResult
     public func fillValue(
         _ id: ConfigItemID,
         value: SecretBytes,
-        pushOnNextSync: Bool
+        pushOnNextSync: Bool = true
     ) throws(ConfigRepositoryError) -> ItemWriteResultModel {
         let normalized = try Self.normalize(value)
         defer { normalized.value.wipe() }
         try itemBatch(id) { batch in
-            try batch.fill(id, value: normalized.value, pushOnNextSync: pushOnNextSync)
+            try batch.fill(id, value: normalized.value, pushOnNextSync: pushOnNextSync, isUserRequest: true)
         }
         return ItemWriteResultModel(itemID: id, didStripTrailingNewlines: normalized.didStripTrailingNewlines)
+    }
+
+    /// "Push on Next Sync" (v0.1.2): the next Sync re-sends the local value of a synced secret
+    /// even when it did not change (`force_push`, requested now: D27 then blocks only a GitHub
+    /// change made after this moment). Revert clears it. Only for secrets: variables are
+    /// compared by value, so a differing variable is already pending or reported as drift.
+    ///
+    /// - Throws: `.edit(.pushNotApplicable)` for a variable, a deleted item, an item not on
+    ///   GitHub or a value-missing secret (fill it instead); `.readOnly`; `.itemNotFound`.
+    public func requestPush(_ id: ConfigItemID) throws(ConfigRepositoryError) {
+        try itemBatch(id) { batch in
+            try batch.requestPush(id)
+        }
+        Self.log.info("Push on next Sync requested for one secret")
     }
 
     /// "Convert to variable / Move to…" (D11): the item moves to `kind` and `scope` as a new row

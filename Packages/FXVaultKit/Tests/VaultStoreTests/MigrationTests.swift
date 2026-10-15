@@ -18,9 +18,9 @@ struct MigrationTests {
     @Test func migrationIdentifiersAreFrozenAndOrdered() {
         #expect(Migration.allCases.map(\.rawValue) == [
             "v1_vault", "v2_accounts_repos", "v3_config", "v4_sync_journal", "v5_create_policies", "v6_sharing",
-            "v7_journal_fingerprints",
+            "v7_journal_fingerprints", "v8_force_push_requested_at",
         ])
-        #expect(Migration.latest == .v7JournalFingerprints)
+        #expect(Migration.latest == .v8ForcePushRequestedAt)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -352,6 +352,11 @@ struct MigrationTests {
                 sql: "UPDATE sync_journal SET source_fp = ?, pushed_fp = ?, did_normalize_value = 1",
                 arguments: [seedSourceFingerprint, seedPushedFingerprint]
             )
+            guard version >= .v8ForcePushRequestedAt else { return }
+            try db.execute(
+                sql: "UPDATE config_items SET force_push = 1, force_push_requested_at = ? WHERE id = ?",
+                arguments: [seedTime, seedItemID]
+            )
         }
     }
 
@@ -390,5 +395,15 @@ struct MigrationTests {
         #expect(journal.sourceFingerprint == seedSourceFingerprint)
         #expect(journal.pushedFingerprint == seedPushedFingerprint)
         #expect(journal.didNormalizeValue == true)
+        let record = try #require(try database.read { tx in
+            try ConfigItemRecord.fetchOne(tx.db, key: seedItemID)
+        })
+        guard version >= .v8ForcePushRequestedAt else {
+            // Rows from before v8 have no requested push.
+            #expect(!record.forcePush && record.forcePushRequestedAt == nil)
+            return
+        }
+        #expect(record.forcePush)
+        #expect(record.forcePushRequestedAt == DatabaseTimestamp.date(from: seedTime))
     }
 }

@@ -27,6 +27,10 @@ public struct ConfigItemSnapshotModel: Sendable, Hashable, Identifiable {
     public var syncedFingerprint: Data?
     /// `force_push`.
     public var forcePush: Bool
+    /// `force_push_requested_at`: when the user asked for the push (Fill without "Already
+    /// matches GitHub", or Push on Next Sync). Nil for pushes FX Vault scheduled itself (drift
+    /// "Keep local", an expired verification). Only meaningful while ``forcePush`` is set.
+    public var forcePushRequestedAt: Date?
     /// `remote_updated_at`: GitHub's `updatedAt` recorded at the last verification.
     public var remoteUpdatedAt: Date?
     /// `verify_state`.
@@ -46,6 +50,7 @@ public struct ConfigItemSnapshotModel: Sendable, Hashable, Identifiable {
         hasSyncedValue: Bool = false,
         syncedFingerprint: Data? = nil,
         forcePush: Bool = false,
+        forcePushRequestedAt: Date? = nil,
         remoteUpdatedAt: Date? = nil,
         verifyState: VerifyState = .verified,
         preWriteUpdatedAt: Date? = nil,
@@ -61,6 +66,7 @@ public struct ConfigItemSnapshotModel: Sendable, Hashable, Identifiable {
         self.hasSyncedValue = hasSyncedValue
         self.syncedFingerprint = syncedFingerprint
         self.forcePush = forcePush
+        self.forcePushRequestedAt = forcePushRequestedAt
         self.remoteUpdatedAt = remoteUpdatedAt
         self.verifyState = verifyState
         self.preWriteUpdatedAt = preWriteUpdatedAt
@@ -98,6 +104,20 @@ public struct ConfigItemSnapshotModel: Sendable, Hashable, Identifiable {
         guard let valueFingerprint else { return false }
         guard let syncedFingerprint else { return true }
         return valueFingerprint != syncedFingerprint
+    }
+
+    /// D27 for a synced secret listed on GitHub with `updatedAt`: true when GitHub changed it
+    /// since the vault last saw it (`remote_updated_at`). A push the user requested
+    /// (``forcePushRequestedAt``) covers the changes GitHub made clearly before the request;
+    /// a change after it, or one whose order is unclear (whole-second `updatedAt`, clock skew:
+    /// ``SyncEngineConstants/requestedPushClockMargin``), counts. Shared by
+    /// ``RemoteBaseChecker`` and ``DriftDetector``.
+    func isSecretChangedOnGitHub(updatedAt: Date?) -> Bool {
+        guard !DriftDetector.isSameTimestamp(updatedAt, remoteUpdatedAt) else { return false }
+        guard forcePush, let requestedAt = forcePushRequestedAt, let updatedAt else { return true }
+        let requestSecond = requestedAt.timeIntervalSince1970.rounded(.down)
+        let coveredBefore = requestSecond - SyncEngineConstants.requestedPushClockMargin
+        return updatedAt.timeIntervalSince1970 >= coveredBefore
     }
 
     /// The row has something to push or delete (ignoring whether it can be pushed).

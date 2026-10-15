@@ -84,6 +84,7 @@ struct ItemMutationWriter {
             isDeleted: row.isDeleted,
             syncedName: row.syncedName,
             forcePush: row.forcePush,
+            forcePushRequestedAt: row.forcePushRequestedAt,
             remoteUpdatedAt: row.remoteUpdatedAt,
             verifyState: row.verifyState,
             preWriteUpdatedAt: row.preWriteUpdatedAt,
@@ -103,6 +104,7 @@ struct ItemMutationWriter {
         record.syncedName = row.syncedName
         record.syncedFingerprint = row.syncedFingerprint
         record.forcePush = row.forcePush
+        record.forcePushRequestedAt = row.forcePushRequestedAt
         record.remoteUpdatedAt = row.remoteUpdatedAt
         record.verifyState = row.verifyState
         record.preWriteUpdatedAt = row.preWriteUpdatedAt

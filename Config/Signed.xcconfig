@@ -12,3 +12,13 @@ CODE_SIGN_IDENTITY = Developer ID Application
 CODE_SIGN_ENTITLEMENTS = Config/FXVault-Signed.entitlements
 PROVISIONING_PROFILE_SPECIFIER = FX Vault Developer ID
 OTHER_CODE_SIGN_FLAGS = --timestamp
+
+// Debug builds are the separate app "FX Vault Dev" (io.fractalx.fxvault.dev, project.yml).
+// The profile above is for io.fractalx.fxvault only, so Debug stays ad-hoc signed and has no
+// Touch ID. To sign Debug too, create an App ID io.fractalx.fxvault.dev with Keychain Sharing
+// and a Developer ID profile for it, and override these settings in Local.xcconfig.
+CODE_SIGN_IDENTITY[config=Debug] = -
+DEVELOPMENT_TEAM[config=Debug] =
+CODE_SIGN_ENTITLEMENTS[config=Debug] = Config/FXVault.entitlements
+PROVISIONING_PROFILE_SPECIFIER[config=Debug] =
+OTHER_CODE_SIGN_FLAGS[config=Debug] =

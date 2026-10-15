@@ -46,7 +46,8 @@ struct DiffSnapshotTests {
         (Fx.item("ADDED"), .added),
         (Fx.item("ADDED_MISSING", value: nil), .blocked),
         (Fx.item("MODIFIED", value: "v2", synced: "MODIFIED", syncedValue: "v1"), .modified),
-        (Fx.item("FORCED", synced: "FORCED", syncedValue: "v1", forcePush: true), .modified),
+        (Fx.item("FORCED", synced: "FORCED", syncedValue: "v1", forcePush: true), .willPush),
+        (Fx.item("FORCED_CHANGED", value: "v2", synced: "FORCED_CHANGED", syncedValue: "v1", forcePush: true), .modified),
         (Fx.item("FORCED_MISSING", value: nil, synced: "FORCED_MISSING", forcePush: true), .blocked),
         (Fx.item("NEW_NAME", synced: "OLD_NAME", syncedValue: "v1"), .added),
         (Fx.item("GONE", synced: "GONE", syncedValue: "v1", deleted: true), .deleted),
@@ -62,7 +63,7 @@ struct DiffSnapshotTests {
         case .blocked:
             #expect(changeSet.changes.isEmpty)
             #expect(!changeSet.blocked.isEmpty)
-        case .added, .modified, .deleted:
+        case .added, .modified, .deleted, .willPush:
             #expect(changeSet.blocked.isEmpty)
             #expect(!changeSet.changes.isEmpty)
             #expect(row.hasPendingChange)

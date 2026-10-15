@@ -45,7 +45,11 @@ public enum SyncStateEffectModel: Sendable, Hashable {
     /// `remote_updated_at := remoteUpdatedAt`; a `share` provenance is confirmed (`local`).
     case itemVerified(itemID: ConfigItemID, remoteUpdatedAt: Date?)
     /// The pending-verification pass gave up after `Limits.pendingVerifyChecks` passes:
-    /// `verify_state := 'verified'`; with `forcePush` (secrets) also `force_push := 1`.
+    /// `verify_state := 'verified'`; with `forcePush` (secrets) also `force_push := 1` and, when
+    /// `pre_write_updated_at` is set, `remote_updated_at := pre_write_updated_at`. The write was
+    /// checked against that base (D27, or the user's push request) and the verifier gives up only
+    /// when nothing changed after it, so the re-push is not blocked by a GitHub change the
+    /// pushed value already replaced.
     case itemVerificationExpired(itemID: ConfigItemID, forcePush: Bool)
     /// C6/C8 confirmed (``ItemDeletedEffectModel``).
     case itemDeleted(ItemDeletedEffectModel)

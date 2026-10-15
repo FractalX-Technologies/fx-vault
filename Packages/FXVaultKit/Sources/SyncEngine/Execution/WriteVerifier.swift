@@ -31,7 +31,8 @@ public enum WriteVerifier {
     ///   `remote_updated_at := updatedAt`;
     /// - otherwise, with `countsMisses`, the row's miss count grows; at
     ///   `Limits.pendingVerifyChecks` the row becomes verified as a failed push: a secret gets
-    ///   `force_push := 1` (pending re-push), a variable is left to ``DriftDetector``.
+    ///   `force_push := 1` (pending re-push) and `remote_updated_at := pre_write_updated_at`
+    ///   (the base its write was checked against), a variable is left to ``DriftDetector``.
     ///
     /// The miss counts are the caller's (the schema has no column for them); pass the previous
     /// result's ``PendingVerificationPassModel/failedChecks``. Sync preflight runs the pass with
@@ -70,7 +71,10 @@ public enum WriteVerifier {
             let forcePush = row.kind == .secret
             effects.append(.itemVerificationExpired(itemID: row.id, forcePush: forcePush))
             snapshot.items[index].verifyState = .verified
-            snapshot.items[index].forcePush = snapshot.items[index].forcePush || forcePush
+            if forcePush {
+                snapshot.items[index].forcePush = true
+                if let baseline = row.preWriteUpdatedAt { snapshot.items[index].remoteUpdatedAt = baseline }
+            }
             checks[row.id] = nil
             expired.append(row.id)
         }

@@ -269,7 +269,8 @@ struct ItemEditorViewModelTests {
 
     // MARK: - Fill (§7.1, §7.8)
 
-    @Test func fillDefaultsToTheLocalValueAlreadyOnGitHub() async throws {
+    /// v0.1.2: the vault is the source of truth, so a filled value is pushed by default.
+    @Test func fillPushesOnTheNextSyncByDefault() async throws {
         let (harness, id) = try await EditorFixtures.importedHarness()
         let secret = try await EditorFixtures.item(harness, id, named: "API_TOKEN")
         #expect(!secret.hasValue)
@@ -277,7 +278,8 @@ struct ItemEditorViewModelTests {
         let model = await editor(harness, id, mode: .fill(secret.id))
         #expect(model.isFilling)
         #expect(model.offersFillChoice)
-        #expect(model.pushOnNextSync == false, "Fill local value (already on GitHub) is the default")
+        #expect(!model.fillMatchesGitHub, "Already matches GitHub (don't push) is off by default")
+        #expect(!model.offersPushOnNextSync, "fill has its own choice")
         #expect(!model.isNameEditable)
         #expect(!model.canSave)
 
@@ -286,21 +288,96 @@ struct ItemEditorViewModelTests {
         #expect(model.save())
         let filled = try await EditorFixtures.item(harness, id, named: "API_TOKEN")
         #expect(filled.hasValue)
-        #expect(filled.syncStatus == .synced)
-        #expect(try EditorFixtures.pendingCount(harness, id) == pendingBefore, "nothing to push")
+        #expect(filled.forcePush)
+        #expect(filled.syncStatus == .modified)
+        #expect(try EditorFixtures.pendingCount(harness, id) == pendingBefore + 1)
     }
 
-    @Test func fillCanPushOnTheNextSync() async throws {
+    @Test func fillThatAlreadyMatchesGitHubPushesNothing() async throws {
         let (harness, id) = try await EditorFixtures.importedHarness()
         let secret = try await EditorFixtures.item(harness, id, named: "API_TOKEN")
         let pendingBefore = try EditorFixtures.pendingCount(harness, id)
         let model = await editor(harness, id, mode: .fill(secret.id))
         model.value = EditorFixtures.secretValue
-        model.pushOnNextSync = true
+        model.fillMatchesGitHub = true
         #expect(model.save())
         let filled = try await EditorFixtures.item(harness, id, named: "API_TOKEN")
-        #expect(filled.syncStatus == .modified)
+        #expect(filled.hasValue)
+        #expect(!filled.forcePush)
+        #expect(filled.syncStatus == .synced)
+        #expect(try EditorFixtures.pendingCount(harness, id) == pendingBefore, "nothing to push")
+    }
+
+    /// After a drift "Accept GitHub" the user chose GitHub's value: the editor starts with
+    /// "Already matches GitHub" checked.
+    @Test func fillAfterAcceptGitHubStartsAsMatchingGitHub() async throws {
+        let (harness, id) = try await EditorFixtures.importedHarness()
+        let secret = try await EditorFixtures.item(harness, id, named: "API_TOKEN")
+        let model = ItemEditorViewModel(
+            context: ItemEditorContext(repositoryID: id, scope: .repository, mode: .fill(secret.id), fillMatchesGitHub: true),
+            dependencies: harness.dependencies(recorder: ActionRecorder())
+        )
+        await model.load()
+        #expect(model.fillMatchesGitHub)
+    }
+
+    // MARK: - Push on Next Sync (v0.1.2)
+
+    /// The imported `API_TOKEN` filled as "already matches GitHub": synced, with a value.
+    private func syncedSecretWithValue(_ harness: TestHarness, _ id: RepoID) async throws -> ConfigItemModel {
+        let secret = try await EditorFixtures.item(harness, id, named: "API_TOKEN")
+        try harness.data.config.fillValue(secret.id, value: SecretBytes(utf8: EditorFixtures.secretValue), pushOnNextSync: false)
+        let synced = try await EditorFixtures.item(harness, id, named: "API_TOKEN")
+        #expect(synced.syncStatus == .synced && synced.hasValue)
+        return synced
+    }
+
+    @Test func pushOnNextSyncResendsAnUnchangedSecret() async throws {
+        let (harness, id) = try await EditorFixtures.importedHarness()
+        let secret = try await syncedSecretWithValue(harness, id)
+        let pendingBefore = try EditorFixtures.pendingCount(harness, id)
+        let model = await editor(harness, id, mode: .edit(secret.id))
+        #expect(model.offersPushOnNextSync)
+        #expect(!model.pushOnNextSync, "off by default")
+        #expect(!model.canSave, "nothing changed yet")
+
+        model.pushOnNextSync = true
+        #expect(model.canSave)
+        #expect(model.save())
+
+        let marked = try await EditorFixtures.item(harness, id, named: "API_TOKEN")
+        #expect(marked.forcePush)
+        #expect(marked.syncStatus == .willPush)
+        #expect(try harness.data.config.reveal(marked.id).utf8String() == EditorFixtures.secretValue, "value kept")
         #expect(try EditorFixtures.pendingCount(harness, id) == pendingBefore + 1)
+
+        let reopened = await editor(harness, id, mode: .edit(secret.id))
+        #expect(!reopened.offersPushOnNextSync)
+        #expect(reopened.isPushAlreadyRequested)
+    }
+
+    @Test func pushOnNextSyncIsOnlyOfferedForSyncedSecretsWithAValue() async throws {
+        let (harness, id) = try await EditorFixtures.importedHarness()
+        let variable = try await EditorFixtures.item(harness, id, named: "BASE_URL")
+        let variableEditor = await editor(harness, id, mode: .edit(variable.id))
+        #expect(!variableEditor.offersPushOnNextSync, "variables are compared by value")
+
+        let (staged, stagedID) = try await EditorFixtures.stagedHarness()
+        let unsynced = try await EditorFixtures.item(staged, stagedID, named: "API_TOKEN")
+        let unsyncedEditor = await editor(staged, stagedID, mode: .edit(unsynced.id))
+        #expect(!unsyncedEditor.offersPushOnNextSync, "not on GitHub yet: Sync adds it anyway")
+    }
+
+    @Test func aRenameWithPushOnNextSyncIsJustARename() async throws {
+        let (harness, id) = try await EditorFixtures.importedHarness()
+        let secret = try await syncedSecretWithValue(harness, id)
+        let model = await editor(harness, id, mode: .edit(secret.id))
+        model.pushOnNextSync = true
+        model.name = "API_TOKEN_V2"
+        #expect(model.save())
+        let renamed = try await EditorFixtures.item(harness, id, named: "API_TOKEN_V2")
+        #expect(!renamed.forcePush)
+        #expect(renamed.syncStatus == .added, "the rename creates the new name on GitHub")
     }
 
     @Test func fillOfASecretWithAValueIsUnavailable() async throws {

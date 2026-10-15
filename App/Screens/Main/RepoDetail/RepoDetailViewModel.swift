@@ -45,6 +45,12 @@ struct ConfigRowModel: Identifiable, Hashable {
     var canRevert: Bool {
         isSynced && status != .synced && status != .unverifiedShare
     }
+
+    /// "Push on Next Sync" is offered for a secret on GitHub with a value and nothing pending.
+    /// Variables are compared by value, so they never need it.
+    var canPushOnNextSync: Bool {
+        kind == .secret && hasValue && isSynced && !isDeleted && (status == .synced || status == .unverifiedShare)
+    }
 }
 
 /// Column 3 (§10): the header (owner/name, visibility, capability chip, Clone, Refresh, drift
@@ -385,6 +391,21 @@ final class RepoDetailViewModel: LockObserving {
     func revert(_ row: ConfigRowModel) {
         do {
             try dependencies.config.revertItem(row.id)
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    /// "Push on Next Sync" (v0.1.2): the next Sync re-sends the secret's value even if it did not
+    /// change, so GitHub matches the vault. The row shows "Will push" until then; Revert undoes it.
+    func pushOnNextSync(_ row: ConfigRowModel) {
+        guard canEdit, row.canPushOnNextSync else { return }
+        do {
+            try dependencies.config.requestPush(row.id)
+            notice = String(
+                localized: "main.detail.pushOnNextSync.notice",
+                defaultValue: "The next Sync pushes \(row.name) to GitHub. Revert cancels it."
+            )
         } catch {
             alert = error.presentation
         }

@@ -147,4 +147,12 @@ enum MigrationSQL {
         ALTER TABLE sync_journal ADD COLUMN pushed_fp BLOB;
         ALTER TABLE sync_journal ADD COLUMN did_normalize_value INTEGER CHECK (did_normalize_value IN (0, 1));
         """
+
+    // MARK: v8_force_push_requested_at (v0.1.2). FROZEN.
+
+    /// When the user asked for a secret's push (Fill without "Already matches GitHub", or Push
+    /// on Next Sync). D27 lets that push replace a GitHub change made up to this instant.
+    static let v8ForcePushRequestedAt = """
+        ALTER TABLE config_items ADD COLUMN force_push_requested_at TEXT;
+        """
 }

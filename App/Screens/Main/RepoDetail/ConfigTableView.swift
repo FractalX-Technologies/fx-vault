@@ -4,7 +4,7 @@ import VaultCore
 
 /// The one table of the detail column (§10): Name, Value (masked with an eye toggle, "Value
 /// missing", or plaintext for variables), Updated and Status, with the row actions Reveal, Copy,
-/// Edit, Revert, Delete and Convert/Move….
+/// Edit, Convert/Move…, Push on Next Sync (secrets), Revert and Delete.
 struct ConfigTableView: View {
     @Bindable var viewModel: RepoDetailViewModel
 
@@ -79,7 +79,8 @@ struct ConfigTableView: View {
     }
 }
 
-/// Reveal, Copy, Edit (or Fill Value), Convert/Move…, Revert and Delete for one row.
+/// Reveal, Copy, Edit (or Fill Value), Convert/Move…, Push on Next Sync, Revert and Delete for
+/// one row.
 private struct ConfigRowActions: View {
     let row: ConfigRowModel
     let viewModel: RepoDetailViewModel
@@ -105,6 +106,12 @@ private struct ConfigRowActions: View {
             viewModel.move(row)
         }
         .disabled(!viewModel.canEdit || row.isDeleted)
+        if row.canPushOnNextSync {
+            Button(String(localized: "main.table.pushOnNextSync", defaultValue: "Push on Next Sync")) {
+                viewModel.pushOnNextSync(row)
+            }
+            .disabled(!viewModel.canEdit)
+        }
         if row.canRevert {
             Button(String(localized: "main.table.revert", defaultValue: "Revert")) {
                 viewModel.revert(row)

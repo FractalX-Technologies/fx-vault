@@ -284,7 +284,8 @@ private struct Detection {
                 ])
             ))
         case .secret(let secret):
-            guard !DriftDetector.isSameTimestamp(secret.updatedAt, row.remoteUpdatedAt) else { return }
+            // A push the user requested covers GitHub changes made before the request.
+            guard row.isSecretChangedOnGitHub(updatedAt: secret.updatedAt) else { return }
             let keepLocal: DriftResolutionModel = if row.isDeleted || row.hasValue {
                 DriftResolutionModel(option: .keepLocal, effects: [
                     .rebaseSecret(itemID: row.id, remoteUpdatedAt: secret.updatedAt, forcePush: !row.isDeleted),

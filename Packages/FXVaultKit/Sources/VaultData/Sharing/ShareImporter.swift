@@ -90,7 +90,8 @@ struct ShareImporter {
                 guard let localID = itemPlan.localItemID else { throw SharingError.planOutdated }
                 let value = try normalizedValue(of: item, label: label, result: &result)
                 defer { value.wipe() }
-                try batch.fill(localID, value: value, pushOnNextSync: pending)
+                // Provenance stays unverified; a pending fill keeps the strict D27 rule.
+                try batch.fill(localID, value: value, pushOnNextSync: pending, isUserRequest: false)
                 adjustments.append((localID, .provenance))
                 result.filled.append(label)
             case .overwritten:
