@@ -1397,7 +1397,7 @@ Root cause of "my vault was deleted after brew upgrade": about 45 Debug copies (
 - [x] Debug builds are "FX Vault Dev" / io.fractalx.fxvault.dev with a visible DEV badge; Release identity unchanged. **Verify:** generated Info.plist per configuration; release gates pass. *Done: project.yml Debug identity, DEV chip, BundleIdentityTests; release gate_app_name added.*
 - [x] Filling a value-missing secret is a pending push by default ("Already matches GitHub" opt-out). **Verify:** ConfigRepository + editor tests; Sync count increments. *Done: default push; "Already matches GitHub" opt-out; 1005 package + 356 app tests.*
 - [x] "Push on Next Sync" for synced secrets (force push; Revert clears it). **Verify:** repository, change-set and view-model tests. *Done: force-push request with a 5 s clock margin; Revert keeps values (review F4).*
-- [ ] Release 0.1.2 (signed, notarized, cask, `brew upgrade`, `--diagnose`). **Verify:** brew shows 0.1.2; probe add 0.
+- [x] Release 0.1.2 (signed, notarized, cask, `brew upgrade`, `--diagnose`). **Verify:** brew shows 0.1.2; probe add 0. *Done: v0.1.2 published, cask bumped, `brew upgrade` here shows 0.1.2 named "FX Vault", spctl Notarized, `--diagnose` passed.*
 
 ### v0.2.0: flexible sharing, connectivity banner, nearby chat (requested by Bryan, 2026-10-15)
 
