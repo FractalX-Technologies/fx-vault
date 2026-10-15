@@ -97,6 +97,10 @@ enum ShareImportPlanning {
             environments: Dictionary(
                 listed.environments.map { (EnvironmentNameValidator.foldKey($0.name), $0.listing) },
                 uniquingKeysWith: { first, _ in first }
+            ),
+            patterns: Dictionary(
+                listed.environments.map { (EnvironmentNameValidator.foldKey($0.name), $0.patterns) },
+                uniquingKeysWith: { first, _ in first }
             )
         )
     }

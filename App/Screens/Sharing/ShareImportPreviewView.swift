@@ -29,8 +29,12 @@ struct ShareImportPreviewView: View {
                             }
                         }
                     } header: {
-                        Text(verbatim: section.environment?.name
-                            ?? String(localized: "share.preview.repositoryLevel", defaultValue: "Repository"))
+                        HStack(spacing: Theme.Spacing.small) {
+                            Text(verbatim: section.environment?.name
+                                ?? String(localized: "share.preview.repositoryLevel", defaultValue: "Repository"))
+                            Text(ShareSummaryLineModel.counts(section.counts))
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                        }
                     }
                 }
             }
@@ -117,12 +121,33 @@ struct ShareImportPreviewView: View {
     @ViewBuilder
     private func environmentRows(_ environment: ShareEnvironmentPlanModel) -> some View {
         switch environment.action {
-        case .create(let pending):
+        case .create(let pending) where environment.includesBranchPolicy:
             ShareNoteView(
                 systemImage: "plus.square.on.square",
                 text: pending
                     ? String(localized: "share.preview.env.create", defaultValue: "Creates this environment (pending until Sync)")
                     : String(localized: "share.preview.env.createSynced", defaultValue: "Adds this environment, which GitHub already has")
+            )
+        case .create where !environment.createsEnvironment:
+            ShareNoteView(
+                systemImage: "minus.square",
+                text: String(
+                    localized: "share.preview.env.notCreated",
+                    defaultValue: "Not created: none of its items is selected."
+                )
+            )
+        case .create(let pending):
+            ShareNoteView(
+                systemImage: "plus.square.on.square",
+                text: pending
+                    ? String(
+                        localized: "share.preview.env.createPartial",
+                        defaultValue: "Creates this environment with all branches allowed (pending until Sync). The share includes only some of its items, not its branch policy."
+                    )
+                    : String(
+                        localized: "share.preview.env.createPartialSynced",
+                        defaultValue: "Adds this environment with the branch policy GitHub already has. The share includes only some of its items."
+                    )
             )
         case .blockedDeletedLocally:
             ShareNoteView(
@@ -132,6 +157,14 @@ struct ShareImportPreviewView: View {
                     defaultValue: "Deleted in your vault and waiting for Sync. Nothing in it is imported."
                 ),
                 tint: Theme.Colors.danger
+            )
+        case .useExisting where !environment.includesBranchPolicy:
+            ShareNoteView(
+                systemImage: "arrow.triangle.branch",
+                text: String(
+                    localized: "share.preview.env.partial",
+                    defaultValue: "Only some items of this environment are shared. Your branch policy stays as it is."
+                )
             )
         case .useExisting:
             EmptyView()
@@ -246,5 +279,34 @@ private struct SharePolicyDifferenceRow: View {
             }
         }
         .padding(.vertical, Theme.Spacing.xSmall)
+    }
+}
+
+/// The one-click "Import <owner/name> from GitHub" of a share import preview (§9.5), shared by
+/// the file import, nearby receive and chat save sheets. It runs gh, so it is disabled offline
+/// and says why.
+struct ShareImportRepositoryButton: View {
+    let title: String
+    let isImporting: Bool
+    let isOnline: Bool
+    let action: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+            HStack(spacing: Theme.Spacing.small) {
+                Button(title, action: action)
+                    .disabled(isImporting || !isOnline)
+                if isImporting {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+            }
+            if !isOnline {
+                Text(ConnectivityCopy.offlineHelp)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }

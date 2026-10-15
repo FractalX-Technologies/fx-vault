@@ -24,18 +24,12 @@ struct NearbySendScreen: View {
                 title: String(localized: "nearbySend.title", defaultValue: "Share Nearby"),
                 subtitle: String(
                     localized: "nearbySend.subtitle",
-                    defaultValue: "Send configuration to a teammate's Mac on the same network. They open Share › Receive Nearby."
+                    defaultValue: "Send configuration to a teammate's Mac nearby. They open Share › Receive Nearby."
                 ),
                 isExperimental: true
             )
             if let preview = viewModel.preview {
-                ShareNoteView(
-                    systemImage: "shippingbox",
-                    text: String(
-                        localized: "nearbySend.summary",
-                        defaultValue: "\(preview.itemCount) items and \(preview.environmentNames.count) environments from \(preview.repositoryFullName)"
-                    )
-                )
+                ShareContentSummaryView(preview: preview)
             }
             Divider()
             content

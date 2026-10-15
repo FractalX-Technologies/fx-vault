@@ -12,7 +12,9 @@ import VaultCore
 /// | Same name, other kind | Skip + warning | No |
 /// | Incoming value missing | Add without value if absent, else skip | No |
 /// | Environment missing | Create with its policy | Pending unless GitHub lists it |
+/// | Partial environment (no policy, v2) missing | Create with GitHub's policy if listed, else all branches | Pending unless GitHub lists it |
 /// | Existing environment, different policy | Keep mine; widening needs a second confirmation | Only if accepted |
+/// | Existing environment, partial (no policy) | Items only; the local policy is never touched | No |
 ///
 /// Run it on the manifest for the nearby preview (Same/Differs unknown, chip
 /// `existsLocally`) and again on the payload before applying.
@@ -172,7 +174,8 @@ private struct Context {
         let matchedItems = package.flattenedItems.compactMap { located in
             itemsByKey[key(for: located).matchKey]?.item.updatedAt
         }
-        let matchedEnvironments = package.repository.environments.compactMap { environment in
+        // A partial environment changes nothing on the environment itself, so only whole ones count.
+        let matchedEnvironments = package.repository.environments.filter(\.includesBranchPolicy).compactMap { environment in
             environmentsByKey[EnvironmentNameValidator.foldKey(environment.name)]?.updatedAt
         }
         if (matchedItems + matchedEnvironments).contains(where: { $0 > package.createdAt }) {
@@ -196,8 +199,8 @@ private struct Context {
         case .some(let localEnvironment):
             action = .useExisting
             let localPolicy = ShareBranchPolicyModel(localEnvironment.branchPolicy)
-            let incoming = environment.deploymentBranchPolicy
-            if localPolicy.type != incoming.type || localPolicy.patternSet != incoming.patternSet {
+            if let incoming = environment.deploymentBranchPolicy,
+               localPolicy.type != incoming.type || localPolicy.patternSet != incoming.patternSet {
                 difference = SharePolicyDifferenceModel(
                     localPolicy: localPolicy,
                     incomingPolicy: incoming,

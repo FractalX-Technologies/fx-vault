@@ -16,12 +16,8 @@ public enum NearbyProtocol {
     public static let txtVersionKey = "v"
     public static let txtVersionValue = "1"
 
-    /// Domain-separation labels.
-    static let labelCommit = Data("fxvault/nearby/v1/commit".utf8)
-    static let labelTranscript = Data("fxvault/nearby/v1/transcript".utf8)
-    static let labelSAS = Data("fxvault/nearby/v1/sas".utf8)
-    static let labelInitiatorToResponder = Data("fxvault/nearby/v1/key/i2r".utf8)
-    static let labelResponderToInitiator = Data("fxvault/nearby/v1/key/r2i".utf8)
+    /// Prefix of every share label (``NearbyLabels/share``): `fxvault/nearby/v1/commit`, ...
+    static let labelPrefix = "fxvault/nearby/v1"
 
     /// X25519 public key size.
     public static let publicKeyBytes = 32
@@ -52,6 +48,8 @@ public enum NearbyProtocol {
     )
     /// Body of a CONFIRM frame.
     static let confirmBody = Data([0x01])
+    /// Type byte of CONFIRM, shared by share and chat (the keys differ by purpose).
+    static let confirmMessageType = NearbyMessageType.confirm.rawValue
     /// Size of the u32 total length that opens the first MANIFEST frame.
     static let manifestLengthBytes = MemoryLayout<UInt32>.size
     /// Size of the u16 display-name length in HELLO frames.
@@ -93,6 +91,11 @@ public enum NearbyTimeoutKind: String, Sendable, Hashable, CaseIterable {
     case idle
     /// The whole session: ``Timeouts/nearbySession``.
     case session
+    /// Chat only: no message or attachment in either direction for ``Timeouts/chatIdle``.
+    case chatIdle
+    /// Chat only: the peer left ``Limits/chatMaxUnansweredPings`` keepalive PINGs unanswered
+    /// (one PING every ``Timeouts/chatKeepaliveInterval``).
+    case keepalive
 
     /// The duration of this timer.
     public var duration: Duration {
@@ -101,6 +104,8 @@ public enum NearbyTimeoutKind: String, Sendable, Hashable, CaseIterable {
         case .sas: Timeouts.nearbySAS
         case .idle: Timeouts.nearbyIdle
         case .session: Timeouts.nearbySession
+        case .chatIdle: Timeouts.chatIdle
+        case .keepalive: Timeouts.chatKeepaliveInterval
         }
     }
 }

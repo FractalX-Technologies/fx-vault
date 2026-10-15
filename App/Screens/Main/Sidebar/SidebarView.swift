@@ -42,7 +42,11 @@ struct SidebarView: View {
                                 }
                                 .buttonStyle(.borderless)
                                 .foregroundStyle(Theme.Colors.textSecondary)
-                                .disabled(!sidebar.isGitHubReady)
+                                .disabled(!sidebar.canAddByName)
+                                .help(main.networkHelp(String(
+                                    localized: "main.sidebar.addByName.help",
+                                    defaultValue: "Find a repository this account reaches as a collaborator"
+                                )))
                             }
                         } header: {
                             AccountHeader(account: account)
@@ -265,12 +269,20 @@ private struct RepoContextMenu: View {
                 Task { await sidebar.importRepository(repo) }
             }
             .disabled(!sidebar.canImport(repo))
+            .help(main.networkHelp(String(
+                localized: "main.sidebar.import.help",
+                defaultValue: "Read this repository's environments, secrets and variables from GitHub"
+            )))
         } else {
             Button(String(localized: "main.sidebar.clone", defaultValue: "Clone…")) {
                 guard let folder = ClonePanel.folder(for: main) else { return }
                 Task { await sidebar.clone(repo, into: folder) }
             }
             .disabled(!sidebar.canClone(repo))
+            .help(main.networkHelp(String(
+                localized: "main.detail.clone.help",
+                defaultValue: "Clone through the account's SSH alias"
+            )))
             Button(String(localized: "main.sidebar.share", defaultValue: "Share…")) {
                 if let id = repo.importedRepoID {
                     main.present(.shareExport(ShareExportContext(selection: .repository(id))))

@@ -10,7 +10,9 @@ import VaultStore
 /// manifest form carries `valueState` without values. Deleted items and environments pending
 /// deletion are left out. A value-missing secret travels by name only (§7.8). An item counts as
 /// `synced` for the receiver only when nothing is pending locally and its last push was
-/// verified.
+/// verified. An environment carries its branch policy only when the selection names the
+/// environment itself; one reached through some of its items is a partial environment (no
+/// policy, schema v2). The package is written with the lowest schema version that holds it.
 struct ShareExportBuilder: Sendable {
     let session: VaultSession
     let clock: any VaultClock
@@ -46,11 +48,14 @@ struct ShareExportBuilder: Sendable {
                 func items(_ records: [ConfigItemRecord], kind: ConfigKind) throws -> [ShareItemModel] {
                     try records.filter { $0.kind == kind }.map(item)
                 }
-                let environments = try rows.environments.map { environment in
+                let environments = try rows.environments.map { selected in
+                    let environment = selected.environment
                     let records = rows.items(in: .environment(environment.id))
                     return ShareEnvironmentModel(
                         name: environment.name,
-                        deploymentBranchPolicy: ShareBranchPolicyModel(environment.branchPolicy),
+                        deploymentBranchPolicy: selected.includesBranchPolicy
+                            ? ShareBranchPolicyModel(environment.branchPolicy)
+                            : nil,
                         secrets: try items(records, kind: .secret),
                         variables: try items(records, kind: .variable)
                     )
@@ -94,7 +99,8 @@ struct ShareExportBuilder: Sendable {
             itemCount: package.itemCount,
             valueMissingNames: package.flattenedItems
                 .filter { $0.item.valueState == .missing }
-                .map(\.item.name)
+                .map(\.item.name),
+            summary: package.contentSummary
         )
     }
 
@@ -107,11 +113,18 @@ struct ShareExportBuilder: Sendable {
     }
 }
 
+/// An environment in a selection and whether the environment itself was selected (its branch
+/// policy is shared) or only some of its items (a partial environment).
+private struct SelectedEnvironment {
+    let environment: EnvironmentModel
+    let includesBranchPolicy: Bool
+}
+
 /// The rows a selection covers (live rows only).
 private struct ShareSelectionRows {
     let scope: ShareScope
     let repository: RepoModel
-    let environments: [EnvironmentModel]
+    let environments: [SelectedEnvironment]
     let itemsByScope: [ConfigScope: [ConfigItemRecord]]
 
     func items(in scope: ConfigScope) -> [ConfigItemRecord] {
@@ -127,12 +140,12 @@ private struct ShareSelectionRows {
                 throw SharingError.itemNotFound
             }
             let repository = try fetchRepository(record.repositoryID, repositories: repositories, tx: tx)
-            var environments: [EnvironmentModel] = []
+            var environments: [SelectedEnvironment] = []
             if let environmentID = record.environmentID {
                 guard let environment = try config.fetchEnvironment(id: environmentID, in: tx), !environment.isDeleted else {
                     throw SharingError.environmentNotFound
                 }
-                environments = [environment]
+                environments = [SelectedEnvironment(environment: environment, includesBranchPolicy: false)]
             }
             return ShareSelectionRows(scope: .secret, repository: repository, environments: environments, itemsByScope: [record.scope: [record]])
         case .environment(let environmentID):
@@ -144,7 +157,7 @@ private struct ShareSelectionRows {
             return ShareSelectionRows(
                 scope: .environment,
                 repository: repository,
-                environments: [environment],
+                environments: [SelectedEnvironment(environment: environment, includesBranchPolicy: true)],
                 itemsByScope: [.environment(environmentID): records.filter { !$0.isDeleted }]
             )
         case .repository(let repositoryID):
@@ -155,10 +168,70 @@ private struct ShareSelectionRows {
             return ShareSelectionRows(
                 scope: .repository,
                 repository: repository,
-                environments: environments,
+                environments: environments.map { SelectedEnvironment(environment: $0, includesBranchPolicy: true) },
                 itemsByScope: Dictionary(grouping: records.filter { liveScopes.contains($0.scope) }, by: \.scope)
             )
+        case .subset(let subset):
+            return try loadSubset(subset, config: config, repositories: repositories, tx: tx)
         }
+    }
+
+    /// Whole environments with every live item, plus the individual items; an item's environment
+    /// that is not selected itself becomes a partial environment. Every id must be live and in
+    /// the subset's repository.
+    private static func loadSubset(
+        _ subset: ShareSubsetModel,
+        config: ConfigStore,
+        repositories: RepoStore,
+        tx: StoreTransaction
+    ) throws -> ShareSelectionRows {
+        let repository = try fetchRepository(subset.repositoryID, repositories: repositories, tx: tx)
+        let live = try config.fetchEnvironments(repositoryID: repository.id, in: tx).filter { !$0.isDeleted }
+        let liveIDs = Set(live.map(\.id))
+        guard subset.environmentIDs.isSubset(of: liveIDs) else { throw SharingError.environmentNotFound }
+        let records = try config.fetchItemRecords(repositoryID: repository.id, in: tx).filter { !$0.isDeleted }
+        let recordsByID = Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var selected: [ConfigItemRecord] = []
+        for itemID in subset.itemIDs {
+            guard let record = recordsByID[itemID] else { throw SharingError.itemNotFound }
+            if let environmentID = record.environmentID {
+                guard liveIDs.contains(environmentID) else { throw SharingError.environmentNotFound }
+                if subset.environmentIDs.contains(environmentID) { continue }
+            }
+            selected.append(record)
+        }
+        selected += records.filter { record in
+            record.environmentID.map(subset.environmentIDs.contains) ?? false
+        }
+        let partialIDs = Set(selected.compactMap(\.environmentID)).subtracting(subset.environmentIDs)
+        let environments = live.compactMap { environment -> SelectedEnvironment? in
+            if subset.environmentIDs.contains(environment.id) {
+                return SelectedEnvironment(environment: environment, includesBranchPolicy: true)
+            }
+            return partialIDs.contains(environment.id)
+                ? SelectedEnvironment(environment: environment, includesBranchPolicy: false)
+                : nil
+        }
+        let selectedIDs = Set(selected.map(\.id))
+        let ordered = records.filter { selectedIDs.contains($0.id) }
+        return ShareSelectionRows(
+            scope: scope(
+                itemCount: ordered.count,
+                repositoryItemCount: ordered.filter { $0.environmentID == nil }.count,
+                environments: environments
+            ),
+            repository: repository,
+            environments: environments,
+            itemsByScope: Dictionary(grouping: ordered, by: \.scope)
+        )
+    }
+
+    /// The narrowest §9.3 scope that describes the contents.
+    private static func scope(itemCount: Int, repositoryItemCount: Int, environments: [SelectedEnvironment]) -> ShareScope {
+        let wholeCount = environments.filter(\.includesBranchPolicy).count
+        if wholeCount == 0, itemCount == 1 { return .secret }
+        if wholeCount == 1, environments.count == 1, repositoryItemCount == 0 { return .environment }
+        return .repository
     }
 
     private static func fetchRepository(_ id: RepoID, repositories: RepoStore, tx: StoreTransaction) throws -> RepoModel {

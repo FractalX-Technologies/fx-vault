@@ -3,6 +3,8 @@ import SwiftUI
 /// Scene identifiers. One main window (not a WindowGroup): FX Vault has a single vault.
 enum SceneID {
     static let main = "main"
+    /// Window › Nearby Chat (v0.2.0, experimental): one window, listed in the Window menu.
+    static let nearbyChat = "nearby-chat"
 }
 
 /// The process entry point. `--diagnose` is answered here, before SwiftUI creates the app
@@ -34,6 +36,16 @@ struct FXVaultApp: App {
             }
         }
 
+        Window(Text(String(localized: "chat.window.title", defaultValue: "Nearby Chat")), id: SceneID.nearbyChat) {
+            switch appDelegate.bootstrap {
+            case .ready(let viewModel):
+                NearbyChatScreen(app: viewModel)
+            case .failed(let error):
+                StartupFailureScreen(error: error)
+            }
+        }
+        .defaultSize(width: Theme.Layout.chatWindowDefaultWidth, height: Theme.Layout.chatWindowDefaultHeight)
+
         Settings {
             switch appDelegate.bootstrap {
             case .ready(let viewModel):
@@ -46,11 +58,13 @@ struct FXVaultApp: App {
 }
 
 /// The menu commands (§10 Toolbar): File › New Repository (⌘N) and Import .env (⇧⌘I), and the
-/// Vault menu with Lock (⌃⌘L), Sync (⇧⌘S) and Share. Commands that act on the main window reach
+/// Vault menu with Lock (⌃⌘L), Sync (⇧⌘S) and Share (with Nearby Chat…, which SwiftUI also lists
+/// in the Window menu because it is a `Window` scene). Commands that act on the main window reach
 /// it through the focused scene value (``FocusedValues/mainViewModel``).
 struct VaultCommands: Commands {
     let viewModel: AppViewModel
     @FocusedValue(\.mainViewModel) private var main
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
@@ -95,6 +109,10 @@ struct VaultCommands: Commands {
                     main?.receiveNearby()
                 }
                 .disabled(main == nil)
+                Divider()
+                Button(String(localized: "toolbar.share.chat", defaultValue: "Nearby Chat…")) {
+                    openWindow(id: SceneID.nearbyChat)
+                }
             }
         }
     }

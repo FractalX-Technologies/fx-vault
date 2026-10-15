@@ -101,6 +101,7 @@ final class AppViewModel {
         container.autoLock.start { [weak self] trigger in
             self?.lock(trigger: trigger)
         }
+        container.connectivity.start()
         ghProbeTask = Task { [weak self] in
             await self?.refreshGHStatus()
         }
@@ -373,6 +374,7 @@ final class AppViewModel {
     func applicationWillTerminate() {
         container.clipboard.clearIfOwned()
         container.autoLock.stop()
+        container.connectivity.stop()
         pendingCountsTask?.cancel()
         guard container.vaultManager.state != .noVault else { return }
         container.vaultManager.lock()

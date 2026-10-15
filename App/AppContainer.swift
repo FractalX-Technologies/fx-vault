@@ -14,7 +14,7 @@ import VaultData
 ///   (``VaultDataComponents/makeOffline(session:runner:clock:sandbox:)``). SwiftUI previews use
 ///   it, and so does the app while it hosts the test bundle (nothing under `~/Library`, no shell
 ///   probe, no gh).
-/// - `test`: unit tests pass their own fakes to ``init(mode:vaultManager:data:preferences:clipboard:autoLock:ghStatusProbe:dockBadge:passphraseGenerator:vaultDirectory:clock:)``.
+/// - `test`: unit tests pass their own fakes to ``init(mode:vaultManager:data:preferences:clipboard:autoLock:ghStatusProbe:dockBadge:passphraseGenerator:vaultDirectory:clock:connectivity:)``.
 ///
 /// Order matters: the session first, then the repositories (``data``), then `VaultManager`,
 /// whose `onLock` purges the token cache of ``VaultDataComponents/github`` (§5.8 Phase A).
@@ -52,6 +52,11 @@ final class AppContainer {
     let vaultDirectory: URL?
     /// The clock every timer of the UI uses (reveal re-mask, clipboard clear).
     let clock: any VaultClock
+    /// Internet reachability (`NWPathMonitor` live; a fixed online path in previews and tests
+    /// unless they pass their own). `AppViewModel` starts it.
+    let connectivity: ConnectivityMonitor
+    /// Whether GitHub answers the gh calls the app makes (fed by the view models).
+    let gitHubReachability = GitHubReachability()
 
     init(
         mode: Mode,
@@ -64,7 +69,8 @@ final class AppContainer {
         dockBadge: any DockBadgeDisplaying,
         passphraseGenerator: PassphraseGenerator?,
         vaultDirectory: URL?,
-        clock: any VaultClock
+        clock: any VaultClock,
+        connectivity: ConnectivityMonitor? = nil
     ) {
         self.mode = mode
         self.vaultManager = vaultManager
@@ -78,6 +84,7 @@ final class AppContainer {
         self.passphraseGenerator = passphraseGenerator
         self.vaultDirectory = vaultDirectory
         self.clock = clock
+        self.connectivity = connectivity ?? ConnectivityMonitor(source: FixedNetworkPathSource(), clock: clock)
     }
 
     /// Whether this container may touch the disk, the keychain or spawn processes.
@@ -140,7 +147,8 @@ final class AppContainer {
             dockBadge: DockBadgeManager(),
             passphraseGenerator: try? PassphraseGenerator.bundled(),
             vaultDirectory: session.databaseDirectory,
-            clock: clock
+            clock: clock,
+            connectivity: ConnectivityMonitor(source: NWPathMonitorSource(), clock: clock)
         )
     }
 

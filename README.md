@@ -29,10 +29,23 @@ environments and accounts, with a local encrypted vault and the GitHub CLI.
   reads the clipboard only when you paste.
 - **`.env` import and export.** Import with key fixes and credential detection; export after
   Touch ID or your master password, with iCloud and git-exposure warnings.
-- **Sharing.** Send a scope to a teammate as an encrypted `.fxvault` file protected by a
-  6-word passphrase.
-- **Experimental: nearby sharing.** Send directly to a Mac on the same network after both
-  people compare a 6-digit code. Marked experimental in the app.
+- **Sharing.** Send any combination to a teammate as an encrypted `.fxvault` file protected
+  by a 6-word passphrase: the repository level, one or more environments, or individual
+  secrets and variables (tri-state checkboxes, with "Secrets: n · Variables: m" per scope). An
+  environment's deployment branch policy travels only when the whole environment is checked.
+- **Works offline.** A banner says when the Mac has no internet connection or GitHub isn't
+  responding (with Retry). Your edits stay in the vault; Sync, Import, New Repository, Refresh
+  and drift checks wait until you are back online, and drift is checked again when the
+  connection returns.
+- **Experimental: nearby sharing.** Send directly to a teammate's Mac nearby after both people
+  compare a 6-digit code. No shared Wi-Fi network is needed (see
+  [Nearby without internet](#nearby-without-internet)). Marked experimental in the app.
+- **Experimental: Nearby Chat.** Share › Nearby Chat… opens an end-to-end encrypted 1:1 chat
+  with a teammate's Mac nearby, after the same 6-digit code check. Messages live only in memory
+  and are wiped when the chat ends, the window closes or the vault locks. You can attach a
+  secret or variable (after Touch ID or your master password); the other person sees its name,
+  never the value, until they choose **Save to my vault**, which opens the normal import
+  preview.
 
 ## Requirements
 
@@ -97,6 +110,28 @@ It prints a JSON report (version, signing, keychain access group, Touch ID avail
 keychain probe that adds and deletes a throwaway item) and exits without opening a window. It
 never reads your vault or a keychain item and prints no secret.
 
+### Nearby without internet
+
+Nearby sharing and Nearby Chat work between two Macs with no router, no shared Wi-Fi network
+and no internet, over peer-to-peer Wi-Fi (AWDL, the link AirDrop uses). They also work when
+both Macs are on the same network.
+
+- **Turn on Wi-Fi and Bluetooth** on both Macs. Wi-Fi does not need to be joined to a network.
+- **Stay close:** about 10 m (30 ft), as for AirDrop.
+- **Allow Local Network access** when macOS asks the first time (or later in **System Settings ›
+  Privacy & Security › Local Network**). Without it FX Vault cannot find or reach the other
+  Mac, and says so.
+- **Firewall:** the receiving Mac (Receive Nearby, or the person listed in Nearby Chat)
+  accepts one incoming connection. If the macOS firewall asks whether FX Vault may accept
+  incoming connections, choose **Allow**. With "Block all incoming connections" turned on, that
+  Mac cannot be reached: turn the option off while you share, or let the other person receive.
+- **Both Macs need FX Vault 0.2.0** to meet without a shared network. A 0.1.x Mac uses the
+  shared network only, and cannot open a share in which an environment is only partly checked.
+- You are visible to nearby Macs only while **Receive Nearby** is open (under a random name) or
+  while the **Nearby Chat** window lists people (under your name from **Settings › General ›
+  Name for nearby Macs**, or your macOS name). Anyone nearby can see that name, and it proves
+  nothing: always compare the 6-digit code.
+
 ### Verify a download
 
 Each release ships `FXVault-<version>.dmg.sha256` next to the DMG. Releases are signed with a
@@ -133,7 +168,10 @@ use the master password instead.
   cleared 30 seconds after a copy.
 - `.env` export and every share need a fresh Touch ID or master-password check.
 - Every GitHub operation goes through `gh` with values passed on stdin, never as arguments.
-- Nothing leaves your Mac except what Sync sends to GitHub and what you choose to share.
+- Nothing leaves your Mac except what Sync sends to GitHub and what you choose to share or send
+  in Nearby Chat. Chat messages are never written to disk.
+- Nearby sharing and chat are end-to-end encrypted after a 6-digit code that both people
+  compare; a mismatch means someone is in the middle, and nothing is sent.
 
 The full model, threat model and residual risks are in
 [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md).
@@ -157,7 +195,8 @@ the local CI script, and [docs/RELEASING.md](docs/RELEASING.md) for signed build
 - [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md): keys, lock, Touch ID, threat model
 - [docs/DATABASE.md](docs/DATABASE.md): the local encrypted vault schema
 - [docs/API.md](docs/API.md): every gh, git and ssh command the app runs
-- [docs/SHARING-PROTOCOL.md](docs/SHARING-PROTOCOL.md): `.fxvault` files and nearby sharing
+- [docs/SHARING-PROTOCOL.md](docs/SHARING-PROTOCOL.md): `.fxvault` files, nearby sharing and
+  Nearby Chat
 - [docs/RELEASING.md](docs/RELEASING.md): signing, notarization, the Homebrew cask and the
   manual release checklist
 

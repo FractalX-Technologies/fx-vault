@@ -93,7 +93,11 @@ public struct NearbyStep: Sendable, Equatable {
     static let none = NearbyStep()
 }
 
-/// The transport-agnostic nearby protocol v1 state machine (§9.4, D21).
+/// The transport-agnostic nearby share protocol v1 state machine (§9.4, D21).
+///
+/// The handshake, the code confirmation and the encrypted channel are ``NearbyKeyExchange``
+/// with the share labels; this type adds the share phases and messages (MANIFEST, DECISION,
+/// PAYLOAD, RESULT).
 ///
 /// Feed it peer frames with ``receive(_:)`` and user actions with the action methods; send
 /// every returned frame in order and surface every event. Protocol violations never throw:
@@ -104,17 +108,8 @@ public struct NearbyStep: Sendable, Equatable {
 public struct NearbyHandshake: Sendable {
     public let role: NearbyRole
     public private(set) var phase: NearbyPhase = .idle
-    /// The code and peer name once keys exist.
-    public private(set) var sas: NearbySASModel?
 
-    private let localName: Data
-    private var keyMaterial: NearbyKeyMaterial?
-    private var helloI: (maxVersion: UInt8, suite: UInt8, commitment: Data, name: Data)?
-    private var keys: NearbySessionKeys?
-    private var sendSequence: UInt64 = 0
-    private var receiveSequence: UInt64 = 0
-    private var localConfirmed = false
-    private var remoteConfirmed = false
+    private var exchange: NearbyKeyExchange
     private var manifest: SharePackageModel?
     private var acceptedIDs: Set<ShareEntryID> = []
     private var expectedManifestLength = 0
@@ -125,8 +120,12 @@ public struct NearbyHandshake: Sendable {
     ///   - keyMaterial: fresh per session; tests inject fixed material.
     public init(role: NearbyRole, localName: String, keyMaterial: NearbyKeyMaterial = .random()) {
         self.role = role
-        self.localName = Data(DisplayNameSanitizer.sanitize(localName).utf8)
-        self.keyMaterial = keyMaterial
+        exchange = NearbyKeyExchange(role: role, purpose: .share, localName: localName, keyMaterial: keyMaterial)
+    }
+
+    /// The code and peer name once keys exist.
+    public var sas: NearbySASModel? {
+        exchange.sas
     }
 
     // MARK: - User actions
@@ -134,33 +133,23 @@ public struct NearbyHandshake: Sendable {
     /// I sends HELLO_I; R starts waiting for it.
     public mutating func start() throws(ShareError) -> NearbyStep {
         try requirePhase(.idle)
-        guard let keyMaterial else { throw .nearbySessionFinished }
+        let hello: Data?
+        do {
+            hello = try exchange.start()
+        } catch {
+            throw .nearbySessionFinished
+        }
         phase = .awaitingHello
-        guard role == .initiator else { return .none }
-        let commitment = NearbyCrypto.commitment(
-            maxVersion: NearbyProtocol.maxVersion,
-            suite: NearbyProtocol.suite,
-            publicKey: keyMaterial.publicKey,
-            nonce: keyMaterial.nonce
-        )
-        helloI = (NearbyProtocol.maxVersion, NearbyProtocol.suite, commitment, localName)
-        let frame = NearbyHandshakeFrame.helloInitiator(
-            maxVersion: NearbyProtocol.maxVersion,
-            suite: NearbyProtocol.suite,
-            commitment: commitment,
-            name: localName
-        )
-        return NearbyStep(frames: [frame.encoded()])
+        return NearbyStep(frames: hello.map { [$0] } ?? [])
     }
 
     /// "Codes match": sends CONFIRM.
     public mutating func confirmSAS() throws(ShareError) -> NearbyStep {
         try requirePhase(.comparingCodes)
-        guard !localConfirmed else { throw .nearbyActionNotAllowed }
-        localConfirmed = true
+        guard !exchange.localConfirmed else { throw .nearbyActionNotAllowed }
         var step = NearbyStep()
         do {
-            step.frames.append(try seal(.confirm, NearbyProtocol.confirmBody))
+            step.frames.append(try exchange.confirm())
         } catch {
             return abort(error.reason)
         }
@@ -189,7 +178,7 @@ public struct NearbyHandshake: Sendable {
         json.withUnsafeBytes { bytes.append(contentsOf: $0) }
         let frames: [Data]
         do {
-            frames = try sealChunks(.manifest, bytes)
+            frames = try exchange.sealChunks(NearbyMessageType.manifest.rawValue, bytes)
         } catch {
             return abort(error.reason)
         }
@@ -242,7 +231,7 @@ public struct NearbyHandshake: Sendable {
         let digest = Data(SHA256.hash(data: bytes))
         var frames: [Data]
         do {
-            frames = try sealChunks(.payloadChunk, bytes)
+            frames = try exchange.sealChunks(NearbyMessageType.payloadChunk.rawValue, bytes)
             frames.append(try seal(
                 .payloadEnd,
                 NearbyMessageBody.payloadEnd(length: UInt64(bytes.count), digest: digest)
@@ -275,7 +264,7 @@ public struct NearbyHandshake: Sendable {
         if let frame = abortFrame(for: reason) {
             step.frames.append(frame)
         }
-        let model = NearbyAbortModel(reason: reason, happenedAfterReveal: keys != nil)
+        let model = NearbyAbortModel(reason: reason, happenedAfterReveal: exchange.hasKeys)
         wipe()
         phase = .aborted
         step.events.append(.aborted(model))
@@ -295,14 +284,11 @@ public struct NearbyHandshake: Sendable {
             break
         }
         do {
-            if keys == nil {
+            if !exchange.hasKeys {
                 return try receivePlaintext(frame)
             }
-            if isPlaintextAbort(frame) {
-                let decoded = try NearbyHandshakeFrame.decode(frame)
-                if case .abort(let code) = decoded {
-                    return abort(.peerAborted(NearbyAbortCode(rawValue: code) ?? .protocolError))
-                }
+            if let code = try exchange.plaintextAbortCode(frame) {
+                return abort(.peerAborted(code))
             }
             return try receiveEncrypted(frame)
         } catch {
@@ -313,146 +299,30 @@ public struct NearbyHandshake: Sendable {
     // MARK: - Plaintext handshake
 
     private mutating func receivePlaintext(_ frame: Data) throws(NearbyFailure) -> NearbyStep {
-        let decoded = try NearbyHandshakeFrame.decode(frame)
-        switch (role, phase, decoded) {
-        case (_, _, .abort(let code)):
-            return abort(.peerAborted(NearbyAbortCode(rawValue: code) ?? .protocolError))
-        case (.responder, .awaitingHello, .helloInitiator(let maxVersion, let suite, let commitment, let name)):
-            return try responderReceivedHello(maxVersion: maxVersion, suite: suite, commitment: commitment, name: name)
-        case (.initiator, .awaitingHello, .helloResponder(let maxVersion, let suite, let publicKey, let nonce, let name)):
-            return try initiatorReceivedHello(
-                maxVersion: maxVersion,
-                suite: suite,
-                publicKey: publicKey,
-                nonce: nonce,
-                name: name
-            )
-        case (.responder, .awaitingReveal, .revealInitiator(let publicKey, let nonce)):
-            return try responderReceivedReveal(publicKey: publicKey, nonce: nonce)
-        default:
-            throw NearbyFailure(.unexpectedMessage)
+        switch try exchange.receivePlaintext(frame) {
+        case .peerAborted(let code):
+            return abort(.peerAborted(code))
+        case .answeredHello(let reply, _):
+            phase = .awaitingReveal
+            return NearbyStep(frames: [reply])
+        case .established(let reply, let sas):
+            phase = .comparingCodes
+            return NearbyStep(frames: reply.map { [$0] } ?? [], events: [.sasReady(sas)])
         }
-    }
-
-    /// R, step 2: answer HELLO_I with HELLO_R (only after C was received).
-    private mutating func responderReceivedHello(
-        maxVersion: UInt8,
-        suite: UInt8,
-        commitment: Data,
-        name: Data
-    ) throws(NearbyFailure) -> NearbyStep {
-        guard maxVersion >= NearbyProtocol.minVersion else { throw NearbyFailure(.unsupportedVersion) }
-        guard suite == NearbyProtocol.suite else { throw NearbyFailure(.unsupportedSuite) }
-        guard let keyMaterial else { throw NearbyFailure(.cancelled) }
-        helloI = (maxVersion, suite, commitment, name)
-        phase = .awaitingReveal
-        let frame = NearbyHandshakeFrame.helloResponder(
-            maxVersion: NearbyProtocol.maxVersion,
-            suite: NearbyProtocol.suite,
-            publicKey: keyMaterial.publicKey,
-            nonce: keyMaterial.nonce,
-            name: localName
-        )
-        return NearbyStep(frames: [frame.encoded()])
-    }
-
-    /// I, steps 3–4: check version and suite, agree, derive, then REVEAL.
-    private mutating func initiatorReceivedHello(
-        maxVersion: UInt8,
-        suite: UInt8,
-        publicKey: Data,
-        nonce: Data,
-        name: Data
-    ) throws(NearbyFailure) -> NearbyStep {
-        guard let keyMaterial, let helloI else { throw NearbyFailure(.cancelled) }
-        guard suite == helloI.suite else { throw NearbyFailure(.suiteMismatch) }
-        let version = min(helloI.maxVersion, maxVersion)
-        guard version >= NearbyProtocol.minVersion else { throw NearbyFailure(.unsupportedVersion) }
-        let secret = try NearbyCrypto.sharedSecret(privateKey: keyMaterial.privateKey, peerPublicKey: publicKey)
-        let transcript = NearbyTranscriptModel(
-            maxVersionI: helloI.maxVersion,
-            maxVersionR: maxVersion,
-            version: version,
-            suiteI: helloI.suite,
-            suiteR: suite,
-            commitment: helloI.commitment,
-            publicKeyI: keyMaterial.publicKey,
-            nonceI: keyMaterial.nonce,
-            nameI: helloI.name,
-            publicKeyR: publicKey,
-            nonceR: nonce,
-            nameR: name
-        )
-        let reveal = NearbyHandshakeFrame.revealInitiator(publicKey: keyMaterial.publicKey, nonce: keyMaterial.nonce)
-        let event = establish(secret: secret, transcript: transcript, peerName: name)
-        return NearbyStep(frames: [reveal.encoded()], events: [event])
-    }
-
-    /// R, steps 3–4: recompute C, agree, derive.
-    private mutating func responderReceivedReveal(publicKey: Data, nonce: Data) throws(NearbyFailure) -> NearbyStep {
-        guard let keyMaterial, let helloI else { throw NearbyFailure(.cancelled) }
-        let expected = NearbyCrypto.commitment(
-            maxVersion: helloI.maxVersion,
-            suite: helloI.suite,
-            publicKey: publicKey,
-            nonce: nonce
-        )
-        let matches = expected.withUnsafeBytes { lhs in
-            helloI.commitment.withUnsafeBytes { rhs in SecretBytes.constantTimeEquals(lhs, rhs) }
-        }
-        guard matches else { throw NearbyFailure(.commitmentMismatch) }
-        let secret = try NearbyCrypto.sharedSecret(privateKey: keyMaterial.privateKey, peerPublicKey: publicKey)
-        let transcript = NearbyTranscriptModel(
-            maxVersionI: helloI.maxVersion,
-            maxVersionR: NearbyProtocol.maxVersion,
-            version: min(helloI.maxVersion, NearbyProtocol.maxVersion),
-            suiteI: helloI.suite,
-            suiteR: NearbyProtocol.suite,
-            commitment: helloI.commitment,
-            publicKeyI: publicKey,
-            nonceI: nonce,
-            nameI: helloI.name,
-            publicKeyR: keyMaterial.publicKey,
-            nonceR: keyMaterial.nonce,
-            nameR: localName
-        )
-        let event = establish(secret: secret, transcript: transcript, peerName: helloI.name)
-        return NearbyStep(events: [event])
-    }
-
-    private mutating func establish(
-        secret: SharedSecret,
-        transcript: NearbyTranscriptModel,
-        peerName: Data
-    ) -> NearbyEvent {
-        let derived = NearbyCrypto.deriveSession(
-            sharedSecret: secret,
-            transcriptHash: NearbyCrypto.transcriptHash(transcript)
-        )
-        keys = derived
-        keyMaterial = nil
-        let displayName = DisplayNameSanitizer.sanitize(String(decoding: peerName, as: UTF8.self))
-        let model = NearbySASModel(value: derived.sasValue, peerName: displayName)
-        sas = model
-        phase = .comparingCodes
-        return .sasReady(model)
     }
 
     // MARK: - Encrypted messages
 
-    private func isPlaintextAbort(_ frame: Data) -> Bool {
-        receiveSequence == 0 && frame.first == NearbyMessageType.abort.rawValue
-    }
-
     private mutating func receiveEncrypted(_ frame: Data) throws(NearbyFailure) -> NearbyStep {
-        guard let keys else { throw NearbyFailure(.unexpectedMessage) }
-        guard receiveSequence < Limits.maxNearbySequence else { throw NearbyFailure(.sequenceExhausted) }
-        let (type, body) = try NearbyEncryptedFrame.open(
-            frame,
-            expectedSequence: receiveSequence,
-            key: keys.receivingKey(for: role)
-        )
-        receiveSequence += 1
+        let opened = try exchange.open(frame)
+        let rawType = opened.type
+        var body = opened.body
+        // A PAYLOAD body is part of the values' JSON: the handlers copy what they keep, so the
+        // decrypted plaintext is zeroed once it was dispatched.
+        defer { body.wipe() }
+        guard let type = NearbyMessageType(rawValue: rawType) else {
+            throw NearbyFailure(.unexpectedMessage)
+        }
         switch (type, role, phase) {
         case (.abort, _, _):
             return abort(.peerAborted(try NearbyMessageBody.decodeAbort(body)))
@@ -477,17 +347,14 @@ public struct NearbyHandshake: Sendable {
     }
 
     private mutating func receivedConfirm(_ body: Data) throws(NearbyFailure) -> NearbyStep {
-        guard body == NearbyProtocol.confirmBody, !remoteConfirmed else {
-            throw NearbyFailure(.unexpectedMessage)
-        }
-        remoteConfirmed = true
+        try exchange.receiveConfirm(body)
         var step = NearbyStep(events: [.peerConfirmedSAS])
         advanceIfBothConfirmed(&step)
         return step
     }
 
     private mutating func advanceIfBothConfirmed(_ step: inout NearbyStep) {
-        guard localConfirmed, remoteConfirmed else { return }
+        guard exchange.isConfirmed else { return }
         switch role {
         case .initiator:
             phase = .readyForManifest
@@ -592,30 +459,7 @@ public struct NearbyHandshake: Sendable {
     }
 
     private mutating func seal(_ type: NearbyMessageType, _ body: Data) throws(NearbyFailure) -> Data {
-        guard let keys else { throw NearbyFailure(.unexpectedMessage) }
-        let frame = try NearbyEncryptedFrame.seal(
-            type: type,
-            sequence: sendSequence,
-            body: body,
-            key: keys.sendingKey(for: role)
-        )
-        sendSequence += 1
-        return frame
-    }
-
-    private mutating func sealChunks(_ type: NearbyMessageType, _ bytes: Data) throws(NearbyFailure) -> [Data] {
-        var frames: [Data] = []
-        var offset = 0
-        repeat {
-            let length = min(NearbyProtocol.maxFramePlaintextBytes, bytes.count - offset)
-            guard var chunk = bytes.bytes(at: offset, length: length) else {
-                throw NearbyFailure(.malformedFrame)
-            }
-            defer { chunk.wipe() }
-            frames.append(try seal(type, chunk))
-            offset += length
-        } while offset < bytes.count
-        return frames
+        try exchange.seal(type.rawValue, body)
     }
 
     private mutating func abortFrame(for reason: NearbyAbortReason) -> Data? {
@@ -623,13 +467,8 @@ public struct NearbyHandshake: Sendable {
         case .disconnected, .peerAborted:
             return nil
         default:
-            break
+            return exchange.abortFrame(code: reason.code)
         }
-        if keys != nil {
-            return try? seal(.abort, Data([reason.code.rawValue]))
-        }
-        guard phase != .idle else { return nil }
-        return NearbyHandshakeFrame.abort(code: reason.code.rawValue).encoded()
     }
 
     private mutating func finish(_ step: NearbyStep, completion: NearbyCompletion) -> NearbyStep {
@@ -646,18 +485,15 @@ public struct NearbyHandshake: Sendable {
         return finish(NearbyStep(frames: close.map { [$0] } ?? []), completion: completion)
     }
 
-    /// Drops every key and wipes buffers. `SymmetricKey` storage is released (CryptoKit
-    /// zeroes it on deallocation); there is no way to resume.
+    /// Drops every key and wipes buffers; there is no way to resume.
     private mutating func wipe() {
-        keys = nil
-        keyMaterial = nil
-        helloI = nil
+        exchange.wipe()
         buffer.wipe()
         buffer = Data()
         acceptedIDs = []
     }
 
-    private static func abortReason(for error: ShareError) -> NearbyAbortReason {
+    static func abortReason(for error: ShareError) -> NearbyAbortReason {
         if case .invalidPackage(let violation) = error {
             return .invalidPackage(violation)
         }

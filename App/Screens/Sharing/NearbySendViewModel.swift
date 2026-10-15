@@ -70,11 +70,11 @@ final class NearbySendViewModel: LockObserving {
         context: NearbySendContext,
         dependencies: FeatureDependencies,
         network: any NearbyNetworking = LiveNearbyNetworking(),
-        identity: ShareLocalIdentityModel = .current
+        identity: ShareLocalIdentityModel? = nil
     ) {
         self.dependencies = dependencies
         self.network = network
-        self.identity = identity
+        self.identity = identity ?? .nearby(preferences: dependencies.preferences)
         selection = context.selection
         step = context.selection == nil ? .chooseSelection : .browsing
         loader = ShareScopeTreeLoader(config: dependencies.config, sharing: dependencies.sharing)
@@ -115,13 +115,18 @@ final class NearbySendViewModel: LockObserving {
         }
     }
 
+    /// Checks or unchecks a row of the tri-state tree (any combination, as in Share › File…).
     func setChecked(_ checked: Bool, for node: ShareScopeNodeModel) {
+        let previous = tree?.selection
         tree?.setChecked(checked, for: node)
+        guard tree?.selection != previous else { return }
+        // The summary must always describe the checked rows: Continue waits for the new one.
+        preview = nil
         Task { await refreshPreview(for: tree?.selection) }
     }
 
     var canContinueWithSelection: Bool {
-        step == .chooseSelection && tree?.selection != nil
+        step == .chooseSelection && tree?.selection != nil && preview != nil
     }
 
     /// Uses the checked scope and starts looking for receivers.
@@ -338,7 +343,11 @@ final class NearbySendViewModel: LockObserving {
             return
         }
         do {
-            preview = try await dependencies.sharing.previewExport(target)
+            let fresh = try await dependencies.sharing.previewExport(target)
+            // A newer check may have changed the selection while this one was loading.
+            if target == (step == .chooseSelection ? tree?.selection : selection) {
+                preview = fresh
+            }
         } catch {
             preview = nil
             alert = error.presentation

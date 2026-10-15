@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import GitHubKit
 import Observation
 import SyncEngine
 import VaultCore
@@ -92,9 +93,11 @@ final class SyncViewModel: LockObserving {
         }
         do {
             let review = try await service.preflight(repositoryIDs: context.repositoryIDs.map { Array($0) })
+            dependencies.gitHubReachability.recordSuccess()
             apply(review)
             step = .summary
         } catch {
+            dependencies.gitHubReachability.record(error)
             step = .failed(error.presentation)
         }
     }
@@ -177,10 +180,25 @@ final class SyncViewModel: LockObserving {
         }
     }
 
-    /// True when the summary may start a run: something to run, and credential-looking
-    /// variables confirmed.
+    /// True when the summary may start a run: something to run, credential-looking variables
+    /// confirmed, and an internet connection (the sheet may have opened just before the Mac went
+    /// offline).
     var canProceed: Bool {
-        executableCount > 0 && (credentialRows.isEmpty || credentialsConfirmed)
+        executableCount > 0 && (credentialRows.isEmpty || credentialsConfirmed) && isOnline
+    }
+
+    /// False while the Mac has no internet connection (v0.2.0 connectivity banner).
+    var isOnline: Bool {
+        dependencies.connectivity.isOnline
+    }
+
+    /// The footer note: the offline explanation while the summary or the deletion review cannot
+    /// start a run, otherwise the last copy confirmation.
+    var footerNotice: String? {
+        if !isOnline, step == .summary || step == .deletions {
+            return ConnectivityCopy.offlineHelp
+        }
+        return notice
     }
 
     // MARK: - Deletions (§7.5)
@@ -241,6 +259,7 @@ final class SyncViewModel: LockObserving {
                 cloneFolder: dependencies.preferences.cloneFolderURL
             )
         } catch {
+            dependencies.gitHubReachability.record(error)
             alert = error.presentation
             step = .summary
             return
@@ -296,6 +315,7 @@ final class SyncViewModel: LockObserving {
             SyncCloneRowModel(id: clone.repositoryID, fullName: fullName(of: clone.repositoryID), state: cloneState(clone.state))
         }
         step = .result
+        reportReachability(outcome.result)
         AppLog.ui.info(
             """
             Sync finished: \(outcome.result.succeeded.count, privacy: .public) succeeded, \
@@ -304,6 +324,24 @@ final class SyncViewModel: LockObserving {
             """
         )
         requestRefresh(after: outcome.result)
+    }
+
+    /// Reports the run to `GitHubReachability`: the last change that says anything about GitHub
+    /// decides (a success or an error GitHub returned means it answered; a network failure or
+    /// timeout means it did not).
+    private func reportReachability(_ result: SyncResultModel) {
+        let last = result.entries.last { entry in
+            switch entry.outcome {
+            case .succeeded: true
+            case .failed(.github(let error)): error.reachedGitHub != nil
+            case .failed, .skipped, .blocked: false
+            }
+        }
+        if case .failed(.github(let error)) = last?.outcome {
+            dependencies.gitHubReachability.record(error)
+        } else if last != nil {
+            dependencies.gitHubReachability.recordSuccess()
+        }
     }
 
     /// gh-backed data the database observation does not cover: drift of every synced

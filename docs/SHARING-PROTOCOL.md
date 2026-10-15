@@ -2,17 +2,18 @@
 
 Implemented in `Packages/FXVaultKit/Sources/SharingKit`. This document records the wire formats
 as built (plan §9 plus the decisions made during M6 implementation). Known-answer vectors are
-pinned in `Tests/SharingKitTests/Fixtures/nearby_kat.json`; the independent generators
+pinned in `Tests/SharingKitTests/Fixtures/nearby_kat.json` and `chat_kat.json`; the independent generators
 (`Fixtures/kat/crosscheck.py`, Python `cryptography`; `Fixtures/kat/NearbyProtocolReference.swift`)
 produce byte-identical output.
 
-## 1. Payload: `SharePackageModel` (schema 1)
+## 1. Payload: `SharePackageModel` (schema 1 and 2)
 
 JSON, keys sorted, dates ISO-8601 UTC with `Z`. `value` and `githubUpdatedAt` are always present
-(explicit `null` when absent).
+(explicit `null` when absent). `deploymentBranchPolicy` is an object, or an explicit `null` for a
+partial environment (schema 2 only, §1.1).
 
 ```json
-{ "schema": "io.fractalx.fxvault.share", "schemaVersion": 1,
+{ "schema": "io.fractalx.fxvault.share", "schemaVersion": 1 | 2,
   "packageId": "<uuid>", "createdAt": "2026-10-14T10:00:00Z",
   "producer": {"app": "FX Vault", "version": "1.0.0"},
   "sender": {"displayName": "<sanitized, ≤ 63 bytes>"},
@@ -25,7 +26,8 @@ JSON, keys sorted, dates ISO-8601 UTC with `Z`. `value` and `githubUpdatedAt` ar
     "variables": [ ... same shape ... ],
     "environments": [{"id": "<uuid>", "name": "production",
                       "deploymentBranchPolicy": {"type": "all | protected | custom",
-                                                 "patterns": [{"name": "release/*", "type": "branch | tag"}]},
+                                                 "patterns": [{"name": "release/*", "type": "branch | tag"}]}
+                                                | null,
                       "secrets": [ ... ], "variables": [ ... ]}] } }
 ```
 
@@ -33,11 +35,65 @@ JSON, keys sorted, dates ISO-8601 UTC with `Z`. `value` and `githubUpdatedAt` ar
   They exist so the nearby DECISION can name what the receiver accepted.
 - **Manifest** = the same document with every `value` set to null (`valueState` kept). Value
   hashes are never included.
-- **`secret` scope** means exactly one item (secret or variable), at repository or environment
-  level.
+- **Scopes** describe the contents; the receiver merges every scope the same way (nothing that
+  is missing from a package is ever deleted):
+  - `secret`: exactly one item (secret or variable), at repository or environment level.
+  - `environment`: exactly one whole environment (with its policy) and no repository-level items.
+  - `repository`: any other combination, including a subset of the repository level, several
+    environments, and partial environments. No new scope value was needed: the v1 validator
+    already accepts any mix under `repository`.
+
+### 1.1 Schema versions and compatibility (v0.2.0)
+
+| `schemaVersion` | Written by | Meaning |
+|---|---|---|
+| 1 | 0.1.x, and 0.2.0 whenever possible | Every environment carries its `deploymentBranchPolicy` |
+| 2 | 0.2.0 when needed | Adds **partial environments**: `deploymentBranchPolicy: null` plus at least one item |
+
+- **Lowest version rule.** A package is written with the lowest version that can hold it
+  (`SharePackageModel.requiredSchemaVersion(for:)`): 2 only when at least one environment is
+  partial. The whole repository, whole environments, the repository level (all or some of it)
+  and single repository-level items are still written as v1.
+- **0.1.x → 0.2.0.** Every v1 file and nearby manifest written by 0.1.x imports unchanged
+  (pinned by `SharingKitTests/Fixtures/item-v1-0.1.1.json` and
+  `VaultDataTests/Fixtures/Sharing/repository-v1-0.1.1.fxvault`, both written by 0.1.1). A v1
+  environment always carries its policy, so 0.1.x semantics are kept: a single
+  environment-level item from 0.1.x still offers its environment's policy as a "Deployment
+  branches differ" row (Keep mine by default).
+- **0.2.0 → 0.1.x.** v1 packages import in 0.1.x. A v2 package (anything with a partial
+  environment, including a single environment-level secret or variable) is rejected by 0.1.x:
+  its decoder requires a policy object, so a `.fxvault` file shows "Wrong passphrase or damaged
+  file" and a nearby MANIFEST aborts. The workaround is to check the whole environment (v1) or
+  to update the receiver.
+- A v1 document with a `null` or missing policy is rejected (`branchPolicyRequired`); a v2
+  document may also contain only whole environments. Versions other than 1 and 2 are
+  `unsupportedSchemaVersion`.
+
+### 1.2 Branch policy rule
+
+An environment's deployment branch policy travels **only when the environment itself is
+selected**: in the scope tree its checkbox is fully checked (checked directly, or every one of
+its items is checked), or the selection is `.environment` / `.repository` / a subset's
+`environmentIDs`. An environment reached only through some of its items is a partial environment:
+it carries the selected items and no policy. Consequences on the receiver (§5):
+
+- an existing environment keeps its policy (no "Deployment branches differ" row);
+- a missing environment is created with GitHub's policy and patterns when GitHub lists it
+  (created as synced, nothing pending), otherwise with all branches (GitHub's default for a new
+  environment, pending create);
+- a missing partial environment whose items the receiver all skips is not created
+  (`ShareEnvironmentPlanModel.createsEnvironment`), and the receiver's nearby DECISION names
+  such an environment only together with at least one accepted item of it, so skipping the only
+  item of a `secret`-scope share declines cleanly.
+
+An environment without items and without a policy says nothing and is invalid
+(`branchPolicyRequired`); the nearby filter drops it (§4 step 9). One scope-tree exception: a
+tree opened for one item ("Share this secret…") shares that item alone (`.item`, no policy)
+even when it is its environment's only item, until the user changes the checks.
 
 `SharePackageValidator` (modes `.manifest` and `.payload`) rejects, among others: a schema or
-version other than the above; producer or sender fields that are not already sanitized; a host
+version other than the above (§1.1); a missing policy in a v1 document, in an `environment`-scope
+document or on an environment without items (`branchPolicyRequired`); producer or sender fields that are not already sanitized; a host
 other than `github.com`; invalid owner or repository names (`.`, `..`, `*.git`); a `githubRepoId`
 over 128 characters; environment names that fail `EnvironmentNameValidator` (NFC, no C0/C1,
 bidi, zero-width or edge whitespace, no `/`, no dot segments); item names that are not already
@@ -94,11 +150,22 @@ count or the position of an unknown word, never the typed text.
 only while "Receive nearby" is open).
 
 **Transport (`NWNearbyTransport`, `NWNearbyBrowser`):** Bonjour `_fxvault-share._tcp` with a
-random service instance name per session; TXT holds only `v=1`. TCP with `acceptLocalOnly`,
-cellular prohibited, `includePeerToPeer = false` (no AWDL: both Macs must share a network). The
-listener accepts only the first connection (a second is `secondPeer`). Framing: u32 BE length
-prefix (`NearbyLengthFramer`). Local Network denial is reported as
+random service instance name per session; TXT holds only `v=1`. TCP with `acceptLocalOnly` and
+cellular prohibited. The listener accepts only the first connection (a second is `secondPeer`).
+Framing: u32 BE length prefix (`NearbyLengthFramer`). Local Network denial is reported as
 `NearbyTransportFailure.localNetworkDenied`.
+
+**Peer-to-peer Wi-Fi (v0.2.0):** the listener, the browser and the connection all use
+`includePeerToPeer = true` (`NWNearbyConfiguration.parameters()`), so Bonjour and TCP also run
+over AWDL, the link AirDrop uses. Two Macs with Wi-Fi turned on find each other with no shared
+network, router or internet; on a shared network the infrastructure path still works. `acceptLocalOnly` still refuses anything that is not on the
+local link, and cellular stays prohibited. The protocol bytes are unchanged (the KATs below
+still pass); only reachability changes, and with it who can see the advertisement: anyone
+within Wi-Fi range, not only people on the same network. The share advertisement carries a
+random instance name and `v=1`; the security of a session still rests on the code comparison.
+0.1.x builds browse and listen without AWDL, so a 0.1.x Mac and a 0.2.0 Mac only meet on a
+shared network. Verified by parameter tests; the two-Mac check with Wi-Fi networks disconnected
+is manual (RELEASING.md).
 
 ### Handshake
 
@@ -124,7 +191,7 @@ prefix (`NearbyLengthFramer`). Local Network denial is reported as
 |---|---|---|
 | 7 | I→R MANIFEST 0x11 | Only after I's user confirmed, `ReauthGate(.nearbySend)` passed and R's CONFIRM arrived. A manifest may span several 0x11 frames: the first starts with a u32 BE total length, the following frames carry the rest. |
 | 8 | R→I DECISION 0x12 | `accept (1) ‖ u32 count ‖ count × 16-byte entry ids`; at most 4,093 ids; accepting needs at least one id. Unknown ids abort (`unknownItemIDs`). |
-| 9 | I→R PAYLOAD_CHUNK 0x13 … PAYLOAD_END 0x14 | Chunks carry the JSON of the package filtered to the accepted ids; END is `u64 BE length ‖ SHA-256(payload)`. A mismatch aborts (`payloadMismatch`). |
+| 9 | I→R PAYLOAD_CHUNK 0x13 … PAYLOAD_END 0x14 | Chunks carry the JSON of the package filtered to the accepted ids; END is `u64 BE length ‖ SHA-256(payload)`. A mismatch aborts (`payloadMismatch`). The filter keeps an environment when one of its items is accepted, or when its own id is and it carries a policy; it never adds or removes a policy and keeps `schemaVersion`. |
 | 10 | R→I RESULT 0x15 | `ok (1)` |
 | 11 | CLOSE 0x7E | Empty. R finishes right after sending RESULT or a decline; I sends CLOSE after RESULT or a decline. A CLOSE that arrives early is `peerAborted(.cancelled)`. |
 | any | ABORT 0x7F | One `NearbyAbortCode` byte: 0x01 protocolError, 0x02 unsupportedVersion, 0x03 unsupportedSuite, 0x04 commitmentMismatch, 0x05 invalidKey, 0x06 decryptionFailed, 0x07 sasRejected, 0x08 timeout, 0x09 cancelled. Plaintext before keys exist; after that, a plaintext ABORT is accepted only until the first encrypted frame from the peer has arrived (the peer may not have keys yet). |
@@ -173,6 +240,11 @@ unverified sender name, and recording the package in `imported_share_packages`).
 - **Defaults:** add; fill; skip when the fingerprint is identical; **keep mine** when different
   (overwrite and overwrite-all are available); an item that only exists under the other kind is
   skipped with a warning.
+- **Partial environments (v2):** no policy row; an existing environment keeps its policy and
+  only the incoming items are planned. A missing one is created with GitHub's policy and
+  patterns when GitHub lists it (synced, nothing pending; `ShareImporter`), otherwise with all
+  branches (pending create). Only whole environments count for the `olderThanLocalChanges`
+  replay warning.
 - **Environments:** missing ones are created (pending unless GitHub already lists them). A
   different branch policy is its own row, defaulting to keep mine. Widening (anything → all,
   custom → protected, or a new pattern containing `*`, `?` or `[`) needs a second confirmation.
@@ -184,7 +256,8 @@ SharingKit stays pure; VaultData's `SharingRepository` connects it to the vault.
 - **Authorization.** `.fxvault` export needs `ReauthGate.authorizeShare(.fileExport, …)` and a
   nearby MANIFEST needs `.nearbySend`. Each authorization is single-use and invalidated by any
   lock, unlock or key rotation (SECURITY-MODEL.md §6).
-- **Export.** The selection (`ShareSelectionModel` item, environment or repository) is built
+- **Export.** The selection (`ShareSelectionModel` item, environment, repository, or
+  `subset(ShareSubsetModel)`: whole environments plus individual items, any combination) is built
   into a `SharePackageModel` with values decrypted inside `VaultSession.read`, sealed with a
   fresh 6-word passphrase by `FxVaultFileCodec(deriver: Argon2idSharingDeriver())` and written
   0600 by `SecureFileWriter`. The passphrase is returned once (`SecretBytes`) and never stored.
@@ -206,3 +279,139 @@ SharingKit stays pure; VaultData's `SharingRepository` connects it to the vault.
   `NearbyTransport` (`NWNearbyTransport` in the app, `InMemoryTransportPair` in tests). The
   receiver previews the manifest, decides, previews the payload and applies through the same
   importer; events forwarded to the UI never carry values.
+
+## 7. Nearby chat: `fxvault-chat/v1` (v0.2.0, experimental)
+
+Implemented in `SharingKit/Chat/` (`NearbyChatSession` actor over the pure `NearbyChatMachine`).
+Bryan's decisions: chat is 1:1 and **ephemeral** (messages live only in memory and are wiped
+on close, lock or disconnect; nothing is written to disk), a secret or variable can be attached
+(names only until the receiver asks; saving goes through the normal share import), and it works
+over peer-to-peer Wi-Fi like nearby share (§4).
+
+**Domain separation from share.** Chat has its own Bonjour service type `_fxvault-chat._tcp`
+(listed in `NSBonjourServices`) and its own label prefix: every hash and HKDF label of the
+handshake is `fxvault/chat/v1/…` instead of `fxvault/nearby/v1/…` (`NearbyPurpose`,
+`NearbyLabels`). The commitment, transcript, SAS and both direction keys therefore differ for
+the same key material. A share initiator talking to a chat responder (or the reverse) fails the
+commitment check at REVEAL (`commitmentMismatch`, plaintext ABORT); even if a relay skipped
+that check, the codes would differ and no CONFIRM would open under the other purpose's keys.
+Share frame types (MANIFEST, DECISION, …) are `unexpectedMessage` in a chat and chat types are
+`unexpectedMessage` in a share. Tested both ways at the state-machine and session level.
+
+**Transport.** `NWNearbyTransport.advertisingChat(displayName:)` publishes `_fxvault-chat._tcp`
+under the user's sanitized display name (≤ 63 bytes, the Bonjour limit; random if nothing is
+left), TXT `v=1`, only while the chat window is open, and accepts one connection.
+`NWNearbyBrowser(purpose: .chat)` lists peers; `NearbyEndpointModel.displayName` is the
+sanitized, **unverified** advertised name. Same TCP parameters, framing and peer-to-peer Wi-Fi as
+share. The advertised name is visible to every Mac in Wi-Fi range while the window is open.
+
+**Handshake.** Steps 1–6 of §4 unchanged (`NearbyKeyExchange`, shared with share) with the chat
+labels. The responder waits for a connection without a timer; after `.connected` the initiator
+sends HELLO_I. Events: `incomingConnection` (responder only: someone connected, nothing known
+yet), `peerConnected(name)` when the peer's HELLO arrives (unverified name), `sasReady(code)`,
+`peerConfirmedSAS`, `verified` once both users pressed "Codes match".
+
+**Encrypted frames** (layout, AAD, nonces, per-direction keys and exact sequence numbers as in
+§4; frames ≤ 64 KiB; anything out of order, replayed, reflected, truncated or oversized aborts):
+
+| Type | Frame | Body | Rules |
+|---|---|---|---|
+| 0x10 | CONFIRM | `0x01` | Only while comparing codes. |
+| 0x20 | TEXT | UTF-8, 1…4,096 bytes (`Limits.chatMessageBytes`) | Only when verified. Over the limit: `oversizeFrame`; empty or invalid UTF-8: `malformedFrame`. Both sides sanitize (`ChatTextSanitizer`: CR/LF and U+2028/9 → LF, other C0/C1/DEL, bidi controls, zero-width characters except ZWJ and every other invisible character (`UnicodeScalarPolicy.isInvisible`: General_Category Cf such as tag characters, soft hyphen and invisible operators, Hangul fillers, U+034F) removed, NFC, at most one blank line in a row (`Limits.chatMaxBlankLines`) and four combining marks per character (`Limits.chatMaxMarksPerCharacter`), trimmed); a message left empty is dropped. |
+| 0x21 | ATTACHMENT_OFFER | `id(16) ‖ manifest JSON` | A share manifest (no values) of scope `secret`: exactly one secret or variable with `valueState = present`, passing `SharePackageValidator` (manifest). Duplicate id: `malformedFrame`; more than 8 open offers (`Limits.chatMaxOpenAttachments`) or more than 32 offers in the chat (`Limits.chatMaxOffersPerChat`): `unexpectedMessage`. |
+| 0x22 | ATTACHMENT_REQUEST | `id(16)` | Receiver → sender ("Save to my vault"); once per offer. Unknown id: `unknownItemIDs`. |
+| 0x23 | ATTACHMENT_PAYLOAD | `id(16) ‖ u32 totalLength ‖ chunk` | Sender → receiver, only for a requested offer, chunks in order with a constant total ≤ 512 KiB (`Limits.chatAttachmentBytes`). The complete JSON must validate (payload mode) and equal the offer apart from the value, else `payloadMismatch`. One transfer at a time. |
+| 0x24 | ATTACHMENT_DECLINE | `id(16)` | Receiver: dismisses an offer it has not requested. Sender: withdraws an offer whose value it cannot supply. Anything else aborts. |
+| 0x30 / 0x31 | PING / PONG | empty | Keepalive; a PONG without an outstanding PING is `unexpectedMessage`. |
+| — | Flood limit | — | More than 100 TEXT, ATTACHMENT_OFFER, ATTACHMENT_REQUEST, ATTACHMENT_DECLINE and PING frames from the peer within 10 s (`Limits.chatMaxPeerFramesPerFloodWindow`, `Timeouts.chatFloodWindow`, by receive time) abort with `unexpectedMessage`. |
+| 0x7E | CLOSE | empty | Ends a verified chat normally (`peerClosed`); before verification it is `peerAborted(.cancelled)`. |
+| 0x7F | ABORT | one `NearbyAbortCode` | As in §4, including the plaintext-ABORT rule. |
+
+**Attachments.** `offerAttachment(manifest:payloadProvider:)` strips any value and sends the
+offer; the caller must have passed ReauthGate first (Touch ID or master password). The provider
+(`@Sendable () async throws -> SecretBytes`) runs only when the peer requests the value; the
+session builds the payload from the offered manifest plus that value, sends it and wipes the
+returned buffer. If the provider throws, the offer is withdrawn (DECLINE). The receiver sees
+`attachmentOffered(ChatAttachmentOfferModel)` (kind, name, repository, environment; never a
+value), then after `requestAttachment` gets `attachmentReceived(id, SharePackageModel)` with
+`SecretBytes` values: the app runs `ShareImportPlanner` and `ShareImporter` exactly as for a
+nearby share, re-encrypting into the vault, and wipes the package. `declineAttachment` sends
+DECLINE.
+
+**Timers** (`VaultClock`; separate from share):
+
+| Phase | Timer |
+|---|---|
+| awaitingPeer | none for the responder; the initiator's handshake timer covers connecting |
+| awaitingHello, awaitingReveal | handshake, 30 s |
+| comparingCodes | SAS, 120 s |
+| chatting | idle, 10 min (`Timeouts.chatIdle`), restarted by every TEXT and attachment frame in either direction; `timeout(.chatIdle)` |
+| chatting | PING every 30 s (`Timeouts.chatKeepaliveInterval`); the tick after 2 unanswered PINGs (`Limits.chatMaxUnansweredPings`) aborts with `timeout(.keepalive)` |
+| whole chat | no limit |
+
+**Ephemerality and wiping.** The machine keeps no message history: each message exists only in
+its event. `close()` (window closed, vault locked), every abort and every disconnect drop the
+keys, every offer and value provider, cancel pending provider calls and zero any partial
+payload buffer. Every decrypted frame body is zeroed once dispatched, and the payload buffer is
+reserved at its announced size so chunks never leave a reallocated copy (the share handshake
+also zeroes its decrypted bodies). Swift `String` copies of message text cannot be wiped
+(SECURITY-MODEL.md residual risks); no message is logged or written to disk. Saving an
+attachment is a share import: it records the package id, dates and the unverified sender name in
+`imported_share_packages` (replay detection) and logs the changed-item count, as every import
+does.
+
+**VaultData and the window** (`VaultData/Chat/`, `App/Screens/NearbyChat/`).
+`ChatRepository.makeConversation(role:transport:localName:clock:)` wraps one
+`NearbyChatSession` in a `NearbyChatConversation`:
+- *Offer:* `offerItem(_:senderName:appVersion:authorization:)` consumes a
+  `ShareAuthorizationModel(.nearbySend)` and builds the manifest with the share builder's
+  `.item(id)` selection (scope `secret`; an environment item is a partial environment, schema 2,
+  §1.2). The value provider decrypts the item inside `VaultSession.read` only when the peer asks,
+  and refuses (the offer is withdrawn) if the item was deleted, renamed, moved or changed kind
+  since the offer, its stored value fingerprint (`value_fp`) differs from the one read when the
+  offer was authorized, or the vault is locked.
+- *Receive:* `.attachmentReceived` is forwarded with the manifest only; the value waits in the
+  conversation until `previewAttachment(_:checkGitHub:)` moves it into a share import draft
+  (`SharingRepository.apply` then plans it again inside the write transaction, exactly as for a
+  file or a nearby share) or `discardAttachment` / `close()` / an abort / a disconnect wipes it.
+- *Picker:* `ChatRepository.attachableItems()` lists live items that have a value (names only).
+- *Window:* advertises with `advertisingChat(displayName:)` and browses with
+  `NWNearbyBrowser(purpose: .chat)` only while it lists people, on the `local.` Bonjour domain
+  only (link-local: infrastructure Wi-Fi or Ethernet and AWDL); this Mac is left out of the
+  list by the instance name Bonjour actually registered (`registeredServiceNames`). Whoever
+  presses "Chat" is the initiator, the other side's advertisement is the responder. On
+  `incomingConnection` the window shows "Not visible" (the listener withdrew the
+  advertisement). A responder connection that drops, stays silent or sends garbage before its
+  HELLO re-advertises without limit; only a listener that fails without accepting anyone counts,
+  and after three such failures in a row the window stops and offers "Try Again". A responder
+  whose peer leaves after HELLO but before the code is shown goes back to the people list with
+  no "ended" screen and no failed-handshake count. Every end of a chat wipes the transcript; a
+  new chat is a new session and a new advertisement.
+
+**Vectors** (`Fixtures/chat_kat.json`, same inputs as §4): C `bb69f4e4…4eb50c58`,
+TH `b2ba2fab…90065cb4`, SAS **550 392**, the chat transcript over the share commitment
+`360 242`, plus CONFIRM (both directions), TEXT "Hello from FX Vault" I→R seq 1, PING R→I seq 1
+and CLOSE I→R seq 2. `crosscheck.py --write-chat` and `NearbyProtocolReference.swift` (its
+`chat_` lines) produce them byte for byte; regenerating `nearby_kat.json` gives an identical file.
+
+## 8. Compatibility between versions (v0.2.0)
+
+| Feature | 0.1.x → 0.2.0 | 0.2.0 → 0.1.x |
+|---|---|---|
+| `.fxvault` file, schema v1 (whole repository, whole environments, repository-level items, a single repository-level item) | Imports unchanged | Imports |
+| `.fxvault` file, schema v2 (any partly checked environment, including a single environment-level item) | n/a | Rejected: "Wrong passphrase or damaged file" (§1.1) |
+| Nearby share, shared Wi-Fi network | Works (nearby protocol v1 unchanged, §4; the MANIFEST follows the file rules above) | Works for v1 packages; a v2 MANIFEST aborts on the 0.1.x side |
+| Nearby share, no shared network (AWDL) | Not found: 0.1.x neither advertises nor browses over peer-to-peer Wi-Fi | Not found |
+| Nearby Chat | 0.1.x has no chat and never browses `_fxvault-chat._tcp` | n/a |
+
+- **Versioning.** Nearby share (protocol v1, labels `fxvault/nearby/v1/…`) and chat
+  (`fxvault-chat/v1`, labels `fxvault/chat/v1/…`) are fixed, as are the TXT record `v=1` and
+  the frame types. A later revision raises `maxVer` in HELLO (bound into the transcript, §4
+  step 4); a change that cannot be negotiated gets a new label prefix, so the commitment check
+  fails cleanly, as it does between share and chat. `schemaVersion` changes
+  follow the lowest-version rule in §1.1.
+- **Chat attachments** are share manifests and payloads of scope `secret`, so they follow the
+  schema rules of §1: a repository-level item is v1, an environment-level item is v2 (partial
+  environment). Both ends of a chat are 0.2.0 or later, so both are always readable.
+- **Mixed fleets.** Until every Mac runs 0.2.0, share whole environments (v1) with 0.1.x users,
+  and use a shared network for nearby sharing with them.

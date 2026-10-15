@@ -221,10 +221,10 @@ struct FxVaultFileCodecTests {
     @Test func openRejectsAValidFileWithAnInvalidPackage() async throws {
         let codec = FxVaultFileCodec(deriver: FakeKeyDeriver())
         var package = PackageFactory.sample()
-        package.schemaVersion = 2
+        package.schemaVersion = SharePackageModel.currentSchemaVersion + 1
         let json = try SharePackageCoder.encode(package)
         let file = try await codec.encrypt(payload: json, passphrase: Self.passphrase)
-        await #expect(throws: ShareError.invalidPackage(.unsupportedSchemaVersion(2))) {
+        await #expect(throws: ShareError.invalidPackage(.unsupportedSchemaVersion(SharePackageModel.currentSchemaVersion + 1))) {
             _ = try await codec.open(file, passphrase: Self.passphrase)
         }
         // Non-JSON plaintext is a damaged file.

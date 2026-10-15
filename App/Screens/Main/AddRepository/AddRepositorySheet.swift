@@ -31,6 +31,12 @@ struct AddRepositorySheet: View {
             if let error = viewModel.error {
                 InlineErrorView(error: error)
             }
+            if !viewModel.isOnline {
+                Label(ConnectivityCopy.offlineHelp, systemImage: ConnectivityBannerModel.offline.systemImage)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             HStack {
                 Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                     dismiss()

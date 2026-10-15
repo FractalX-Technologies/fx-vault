@@ -28,7 +28,8 @@ struct SharePackageValidatorTests {
     static let rejected: [Case] = [
         // Header
         Case(label: "schema", mutate: { $0.schema = "io.example.share" }, expected: .unsupportedSchema),
-        Case(label: "schema version", mutate: { $0.schemaVersion = 2 }, expected: .unsupportedSchemaVersion(2)),
+        Case(label: "schema version 3", mutate: { $0.schemaVersion = 3 }, expected: .unsupportedSchemaVersion(3)),
+        Case(label: "schema version 0", mutate: { $0.schemaVersion = 0 }, expected: .unsupportedSchemaVersion(0)),
         Case(label: "empty producer", mutate: { $0.producer.app = "" }, expected: .invalidProducer),
         Case(label: "producer bidi", mutate: { $0.producer.version = "1.0\u{202E}" }, expected: .invalidProducer),
         Case(label: "sender bidi", mutate: { $0.sender.displayName = "Bry\u{202E}an" }, expected: .invalidSenderName),
@@ -144,13 +145,13 @@ struct SharePackageValidatorTests {
         // Patterns
         Case(
             label: "patterns without custom",
-            mutate: { $0.repository.environments[0].deploymentBranchPolicy.type = .protected },
+            mutate: { $0.repository.environments[0].deploymentBranchPolicy?.type = .protected },
             expected: .patternsWithoutCustomPolicy
         ),
         Case(
             label: "51 patterns",
             mutate: {
-                $0.repository.environments[0].deploymentBranchPolicy.patterns = (0...50).map {
+                $0.repository.environments[0].deploymentBranchPolicy?.patterns = (0...50).map {
                     ShareBranchPatternModel(name: "release/\($0)", type: .branch)
                 }
             },
@@ -159,7 +160,7 @@ struct SharePackageValidatorTests {
         Case(
             label: "pattern too long",
             mutate: {
-                $0.repository.environments[0].deploymentBranchPolicy.patterns = [
+                $0.repository.environments[0].deploymentBranchPolicy?.patterns = [
                     ShareBranchPatternModel(name: String(repeating: "a", count: 256), type: .branch),
                 ]
             },
@@ -167,26 +168,56 @@ struct SharePackageValidatorTests {
         ),
         Case(
             label: "pattern empty",
-            mutate: { $0.repository.environments[0].deploymentBranchPolicy.patterns = [ShareBranchPatternModel(name: "", type: .tag)] },
+            mutate: { $0.repository.environments[0].deploymentBranchPolicy?.patterns = [ShareBranchPatternModel(name: "", type: .tag)] },
             expected: .invalidPattern(.empty)
         ),
         Case(
             label: "pattern bidi",
-            mutate: { $0.repository.environments[0].deploymentBranchPolicy.patterns = [ShareBranchPatternModel(name: "ma\u{202E}in", type: .branch)] },
+            mutate: { $0.repository.environments[0].deploymentBranchPolicy?.patterns = [ShareBranchPatternModel(name: "ma\u{202E}in", type: .branch)] },
             expected: .invalidPattern(.bidiCharacter)
         ),
         Case(
             label: "pattern control",
-            mutate: { $0.repository.environments[0].deploymentBranchPolicy.patterns = [ShareBranchPatternModel(name: "main\n", type: .branch)] },
+            mutate: { $0.repository.environments[0].deploymentBranchPolicy?.patterns = [ShareBranchPatternModel(name: "main\n", type: .branch)] },
             expected: .invalidPattern(.controlCharacter)
         ),
         Case(
             label: "duplicate pattern",
             mutate: {
                 let pattern = ShareBranchPatternModel(name: "main", type: .branch)
-                $0.repository.environments[0].deploymentBranchPolicy.patterns = [pattern, pattern]
+                $0.repository.environments[0].deploymentBranchPolicy?.patterns = [pattern, pattern]
             },
             expected: .duplicatePattern
+        ),
+        // Partial environments (schema v2)
+        Case(
+            label: "v1 environment without policy",
+            mutate: {
+                $0.repository.environments[0].deploymentBranchPolicy = nil
+                $0.schemaVersion = SharePackageModel.wholeEnvironmentsSchemaVersion
+            },
+            expected: .branchPolicyRequired
+        ),
+        Case(
+            label: "v2 environment without policy or items",
+            mutate: {
+                $0.repository.environments[0].deploymentBranchPolicy = nil
+                $0.repository.environments[0].secrets = []
+                $0.repository.environments[0].variables = []
+                $0.schemaVersion = SharePackageModel.partialEnvironmentsSchemaVersion
+            },
+            expected: .branchPolicyRequired
+        ),
+        Case(
+            label: "environment scope without policy",
+            mutate: {
+                $0.repository.secrets = []
+                $0.repository.variables = []
+                $0.repository.environments[0].deploymentBranchPolicy = nil
+                $0.schemaVersion = SharePackageModel.partialEnvironmentsSchemaVersion
+                $0.scope = .environment
+            },
+            expected: .branchPolicyRequired
         ),
         // Scope rules
         Case(label: "secret scope with many items", mutate: { $0.scope = .secret }, expected: .scopeMismatch(.secret)),
@@ -213,7 +244,7 @@ struct SharePackageValidatorTests {
         var package = PackageFactory.sample()
         package.repository.secrets = (0..<100).map { PackageFactory.item("S_\($0)") }
         package.repository.variables = (0..<500).map { PackageFactory.item("V_\($0)", value: "x") }
-        package.repository.environments[0].deploymentBranchPolicy.patterns = (0..<50).map {
+        package.repository.environments[0].deploymentBranchPolicy?.patterns = (0..<50).map {
             ShareBranchPatternModel(name: "release/*/\($0)", type: .branch)
         }
         package.repository.environments[0].secrets[0].value = SecretBytes(utf8: String(repeating: "a", count: 48_000) + "\n")
@@ -240,6 +271,56 @@ struct SharePackageValidatorTests {
         #expect(SharePackageValidator.violation(in: twoEnvironments, mode: .payload) == .scopeMismatch(.environment))
         let emptySecret = PackageFactory.package(scope: .secret)
         #expect(SharePackageValidator.violation(in: emptySecret, mode: .payload) == .scopeMismatch(.secret))
+    }
+
+    @Test func acceptsEveryCombinationUnderTheRepositoryScope() {
+        let repositoryLevelOnly = PackageFactory.package(
+            secrets: [PackageFactory.item("A")],
+            variables: [PackageFactory.item("B", value: "b")]
+        )
+        let someRepositoryItems = PackageFactory.package(secrets: [PackageFactory.item("A"), PackageFactory.item("C")])
+        let twoEnvironments = PackageFactory.package(environments: [
+            PackageFactory.environment("staging", secrets: [PackageFactory.item("S")]),
+            PackageFactory.environment("production"),
+        ])
+        let repositoryAndEnvironment = PackageFactory.package(
+            secrets: [PackageFactory.item("A")],
+            environments: [PackageFactory.environment("staging", variables: [PackageFactory.item("V", value: "1")])]
+        )
+        let itemsOnly = PackageFactory.package(
+            secrets: [PackageFactory.item("A")],
+            environments: [
+                PackageFactory.partialEnvironment("staging", secrets: [PackageFactory.item("S")]),
+                PackageFactory.partialEnvironment("production", variables: [PackageFactory.item("V", value: "1")]),
+            ]
+        )
+        let mixed = PackageFactory.package(environments: [
+            PackageFactory.environment("staging", secrets: [PackageFactory.item("S")]),
+            PackageFactory.partialEnvironment("production", secrets: [PackageFactory.item("P")]),
+        ])
+        for package in [repositoryLevelOnly, someRepositoryItems, twoEnvironments, repositoryAndEnvironment, itemsOnly, mixed] {
+            #expect(SharePackageValidator.violation(in: package, mode: .payload) == nil)
+            #expect(SharePackageValidator.violation(in: package.manifest(), mode: .manifest) == nil)
+        }
+        #expect(itemsOnly.schemaVersion == SharePackageModel.partialEnvironmentsSchemaVersion)
+        #expect(mixed.schemaVersion == SharePackageModel.partialEnvironmentsSchemaVersion)
+        #expect(twoEnvironments.schemaVersion == SharePackageModel.wholeEnvironmentsSchemaVersion)
+        #expect(repositoryLevelOnly.schemaVersion == SharePackageModel.wholeEnvironmentsSchemaVersion)
+    }
+
+    @Test func partialEnvironmentsAreValidForASingleItem() {
+        let single = PackageFactory.package(
+            scope: .secret,
+            environments: [PackageFactory.partialEnvironment("staging", secrets: [PackageFactory.item("ONLY")])]
+        )
+        #expect(single.schemaVersion == SharePackageModel.partialEnvironmentsSchemaVersion)
+        #expect(SharePackageValidator.violation(in: single, mode: .payload) == nil)
+    }
+
+    @Test func schemaV2AlsoAcceptsWholeEnvironments() {
+        var package = PackageFactory.sample()
+        package.schemaVersion = SharePackageModel.partialEnvironmentsSchemaVersion
+        #expect(SharePackageValidator.violation(in: package, mode: .payload) == nil)
     }
 
     @Test func secretAndVariableMayShareANameInOneScope() {

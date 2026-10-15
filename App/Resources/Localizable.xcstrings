@@ -529,6 +529,1117 @@
         }
       }
     },
+    "chat.abort.cancelled" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The chat was cancelled."
+          }
+        }
+      }
+    },
+    "chat.abort.disconnected" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other Mac disconnected."
+          }
+        }
+      }
+    },
+    "chat.abort.interception" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Someone nearby may be trying to intercept this chat."
+          }
+        }
+      }
+    },
+    "chat.abort.peerSasRejected" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other person pressed Don't Match, so the chat was stopped."
+          }
+        }
+      }
+    },
+    "chat.abort.sasRejected" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The codes didn't match, so the chat was stopped."
+          }
+        }
+      }
+    },
+    "chat.abort.secondPeer" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Another Mac tried to join this chat, so it was stopped."
+          }
+        }
+      }
+    },
+    "chat.abort.security" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The connection could not be verified, so the chat was stopped."
+          }
+        }
+      }
+    },
+    "chat.abort.timeout" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The chat took too long and was stopped."
+          }
+        }
+      }
+    },
+    "chat.abort.timeout.handshake" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other Mac didn't answer in time."
+          }
+        }
+      }
+    },
+    "chat.abort.timeout.idle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The chat ended after %lld minutes without messages."
+          }
+        }
+      }
+    },
+    "chat.abort.timeout.keepalive" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other Mac stopped answering."
+          }
+        }
+      }
+    },
+    "chat.abort.timeout.sas" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The codes were not confirmed in time."
+          }
+        }
+      }
+    },
+    "chat.abort.tooLarge" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "An attachment was too large to send."
+          }
+        }
+      }
+    },
+    "chat.abort.version" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other Mac runs an FX Vault version that can't chat with this one. Update both Macs."
+          }
+        }
+      }
+    },
+    "chat.attach" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Attach secret or variable…"
+          }
+        }
+      }
+    },
+    "chat.attach.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Asks for Touch ID or your master password, then sends the name only. The value is sent only if your teammate saves it."
+          }
+        }
+      }
+    },
+    "chat.browsing.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose someone on the left, or wait for them to choose you. You compare a code first; messages are end-to-end encrypted and never saved."
+          }
+        }
+      }
+    },
+    "chat.browsing.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Chat with a teammate nearby"
+          }
+        }
+      }
+    },
+    "chat.card.awaitingPeer" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Offered. The value is sent only if your teammate saves it."
+          }
+        }
+      }
+    },
+    "chat.card.dismiss" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Dismiss"
+          }
+        }
+      }
+    },
+    "chat.card.dismissed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Dismissed. Nothing was sent."
+          }
+        }
+      }
+    },
+    "chat.card.dismissedByPeer" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not sent. Your teammate dismissed it, or the item changed."
+          }
+        }
+      }
+    },
+    "chat.card.notSaved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not saved. The value was wiped."
+          }
+        }
+      }
+    },
+    "chat.card.offered" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The value is not shown. Saving lets you review it before anything is imported."
+          }
+        }
+      }
+    },
+    "chat.card.readyToSave" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Arrived. Review it to save it to your vault."
+          }
+        }
+      }
+    },
+    "chat.card.repositoryLevel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository"
+          }
+        }
+      }
+    },
+    "chat.card.requested" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Receiving…"
+          }
+        }
+      }
+    },
+    "chat.card.review" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Review…"
+          }
+        }
+      }
+    },
+    "chat.card.reviewing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reviewing…"
+          }
+        }
+      }
+    },
+    "chat.card.save" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save to my vault"
+          }
+        }
+      }
+    },
+    "chat.card.saved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved to your vault. Nothing was synced."
+          }
+        }
+      }
+    },
+    "chat.card.sent" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your teammate saved it. The value was sent once."
+          }
+        }
+      }
+    },
+    "chat.card.withdrawn" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Withdrawn by your teammate."
+          }
+        }
+      }
+    },
+    "chat.composer.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Message"
+          }
+        }
+      }
+    },
+    "chat.composer.placeholder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Message (⌘↩ to send)"
+          }
+        }
+      }
+    },
+    "chat.composer.remaining" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld left"
+          }
+        }
+      }
+    },
+    "chat.connecting" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting…"
+          }
+        }
+      }
+    },
+    "chat.connecting.named" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting with %@…"
+          }
+        }
+      }
+    },
+    "chat.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Say hello. You can also attach a secret or variable; it is sent only if your teammate saves it."
+          }
+        }
+      }
+    },
+    "chat.end" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "End Chat"
+          }
+        }
+      }
+    },
+    "chat.ended.here" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You ended the chat."
+          }
+        }
+      }
+    },
+    "chat.ended.locked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault locked."
+          }
+        }
+      }
+    },
+    "chat.ended.peerLeft" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other person ended the chat."
+          }
+        }
+      }
+    },
+    "chat.ended.peerLeft.named" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ ended the chat."
+          }
+        }
+      }
+    },
+    "chat.ended.saved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld items you saved stay in your vault."
+          }
+        }
+      }
+    },
+    "chat.ended.savedOne" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The item you saved stays in your vault."
+          }
+        }
+      }
+    },
+    "chat.ended.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Conversation ended. Nothing was saved."
+          }
+        }
+      }
+    },
+    "chat.ended.wiped" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The messages existed only in memory and are gone."
+          }
+        }
+      }
+    },
+    "chat.error.attachmentGone.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other Mac withdrew it, or it was already saved or dismissed."
+          }
+        }
+      }
+    },
+    "chat.error.attachmentGone.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Attachment no longer available"
+          }
+        }
+      }
+    },
+    "chat.error.attachmentInvalid.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only one secret or variable that has a value can be attached."
+          }
+        }
+      }
+    },
+    "chat.error.attachmentInvalid.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This item can't be attached"
+          }
+        }
+      }
+    },
+    "chat.error.empty.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The message is empty after removing invisible characters."
+          }
+        }
+      }
+    },
+    "chat.error.empty.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nothing to send"
+          }
+        }
+      }
+    },
+    "chat.error.ended.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This conversation has ended or the codes were not confirmed yet."
+          }
+        }
+      }
+    },
+    "chat.error.ended.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The chat isn't open"
+          }
+        }
+      }
+    },
+    "chat.error.notVisible.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby Macs can't find this Mac. Check that Wi-Fi is on and FX Vault may use the local network, then try again."
+          }
+        }
+      }
+    },
+    "chat.error.notVisible.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You're not visible right now"
+          }
+        }
+      }
+    },
+    "chat.error.peerGone.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It closed Nearby Chat or moved out of range. Choose someone else."
+          }
+        }
+      }
+    },
+    "chat.error.peerGone.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "That Mac is no longer nearby"
+          }
+        }
+      }
+    },
+    "chat.error.tooLong.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shorten the message, or send it in parts."
+          }
+        }
+      }
+    },
+    "chat.error.tooLong.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Message too long"
+          }
+        }
+      }
+    },
+    "chat.error.tooMany.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Wait until the other person saves or dismisses one, then attach again."
+          }
+        }
+      }
+    },
+    "chat.error.tooMany.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Too many open attachments"
+          }
+        }
+      }
+    },
+    "chat.error.valueGone.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It was wiped when the preview closed or the chat ended. Ask your teammate to attach it again."
+          }
+        }
+      }
+    },
+    "chat.error.valueGone.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The value is no longer here"
+          }
+        }
+      }
+    },
+    "chat.error.valueMissing.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Its value is not in your vault. Fill it in first, then attach it."
+          }
+        }
+      }
+    },
+    "chat.error.valueMissing.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This secret has no value"
+          }
+        }
+      }
+    },
+    "chat.header.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Codes matched. End-to-end encrypted; messages are never saved."
+          }
+        }
+      }
+    },
+    "chat.locked.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby Chat works only while your vault is unlocked, and ends when it locks."
+          }
+        }
+      }
+    },
+    "chat.locked.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock FX Vault to chat"
+          }
+        }
+      }
+    },
+    "chat.message.copy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "chat.notVisible" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not visible to nearby Macs"
+          }
+        }
+      }
+    },
+    "chat.notVisible.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nobody can find this Mac now. Nearby Macs see you only while this window lists people."
+          }
+        }
+      }
+    },
+    "chat.openVault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open FX Vault"
+          }
+        }
+      }
+    },
+    "chat.peer.unknown" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby Mac"
+          }
+        }
+      }
+    },
+    "chat.peers.busy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You're in a chat. Nobody else can find or join you until it ends."
+          }
+        }
+      }
+    },
+    "chat.peers.connect" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Chat"
+          }
+        }
+      }
+    },
+    "chat.peers.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Names are what each Mac says it is. The code you compare next proves who you're talking to."
+          }
+        }
+      }
+    },
+    "chat.peers.searching" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Looking for Macs with Nearby Chat open…"
+          }
+        }
+      }
+    },
+    "chat.peers.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby"
+          }
+        }
+      }
+    },
+    "chat.picker.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No secret or variable with a value matches."
+          }
+        }
+      }
+    },
+    "chat.picker.reauth" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Attaching from your vault needs Touch ID or your master password."
+          }
+        }
+      }
+    },
+    "chat.picker.search" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search by name, repository or environment"
+          }
+        }
+      }
+    },
+    "chat.picker.send" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Attach"
+          }
+        }
+      }
+    },
+    "chat.picker.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your teammate sees the name, kind and scope. The value is sent only if they save it."
+          }
+        }
+      }
+    },
+    "chat.picker.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Attach Secret or Variable"
+          }
+        }
+      }
+    },
+    "chat.save.importRepo" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import %@ from GitHub"
+          }
+        }
+      }
+    },
+    "chat.save.preparing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Preparing the preview…"
+          }
+        }
+      }
+    },
+    "chat.save.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@, received in Nearby Chat. Review it before it is imported."
+          }
+        }
+      }
+    },
+    "chat.save.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save to My Vault"
+          }
+        }
+      }
+    },
+    "chat.save.wiped" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nothing was imported. The value was wiped."
+          }
+        }
+      }
+    },
+    "chat.send" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send"
+          }
+        }
+      }
+    },
+    "chat.startAgain" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Start New Chat"
+          }
+        }
+      }
+    },
+    "chat.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "End-to-end encrypted, 1:1, nothing saved. Works over Wi-Fi without a shared network."
+          }
+        }
+      }
+    },
+    "chat.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby Chat"
+          }
+        }
+      }
+    },
+    "chat.unavailable.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby Chat needs Wi-Fi turned on, or a network cable. You don't need to join a network or have internet."
+          }
+        }
+      }
+    },
+    "chat.unavailable.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Turn on Wi-Fi to chat nearby"
+          }
+        }
+      }
+    },
+    "chat.visible" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You're visible to nearby Macs as %@"
+          }
+        }
+      }
+    },
+    "chat.visible.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Macs nearby with Nearby Chat open see this name until you start a chat or close this window. Change it in Settings › General."
+          }
+        }
+      }
+    },
+    "chat.window.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby Chat"
+          }
+        }
+      }
+    },
     "command.copy" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -591,6 +1702,61 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "OK"
+          }
+        }
+      }
+    },
+    "connectivity.banner.github" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub isn't responding. Try again in a moment."
+          }
+        }
+      }
+    },
+    "connectivity.banner.offline" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No internet connection. Your changes stay in the vault; sync when you're back online."
+          }
+        }
+      }
+    },
+    "connectivity.banner.retry" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Retry"
+          }
+        }
+      }
+    },
+    "connectivity.banner.retry.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "List repositories and check the open repository on GitHub again"
+          }
+        }
+      }
+    },
+    "connectivity.offline.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Needs an internet connection. Your changes stay in the vault until you're back online."
           }
         }
       }
@@ -6997,6 +8163,17 @@
         }
       }
     },
+    "main.sidebar.addByName.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find a repository this account reaches as a collaborator"
+          }
+        }
+      }
+    },
     "main.sidebar.clone" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7059,6 +8236,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Import"
+          }
+        }
+      }
+    },
+    "main.sidebar.import.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Read this repository's environments, secrets and variables from GitHub"
           }
         }
       }
@@ -7839,7 +9027,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Receive configuration from a teammate's Mac on the same network. This Mac is visible only while this window is open."
+            "value" : "Receive configuration from a teammate's Mac nearby. This Mac is visible only while this window is open."
           }
         }
       }
@@ -8026,18 +9214,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Send configuration to a teammate's Mac on the same network. They open Share › Receive Nearby."
-          }
-        }
-      }
-    },
-    "nearbySend.summary" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld items and %2$lld environments from %3$@"
+            "value" : "Send configuration to a teammate's Mac nearby. They open Share › Receive Nearby."
           }
         }
       }
@@ -9006,6 +10183,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Choose"
+          }
+        }
+      }
+    },
+    "settings.general.nearbyName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Name for nearby Macs"
+          }
+        }
+      }
+    },
+    "settings.general.nearbyName.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shown to nearby Macs while Nearby Chat is open, and to the teammate you share with nearby. Anyone nearby can see it, and it proves nothing: compare the code to know who you're talking to."
           }
         }
       }
@@ -10094,7 +11293,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "The connection to the other Mac failed. Make sure both Macs are on the same network."
+            "value" : "The connection to the other Mac failed. Keep both Macs close together with Wi-Fi turned on, then try again."
           }
         }
       }
@@ -10253,6 +11452,28 @@
         }
       }
     },
+    "share.preview.env.createPartial" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Creates this environment with all branches allowed (pending until Sync). The share includes only some of its items, not its branch policy."
+          }
+        }
+      }
+    },
+    "share.preview.env.createPartialSynced" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adds this environment with the branch policy GitHub already has. The share includes only some of its items."
+          }
+        }
+      }
+    },
     "share.preview.env.createSynced" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10271,6 +11492,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Deleted in your vault and waiting for Sync. Nothing in it is imported."
+          }
+        }
+      }
+    },
+    "share.preview.env.notCreated" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not created: none of its items is selected."
+          }
+        }
+      }
+    },
+    "share.preview.env.partial" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only some items of this environment are shared. Your branch policy stays as it is."
           }
         }
       }
@@ -10561,6 +11804,61 @@
         }
       }
     },
+    "share.summary.counts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets: %1$lld · Variables: %2$lld"
+          }
+        }
+      }
+    },
+    "share.summary.policyIncluded" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "with branch policy"
+          }
+        }
+      }
+    },
+    "share.summary.policyNotIncluded" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "selected items, no branch policy"
+          }
+        }
+      }
+    },
+    "share.summary.repositoryLevel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository level"
+          }
+        }
+      }
+    },
+    "share.summary.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From %@"
+          }
+        }
+      }
+    },
     "share.tree.byNameOnly" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10583,24 +11881,90 @@
         }
       }
     },
-    "share.tree.inherited.help" : {
+    "share.tree.itemsOnly" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Included with the checked row above. Uncheck that row first to share a smaller part."
+            "value" : "Selected items only"
           }
         }
       }
     },
-    "share.tree.inherited.hint" : {
+    "share.tree.itemsOnly.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Included with the checked item above"
+            "value" : "Only the checked items are shared. The deployment branch policy is shared only when the whole environment is checked."
+          }
+        }
+      }
+    },
+    "share.tree.repositoryLevel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository level"
+          }
+        }
+      }
+    },
+    "share.tree.state.checked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shared"
+          }
+        }
+      }
+    },
+    "share.tree.state.mixed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Partly shared"
+          }
+        }
+      }
+    },
+    "share.tree.state.unchecked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not shared"
+          }
+        }
+      }
+    },
+    "share.tree.withPolicy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "With branch policy"
+          }
+        }
+      }
+    },
+    "share.tree.withPolicy.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The whole environment is checked, so its deployment branch policy is shared too."
           }
         }
       }
@@ -10744,17 +12108,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "An encrypted .fxvault file that only opens with its six-word passphrase."
-          }
-        }
-      }
-    },
-    "shareExport.summary" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld items and %2$lld environments from %3$@"
           }
         }
       }
@@ -12856,6 +14209,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Share"
+          }
+        }
+      }
+    },
+    "toolbar.share.chat" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby Chat…"
           }
         }
       }

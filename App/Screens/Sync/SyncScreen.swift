@@ -25,7 +25,7 @@ struct SyncScreen: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             Divider()
-            SyncFooterView(buttons: viewModel.buttons, notice: viewModel.notice) { action in
+            SyncFooterView(buttons: viewModel.buttons, notice: viewModel.footerNotice) { action in
                 if viewModel.perform(action) {
                     dismiss()
                 }

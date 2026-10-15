@@ -41,9 +41,13 @@ public enum SharePackageViolation: Sendable, Hashable {
     case patternsWithoutCustomPolicy
     /// The contents do not match `scope` (see ``ShareScope``).
     case scopeMismatch(ShareScope)
+    /// An environment has no branch policy where one is required: in a schema v1 package, in an
+    /// `environment`-scope package, or when it carries no items (a partial environment must
+    /// carry at least one item).
+    case branchPolicyRequired
 }
 
-/// Checks every §9.3 rule on a decoded or about-to-be-sent package.
+/// Checks every §9.3 rule on a decoded or about-to-be-sent package (schema v1 and v2).
 ///
 /// Run on every boundary: after decrypting a `.fxvault`, on a received nearby MANIFEST and
 /// PAYLOAD, and before exporting.
@@ -71,7 +75,7 @@ public enum SharePackageValidator {
     /// The first violation, or nil when the package is valid.
     public static func violation(in package: SharePackageModel, mode: Mode) -> SharePackageViolation? {
         if package.schema != SharePackageModel.schemaIdentifier { return .unsupportedSchema }
-        if package.schemaVersion != SharePackageModel.currentSchemaVersion {
+        if !SharePackageModel.supportedSchemaVersions.contains(package.schemaVersion) {
             return .unsupportedSchemaVersion(package.schemaVersion)
         }
         if let violation = producerViolation(package.producer) { return violation }
@@ -79,6 +83,7 @@ public enum SharePackageValidator {
         if let violation = repositoryViolation(package.repository) { return violation }
         if let violation = entryIDViolation(package) { return violation }
         if let violation = itemsViolation(package.repository, mode: mode) { return violation }
+        if let violation = partialEnvironmentViolation(package) { return violation }
         return scopeViolation(package)
     }
 
@@ -138,7 +143,7 @@ public enum SharePackageValidator {
             guard keys.insert(EnvironmentNameValidator.foldKey(environment.name)).inserted else {
                 return .duplicateEnvironment
             }
-            if let violation = policyViolation(environment.deploymentBranchPolicy) {
+            if let policy = environment.deploymentBranchPolicy, let violation = policyViolation(policy) {
                 return violation
             }
         }
@@ -244,6 +249,17 @@ public enum SharePackageValidator {
         }
     }
 
+    // MARK: - Partial environments
+
+    /// A missing branch policy needs schema v2 and at least one item in the environment.
+    private static func partialEnvironmentViolation(_ package: SharePackageModel) -> SharePackageViolation? {
+        let partial = package.repository.environments.filter { !$0.includesBranchPolicy }
+        guard !partial.isEmpty else { return nil }
+        let allowsPartial = package.schemaVersion >= SharePackageModel.partialEnvironmentsSchemaVersion
+        let isValid = allowsPartial && partial.allSatisfy { $0.itemCount > 0 }
+        return isValid ? nil : .branchPolicyRequired
+    }
+
     // MARK: - Scope rules
 
     private static func scopeViolation(_ package: SharePackageModel) -> SharePackageViolation? {
@@ -258,6 +274,7 @@ public enum SharePackageValidator {
                 && package.itemCount == 1
             isValid = isSingleRepositoryItem || isSingleEnvironmentItem
         case .environment:
+            guard repository.environments.allSatisfy(\.includesBranchPolicy) else { return .branchPolicyRequired }
             isValid = repositoryItemCount == 0 && repository.environments.count == 1
         case .repository:
             isValid = true

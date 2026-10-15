@@ -94,6 +94,8 @@ final class CreateRepoViewModel: LockObserving {
     @ObservationIgnored private let preferences: PreferencesManager
     @ObservationIgnored private let clock: any VaultClock
     @ObservationIgnored private let actions: MainActions
+    @ObservationIgnored private let reachability: GitHubReachability
+    @ObservationIgnored private let connectivity: ConnectivityMonitor
     @ObservationIgnored private let tasks = TaskBag()
     /// The owner to preselect on the first owners load (from the context).
     @ObservationIgnored private var preferredOwnerLogin: String?
@@ -116,6 +118,8 @@ final class CreateRepoViewModel: LockObserving {
         preferences = dependencies.preferences
         clock = dependencies.clock
         actions = dependencies.actions
+        reachability = dependencies.gitHubReachability
+        connectivity = dependencies.connectivity
         preferredOwnerLogin = context.ownerLogin
         dependencies.actions.addLockObserver(self)
     }
@@ -187,7 +191,9 @@ final class CreateRepoViewModel: LockObserving {
         var warning: ErrorPresentationModel?
         do {
             loaded = try await creation.owners(accountLogin: account)
+            reachability.recordSuccess()
         } catch {
+            reachability.record(error)
             loaded = [RepoOwnerChoiceModel(login: account, ownerType: .user)]
             warning = ErrorPresentationModel(
                 title: String(localized: "createRepo.owners.failed", defaultValue: "Organizations could not be listed"),
@@ -208,6 +214,7 @@ final class CreateRepoViewModel: LockObserving {
         do {
             let gitignores = try await creation.gitignoreTemplates(accountLogin: account)
             let licenses = try await creation.licenseTemplates(accountLogin: account)
+            reachability.recordSuccess()
             guard accountLogin == account else { return }
             gitignoreTemplates = gitignores
             licenseTemplates = licenses
@@ -218,6 +225,7 @@ final class CreateRepoViewModel: LockObserving {
                 licenseKey = nil
             }
         } catch {
+            reachability.record(error)
             guard accountLogin == account else { return }
             templatesError = error.presentation
         }
@@ -546,9 +554,16 @@ final class CreateRepoViewModel: LockObserving {
     }
 
     /// Sync Now…: opens the Sync sheet for the staged repository (it reviews before running).
+    /// Sync needs the internet: offline the button is disabled and says why (the router would
+    /// refuse the sheet anyway).
     var canSyncNow: Bool {
         guard case .staged = phase else { return false }
-        return actions.isGitHubReady()
+        return actions.isGitHubReady() && connectivity.isOnline
+    }
+
+    /// Shown under Sync Now… while offline.
+    var syncNowUnavailableReason: String? {
+        connectivity.isOnline ? nil : ConnectivityCopy.offlineHelp
     }
 
     func syncNow() {

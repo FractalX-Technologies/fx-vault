@@ -45,6 +45,17 @@ enum MainSheet: Hashable, Identifiable {
     var id: Self {
         self
     }
+
+    /// Routes that cannot do anything without GitHub; the router refuses them while offline
+    /// (v0.2.0). Nearby sharing is peer-to-peer and works without an internet route.
+    var needsInternet: Bool {
+        switch self {
+        case .sync, .createRepository, .addRepositoryByName:
+            true
+        default:
+            false
+        }
+    }
 }
 
 // MARK: - Contexts

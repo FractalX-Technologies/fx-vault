@@ -159,7 +159,7 @@ private struct RepoDetailHeader: View {
                 Label(String(localized: "main.detail.clone", defaultValue: "Clone"), systemImage: "arrow.down.to.line")
             }
             .disabled(!viewModel.canClone)
-            .help(String(localized: "main.detail.clone.help", defaultValue: "Clone through the account's SSH alias"))
+            .help(main.networkHelp(String(localized: "main.detail.clone.help", defaultValue: "Clone through the account's SSH alias")))
             Button {
                 Task { await viewModel.refresh() }
             } label: {
@@ -171,7 +171,10 @@ private struct RepoDetailHeader: View {
                 }
             }
             .disabled(!viewModel.canRefresh)
-            .help(String(localized: "main.detail.refresh.help", defaultValue: "Read permissions and check GitHub for changes"))
+            .help(main.networkHelp(String(
+                localized: "main.detail.refresh.help",
+                defaultValue: "Read permissions and check GitHub for changes"
+            )))
         }
     }
 }
@@ -238,7 +241,11 @@ struct RepoImportPromptView: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(!sidebar.canImport(repo))
             }
-            if !sidebar.isGitHubReady {
+            if !sidebar.isOnline {
+                Text(ConnectivityCopy.offlineHelp)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            } else if !sidebar.isGitHubReady {
                 Text(String(localized: "main.import.needsGH", defaultValue: "Importing needs the GitHub CLI."))
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Colors.textSecondary)

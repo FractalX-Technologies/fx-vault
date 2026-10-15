@@ -173,6 +173,15 @@ enum PackageFactory {
         ShareEnvironmentModel(name: name, deploymentBranchPolicy: policy, secrets: secrets, variables: variables)
     }
 
+    /// A partial environment (schema v2): selected items only, no branch policy.
+    static func partialEnvironment(
+        _ name: String,
+        secrets: [ShareItemModel] = [],
+        variables: [ShareItemModel] = []
+    ) -> ShareEnvironmentModel {
+        ShareEnvironmentModel(name: name, deploymentBranchPolicy: nil, secrets: secrets, variables: variables)
+    }
+
     static func package(
         scope: ShareScope = .repository,
         secrets: [ShareItemModel] = [],

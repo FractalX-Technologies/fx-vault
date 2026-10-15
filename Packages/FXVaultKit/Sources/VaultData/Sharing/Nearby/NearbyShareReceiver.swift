@@ -139,7 +139,8 @@ public actor NearbyShareReceiver {
 
     /// The DECISION for a manifest plan: every item whose selected action changes something,
     /// every item that exists locally (Same/Differs needs its value), and every environment
-    /// that would be created or get the incoming policy.
+    /// that would be created or get the incoming policy. A missing partial environment counts
+    /// only with at least one accepted item: alone its id asks for nothing (§1.2).
     static func decision(for plan: ShareImportPlanModel) -> NearbyDecisionModel {
         var ids: Set<ShareEntryID> = []
         for item in plan.allItems where item.action != .skip || item.chip == .existsLocally {
@@ -148,7 +149,9 @@ public actor NearbyShareReceiver {
         for environment in plan.environments {
             switch environment.action {
             case .create:
-                ids.insert(environment.id)
+                if environment.includesBranchPolicy || environment.items.contains(where: { ids.contains($0.id) }) {
+                    ids.insert(environment.id)
+                }
             case .useExisting where environment.policyDifference?.decision == .useIncoming:
                 ids.insert(environment.id)
             default:

@@ -13,22 +13,17 @@ struct MainScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        @Bindable var sidebar = viewModel.sidebar
-        NavigationSplitView {
-            SidebarView(main: viewModel)
-                .navigationSplitViewColumnWidth(min: Theme.Layout.sidebarMinWidth, ideal: Theme.Layout.sidebarIdealWidth)
-        } content: {
-            ScopeColumnView(main: viewModel)
-                .navigationSplitViewColumnWidth(min: Theme.Layout.scopeListMinWidth, ideal: Theme.Layout.scopeListIdealWidth)
-        } detail: {
-            DetailColumnView(main: viewModel)
-                .frame(minWidth: Theme.Layout.detailMinWidth)
+        VStack(spacing: 0) {
+            if let banner = viewModel.connectivityBanner {
+                ConnectivityBannerView(banner: banner) {
+                    Task { await viewModel.retryGitHub() }
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                Divider()
+            }
+            splitView
         }
-        .searchable(
-            text: $sidebar.searchText,
-            placement: .sidebar,
-            prompt: Text(String(localized: "main.search.prompt", defaultValue: "Search repositories"))
-        )
+        .animation(Theme.Durations.standardAnimation, value: viewModel.connectivityBanner)
         .toolbar {
             MainToolbar(viewModel: viewModel)
         }
@@ -49,6 +44,26 @@ struct MainScreen: View {
             viewModel.detail?.remaskAll()
         }
     }
+
+    /// The three columns (sidebar, scopes, detail) under the connectivity banner.
+    private var splitView: some View {
+        @Bindable var sidebar = viewModel.sidebar
+        return NavigationSplitView {
+            SidebarView(main: viewModel)
+                .navigationSplitViewColumnWidth(min: Theme.Layout.sidebarMinWidth, ideal: Theme.Layout.sidebarIdealWidth)
+        } content: {
+            ScopeColumnView(main: viewModel)
+                .navigationSplitViewColumnWidth(min: Theme.Layout.scopeListMinWidth, ideal: Theme.Layout.scopeListIdealWidth)
+        } detail: {
+            DetailColumnView(main: viewModel)
+                .frame(minWidth: Theme.Layout.detailMinWidth)
+        }
+        .searchable(
+            text: $sidebar.searchText,
+            placement: .sidebar,
+            prompt: Text(String(localized: "main.search.prompt", defaultValue: "Search repositories"))
+        )
+    }
 }
 
 /// The toolbar (§10 Toolbar): New Repository, Import .env, Share, Lock and the prominent Sync.
@@ -62,7 +77,7 @@ private struct MainToolbar: ToolbarContent {
             } label: {
                 Label(String(localized: "toolbar.newRepository", defaultValue: "New Repository"), systemImage: "plus.rectangle.on.folder")
             }
-            .help(String(localized: "toolbar.newRepository.help", defaultValue: "New Repository (⌘N)"))
+            .help(viewModel.networkHelp(String(localized: "toolbar.newRepository.help", defaultValue: "New Repository (⌘N)")))
             .disabled(!viewModel.canCreateRepository)
 
             Button {
@@ -85,7 +100,8 @@ private struct MainToolbar: ToolbarContent {
             SyncToolbarButton(
                 count: viewModel.pendingChangeCount,
                 isSyncing: viewModel.isSyncing,
-                isEnabled: viewModel.canSync
+                isEnabled: viewModel.canSync,
+                unavailableReason: viewModel.isOnline ? nil : ConnectivityCopy.offlineHelp
             ) {
                 viewModel.sync()
             }
@@ -93,9 +109,10 @@ private struct MainToolbar: ToolbarContent {
     }
 }
 
-/// Share › File… / Nearby… / Receive Nearby….
+/// Share › File… / Nearby… / Receive Nearby… / Nearby Chat… (its own window).
 private struct ShareMenu: View {
     let viewModel: MainViewModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Menu {
@@ -109,6 +126,10 @@ private struct ShareMenu: View {
             Divider()
             Button(String(localized: "toolbar.share.receive", defaultValue: "Receive Nearby…")) {
                 viewModel.receiveNearby()
+            }
+            Divider()
+            Button(String(localized: "toolbar.share.chat", defaultValue: "Nearby Chat…")) {
+                openWindow(id: SceneID.nearbyChat)
             }
         } label: {
             Label(String(localized: "toolbar.share", defaultValue: "Share"), systemImage: "square.and.arrow.up")
@@ -156,7 +177,9 @@ private struct MainSheetContent: View {
         case .addRepositoryByName(let context):
             AddRepositorySheet(viewModel: AddRepositoryViewModel(
                 context: context,
-                catalog: dependencies.catalog
+                catalog: dependencies.catalog,
+                connectivity: dependencies.connectivity,
+                gitHubReachability: dependencies.gitHubReachability
             ) { [weak sidebar = main.sidebar] repo in
                 sidebar?.didAddRepository(repo, accountLogin: context.accountLogin)
             })

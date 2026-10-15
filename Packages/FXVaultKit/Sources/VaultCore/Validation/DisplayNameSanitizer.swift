@@ -2,7 +2,8 @@ import Foundation
 
 /// Cleans a display name shown to another person (nearby HELLO, share sender, §9.3–§9.4).
 ///
-/// Never throws: it removes control, bidi and zero-width characters, normalizes to NFC, trims
+/// Never throws: it removes control, bidi, zero-width and other invisible characters
+/// (``UnicodeScalarPolicy/isInvisible(_:)``), normalizes to NFC, trims
 /// whitespace and truncates to at most `maxBytes` UTF-8 bytes on a character boundary. The
 /// result may be empty; callers substitute their own fallback.
 public enum DisplayNameSanitizer {
@@ -11,7 +12,7 @@ public enum DisplayNameSanitizer {
         _ name: String,
         maxBytes: Int = Limits.maxDisplayNameBytes
     ) -> String {
-        let cleaned = UnicodeScalarPolicy.removingDisallowed(from: name)
+        let cleaned = UnicodeScalarPolicy.removingDisallowedAndInvisible(from: name)
             .precomposedStringWithCanonicalMapping
             .trimmingCharacters(in: .whitespacesAndNewlines)
         var result = ""

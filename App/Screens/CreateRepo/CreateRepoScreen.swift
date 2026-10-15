@@ -74,7 +74,11 @@ struct CreateRepoScreen: View {
         case .ready, .staging:
             CreateRepoFormView(viewModel: viewModel, onCancel: cancel, onCreate: create)
         case .staged(let staged):
-            CreateRepoStagedView(staged: staged, canSyncNow: viewModel.canSyncNow) {
+            CreateRepoStagedView(
+                staged: staged,
+                canSyncNow: viewModel.canSyncNow,
+                syncNowUnavailableReason: viewModel.syncNowUnavailableReason
+            ) {
                 viewModel.syncNow()
             } onDone: {
                 dismiss()

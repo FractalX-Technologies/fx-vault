@@ -242,6 +242,16 @@ public struct ShareItemPlanModel: Sendable, Hashable, Identifiable {
         outcome(for: action)
     }
 
+    /// Whether the selected action writes a row. A variable has no value-missing state, so
+    /// adding one without its value is skipped by the importer.
+    var writesRow: Bool {
+        switch outcome {
+        case .unchanged: false
+        case .addedWithoutValue: key.kind == .secret
+        case .added, .filled, .overwritten: true
+        }
+    }
+
     /// The effect `action` would have.
     public func outcome(for action: ShareItemAction) -> ShareItemOutcome {
         switch action {
@@ -256,7 +266,9 @@ public struct ShareItemPlanModel: Sendable, Hashable, Identifiable {
 
 /// What happens to an incoming environment.
 public enum ShareEnvironmentAction: Sendable, Hashable {
-    /// Created locally with the incoming policy; pending create unless GitHub has it (B3).
+    /// Created locally with the incoming policy; pending create unless GitHub has it (B3). A
+    /// partial environment (no incoming policy) gets GitHub's policy when GitHub lists it
+    /// (`pending == false`, nothing pending), otherwise all branches, GitHub's default.
     case create(pending: Bool)
     /// Merged into the existing local environment.
     case useExisting
@@ -291,10 +303,25 @@ public struct ShareEnvironmentPlanModel: Sendable, Hashable, Identifiable {
     public let name: String
     public let localEnvironmentID: EnvironmentID?
     public let action: ShareEnvironmentAction
-    public let incomingPolicy: ShareBranchPolicyModel
-    /// Set when an existing local environment has a different policy.
+    /// Nil for a partial environment (schema v2): the sender shared only some of its items, so
+    /// no policy row is shown and the local policy is never changed.
+    public let incomingPolicy: ShareBranchPolicyModel?
+    /// Set when an existing local environment has a different policy (whole environments only).
     public internal(set) var policyDifference: SharePolicyDifferenceModel?
     public internal(set) var items: [ShareItemPlanModel]
+
+    /// True when the package carries the environment's branch policy.
+    public var includesBranchPolicy: Bool {
+        incomingPolicy != nil
+    }
+
+    /// Whether applying the plan creates this environment. A whole environment (with its policy)
+    /// is created even with every item skipped: the policy is the content. A partial environment
+    /// has only its items, so it is created only if at least one of them is written.
+    public var createsEnvironment: Bool {
+        guard case .create = action else { return false }
+        return includesBranchPolicy || items.contains(where: \.writesRow)
+    }
 }
 
 /// The full import preview and the user's selections (§9.5). Pure data: `ShareImporter`
@@ -329,7 +356,7 @@ public struct ShareImportPlanModel: Sendable, Hashable {
     public var pendingChangeCount: Int {
         let items = allItems.filter(\.outcome.isPending).count
         let environments = environments.filter { plan in
-            if case .create(pending: true) = plan.action { return true }
+            if case .create(pending: true) = plan.action { return plan.createsEnvironment }
             return plan.policyDifference?.isPending == true
         }.count
         return items + environments

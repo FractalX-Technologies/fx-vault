@@ -81,7 +81,7 @@ struct SharingExportViewModelTests {
         #expect(model.step == .chooseScope)
     }
 
-    @Test func theScopeTreeHasOneCheckedNodeAndItsContents() async throws {
+    @Test func theScopeTreeSharesAnyCombinationWithPerScopeCounts() async throws {
         let fixture = try await Fixture { world in
             let scope = try world.environmentScope(in: world.sender, repositoryID: world.senderRepositoryID)
             return .environment(try #require(scope.environmentID))
@@ -89,26 +89,82 @@ struct SharingExportViewModelTests {
         let model = fixture.viewModel
         await model.start()
         let tree = try #require(model.tree)
+        let repositoryLevel = try #require(tree.root.children?.first { $0.kind == .repositoryLevel })
         let environment = try #require(tree.root.children?.first { $0.kind == .environment })
         let deployKey = try #require(environment.children?.first)
+        let apiToken = try #require(repositoryLevel.children?.first { $0.title == "API_TOKEN" })
 
-        #expect(tree.isSelected(environment))
-        #expect(tree.isIncludedByAncestor(deployKey))
-        #expect(!tree.isIncluded(tree.root))
-        #expect(tree.root.children?.map(\.title) == ["API_TOKEN", "NEW_SECRET", "BASE_URL", SharingWorld.environment])
+        #expect(tree.root.children?.map(\.title) == ["Repository level", SharingWorld.environment])
+        #expect(repositoryLevel.children?.map(\.title) == ["API_TOKEN", "NEW_SECRET", "BASE_URL"])
+        #expect(tree.state(of: environment) == .checked)
+        #expect(tree.state(of: deployKey) == .checked)
+        #expect(tree.state(of: tree.root) == .mixed)
         #expect(model.preview?.itemCount == 1)
         #expect(model.preview?.environmentNames == [SharingWorld.environment])
+        #expect(model.preview?.summary.environments.first?.includesBranchPolicy == true)
 
-        // A child of the checked node cannot be checked on its own.
-        model.setChecked(true, for: deployKey)
-        #expect(model.selection == environment.selection)
         // Unchecking leaves nothing to create.
         model.setChecked(false, for: environment)
         #expect(model.selection == nil)
         #expect(!model.canCreate)
-        model.setChecked(true, for: deployKey)
-        #expect(model.selection == deployKey.selection)
+
+        // One repository-level item.
+        model.setChecked(true, for: apiToken)
+        guard case .item = model.selection else {
+            Issue.record("Expected a single item, got \(String(describing: model.selection))")
+            return
+        }
         #expect(await TestFixtures.eventually { model.preview?.itemCount == 1 && model.preview?.scope == .secret })
+
+        // The whole repository level: secrets and variables, no environment.
+        model.setChecked(true, for: repositoryLevel)
+        #expect(await TestFixtures.eventually {
+            model.preview?.summary.repositoryLevel == ShareItemCountModel(secrets: 2, variables: 1)
+                && model.preview?.summary.environments.isEmpty == true
+                && model.preview?.scope == .repository
+        })
+
+        // Repository level plus the environment is everything.
+        model.setChecked(true, for: environment)
+        #expect(model.selection == .repository(fixture.world.senderRepositoryID))
+        #expect(await TestFixtures.eventually { model.preview?.itemCount == 4 })
+    }
+
+    @Test func aRepositoryItemPlusTheEnvironmentIsSealedAndImportsOnTheReceiver() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.viewModel
+        await model.start()
+        model.reauth.password = testPassword
+        await model.authenticateWithPassword()
+        let tree = try #require(model.tree)
+        let repositoryLevel = try #require(tree.root.children?.first { $0.kind == .repositoryLevel })
+        let newSecret = try #require(repositoryLevel.children?.first { $0.title == "NEW_SECRET" })
+        // Everything starts checked; keep one repository-level item and the environment.
+        model.setChecked(false, for: repositoryLevel)
+        model.setChecked(true, for: newSecret)
+        guard case .subset(let subset) = model.selection else {
+            Issue.record("Expected a subset, got \(String(describing: model.selection))")
+            return
+        }
+        #expect(subset.environmentIDs.count == 1)
+        #expect(subset.itemIDs.count == 1)
+        #expect(await TestFixtures.eventually { model.canCreate })
+        #expect(model.preview?.summary.repositoryLevel == ShareItemCountModel(secrets: 1, variables: 0))
+        #expect(model.preview?.summary.environments.map(\.includesBranchPolicy) == [true])
+
+        await model.createShareFile()
+        let file = try #require(model.stagedFileURL)
+        let passphrase = try #require(model.passphrase)
+        let receiver = fixture.world.receiver.data.sharing
+        let draft = try await receiver.openFile(receiver.readFile(at: file), passphrase: passphrase, checkGitHub: false)
+        defer { draft.discard() }
+        #expect(draft.manifest.scope == .repository)
+        #expect(draft.plan.repositoryItems.map(\.key.name) == ["NEW_SECRET"])
+        let environment = try #require(draft.plan.environments.first)
+        #expect(environment.name == SharingWorld.environment)
+        #expect(environment.includesBranchPolicy)
+        #expect(environment.items.map(\.key.name) == ["DEPLOY_KEY"])
+        #expect(!textDump(model.preview as Any, model.tree as Any).contains(SharingWorld.secretValue))
     }
 
     @Test func createSealsAnEncryptedFileAndShowsThePassphraseOnce() async throws {

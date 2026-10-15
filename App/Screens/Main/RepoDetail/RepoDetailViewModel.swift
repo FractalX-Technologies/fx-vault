@@ -83,6 +83,8 @@ final class RepoDetailViewModel: LockObserving {
     /// The scheduled re-mask of each revealed value (internal so tests can await it).
     @ObservationIgnored private(set) var remaskTasks: [ConfigItemID: Task<Void, Never>] = [:]
     @ObservationIgnored private(set) var driftTask: Task<Void, Never>?
+    /// A drift check was asked for while offline and skipped: the reconnect check re-lists.
+    @ObservationIgnored private var missedDriftCheckOffline = false
     @ObservationIgnored private let dependencies: FeatureDependencies
     @ObservationIgnored private let repositoryProvider: () -> RepoModel?
     @ObservationIgnored private let scopeProvider: (ConfigScope) -> ConfigScopeSummaryModel?
@@ -141,14 +143,33 @@ final class RepoDetailViewModel: LockObserving {
         scope.level == .environment && repository?.visibility.isPrivate == true
     }
 
+    /// False while the Mac has no internet connection: Clone, Refresh and drift checks wait
+    /// (the main window re-runs the drift check when the connection returns).
+    var isOnline: Bool {
+        dependencies.connectivity.isOnline
+    }
+
     var canClone: Bool {
         guard let repository else { return false }
-        return repository.existsOnGitHub && dependencies.actions.isGitHubReady()
+        return repository.existsOnGitHub && dependencies.actions.isGitHubReady() && isOnline
     }
 
     var canRefresh: Bool {
         guard let repository else { return false }
-        return repository.existsOnGitHub && dependencies.actions.isGitHubReady() && !isRefreshing
+        return repository.existsOnGitHub && dependencies.actions.isGitHubReady() && isOnline && !isRefreshing
+    }
+
+    /// Drift checks need the repository on GitHub, gh and the internet.
+    private var canCheckDrift: Bool {
+        guard let repository else { return false }
+        return repository.existsOnGitHub && dependencies.actions.isGitHubReady() && isOnline
+    }
+
+    /// Remembers a drift check skipped because the Mac was offline: the reconnect check re-lists.
+    private func noteSkippedDriftCheck() {
+        if !isOnline {
+            missedDriftCheckOffline = true
+        }
     }
 
     // MARK: - Table
@@ -408,17 +429,24 @@ final class RepoDetailViewModel: LockObserving {
 
     /// The drift check when the repository opens (debounced by `DriftRepository`).
     func checkDriftOnOpen() {
-        guard let repository, repository.existsOnGitHub, !repository.isUnavailable,
-              dependencies.actions.isGitHubReady() else { return }
+        guard let repository, !repository.isUnavailable else { return }
+        guard canCheckDrift else {
+            noteSkippedDriftCheck()
+            return
+        }
+        missedDriftCheckOffline = false
         let drift = dependencies.drift
+        let reachability = dependencies.gitHubReachability
         let id = repositoryID
         driftTask?.cancel()
         driftTask = Task { [weak self] in
             do {
                 let report = try await drift.detectOnOpen(id)
+                reachability.recordSuccess()
                 self?.driftReport = report
                 self?.driftError = nil
             } catch {
+                reachability.record(error)
                 self?.driftError = error.presentation
             }
         }
@@ -434,18 +462,40 @@ final class RepoDetailViewModel: LockObserving {
             try await dependencies.catalog.refreshRepository(repositoryID)
             driftReport = try await dependencies.drift.refresh(repositoryID)
             driftError = nil
+            dependencies.gitHubReachability.recordSuccess()
         } catch {
+            dependencies.gitHubReachability.record(error)
             alert = error.presentation
         }
     }
 
-    /// Re-runs the drift check after a feature resolved findings or synced.
+    /// Re-runs the drift check after a feature resolved findings or synced, and from the
+    /// banner's Retry.
     func refreshDrift() async {
-        guard let repository, repository.existsOnGitHub, dependencies.actions.isGitHubReady() else { return }
+        await checkDrift(debounced: false)
+    }
+
+    /// The internet connection came back: a full re-list only when the last check failed, never
+    /// ran, or was skipped while offline; otherwise the debounced check, so a flapping
+    /// connection does not re-list the repository on every return.
+    func checkDriftAfterReconnect() async {
+        await checkDrift(debounced: driftReport != nil && driftError == nil && !missedDriftCheckOffline)
+    }
+
+    private func checkDrift(debounced: Bool) async {
+        guard canCheckDrift else {
+            noteSkippedDriftCheck()
+            return
+        }
+        missedDriftCheckOffline = false
         do {
-            driftReport = try await dependencies.drift.refresh(repositoryID)
+            driftReport = debounced
+                ? try await dependencies.drift.detectOnOpen(repositoryID)
+                : try await dependencies.drift.refresh(repositoryID)
             driftError = nil
+            dependencies.gitHubReachability.recordSuccess()
         } catch {
+            dependencies.gitHubReachability.record(error)
             driftError = error.presentation
         }
     }

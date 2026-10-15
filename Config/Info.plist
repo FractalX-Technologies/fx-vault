@@ -42,11 +42,12 @@
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_fxvault-share._tcp</string>
+		<string>_fxvault-chat._tcp</string>
 	</array>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright (c) 2026 FractalX. MIT License.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>FX Vault uses the local network to share configuration with a nearby teammate.</string>
+	<string>FX Vault uses the local network to share configuration and chat with a nearby teammate.</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

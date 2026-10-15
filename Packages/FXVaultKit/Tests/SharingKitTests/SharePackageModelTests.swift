@@ -174,7 +174,8 @@ struct NearbyLengthFramerTests {
         let parameters = NWNearbyConfiguration.parameters()
         #expect(parameters.acceptLocalOnly)
         #expect(parameters.prohibitedInterfaceTypes == [.cellular])
-        #expect(!parameters.includePeerToPeer)
+        // Peer-to-peer Wi-Fi (AWDL): two Macs need no shared network (v0.2.0).
+        #expect(parameters.includePeerToPeer)
         let first = NWNearbyConfiguration.randomInstanceName()
         let second = NWNearbyConfiguration.randomInstanceName()
         #expect(first != second)

@@ -115,20 +115,15 @@ struct ShareImportScreen: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.small) {
             ShareNoteView(systemImage: "exclamationmark.octagon", text: reason.localizedMessage, tint: Theme.Colors.danger)
             if viewModel.needsRepositoryImport {
-                HStack(spacing: Theme.Spacing.small) {
-                    Button {
-                        Task { await viewModel.importRepository() }
-                    } label: {
-                        Text(String(
-                            localized: "shareImport.importRepo",
-                            defaultValue: "Import \(viewModel.repositoryFullName ?? "") from GitHub"
-                        ))
-                    }
-                    .disabled(viewModel.isImportingRepository)
-                    if viewModel.isImportingRepository {
-                        ProgressView()
-                            .controlSize(.small)
-                    }
+                ShareImportRepositoryButton(
+                    title: String(
+                        localized: "shareImport.importRepo",
+                        defaultValue: "Import \(viewModel.repositoryFullName ?? "") from GitHub"
+                    ),
+                    isImporting: viewModel.isImportingRepository,
+                    isOnline: viewModel.isOnline
+                ) {
+                    Task { await viewModel.importRepository() }
                 }
             }
         }

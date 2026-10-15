@@ -6,7 +6,9 @@ import VaultData
 
 /// Share › File… (§9.1–§9.3, §10 `ShareExportScreen`, D30):
 /// 1. **Authenticate** with Touch ID or the master password (`ReauthGate.authorizeShare(.fileExport)`).
-/// 2. **Choose the scope** in the tree (one secret, an environment or the whole repository).
+/// 2. **Choose what to share** in the tri-state tree: any combination of the repository level,
+///    environments and single items (``ShareScopeTreeModel``; a branch policy travels only with
+///    a fully checked environment).
 /// 3. **Create**: `SharingRepository.exportFile` seals the selection under a fresh 6-word
 ///    passphrase into a private staging folder (0600 file, 0700 folder).
 /// 4. **Passphrase**: shown once with Copy (concealed, cleared after 30 s), the "send it through

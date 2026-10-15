@@ -3,6 +3,48 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.2.0
+
+### Added
+
+- **Share any combination.** The share scope tree (Share › File… and the nearby "what to send"
+  picker) is multi-select with tri-state checkboxes: the repository level, one or more
+  environments, the repository level plus environments, or individual secrets and variables.
+  The sheet shows "Secrets: n · Variables: m" per scope. An environment's deployment branch
+  policy is shared only when the whole environment is checked; a partly checked environment
+  shares only its checked items and never changes the receiver's policy.
+- **Connectivity banner.** "No internet connection" at the top of the main window when the Mac
+  is offline, and a separate "GitHub isn't responding" state with Retry when gh calls time out
+  or cannot reach GitHub. While offline, Sync, New Repository, Import, Add by name, Clone,
+  Refresh and drift checks are disabled with an explanation; local editing, `.env` files and
+  sharing keep working. When the connection returns, the repository lists reload and the open
+  repository's drift check runs again.
+- **Nearby without a shared network.** Nearby share and Nearby Chat also run over peer-to-peer
+  Wi-Fi (AWDL, the link AirDrop uses): Wi-Fi and Bluetooth on, about 10 m apart, no router or
+  internet needed.
+- **Nearby Chat (experimental).** Share › Nearby Chat… opens a separate window for an
+  end-to-end encrypted 1:1 chat with a teammate's Mac nearby. You are visible under your name
+  (Settings › General › "Name for nearby Macs") only while the window lists people. Both people
+  compare a 6-digit code before anything is sent. Messages live only in memory and are wiped
+  when the chat ends, the window closes, the vault locks or the connection drops; nothing is
+  written to disk. Copy a message from its context menu: like a copied value it stays on this
+  Mac and is cleared after 30 s and on lock.
+- **Attach a secret or variable in chat.** After Touch ID or your master password, pick one
+  item to offer. The other person sees a card with its name, kind, repository and environment
+  (never the value); "Save to my vault" fetches the value and opens the normal share import
+  preview, "Dismiss" declines it.
+
+### Changed
+
+- Share packages use schema version 2 only when an environment is partly selected (including a
+  single environment-level secret or variable). FX Vault 0.1.x cannot open those; everything
+  else is still written as version 1 and opens in 0.1.x. Files and nearby shares from 0.1.x
+  open unchanged.
+- A 0.1.x Mac and a 0.2.0 Mac find each other for nearby sharing only on a shared network
+  (0.1.x does not use peer-to-peer Wi-Fi).
+- The Local Network permission text now mentions chat.
+- Nearby share, receive and chat use the name from Settings › General when one is set.
+
 ## 0.1.1
 
 ### Added

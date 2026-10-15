@@ -434,8 +434,21 @@ struct CreateRepoViewModelTests {
         }
         #expect(fixture.recorder.selections == [staged.repositoryID], "the staged repository is selected in the sidebar")
         #expect(model.canSyncNow)
+        #expect(model.syncNowUnavailableReason == nil)
         model.syncNow()
         #expect(fixture.recorder.presented == [.sync(SyncContext(repositoryIDs: [staged.repositoryID]))])
+    }
+
+    @Test func syncNowIsDisabledOfflineAndSaysWhy() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.viewModel
+        await fixture.readyToCreate()
+        #expect(await model.create())
+        fixture.harness.pathSource.send(.offline)
+        #expect(!model.canSyncNow)
+        #expect(model.syncNowUnavailableReason == ConnectivityCopy.offlineHelp)
+        model.syncNow()
+        #expect(fixture.recorder.presented.isEmpty)
     }
 
     // MARK: - Environments and plan note

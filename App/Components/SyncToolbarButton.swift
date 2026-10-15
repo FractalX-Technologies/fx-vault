@@ -7,6 +7,8 @@ struct SyncToolbarButton: View {
     let count: Int
     let isSyncing: Bool
     let isEnabled: Bool
+    /// Replaces the help text while Sync cannot run for an outside reason (offline).
+    var unavailableReason: String?
     let action: () -> Void
 
     var body: some View {
@@ -24,7 +26,7 @@ struct SyncToolbarButton: View {
         }
         .buttonStyle(.borderedProminent)
         .disabled(!isEnabled)
-        .help(Self.help(count: count, isSyncing: isSyncing))
+        .help(unavailableReason ?? Self.help(count: count, isSyncing: isSyncing))
         .accessibilityLabel(Self.accessibilityLabel(count: count))
     }
 

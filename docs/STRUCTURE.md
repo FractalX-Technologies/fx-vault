@@ -39,6 +39,8 @@ FXVault/
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
 │   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel
+│   │   │   ├── ConnectivityBannerView.swift  # offline / GitHub-not-responding banner,
+│   │   │   │                        # ConnectivityBannerModel, ConnectivityCopy (offline .help)
 │   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel
 │   │   │   ├── ScopeList/           # ScopeListView/ViewModel ("Repository" + environments)
 │   │   │   ├── RepoDetail/          # RepoDetailScreen/ViewModel, ConfigTableView
@@ -61,10 +63,17 @@ FXVault/
 │   │   │                            # EnvFileError+Extension, EnvParseIssue+Extension
 │   │   ├── Sharing/                 # ShareExport/ShareImport/NearbySend/NearbyReceive
 │   │   │                            # Screen+ViewModel, ShareReauthModel/View, ShareScopeTree
-│   │   │                            # Model/View, ShareImportPlanEditor/PreviewView, SASCodeView,
+│   │   │                            # Model/View (tri-state), ShareContentSummaryView,
+│   │   │                            # ShareImportPlanEditor/PreviewView, SASCodeView,
 │   │   │                            # NearbyNetworking, ShareRepositoryImporter, ShareFileDelivery,
 │   │   │                            # ShareStagingFolder, ShareLocalIdentityModel, ShareSheetHeader,
 │   │   │                            # SharingError and SharingKit-type +Extension files
+│   │   ├── NearbyChat/              # Window › Nearby Chat (v0.2.0, its own scene): NearbyChatScreen/
+│   │   │                            # ViewModel, NearbyChatModels, NearbyChatNetworking, ChatPeerList,
+│   │   │                            # ChatConversation (transcript, bubbles, composer), ChatAttachment
+│   │   │                            # Card, ChatAttachmentPicker Sheet/ViewModel, ChatSave Sheet/
+│   │   │                            # ViewModel, NearbyChatCopy (aborts, ChatError, NearbyChatError),
+│   │   │                            # AppViewModel+NearbyChat (dependencies of the window)
 │   │   └── Preferences/             # PreferencesScreen/ViewModel, General, Security(+ViewModel),
 │   │                                # Accounts(+ViewModel), Advanced
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
@@ -74,7 +83,9 @@ FXVault/
 │   │                                # ErrorAlert, ConfigEditorSheet (+ ConfigEditorNote),
 │   │                                # BranchPolicyEditorView, BranchPolicyFormModel
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
-│   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe
+│   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe,
+│   │                                # ConnectivityMonitor (NWPathMonitor, path sources),
+│   │                                # WiFiRadio (CoreWLAN power state), GitHubReachability
 │   ├── Helpers/
 │   │   ├── AppLog.swift             # os.Logger categories
 │   │   ├── TaskBag.swift            # cancels a view model's tasks when it goes away
@@ -102,7 +113,11 @@ FXVault/
 │   │                                # (+ EnvironmentBranchPolicyForm), Sync, DriftReview,
 │   │                                # CreateRepo (+ CreateRepoEditor), EnvFileImport,
 │   │                                # EnvFilePaste, EnvFileExport, SharingExport, SharingImport,
-│   │                                # SharingNearby, SecretValueEditor, AppSmoke
+│   │                                # SharingNearby, SecretValueEditor, AppSmoke,
+│   │                                # Connectivity (monitor, GitHub reachability, offline gating),
+│   │                                # SyncConnectivity (Sync and drift review reporting, offline
+│   │                                # Sync sheet), SharingScopeTreeModel (tri-state tree),
+│   │                                # NearbyChat (window, picker, save preview, wipe)
 │   └── <Feature>TestSupport.swift   # ItemEditor, Sync, Drift, EnvFile, Sharing fakes and fixtures
 ├── Packages/FXVaultKit/
 │   ├── Package.swift                # tools 6.1, macOS 14, Swift 6, MemberImportVisibility
@@ -157,9 +172,13 @@ FXVault/
 │   │   │   ├── Model/               # SharePackageModel, SharePackageCoder, SharePackageValidator
 │   │   │   ├── File/                # FxVaultHeaderModel, FxVaultFileCodec, KeyDeriving
 │   │   │   ├── Passphrase/          # PassphraseGenerator
-│   │   │   ├── Nearby/              # NearbyProtocol, NearbyCrypto, NearbyFrame, NearbyHandshake,
+│   │   │   ├── Nearby/              # NearbyProtocol, NearbyPurpose, NearbyCrypto, NearbyFrame,
+│   │   │   │                        # NearbyKeyExchange (shared handshake), NearbyHandshake,
 │   │   │   │                        # NearbySession, NearbyTransport, NearbyLengthFramer,
 │   │   │   │                        # NWNearbyTransport
+│   │   │   ├── Chat/                # fxvault-chat/v1: NearbyChatProtocol (+ chat Limits/Timeouts),
+│   │   │   │                        # NearbyChatModels, ChatTextSanitizer, NearbyChatMachine,
+│   │   │   │                        # NearbyChatSession
 │   │   │   ├── Import/              # ShareImportPlanner, ShareImportPlanModel
 │   │   │   ├── Extensions/          # Data+Extension
 │   │   │   └── Resources/           # eff_large_wordlist.txt
@@ -204,6 +223,9 @@ FXVault/
 │   │       ├── Creation/            # RepoCreationRepository (+Models, +Error)
 │   │       ├── Drift/               # DriftRepository (+Models), DriftEffectApplier,
 │   │       │                        # DriftRemoteInputs
+│   │       ├── Chat/                # ChatRepository (attachable items, conversations),
+│   │       │                        # NearbyChatConversation, ChatModels (ChatAttachableItemModel,
+│   │       │                        # NearbyChatError)
 │   │       └── Sharing/             # SharingRepository (+Models, +Error), ShareAuthorizationModel,
 │   │           │                    # ReauthGate+Share, ShareExportBuilder, ShareImportPlanning,
 │   │           │                    # ShareImporter
@@ -215,11 +237,14 @@ FXVault/
 │       │                                         # ExecutionTests/
 │       ├── VaultDataTests/                       # VaultManagerTests/, AccountsTests/, CatalogTests/,
 │       │                                         # ConfigTests/, EnvFilesTests/, SyncTests/ (+Support/),
-│       │                                         # CreationTests/, DriftTests/, SharingTests/,
+│       │                                         # CreationTests/, DriftTests/, SharingTests/, ChatTests/,
 │       │                                         # Live/ (opt-in live E2E: FXV_LIVE_E2E*, plus a
 │       │                                         # GitHubSimulator dry run that always runs)
 │       ├── VaultCryptoTests/Fixtures/kat/        # generate_kat.py + kat_vectors.json
-│       ├── SharingKitTests/Fixtures/             # nearby_kat.json, kat/ (crosscheck.py, reference)
+│       ├── SharingKitTests/Fixtures/             # nearby_kat.json, chat_kat.json, kat/ (crosscheck.py,
+│       │                                         # reference),
+│       │                                         # item-v1-0.1.1.json (package written by 0.1.1)
+│       ├── VaultDataTests/Fixtures/Sharing/      # repository-v1-0.1.1.fxvault (file written by 0.1.1)
 │       ├── GitHubKitTests/Fixtures/              # gh/, api/, ssh/, shell/ (sanitized)
 │       └── EnvToolsTests/Fixtures/sample.env     # placeholder values only
 ├── scripts/

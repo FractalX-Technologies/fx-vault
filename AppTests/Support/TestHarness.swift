@@ -71,6 +71,27 @@ final class FakeTicker: InactivityTicker {
     }
 }
 
+/// A network path source the test drives by hand (connectivity banner, v0.2.0).
+@MainActor
+final class FakeNetworkPathSource: NetworkPathSource {
+    private var onUpdate: (@MainActor (NetworkPathModel) -> Void)?
+    private(set) var isStarted = false
+
+    func start(onUpdate: @escaping @MainActor (NetworkPathModel) -> Void) {
+        self.onUpdate = onUpdate
+        isStarted = true
+    }
+
+    func stop() {
+        onUpdate = nil
+        isStarted = false
+    }
+
+    func send(_ path: NetworkPathModel) {
+        onUpdate?(path)
+    }
+}
+
 /// The starting state of a harness vault.
 enum TestVaultState {
     case none
@@ -99,6 +120,11 @@ final class TestHarness {
     let signals = FakeLockSignalSource()
     let ticker = FakeTicker()
     let dockBadge = RecordedDockBadge()
+    /// The network path the connectivity monitor sees (nothing is reported until a test sends
+    /// one, so the app starts online).
+    let pathSource = FakeNetworkPathSource()
+    /// The connectivity monitor's own clock, so its debounce never mixes with other sleepers.
+    let networkClock = ManualClock()
     /// The recovery key issued when the harness created its vault (nil for `.none`).
     let recoveryKey: RecoveryKey?
 
@@ -161,7 +187,8 @@ final class TestHarness {
             dockBadge: dockBadge,
             passphraseGenerator: try? PassphraseGenerator.bundled(),
             vaultDirectory: nil,
-            clock: clock
+            clock: clock,
+            connectivity: ConnectivityMonitor(source: pathSource, clock: networkClock)
         )
         app = AppViewModel(container: container)
         await app.ghProbeTask?.value

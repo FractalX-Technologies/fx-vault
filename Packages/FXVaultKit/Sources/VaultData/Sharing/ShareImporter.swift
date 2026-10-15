@@ -11,7 +11,11 @@ import VaultStore
 ///
 /// - Environments first: created with the incoming policy (as synced when GitHub already lists
 ///   them), or given the incoming policy when the user accepted a "Deployment branches differ"
-///   row.
+///   row. A partial environment (no incoming policy, schema v2) never changes an existing
+///   policy; when it is missing locally it is created with GitHub's policy and patterns when
+///   GitHub lists it (fully synced, nothing pending), otherwise with all branches (GitHub's
+///   default for a new environment, pending create). A missing partial environment whose items
+///   are all skipped is not created (``ShareEnvironmentPlanModel/createsEnvironment``).
 /// - Items through ``ItemEditBatch`` (the §7.1 editing rules, capability and capacity checks):
 ///   add, fill (as already on GitHub, or pushed on the next Sync) and overwrite (a pending
 ///   modify). Every value is normalized on entry (D32) and sealed with the **receiver's** keys
@@ -148,17 +152,29 @@ struct ShareImporter {
         for environment in plan.environments {
             switch environment.action {
             case .create(let pending):
-                let id = try editor.create(in: repository.id, name: environment.name, policy: Self.draft(environment.incomingPolicy))
-                if !pending, let listing = remote?.environments[EnvironmentNameValidator.foldKey(environment.name)] {
+                // A partial environment whose items are all skipped says nothing: not created,
+                // so its items have no scope and nothing in it is imported.
+                guard environment.createsEnvironment else { continue }
+                let key = EnvironmentNameValidator.foldKey(environment.name)
+                let listing = pending ? nil : remote?.environments[key]
+                let listedPatterns = remote?.patterns[key] ?? []
+                let policy = environment.incomingPolicy.map(Self.draft)
+                    ?? listing.map { Self.draft(listed: $0.branchPolicyKind, patterns: listedPatterns) }
+                    ?? .all
+                let id = try editor.create(in: repository.id, name: environment.name, policy: policy)
+                if let listing {
                     try markSynced(id, listing: listing, store: store)
+                    if !environment.includesBranchPolicy {
+                        try markPatternsSynced(id, listed: listedPatterns, store: store)
+                    }
                 }
                 scopes[environment.id] = .environment(id)
                 result.environmentsCreated.append(environment.name)
             case .useExisting:
                 guard let id = environment.localEnvironmentID else { throw SharingError.planOutdated }
                 scopes[environment.id] = .environment(id)
-                if environment.policyDifference?.decision == .useIncoming {
-                    try editor.updatePolicy(id, to: Self.draft(environment.incomingPolicy))
+                if environment.policyDifference?.decision == .useIncoming, let incoming = environment.incomingPolicy {
+                    try editor.updatePolicy(id, to: Self.draft(incoming))
                     result.policiesChanged.append(environment.name)
                 }
             case .blockedDeletedLocally:
@@ -178,6 +194,34 @@ struct ShareImporter {
         environment.foreignRulesJSON = listing.foreignRulesJSON
         environment.remoteUpdatedAt = listing.updatedAt
         try store.updateEnvironment(environment, in: tx)
+    }
+
+    /// Gives the created environment's patterns GitHub's policy ids, so a policy copied from
+    /// GitHub's listing is not pushed again.
+    private func markPatternsSynced(_ id: EnvironmentID, listed: [GHBranchPolicyDTO], store: ConfigStore) throws {
+        let listedIDs = Dictionary(
+            listed.map { (BranchPatternKey(pattern: $0.name, type: $0.type), $0.id) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for var pattern in try store.fetchPatterns(environmentID: id, in: tx) {
+            guard let githubID = listedIDs[BranchPatternKey(pattern: pattern.pattern, type: pattern.type)] else { continue }
+            pattern.githubPolicyID = githubID
+            try store.updatePattern(pattern, in: tx)
+        }
+    }
+
+    private struct BranchPatternKey: Hashable {
+        let pattern: String
+        let type: BranchPatternType
+    }
+
+    /// GitHub's listed policy as a draft (patterns only for `custom`).
+    static func draft(listed kind: BranchPolicyKind, patterns: [GHBranchPolicyDTO]) -> BranchPolicyDraftModel {
+        switch kind {
+        case .all: .all
+        case .protected: .protectedBranches
+        case .custom: .custom(patterns.map { BranchPatternDraftModel(pattern: $0.name, type: $0.type) })
+        }
     }
 
     static func draft(_ policy: ShareBranchPolicyModel) -> BranchPolicyDraftModel {

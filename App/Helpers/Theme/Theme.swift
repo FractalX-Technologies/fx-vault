@@ -113,6 +113,22 @@ enum Theme {
         static let shareActionPickerWidth: CGFloat = 150
         /// Minimum width of each SAS decision button ("Codes match" / "Don't match").
         static let sasButtonMinWidth: CGFloat = 160
+
+        // MARK: Nearby Chat window (v0.2.0)
+
+        static let chatWindowMinWidth: CGFloat = 720
+        static let chatWindowMinHeight: CGFloat = 480
+        static let chatWindowDefaultWidth: CGFloat = 860
+        static let chatWindowDefaultHeight: CGFloat = 600
+        /// Width of the "Nearby" people column.
+        static let chatPeerListWidth: CGFloat = 240
+        /// Widest a message bubble or attachment card grows.
+        static let chatBubbleMaxWidth: CGFloat = 420
+        /// Height of the message field (about four lines).
+        static let chatComposerHeight: CGFloat = 76
+        /// The attachment picker sheet and its item list.
+        static let chatPickerWidth: CGFloat = 520
+        static let chatPickerListHeight: CGFloat = 300
     }
 
     /// Opacity levels for tinted backgrounds and dimmed content.

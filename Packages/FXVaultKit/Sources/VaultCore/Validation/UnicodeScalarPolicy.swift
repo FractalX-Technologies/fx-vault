@@ -27,6 +27,9 @@ public enum UnicodeScalarPolicy {
     private static let wordJoiner: UInt32 = 0x2060
     private static let byteOrderMark: UInt32 = 0xFEFF
 
+    private static let hangulFillers: Set<UInt32> = [0x115F, 0x1160, 0x3164, 0xFFA0]
+    private static let combiningGraphemeJoiner: UInt32 = 0x034F
+
     /// C0, DEL, C1 and the line/paragraph separators.
     public static func isControl(_ scalar: Unicode.Scalar) -> Bool {
         let value = scalar.value
@@ -53,6 +56,17 @@ public enum UnicodeScalarPolicy {
             || value == byteOrderMark
     }
 
+    /// Scalars that render as nothing or as blank space, so they can hide text shown from another
+    /// person: every format character (General_Category `Cf`: soft hyphen, invisible operators,
+    /// tag characters, interlinear annotation, U+180E, besides the bidi and zero-width ones), the
+    /// Hangul fillers and the combining grapheme joiner. Not a name ``Violation``: validators
+    /// keep their rules; display sanitizers (peer names, chat text) drop these too.
+    public static func isInvisible(_ scalar: Unicode.Scalar) -> Bool {
+        scalar.properties.generalCategory == .format
+            || hangulFillers.contains(scalar.value)
+            || scalar.value == combiningGraphemeJoiner
+    }
+
     /// The violation for one scalar, or nil if it is allowed.
     public static func violation(of scalar: Unicode.Scalar) -> Violation? {
         if isControl(scalar) { return .control }
@@ -73,6 +87,13 @@ public enum UnicodeScalarPolicy {
     public static func removingDisallowed(from string: String) -> String {
         var scalars = String.UnicodeScalarView()
         scalars.append(contentsOf: string.unicodeScalars.filter { violation(of: $0) == nil })
+        return String(scalars)
+    }
+
+    /// For text shown from another person: every disallowed and every invisible scalar removed.
+    public static func removingDisallowedAndInvisible(from string: String) -> String {
+        var scalars = String.UnicodeScalarView()
+        scalars.append(contentsOf: string.unicodeScalars.filter { violation(of: $0) == nil && !isInvisible($0) })
         return String(scalars)
     }
 

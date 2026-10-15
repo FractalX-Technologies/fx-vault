@@ -20,3 +20,13 @@ struct ShareLocalIdentityModel: Equatable {
     private static let versionKey = "CFBundleShortVersionString"
     private static let unknownVersion = "0"
 }
+
+extension ShareLocalIdentityModel {
+    /// The identity nearby Macs see (Nearby Chat, nearby send and receive, v0.2.0): the name from
+    /// Preferences › General, or ``current`` when none is set.
+    static func nearby(preferences: PreferencesManager) -> ShareLocalIdentityModel {
+        let system = ShareLocalIdentityModel.current
+        guard let name = preferences.nearbyName else { return system }
+        return ShareLocalIdentityModel(displayName: name, appVersion: system.appVersion)
+    }
+}

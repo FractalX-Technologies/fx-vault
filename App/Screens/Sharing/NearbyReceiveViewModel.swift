@@ -54,11 +54,11 @@ final class NearbyReceiveViewModel: LockObserving {
         context: NearbyReceiveContext,
         dependencies: FeatureDependencies,
         network: any NearbyNetworking = LiveNearbyNetworking(),
-        identity: ShareLocalIdentityModel = .current
+        identity: ShareLocalIdentityModel? = nil
     ) {
         self.dependencies = dependencies
         self.network = network
-        self.identity = identity
+        self.identity = identity ?? .nearby(preferences: dependencies.preferences)
         importer = ShareRepositoryImporter(
             github: dependencies.github,
             catalog: dependencies.catalog,
@@ -130,8 +130,13 @@ final class NearbyReceiveViewModel: LockObserving {
     }
 
     /// Imports the repository through an account with access, then previews the manifest again.
+    /// The import goes through gh: offline it is disabled with the offline explanation.
+    var isOnline: Bool {
+        dependencies.connectivity.isOnline
+    }
+
     func importRepository() async {
-        guard needsRepositoryImport, let manifest, !isImportingRepository else { return }
+        guard needsRepositoryImport, isOnline, let manifest, !isImportingRepository else { return }
         isImportingRepository = true
         defer { isImportingRepository = false }
         do {
@@ -262,7 +267,7 @@ final class NearbyReceiveViewModel: LockObserving {
     private func previewManifest() async {
         guard let receiver, let manifest else { return }
         do {
-            let plan = try await receiver.previewManifest(checkGitHub: dependencies.actions.isGitHubReady())
+            let plan = try await receiver.previewManifest(checkGitHub: dependencies.checksGitHub)
             editor = ShareImportPlanEditor(plan: plan, repositoryFullName: manifest.repository.fullName)
             step = .reviewingManifest
         } catch {
@@ -273,7 +278,7 @@ final class NearbyReceiveViewModel: LockObserving {
     private func previewPayload() async {
         guard let receiver, let manifest else { return }
         do {
-            let draft = try await receiver.previewPayload(checkGitHub: dependencies.actions.isGitHubReady())
+            let draft = try await receiver.previewPayload(checkGitHub: dependencies.checksGitHub)
             let payloadEditor = ShareImportPlanEditor(plan: draft.plan, repositoryFullName: manifest.repository.fullName)
             if let manifestPlan {
                 payloadEditor.adoptPolicyDecisions(from: manifestPlan)

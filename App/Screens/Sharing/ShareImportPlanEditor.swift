@@ -131,5 +131,13 @@ struct ShareImportSectionModel: Identifiable {
         environment.map { $0.id.description } ?? Self.repositoryID
     }
 
+    /// Incoming secrets and variables in this scope (names only).
+    var counts: ShareItemCountModel {
+        ShareItemCountModel(
+            secrets: items.filter { $0.key.kind == .secret }.count,
+            variables: items.filter { $0.key.kind == .variable }.count
+        )
+    }
+
     private static let repositoryID = "repository"
 }

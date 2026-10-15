@@ -7,7 +7,7 @@ import VaultData
 /// The three-column main window (§10.4): it owns the column view models, the toolbar and menu
 /// commands, and the sheet router of the UI feature contract (``activeSheet``).
 @Observable
-final class MainViewModel: LockObserving {
+final class MainViewModel: LockObserving, ConnectivityObserving {
     let sidebar: SidebarViewModel
     /// The scopes column of the selected imported repository.
     private(set) var scopeList: ScopeListViewModel?
@@ -23,6 +23,8 @@ final class MainViewModel: LockObserving {
     }
 
     @ObservationIgnored let app: AppViewModel
+    /// The reload after the connection came back (internal so tests can await it).
+    @ObservationIgnored private(set) var reconnectTask: Task<Void, Never>?
 
     init(app: AppViewModel) {
         self.app = app
@@ -31,6 +33,7 @@ final class MainViewModel: LockObserving {
             self?.followSelection()
         }
         app.addLockObserver(self)
+        app.container.connectivity.addObserver(self)
     }
 
     /// Dependencies handed to every feature entry view (UI feature contract).
@@ -92,6 +95,7 @@ final class MainViewModel: LockObserving {
 
     func present(_ sheet: MainSheet) {
         guard app.phase == .unlocked else { return }
+        guard isOnline || !sheet.needsInternet else { return }
         activeSheet = sheet
     }
 
@@ -144,9 +148,9 @@ final class MainViewModel: LockObserving {
         app.phase == .unlocked
     }
 
-    /// Disabled at 0, while locked and while a sync runs (§10 Toolbar).
+    /// Disabled at 0, while locked, while a sync runs (§10 Toolbar) and while offline.
     var canSync: Bool {
-        pendingChangeCount > 0 && isUnlocked && !isSyncing && app.ghStatus.isReady
+        pendingChangeCount > 0 && isUnlocked && !isSyncing && app.ghStatus.isReady && isOnline
     }
 
     func sync() {
@@ -154,8 +158,9 @@ final class MainViewModel: LockObserving {
         present(.sync(SyncContext(repositoryIDs: nil)))
     }
 
+    /// Needs gh and the internet (owners, templates and the name check call GitHub).
     var canCreateRepository: Bool {
-        isUnlocked && app.ghStatus.isReady
+        isUnlocked && app.ghStatus.isReady && isOnline
     }
 
     /// New Repository (⌘N), with the selected account and owner preselected.
@@ -200,6 +205,7 @@ final class MainViewModel: LockObserving {
     }
 
     func addRepositoryByName(accountLogin: String) {
+        guard sidebar.canAddByName else { return }
         present(.addRepositoryByName(AddRepositoryContext(accountLogin: accountLogin)))
     }
 
@@ -224,9 +230,63 @@ final class MainViewModel: LockObserving {
         app.container.preferences.setCloneFolder(url)
     }
 
+    // MARK: - Connectivity (v0.2.0)
+
+    var isOnline: Bool {
+        app.container.connectivity.isOnline
+    }
+
+    /// The banner at the top of the main window: offline first, then GitHub not responding.
+    var connectivityBanner: ConnectivityBannerModel? {
+        if !isOnline {
+            return .offline
+        }
+        let github = app.container.gitHubReachability
+        return github.isResponding ? nil : .gitHubNotResponding(isRetrying: github.isRetrying)
+    }
+
+    /// The `.help` of a gh-backed action: why it is disabled while offline, `help` otherwise.
+    func networkHelp(_ help: String) -> String {
+        isOnline ? help : ConnectivityCopy.offlineHelp
+    }
+
+    /// **Retry** on the "GitHub isn't responding" banner: the calls the window already makes
+    /// (the repository lists and the open repository's drift check), which report back to
+    /// `GitHubReachability`.
+    func retryGitHub() async {
+        guard isOnline else { return }
+        await app.container.gitHubReachability.retry { [sidebar, detail] in
+            await sidebar.reload()
+            await detail?.refreshDrift()
+        }
+    }
+
+    /// The connection came back: the GitHub state starts over, the repository lists load again
+    /// if they could not load before, and the open repository's drift check runs again (a full
+    /// re-list only if the last one failed or was skipped offline). A reconnect replaces the
+    /// previous one, so a flapping connection never runs them side by side.
+    func connectivityDidChange(isOnline: Bool) {
+        guard isOnline else { return }
+        app.container.gitHubReachability.reset()
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        guard isUnlocked else { return }
+        let sidebar = sidebar
+        let detail = detail
+        reconnectTask = Task {
+            if sidebar.needsReload {
+                await sidebar.reload()
+            }
+            guard !Task.isCancelled else { return }
+            await detail?.checkDriftAfterReconnect()
+        }
+    }
+
     // MARK: - LockObserving
 
     func vaultDidLock() {
+        reconnectTask?.cancel()
+        reconnectTask = nil
         activeSheet = nil
     }
 }

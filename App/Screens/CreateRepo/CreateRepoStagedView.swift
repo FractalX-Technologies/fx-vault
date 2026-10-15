@@ -5,6 +5,8 @@ import SwiftUI
 struct CreateRepoStagedView: View {
     let staged: CreateRepoStagedModel
     let canSyncNow: Bool
+    /// Why Sync Now… is disabled (offline), shown under the buttons.
+    let syncNowUnavailableReason: String?
     let onSyncNow: () -> Void
     let onDone: () -> Void
 
@@ -52,6 +54,13 @@ struct CreateRepoStagedView: View {
                 Button(String(localized: "createRepo.staged.done", defaultValue: "Done"), action: onDone)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
+            }
+            if let syncNowUnavailableReason {
+                Text(syncNowUnavailableReason)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(Theme.Spacing.xLarge)

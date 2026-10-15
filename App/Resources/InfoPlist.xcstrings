@@ -44,7 +44,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "FX Vault uses the local network to share configuration with a nearby teammate."
+            "value" : "FX Vault uses the local network to share configuration and chat with a nearby teammate."
           }
         }
       }

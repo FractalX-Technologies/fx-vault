@@ -111,7 +111,9 @@ struct MainViewModelTests {
 
         let add = AddRepositoryViewModel(
             context: AddRepositoryContext(accountLogin: TestFixtures.account),
-            catalog: harness.data.catalog
+            catalog: harness.data.catalog,
+            connectivity: harness.container.connectivity,
+            gitHubReachability: harness.container.gitHubReachability
         ) { repo in
             main.sidebar.didAddRepository(repo, accountLogin: TestFixtures.account)
         }

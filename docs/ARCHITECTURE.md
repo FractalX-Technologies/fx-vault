@@ -223,14 +223,36 @@ See [API.md](API.md) for the command catalog.
 See [SHARING-PROTOCOL.md](SHARING-PROTOCOL.md).
 
 - **Package:** `SharePackageModel` (+ nested models, `ShareEntryID`), `SharePackageCoder`,
-  `SharePackageValidator` (`.manifest` / `.payload`).
+  `SharePackageValidator` (`.manifest` / `.payload`). Schema v1 and v2 (v2 adds partial
+  environments: `ShareEnvironmentModel.deploymentBranchPolicy == nil`);
+  `requiredSchemaVersion(for:)` picks the lowest version that holds the contents;
+  `contentSummary -> ShareContentSummaryModel` gives counts per scope (never values).
 - **File:** `FxVaultHeaderModel`, `FxVaultFileCodec(deriver:)` (`inspect`, `open`, `seal`,
   `encrypt`, `decrypt`), `protocol KeyDeriving` (VaultData adapts Argon2id).
 - **Passphrase:** `PassphraseGenerator.bundled()`, `generate()`, `normalize(_:)`.
 - **Nearby:** `NearbyHandshake` (pure state machine), `NearbySession` (actor over a
   `NearbyTransport` and a `VaultClock`), `NWNearbyTransport` / `NWNearbyBrowser` (Network
-  framework), `InMemoryTransportPair` (tests, previews), `NearbyFailureTracker`, events and
-  abort reasons.
+  framework, peer-to-peer Wi-Fi enabled, `local.` domain only; `advertising(purpose:)`,
+  `advertisingChat(displayName:)`, `registeredServiceNames` (the name Bonjour registered),
+  `NWNearbyBrowser(purpose:)`), `InMemoryTransportPair` (tests, previews),
+  `NearbyFailureTracker`, events and abort reasons. `NearbyPurpose` (`.share` / `.chat`) selects
+  the Bonjour service type and the label prefix; the commit-reveal handshake, SAS, CONFIRM and
+  encrypted channel live once in the internal `NearbyKeyExchange`, used by both protocols.
+- **Chat** (`Chat/`, `fxvault-chat/v1`, SHARING-PROTOCOL.md §7):
+  `NearbyChatSession(role:localName:transport:clock:)` actor with `events`
+  (`AsyncStream<NearbyChatEvent>`: `incomingConnection` (responder), `peerConnected`, `sasReady`,
+  `peerConfirmedSAS`, `verified`,
+  `message(ChatMessageModel)`, `attachmentOffered(ChatAttachmentOfferModel)`,
+  `attachmentDeclined`, `attachmentSent`, `attachmentReceived(id, SharePackageModel)`,
+  `peerClosed`, `aborted(NearbyAbortModel)`) and `start`, `confirmSAS`, `rejectSAS`, `sendText`,
+  `offerAttachment(manifest:payloadProvider:)`, `requestAttachment`, `declineAttachment`,
+  `close`; `phase` (`NearbyChatPhase`), `ChatError`, `ChatTextSanitizer`. Ephemeral: no message
+  history, everything wiped on close, abort or disconnect. Chat limits and timers are
+  `Limits.chatMessageBytes`, `chatAttachmentBytes`, `chatMaxOpenAttachments`,
+  `chatMaxOffersPerChat`, `chatMaxPeerFramesPerFloodWindow`, `chatMaxUnansweredPings`,
+  `chatMaxBlankLines`, `chatMaxMarksPerCharacter` and `Timeouts.chatKeepaliveInterval`,
+  `chatIdle`, `chatFloodWindow`, declared in
+  SharingKit (`Chat/NearbyChatProtocol.swift`) as extensions of the VaultCore enums.
 - **Import:** `ShareImportPlanner.plan(_:mode:local:fingerprint:)` → `ShareImportPlanModel`
   (chips, default actions, policy differences, replay warnings, provenance). VaultData's
   `ShareImporter` applies it in one transaction.
@@ -472,7 +494,25 @@ any passphrase), `openFile(_:passphrase:checkGitHub:) -> ShareImportDraftModel`,
 checkGitHub:)`, `apply(_:plan:confirmReplay:)` (re-plans inside the transaction;
 `.planOutdated`), `makeNearbySender(transport:localName:clock:)`,
 `makeNearbyReceiver(transport:localName:clock:)` (`NearbyShareSender` / `NearbyShareReceiver`
-actors; the UI never receives values).
+actors; the UI never receives values). What to share is a `ShareSelectionModel`: `.item`,
+`.environment`, `.repository` or `.subset(ShareSubsetModel(repositoryID:environmentIDs:itemIDs:))`
+(any combination; a branch policy travels only for the environments in `environmentIDs`, see
+SHARING-PROTOCOL.md §1.2). `ShareExportPreviewModel.summary` holds the per-scope counts.
+
+**Chat** (`Chat/`, v0.2.0). `struct ChatRepository(session:sharing:clock:)`:
+`attachableItems() -> [ChatAttachableItemModel]` (live items with a value, names only, by
+repository, then repository level before environments, kind and name) and
+`makeConversation(role:transport:localName:clock:) -> NearbyChatConversation`. The
+`NearbyChatConversation` actor wraps one `NearbyChatSession`: `events` (the session's events; a
+received attachment is forwarded **without** its value), `start`, `confirmCode`, `rejectCode`,
+`sendText`, `offerItem(_:senderName:appVersion:authorization:)` (consumes a
+`ShareAuthorizationModel(.nearbySend)`; manifest from the share builder's `.item(id)`; the value
+is decrypted only when the peer asks, and only if the item still has the offered name, kind and
+scope), `requestAttachment`, `declineAttachment`, `previewAttachment(_:checkGitHub:) ->
+ShareImportDraftModel` (moves the received value into a share import draft; apply it with
+`SharingRepository.apply`), `discardAttachment`, `close()` (wipes every received value; aborts
+and disconnects do too). Errors: `NearbyChatError` (`.chat(ChatError)`, `.sharing(SharingError)`,
+`.valueMissing`, `.attachmentUnavailable`).
 
 **Composition (`AppContainer`, `App/Composition/VaultDataComponents.swift`).**
 
@@ -490,7 +530,7 @@ let reauth = ReauthGate(manager: vault)
 ```
 
 - One instance of each repository for the process (`VaultDataComponents`): `github`, `catalog`,
-  `config`, `envFiles`, `sync`, `creation`, `cloner`, `drift`, `sharing`.
+  `config`, `envFiles`, `sync`, `creation`, `cloner`, `drift`, `sharing`, `chat`.
 - git needs the probed login-shell environment (PATH, `SSH_AUTH_SOCK`). `GitServiceProvider`
   resolves it on first use through `github.shellEnvironment()`; `ShellResolvingRepoCloner`
   (`RepoCloning`, also `sync`'s cloner) and `ShellResolvingGitignoreChecker` (`envFiles`) use it.
@@ -558,7 +598,7 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 31 | M4 | New Repository with "Clone to my Mac" on needs a clone folder before Create; the owner picker shows "(Personal)" / "(Organization)" (no organization role is available) |
 | 32 | §5.12 | `.env` export runs the git checks once before writing and shows them after the write (the iCloud warning must come before it); a failed write uses up the Touch ID / password authorization |
 | 33 | §5.12 | Pasted `.env` text is cleared as soon as it is parsed; Start Over returns to an empty paste box. **Superseded in v0.1.1:** paste mode parses live and keeps the text in the editor until the import, close or lock (bulk paste) |
-| 34 | §9 | The share scope tree checks one node at a time (a package holds exactly one scope); checking a node includes everything under it |
+| 34 | §9 | The share scope tree checks one node at a time (a package holds exactly one scope); checking a node includes everything under it. **Superseded in v0.2.0:** the tree is multi-select with tri-state checkboxes (a "Repository level" group, each environment, each item; any combination). An environment's branch policy is shared only when its checkbox is fully checked; a mixed environment shares only its checked items (schema v2 partial environment, SHARING-PROTOCOL.md §1.1–§1.2) |
 | 35 | §7.3 | Clone in the Sync result is always offered for a failed or not-attempted clone; without a clone folder it asks for one (`ClonePanel`) |
 
 ### As built in v0.1.1 (bulk paste and Touch ID)
@@ -573,6 +613,23 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 41 | Touch ID | `errSecAuthFailed` without lockout maps to `.passwordFallbackRequested` (keeps the item); only `errSecItemNotFound` means invalidated. Enrollment changes are also caught from `biometry_state_hash`: a password unlock deletes the stale item and clears the enablement. The re-offer after a password unlock follows `VaultManager.isBiometricsTurnedOffAutomatically`, not the reason the lock screen showed (restart and 14 days are checked before the enrollment) |
 | 42 | Touch ID | `--diagnose` is answered by `FXVaultMain` (the `@main` entry) before `FXVaultApp.main()`, so the app delegate never opens the database. The probe adds and deletes with `KeychainManager.addQuery` under its own service; it has no read path. Unsigned builds skip it |
 
+### As built in v0.2.0 (flexible sharing, connectivity banner, nearby chat)
+
+| # | Area | Decision |
+|---|---|---|
+| 43 | Sharing | The scope values stay `secret` / `environment` / `repository`; any mix is `repository`. Schema v2 exists only for partial environments (`deploymentBranchPolicy: null`) and is written only when one is present (lowest-version rule), so whole environments, the whole repository and repository-level selections stay readable by 0.1.x (SHARING-PROTOCOL.md §1.1) |
+| 44 | Sharing | A branch policy travels only with a fully checked environment. A partial environment never changes the receiver's policy; when it is missing on the receiver it is created with GitHub's policy and patterns if GitHub lists it (synced), else with all branches (pending create). `.item` on an environment item is now a partial environment (supersedes decision 34) |
+| 45 | Connectivity | `ConnectivityMonitor` applies the first path at once and later changes after 2 s on the injected clock; Low Data Mode is online, requires-connection is offline. `GitHubReachability` makes no calls of its own: the sidebar, repository detail, Add by name, the Sync sheet (preflight, start, and the last change of a run that says anything about GitHub), Create Repository (owners and templates) and the drift review report their gh outcomes |
+| 46 | Connectivity | Nearby share and Nearby Chat are never gated by `isOnline` (peer-to-peer Wi-Fi works with no internet route, and a Mac with Wi-Fi on but joined to no network reports no connection). Nearby Chat is disabled only by `hasNetworkInterface == false`. Clone is disabled offline too; the toolbar Import .env stays enabled (local only). A Sync sheet left open when the Mac goes offline cannot start a run or review deletions and says why in its footer |
+| 47 | Nearby | Listener, browser and connection set `includePeerToPeer` (AWDL); the protocol bytes and KATs are unchanged. 0.1.x does not use AWDL, so 0.1.x and 0.2.0 Macs meet only on a shared network |
+| 48 | Chat | Chat is domain-separated from share by its Bonjour type (`_fxvault-chat._tcp`) and label prefix (`fxvault/chat/v1`); the handshake moved, unchanged, into the internal `NearbyKeyExchange` used by both. Chat KATs are cross-checked with Python like the share KATs |
+| 49 | Chat | Ephemeral by construction: the session keeps no history, the window's transcript lives in the view model only, and close, lock, sleep, screen lock, disconnect, timeout and End Chat wipe it. Idle 10 min, keepalive PING every 30 s (abort after 2 unanswered), no overall limit; the responder waits for a connection without a timer |
+| 50 | Chat | Attaching asks ReauthGate before the picker opens and reuses `ShareAuthorizationPurpose.nearbySend` (its Touch ID prompt). The offer carries a manifest only; the value is decrypted when the peer asks and only if the item still has the offered name, kind and scope. "Save to my vault" goes through the share import preview and `SharingRepository.apply` |
+| 51 | Chat | The chat window needs an unlocked vault; closing the main window locks the vault (D16) and so ends the chat. A responder whose unverified peer drops before HELLO, or leaves before the code is shown, re-advertises and returns to the people list without an "ended" screen or a failed-handshake count; only listener failures (no connection accepted) count, 3 in a row at most. `incomingConnection` clears the "visible" chip. There is no accept/decline step before the code comparison (open product question) |
+| 52 | Nearby | Chat advertises the user's sanitized display name (Preferences › General › "Name for nearby Macs", else the macOS full name) as its Bonjour instance name. Nearby share and receive use the same name in HELLO (`ShareLocalIdentityModel.nearby(preferences:)`) but keep random Bonjour instance names |
+| 53 | Chat | Flood limits: more than 100 TEXT/offer/request/decline/PING frames in 10 s, or more than 32 offers per chat, abort with `unexpectedMessage`; the window keeps 1,000 messages. Text and names drop every invisible character (`UnicodeScalarPolicy.isInvisible`); chat text keeps one blank line in a row and four combining marks per character. Messages are not selectable: Copy goes through `ClipboardManager`. Late async results (send, offer, request, a save preview) of a chat that ended are dropped. An offer's value provider refuses a value whose `value_fp` changed since the offer. Discovery uses the `local.` domain and filters this Mac by its registered name |
+| 54 | Sharing | A missing partial environment whose items are all skipped is not created (`ShareEnvironmentPlanModel.createsEnvironment`); a nearby DECISION carries such an environment's id only with an accepted item. A tree opened for one item keeps sharing that item even if it is its environment's only item, until the checks change. Share import previews read GitHub only when online (`FeatureDependencies.checksGitHub`), and their "Import repository" button, the drift review's Refresh and resolutions, and Create Repository's Sync Now… are disabled offline with `ConnectivityCopy.offlineHelp`. The connectivity debounce is not restarted by more updates of the same transition; a reconnect cancels the previous one and re-lists drift only when the last check failed, never ran or was skipped offline |
+
 
 ## App shell
 
@@ -584,8 +641,9 @@ AppTests).
   test host never touches `~/Library`, the keychain or gh). Properties: `vaultManager`, `data:
   VaultDataComponents`, `reauth: ReauthGate`, `preferences`, `clipboard`, `autoLock`,
   `ghStatusProbe`, `dockBadge`, `passphraseGenerator`, `vaultDirectory`, `clock`,
-  `hasSideEffects`. `live()` uses `GitHubEnvironmentStatusProbe`; `preview()` a
-  `FixedGHStatusProbe`.
+  `connectivity`, `gitHubReachability`, `hasSideEffects`. `live()` uses
+  `GitHubEnvironmentStatusProbe` and `NWPathMonitorSource`; `preview()` a `FixedGHStatusProbe`
+  and a `FixedNetworkPathSource` (always online; tests pass their own monitor).
 - `AppBootstrap` (`.ready(AppViewModel)` / `.failed(ErrorPresentationModel)`), owned by
   `AppDelegate`: a startup-failure screen, never a fallback to an empty vault.
 - `@Observable AppViewModel`: `phase: VaultPhase`, `ghStatus` / `isCheckingGH` /
@@ -598,6 +656,10 @@ AppTests).
   `lock(trigger:)`, `didUnlock()`, `completeOnboarding()`, `didResetVault()`,
   `applicationWillTerminate()`, `shouldOfferTouchID(afterInvalidation:)` /
   `recordTouchIDOfferAnswer()` (the one-time Touch ID offer) and `make…ViewModel()` factories.
+- Scenes: the main `Window` (`SceneID.main`), Settings, and since v0.2.0 the **Nearby Chat**
+  `Window` (`SceneID.nearbyChat` = `"nearby-chat"`, `NearbyChatScreen(app:)`), opened from
+  Share › Nearby Chat… (toolbar and Vault menu) and listed by SwiftUI in the Window menu; never
+  restored at launch (`isRestorable = false`).
 - `FXVaultMain` (`FXVaultApp.swift`) is the `@main` entry: `DiagnoseCommand.runIfRequested()`
   answers `--diagnose` (JSON on stdout, then `exit(0)`) before `FXVaultApp.main()` creates the app
   delegate, so no window, vault or database opens. `App/Diagnostics`: `DiagnosticReporter`
@@ -624,9 +686,30 @@ AppTests).
   after 30 s if still owned), `copyCommand(_:)` (plain text such as `brew install gh`, never
   cleared), `clearIfOwned()`; never reads the pasteboard.
 - `@Observable PreferencesManager(store:)`: `autoLockMinutes` / `autoLockTimeout`, clone folder,
-  `ghPathOverride`, `isRecoveryKeyConfirmationPending`, `hasAnsweredTouchIDOffer`; `UserDefaultsPreferencesStore` (live) or
+  `ghPathOverride`, `isRecoveryKeyConfirmationPending`, `hasAnsweredTouchIDOffer`,
+  `nearbyDisplayName` / `nearbyName` (v0.2.0: the name nearby Macs see, Preferences › General;
+  nil uses the macOS full name); `UserDefaultsPreferencesStore` (live) or
   `InMemoryPreferencesStore`.
 - `DockBadgeDisplaying` (`DockBadgeManager`, `RecordedDockBadge`).
+- `ConnectivityMonitor(source:clock:debounce:)` (v0.2.0, `@Observable`): `isOnline`,
+  `isConstrained`, `start()` (by `AppViewModel.init`), `stop()` (at quit),
+  `addObserver(_ ConnectivityObserving)` (held weakly). The first path applies at once; later
+  changes apply only after holding `Theme.Durations.connectivityDebounce` (2 s) on the injected
+  clock, so a flapping path never reaches the UI. Satisfied (also constrained, Low Data Mode) is
+  online; unsatisfied and requires-connection are offline. Sources: `protocol NetworkPathSource`
+  with `NWPathMonitorSource` (live; reads path metadata only, sends nothing) and
+  `FixedNetworkPathSource`; `NetworkPathModel` is the reduced `NWPath`. Separately,
+  `hasNetworkInterface` (v0.2.0 Nearby Chat; applied at once, no debounce) is true while any
+  interface can reach a nearby Mac: the path lists one other than loopback, or the Wi-Fi radio is
+  on even when it joined no network (`WiFiRadio`, CoreWLAN power state only; a power change
+  re-reports the path). Nearby Chat is disabled only when it is false; `isOnline` never gates it.
+- `GitHubReachability` (v0.2.0, `@Observable`): `isResponding`, `isRetrying`,
+  `record(error)`, `recordSuccess()`, `reset()`, `retry(_:)`. It makes no calls of its own: view
+  models report the outcome of the gh calls they already make. `GHError.network` / `.timeout`
+  (after the scheduler's retries) mean not responding; a success or an error GitHub returned
+  (404, 422, 401, rate limit, 5xx, SAML) means responding; local failures say nothing.
+  `Error.gitHubFailure` unwraps the `GHError` inside VaultData and SyncEngine errors. Retry runs
+  the main window's own calls again and clears the state when none of them reported anything.
 - `GHStatusProbing`: `GitHubEnvironmentStatusProbe(github:overridePath:)` (`detectGH` then
   `accounts()`) and `FixedGHStatusProbe`. `GHStatusModel`: `.checking`, `.unknown`,
   `.ready(version:path:)`, `.notInstalled`, `.outdated(found:required:)`, `.untrusted(path:)`,
@@ -669,7 +752,23 @@ AppTests).
     target. Revealed values re-mask after
     `Timeouts.revealRemask` (injected clock), on resign active, on scope change and on lock.
     The drift check runs when a repository opens (`DriftRepository.detectOnOpen`).
-  - Toolbar: New Repository, Import .env, Share menu (File… / Nearby… / Receive Nearby…), Lock,
+  - Connectivity (v0.2.0): `ConnectivityBannerView` above the three columns shows
+    `MainViewModel.connectivityBanner` ("No internet connection. Your changes stay in the vault;
+    sync when you're back online.", or "GitHub isn't responding. Try again in a moment." with
+    Retry → `retryGitHub()`; offline wins). While offline, Sync, New Repository, Import (sidebar
+    and detail prompt), Add repository by name, Clone, Refresh, the catalog reload and every
+    drift check are disabled, with `ConnectivityCopy.offlineHelp` as their `.help`
+    (`networkHelp(_:)`), and the router refuses `MainSheet.needsInternet` routes (`.sync`,
+    `.createRepository`, `.addRepositoryByName`, also when chained by a feature). Local editing,
+    `.env` import/export, file sharing and nearby send/receive stay available: nearby is
+    peer-to-peer (AWDL) and needs no internet route. `MainViewModel` is a `ConnectivityObserving`:
+    when the connection returns it resets `GitHubReachability`, reloads the repository lists if
+    they never loaded or failed (`SidebarViewModel.needsReload`) and re-runs the open
+    repository's drift check (`reconnectTask`). Sidebar, repository detail, Add by name, the
+    Sync sheet, Create Repository and the drift review report their gh outcomes to
+    `GitHubReachability` (decision 45).
+  - Toolbar: New Repository, Import .env, Share menu (File… / Nearby… / Receive Nearby… /
+    Nearby Chat…, which opens the chat window), Lock,
     Sync (`SyncToolbarButton`, count in the label, disabled at 0, while locked, while syncing and
     without gh). Menu commands (`VaultCommands`): File › New Repository… (⌘N), Import .env… (⇧⌘I);
     Vault › Lock (⌃⌘L), Sync (⇧⌘S), Share. Commands reach the window through
@@ -723,8 +822,9 @@ AppTests).
     plaintext, skipped and unverified-share warnings → save panel → iCloud confirmation before
     any write → 0600 write → git tracked / not ignored / ignored / unknown, with the `.gitignore`
     offer). One authorization per write; a failed write uses it up.
-  - `Sharing` (§9, M6): file export (`ReauthGate.authorizeShare(.fileExport)` → one-node scope
-    tree → `exportFile` into `$TMPDIR/io.fractalx.fxvault.shares/<uuid>/` (0700 / 0600) →
+  - `Sharing` (§9, M6): file export (`ReauthGate.authorizeShare(.fileExport)` → multi-select
+    tri-state scope tree (`ShareScopeTreeModel`, also used by the nearby "what to send" picker)
+    with per-scope counts (`ShareContentSummaryView`) → `exportFile` into `$TMPDIR/io.fractalx.fxvault.shares/<uuid>/` (0700 / 0600) →
     passphrase shown once → Save… (0600) or AirDrop…; the staged file is removed on close or when
     AirDrop ends), import (header before passphrase; one message for wrong passphrase / damaged
     file; chips, Keep mine default, widening-policy and replay confirmations; one-click import of
@@ -733,6 +833,25 @@ AppTests).
     `SASCodeView` with no default button; re-authentication before the manifest; advertising
     only while the receive sheet is open; no automatic retry). Re-authentication sheets use
     `ShareReauthModel` / `ShareReauthView`.
+
+- `NearbyChat` (v0.2.0, experimental; its own window, not a sheet): `NearbyChatViewModel`
+  (`LockObserving`, built by `AppViewModel.makeNearbyChatViewModel()` over
+  `nearbyChatDependencies()`, whose `present` brings the main window forward) with steps
+  `locked` / `unavailable` / `browsing` / `connecting` / `comparing` / `chatting` / `ended`.
+  While browsing, the window advertises under `ShareLocalIdentityModel.nearby(preferences:)` and
+  lists peers (`NearbyChatNetworking`: `LiveNearbyDiscovery(purpose: .chat)` and
+  `advertisingChat`, this Mac left out) with "You're visible to nearby Macs as …"; connecting or
+  being connected stops both. `SASCodeView` (no default button), then bubbles with times, an
+  attachment card per offer, and the composer (⌘↩, `Limits.chatMessageBytes` after
+  sanitizing). "Attach secret or variable…" opens `ChatAttachmentPickerViewModel`
+  (`ShareReauthModel(.nearbySend)` first, then one item from `chat.attachableItems()`); a
+  received card offers "Save to my vault" (requests the value, then `ChatSaveViewModel`: the
+  share import preview with `ShareImportPlanEditor`, repository import, `SharingRepository.apply`)
+  or "Dismiss". Window close, lock (sleep and screen lock lock), "End Chat", the peer leaving, a
+  disconnect or timeout end the chat: the transcript, cards, draft and any received value are
+  wiped and the window shows "Conversation ended. Nothing was saved." Disabled only without any
+  network interface (`ConnectivityMonitor.hasNetworkInterface`); closing the main window locks the
+  vault (D16) and therefore ends the chat.
 
 **Components** (`App/Components`): `SecretValueEditor`, `MaskedValueCell` (display-only: masked /
 revealed / plain / missing, the view model owns reveal state), `CommandRow`,
@@ -793,7 +912,10 @@ Every entry view is `struct XScreen: View { init(context: XContext, dependencies
 FeatureDependencies) }` (all `App/Screens/<Folder>/<XScreen>.swift`). The one non-sheet entry is
 `Drift/DriftBannerView: init(report: DriftReportModel, onReview: @escaping () -> Void)`, shown by
 `RepoDetailScreen` when the last drift check found something; `onReview` presents
-`.driftReview`. Contexts carry ids only (never values or names that could go stale): re-read
+`.driftReview`. The Nearby Chat window (v0.2.0) is not routed at all: it is its own scene,
+`NearbyChatScreen(app:)`, whose view model gets `FeatureDependencies` from
+`AppViewModel.nearbyChatDependencies()` (lock observers and gh readiness as for sheets; `present`
+brings the main window forward, `refresh` and `select` do nothing). Contexts carry ids only (never values or names that could go stale): re-read
 through the repositories. The one exception is `EnvImportContext.Start.pasted`, which carries
 the text the user pasted on the detail table in an `EnvPasteBuffer` (a class compared and
 hashed by identity, `SecretBytes` inside, redacted description); the import view model takes the
@@ -808,13 +930,15 @@ so view-model tests construct it with a `TestHarness`.
 | Member | Use |
 |---|---|
 | `session` | The vault session (`authorizeEnvExport` / `authorizeShare` need it). |
-| `config`, `catalog`, `github`, `sync`, `drift`, `envFiles`, `sharing`, `creation` | The VaultData repositories (one instance each). |
+| `config`, `catalog`, `github`, `sync`, `drift`, `envFiles`, `sharing`, `creation`, `chat` | The VaultData repositories (one instance each; `chat` is Nearby Chat's `ChatRepository`). |
 | `cloner` | Clone (`RepoCloning`); never `creation.clone`. |
 | `reauth` | `ReauthGate`. |
 | `clipboard` | `ClipboardManager` (values: `copy`, commands: `copyCommand`). |
 | `preferences` | Clone folder, gh override. |
 | `passphraseGenerator` | 6-word passphrases (nil if the wordlist failed its check). |
 | `clock` | `any VaultClock` for every timer (tests use `ManualClock`). |
+| `connectivity` | `ConnectivityMonitor`: disable gh-backed actions while `!isOnline` (with `ConnectivityCopy.offlineHelp`). Nearby sharing does not depend on it. |
+| `gitHubReachability` | Report gh outcomes (`record(error)` / `recordSuccess()`) for the "GitHub isn't responding" banner. |
 | `actions` | `MainActions` (below). |
 | `copyValue(of:)` | Decrypt, copy with the privacy markers, wipe. |
 | `FeatureDependencies.reauthPrompt(for:)` | The Touch ID prompt for `.export`, `.share`, `.nearbySend`. |

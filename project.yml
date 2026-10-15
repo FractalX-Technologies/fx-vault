@@ -45,9 +45,10 @@ targets:
         LSApplicationCategoryType: public.app-category.developer-tools
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         NSHumanReadableCopyright: Copyright (c) 2026 FractalX. MIT License.
-        NSLocalNetworkUsageDescription: FX Vault uses the local network to share configuration with a nearby teammate.
+        NSLocalNetworkUsageDescription: FX Vault uses the local network to share configuration and chat with a nearby teammate.
         NSBonjourServices:
           - _fxvault-share._tcp
+          - _fxvault-chat._tcp
         UTExportedTypeDeclarations:
           - UTTypeIdentifier: io.fractalx.fxvault.share
             UTTypeDescription: FX Vault Share

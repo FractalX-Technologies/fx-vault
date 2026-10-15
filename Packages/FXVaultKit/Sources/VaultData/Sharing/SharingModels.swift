@@ -5,13 +5,44 @@ import SharingKit
 import VaultCore
 
 /// What to share (§9.3 `scope`, §10 `ShareExportScreen` scope tree).
+///
+/// An environment's branch policy is shared only when the environment itself is selected
+/// (`.environment`, `.repository`, or listed in a subset's `environmentIDs`); an environment
+/// reached only through some of its items travels as a partial environment without a policy
+/// (docs/SHARING-PROTOCOL.md §1.2).
 public enum ShareSelectionModel: Sendable, Hashable {
-    /// One secret or variable (`secret` scope), with its environment when it has one.
+    /// One secret or variable (`secret` scope). An environment-level item travels in a partial
+    /// environment (no branch policy).
     case item(ConfigItemID)
     /// One environment with its policy and items (`environment` scope).
     case environment(EnvironmentID)
     /// Repository-level items and every environment (`repository` scope).
     case repository(RepoID)
+    /// Any combination inside one repository (see ``ShareSubsetModel``).
+    case subset(ShareSubsetModel)
+}
+
+/// Any combination of whole environments and individual items of one repository: repository
+/// level only, one or more environments, repository level plus environments, or single items.
+public struct ShareSubsetModel: Sendable, Hashable {
+    public var repositoryID: RepoID
+    /// Whole environments: the branch policy plus every live item at export time.
+    public var environmentIDs: Set<EnvironmentID>
+    /// Individual secrets and variables, at repository level or in environments that are not
+    /// in ``environmentIDs`` (those travel as partial environments without their policy). An
+    /// item inside a whole environment adds nothing.
+    public var itemIDs: Set<ConfigItemID>
+
+    public init(repositoryID: RepoID, environmentIDs: Set<EnvironmentID> = [], itemIDs: Set<ConfigItemID> = []) {
+        self.repositoryID = repositoryID
+        self.environmentIDs = environmentIDs
+        self.itemIDs = itemIDs
+    }
+
+    /// True when nothing is selected.
+    public var isEmpty: Bool {
+        environmentIDs.isEmpty && itemIDs.isEmpty
+    }
 }
 
 /// What an export would contain, for the confirmation step (names and counts, never values).
@@ -23,13 +54,24 @@ public struct ShareExportPreviewModel: Sendable, Hashable {
     public var itemCount: Int
     /// Secrets whose value is missing locally: shared by name only (§7.8).
     public var valueMissingNames: [String]
+    /// Counts per scope: repository level, then each environment with whether its branch
+    /// policy is included.
+    public var summary: ShareContentSummaryModel
 
-    public init(scope: ShareScope, repositoryFullName: String, environmentNames: [String], itemCount: Int, valueMissingNames: [String]) {
+    public init(
+        scope: ShareScope,
+        repositoryFullName: String,
+        environmentNames: [String],
+        itemCount: Int,
+        valueMissingNames: [String],
+        summary: ShareContentSummaryModel
+    ) {
         self.scope = scope
         self.repositoryFullName = repositoryFullName
         self.environmentNames = environmentNames
         self.itemCount = itemCount
         self.valueMissingNames = valueMissingNames
+        self.summary = summary
     }
 }
 
@@ -150,6 +192,9 @@ struct ShareRemoteContextModel: Sendable {
     let rowIDs: [ShareRemoteKeyModel: ConfigItemID]
     /// Listed environments by fold key.
     let environments: [String: GHEnvironmentDTO]
+    /// Listed custom deployment patterns (B5) by environment fold key: a partial environment
+    /// GitHub already has is created with GitHub's policy.
+    var patterns: [String: [GHBranchPolicyDTO]] = [:]
 }
 
 /// A listed item's identity: environment fold key ("" at repository level), kind and name fold

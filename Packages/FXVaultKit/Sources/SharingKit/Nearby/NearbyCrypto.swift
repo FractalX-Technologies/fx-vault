@@ -71,12 +71,19 @@ struct NearbyFailure: Error, Sendable, Hashable {
     }
 }
 
-/// The pure cryptography of nearby protocol v1 (§9.4, D21).
+/// The pure cryptography of nearby protocol v1 (§9.4, D21), shared by share and chat. Every
+/// function takes the purpose's ``NearbyLabels``; the default is the share labels.
 enum NearbyCrypto {
-    /// `C = SHA256(LP("fxvault/nearby/v1/commit") ‖ maxVerI ‖ suiteI ‖ LP(pkI) ‖ LP(nI))`.
-    static func commitment(maxVersion: UInt8, suite: UInt8, publicKey: Data, nonce: Data) -> Data {
+    /// `C = SHA256(LP("<prefix>/commit") ‖ maxVerI ‖ suiteI ‖ LP(pkI) ‖ LP(nI))`.
+    static func commitment(
+        maxVersion: UInt8,
+        suite: UInt8,
+        publicKey: Data,
+        nonce: Data,
+        labels: NearbyLabels = .share
+    ) -> Data {
         var message = Data()
-        message.appendLengthPrefixed(NearbyProtocol.labelCommit)
+        message.appendLengthPrefixed(labels.commit)
         message.append(maxVersion)
         message.append(suite)
         message.appendLengthPrefixed(publicKey)
@@ -84,11 +91,11 @@ enum NearbyCrypto {
         return Data(SHA256.hash(data: message))
     }
 
-    /// `TH = SHA256(LP(label) ‖ maxVerI ‖ maxVerR ‖ ver ‖ suiteI ‖ suiteR ‖ LP(C) ‖ LP(pkI) ‖
-    /// LP(nI) ‖ LP(nameI) ‖ LP(pkR) ‖ LP(nR) ‖ LP(nameR))`.
-    static func transcriptHash(_ transcript: NearbyTranscriptModel) -> Data {
+    /// `TH = SHA256(LP("<prefix>/transcript") ‖ maxVerI ‖ maxVerR ‖ ver ‖ suiteI ‖ suiteR ‖ LP(C) ‖
+    /// LP(pkI) ‖ LP(nI) ‖ LP(nameI) ‖ LP(pkR) ‖ LP(nR) ‖ LP(nameR))`.
+    static func transcriptHash(_ transcript: NearbyTranscriptModel, labels: NearbyLabels = .share) -> Data {
         var message = Data()
-        message.appendLengthPrefixed(NearbyProtocol.labelTranscript)
+        message.appendLengthPrefixed(labels.transcript)
         message.append(contentsOf: [
             transcript.maxVersionI,
             transcript.maxVersionR,
@@ -132,11 +139,15 @@ enum NearbyCrypto {
     }
 
     /// SAS and direction keys from the shared secret, salted with the transcript hash.
-    static func deriveSession(sharedSecret: SharedSecret, transcriptHash: Data) -> NearbySessionKeys {
+    static func deriveSession(
+        sharedSecret: SharedSecret,
+        transcriptHash: Data,
+        labels: NearbyLabels = .share
+    ) -> NearbySessionKeys {
         let sasKey = sharedSecret.hkdfDerivedSymmetricKey(
             using: SHA256.self,
             salt: transcriptHash,
-            sharedInfo: NearbyProtocol.labelSAS,
+            sharedInfo: labels.sas,
             outputByteCount: NearbyProtocol.sasKeyBytes
         )
         let sasBits = sasKey.withUnsafeBytes { bytes in
@@ -145,13 +156,13 @@ enum NearbyCrypto {
         let initiatorToResponder = sharedSecret.hkdfDerivedSymmetricKey(
             using: SHA256.self,
             salt: transcriptHash,
-            sharedInfo: NearbyProtocol.labelInitiatorToResponder,
+            sharedInfo: labels.initiatorToResponder,
             outputByteCount: NearbyProtocol.directionKeyBytes
         )
         let responderToInitiator = sharedSecret.hkdfDerivedSymmetricKey(
             using: SHA256.self,
             salt: transcriptHash,
-            sharedInfo: NearbyProtocol.labelResponderToInitiator,
+            sharedInfo: labels.responderToInitiator,
             outputByteCount: NearbyProtocol.directionKeyBytes
         )
         return NearbySessionKeys(

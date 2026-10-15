@@ -24,7 +24,7 @@ struct NearbyReceiveScreen: View {
                 title: String(localized: "nearbyReceive.title", defaultValue: "Receive Nearby"),
                 subtitle: String(
                     localized: "nearbyReceive.subtitle",
-                    defaultValue: "Receive configuration from a teammate's Mac on the same network. This Mac is visible only while this window is open."
+                    defaultValue: "Receive configuration from a teammate's Mac nearby. This Mac is visible only while this window is open."
                 ),
                 isExperimental: true
             )
@@ -89,18 +89,15 @@ struct NearbyReceiveScreen: View {
                 if let reason = editor.blockReason {
                     ShareNoteView(systemImage: "exclamationmark.octagon", text: reason.localizedMessage, tint: Theme.Colors.danger)
                     if viewModel.needsRepositoryImport {
-                        HStack(spacing: Theme.Spacing.small) {
-                            Button(String(
+                        ShareImportRepositoryButton(
+                            title: String(
                                 localized: "nearbyReceive.importRepo",
                                 defaultValue: "Import \(viewModel.repositoryFullName ?? "") from GitHub"
-                            )) {
-                                Task { await viewModel.importRepository() }
-                            }
-                            .disabled(viewModel.isImportingRepository)
-                            if viewModel.isImportingRepository {
-                                ProgressView()
-                                    .controlSize(.small)
-                            }
+                            ),
+                            isImporting: viewModel.isImportingRepository,
+                            isOnline: viewModel.isOnline
+                        ) {
+                            Task { await viewModel.importRepository() }
                         }
                     }
                 }

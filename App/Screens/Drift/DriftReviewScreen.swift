@@ -78,8 +78,10 @@ struct DriftReviewScreen: View {
                 Label(String(localized: "drift.review.refresh", defaultValue: "Refresh"), systemImage: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
-            .disabled(viewModel.isLoading)
-            .help(String(localized: "drift.review.refresh.help", defaultValue: "Check GitHub again"))
+            .disabled(viewModel.isLoading || !viewModel.isOnline)
+            .help(viewModel.isOnline
+                ? String(localized: "drift.review.refresh.help", defaultValue: "Check GitHub again")
+                : ConnectivityCopy.offlineHelp)
         }
         .padding(Theme.Spacing.large)
     }

@@ -129,6 +129,11 @@ struct DisplayNameSanitizerTests {
         ("Al\u{0}ex", "Alex"),
         ("Jose\u{301}", "Jos\u{E9}"),
         ("\u{2066}\u{2069}", ""),
+        // Invisible characters a peer could hide in a name.
+        ("Al\u{E0041}\u{E0042}ex", "Alex"),
+        ("Al\u{00AD}ex\u{2062}", "Alex"),
+        ("\u{3164}Alex\u{115F}", "Alex"),
+        ("Al\u{FFF9}ex\u{FFFB}", "Alex"),
     ])
     func sanitizes(input: String, expected: String) {
         let output = DisplayNameSanitizer.sanitize(input)

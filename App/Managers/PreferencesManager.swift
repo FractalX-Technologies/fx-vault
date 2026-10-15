@@ -95,6 +95,7 @@ final class PreferencesManager {
         static let ghPathOverride = "preferences.ghPathOverride"
         static let recoveryKeyConfirmationPending = "preferences.recoveryKeyConfirmationPending"
         static let touchIDOfferAnswered = "preferences.touchIDOfferAnswered"
+        static let nearbyDisplayName = "preferences.nearbyDisplayName"
     }
 
     /// Auto-lock choices offered in Preferences, in minutes (§5.7).
@@ -109,6 +110,7 @@ final class PreferencesManager {
         ghPathOverride = Self.normalizedPath(store.string(forKey: Key.ghPathOverride))
         isRecoveryKeyConfirmationPending = store.bool(forKey: Key.recoveryKeyConfirmationPending)
         hasAnsweredTouchIDOffer = store.bool(forKey: Key.touchIDOfferAnswered)
+        nearbyDisplayName = store.string(forKey: Key.nearbyDisplayName)
     }
 
     /// Inactivity auto-lock, in minutes. Always one of ``autoLockOptions``.
@@ -170,11 +172,33 @@ final class PreferencesManager {
         }
     }
 
+    /// The name nearby Macs see while Nearby Chat is open (v0.2.0), as typed, or nil for the
+    /// macOS user's full name (a blank name is nil). Readers trim it (``nearbyName``). Sent in
+    /// cleartext on the local network and unverified for the receiver (SECURITY-MODEL.md).
+    var nearbyDisplayName: String? {
+        didSet {
+            if let name = nearbyDisplayName, Self.normalizedName(name) == nil {
+                nearbyDisplayName = nil
+                return
+            }
+            store.set(nearbyDisplayName, forKey: Key.nearbyDisplayName)
+        }
+    }
+
+    /// ``nearbyDisplayName`` trimmed, or nil.
+    var nearbyName: String? {
+        Self.normalizedName(nearbyDisplayName)
+    }
+
     // MARK: - Validation
 
     static func validatedAutoLockMinutes(_ minutes: Int?) -> Int {
         guard let minutes, autoLockOptions.contains(minutes) else { return Timeouts.autoLockDefaultMinutes }
         return minutes
+    }
+
+    private static func normalizedName(_ name: String?) -> String? {
+        normalizedPath(name)
     }
 
     private static func normalizedPath(_ path: String?) -> String? {

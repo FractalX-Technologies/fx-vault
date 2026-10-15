@@ -34,6 +34,8 @@ struct VaultDataComponents {
     let cloner: any RepoCloning
     let drift: DriftRepository
     let sharing: SharingRepository
+    /// Nearby chat conversations and the items that can be attached (v0.2.0).
+    let chat: ChatRepository
 
     /// Builds every repository over `session`.
     ///
@@ -78,6 +80,7 @@ struct VaultDataComponents {
             clock: clock,
             writePolicy: writePolicy
         )
+        let sharing = SharingRepository(session: session, schedulers: github, deriver: deriver, clock: clock, writePolicy: writePolicy)
         return VaultDataComponents(
             session: session,
             github: github,
@@ -93,7 +96,8 @@ struct VaultDataComponents {
             creation: RepoCreationRepository(session: session, schedulers: github, git: nil, clock: clock, writePolicy: writePolicy),
             cloner: cloner,
             drift: DriftRepository(session: session, schedulers: github, clock: clock, writePolicy: writePolicy),
-            sharing: SharingRepository(session: session, schedulers: github, deriver: deriver, clock: clock, writePolicy: writePolicy)
+            sharing: sharing,
+            chat: ChatRepository(session: session, sharing: sharing, clock: clock)
         )
     }
 

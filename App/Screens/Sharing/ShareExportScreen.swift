@@ -81,7 +81,7 @@ struct ShareExportScreen: View {
                     .frame(maxWidth: .infinity, minHeight: Theme.Layout.shareListHeight)
             }
             if let preview = viewModel.preview {
-                ShareExportSummaryView(preview: preview)
+                ShareContentSummaryView(preview: preview)
             }
         }
     }
@@ -157,33 +157,6 @@ struct ShareExportScreen: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(!viewModel.canCreate)
                 }
-            }
-        }
-    }
-}
-
-/// What the checked scope contains: names and counts only.
-private struct ShareExportSummaryView: View {
-    let preview: ShareExportPreviewModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-            ShareNoteView(
-                systemImage: "shippingbox",
-                text: String(
-                    localized: "shareExport.summary",
-                    defaultValue: "\(preview.itemCount) items and \(preview.environmentNames.count) environments from \(preview.repositoryFullName)"
-                )
-            )
-            if !preview.valueMissingNames.isEmpty {
-                ShareNoteView(
-                    systemImage: "exclamationmark.triangle",
-                    text: String(
-                        localized: "shareExport.summary.valueMissing",
-                        defaultValue: "\(preview.valueMissingNames.count) secrets have no value in your vault and are shared by name only."
-                    ),
-                    tint: Theme.Colors.warning
-                )
             }
         }
     }

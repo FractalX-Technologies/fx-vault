@@ -95,7 +95,7 @@ final class ShareImportViewModel: LockObserving {
             let opened = try await dependencies.sharing.openFile(
                 file,
                 passphrase: passphrase,
-                checkGitHub: dependencies.actions.isGitHubReady()
+                checkGitHub: dependencies.checksGitHub
             )
             passphrase = ""
             show(opened)
@@ -118,15 +118,20 @@ final class ShareImportViewModel: LockObserving {
     }
 
     /// Imports the repository through an account with access, then plans the package again.
+    /// The import goes through gh: offline it is disabled with the offline explanation.
+    var isOnline: Bool {
+        dependencies.connectivity.isOnline
+    }
+
     func importRepository() async {
-        guard needsRepositoryImport, let draft, !isImportingRepository else { return }
+        guard needsRepositoryImport, isOnline, let draft, !isImportingRepository else { return }
         isImportingRepository = true
         defer { isImportingRepository = false }
         do {
             let repository = draft.manifest.repository
             _ = try await importer.importRepository(owner: repository.owner, name: repository.name)
             dependencies.actions.refresh(.catalog)
-            show(try await dependencies.sharing.replan(draft, checkGitHub: dependencies.actions.isGitHubReady()))
+            show(try await dependencies.sharing.replan(draft, checkGitHub: dependencies.checksGitHub))
         } catch {
             alert = error.presentation
         }
@@ -189,7 +194,7 @@ final class ShareImportViewModel: LockObserving {
 
     private func replanAfterChange(_ outdated: ShareImportDraftModel) async {
         do {
-            show(try await dependencies.sharing.replan(outdated, checkGitHub: dependencies.actions.isGitHubReady()))
+            show(try await dependencies.sharing.replan(outdated, checkGitHub: dependencies.checksGitHub))
         } catch {
             alert = error.presentation
             step = .preview

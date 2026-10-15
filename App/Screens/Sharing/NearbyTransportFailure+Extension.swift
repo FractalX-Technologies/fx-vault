@@ -16,7 +16,7 @@ nonisolated extension NearbyTransportFailure {
                 title: String(localized: "share.nearby.connection.title", defaultValue: "Connection failed"),
                 message: String(
                     localized: "share.nearby.connection.message",
-                    defaultValue: "The connection to the other Mac failed. Make sure both Macs are on the same network."
+                    defaultValue: "The connection to the other Mac failed. Keep both Macs close together with Wi-Fi turned on, then try again."
                 )
             )
         }

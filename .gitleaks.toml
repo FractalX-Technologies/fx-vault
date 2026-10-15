@@ -12,5 +12,6 @@ description = "Synthetic cryptographic test vectors and a sample .env with place
 paths = [
   '''^Packages/FXVaultKit/Tests/VaultCryptoTests/Fixtures/kat/kat_vectors\.json$''',
   '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/nearby_kat\.json$''',
+  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/chat_kat\.json$''',
   '''^Packages/FXVaultKit/Tests/EnvToolsTests/Fixtures/sample\.env$''',
 ]

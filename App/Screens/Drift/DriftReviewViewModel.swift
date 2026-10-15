@@ -95,8 +95,15 @@ final class DriftReviewViewModel {
         await refresh()
     }
 
+    /// Refresh and every resolution read GitHub first (a resolution re-reads the finding's
+    /// scope): offline they are disabled with the offline explanation. "Fill Value…" stays.
+    var isOnline: Bool {
+        dependencies.connectivity.isOnline
+    }
+
     /// **Refresh**: a full re-list now.
     func refresh() async {
+        guard isOnline else { return }
         guard dependencies.actions.isGitHubReady() else {
             alert = ErrorPresentationModel(
                 title: String(localized: "error.drift.title", defaultValue: "GitHub changes not checked"),
@@ -108,7 +115,9 @@ final class DriftReviewViewModel {
         defer { isLoading = false }
         do {
             report = try await service.refresh(repositoryID)
+            dependencies.gitHubReachability.recordSuccess()
         } catch {
+            dependencies.gitHubReachability.record(error)
             alert = error.presentation
         }
     }
@@ -154,7 +163,8 @@ final class DriftReviewViewModel {
             explanation: option == .keepLocal
                 ? DriftCopy.keepLocalExplanation(drift.kind)
                 : DriftCopy.acceptGitHubExplanation(drift.kind),
-            unavailableReason: resolution.unavailableReason.map(DriftCopy.unavailable),
+            unavailableReason: resolution.unavailableReason.map(DriftCopy.unavailable)
+                ?? (isOnline ? nil : ConnectivityCopy.offlineHelp),
             needsConfirmation: Self.needsConfirmation(drift, option)
         )
     }
@@ -195,7 +205,7 @@ final class DriftReviewViewModel {
 
     /// A choice button: asks first when the choice deletes local data.
     func choose(_ driftID: String, _ option: DriftResolutionOption) async {
-        guard let drift = drift(driftID), drift.resolution(option).isAvailable, !resolving.contains(driftID) else { return }
+        guard isOnline, let drift = drift(driftID), drift.resolution(option).isAvailable, !resolving.contains(driftID) else { return }
         if Self.needsConfirmation(drift, option) {
             confirmation = DriftConfirmationModel(
                 driftID: driftID,
@@ -210,7 +220,7 @@ final class DriftReviewViewModel {
 
     /// The confirmed deletion.
     func confirm() async {
-        guard let confirmation, let drift = drift(confirmation.driftID) else { return }
+        guard isOnline, let confirmation, let drift = drift(confirmation.driftID) else { return }
         self.confirmation = nil
         await resolve(drift, confirmation.option)
     }
@@ -225,7 +235,9 @@ final class DriftReviewViewModel {
         let result: DriftResolutionResultModel
         do {
             result = try await service.resolve(drift, option: option)
+            dependencies.gitHubReachability.recordSuccess()
         } catch {
+            dependencies.gitHubReachability.record(error)
             alert = error.presentation
             if error == .stale {
                 await refresh()

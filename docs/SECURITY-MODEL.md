@@ -85,7 +85,10 @@ repository write that was in flight fails with `.locked` and installs or commits
 **Phase B** (after Phase A): lock observers dismiss sheets and wipe on-screen key material, the
 clipboard is cleared if FX Vault still owns it, a running modal panel is aborted, the database
 is checkpointed. The sync, drift and nearby stages add: cancel the active sync run
-(`SyncRunHandle.cancel()`), `DriftRepository.reset()`, cancel nearby sessions.
+(`SyncRunHandle.cancel()`), `DriftRepository.reset()`, cancel nearby sessions. Since v0.2.0 the
+Nearby Chat window is a lock observer too: a lock (including sleep and screen lock, which always
+lock) closes the chat (CLOSE to the peer), stops advertising and browsing, discards an open
+import preview and wipes the transcript, the typed message and every received value.
 
 **Triggers:** system sleep, display sleep, session resign-active, protected data becoming
 unavailable, screen lock, screensaver start, main-window close, manual lock (⌃⌘L), and
@@ -142,7 +145,9 @@ the official signed release.") and every keychain call refuses with `.unsignedBu
 
 ## 6. Re-authentication (D30)
 
-`.env` export, `.fxvault` export and nearby send require a fresh Touch ID or master-password
+`.env` export, `.fxvault` export, nearby send and attaching a secret or variable in Nearby Chat
+(`ShareAuthorizationPurpose.nearbySend`, asked before the item picker opens) require a fresh
+Touch ID or master-password
 check through `ReauthGate` (never `.deviceOwnerAuthentication`, which would accept the macOS
 login password). The result is a single-use authorization (`EnvExportAuthorizationModel`,
 `ShareAuthorizationModel`) bound to the session and its key generation: a lock, unlock or
@@ -210,9 +215,13 @@ non-writable locations owned by root or the user. Details: [API.md](API.md).
 - Clipboard leaks.
 - Accidental `.env` commits and iCloud upload of exports.
 - A person at an unlocked Mac using the recovery-key, export or share paths (ReauthGate).
-- A man in the middle on the local network during nearby sharing (commit-reveal SAS).
+- A man in the middle on the local network or within peer-to-peer Wi-Fi range during nearby
+  sharing and nearby chat (commit-reveal SAS; share and chat use domain-separated labels, so a
+  session of one can never be completed as the other).
 - An intercepted `.fxvault` file (Argon2id plus a 6-word, 77.5-bit passphrase).
-- Malicious share packages (validator, merge defaults, replay warnings).
+- Malicious share packages (validator, merge defaults, replay warnings). A package that shares
+  only some items of an environment carries no branch policy and can never change the
+  receiver's policy (SHARING-PROTOCOL.md §1.2).
 - Partial or indeterminate sync results (journal, reconciliation, verification).
 - Leaked old credentials combined with new data (DEK rotation).
 
@@ -223,6 +232,42 @@ non-writable locations owned by root or the user. Details: [API.md](API.md).
 - A compromised gh token or GitHub account.
 - Keyloggers.
 - A compromised build machine.
+
+### 10.1 Nearby Chat (v0.2.0, experimental)
+
+Protocol details: [SHARING-PROTOCOL.md](SHARING-PROTOCOL.md) §7.
+
+**Assets.** Message text, an attached secret or variable value, and the user's display name.
+
+**Adversaries.** Anyone within Wi-Fi range (on the same network or over peer-to-peer Wi-Fi, about
+10 m): passive listeners, an active relay between the two Macs, a Mac that impersonates a
+teammate's name, and a peer that sends hostile frames.
+
+| Threat | Defense |
+|---|---|
+| Eavesdropping | Every TEXT, attachment, PING and CLOSE frame is AES-GCM under per-direction keys from X25519, with strict sequence numbers bound into the AAD. Nothing but HELLO (display name, versions) and the Bonjour advertisement is cleartext. |
+| Man in the middle | Commit-reveal X25519 with a 6-digit code (SAS) both people compare. A relay gets different codes on each leg; one attempt per session (the commitment stops it from searching for a matching code). Nothing is sent before both press "Codes match"; "Don't match" ends the chat with an interception warning. |
+| Impersonation by name | Display names are unverified and shown as such: the code comparison (in person or over a trusted channel) is what authenticates the peer, and the UI says so. |
+| Share and chat confusion | Separate Bonjour types and label prefixes (`fxvault/chat/v1`): a share session can never complete as a chat or the reverse, and each rejects the other's frame types. |
+| Replay, reorder, truncation, reflection, oversize | Abort the chat (`NearbyChatMachine`): exact sequence numbers per direction, 64 KiB frames, 4 KiB messages, 512 KiB attachments, at most 8 open offers and 32 offers per chat. Text and display names are sanitized on both sides before display: controls, bidi, zero-width and every other invisible character (format characters such as tag characters, soft hyphens and invisible operators, Hangul fillers); a message keeps at most one blank line in a row and four combining marks per character. |
+| Flooding by a verified peer | More than 100 TEXT, offer, request, decline or PING frames within 10 s abort the chat; the window keeps at most 1,000 messages. Decrypted attachment chunks are zeroed once copied into the payload buffer, which is reserved at its final size. |
+| Leaving traces | Ephemeral: messages live only in memory (the session keeps no history; the window's transcript is dropped), no message is logged or written to disk, and closing the window, End Chat, a lock (also on sleep and screen lock), a disconnect, the idle timeout (10 min) or a missed keepalive end the chat and wipe keys, offers, typed text and received values. Message text cannot be selected; Copy goes through `ClipboardManager` (concealed, this Mac only, cleared after 30 s and on lock). One exception: saving an attachment is a share import, so like any import it records the package id, its dates and the sender's (unverified) display name in `imported_share_packages` (replay detection) and logs "Imported a share package" with the count of changed items; never a value or a message. |
+| An attached value | Sending needs Touch ID or the master password first (ReauthGate, `.nearbySend`). The offer is a manifest without the value; the value is decrypted only when the peer asks, re-read and checked against the offered name, kind and scope and against the stored value fingerprint taken when the user authorized the offer (a value changed since then is never sent: the offer is withdrawn), then wiped. The receiver's UI shows name, kind and scope only; "Save to my vault" moves the value into the normal share import preview (re-encrypted under the receiver's DEK), and Dismiss or the end of the chat wipes it. |
+| Unwanted visibility | The Mac is advertised only while the chat window lists people, and only on the link-local Bonjour domain (`local.`, never a wide-area DNS-SD domain); connecting or being connected stops advertising and browsing. The listener accepts one connection. |
+| Disruption by strangers | Anyone nearby can connect to an advertising Mac. A connection that drops, stays silent or sends garbage before its HELLO, or that leaves before the code is shown, returns the window to the people list and advertises again: no "Conversation ended" screen, no failed-handshake count (interception warning), and it never counts toward the listener-failure limit (3 in a row), so a stranger cannot make the Mac invisible. The chip shows "Not visible" while such a connection is held. A Mac that advertises the user's own name stays listed (the own entry is filtered by the name Bonjour actually registered). |
+
+**Cleartext metadata.** While the chat window lists people, the Bonjour instance name (the
+sanitized display name, at most 63 bytes) and the TXT record `v=1` are visible to every Mac in
+range, and HELLO carries the display name and protocol versions in cleartext. Anyone nearby
+learns that someone with that name has FX Vault's chat window open. Users who do not want that
+can set a different name in Settings › General or keep the window closed.
+
+**Not covered.** A peer who passes the code check is trusted with what the user chooses to send
+it; FX Vault cannot stop them from copying a message or a saved value. A user who skips the
+code comparison gets no protection against a relay. Denial of service by radio jamming or by
+flooding Bonjour is out of scope. There is no accept/decline step before the code comparison:
+a stranger who connects and lets the code screen appear, then cancels, ends that conversation
+attempt on the other Mac like any cancelled chat (pending a product decision).
 
 ## 11. Residual risks
 
@@ -245,7 +290,16 @@ non-writable locations owned by root or the user. Details: [API.md](API.md).
 - Values lose trailing CR/LF (D32); the user is told on entry.
 - Pending-verification miss counts live in memory, so a relaunch restarts the count before a
   secret is force-pushed.
-- Nearby HELLO metadata (display name, versions) is cleartext on the LAN.
+- Nearby HELLO metadata (display name, versions) is cleartext on the LAN and, since v0.2.0,
+  to anyone within peer-to-peer Wi-Fi (AWDL) range.
+- While the nearby chat window lists people, the user's display name (Preferences › General
+  › "Name for nearby Macs", or the macOS full name) is advertised as the Bonjour instance name
+  to every Mac in range; connecting to someone, or being connected to, stops it. Chat message
+  text arrives and is shown as Swift `String`s, which cannot be wiped; the chat keeps no
+  history and writes nothing to disk, and the window drops its transcript when the chat ends
+  (close, lock, sleep, disconnect, timeout). An attached value is decrypted only when the peer
+  asks for it (re-read and checked against the offered name, kind and scope) and reaches the
+  receiver's vault only through the share import preview; the chat UI never holds a value.
 - The Keychain status codes for the Touch ID fallback button, lockout and an enrollment-
   invalidated item follow Apple's documentation and still need confirmation on a signed build
   (RELEASING.md manual checklist). Since v0.1.1 an unexpected `errSecAuthFailed` can no longer

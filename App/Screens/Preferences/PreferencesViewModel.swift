@@ -71,6 +71,17 @@ final class PreferencesViewModel: LockObserving {
         app.container.preferences.setCloneFolder(url)
     }
 
+    /// Preferences › General › "Name for nearby Macs" (empty: the macOS user's name).
+    var nearbyDisplayName: String {
+        get { app.container.preferences.nearbyDisplayName ?? "" }
+        set { app.container.preferences.nearbyDisplayName = newValue }
+    }
+
+    /// The name shown when ``nearbyDisplayName`` is empty.
+    var defaultNearbyDisplayName: String {
+        ShareLocalIdentityModel.current.displayName
+    }
+
     // MARK: - Advanced
 
     var ghPathOverride: String {

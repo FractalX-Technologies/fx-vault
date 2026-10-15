@@ -1,7 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Preferences › General: clone folder and auto-lock (works in every phase).
+/// Preferences › General: clone folder, the name for nearby Macs and auto-lock (works in every
+/// phase).
 struct GeneralSettingsView: View {
     @Bindable var viewModel: PreferencesViewModel
 
@@ -20,6 +21,19 @@ struct GeneralSettingsView: View {
                         }
                     }
                 }
+            }
+            Section {
+                TextField(
+                    String(localized: "settings.general.nearbyName", defaultValue: "Name for nearby Macs"),
+                    text: $viewModel.nearbyDisplayName,
+                    prompt: Text(verbatim: viewModel.defaultNearbyDisplayName)
+                )
+                Text(String(
+                    localized: "settings.general.nearbyName.note",
+                    defaultValue: "Shown to nearby Macs while Nearby Chat is open, and to the teammate you share with nearby. Anyone nearby can see it, and it proves nothing: compare the code to know who you're talking to."
+                ))
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Colors.textSecondary)
             }
             Section {
                 Picker(

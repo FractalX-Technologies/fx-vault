@@ -56,11 +56,14 @@ final class LiveNearbyDiscovery: NearbyPeerDiscovering {
 
     private let peersContinuation: AsyncStream<[NearbyPeerModel]>.Continuation
     private let failuresContinuation: AsyncStream<NearbyTransportFailure>.Continuation
-    private let browser = NWNearbyBrowser()
+    private let browser: NWNearbyBrowser
     private var endpoints: [String: NearbyEndpointModel] = [:]
     private var tasks: [Task<Void, Never>] = []
 
-    init() {
+    /// - Parameter purpose: `.share` (Share Nearby) or `.chat` (Nearby Chat, whose peer ids are
+    ///   the advertised display names).
+    init(purpose: NearbyPurpose = .share) {
+        browser = NWNearbyBrowser(purpose: purpose)
         (peers, peersContinuation) = AsyncStream.makeStream(of: [NearbyPeerModel].self)
         (failures, failuresContinuation) = AsyncStream.makeStream(of: NearbyTransportFailure.self)
     }

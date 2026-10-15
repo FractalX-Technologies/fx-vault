@@ -3,8 +3,9 @@ import Foundation
 import Network
 import VaultCore
 
-/// A nearby receiver found by ``NWNearbyBrowser``. The instance name is random per session
-/// and means nothing to the user; the peer's display name arrives in HELLO_R.
+/// A nearby peer found by ``NWNearbyBrowser``. For share the instance name is random per
+/// session and means nothing to the user; for chat it is the advertiser's display name
+/// (unverified). The authenticated name and the code arrive in the handshake.
 public struct NearbyEndpointModel: Sendable, Hashable, Identifiable {
     /// The Bonjour service instance name.
     public let id: String
@@ -14,9 +15,15 @@ public struct NearbyEndpointModel: Sendable, Hashable, Identifiable {
         self.id = id
         self.endpoint = endpoint
     }
+
+    /// The instance name cleaned for display (control, bidi and zero-width characters removed,
+    /// at most ``Limits/maxDisplayNameBytes``). Unverified: anyone can advertise any name.
+    public var displayName: String {
+        DisplayNameSanitizer.sanitize(id)
+    }
 }
 
-/// Shared Network framework settings for nearby sharing (D22, §9.4).
+/// Shared Network framework settings for nearby share and chat (D22, §9.4).
 enum NWNearbyConfiguration {
     /// Prefix of the random service instance name.
     static let instanceNamePrefix = "FXVault-"
@@ -25,18 +32,33 @@ enum NWNearbyConfiguration {
     /// Largest read requested from the connection at once.
     static let readChunkBytes = NearbyProtocol.maxTransportFrameBytes + NearbyLengthFramer.prefixBytes
 
-    /// TCP, local network only (`acceptLocalOnly`), cellular prohibited, no peer-to-peer Wi-Fi.
+    /// TCP, local network only (`acceptLocalOnly`), cellular prohibited, peer-to-peer Wi-Fi
+    /// allowed. `includePeerToPeer` lets Bonjour and TCP run over AWDL, as AirDrop does, so two
+    /// Macs with Wi-Fi turned on find each other without sharing a network or a router. The same
+    /// parameters serve the listener, the browser and the outgoing connection.
     static func parameters() -> NWParameters {
         let parameters = NWParameters(tls: nil, tcp: NWProtocolTCP.Options())
         parameters.acceptLocalOnly = true
         parameters.prohibitedInterfaceTypes = [.cellular]
-        parameters.includePeerToPeer = false
+        parameters.includePeerToPeer = true
         return parameters
     }
+
+    /// The Bonjour domain for browsing and advertising: link-local multicast DNS only
+    /// (infrastructure Wi-Fi or Ethernet, and peer-to-peer Wi-Fi), never a wide-area DNS-SD
+    /// domain a network may publish, where a chat advertiser's display name would leak.
+    static let bonjourDomain = "local."
 
     /// The TXT record advertised by receivers: only `v=1`.
     static func txtRecord() -> NWTXTRecord {
         NWTXTRecord([NearbyProtocol.txtVersionKey: NearbyProtocol.txtVersionValue])
+    }
+
+    /// The instance name a chat advertiser publishes: its sanitized display name (Bonjour
+    /// allows 63 bytes, the display-name limit), or a random name when nothing is left.
+    static func chatInstanceName(displayName: String) -> String {
+        let name = DisplayNameSanitizer.sanitize(displayName)
+        return name.isEmpty ? randomInstanceName() : name
     }
 
     /// A new random instance name for one session.
@@ -57,10 +79,13 @@ enum NWNearbyConfiguration {
     }
 }
 
-/// Browses for receivers advertising `_fxvault-share._tcp` with `v=1` (I side).
+/// Browses for peers advertising the purpose's service type (`_fxvault-share._tcp` or
+/// `_fxvault-chat._tcp`) with `v=1` (I side), on the local network and over peer-to-peer Wi-Fi.
 ///
 /// Queue-confined `@unchecked Sendable`: every mutable property is touched only on `queue`.
 public final class NWNearbyBrowser: @unchecked Sendable {
+    /// What this browser looks for.
+    public let purpose: NearbyPurpose
     /// The current receivers, sorted by instance name. Finishes on ``stop()`` or failure.
     public let results: AsyncStream<[NearbyEndpointModel]>
     /// Emits `.localNetworkDenied` or `.connectionFailed` if browsing fails, then finishes.
@@ -71,7 +96,8 @@ public final class NWNearbyBrowser: @unchecked Sendable {
     private let queue = DispatchQueue(label: "io.fractalx.fxvault.nearby.browser")
     private var browser: NWBrowser?
 
-    public init() {
+    public init(purpose: NearbyPurpose = .share) {
+        self.purpose = purpose
         (results, resultsContinuation) = AsyncStream.makeStream(of: [NearbyEndpointModel].self)
         (failures, failuresContinuation) = AsyncStream.makeStream(of: NearbyTransportFailure.self)
     }
@@ -81,8 +107,8 @@ public final class NWNearbyBrowser: @unchecked Sendable {
         queue.async { [self] in
             guard browser == nil else { return }
             let descriptor = NWBrowser.Descriptor.bonjourWithTXTRecord(
-                type: NearbyProtocol.bonjourServiceType,
-                domain: nil
+                type: purpose.bonjourServiceType,
+                domain: NWNearbyConfiguration.bonjourDomain
             )
             let browser = NWBrowser(for: descriptor, using: NWNearbyConfiguration.parameters())
             browser.browseResultsChangedHandler = { [weak self] results, _ in
@@ -133,10 +159,11 @@ public final class NWNearbyBrowser: @unchecked Sendable {
 }
 
 /// The Network framework ``NearbyTransport`` (D22, §9.4): TCP with 4-byte big-endian length
-/// framing, one connection per session.
+/// framing, one connection per session, over the local network or peer-to-peer Wi-Fi (AWDL).
 ///
-/// - Receiver (R): ``advertising()`` publishes `_fxvault-share._tcp` under a random instance
-///   name with TXT `v=1`, accepts the first connection, then closes the listener. Any further
+/// - Receiver (R): ``advertising(purpose:)`` publishes the purpose's service type under a random
+///   instance name (share) or ``advertisingChat(displayName:)`` under the display name (chat),
+///   with TXT `v=1`, accepts the first connection, then closes the listener. Any further
 ///   connection attempt is refused and reported as `.secondPeer`.
 /// - Sender (I): ``connecting(to:)`` opens one connection to a browsed endpoint.
 ///
@@ -145,8 +172,15 @@ public final class NWNearbyTransport: NearbyTransport, @unchecked Sendable {
     public let events: AsyncStream<NearbyTransportEvent>
     /// The advertised instance name (receiver only).
     public let serviceName: String?
+    /// The purpose whose service type is advertised (receiver only; nil for a sender).
+    public let purpose: NearbyPurpose?
+    /// The instance name the system actually registered (receiver only). Bonjour renames on a
+    /// conflict ("Bob's Mac (2)"), so this can differ from ``serviceName``. Finishes with the
+    /// transport.
+    public let registeredServiceNames: AsyncStream<String>
 
     private let continuation: AsyncStream<NearbyTransportEvent>.Continuation
+    private let registeredNamesContinuation: AsyncStream<String>.Continuation
     private let queue = DispatchQueue(label: "io.fractalx.fxvault.nearby.transport")
     private let target: NearbyEndpointModel?
     private var listener: NWListener?
@@ -156,20 +190,40 @@ public final class NWNearbyTransport: NearbyTransport, @unchecked Sendable {
     private var isStarted = false
     private var isClosed = false
 
-    private init(serviceName: String?, target: NearbyEndpointModel?) {
+    private init(serviceName: String?, purpose: NearbyPurpose?, target: NearbyEndpointModel?) {
         self.serviceName = serviceName
+        self.purpose = purpose
         self.target = target
         (events, continuation) = AsyncStream.makeStream(of: NearbyTransportEvent.self)
+        (registeredServiceNames, registeredNamesContinuation) = AsyncStream.makeStream(of: String.self)
+        if target != nil {
+            registeredNamesContinuation.finish()
+        }
     }
 
     /// A receiver transport with a fresh random instance name. Call ``start()``.
-    public static func advertising() -> NWNearbyTransport {
-        NWNearbyTransport(serviceName: NWNearbyConfiguration.randomInstanceName(), target: nil)
+    public static func advertising(purpose: NearbyPurpose = .share) -> NWNearbyTransport {
+        NWNearbyTransport(
+            serviceName: NWNearbyConfiguration.randomInstanceName(),
+            purpose: purpose,
+            target: nil
+        )
     }
 
-    /// A sender transport to `endpoint`. Call ``start()``.
+    /// A chat receiver advertised under `displayName` (sanitized; random if nothing is left),
+    /// so nearby Macs can tell who is available while the chat window is open. The name is
+    /// unverified; only the code authenticates the peer. Call ``start()``.
+    public static func advertisingChat(displayName: String) -> NWNearbyTransport {
+        NWNearbyTransport(
+            serviceName: NWNearbyConfiguration.chatInstanceName(displayName: displayName),
+            purpose: .chat,
+            target: nil
+        )
+    }
+
+    /// A sender transport to `endpoint` (found by a browser of either purpose). Call ``start()``.
     public static func connecting(to endpoint: NearbyEndpointModel) -> NWNearbyTransport {
-        NWNearbyTransport(serviceName: nil, target: endpoint)
+        NWNearbyTransport(serviceName: nil, purpose: nil, target: endpoint)
     }
 
     /// Starts listening (receiver) or connecting (sender). Runs once.
@@ -215,7 +269,7 @@ public final class NWNearbyTransport: NearbyTransport, @unchecked Sendable {
     // MARK: - Queue-confined
 
     private func startListener() {
-        guard let serviceName else { return }
+        guard let serviceName, let purpose else { return }
         let listener: NWListener
         do {
             listener = try NWListener(using: NWNearbyConfiguration.parameters())
@@ -225,8 +279,8 @@ public final class NWNearbyTransport: NearbyTransport, @unchecked Sendable {
         }
         listener.service = NWListener.Service(
             name: serviceName,
-            type: NearbyProtocol.bonjourServiceType,
-            domain: nil,
+            type: purpose.bonjourServiceType,
+            domain: NWNearbyConfiguration.bonjourDomain,
             txtRecord: NWNearbyConfiguration.txtRecord()
         )
         listener.newConnectionHandler = { [weak self] connection in
@@ -234,6 +288,9 @@ public final class NWNearbyTransport: NearbyTransport, @unchecked Sendable {
         }
         listener.stateUpdateHandler = { [weak self] state in
             self?.listenerChanged(state)
+        }
+        listener.serviceRegistrationUpdateHandler = { [weak self] change in
+            self?.registrationChanged(change)
         }
         self.listener = listener
         listener.start(queue: queue)
@@ -263,6 +320,11 @@ public final class NWNearbyTransport: NearbyTransport, @unchecked Sendable {
         default:
             break
         }
+    }
+
+    private func registrationChanged(_ change: NWListener.ServiceRegistrationChange) {
+        guard !isClosed, case .add(let endpoint) = change, case .service(let name, _, _, _) = endpoint else { return }
+        registeredNamesContinuation.yield(name)
     }
 
     private func accept(_ connection: NWConnection) {
@@ -331,6 +393,7 @@ public final class NWNearbyTransport: NearbyTransport, @unchecked Sendable {
         connection = nil
         continuation.yield(event)
         continuation.finish()
+        registeredNamesContinuation.finish()
     }
 
     private static func failure(from error: ShareError) -> NearbyTransportFailure {

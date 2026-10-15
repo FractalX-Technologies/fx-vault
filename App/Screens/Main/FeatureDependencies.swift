@@ -53,6 +53,8 @@ struct FeatureDependencies {
     let drift: DriftRepository
     let envFiles: EnvFileRepository
     let sharing: SharingRepository
+    /// Nearby chat (v0.2.0): conversations and the items that can be attached.
+    let chat: ChatRepository
     /// Staging, owners, templates and name checks. Clone through ``cloner``.
     let creation: RepoCreationRepository
     let cloner: any RepoCloning
@@ -61,10 +63,23 @@ struct FeatureDependencies {
     let preferences: PreferencesManager
     let passphraseGenerator: PassphraseGenerator?
     let clock: any VaultClock
+    /// Internet reachability. While offline, gh-backed actions are disabled with
+    /// `ConnectivityCopy.offlineHelp`; nearby sharing (peer-to-peer) does not depend on it.
+    let connectivity: ConnectivityMonitor
+    /// Report the outcome of gh-backed calls here (`record(error)` / `recordSuccess()`), which
+    /// drives the "GitHub isn't responding" banner.
+    let gitHubReachability: GitHubReachability
     let actions: MainActions
     /// The vault's Touch ID status, read without a prompt; nil when it cannot be read. Sheets
     /// that re-authenticate offer "Use Touch ID" only when it is `.available`.
     let touchIDStatus: () -> BiometricUnlockStatus?
+
+    /// Whether a share import preview reads GitHub's listing: only when gh is ready and the Mac
+    /// is online. Otherwise it plans without it at once (an AWDL-only nearby receive has no
+    /// route to GitHub, and each attempt would retry and time out first).
+    var checksGitHub: Bool {
+        actions.isGitHubReady() && connectivity.isOnline
+    }
 
     init(container: AppContainer, actions: MainActions) {
         let data = container.data
@@ -76,6 +91,7 @@ struct FeatureDependencies {
         drift = data.drift
         envFiles = data.envFiles
         sharing = data.sharing
+        chat = data.chat
         creation = data.creation
         cloner = data.cloner
         reauth = container.reauth
@@ -83,6 +99,8 @@ struct FeatureDependencies {
         preferences = container.preferences
         passphraseGenerator = container.passphraseGenerator
         clock = container.clock
+        connectivity = container.connectivity
+        gitHubReachability = container.gitHubReachability
         self.actions = actions
         let vaultManager = container.vaultManager
         touchIDStatus = { try? vaultManager.biometricUnlockStatus() }

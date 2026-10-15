@@ -81,6 +81,27 @@ final class SidebarViewModel {
         app.ghStatus.isReady
     }
 
+    /// False while the Mac has no internet connection (v0.2.0): every gh-backed row action is
+    /// disabled and the lists load again when it returns.
+    var isOnline: Bool {
+        app.container.connectivity.isOnline
+    }
+
+    private var gitHubReachability: GitHubReachability {
+        app.container.gitHubReachability
+    }
+
+    /// "Add repository by name…" needs gh and the internet.
+    var canAddByName: Bool {
+        isUnlocked && isGitHubReady && isOnline
+    }
+
+    /// True when the accounts or a catalog could not be listed (or never were), so the lists
+    /// load again when the connection returns.
+    var needsReload: Bool {
+        input.accounts.isEmpty || accountsError != nil || !catalogErrors.isEmpty
+    }
+
     func catalogError(for accountID: SidebarAccountModel.ID) -> ErrorPresentationModel? {
         catalogErrors[accountID]
     }
@@ -107,9 +128,10 @@ final class SidebarViewModel {
         })
     }
 
-    /// Lists the gh accounts and each logged-in account's catalog. Does nothing until gh is ready.
+    /// Lists the gh accounts and each logged-in account's catalog. Does nothing until gh is ready
+    /// or while offline. Catalog results feed `GitHubReachability`.
     func reload() async {
-        guard isGitHubReady, !isLoadingCatalog else { return }
+        guard isGitHubReady, isOnline, !isLoadingCatalog else { return }
         isLoadingCatalog = true
         defer { isLoadingCatalog = false }
         let accounts: [GHAccountSummaryModel]
@@ -118,6 +140,7 @@ final class SidebarViewModel {
             accountsError = nil
         } catch {
             accountsError = error.presentation
+            gitHubReachability.record(error)
             return
         }
         input.accounts = accounts
@@ -125,8 +148,10 @@ final class SidebarViewModel {
             do {
                 input.catalogs[account.id] = try await data.catalog.catalog(accountLogin: account.account.login)
                 catalogErrors[account.id] = nil
+                gitHubReachability.recordSuccess()
             } catch {
                 catalogErrors[account.id] = error.presentation
+                gitHubReachability.record(error)
             }
         }
     }
@@ -169,16 +194,17 @@ final class SidebarViewModel {
         guard canImport(repo) else { return }
         await perform(on: repo) {
             let result = try await data.catalog.importRepository(try repo.ref(), accountLogin: repo.accountLogin)
+            gitHubReachability.recordSuccess()
             notice = Self.importNotice(result)
         }
     }
 
     func canImport(_ repo: SidebarRepoModel) -> Bool {
-        !repo.isImported && isUnlocked && isGitHubReady && !isBusy(repo)
+        !repo.isImported && isUnlocked && isGitHubReady && isOnline && !isBusy(repo)
     }
 
     func canClone(_ repo: SidebarRepoModel) -> Bool {
-        repo.isImported && repo.existsOnGitHub && isGitHubReady && !isBusy(repo)
+        repo.isImported && repo.existsOnGitHub && isGitHubReady && isOnline && !isBusy(repo)
     }
 
     func canRemove(_ repo: SidebarRepoModel) -> Bool {
@@ -219,6 +245,7 @@ final class SidebarViewModel {
         do {
             try await body()
         } catch {
+            gitHubReachability.record(error)
             alert = error.presentation
         }
     }

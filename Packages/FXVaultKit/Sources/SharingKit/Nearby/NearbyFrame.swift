@@ -99,11 +99,23 @@ enum NearbyHandshakeFrame: Sendable, Hashable {
 }
 
 /// Encrypted frames (§9.4): `[ver][type][seq:8 BE][ciphertext][tag:16]`, AAD = the first 10
-/// bytes, nonce = `0^4 ‖ seq`, one key per direction, exact sequence per direction.
+/// bytes, nonce = `0^4 ‖ seq`, one key per direction, exact sequence per direction. The same
+/// layout carries share (``NearbyMessageType``) and chat (``NearbyChatMessageType``) frames; the
+/// keys are domain-separated by purpose, so a frame never opens under the other purpose.
 enum NearbyEncryptedFrame {
-    /// Seals `body` as a frame of `type` with sequence number `sequence`.
+    /// Seals `body` as a share frame of `type` with sequence number `sequence`.
     static func seal(
         type: NearbyMessageType,
+        sequence: UInt64,
+        body: Data,
+        key: SymmetricKey
+    ) throws(NearbyFailure) -> Data {
+        try seal(rawType: type.rawValue, sequence: sequence, body: body, key: key)
+    }
+
+    /// Seals `body` as a frame whose type byte is `rawType`.
+    static func seal(
+        rawType: UInt8,
         sequence: UInt64,
         body: Data,
         key: SymmetricKey
@@ -112,7 +124,7 @@ enum NearbyEncryptedFrame {
         guard body.count <= NearbyProtocol.maxFramePlaintextBytes else {
             throw NearbyFailure(.oversizeFrame)
         }
-        let header = header(type: type.rawValue, sequence: sequence)
+        let header = header(type: rawType, sequence: sequence)
         do {
             let box = try AES.GCM.seal(body, using: key, nonce: try nonce(sequence), authenticating: header)
             return header + box.ciphertext + box.tag
@@ -121,13 +133,27 @@ enum NearbyEncryptedFrame {
         }
     }
 
-    /// Opens a frame that must carry `expectedSequence`. Checks, in order: size, version,
+    /// Opens a share frame that must carry `expectedSequence`. Checks, in order: size, version,
     /// sequence, authentication, then the (authenticated) type.
     static func open(
         _ frame: Data,
         expectedSequence: UInt64,
         key: SymmetricKey
     ) throws(NearbyFailure) -> (type: NearbyMessageType, body: Data) {
+        let (rawType, body) = try open(raw: frame, expectedSequence: expectedSequence, key: key)
+        guard let type = NearbyMessageType(rawValue: rawType) else {
+            throw NearbyFailure(.unexpectedMessage)
+        }
+        return (type, body)
+    }
+
+    /// Opens a frame and returns its authenticated type byte; the caller maps it to its own
+    /// message types (an unknown type is `.unexpectedMessage`).
+    static func open(
+        raw frame: Data,
+        expectedSequence: UInt64,
+        key: SymmetricKey
+    ) throws(NearbyFailure) -> (type: UInt8, body: Data) {
         guard frame.count <= Limits.maxNearbyEncryptedFrameBytes else {
             throw NearbyFailure(.oversizeFrame)
         }
@@ -152,10 +178,7 @@ enum NearbyEncryptedFrame {
         } catch {
             throw NearbyFailure(.decryptionFailed)
         }
-        guard let type = NearbyMessageType(rawValue: header[Offset.type]) else {
-            throw NearbyFailure(.unexpectedMessage)
-        }
-        return (type, body)
+        return (header[Offset.type], body)
     }
 
     private enum Offset {
@@ -272,7 +295,7 @@ enum NearbyMessageBody {
 
 /// A bounds-checked cursor over a frame. Every overrun is `.malformedFrame`.
 struct NearbyByteReader {
-    private let data: Data
+    private var data: Data
     private var offset = 0
 
     init(_ data: Data) {
@@ -309,6 +332,11 @@ struct NearbyByteReader {
 
     func requireEnd() throws(NearbyFailure) {
         guard offset == data.count else { throw NearbyFailure(.malformedFrame) }
+    }
+
+    /// Zeroes the reader's copy of the body (a body that held plaintext secret bytes).
+    mutating func wipe() {
+        data.wipe()
     }
 
     private mutating func integer<Value: FixedWidthInteger>(_ type: Value.Type) throws(NearbyFailure) -> Value {

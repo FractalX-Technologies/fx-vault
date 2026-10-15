@@ -260,6 +260,33 @@ struct SharingNearbyViewModelTests {
         sender.close()
     }
 
+    @Test func theNearbyPickerUsesTheSameMultiSelectTree() async throws {
+        let fixture = try await Fixture(selection: .some(nil))
+        let sender = fixture.sender
+        await sender.start()
+        await sender.chooseRepository(fixture.world.senderRepositoryID)
+        let tree = try #require(sender.tree)
+        let environment = try #require(tree.root.children?.first { $0.kind == .environment })
+        // Repository level only: the environment is left out.
+        sender.setChecked(false, for: environment)
+        #expect(!sender.canContinueWithSelection)
+        #expect(await TestFixtures.eventually {
+            sender.preview?.summary.environments.isEmpty == true
+                && sender.preview?.summary.repositoryLevel == ShareItemCountModel(secrets: 2, variables: 1)
+        })
+        guard case .subset(let subset) = sender.tree?.selection else {
+            Issue.record("Expected a subset, got \(String(describing: sender.tree?.selection))")
+            return
+        }
+        #expect(subset.environmentIDs.isEmpty)
+        #expect(subset.itemIDs.count == 3)
+        #expect(sender.canContinueWithSelection)
+        sender.continueWithSelection()
+        #expect(sender.step == .browsing)
+        #expect(sender.selection == .subset(subset))
+        sender.close()
+    }
+
     @Test func aLockCancelsTheSessionAndDropsTheAuthorization() async throws {
         let fixture = try await Fixture()
         try await fixture.connect()

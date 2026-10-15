@@ -6,7 +6,8 @@ import VaultCore
 /// - Keys are sorted, dates are ISO-8601 UTC (`…Z`, whole seconds on output; fractional seconds
 ///   are accepted on input).
 /// - `value` and `githubUpdatedAt` are written as explicit `null` when absent, so the manifest is
-///   the same document with every value null.
+///   the same document with every value null. A partial environment's `deploymentBranchPolicy`
+///   is an explicit `null` too (schema v2).
 /// - Plaintext JSON is returned as ``SecretBytes``; intermediate `Data` buffers are wiped.
 public enum SharePackageCoder {
     /// Encodes `package` to UTF-8 JSON. Throws `.payloadTooLarge` above
@@ -207,7 +208,9 @@ extension ShareEnvironmentModel: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(ShareEntryID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
-        deploymentBranchPolicy = try container.decode(
+        // Null (schema v2, partial environment) decodes as nil; the validator rejects a missing
+        // policy wherever one is required (schema v1, `environment` scope, no items).
+        deploymentBranchPolicy = try container.decodeIfPresent(
             ShareBranchPolicyModel.self,
             forKey: .deploymentBranchPolicy
         )
