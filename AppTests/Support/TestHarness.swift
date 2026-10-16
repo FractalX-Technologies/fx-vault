@@ -125,8 +125,12 @@ final class TestHarness {
     let pathSource = FakeNetworkPathSource()
     /// The connectivity monitor's own clock, so its debounce never mixes with other sleepers.
     let networkClock = ManualClock()
+    /// Teammate presence's own clock, so its pseudonym renewal never mixes with other sleepers.
+    let presenceClock = ManualClock()
     /// The recovery key issued when the harness created its vault (nil for `.none`).
     let recoveryKey: RecoveryKey?
+    /// Pings that would have made a sound or a notification (v0.5.0).
+    let pingAlerts = RecordedPingAlerts()
 
     /// - Parameters:
     ///   - ghStatus: the fixed gh status, or nil to use the live probe over the scripted gh
@@ -137,7 +141,9 @@ final class TestHarness {
         vault: TestVaultState = .none,
         signed: Bool = true,
         ghStatus: GHStatusModel? = .unknown,
-        fileInspector: (any GHFileInspecting)? = nil
+        fileInspector: (any GHFileInspecting)? = nil,
+        teamNetworking: any TeamPresenceNetworking = InertTeamPresenceNetworking(),
+        spaceNetworking: any SpaceRemoteNetworking = InertSpaceRemoteNetworking()
     ) async throws {
         clock = ManualClock()
         biometrics = FakeBiometricKeyStore()
@@ -201,7 +207,11 @@ final class TestHarness {
             passphraseGenerator: try? PassphraseGenerator.bundled(),
             vaultDirectory: nil,
             clock: clock,
-            connectivity: ConnectivityMonitor(source: pathSource, clock: networkClock)
+            connectivity: ConnectivityMonitor(source: pathSource, clock: networkClock),
+            teamNetworking: teamNetworking,
+            presenceClock: presenceClock,
+            pingAlerts: pingAlerts,
+            spaceNetworking: spaceNetworking
         )
         app = AppViewModel(container: container)
         await app.ghProbeTask?.value
@@ -379,6 +389,16 @@ final class ActionRecorder {
     var presented: [MainSheet] = []
     var refreshes: [MainRefreshRequest] = []
     var selections: [RepoID] = []
+    var openings: [OpenedScope] = []
+    /// Get Updates from Teammates calls (v0.6.0).
+    var spaceSyncs = 0
+    /// Publishes members were told about (v0.6.0).
+    var spacePublishes = 0
+
+    struct OpenedScope: Equatable {
+        let repositoryID: RepoID
+        let scope: ConfigScope
+    }
 }
 
 extension TestHarness {
@@ -390,7 +410,11 @@ extension TestHarness {
             beginSyncActivity: { [app] in app.beginSyncActivity() },
             addLockObserver: { [app] observer in app.addLockObserver(observer) },
             isGitHubReady: { isGitHubReady },
-            select: { recorder.selections.append($0) }
+            select: { recorder.selections.append($0) },
+            open: { recorder.openings.append(ActionRecorder.OpenedScope(repositoryID: $0, scope: $1)) },
+            syncSpaces: { recorder.spaceSyncs += 1 },
+            spacesPublished: { recorder.spacePublishes += 1 },
+            spaceIdentity: { SpaceLocalIdentityModel(login: TestFixtures.account, displayName: "Ana", macName: "Ana's Mac") }
         ))
     }
 }

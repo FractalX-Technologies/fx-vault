@@ -183,6 +183,8 @@ public final class NWNearbyTransport: NearbyTransport, @unchecked Sendable {
     private let registeredNamesContinuation: AsyncStream<String>.Continuation
     private let queue = DispatchQueue(label: "io.fractalx.fxvault.nearby.transport")
     private let target: NearbyEndpointModel?
+    /// A connection a ``NWTeamListener`` accepted (v0.5.0).
+    private var incoming: NWConnection?
     private var listener: NWListener?
     private var connection: NWConnection?
     private var framer = NearbyLengthFramer()
@@ -196,7 +198,7 @@ public final class NWNearbyTransport: NearbyTransport, @unchecked Sendable {
         self.target = target
         (events, continuation) = AsyncStream.makeStream(of: NearbyTransportEvent.self)
         (registeredServiceNames, registeredNamesContinuation) = AsyncStream.makeStream(of: String.self)
-        if target != nil {
+        if serviceName == nil {
             registeredNamesContinuation.finish()
         }
     }
@@ -214,11 +216,24 @@ public final class NWNearbyTransport: NearbyTransport, @unchecked Sendable {
     /// so nearby Macs can tell who is available while the chat window is open. The name is
     /// unverified; only the code authenticates the peer. Call ``start()``.
     public static func advertisingChat(displayName: String) -> NWNearbyTransport {
+        advertising(purpose: .chat, displayName: displayName)
+    }
+
+    /// A receiver for `purpose` advertised under `displayName` (sanitized; random if nothing is
+    /// left): chat, and Add Teammate (`.pair`, v0.5.0). Call ``start()``.
+    public static func advertising(purpose: NearbyPurpose, displayName: String) -> NWNearbyTransport {
         NWNearbyTransport(
             serviceName: NWNearbyConfiguration.chatInstanceName(displayName: displayName),
-            purpose: .chat,
+            purpose: purpose,
             target: nil
         )
+    }
+
+    /// A transport over a connection a ``NWTeamListener`` accepted. Call ``start()``.
+    static func accepted(_ connection: NWConnection) -> NWNearbyTransport {
+        let transport = NWNearbyTransport(serviceName: nil, purpose: nil, target: nil)
+        transport.incoming = connection
+        return transport
     }
 
     /// A sender transport to `endpoint` (found by a browser of either purpose). Call ``start()``.
@@ -231,7 +246,11 @@ public final class NWNearbyTransport: NearbyTransport, @unchecked Sendable {
         queue.async { [self] in
             guard !isStarted, !isClosed else { return }
             isStarted = true
-            if let target {
+            if let incoming {
+                self.incoming = nil
+                hasAcceptedPeer = true
+                accept(incoming)
+            } else if let target {
                 accept(NWConnection(to: target.endpoint, using: NWNearbyConfiguration.parameters()))
             } else {
                 startListener()

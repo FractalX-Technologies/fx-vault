@@ -17,11 +17,17 @@ import VaultCore
 /// environment, and the delete half of an item rename runs only when its set was verified.
 public enum SyncPlanner {
     /// Plans every repository. With `includeDeletions == false` (the user did not confirm §7.5)
-    /// every deletion stays pending and is reported as skipped.
-    public static func plan(_ preflight: SyncPreflightModel, includeDeletions: Bool = true) -> SyncPlanModel {
+    /// every deletion stays pending and is reported as skipped. `spaceReason` is the "What
+    /// changed?" note of the shared space versions the run publishes.
+    public static func plan(
+        _ preflight: SyncPreflightModel,
+        includeDeletions: Bool = true,
+        spaceReason: String? = nil
+    ) -> SyncPlanModel {
         SyncPlanModel(
             runID: preflight.runID,
-            repositories: preflight.repositories.map { plan($0, includeDeletions: includeDeletions) }
+            repositories: preflight.repositories.map { plan($0, includeDeletions: includeDeletions) },
+            spaceReason: spaceReason
         )
     }
 
@@ -85,7 +91,8 @@ public enum SyncPlanner {
             snapshot: snapshot,
             steps: steps,
             blocked: repository.blocked,
-            unconfirmedDeletions: unconfirmed
+            unconfirmedDeletions: unconfirmed,
+            spaces: repository.spaces.filter(\.allowsPush)
         )
     }
 

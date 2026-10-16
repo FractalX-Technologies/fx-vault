@@ -48,8 +48,22 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             beginSyncActivity: { [app] in app.beginSyncActivity() },
             addLockObserver: { [app] observer in app.addLockObserver(observer) },
             isGitHubReady: { [app] in app.ghStatus.isReady },
-            select: { [weak self] id in self?.sidebar.select(repositoryID: id) }
+            select: { [weak self] id in self?.sidebar.select(repositoryID: id) },
+            open: { [weak self] id, scope in self?.open(repositoryID: id, scope: scope) },
+            syncSpaces: { [app] in await app.spaceSync.syncAllAndWait() },
+            spacesPublished: { [app] in app.spaceSync.syncAll() },
+            spaceIdentity: { [app] in app.spaceIdentity },
+            spaceSyncCount: { [app] in app.spaceSync.receivedCount }
         )
+    }
+
+    /// Shows `scope` of a vault repository (v0.4.1, a linked copy's place): selects the
+    /// repository in the sidebar, then the scope once its column has the scopes.
+    func open(repositoryID id: RepoID, scope: ConfigScope) {
+        sidebar.select(repositoryID: id)
+        if scopeList?.repositoryID == id {
+            scopeList?.select(scope: scope)
+        }
     }
 
     // MARK: - Selection

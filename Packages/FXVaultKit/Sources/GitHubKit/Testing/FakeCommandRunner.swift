@@ -67,7 +67,23 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
         /// can find it).
         var prefix: [String]?
         let matcher: Matcher
-        let response: Response
+        let respond: @Sendable (Invocation) -> Response
+
+        init(executablePath: String? = nil, prefix: [String]? = nil, matcher: @escaping Matcher, response: Response) {
+            self.init(executablePath: executablePath, prefix: prefix, matcher: matcher) { _ in response }
+        }
+
+        init(
+            executablePath: String? = nil,
+            prefix: [String]? = nil,
+            matcher: @escaping Matcher,
+            respond: @escaping @Sendable (Invocation) -> Response
+        ) {
+            self.executablePath = executablePath
+            self.prefix = prefix
+            self.matcher = matcher
+            self.respond = respond
+        }
 
         func matches(_ spec: CommandSpec) -> Bool {
             (executablePath == nil || executablePath == spec.executableURL.path) && matcher(spec.arguments)
@@ -111,6 +127,15 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
         }
     }
 
+    /// Adds a persistent response computed from each call whose argv starts with `prefix` (a
+    /// stateful stand-in, for example a variable that lists what was last set). Checked before
+    /// the other stubs.
+    public func respond(argumentsPrefix prefix: [String], with handler: @escaping @Sendable (Invocation) -> Response) {
+        state.withLock { state in
+            state.stubs.insert(Entry(prefix: prefix, matcher: { Array($0.prefix(prefix.count)) == prefix }, respond: handler), at: 0)
+        }
+    }
+
     /// Adds a persistent response for calls of `executablePath` whose argv starts with `prefix`
     /// (several gh binaries in one test). Checked before the stubs that match any executable.
     public func stub(executablePath: String, argumentsPrefix prefix: [String], with response: Response) {
@@ -141,14 +166,14 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
             stdin: stdin,
             timeout: spec.timeout
         )
-        let response = state.withLock { state -> Response? in
+        let entry = state.withLock { state -> Entry? in
             state.invocations.append(invocation)
             if let index = state.queued.firstIndex(where: { $0.matches(spec) }) {
-                return state.queued.remove(at: index).response
+                return state.queued.remove(at: index)
             }
-            return state.stubs.first(where: { $0.matches(spec) })?.response
+            return state.stubs.first(where: { $0.matches(spec) })
         }
-        guard let response else {
+        guard let response = entry?.respond(invocation) else {
             return CommandResult(exitCode: Self.unmatchedExitCode, stdout: SecretBytes(count: 0), stderr: Self.unmatchedStderr)
         }
         if let error = response.error {

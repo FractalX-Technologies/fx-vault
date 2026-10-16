@@ -329,6 +329,13 @@ foreground color, so `.primary` text still turns white on selected rows.
   Next Sync and Revert as outline pills when some rows allow them, Delete… as an outline pill
   (the destructive style stays for the dialog's final confirm), and Deselect as an outline
   circle.
+- Linked copies (v0.4.1): a linked row shows `LinkedChip` after its name, a `brand` outlined
+  capsule (`tagHeight`) with the `link` symbol (`monoLabel`) and the count (`monoMeta`). Its
+  popover (`LinkedCopiesPopover`, `Theme.Layout.linkedPopoverWidth`) has a `SectionLabel`, the
+  name in `.monoName`, one row per place (repository in `.monoName`, "scope · account" in
+  `.monoMeta`, the copy's own name only when it differs, a `StatusChip`: Same value `.success`,
+  Differs `.brand`, Value missing `.warning`, Not compared `.neutral`, and a chevron), a
+  hairline, a caption and an outline Unlink.
 - The detail fits its narrowest column (`Theme.Layout.detailMinWidth`): Clone and Refresh move
   under the title, the tags stack, and the add actions move under the Secrets / Variables pill
   when a row does not fit (`ViewThatFits`); the table scrolls sideways inside its card. Nothing
@@ -336,7 +343,59 @@ foreground color, so `.primary` text still turns white on selected rows.
 - On macOS 26+ the sidebar's rows scroll under the traffic lights and the sidebar button with the
   system's soft scroll-edge effect, as in Finder; at rest they start below the title bar.
 
+- Teammates nearby (v0.5.0): `NearbyPresenceView` sits before the Sync pill: `avatarSize`
+  circles with initials (`monoLabel`, `surface2` fill, a 2 pt `ground` ring so overlapping
+  bubbles stay apart, `presenceOverlap`), a `success` dot for teammates, "+N" after
+  `presenceMaxBubbles` (an outlined `surface` circle with its own list). A person scales in with
+  the spring; a ping bounces the bubble (`phaseAnimator`). The ping outcome shows as a caption
+  before the bubbles for 4 s. The popover (`presencePopoverWidth`): avatar, name in `.headline`,
+  Mac name in `.monoMeta`, a Teammate (`.success`) or Nearby (`.neutral`) chip, a caption for
+  strangers, Ping (outline, "Ping (8 s)" while cooling down) and Chat (primary).
+- Shared spaces (v0.6.0): a shared scope's row in the scopes column shows a `brand`
+  `person.2` symbol (help: what it means); the detail header adds a `brand` `StatusChip`
+  "Shared · v7" ("· publishing" while a claim is open) that opens the space sheet. When a
+  teammate's version arrives, "Got v7 from Ana" shows as a caption before the bubbles for 8 s
+  (the ping outcome wins while it shows).
+
 ### Sheets (board SyncReview)
+
+- Add Teammate (v0.5.0): `SheetHeader`, "Visible to people nearby as …" caption, the people list
+  in a `container` card (`addTeammateListHeight`), then `SASCodeView`, then an info `Banner`
+  ("… is now your teammate") or a warning `Banner` with Try Again. Preferences › Teammates uses
+  the Settings sections: Nearby (visibility picker with its explanation as the footnote, Mute all
+  pings) and Teammates (avatar, name, login · Mac, last seen, Mute checkbox, Remove…, Add
+  Teammate…).
+- Share with Teammates (v0.6.0) is a `ConfigEditorSheet`: what sharing does in `mutedText`
+  `.body`, then either warning `Banner`s naming what to sync or fill first, or the paired
+  teammates as checkbox rows in a `ConfigSheetList` (name in `.body`, login · Mac in `.monoMeta`)
+  and an optional Note `FXTextField`; after sharing, an info `Banner` with "Show Shared Scope".
+- The space sheet (v0.6.0): `SheetHeader` (SHARED WITH TEAMMATES, the scope's name, "v7 ·
+  3 members"), a native segmented picker (History / Members). History is a `ConfigSheetList` of
+  versions (title `.bodyEmphasized`, Mac and time in `.monoMeta`, the note in `.body`, the items
+  it changed as ghost buttons in a `FlowLayout`); choosing an item shows its versions above
+  (fingerprint in `.monoMeta`, Reveal / Hide ghost, Restore This Value secondary, the revealed
+  value in `.monoMeta` with text selection, the password row inline when Touch ID is not used).
+  Members: name, login · Mac, "This Mac" (`brand`) or "Not paired on this Mac" (`warning`),
+  Remove… (ghost, with a destructive confirmation), Add Teammates as a menu. The footer has only
+  Done.
+- The Sync sheet (v0.6.0) shows a blocked shared scope as one issue ("Shared with teammates ·
+  production", the reason, how many changes wait) with Get Updates from Teammates or Take Over…
+  (destructive confirmation); a run that publishes asks "What changed?" in an `FXTextField`
+  under the summary. Drift review shows an info `Banner` with Get Updates from Teammates, and a
+  teammate's finding has both choices unavailable with the reason.
+- Preferences › Teammates › Outside this network (v0.6.0): the port as a narrow text field
+  (`portFieldWidth`), then one row per teammate (name, "Sync shared scopes outside this network"
+  or the last sync time, a switch) and, when on, a mono "Their address" `FXTextField`; the rules
+  are the section footnote.
+- Copy to Another Repository (v0.4.1) is a `ConfigEditorSheet`: a rounded search field, then a
+  `container` card (`Theme.Layout.copyTargetListHeight`) with `SectionLabel` account headers,
+  repository rows (`.monoName`, chevron, `.fxRowBackground(style: .sidebar)` when chosen) and
+  the chosen repository's scopes indented as radio rows (`.fxRowBackground(style: .scope)` when
+  chosen; a `lock` symbol with the reason as help when read-only). After the copy the list gives
+  way to an info `Banner` with the outcome and "Show …".
+- The item editor's "Linked copies" field (v0.4.1) appears under the value once a new value is
+  typed: one `FXCheckboxRow` per place ("owner/name · scope · account (Same value)") and an info
+  note.
 
 - Content on `card` (`.fxSheetBackground()`), padding 32, gap 22–24.
 - Header: `SectionLabel` (REVIEW BEFORE SYNC) + `.title` + `mutedText` `.body` line.
@@ -478,7 +537,8 @@ FXV_SNAPSHOTS_DIR=$PWD/.build-snapshots TEST_RUNNER_FXV_SNAPSHOTS_DIR=$PWD/.buil
 ```
 
 Each screen gives `<name>-<light|dark>.window.png` (an offscreen window): the review set is these
-window captures (9 screens × 2 appearances = 18 files). SwiftUI `ImageRenderer` is not used: it
+window captures (9 screens × 2 appearances = 18 files; v0.6.0 adds `space-share`,
+`space-history`, `space-members`, `sync-summary-space` and `settings-teammates-remote`). SwiftUI `ImageRenderer` is not used: it
 cannot draw AppKit-backed views (`ScrollView`, `List`, `Table`, text fields, toggles, the split
 view), which came out blank or as placeholders. A window capture cannot draw the macOS 26+ glass
 sidebar, so the sidebar also has its own snapshot (`main-sidebar`).

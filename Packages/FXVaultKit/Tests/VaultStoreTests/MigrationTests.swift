@@ -12,15 +12,17 @@ struct MigrationTests {
 
     static let expectedTables: Set<String> = [
         "vaults", "key_wraps", "accounts", "repositories", "environments", "config_items",
-        "sync_journal", "deployment_branch_patterns", "imported_share_packages",
+        "sync_journal", "deployment_branch_patterns", "imported_share_packages", "device_identity", "teammates",
+        "spaces", "space_keys", "space_versions", "teammate_addresses",
     ]
 
     @Test func migrationIdentifiersAreFrozenAndOrdered() {
         #expect(Migration.allCases.map(\.rawValue) == [
             "v1_vault", "v2_accounts_repos", "v3_config", "v4_sync_journal", "v5_create_policies", "v6_sharing",
-            "v7_journal_fingerprints", "v8_force_push_requested_at",
+            "v7_journal_fingerprints", "v8_force_push_requested_at", "v9_item_links", "v10_teammates",
+            "v11_spaces",
         ])
-        #expect(Migration.latest == .v8ForcePushRequestedAt)
+        #expect(Migration.latest == .v11Spaces)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -295,6 +297,7 @@ struct MigrationTests {
     static let seedTime = "2001-01-01T00:00:00.000Z"
     static let seedSourceFingerprint = Data(repeating: 9, count: 32)
     static let seedPushedFingerprint = Data(repeating: 10, count: 32)
+    static let seedLinkID = "44444444-4444-4444-8444-444444444444"
 
     static func seed(_ database: VaultDatabase, upTo version: Migration) throws {
         try database.write { tx in
@@ -357,6 +360,8 @@ struct MigrationTests {
                 sql: "UPDATE config_items SET force_push = 1, force_push_requested_at = ? WHERE id = ?",
                 arguments: [seedTime, seedItemID]
             )
+            guard version >= .v9ItemLinks else { return }
+            try db.execute(sql: "UPDATE config_items SET link_id = ? WHERE id = ?", arguments: [seedLinkID, seedItemID])
         }
     }
 
@@ -405,5 +410,11 @@ struct MigrationTests {
         }
         #expect(record.forcePush)
         #expect(record.forcePushRequestedAt == DatabaseTimestamp.date(from: seedTime))
+        guard version >= .v9ItemLinks else {
+            // Rows from before v9 are not linked.
+            #expect(record.linkID == nil)
+            return
+        }
+        #expect(record.linkID == ItemLinkID(uuidString: seedLinkID))
     }
 }

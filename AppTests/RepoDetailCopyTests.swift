@@ -5,14 +5,15 @@ import VaultCore
 import VaultData
 @testable import FXVault
 
-/// Copy and paste between scopes of one repository (v0.4.0): ⌘C keeps the items in the app and
-/// puts only their names on the pasteboard, ⌘V in another scope copies them (asking "Replace or
-/// keep?" for names that scope has), Copy To… does the same from a menu, and text copied since
-/// still opens the .env import.
+/// Copy and paste (v0.4.0; any repository and linked since v0.4.1): ⌘C keeps the items in the
+/// app and puts only their names on the pasteboard, ⌘V in another scope or repository copies
+/// them as linked copies (asking "Replace or keep?" for names that scope has), Copy To does the
+/// same from a menu, and text copied since still opens the .env import.
 @MainActor
 @Suite("Repository detail copy and paste")
 struct RepoDetailCopyTests {
     static let otherValue = "FXV_FIXTURE_OTHER_VALUE"
+    static let newValue = "FXV_FIXTURE_NEW_VALUE"
 
     @MainActor
     struct Fixture {
@@ -71,9 +72,9 @@ struct RepoDetailCopyTests {
         fixture.select(["API_TOKEN", "NEW_A"])
 
         model.copySelection()
-        #expect(model.copiedItems?.names == ["API_TOKEN", "NEW_A"])
+        #expect(fixture.harness.container.clipboard.itemsToPaste?.names == ["API_TOKEN", "NEW_A"])
         #expect(fixture.harness.pasteboardString == "API_TOKEN\nNEW_A", "names only, never values")
-        #expect(model.notice == "Copied 2 items. Open another scope of this repository and paste them with ⌘V.")
+        #expect(model.notice == "Copied 2 items. Open another scope or repository and paste them with ⌘V: the copies stay linked to these items.")
 
         model.select(scope: fixture.staging)
         await model.handlePaste([NSItemProvider(object: "API_TOKEN\nNEW_A" as NSString)])
@@ -83,6 +84,7 @@ struct RepoDetailCopyTests {
         #expect(try await fixture.value("API_TOKEN", in: fixture.staging) == EditorFixtures.secretValue)
         #expect(model.notice == "Copied 2 items to staging.")
         #expect(fixture.recorder.presented.isEmpty, "no .env import")
+        #expect(await TestFixtures.eventually { model.rows.allSatisfy { $0.isLinked && $0.linkCount == 2 } })
     }
 
     @Test func pastingIntoAScopeWithTheSameNamesAsksReplaceOrKeep() async throws {
@@ -160,7 +162,7 @@ struct RepoDetailCopyTests {
 
         await model.handlePaste([NSItemProvider(object: "NEW_A" as NSString)])
 
-        #expect(model.notice == "These items are already in this scope. Open another scope of this repository to paste them.")
+        #expect(model.notice == "These items are already in this scope. Open another scope or repository to paste them.")
         #expect(model.rows.count == 2)
     }
 
@@ -170,10 +172,92 @@ struct RepoDetailCopyTests {
         #expect(await fixture.waitForRows(["API_TOKEN", "NEW_A"]))
         fixture.select(["NEW_A"])
         model.copySelection()
-        #expect(model.copiedItems != nil)
+        #expect(fixture.harness.container.clipboard.itemsToPaste != nil)
 
         fixture.harness.app.lock(trigger: .manual)
-        #expect(model.copiedItems == nil)
+        #expect(fixture.harness.container.clipboard.itemsToPaste == nil)
         #expect(model.pendingCopy == nil)
+    }
+
+    // MARK: - Another repository and linked copies (v0.4.1)
+
+    @Test func pasteIntoAnotherRepository() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.viewModel
+        #expect(await fixture.waitForRows(["API_TOKEN", "NEW_A"]))
+        let otherID = try await fixture.harness.stageRepository(name: "other-repo")
+        let other = Self.detail(fixture, otherID)
+        fixture.select(["API_TOKEN"])
+        model.copySelection()
+
+        await other.handlePaste([NSItemProvider(object: "API_TOKEN" as NSString)])
+
+        #expect(other.notice == "Copied 1 item to Repository.")
+        #expect(await TestFixtures.eventually { other.rows.map(\.name) == ["API_TOKEN"] && other.rows.first?.isLinked == true })
+        let copy = try await EditorFixtures.item(fixture.harness, otherID, named: "API_TOKEN")
+        let value = try fixture.harness.data.config.reveal(copy.id)
+        defer { value.wipe() }
+        #expect(value.utf8String() == EditorFixtures.secretValue)
+        #expect(await TestFixtures.eventually { model.rows.first { $0.name == "API_TOKEN" }?.linkCount == 2 })
+    }
+
+    @Test func copyToAnotherRepositoryOpensTheList() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.viewModel
+        #expect(await fixture.waitForRows(["API_TOKEN", "NEW_A"]))
+        fixture.select(["NEW_A"])
+
+        model.copyToOtherRepository(model.selectedRows)
+
+        guard case .copyToRepository(let context) = try #require(fixture.recorder.presented.last) else {
+            Issue.record("expected Copy to Another Repository")
+            return
+        }
+        #expect(context.itemIDs == model.selectedRows.map(\.id))
+        #expect(context.sourceRepositoryID == fixture.repositoryID)
+        #expect(context.sourceScope == .repository)
+    }
+
+    @Test func linkedCopiesPopoverListsOpensAndUnlinks() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.viewModel
+        #expect(await fixture.waitForRows(["API_TOKEN", "NEW_A"]))
+        fixture.select(["NEW_A"])
+        let staging = try #require(model.copyTargets.first { $0.scope == fixture.staging })
+        model.copy(model.selectedRows, to: staging)
+        #expect(await TestFixtures.eventually { model.rows.first { $0.name == "NEW_A" }?.isLinked == true })
+        let row = try #require(model.rows.first { $0.name == "NEW_A" })
+
+        model.showLinkedCopies(of: row)
+        #expect(model.linkedPopoverRowID == row.id)
+        let copy = try #require(model.linkedCopies.first)
+        #expect(model.linkedCopies.count == 1)
+        #expect(copy.environmentName == "staging")
+        #expect(copy.comparison == .same)
+        #expect(copy.placeDetail(itemName: "NEW_A") == "staging · user-a")
+        #expect(copy.placeDetail(itemName: "OTHER") == "staging · NEW_A · user-a")
+
+        model.openLinkedCopy(copy)
+        #expect(model.linkedPopoverRowID == nil)
+        #expect(model.linkedCopies.isEmpty)
+        #expect(fixture.recorder.openings == [ActionRecorder.OpenedScope(repositoryID: fixture.repositoryID, scope: fixture.staging)])
+
+        model.unlink(row)
+        #expect(model.notice == "NEW_A is no longer linked. The copies stay where they are.")
+        #expect(await TestFixtures.eventually { model.rows.first { $0.name == "NEW_A" }?.isLinked == false })
+    }
+
+    private static func detail(_ fixture: Fixture, _ id: RepoID) -> RepoDetailViewModel {
+        let harness = fixture.harness
+        let model = RepoDetailViewModel(
+            repositoryID: id,
+            dependencies: harness.dependencies(recorder: fixture.recorder),
+            repository: { harness.repository(id) },
+            scopeSummary: { scope in
+                try? harness.data.config.scopes(repositoryID: id).first { $0.scope == scope }
+            }
+        )
+        model.kind = .secret
+        return model
     }
 }

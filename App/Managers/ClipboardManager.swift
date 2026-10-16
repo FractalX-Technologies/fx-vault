@@ -1,6 +1,16 @@
 import AppKit
 import VaultCore
 
+/// Items copied with ⌘C on the detail table (v0.4.0), by id: their values stay in the vault and
+/// only their names go to the pasteboard. App-wide since v0.4.1, so they paste into any
+/// repository of the vault.
+struct CopiedItemsModel: Hashable {
+    let ids: [ConfigItemID]
+    let names: [String]
+    let sourceRepositoryID: RepoID
+    let sourceScope: ConfigScope
+}
+
 /// Copies values to the pasteboard and clears them again (§5.9, D17).
 ///
 /// - Every copy is `.currentHostOnly` (no Universal Clipboard) and carries the
@@ -28,6 +38,8 @@ final class ClipboardManager {
     private var ownedChangeCount: Int?
     /// `changeCount` right after the last ``copyItemNames(_:)``.
     private var itemNamesChangeCount: Int?
+    /// The items of the last ``copyItems(_:)``, until the vault locks.
+    private var copiedItems: CopiedItemsModel?
     /// The scheduled clear for the last copy. Internal so tests can await it.
     private(set) var pendingClear: Task<Void, Never>?
 
@@ -109,6 +121,24 @@ final class ClipboardManager {
     /// `changeCount` only: anything copied since, in any app, makes it false).
     var holdsItemNames: Bool {
         itemNamesChangeCount == pasteboard.changeCount
+    }
+
+    /// ⌘C on the detail table: keeps `items` for a paste in any repository (v0.4.1) and puts
+    /// their names on the pasteboard (``copyItemNames(_:)``).
+    func copyItems(_ items: CopiedItemsModel) {
+        copyItemNames(items.names)
+        copiedItems = items
+    }
+
+    /// The items to paste: the last ``copyItems(_:)`` while the pasteboard still holds their
+    /// names; nil once anything else was copied or the vault locked.
+    var itemsToPaste: CopiedItemsModel? {
+        holdsItemNames ? copiedItems : nil
+    }
+
+    /// Forgets the copied items (lock, terminate). The names on the pasteboard are not secret.
+    func forgetCopiedItems() {
+        copiedItems = nil
     }
 
     /// Clears the pasteboard if it still holds our last copy (lock, terminate, timer).

@@ -226,7 +226,7 @@ public struct SyncCommitModel: Sendable, Hashable {
 
 extension GHError {
     /// Outcomes after which the write may or may not have reached GitHub (§7.3).
-    var isIndeterminateOutcome: Bool {
+    public var isIndeterminateOutcome: Bool {
         switch self {
         case .indeterminate, .serverError, .network, .timeout: true
         default: false

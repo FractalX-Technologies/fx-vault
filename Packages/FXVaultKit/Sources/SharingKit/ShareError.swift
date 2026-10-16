@@ -31,6 +31,14 @@ public enum ShareError: Error, Sendable, Hashable {
     case transport(NearbyTransportFailure)
     /// The import plan cannot apply the requested action to this item or environment.
     case importActionNotAllowed
+    /// A teammate card read back from the vault does not match its keys (v0.5.0).
+    case teamCardInvalid
+    /// This Mac's teammate keys in the vault have the wrong size or were rejected (v0.5.0).
+    case teamKeysInvalid
+    /// A space version could not be read (v0.6.0).
+    case spaceVersionInvalid
+    /// A space log broke a rule (v0.6.0).
+    case spaceLogInvalid(SpaceLogFailure)
 }
 
 /// Why a typed passphrase was rejected (§9.2). Never carries the typed text.

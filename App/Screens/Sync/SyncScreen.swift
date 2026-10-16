@@ -52,6 +52,23 @@ struct SyncScreen: View {
         .fxSheetBackground()
         .interactiveDismissDisabled(viewModel.blocksDismissal)
         .errorAlert($viewModel.alert)
+        .confirmationDialog(
+            viewModel.pendingTakeover.map { SyncCopy.takeOverTitle($0.login) } ?? "",
+            isPresented: Binding(
+                get: { viewModel.pendingTakeover != nil },
+                set: { if !$0 { viewModel.pendingTakeover = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(SyncCopy.takeOverConfirm, role: .destructive) {
+                Task { await viewModel.confirmTakeover() }
+            }
+            Button(String(localized: "common.cancel", defaultValue: "Cancel"), role: .cancel) {
+                viewModel.pendingTakeover = nil
+            }
+        } message: {
+            Text(SyncCopy.takeOverMessage)
+        }
         .task {
             await viewModel.load()
         }

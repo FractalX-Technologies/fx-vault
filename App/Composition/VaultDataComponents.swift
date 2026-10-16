@@ -36,6 +36,11 @@ struct VaultDataComponents {
     let sharing: SharingRepository
     /// Nearby chat conversations and the items that can be attached (v0.2.0).
     let chat: ChatRepository
+    /// This device's teammate keys and the paired devices (v0.5.0).
+    let team: TeamRepository
+    /// Shared spaces (v0.6.0): the versioned scopes teammates keep in sync. ``sync`` gates and
+    /// publishes through it.
+    let spaces: SpaceRepository
 
     /// Builds every repository over `session`.
     ///
@@ -85,6 +90,7 @@ struct VaultDataComponents {
             writePolicy: writePolicy
         )
         let sharing = SharingRepository(session: session, schedulers: github, deriver: deriver, clock: clock, writePolicy: writePolicy)
+        let spaces = SpaceRepository(session: session, schedulers: github, clock: clock)
         return VaultDataComponents(
             session: session,
             github: github,
@@ -96,12 +102,21 @@ struct VaultDataComponents {
                 clock: clock,
                 writePolicy: writePolicy
             ),
-            sync: SyncRepository(session: session, schedulers: github, cloner: cloner, clock: clock, writePolicy: writePolicy),
+            sync: SyncRepository(
+                session: session,
+                schedulers: github,
+                cloner: cloner,
+                clock: clock,
+                writePolicy: writePolicy,
+                spaces: spaces
+            ),
             creation: RepoCreationRepository(session: session, schedulers: github, git: nil, clock: clock, writePolicy: writePolicy),
             cloner: cloner,
-            drift: DriftRepository(session: session, schedulers: github, clock: clock, writePolicy: writePolicy),
+            drift: DriftRepository(session: session, schedulers: github, clock: clock, writePolicy: writePolicy, spaces: spaces),
             sharing: sharing,
-            chat: ChatRepository(session: session, sharing: sharing, clock: clock)
+            chat: ChatRepository(session: session, sharing: sharing, clock: clock),
+            team: TeamRepository(session: session, clock: clock),
+            spaces: spaces
         )
     }
 

@@ -21,6 +21,16 @@ struct MainActions {
     /// Selects a vault repository in the sidebar (for example the one New Repository staged).
     /// A repository the vault observation has not delivered yet is selected when it appears.
     let select: (RepoID) -> Void
+    /// Selects a vault repository and one of its scopes (a linked copy's place, v0.4.1).
+    var open: (RepoID, ConfigScope) -> Void = { _, _ in }
+    /// Get Updates from Teammates (v0.6.0): pulls every shared space, returns when done.
+    var syncSpaces: () async -> Void = {}
+    /// A Sync run published shared versions: members are told right away.
+    var spacesPublished: () -> Void = {}
+    /// Who this Mac is in the shared spaces it creates or changes (login, name, Mac name).
+    var spaceIdentity: () -> SpaceLocalIdentityModel = { SpaceLocalIdentityModel(login: "", displayName: "", macName: "") }
+    /// Versions teammates brought in (the space screens reload on change).
+    var spaceSyncCount: () -> Int = { 0 }
 
     /// Actions that do nothing (SwiftUI previews).
     static let inert = MainActions(
@@ -55,6 +65,10 @@ struct FeatureDependencies {
     let sharing: SharingRepository
     /// Nearby chat (v0.2.0): conversations and the items that can be attached.
     let chat: ChatRepository
+    /// Teammates (v0.5.0) and their remote access (v0.6.0).
+    let team: TeamRepository
+    /// Shared spaces (v0.6.0): share a scope, members, history.
+    let spaces: SpaceRepository
     /// Staging, owners, templates and name checks. Clone through ``cloner``.
     let creation: RepoCreationRepository
     let cloner: any RepoCloning
@@ -92,6 +106,8 @@ struct FeatureDependencies {
         envFiles = data.envFiles
         sharing = data.sharing
         chat = data.chat
+        team = data.team
+        spaces = data.spaces
         creation = data.creation
         cloner = data.cloner
         reauth = container.reauth
@@ -128,6 +144,8 @@ struct FeatureDependencies {
             String(localized: "touchID.prompt.share", defaultValue: "share configuration")
         case .nearbySend:
             String(localized: "touchID.prompt.nearbySend", defaultValue: "send configuration to a nearby Mac")
+        case .spaceHistory:
+            String(localized: "touchID.prompt.spaceHistory", defaultValue: "reveal an older value")
         }
         return BiometricPrompt(reason: reason, fallbackTitle: fallback)
     }

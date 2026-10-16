@@ -46,3 +46,16 @@ extension GHVariableListingModel: CustomStringConvertible, CustomDebugStringConv
         description
     }
 }
+
+/// One scope's variables with the shared space marker split off (v0.6.0, S4). ``variables``
+/// never contains `FXVAULT_SPACE`, so tables, drift, `.env` export and sharing never see it.
+public struct GHVariableScopeListingModel: Sendable {
+    public let variables: [GHVariableListingModel]
+    /// `FXVAULT_SPACE`'s value (a signed JSON marker, no secret), or nil when the scope has none.
+    public let spaceMarker: String?
+
+    public init(variables: [GHVariableListingModel], spaceMarker: String?) {
+        self.variables = variables
+        self.spaceMarker = spaceMarker
+    }
+}

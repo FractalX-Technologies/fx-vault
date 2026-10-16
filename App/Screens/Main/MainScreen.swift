@@ -34,12 +34,21 @@ struct MainScreen: View {
             }
             .onAppear {
                 viewModel.presentNextPendingImport()
+                viewModel.app.teamPresence.setBrowsing(NSApp?.isActive ?? true)
+            }
+            .onDisappear {
+                viewModel.app.teamPresence.setBrowsing(false)
             }
             .onChange(of: viewModel.app.pendingImports) {
                 viewModel.presentNextPendingImport()
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
                 viewModel.detail?.remaskAll()
+                // Teammates nearby browses only while FX Vault is active (T8).
+                viewModel.app.teamPresence.setBrowsing(false)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                viewModel.app.teamPresence.setBrowsing(true)
             }
     }
 
@@ -118,6 +127,9 @@ private struct MainToolbar: ToolbarContent {
             MainToolbarActions(viewModel: viewModel)
         }
         ToolbarItem(placement: .primaryAction) {
+            NearbyPresenceView(presence: viewModel.app.teamPresence, spaceSync: viewModel.app.spaceSync)
+        }
+        ToolbarItem(placement: .primaryAction) {
             MainSyncButton(viewModel: viewModel)
         }
     }
@@ -135,6 +147,10 @@ private struct GlasslessMainToolbar: ToolbarContent {
         .sharedBackgroundVisibility(.hidden)
         ToolbarItemGroup(placement: .primaryAction) {
             MainToolbarActions(viewModel: viewModel)
+        }
+        .sharedBackgroundVisibility(.hidden)
+        ToolbarItem(placement: .primaryAction) {
+            NearbyPresenceView(presence: viewModel.app.teamPresence, spaceSync: viewModel.app.spaceSync)
         }
         .sharedBackgroundVisibility(.hidden)
         ToolbarItem(placement: .primaryAction) {
@@ -299,6 +315,8 @@ private struct MainSheetContent: View {
         switch sheet {
         case .itemEditor(let context):
             ItemEditorScreen(context: context, dependencies: dependencies)
+        case .copyToRepository(let context):
+            CopyToRepositoryScreen(context: context, dependencies: dependencies)
         case .newEnvironment(let context):
             NewEnvironmentScreen(context: context, dependencies: dependencies)
         case .environmentSettings(let context):
@@ -325,6 +343,10 @@ private struct MainSheetContent: View {
             NearbySendScreen(context: context, dependencies: dependencies)
         case .nearbyReceive(let context):
             NearbyReceiveScreen(context: context, dependencies: dependencies)
+        case .shareSpace(let context):
+            ShareSpaceScreen(context: context, dependencies: dependencies)
+        case .space(let context):
+            SpaceScreen(context: context, dependencies: dependencies)
         case .addRepositoryByName(let context):
             AddRepositorySheet(viewModel: AddRepositoryViewModel(
                 context: context,

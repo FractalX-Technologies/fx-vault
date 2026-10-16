@@ -28,6 +28,8 @@ struct ConfigRowModel: Identifiable, Hashable {
     let status: ConfigSyncStatus
     /// "Renamed from OLD_NAME" while a rename is pending.
     let syncedName: String?
+    /// How many places share this item's link, this one included (v0.4.1); 0 when not linked.
+    let linkCount: Int
 
     init(_ item: ConfigItemModel) {
         id = item.id
@@ -39,6 +41,12 @@ struct ConfigRowModel: Identifiable, Hashable {
         updatedAt = item.updatedAt
         status = item.syncStatus
         syncedName = item.syncedName == item.name ? nil : item.syncedName
+        linkCount = item.isLinked ? item.linkCount : 0
+    }
+
+    /// True when the Linked chip shows (another live place shares the link).
+    var isLinked: Bool {
+        linkCount > 1
     }
 
     /// True when Revert has something to undo (a synced item with a local change).
@@ -68,30 +76,32 @@ struct ConfigDeletionModel: Hashable {
     }
 }
 
-/// Items copied with ⌘C on the detail table (v0.4.0), by id: their values stay in the vault and
-/// only their names go to the pasteboard.
-struct CopiedItemsModel: Hashable {
-    let ids: [ConfigItemID]
-    let names: [String]
-    let sourceScope: ConfigScope
-}
-
 /// A copy into another scope waiting for "Replace or keep?": the target already has `conflicts`.
 struct ItemCopyRequestModel: Hashable {
     let ids: [ConfigItemID]
-    let target: ConfigScope
-    let targetTitle: String
+    let target: ItemCopyTargetModel
     let conflicts: [String]
+
+    var targetTitle: String {
+        target.title
+    }
 }
 
-/// A scope Copy to… offers, and whether this account may add items there.
+/// A scope of a vault repository Copy To offers, and whether its account may add items there.
 struct ItemCopyTargetModel: Hashable, Identifiable {
+    struct ID: Hashable {
+        let repositoryID: RepoID
+        let scope: ConfigScope
+    }
+
+    let repositoryID: RepoID
     let scope: ConfigScope
+    /// "staging" in the same repository, "owner/name · staging" in another one.
     let title: String
     let isEditable: Bool
 
-    var id: ConfigScope {
-        scope
+    var id: ID {
+        ID(repositoryID: repositoryID, scope: scope)
     }
 }
 
@@ -127,10 +137,20 @@ final class RepoDetailViewModel: LockObserving {
     private(set) var notice: String?
     /// The items waiting for the "Delete?" confirmation.
     var pendingDeletion: ConfigDeletionModel?
-    /// The items ⌘C copied, until the vault locks (v0.4.0).
-    private(set) var copiedItems: CopiedItemsModel?
     /// A copy waiting for "Replace or keep?".
     var pendingCopy: ItemCopyRequestModel?
+    /// The row whose linked copies popover is open (v0.4.1).
+    var linkedPopoverRowID: ConfigItemID? {
+        didSet {
+            if linkedPopoverRowID == nil {
+                linkedCopies = []
+            }
+        }
+    }
+    /// The other places of ``linkedPopoverRowID``, loaded when the popover opens.
+    private(set) var linkedCopies: [LinkedCopyModel] = []
+    /// The shared spaces of this repository (v0.6.0), by scope.
+    private(set) var spaces: [ConfigScope: SpaceSummaryModel] = [:]
 
     /// The scheduled re-mask of each revealed value (internal so tests can await it).
     @ObservationIgnored private(set) var remaskTasks: [ConfigItemID: Task<Void, Never>] = [:]
@@ -158,9 +178,38 @@ final class RepoDetailViewModel: LockObserving {
         scopeProvider = scopeSummary
         dependencies.actions.addLockObserver(self)
         observeItems()
+        observeSpaces()
     }
 
     // MARK: - Header
+
+    /// The selected scope's shared space (v0.6.0), or nil when it is not shared.
+    var space: SpaceSummaryModel? {
+        spaces[scope]
+    }
+
+    /// The shared scope's history and members.
+    func showSpace() {
+        guard let space else { return }
+        dependencies.actions.present(.space(SpaceContext(spaceID: space.id)))
+    }
+
+    private func observeSpaces() {
+        let stream = dependencies.spaces.observeSpaces()
+        let repositoryID = repositoryID
+        tasks.set("spaces", Task { [weak self] in
+            do {
+                for try await all in stream {
+                    self?.spaces = Dictionary(
+                        all.filter { $0.repositoryID == repositoryID }.map { ($0.scope, $0) },
+                        uniquingKeysWith: { first, _ in first }
+                    )
+                }
+            } catch {
+                AppLog.ui.error("Space observation ended")
+            }
+        })
+    }
 
     var repository: RepoModel? {
         repositoryProvider()
@@ -263,16 +312,17 @@ final class RepoDetailViewModel: LockObserving {
         selection.removeAll()
     }
 
-    // MARK: - Copy and paste between scopes (v0.4.0)
+    // MARK: - Copy and paste (v0.4.0; any repository and linked since v0.4.1)
 
-    /// The repository's other scopes, where Copy to… copies; those the account may not change
-    /// are listed disabled.
+    /// The repository's other scopes, where Copy To copies; those the account may not change
+    /// are listed disabled. Other repositories are offered by "Other Repository…".
     var copyTargets: [ItemCopyTargetModel] {
         let summaries = (try? dependencies.config.scopes(repositoryID: repositoryID)) ?? []
         return summaries
             .filter { $0.scope != scope && !$0.isDeleted }
             .map { summary in
                 ItemCopyTargetModel(
+                    repositoryID: repositoryID,
                     scope: summary.scope,
                     title: summary.title,
                     isEditable: capability?.canEditItems(at: summary.scope.level) == true
@@ -281,26 +331,41 @@ final class RepoDetailViewModel: LockObserving {
     }
 
     /// ⌘C on the table: the selected rows go to the app's item clipboard and their names to the
-    /// pasteboard. ⌘V in another scope of this repository pastes them.
+    /// pasteboard. ⌘V in any other scope of any repository pastes them as linked copies.
     func copySelection() {
         let rows = selectedRows.filter { !$0.isDeleted }
         guard let first = rows.first else { return }
-        copiedItems = CopiedItemsModel(ids: rows.map(\.id), names: rows.map(\.name), sourceScope: scope)
-        dependencies.clipboard.copyItemNames(rows.map(\.name))
+        dependencies.clipboard.copyItems(CopiedItemsModel(
+            ids: rows.map(\.id),
+            names: rows.map(\.name),
+            sourceRepositoryID: repositoryID,
+            sourceScope: scope
+        ))
         notice = rows.count == 1
             ? String(
-                localized: "main.detail.copiedItem.notice",
-                defaultValue: "Copied \(first.name). Open another scope of this repository and paste it with ⌘V."
+                localized: "main.detail.copiedItem.notice.linked",
+                defaultValue: "Copied \(first.name). Open another scope or repository and paste it with ⌘V: the copy stays linked to this item."
             )
             : String(
-                localized: "main.detail.copiedItems.notice",
-                defaultValue: "Copied \(rows.count) items. Open another scope of this repository and paste them with ⌘V."
+                localized: "main.detail.copiedItems.notice.linked",
+                defaultValue: "Copied \(rows.count) items. Open another scope or repository and paste them with ⌘V: the copies stay linked to these items."
             )
     }
 
-    /// Copy to… from the context menu or the selection bar.
+    /// Copy To from the context menu or the selection bar.
     func copy(_ rows: [ConfigRowModel], to target: ItemCopyTargetModel) {
-        requestCopy(ids: rows.filter { !$0.isDeleted }.map(\.id), to: target.scope, title: target.title)
+        requestCopy(ids: rows.filter { !$0.isDeleted }.map(\.id), to: target)
+    }
+
+    /// Copy To › Other Repository…: the searchable list of every repository of the vault.
+    func copyToOtherRepository(_ rows: [ConfigRowModel]) {
+        let ids = rows.filter { !$0.isDeleted }.map(\.id)
+        guard !ids.isEmpty else { return }
+        dependencies.actions.present(.copyToRepository(CopyToRepositoryContext(
+            itemIDs: ids,
+            sourceRepositoryID: repositoryID,
+            sourceScope: scope
+        )))
     }
 
     func confirmCopy(replacing: Bool) {
@@ -311,29 +376,34 @@ final class RepoDetailViewModel: LockObserving {
 
     /// ⌘V while the pasteboard still holds names FX Vault copied: their items, not the text.
     private func pasteCopiedItems() {
-        guard let copied = copiedItems else {
+        guard let copied = dependencies.clipboard.itemsToPaste else {
             notice = String(
-                localized: "main.detail.paste.otherRepository",
-                defaultValue: "Copied items paste into another scope of the same repository. To bring configuration to another repository, use Share."
+                localized: "main.detail.paste.expired",
+                defaultValue: "The copied items are no longer available (FX Vault was locked). Select them and press ⌘C again."
             )
             return
         }
-        guard copied.sourceScope != scope else {
+        guard copied.sourceRepositoryID != repositoryID || copied.sourceScope != scope else {
             notice = String(
-                localized: "main.detail.paste.sameScope",
-                defaultValue: "These items are already in this scope. Open another scope of this repository to paste them."
+                localized: "main.detail.paste.sameScope.linked",
+                defaultValue: "These items are already in this scope. Open another scope or repository to paste them."
             )
             return
         }
-        requestCopy(ids: copied.ids, to: scope, title: scopeSummary?.title ?? "")
+        requestCopy(ids: copied.ids, to: ItemCopyTargetModel(
+            repositoryID: repositoryID,
+            scope: scope,
+            title: scopeSummary?.title ?? "",
+            isEditable: canEdit
+        ))
     }
 
     /// Asks "Replace or keep?" when the target already has some of the names, otherwise copies.
-    private func requestCopy(ids: [ConfigItemID], to target: ConfigScope, title: String) {
-        guard !ids.isEmpty, capability?.canEditItems(at: target.level) == true else { return }
+    private func requestCopy(ids: [ConfigItemID], to target: ItemCopyTargetModel) {
+        guard !ids.isEmpty, target.isEditable else { return }
         do {
-            let conflicts = try dependencies.config.copyConflicts(ids, to: target, repositoryID: repositoryID)
-            let request = ItemCopyRequestModel(ids: ids, target: target, targetTitle: title, conflicts: conflicts)
+            let conflicts = try dependencies.config.copyConflicts(ids, to: target.scope, repositoryID: target.repositoryID)
+            let request = ItemCopyRequestModel(ids: ids, target: target, conflicts: conflicts)
             if conflicts.isEmpty {
                 performCopy(request, conflicts: .keep)
             } else {
@@ -348,11 +418,43 @@ final class RepoDetailViewModel: LockObserving {
         do {
             let result = try dependencies.config.copyItems(
                 request.ids,
-                to: request.target,
-                repositoryID: repositoryID,
+                to: request.target.scope,
+                repositoryID: request.target.repositoryID,
                 conflicts: conflicts
             )
-            notice = result.notice(target: request.targetTitle)
+            notice = result.notice(target: request.target.title)
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    // MARK: - Linked copies (v0.4.1)
+
+    /// Opens the linked copies popover of `row` (its chip, or Show Linked Copies in its menu).
+    func showLinkedCopies(of row: ConfigRowModel) {
+        do {
+            linkedCopies = try dependencies.config.linkedCopies(of: row.id)
+            linkedPopoverRowID = row.id
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    /// Shows a linked copy's repository and scope.
+    func openLinkedCopy(_ copy: LinkedCopyModel) {
+        linkedPopoverRowID = nil
+        dependencies.actions.open(copy.repositoryID, copy.scope)
+    }
+
+    /// Takes `row` out of its link group; its copies stay where they are.
+    func unlink(_ row: ConfigRowModel) {
+        linkedPopoverRowID = nil
+        do {
+            try dependencies.config.unlink(row.id)
+            notice = String(
+                localized: "main.detail.unlinked",
+                defaultValue: "\(row.name) is no longer linked. The copies stay where they are."
+            )
         } catch {
             alert = error.presentation
         }
@@ -752,8 +854,8 @@ final class RepoDetailViewModel: LockObserving {
         driftTask?.cancel()
         driftReport = nil
         pendingDeletion = nil
-        copiedItems = nil
         pendingCopy = nil
+        linkedPopoverRowID = nil
     }
 }
 

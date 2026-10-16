@@ -263,6 +263,87 @@ ALTER TABLE config_items ADD COLUMN force_push_requested_at TEXT;  -- when the u
   `remote_updated_at := pre_write_updated_at`, the base the write was checked against, so the
   re-push is not blocked by a GitHub change the request already replaced.
 
+### v9_item_links (v0.4.1)
+
+```sql
+ALTER TABLE config_items ADD COLUMN link_id TEXT CHECK (link_id IS NULL OR length(link_id) = 36);
+CREATE INDEX config_items_link ON config_items(link_id) WHERE link_id IS NOT NULL;
+```
+
+- Linked copies (`ItemLinkID`, a lowercase UUID). `ConfigRepository.copyItems` gives the copy
+  (an add or a replaced value) its source's `link_id`, and a new one to both when the source
+  had none; a kept conflict is not linked. `ConfigStore.setLinkID(_:itemIDs:in:)` changes only
+  this column, so values, AADs and sync state stay as they are.
+- The link follows the item: `ItemMutationWriter` gives the row that takes over another row's
+  item (Convert/Move, a rename or move into a tombstone) that row's `link_id`. Duplicate
+  environment, imports, shares and drift do not link.
+- Group lookups: `ConfigStore.fetchLinkedItemRecords(linkID:in:)` (live rows of every
+  repository) and the counts `observeItems` attaches to each model (`ConfigItemModel.linkCount`,
+  live rows only, so a deleted copy leaves the group's count). Unlinking the last-but-one item
+  clears the last one too.
+
+### v10_teammates (v0.5.0)
+
+```sql
+CREATE TABLE device_identity (id INTEGER PRIMARY KEY CHECK (id = 1),
+  device_id TEXT NOT NULL CHECK (length(device_id) = 32 AND device_id = lower(device_id)),
+  secret_ct BLOB NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE teammates (device_id TEXT PRIMARY KEY CHECK (...same...),
+  signing_pk BLOB NOT NULL CHECK (length(signing_pk) = 32),
+  agreement_pk BLOB NOT NULL CHECK (length(agreement_pk) = 32),
+  announce_ct BLOB NOT NULL, login TEXT NOT NULL, display_name TEXT NOT NULL, mac_name TEXT NOT NULL,
+  paired_at TEXT NOT NULL, last_seen_at TEXT,
+  is_muted INTEGER NOT NULL DEFAULT 0 CHECK (is_muted IN (0, 1)),
+  needs_card_update INTEGER NOT NULL DEFAULT 0 CHECK (needs_card_update IN (0, 1)));
+```
+
+- `secret_ct` = this device's `signingSeed ‖ agreementKey ‖ announceKey` (96 bytes) sealed as a
+  secret field (`SecretFieldAAD`: table, column, device id bytes); `announce_ct` = a teammate's
+  announce key, sealed the same way. Both are re-sealed by DEK rotation (`DEKRotator`).
+- `TeamRepository` (VaultData) owns both tables: keys are created on first use; removing a
+  teammate renews this device's announce key and sets `needs_card_update` on every remaining
+  teammate; `last_seen_at` is written at most once a minute.
+
+### v11_spaces (v0.6.0)
+
+```sql
+CREATE TABLE spaces (id TEXT PRIMARY KEY CHECK (length(id) = 36),
+  repository_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+  environment_id TEXT REFERENCES environments(id) ON DELETE CASCADE,
+  head_version INTEGER NOT NULL CHECK (head_version >= 1),
+  head_hash BLOB NOT NULL CHECK (length(head_hash) = 32),
+  epoch INTEGER NOT NULL CHECK (epoch >= 1),
+  claimed_version INTEGER CHECK (claimed_version IS NULL OR claimed_version >= 1),
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE UNIQUE INDEX spaces_scope ON spaces(repository_id, COALESCE(environment_id, ''));
+CREATE TABLE space_keys (space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+  epoch INTEGER NOT NULL CHECK (epoch >= 1), key_ct BLOB NOT NULL, PRIMARY KEY (space_id, epoch));
+CREATE TABLE space_versions (space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+  version INTEGER NOT NULL CHECK (version >= 1), kind INTEGER NOT NULL CHECK (kind IN (1, 2, 3)),
+  author_device_id TEXT NOT NULL CHECK (length(author_device_id) = 32 AND author_device_id = lower(author_device_id)),
+  created_at TEXT NOT NULL, hash BLOB NOT NULL CHECK (length(hash) = 32), data BLOB NOT NULL,
+  PRIMARY KEY (space_id, version));
+CREATE TABLE teammate_addresses (device_id TEXT PRIMARY KEY REFERENCES teammates(device_id) ON DELETE CASCADE,
+  host TEXT CHECK (host IS NULL OR length(host) BETWEEN 1 AND 253),
+  port INTEGER CHECK (port IS NULL OR port BETWEEN 1 AND 65535),
+  allows_remote INTEGER NOT NULL DEFAULT 0 CHECK (allows_remote IN (0, 1)),
+  last_connected_at TEXT, CHECK ((host IS NULL) = (port IS NULL)));
+```
+
+- One space per scope. `head_version`/`head_hash` are the verified head; every read re-verifies
+  the whole `space_versions` log from genesis and refuses a stored head that does not match it.
+  `claimed_version` is set by a claim and cleared only when the `published` marker is confirmed
+  on GitHub (or the claim is lost); launch reconciliation finishes it.
+- `space_versions` is append-only: `data` is the version's signed wire form (SHARING-PROTOCOL.md
+  §11.1), whose payload (names and values) is encrypted under the epoch key. Removing a
+  repository or environment removes its space, versions and keys.
+- `key_ct` = one epoch key sealed as a secret field (`SecretFieldAAD`: table, column,
+  `spaceID ‖ u32be(epoch)`); re-sealed by DEK rotation.
+- `teammate_addresses`: remote space sync per teammate (Q4). A row with `allows_remote = 1` and no
+  address only accepts that teammate's connections. Removing the teammate removes the row.
+- `SpaceRepository` (VaultData) owns `spaces`, `space_keys` and `space_versions`;
+  `TeamRepository` owns `teammate_addresses`.
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -270,12 +351,18 @@ ALTER TABLE config_items ADD COLUMN force_push_requested_at TEXT;  -- when the u
 | `vaults` | `VaultRecord` | `VaultRecordStore` | Single row (`id = 1`) |
 | `key_wraps` | `KeyWrapRecord` | `VaultRecordStore` | One row per unlock method; map to VaultCrypto with `KeyWrapModel(storedMethod:…)` |
 | `accounts` | `AccountRecord` | `AccountStore` | |
-| `repositories` | `RepositoryRecord` | `RepoStore` | Deleting a repository cascades to environments, items and patterns and nulls journal rows |
+| `repositories` | `RepositoryRecord` | `RepoStore` | Deleting a repository cascades to environments, items, patterns and spaces and nulls journal rows |
 | `environments` | `EnvironmentRecord` | `ConfigStore` | Patterns are attached when the policy is custom |
 | `deployment_branch_patterns` | `BranchPatternRecord` | `ConfigStore` | |
-| `config_items` | `ConfigItemRecord` (with ciphertext), `ConfigItemState` (read-only projection without ciphertext) | `ConfigStore` | Status is derived with `ConfigSyncStatus.derive(state.syncFacts)` |
+| `config_items` | `ConfigItemRecord` (with ciphertext), `ConfigItemState` (read-only projection without ciphertext) | `ConfigStore` | Status is derived with `ConfigSyncStatus.derive(state.syncFacts)`; `link_id` groups linked copies (v0.4.1) |
 | `sync_journal` | `SyncJournalRecord` | `SyncJournalStore` | Names and push fingerprints only, never values |
 | `imported_share_packages` | `ImportedSharePackageRecord` | `SharePackageStore` | |
+| `device_identity` | `DeviceIdentityRecord` | `TeamStore` | Single row (`id = 1`), v0.5.0 |
+| `teammates` | `TeammateRecord` (`TeammateModel` without keys) | `TeamStore` | v0.5.0 |
+| `spaces` | `SpaceRecord` | `SpaceStore` | One per shared scope, v0.6.0 |
+| `space_keys` | `SpaceKeyRecord` | `SpaceStore` | Epoch keys, sealed, v0.6.0 |
+| `space_versions` | `SpaceVersionRecord` | `SpaceStore` | Append-only signed versions, v0.6.0 |
+| `teammate_addresses` | `TeammateAddressRecord` | `SpaceStore` | Remote space sync per teammate (Q4), v0.6.0 |
 
 ## Transactions
 

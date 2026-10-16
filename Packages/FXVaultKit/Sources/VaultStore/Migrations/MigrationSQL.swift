@@ -155,4 +155,79 @@ enum MigrationSQL {
     static let v8ForcePushRequestedAt = """
         ALTER TABLE config_items ADD COLUMN force_push_requested_at TEXT;
         """
+
+    // MARK: v9_item_links (v0.4.1). FROZEN.
+
+    /// Linked copies: every row pasted from another place shares its source's `link_id`
+    /// (a lowercase UUID). NULL = not linked. The partial index serves the group lookups.
+    static let v9ItemLinks = """
+        ALTER TABLE config_items ADD COLUMN link_id TEXT CHECK (link_id IS NULL OR length(link_id) = 36);
+        CREATE INDEX config_items_link ON config_items(link_id) WHERE link_id IS NOT NULL;
+        """
+
+    // MARK: v10_teammates (v0.5.0). FROZEN.
+
+    /// This device's teammate keys (one row, sealed: signing seed, agreement key, announce key)
+    /// and the paired devices: public keys in plaintext, each teammate's announce key sealed (it
+    /// recognizes that teammate's pseudonyms), names as the teammate's Mac sent them.
+    static let v10Teammates = """
+        CREATE TABLE device_identity (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          device_id TEXT NOT NULL CHECK (length(device_id) = 32 AND device_id = lower(device_id)),
+          secret_ct BLOB NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL);
+        CREATE TABLE teammates (
+          device_id TEXT PRIMARY KEY CHECK (length(device_id) = 32 AND device_id = lower(device_id)),
+          signing_pk BLOB NOT NULL CHECK (length(signing_pk) = 32),
+          agreement_pk BLOB NOT NULL CHECK (length(agreement_pk) = 32),
+          announce_ct BLOB NOT NULL,
+          login TEXT NOT NULL,
+          display_name TEXT NOT NULL,
+          mac_name TEXT NOT NULL,
+          paired_at TEXT NOT NULL,
+          last_seen_at TEXT,
+          is_muted INTEGER NOT NULL DEFAULT 0 CHECK (is_muted IN (0, 1)),
+          needs_card_update INTEGER NOT NULL DEFAULT 0 CHECK (needs_card_update IN (0, 1)));
+        """
+
+    // MARK: v11_spaces (v0.6.0). FROZEN.
+
+    /// Shared spaces: one per scope, its verified log (each version's wire form: header,
+    /// keyring, payload ciphertext under the space key, signature), the space keys per epoch
+    /// (sealed), and remote addresses of teammates (Q4: off unless allowed).
+    static let v11Spaces = """
+        CREATE TABLE spaces (
+          id TEXT PRIMARY KEY CHECK (length(id) = 36),
+          repository_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+          environment_id TEXT REFERENCES environments(id) ON DELETE CASCADE,
+          head_version INTEGER NOT NULL CHECK (head_version >= 1),
+          head_hash BLOB NOT NULL CHECK (length(head_hash) = 32),
+          epoch INTEGER NOT NULL CHECK (epoch >= 1),
+          claimed_version INTEGER CHECK (claimed_version IS NULL OR claimed_version >= 1),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL);
+        CREATE UNIQUE INDEX spaces_scope ON spaces(repository_id, COALESCE(environment_id, ''));
+        CREATE TABLE space_keys (
+          space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+          epoch INTEGER NOT NULL CHECK (epoch >= 1),
+          key_ct BLOB NOT NULL,
+          PRIMARY KEY (space_id, epoch));
+        CREATE TABLE space_versions (
+          space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+          version INTEGER NOT NULL CHECK (version >= 1),
+          kind INTEGER NOT NULL CHECK (kind IN (1, 2, 3)),
+          author_device_id TEXT NOT NULL CHECK (length(author_device_id) = 32 AND author_device_id = lower(author_device_id)),
+          created_at TEXT NOT NULL,
+          hash BLOB NOT NULL CHECK (length(hash) = 32),
+          data BLOB NOT NULL,
+          PRIMARY KEY (space_id, version));
+        CREATE TABLE teammate_addresses (
+          device_id TEXT PRIMARY KEY REFERENCES teammates(device_id) ON DELETE CASCADE,
+          host TEXT CHECK (host IS NULL OR length(host) BETWEEN 1 AND 253),
+          port INTEGER CHECK (port IS NULL OR port BETWEEN 1 AND 65535),
+          allows_remote INTEGER NOT NULL DEFAULT 0 CHECK (allows_remote IN (0, 1)),
+          last_connected_at TEXT,
+          CHECK ((host IS NULL) = (port IS NULL)));
+        """
 }

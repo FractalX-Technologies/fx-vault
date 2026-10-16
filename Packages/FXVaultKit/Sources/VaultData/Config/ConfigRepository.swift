@@ -23,7 +23,7 @@ import VaultStore
 public struct ConfigRepository: Sendable {
     public let session: VaultSession
     private let clock: any VaultClock
-    private let writePolicy: WriteCollaboratorPolicy
+    let writePolicy: WriteCollaboratorPolicy
 
     public init(
         session: VaultSession,
@@ -35,7 +35,7 @@ public struct ConfigRepository: Sendable {
         self.writePolicy = writePolicy
     }
 
-    private var store: ConfigStore {
+    var store: ConfigStore {
         ConfigStore(database: session.database)
     }
 
@@ -254,10 +254,11 @@ public struct ConfigRepository: Sendable {
         Self.log.info("Push on next Sync requested for \(ids.count, privacy: .public) secrets")
     }
 
-    // MARK: - Copy between scopes (v0.4.0)
+    // MARK: - Copy between scopes (v0.4.0) and repositories (v0.4.1)
 
-    /// The names among `ids` that `scope` already holds (same kind, not deleted): the copy asks
-    /// whether to replace or keep those items. Deleted and missing ids are ignored here.
+    /// The names among `ids` that `scope` of `repositoryID` already holds (same kind, not
+    /// deleted): the copy asks whether to replace or keep those items. The sources may belong to
+    /// any repository; deleted and missing ids, and items already in that scope, are ignored here.
     public func copyConflicts(
         _ ids: [ConfigItemID],
         to scope: ConfigScope,
@@ -269,7 +270,7 @@ public struct ConfigRepository: Sendable {
             return try ids.compactMap { id in
                 guard let source = try store.fetchItemRecord(id: id),
                       !source.isDeleted,
-                      source.scope != scope,
+                      !Self.isInPlace(source, scope: scope, repositoryID: repositoryID),
                       taken.contains(TargetKey(kind: source.kind, name: GitHubNameValidator.foldKey(source.name)))
                 else { return nil }
                 return source.name
@@ -277,12 +278,16 @@ public struct ConfigRepository: Sendable {
         }
     }
 
-    /// Copies items of a repository into another of its scopes (repository level ↔ environments,
-    /// environment ↔ environment) in one transaction: each becomes a pending add there with its
-    /// value re-encrypted for its new row, or, when the target already has the name, replaces
-    /// that item's value or keeps it (`conflicts`). Secrets without a value are not copied (they
-    /// are listed in the result). Nothing is written when one of them fails (an edit the account
-    /// may not make, a full scope).
+    /// Copies items into `scope` of `repositoryID` in one transaction. The sources may be in any
+    /// scope of any repository in the vault (v0.4.1), whatever account it belongs to; the target
+    /// must be editable by its own repository's account. Each item becomes a pending add there
+    /// with its value encrypted for its new row, or, when the target already has the name,
+    /// replaces that item's value or keeps it (`conflicts`).
+    ///
+    /// Every copied or replaced item is **linked** to its source (v0.4.1): both get the source's
+    /// `link_id`, a new one when the source had none. A kept item is not linked. Secrets without
+    /// a value are not copied (they are listed in the result). Nothing is written when one of
+    /// them fails (an edit the account may not make, a full scope).
     @discardableResult
     public func copyItems(
         _ ids: [ConfigItemID],
@@ -290,36 +295,54 @@ public struct ConfigRepository: Sendable {
         repositoryID: RepoID,
         conflicts: ItemCopyConflictPolicy
     ) throws(ConfigRepositoryError) -> ItemCopyResultModel {
-        let result = try batch(repositoryID: repositoryID) { batch in
+        let result = try write { keys, tx, now in
+            var batch = try ItemEditBatch(
+                repositoryID: repositoryID,
+                keys: keys,
+                tx: tx,
+                store: store,
+                now: now,
+                writePolicy: writePolicy
+            )
             try batch.requireEditable(scope)
             var result = ItemCopyResultModel()
             for id in ids {
-                guard let source = batch.row(id), !source.isDeleted else {
+                guard let source = try store.fetchItemRecord(id: id, in: tx), !source.isDeleted else {
                     throw ConfigRepositoryError.itemNotFound
                 }
-                guard source.scope != scope else { continue }
-                guard let value = try batch.storedValue(of: id) else {
+                guard !Self.isInPlace(source, scope: scope, repositoryID: repositoryID) else { continue }
+                guard let value = try ConfigFieldCipher.openValue(of: source, keys: keys) else {
                     result.withoutValue.append(source.name)
                     continue
                 }
                 defer { value.wipe() }
+                let copyID: ConfigItemID
                 if let existing = batch.liveRow(scope: scope, kind: source.kind, name: source.name) {
                     switch conflicts {
                     case .keep:
                         result.kept += 1
+                        continue
                     case .replace:
                         try batch.editValue(existing.id, value: value)
+                        copyID = existing.id
                         result.replaced += 1
                     }
                 } else {
-                    try batch.add(scope: scope, kind: source.kind, name: source.name, value: value)
+                    copyID = try batch.add(scope: scope, kind: source.kind, name: source.name, value: value)
                     result.added += 1
                 }
+                let link = source.linkID ?? ItemLinkID()
+                try store.setLinkID(link, itemIDs: source.linkID == nil ? [source.id, copyID] : [copyID], in: tx)
             }
             return result
         }
         Self.log.info("Copied \(result.added + result.replaced, privacy: .public) items to another scope")
         return result
+    }
+
+    /// True when `record` already is in `scope` of `repositoryID` (nothing to copy).
+    private static func isInPlace(_ record: ConfigItemRecord, scope: ConfigScope, repositoryID: RepoID) -> Bool {
+        record.repositoryID == repositoryID && record.scope == scope
     }
 
     /// The kind and folded name a copy target is matched on.
@@ -491,7 +514,7 @@ public struct ConfigRepository: Sendable {
     }
 
     /// One write transaction with the keys and the current time.
-    private func write<Result>(
+    func write<Result>(
         _ body: (borrowing UnlockedKeys, StoreTransaction, Date) throws -> Result
     ) throws(ConfigRepositoryError) -> Result {
         let now = clock.now

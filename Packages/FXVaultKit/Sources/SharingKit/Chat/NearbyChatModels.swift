@@ -157,6 +157,9 @@ public enum NearbyChatEvent: Sendable, Equatable {
     case sasReady(NearbySASModel)
     /// The peer's user confirmed the code.
     case peerConfirmedSAS
+    /// The peer proved with its device key that it is this teammate (chat version 3, v0.5.0):
+    /// the code counts as compared on this Mac.
+    case teammateVerified(TeamCardModel)
     /// Both users confirmed: the chat is end-to-end encrypted and verified.
     case verified
     /// A message from the peer.

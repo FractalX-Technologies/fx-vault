@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Step 1 (§7.2): per repository and scope what will change (names only), blocked changes with
-/// their fixes, changes routed to Drift review, credential-looking variables and the write limit.
+/// their fixes, changes routed to Drift review, credential-looking variables, "What changed?"
+/// when the run publishes shared versions (v0.6.0), and the write limit.
 ///
 /// Board SyncReview: each repository is a hairline card of scope rows (mono scope label, the
 /// counts sentence, the mono names); confirmations are checkbox rows.
@@ -28,6 +29,13 @@ struct SyncSummaryView: View {
                 }
                 if !viewModel.credentialRows.isEmpty {
                     credentialSection
+                }
+                if viewModel.publishesSharedVersions {
+                    FXTextField(
+                        label: SyncCopy.spaceReasonTitle,
+                        text: $viewModel.spaceReason,
+                        prompt: SyncCopy.spaceReasonPlaceholder
+                    )
                 }
                 limitSection
             }

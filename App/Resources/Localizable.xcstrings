@@ -639,6 +639,28 @@
         }
       }
     },
+    "chat.abort.signatureInvalid" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other Mac couldn't prove it is your teammate, so the chat was stopped."
+          }
+        }
+      }
+    },
+    "chat.abort.teammateNotRecognized" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other Mac is not the teammate you chose, so the chat was stopped."
+          }
+        }
+      }
+    },
     "chat.abort.timeout" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -1519,6 +1541,28 @@
         }
       }
     },
+    "chat.header.note.teammate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your teammate's Mac proved who it is. End-to-end encrypted; messages are never saved."
+          }
+        }
+      }
+    },
+    "chat.header.teammate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammate"
+          }
+        }
+      }
+    },
     "chat.locked.message" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2186,6 +2230,127 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Needs an internet connection. Your changes stay in the vault until you're back online."
+          }
+        }
+      }
+    },
+    "copyTo.copy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "copyTo.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No repository matches."
+          }
+        }
+      }
+    },
+    "copyTo.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy To"
+          }
+        }
+      }
+    },
+    "copyTo.noScope" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No other scope to copy into."
+          }
+        }
+      }
+    },
+    "copyTo.search" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository"
+          }
+        }
+      }
+    },
+    "copyTo.search.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search by name, owner or account"
+          }
+        }
+      }
+    },
+    "copyTo.show" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show %@"
+          }
+        }
+      }
+    },
+    "copyTo.subtitle.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copies %@. The copy stays linked to it."
+          }
+        }
+      }
+    },
+    "copyTo.subtitle.several" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copies %lld items. Each copy stays linked to its item."
+          }
+        }
+      }
+    },
+    "copyTo.target.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "copyTo.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Another Repository"
           }
         }
       }
@@ -3726,6 +3891,39 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "GitHub has names FX Vault cannot store, so they were not compared: %@."
+          }
+        }
+      }
+    },
+    "drift.space.banner" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A teammate published versions of a shared scope that this Mac does not have yet. Get them from your teammates: their changes arrive with the values."
+          }
+        }
+      }
+    },
+    "drift.space.behind" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ changed this in v%2$llu of the shared scope. Get Updates from Teammates instead."
+          }
+        }
+      }
+    },
+    "drift.space.forked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammates pushed this scope at the same time. Get Updates from Teammates and check its history."
           }
         }
       }
@@ -6612,6 +6810,17 @@
         }
       }
     },
+    "error.name.reservedName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault uses this name for shared spaces."
+          }
+        }
+      }
+    },
     "error.name.reservedPrefix" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7822,6 +8031,39 @@
         }
       }
     },
+    "itemEditor.linked.header" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Linked copies"
+          }
+        }
+      }
+    },
+    "itemEditor.linked.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Checked copies get the new value too, as changes for the next Sync. Copies that still had the current value are checked."
+          }
+        }
+      }
+    },
+    "itemEditor.linked.row" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@ (%3$@)"
+          }
+        }
+      }
+    },
     "itemEditor.move.kind" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8559,24 +8801,24 @@
         }
       }
     },
-    "main.detail.copiedItem.notice" : {
+    "main.detail.copiedItem.notice.linked" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Copied %@. Open another scope of this repository and paste it with ⌘V."
+            "value" : "Copied %@. Open another scope or repository and paste it with ⌘V: the copy stays linked to this item."
           }
         }
       }
     },
-    "main.detail.copiedItems.notice" : {
+    "main.detail.copiedItems.notice.linked" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Copied %lld items. Open another scope of this repository and paste them with ⌘V."
+            "value" : "Copied %lld items. Open another scope or repository and paste them with ⌘V: the copies stay linked to these items."
           }
         }
       }
@@ -8911,24 +9153,24 @@
         }
       }
     },
-    "main.detail.paste.otherRepository" : {
+    "main.detail.paste.expired" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Copied items paste into another scope of the same repository. To bring configuration to another repository, use Share."
+            "value" : "The copied items are no longer available (FX Vault was locked). Select them and press ⌘C again."
           }
         }
       }
     },
-    "main.detail.paste.sameScope" : {
+    "main.detail.paste.sameScope.linked" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "These items are already in this scope. Open another scope of this repository to paste them."
+            "value" : "These items are already in this scope. Open another scope or repository to paste them."
           }
         }
       }
@@ -9120,6 +9362,17 @@
         }
       }
     },
+    "main.detail.unlinked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is no longer linked. The copies stay where they are."
+          }
+        }
+      }
+    },
     "main.import.button" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9149,6 +9402,105 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Importing needs the GitHub CLI."
+          }
+        }
+      }
+    },
+    "main.linked.differs" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Differs"
+          }
+        }
+      }
+    },
+    "main.linked.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Linked copies"
+          }
+        }
+      }
+    },
+    "main.linked.footer" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Editing the value offers to update the copies too."
+          }
+        }
+      }
+    },
+    "main.linked.missing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Value missing"
+          }
+        }
+      }
+    },
+    "main.linked.none" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No other place has this item any more."
+          }
+        }
+      }
+    },
+    "main.linked.open.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show %1$@ in %2$@"
+          }
+        }
+      }
+    },
+    "main.linked.same" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Same value"
+          }
+        }
+      }
+    },
+    "main.linked.unknown" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not compared"
+          }
+        }
+      }
+    },
+    "main.linked.unlink" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlink"
           }
         }
       }
@@ -9758,6 +10110,17 @@
         }
       }
     },
+    "main.table.copyTo.otherRepository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Another Repository…"
+          }
+        }
+      }
+    },
     "main.table.delete" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9831,6 +10194,39 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Fill Value…"
+          }
+        }
+      }
+    },
+    "main.table.linked.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Linked copy: the same item is in %lld places"
+          }
+        }
+      }
+    },
+    "main.table.linked.show" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show Linked Copies"
+          }
+        }
+      }
+    },
+    "main.table.linked.unlink" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlink"
           }
         }
       }
@@ -10117,6 +10513,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "The connection could not be verified, so the share was stopped. Nothing was imported."
+          }
+        }
+      }
+    },
+    "nearby.abort.signatureInvalid" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other Mac couldn't prove who it is, so the connection was stopped. Nothing was shared."
+          }
+        }
+      }
+    },
+    "nearby.abort.teammateNotRecognized" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other Mac is not one of your teammates, or not the one you chose. Nothing was shared."
           }
         }
       }
@@ -11331,6 +11749,182 @@
         }
       }
     },
+    "ping.notification.body" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open FX Vault to see who is nearby."
+          }
+        }
+      }
+    },
+    "ping.notification.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ pinged you"
+          }
+        }
+      }
+    },
+    "presence.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "People nearby"
+          }
+        }
+      }
+    },
+    "presence.chat" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Chat"
+          }
+        }
+      }
+    },
+    "presence.nearby.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is nearby"
+          }
+        }
+      }
+    },
+    "presence.nearbyNow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby now"
+          }
+        }
+      }
+    },
+    "presence.ping" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ping"
+          }
+        }
+      }
+    },
+    "presence.ping.delivered" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ got your ping"
+          }
+        }
+      }
+    },
+    "presence.ping.failed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Couldn't reach %@"
+          }
+        }
+      }
+    },
+    "presence.ping.sending" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pinging %@…"
+          }
+        }
+      }
+    },
+    "presence.ping.unreachable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is no longer nearby"
+          }
+        }
+      }
+    },
+    "presence.ping.wait" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ping (%lld s)"
+          }
+        }
+      }
+    },
+    "presence.stranger.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not a teammate: the name is what their Mac says. A chat starts with the code."
+          }
+        }
+      }
+    },
+    "presence.tag.nearby" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby"
+          }
+        }
+      }
+    },
+    "presence.tag.teammate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammate"
+          }
+        }
+      }
+    },
+    "presence.teammate.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@, your teammate, is nearby"
+          }
+        }
+      }
+    },
     "recoveryKey.group.accessibility" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12024,6 +12618,72 @@
         }
       }
     },
+    "settings.nearby.visibility.everyone" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Everyone nearby"
+          }
+        }
+      }
+    },
+    "settings.nearby.visibility.everyone.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Anyone nearby with FX Vault sees your name and can ask to chat (with the code). Only teammates can ping you."
+          }
+        }
+      }
+    },
+    "settings.nearby.visibility.nobody" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nobody"
+          }
+        }
+      }
+    },
+    "settings.nearby.visibility.nobody.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This Mac does not show up for anyone. Nearby Chat still makes it visible while its window lists people."
+          }
+        }
+      }
+    },
+    "settings.nearby.visibility.teammates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammates"
+          }
+        }
+      }
+    },
+    "settings.nearby.visibility.teammates.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only your teammates see this Mac, under a name that changes every 15 minutes and that nobody else can link to you."
+          }
+        }
+      }
+    },
     "settings.reset.confirm" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12416,6 +13076,303 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Security"
+          }
+        }
+      }
+    },
+    "settings.tab.teammates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammates"
+          }
+        }
+      }
+    },
+    "settings.teammates.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Teammate…"
+          }
+        }
+      }
+    },
+    "settings.teammates.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No teammates yet. Open Add Teammate on both Macs, side by side."
+          }
+        }
+      }
+    },
+    "settings.teammates.footnote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammates are Macs you paired with by comparing a code. They recognize each other nearby, can ping each other and chat without a code."
+          }
+        }
+      }
+    },
+    "settings.teammates.locked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock FX Vault to add or remove teammates."
+          }
+        }
+      }
+    },
+    "settings.teammates.mute" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mute"
+          }
+        }
+      }
+    },
+    "settings.teammates.muteAll" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mute all pings"
+          }
+        }
+      }
+    },
+    "settings.teammates.muteAll.detail" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A ping still bounces the bubble, without a sound or a notification."
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.address" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Their address"
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.address.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "host:port (optional)"
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.allow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync shared scopes outside this network"
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.footnote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shared scopes also sync with the teammates you turn on here when you are not nearby, for example over Tailscale. Turn it on for each other on both Macs. Only shared-scope sync uses it: no pings, no chat. This Mac listens on TCP port %@, never advertises it, and answers only the teammates turned on here after they prove their key; five failed attempts close it for 10 minutes. Use a private network; do not open the port to the internet."
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.invalidAddress.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Type the teammate's host name or IP address and port, like mac-a.example.ts.net:52731."
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.invalidAddress.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check the address"
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.invalidPort.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose a port from 1 to 65535."
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.invalidPort.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check the port"
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.lastSync" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Synced outside this network %@"
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.port" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Listen on port"
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.portUnavailable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault can't listen on port %u. Another app may use it; choose another port."
+          }
+        }
+      }
+    },
+    "settings.teammates.remote.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Outside this network"
+          }
+        }
+      }
+    },
+    "settings.teammates.remove" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove…"
+          }
+        }
+      }
+    },
+    "settings.teammates.remove.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove Teammate"
+          }
+        }
+      }
+    },
+    "settings.teammates.remove.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Their Mac will no longer recognize this one: FX Vault changes the name this Mac uses nearby. Your other teammates get the new one the next time they are nearby."
+          }
+        }
+      }
+    },
+    "settings.teammates.remove.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove %@?"
+          }
+        }
+      }
+    },
+    "settings.teammates.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammates"
+          }
+        }
+      }
+    },
+    "settings.teammates.visibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Who can see this Mac"
+          }
+        }
+      }
+    },
+    "settings.teammates.visibility.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby"
           }
         }
       }
@@ -12900,6 +13857,50 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Confirm the warning"
+          }
+        }
+      }
+    },
+    "share.error.space.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It didn't come from a member of the space, or it was changed on the way. Nothing was stored."
+          }
+        }
+      }
+    },
+    "share.error.space.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A shared space update was refused"
+          }
+        }
+      }
+    },
+    "share.error.teamKeys.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault couldn't read the stored teammate keys. Remove the teammate and pair again."
+          }
+        }
+      }
+    },
+    "share.error.teamKeys.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammate keys unreadable"
           }
         }
       }
@@ -14202,6 +15203,754 @@
         }
       }
     },
+    "spaces.chip" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shared · v%lld"
+          }
+        }
+      }
+    },
+    "spaces.chip.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shared with teammates: show its history and members"
+          }
+        }
+      }
+    },
+    "spaces.chip.publishing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shared · v%lld · publishing"
+          }
+        }
+      }
+    },
+    "spaces.error.alreadyShared.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This scope is already shared with teammates."
+          }
+        }
+      }
+    },
+    "spaces.error.alreadyShared.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Already shared"
+          }
+        }
+      }
+    },
+    "spaces.error.gate.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not now"
+          }
+        }
+      }
+    },
+    "spaces.error.locked.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock FX Vault to work with shared scopes."
+          }
+        }
+      }
+    },
+    "spaces.error.locked.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault is locked"
+          }
+        }
+      }
+    },
+    "spaces.error.log.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A stored version did not pass its checks. Nothing was changed."
+          }
+        }
+      }
+    },
+    "spaces.error.log.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The shared scope's history can't be read"
+          }
+        }
+      }
+    },
+    "spaces.error.members.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A shared scope keeps at least this Mac. To stop sharing, ask the others to remove you."
+          }
+        }
+      }
+    },
+    "spaces.error.members.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Can't change the members"
+          }
+        }
+      }
+    },
+    "spaces.error.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nothing was changed. Try again."
+          }
+        }
+      }
+    },
+    "spaces.error.notAMember.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not a member"
+          }
+        }
+      }
+    },
+    "spaces.error.notOnGitHub.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync the repository to GitHub first, then share it."
+          }
+        }
+      }
+    },
+    "spaces.error.notOnGitHub.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not on GitHub yet"
+          }
+        }
+      }
+    },
+    "spaces.error.notReady.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A shared scope starts from what GitHub holds. Push its pending changes and fill every missing secret value, then share it."
+          }
+        }
+      }
+    },
+    "spaces.error.notReady.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync this scope first"
+          }
+        }
+      }
+    },
+    "spaces.error.sharedOnGitHub.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub shows that a teammate shares this scope. Ask them to add you; you get every version when your Macs meet."
+          }
+        }
+      }
+    },
+    "spaces.error.sharedOnGitHub.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Someone shares this scope already"
+          }
+        }
+      }
+    },
+    "spaces.error.teammate.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pair with the teammate first, in Preferences › Teammates."
+          }
+        }
+      }
+    },
+    "spaces.error.teammate.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammate not found"
+          }
+        }
+      }
+    },
+    "spaces.error.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Something went wrong"
+          }
+        }
+      }
+    },
+    "spaces.getUpdates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Updates from Teammates"
+          }
+        }
+      }
+    },
+    "spaces.history.item.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show the versions of %@"
+          }
+        }
+      }
+    },
+    "spaces.history.members" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "v%1$lld · Members changed by %2$@"
+          }
+        }
+      }
+    },
+    "spaces.history.published" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "v%1$lld · Pushed by %2$@"
+          }
+        }
+      }
+    },
+    "spaces.history.shared" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "v%1$lld · Shared by %2$@"
+          }
+        }
+      }
+    },
+    "spaces.item.changed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "v%1$lld · %2$@"
+          }
+        }
+      }
+    },
+    "spaces.item.close" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "spaces.item.fingerprint.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The same on every member's Mac for the same value"
+          }
+        }
+      }
+    },
+    "spaces.item.hide" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide"
+          }
+        }
+      }
+    },
+    "spaces.item.noValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No value in this version"
+          }
+        }
+      }
+    },
+    "spaces.item.removed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "v%1$lld · removed by %2$@"
+          }
+        }
+      }
+    },
+    "spaces.item.restore" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restore This Value"
+          }
+        }
+      }
+    },
+    "spaces.item.restored" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restored as a local change. Sync to make it the next version."
+          }
+        }
+      }
+    },
+    "spaces.item.reveal" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reveal"
+          }
+        }
+      }
+    },
+    "spaces.item.reveal.password" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter your master password to reveal an older value."
+          }
+        }
+      }
+    },
+    "spaces.members.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Teammates"
+          }
+        }
+      }
+    },
+    "spaces.members.notPaired" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not paired on this Mac"
+          }
+        }
+      }
+    },
+    "spaces.members.remove" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove…"
+          }
+        }
+      }
+    },
+    "spaces.members.remove.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The members get a new key, so new versions are hidden from them. What they already received stays with them: rotate those secrets on GitHub."
+          }
+        }
+      }
+    },
+    "spaces.members.remove.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove %@ from this scope?"
+          }
+        }
+      }
+    },
+    "spaces.members.removedNotice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You are no longer a member of this scope: new versions stay with the members."
+          }
+        }
+      }
+    },
+    "spaces.members.rotate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Removed. They received these secrets; rotate them on GitHub: %@."
+          }
+        }
+      }
+    },
+    "spaces.members.rotate.none" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Removed. No secret of this scope ever reached them."
+          }
+        }
+      }
+    },
+    "spaces.members.thisMac" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This Mac"
+          }
+        }
+      }
+    },
+    "spaces.menu.share" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share with Teammates…"
+          }
+        }
+      }
+    },
+    "spaces.menu.show" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shared with Teammates…"
+          }
+        }
+      }
+    },
+    "spaces.scope.repository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository"
+          }
+        }
+      }
+    },
+    "spaces.share.done" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shared. Your teammates get it the next time your Macs meet, nearby or at their address."
+          }
+        }
+      }
+    },
+    "spaces.share.explanation" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Every push to this scope becomes a version your teammates get Mac to Mac, with its value, author and time. Before anyone pushes, FX Vault checks they have the latest version. No server is involved: GitHub only holds a small version marker."
+          }
+        }
+      }
+    },
+    "spaces.share.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share with Teammates"
+          }
+        }
+      }
+    },
+    "spaces.share.noTeammates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pair with a teammate first, in Preferences › Teammates."
+          }
+        }
+      }
+    },
+    "spaces.share.notReady.missing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Fill these secret values first (GitHub never returns them): %@."
+          }
+        }
+      }
+    },
+    "spaces.share.notReady.pending" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync these first, so the first version matches GitHub: %@."
+          }
+        }
+      }
+    },
+    "spaces.share.primary" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share"
+          }
+        }
+      }
+    },
+    "spaces.share.reason" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Note"
+          }
+        }
+      }
+    },
+    "spaces.share.reason.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Optional. Shown in the history."
+          }
+        }
+      }
+    },
+    "spaces.share.show" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show Shared Scope"
+          }
+        }
+      }
+    },
+    "spaces.share.teammates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammates"
+          }
+        }
+      }
+    },
+    "spaces.share.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep this scope in sync"
+          }
+        }
+      }
+    },
+    "spaces.sheet.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shared with Teammates"
+          }
+        }
+      }
+    },
+    "spaces.sheet.history" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "History"
+          }
+        }
+      }
+    },
+    "spaces.sheet.members" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Members"
+          }
+        }
+      }
+    },
+    "spaces.sheet.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "v%1$lld · %2$lld members"
+          }
+        }
+      }
+    },
+    "spaces.sync.received" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Got v%1$lld from %2$@"
+          }
+        }
+      }
+    },
+    "spaces.sync.receivedWithDrafts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Got v%1$lld from %2$@. Your edits to %3$@ stay on top."
+          }
+        }
+      }
+    },
     "startup.failed.message" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -14407,6 +16156,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "The environment is recreated on GitHub, which needs every value. Fill these first: %@."
+          }
+        }
+      }
+    },
+    "sync.blocked.sharedEnvironment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This environment is shared with teammates. Renaming or deleting a shared environment is not supported yet."
           }
         }
       }
@@ -15137,6 +16897,17 @@
         }
       }
     },
+    "sync.fix.getTeammateUpdates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Updates from Teammates"
+          }
+        }
+      }
+    },
     "sync.fix.learnMore" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -15155,6 +16926,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Review Drift…"
+          }
+        }
+      }
+    },
+    "sync.fix.takeOver" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Take Over…"
           }
         }
       }
@@ -15485,6 +17267,182 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "The new name was not confirmed, so the old name is kept on GitHub."
+          }
+        }
+      }
+    },
+    "sync.space.behind" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ published v%2$llu, which this Mac does not have yet. Get it from your teammates first, so nothing they changed is overwritten."
+          }
+        }
+      }
+    },
+    "sync.space.blockedCount" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld changes wait for it."
+          }
+        }
+      }
+    },
+    "sync.space.clear" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shared with teammates."
+          }
+        }
+      }
+    },
+    "sync.space.forked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Two teammates pushed to this scope at the same time. Get updates from your teammates and check its history before pushing."
+          }
+        }
+      }
+    },
+    "sync.space.gettingUpdates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Getting updates from your teammates…"
+          }
+        }
+      }
+    },
+    "sync.space.invalidMarker" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The version marker on GitHub was not written by a member of this shared scope. Check its history before pushing."
+          }
+        }
+      }
+    },
+    "sync.space.notAMember" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This Mac was removed from the shared scope. Ask a member to add you again."
+          }
+        }
+      }
+    },
+    "sync.space.publishNote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Some scopes are shared with teammates: this push becomes a new version they get automatically."
+          }
+        }
+      }
+    },
+    "sync.space.publishing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ has been pushing to this scope since %2$@. Sync again when they are done."
+          }
+        }
+      }
+    },
+    "sync.space.publishingStale" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ started pushing to this scope at %2$@ and never finished. You can take over."
+          }
+        }
+      }
+    },
+    "sync.space.reason.placeholder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Optional. Your teammates see it in the history."
+          }
+        }
+      }
+    },
+    "sync.space.reason.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "What changed?"
+          }
+        }
+      }
+    },
+    "sync.space.takeOver.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Take Over"
+          }
+        }
+      }
+    },
+    "sync.space.takeOver.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Do this only if they are not pushing anymore. Your push becomes the next version, and the takeover is recorded in its history."
+          }
+        }
+      }
+    },
+    "sync.space.takeOver.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Take over %@'s unfinished push?"
+          }
+        }
+      }
+    },
+    "sync.space.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shared with teammates · %@"
           }
         }
       }
@@ -16028,6 +17986,28 @@
         }
       }
     },
+    "sync.warning.spaceForked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A teammate pushed to a shared scope at the same moment. Get updates from your teammates and check its history."
+          }
+        }
+      }
+    },
+    "sync.warning.spaceNotPublished" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub did not confirm the shared version marker. FX Vault finishes it at the next Sync or unlock; until then teammates may see the scope as being pushed."
+          }
+        }
+      }
+    },
     "sync.warning.valueNormalized" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -16035,6 +18015,259 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Trailing line breaks were removed from %@ before it was pushed."
+          }
+        }
+      }
+    },
+    "teammates.add.abort.cancelled" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other person cancelled. Nobody was added."
+          }
+        }
+      }
+    },
+    "teammates.add.abort.disconnected" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other Mac disconnected. Nobody was added."
+          }
+        }
+      }
+    },
+    "teammates.add.abort.mismatch" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The codes didn't match, so nobody was added."
+          }
+        }
+      }
+    },
+    "teammates.add.abort.security" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The connection could not be verified, so nobody was added. Try again."
+          }
+        }
+      }
+    },
+    "teammates.add.abort.self" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "That is this Mac. Choose someone else's Mac."
+          }
+        }
+      }
+    },
+    "teammates.add.abort.timeout" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The codes were not confirmed in time. Nobody was added."
+          }
+        }
+      }
+    },
+    "teammates.add.connecting" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Someone is connecting…"
+          }
+        }
+      }
+    },
+    "teammates.add.connecting.named" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting to %@…"
+          }
+        }
+      }
+    },
+    "teammates.add.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammates"
+          }
+        }
+      }
+    },
+    "teammates.add.paired" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is now your teammate. You'll see each other nearby and can ping and chat without a code."
+          }
+        }
+      }
+    },
+    "teammates.add.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open Add Teammate on both Macs, choose the other person, and compare the code."
+          }
+        }
+      }
+    },
+    "teammates.add.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Teammate"
+          }
+        }
+      }
+    },
+    "teammates.add.tryAgain" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Try Again"
+          }
+        }
+      }
+    },
+    "teammates.add.visibleAs" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Visible to people nearby as %@"
+          }
+        }
+      }
+    },
+    "teammates.add.waiting" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Looking for Macs with Add Teammate open…"
+          }
+        }
+      }
+    },
+    "teammates.error.locked.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock FX Vault to change your teammates."
+          }
+        }
+      }
+    },
+    "teammates.error.locked.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault is locked"
+          }
+        }
+      }
+    },
+    "teammates.error.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nothing was changed. Try again."
+          }
+        }
+      }
+    },
+    "teammates.error.notFound.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This teammate was already removed."
+          }
+        }
+      }
+    },
+    "teammates.error.notFound.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammate not found"
+          }
+        }
+      }
+    },
+    "teammates.error.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Couldn't update your teammates"
+          }
+        }
+      }
+    },
+    "teammates.lastSeen" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Seen nearby %@"
+          }
+        }
+      }
+    },
+    "teammates.lastSeen.never" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not seen nearby yet"
           }
         }
       }
@@ -16310,6 +18543,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "share configuration"
+          }
+        }
+      }
+    },
+    "touchID.prompt.spaceHistory" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "reveal an older value"
           }
         }
       }

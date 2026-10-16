@@ -101,7 +101,7 @@ while every foreign owner is that uid. Symlinks are resolved;
 | B4 environment | `gh api -X GET -i repos/{o}/{r}/environments/{e}` | `.get(repo:environment:)` / `decodeEnvironment` | 404 means absent: `GHCommandScheduler.environment(_:named:)` returns nil. |
 | B5 patterns | `gh api -X GET repos/{o}/{r}/environments/{e}/deployment-branch-policies --paginate --slurp` | `.listBranchPolicies` / `decodeBranchPolicies` | `GHBranchPolicyDTO`; a missing `type` means branch. |
 | B6/B7 secrets | `gh secret list --repo={o}/{r} [--env={e}] --json name,updatedAt` | `GHSecretsCommands.list` / `decodeList` | gh follows every page. |
-| B8/B9 variables | `gh variable list --repo={o}/{r} [--env={e}] --json name,value,updatedAt,createdAt` | `GHVariablesCommands.list` / `decodeList` | Values become `SecretBytes` (`GHVariableListingModel`); stdout is wiped. The JSON decoder's transient `String` copies cannot be wiped. |
+| B8/B9 variables | `gh variable list --repo={o}/{r} [--env={e}] --json name,value,updatedAt,createdAt` | `GHVariablesCommands.list` / `decodeList` | Values become `SecretBytes` (`GHVariableListingModel`); stdout is wiped. The JSON decoder's transient `String` copies cannot be wiped. Since v0.6.0 the shared space marker `FXVAULT_SPACE` is split off every listing (`splitSpaceMarker`; `GHCommandScheduler.listVariables` never returns it, `listVariableScope` returns it beside the variables). |
 | B10g / B10l | `gh repo gitignore list`, `gh repo license list` | `GHTemplatesCommands` | Plain text by line; license key column first. |
 
 ## C. Write
@@ -117,7 +117,8 @@ parallel. Values and JSON bodies are on stdin.
 | C4 pattern delete | `gh api -X DELETE -i repos/{o}/{r}/environments/{e}/deployment-branch-policies/{id}` | `.deleteBranchPolicy` | 204; a 404 counts as done. |
 | C5 secret set | `gh secret set {n} --repo={o}/{r} [--env={e}]` | `GHSecretsCommands.set` | Value on stdin (the builder copies it). Verified by the caller through B6/B7 `updatedAt`. |
 | C6 secret delete | `gh secret delete {n} --repo={o}/{r} [--env={e}]` | `.delete` | A 404 is thrown as `.notFound`; the caller treats it as done only after a successful re-list of the same scope. |
-| C7 variable set | `gh variable set {n} --repo={o}/{r} [--env={e}]` | `GHVariablesCommands.set(…isUpdate:)` | Upsert; write cost 2 when `isUpdate`. Empty values are rejected before argv. |
+| C7 variable set | `gh variable set {n} --repo={o}/{r} [--env={e}]` | `GHVariablesCommands.set(…isUpdate:)` | Upsert; write cost 2 when `isUpdate`. Empty values are rejected before argv. The reserved name `FXVAULT_SPACE` is refused here. |
+| C7 space marker (v0.6.0) | `gh variable set FXVAULT_SPACE --repo={o}/{r} [--env={e}]`, the signed marker JSON on stdin | `GHVariablesCommands.setSpaceMarker(…isUpdate:)` | The only write of the reserved name (SHARING-PROTOCOL.md §11.2). Same queue, throttle and retries as C7; always re-read with B8/B9 afterwards. Not journaled: `spaces.claimed_version` records an unfinished claim instead. |
 | C8 variable delete | `gh variable delete {n} --repo={o}/{r} [--env={e}]` | `.delete` | As C6. |
 | C9 env delete | `gh api -X DELETE -i repos/{o}/{r}/environments/{e}` | `GHEnvironmentsAPI.delete` | 204; a 404 is `.notFound` until a B3 re-list confirms it. |
 
@@ -206,7 +207,10 @@ case-insensitive, seeded once from the journal's write start times over the last
 |---|---|---|
 | `GitHubEnvironmentRepository` | A1–A4, D1, D2 | gh detection (shell probe, `GHLocator`, 2.97.0 floor), accounts and scopes, token cache (`purgeTokens()` on lock), SSH alias test (D1 must resolve to github.com, then D2) |
 | `RepoCatalogRepository` | A5, B1, B2; import: B2, B3, B5, B6–B9 | One owner failing (SAML, not found) marks only that owner unavailable. An import read failing for permission, SAML or plan reasons marks only that scope unreadable; token, network and rate-limit failures stop the import |
-| `SyncPreflight` | B2 (repository to create, journaled as a read), B3–B9 for every touched scope | D27 base checks; the pending-verification pass runs on the same re-list |
+| `SyncPreflight` | B2 (repository to create, journaled as a read), B3–B9 for every touched scope | D27 base checks; the pending-verification pass runs on the same re-list; the marker of each shared scope from the same B8/B9 decides its gate (v0.6.0) |
+| `SyncExecutor` (spaces) | C7 marker, B8/B9 re-read | v0.6.0: claim and re-read before a shared scope's first write; publish and re-read after the repository's steps |
+| `SpaceClaimReconciler` | B8/B9, C7 marker | v0.6.0: at unlock, finishes a claim left open (publishes and re-reads) or drops one another member replaced |
+| `SpaceRepository` | B8/B9, C7 marker | v0.6.0: Share with Teammates (version 1, published marker) and member changes (claim, members version, published marker) |
 | `SyncExecutor` | C1–C9, then B-row re-lists | Order: C1, C2 upserts, C3/C4 patterns, guided renames, scope writes (repository first, variables before secrets), item deletes, C9. Before a scope's writes it re-lists the scope (D27 re-check, `pre_write_updated_at`); after them it verifies by re-listing every `Timeouts.verifyRetryInterval` (2 s) for up to `verifyRetryWindow` (60 s) |
 | `SyncExecutor` (new repository) | B2 after C1 | Within `Timeouts.freshRepoWindow` (90 s) after C1, "not found" is retried every `freshRepoRetryInterval` (1 s) for up to `freshRepoRetryWindow` (60 s) and never classified as plan-gated |
 | `SyncReconciler` | B2, B3–B9 | Launch reconciliation of `in_flight` / `indeterminate` journal rows by re-list; never by the local clock. A timed-out C1 is adopted only after the journaled "name is free" lookup and a B2 showing the expected owner and visibility |

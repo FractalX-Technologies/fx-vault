@@ -40,7 +40,7 @@ struct DriftEffectApplier {
             try requireListedSecret(updatedAt: remoteUpdatedAt)
             try updateItem(itemID) { record in
                 Self.takeSyncedIdentity(&record)
-                Self.clearValues(&record)
+                record.clearValues()
                 record.remoteUpdatedAt = remoteUpdatedAt
             }
         case .createTombstone(let placement):
@@ -55,7 +55,7 @@ struct DriftEffectApplier {
             try adoptRemoteIdentity(itemID, remoteName: remoteName, remoteUpdatedAt: remoteUpdatedAt, fingerprint: fingerprint, replace: true)
         case .markItemUnsynced(let itemID):
             try requireItemAbsent()
-            try updateItem(itemID, Self.markUnsynced)
+            try updateItem(itemID) { $0.markUnsynced() }
         case .deleteLocalItem(let itemID):
             try requireItemAbsent()
             guard try rows.config.deleteItem(id: itemID, in: rows.tx) else { throw DriftRepositoryError.stale }
@@ -159,7 +159,7 @@ struct DriftEffectApplier {
         }
         guard let syncedName = record.syncedName else { return }
         try rows.insertDetachedTombstone(of: record, name: syncedName, keys: keys)
-        try updateItem(itemID, Self.markUnsynced)
+        try updateItem(itemID) { $0.markUnsynced() }
     }
 
     /// A new row for a remote-only item: a tombstone ("Keep local": the next Sync deletes it) or
@@ -272,7 +272,7 @@ struct DriftEffectApplier {
             if item.isDeleted {
                 try rows.config.deleteItem(id: item.id, in: rows.tx)
             } else {
-                try updateItem(item.id, Self.markUnsynced)
+                try updateItem(item.id) { $0.markUnsynced() }
             }
         }
     }
@@ -371,24 +371,6 @@ struct DriftEffectApplier {
         record.verifyState = .verified
     }
 
-    private static func clearValues(_ record: inout ConfigItemRecord) {
-        record.valueCiphertext = nil
-        record.valueFingerprint = nil
-        record.syncedValueCiphertext = nil
-        record.syncedFingerprint = nil
-    }
-
-    /// A pending add again: every synced column cleared.
-    private static func markUnsynced(_ record: inout ConfigItemRecord) {
-        record.syncedName = nil
-        record.syncedValueCiphertext = nil
-        record.syncedFingerprint = nil
-        record.remoteUpdatedAt = nil
-        record.forcePush = false
-        record.forcePushRequestedAt = nil
-        record.verifyState = .verified
-        record.preWriteUpdatedAt = nil
-    }
 
     static func policy(_ kind: BranchPolicyKind, patterns: [BranchPatternModel]) -> DeploymentBranchPolicyModel {
         switch kind {

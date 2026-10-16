@@ -9,6 +9,8 @@ public enum ReauthPurpose: String, Sendable, Hashable, CaseIterable {
     case share
     /// Sending a nearby MANIFEST.
     case nearbySend
+    /// Revealing an older value from a shared space's history (v0.6.0).
+    case spaceHistory
 }
 
 /// Operations that accept **only** the master password (D30). Touch ID never authorizes them:

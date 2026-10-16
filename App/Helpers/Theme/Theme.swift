@@ -81,6 +81,8 @@ enum Theme {
         static let recoveryKeyRows = 2
         static let recoveryKeyColumns = Limits.recoveryKeyGroupCount / recoveryKeyRows
         static let recoveryGroupFieldWidth: CGFloat = 88
+        /// Preferences › Teammates › port field (v0.6.0).
+        static let portFieldWidth: CGFloat = 88
         static let secretEditorMinHeight: CGFloat = 96
 
         // MARK: Main window
@@ -192,6 +194,28 @@ enum Theme {
         /// The attachment picker sheet and its item list.
         static let chatPickerWidth: CGFloat = 520
         static let chatPickerListHeight: CGFloat = 300
+
+        // MARK: Linked copies (v0.4.1)
+
+        /// Width of the linked copies popover and of the "Copy to Another Repository" list.
+        static let linkedPopoverWidth: CGFloat = 380
+        /// Tallest the linked copies list grows before it scrolls.
+        static let linkedListMaxHeight: CGFloat = 280
+        /// Height of the repository list in "Copy to Another Repository".
+        static let copyTargetListHeight: CGFloat = 320
+
+        // MARK: Teammates nearby (v0.5.0)
+
+        /// Bubbles shown in the toolbar before "+N".
+        static let presenceMaxBubbles = 4
+        /// How much neighbouring bubbles overlap.
+        static let presenceOverlap: CGFloat = 6
+        /// Width of a person's popover and of the "+N" list.
+        static let presencePopoverWidth: CGFloat = 300
+        /// The Add Teammate sheet.
+        static let addTeammateSheetWidth: CGFloat = 520
+        /// The people list in Add Teammate.
+        static let addTeammateListHeight: CGFloat = 220
     }
 
     /// Opacity levels for states and tinted backgrounds.
@@ -212,6 +236,8 @@ enum Theme {
     nonisolated enum Stroke {
         /// Every border and divider: 1 pt hairlines instead of shadows.
         static let hairline: CGFloat = 1
+        /// The ring that separates overlapping presence bubbles (v0.5.0).
+        static let emphasis: CGFloat = 2
         /// Dashed hairlines ("+ New Environment"): 4 pt dashes, 4 pt gaps.
         static let dashPattern: [CGFloat] = [4, 4]
         /// The outlined center cell of the brand mark, as a fraction of the mark's size.

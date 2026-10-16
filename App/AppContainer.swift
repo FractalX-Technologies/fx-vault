@@ -57,6 +57,15 @@ final class AppContainer {
     let connectivity: ConnectivityMonitor
     /// Whether GitHub answers the gh calls the app makes (fed by the view models).
     let gitHubReachability = GitHubReachability()
+    /// The network of teammate presence and Add Teammate (v0.5.0).
+    let teamNetworking: any TeamPresenceNetworking
+    /// The clock of teammate presence (pseudonym renewal, grace, ping cooldown); `clock` unless
+    /// tests pass their own, so its renewal timer never mixes with other sleepers.
+    let presenceClock: any VaultClock
+    /// How a teammate's ping gets attention (v0.5.0).
+    let pingAlerts: any PingAlerting
+    /// Space sync with teammates outside the local network (v0.6.0, Q4).
+    let spaceNetworking: any SpaceRemoteNetworking
 
     init(
         mode: Mode,
@@ -70,7 +79,11 @@ final class AppContainer {
         passphraseGenerator: PassphraseGenerator?,
         vaultDirectory: URL?,
         clock: any VaultClock,
-        connectivity: ConnectivityMonitor? = nil
+        connectivity: ConnectivityMonitor? = nil,
+        teamNetworking: any TeamPresenceNetworking = InertTeamPresenceNetworking(),
+        presenceClock: (any VaultClock)? = nil,
+        pingAlerts: any PingAlerting = RecordedPingAlerts(),
+        spaceNetworking: any SpaceRemoteNetworking = InertSpaceRemoteNetworking()
     ) {
         self.mode = mode
         self.vaultManager = vaultManager
@@ -85,6 +98,10 @@ final class AppContainer {
         self.vaultDirectory = vaultDirectory
         self.clock = clock
         self.connectivity = connectivity ?? ConnectivityMonitor(source: FixedNetworkPathSource(), clock: clock)
+        self.teamNetworking = teamNetworking
+        self.presenceClock = presenceClock ?? clock
+        self.pingAlerts = pingAlerts
+        self.spaceNetworking = spaceNetworking
     }
 
     /// Whether this container may touch the disk, the keychain or spawn processes.
@@ -145,7 +162,10 @@ final class AppContainer {
             passphraseGenerator: try? PassphraseGenerator.bundled(),
             vaultDirectory: session.databaseDirectory,
             clock: clock,
-            connectivity: ConnectivityMonitor(source: NWPathMonitorSource(), clock: clock)
+            connectivity: ConnectivityMonitor(source: NWPathMonitorSource(), clock: clock),
+            teamNetworking: LiveTeamPresenceNetworking(),
+            pingAlerts: SystemPingAlerts(),
+            spaceNetworking: LiveSpaceRemoteNetworking()
         )
     }
 

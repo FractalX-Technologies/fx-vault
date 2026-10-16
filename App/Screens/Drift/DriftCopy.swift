@@ -149,6 +149,29 @@ nonisolated enum DriftCopy {
         }
     }
 
+    // MARK: - Shared spaces (v0.6.0, S9)
+
+    static let teammateChangesBanner = String(
+        localized: "drift.space.banner",
+        defaultValue: "A teammate published versions of a shared scope that this Mac does not have yet. Get them from your teammates: their changes arrive with the values."
+    )
+
+    /// Why Keep Local and Accept GitHub are not offered for a teammate's change.
+    static func teammateChange(_ decision: SpaceGateDecision) -> String {
+        switch decision {
+        case .behind(let version, let login):
+            String(
+                localized: "drift.space.behind",
+                defaultValue: "\(login) changed this in v\(version) of the shared scope. Get Updates from Teammates instead."
+            )
+        default:
+            String(
+                localized: "drift.space.forked",
+                defaultValue: "Teammates pushed this scope at the same time. Get Updates from Teammates and check its history."
+            )
+        }
+    }
+
     static func unavailable(_ reason: DriftUnavailableReason) -> String {
         switch reason {
         case .valueMissing:

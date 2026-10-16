@@ -55,6 +55,8 @@ nonisolated extension NameRule {
             String(localized: "error.name.leadingDigit", defaultValue: "The name cannot start with a digit.")
         case .reservedPrefix:
             String(localized: "error.name.reservedPrefix", defaultValue: "Names starting with GITHUB_ are reserved by GitHub.")
+        case .reservedName:
+            String(localized: "error.name.reservedName", defaultValue: "FX Vault uses this name for shared spaces.")
         case .dotName:
             String(localized: "error.name.dotName", defaultValue: "The name cannot be . or ..")
         case .gitSuffix:

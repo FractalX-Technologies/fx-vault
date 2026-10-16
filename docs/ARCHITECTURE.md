@@ -277,6 +277,25 @@ See [SHARING-PROTOCOL.md](SHARING-PROTOCOL.md).
   `ShareImporter` applies it in one transaction.
 - `ShareError` (one `.invalidFile` for every file read failure).
 
+- Teammates (v0.5.0, `Team/`): `TeamProtocol`, `TeamService` (preamble), `TeamMessageType`;
+  `TeamDeviceKeys` (generate, `secretBytes()`, `withNewAnnounceKey()`, `card(login:displayName:macName:)`),
+  `TeamCardModel` (wire form, id check), `TeamDeviceID`; `TeamPseudonym` and `TeamPresenceMatcher`;
+  `TeamPairingMachine` / `TeamPairingSession` (Add Teammate); `TeamSessionMachine` / `TeamSession`
+  (`connect(to:keys:requests:transport:)`, `ping`, `answer`) with `TeamRequest` (`.ping`,
+  `.updateCard`); `TeamRouter.route(_:)` (preamble), `PreambleTransport`, `WatchedTransport`;
+  `NWTeamListener` (persistent, re-registering presence advertisement); `TeamChatIdentityModel`
+  for chat version 3. `NearbyChannel` is the encrypted channel shared by every nearby protocol.
+- Shared spaces (v0.6.0, `Space/`, SHARING-PROTOCOL.md §11): `SpaceProtocol`; models
+  (`SpaceBindingModel`, `SpaceMemberModel`, `SpaceItemModel`, `SpaceSnapshotModel`,
+  `SpaceVersionModel` with `hash`, `encoded()`, `decode`, `SpaceHeadModel`); `SpaceLog`
+  (`verify`, `verifyGenesis`, `apply` → `SpaceStateModel`), `SpaceKeychain` (epoch keys from
+  wraps, `exportKey`/`importKey`), `SpaceVersionBuilder` (`genesis`, `publish`, `members`,
+  `snapshot(of:keychain:)`, `fingerprint`), `SpaceMarkerModel` (`make`, `encoded`, `decode`,
+  `isSigned(by:)`) and `SpaceGate.decide`. In `Team/`: `TeamService.spaces`, the spaces messages
+  of `TeamSessionMachine`, `TeamSession.syncSpaces(with:keys:exchanger:transport:)` and
+  `answer(…service:exchanger:)` over `TeamSpaceExchanging`; `NWSpaceListener`,
+  `RemoteSpaceBackoff` and `TeamRemoteAddressModel` (Q4).
+
 ### SyncEngine
 
 Pure domain (§7) plus execution. It never touches the database or the keys: VaultData
@@ -384,9 +403,16 @@ text) because packages ship no user-facing text.
   Throws only
   `.locked` / `.persistenceFailed`; gh failures become
   `SyncBlockedChangeModel{change, reason: SyncBlockReason}`.
-- `SyncPlanner.plan(_:includeDeletions:) -> SyncPlanModel` with ordered `SyncStepModel`s:
+- `SyncPlanner.plan(_:includeDeletions:spaceReason:) -> SyncPlanModel` with ordered `SyncStepModel`s:
   create, environment upserts, patterns, guided renames, scope writes (repository first,
   variables before secrets), item deletes, environment deletes.
+- Shared spaces (v0.6.0): `protocol SyncSpaceCoordinating` (`sharedScopes`, `gate`, `claim`,
+  `publish`, `confirmPublished`, `abandonClaim`), injected as `spaces:` into `SyncPreflight`
+  (`run(…spaceTakeovers:)`; gates every shared scope it touches, `SyncBlockReason.space` /
+  `.sharedEnvironment`, `RepoPreflightModel.spaces`) and `SyncExecutor` (claim and re-read before
+  a shared scope's first write, publish and re-read after the repository's steps; warnings
+  `.spaceNotPublished`, `.spaceForked`), and `SpaceClaimReconciler` (unfinished claims at
+  unlock).
 - `actor SyncExecutor(schedulers:persistence:values:clock:)`: `run(_ plan) -> SyncResultModel`
   (throws only `.alreadyRunning`), `nonisolated progress: AsyncStream<SyncProgressEventModel>`,
   `nonisolated cancel()` (stops after the command in flight). One gh command per item, values on
@@ -484,9 +510,34 @@ one `VaultSession.write` and throws `ConfigRepositoryError`.
   `reveal(_:) -> SecretBytes` (caller wipes). Values are normalized on entry (D32;
   `ItemWriteResultModel.didStripTrailingNewlines`).
 - Reads and streams: `changeSet(repositoryID:)`, `scopes(repositoryID:)`, `pendingCounts()`,
-  `observeRepositories()`, `observeScopes(repositoryID:)`, `observeItems(repositoryID:scope:)`,
-  `observePendingCounts()`.
+  `observeRepositories()`, `observeScopes(repositoryID:)`, `observeItems(repositoryID:scope:)`
+  (each model with its `linkCount`), `observePendingCounts()`.
+- Copy and linked copies (v0.4.0, v0.4.1): `copyConflicts(_:to:repositoryID:)` and
+  `copyItems(_:to:repositoryID:conflicts:)` take sources from any repository; `copyItems` links
+  each copy to its source. `ConfigRepository+Links.swift`: `linkedCopies(of:) ->
+  [LinkedCopyModel]` (the group's other live places with `LinkedValueComparison` `.same` /
+  `.differs` / `.valueMissing` / `.unknown`, the sync status and `editBlock`), `unlink(_:)`, and
+  `updateLinkedCopies(from:to:) -> Int` (one transaction, one `ItemEditBatch` per repository; a
+  value-missing copy is filled with a push requested now).
 - `RepoSnapshotMapper` is the only `ConfigItemState` → `ConfigItemSnapshotModel` mapping.
+
+**Team** (`Team/`, v0.5.0). `struct TeamRepository(session:clock:)`: `deviceKeys()` (created on
+first use), `teammates()`, `observeTeammates()`, `teammateCards()` (announce keys opened),
+`addTeammate(_:)`, `applyCardUpdate(_:)`, `removeTeammate(id:)` (renews the announce key, marks
+`needs_card_update`), `setMuted(_:teammate:)`, `markSeen(_:)`, `cardUpdateDelivered(to:)`.
+Errors: `TeamRepositoryError`. `ChatRepository.makeConversation(…team:)` passes the teammate
+identity to chat version 3. Since v0.6.0: `remoteAccess()`, `observeRemoteAccess()`,
+`setRemoteAccess(_:isAllowed:address:)`, `markRemoteConnection(_:at:)` (Q4).
+
+**Spaces** (`Spaces/`, v0.6.0). `struct SpaceRepository(session:schedulers:clock:)`, also the
+app's `SyncSpaceCoordinating`: `spaces()`, `observeSpaces()`, `detail(_:)`,
+`readiness(repositoryID:scope:)`, `share(repositoryID:scope:with:me:reason:)` (genesis and the
+marker), `addMembers` / `removeMembers` (→ `SpaceRotationChecklistModel`), `history(_:)`,
+`itemHistory(_:kind:name:)`, `value(_:version:kind:name:)`, `restore(…)`; peers:
+`heads(sharedWith:)`, `version(_:of:for:)`, `receive(_:spaceID:from:)` (→
+`SpaceReceiveOutcomeModel`). `SpaceSnapshotBuilder` (rows → snapshot) and
+`SpaceSnapshotApplier` (snapshot → rows, drafts kept). Errors: `SpaceRepositoryError`.
+`SyncRepository` and `DriftRepository` take it as `spaces:`.
 
 **.env files** (`EnvFiles/`). `struct EnvFileRepository(session:gitignoreChecker:
 cloudSyncDetector:fileWriter:clock:writePolicy:)`: `readFile(at:)`, `parse(_:)`,
@@ -703,6 +754,70 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 75 | Chat | **Import Into…** (Bryan, Q3) plans the package as if it were for the repository the receiver picks: owner, name and GitHub id come from that vault row, then the same `ShareImportPlanner`, preview and `SharingRepository.apply` as any import, so environments it lacks are created and everything is pending for the next Sync. Repositories the account cannot change are listed with the reason (archived; admin required when the package has environments, which need admin) and cannot be chosen; the sender's `owner/name` is preselected when the vault has it. Cancel at the repository choice keeps the received values (nothing was planned); Cancel after the preview wipes them, as for one item |
 | 76 | Chat | **Save as File…** (Bryan, Q3) reuses `ShareExportViewModel` with a chat source: `.fileExport` re-authentication, a fresh passphrase shown once, Save… or AirDrop. The file keeps the sender's name and package id; the package stays in the conversation, so it can still be imported. No plaintext `.env` from chat. The chat window shows one sheet at a time: a value that arrives while another sheet is open waits on its card |
 
+### As built in v0.4.1 (copy across repositories, linked copies)
+
+v0.4.1 and v0.5.0 are plan steps (tasks/todo.md); neither was released on its own. Both shipped
+with v0.6.0 in release 0.6.0.
+
+| # | Area | Decision |
+|---|---|---|
+| 77 | Copy | Copy and paste reaches every repository of the vault, whatever account it belongs to (Bryan, 2026-10-15, reversing decision 72's same-repository rule). The target must be editable by its own repository's account; the copy is one transaction on the target repository (`ItemEditBatch` over the target, sources read by id). The copied items moved from the detail view model, which is rebuilt for each repository, into `ClipboardManager` |
+| 78 | Links | Every copy is linked to its source (`config_items.link_id`); a kept conflict is not. The link is local metadata: it never travels in shares, chat or `.env` files and does not change how a row syncs. Duplicate environment does not link (its copies are a starting point that is expected to diverge) |
+| 79 | Links | Same value / Differs is computed when the popover or the editor needs it (values decrypted in memory, compared in constant time, wiped), not stored: a stored group fingerprint would have to be kept current by every value write path, and the sync diff (D11) never needs it. The table shows only the count, which needs no keys |
+| 80 | Links | Update everywhere lives in the item editor: when a linked item gets a new value, its other places are listed, the ones that still have the current value checked and the ones the account cannot change disabled with the reason; Save updates the checked ones in one more transaction after the item's own edit (`updateLinkedCopies`). Each copy is an ordinary pending change for the next Sync |
+
+### As built in v0.5.0 (teammates nearby, ping)
+
+| # | Area | Decision |
+|---|---|---|
+| 81 | Teammates | A device identity per vault (Ed25519, X25519, announce key), created on first use and sealed in the vault as a secret field (`SecretFieldAAD`, `K_field`), not in the keychain: ad-hoc builds work and nothing is usable while locked. DEK rotation re-seals it |
+| 82 | Pairing | Add Teammate reuses the nearby commit-reveal handshake (`NearbyKeyExchange`) with its own purpose and labels (`.pair`, `fxvault/pair/v1`), then exchanges cards signed over the transcript hash and the role. The encrypted channel was extracted from `NearbyKeyExchange` into `NearbyChannel`, which the paired handshake reuses |
+| 83 | Presence | One service, `_fxvault-team._tcp`, advertised under a pseudonym from the announce key and the 15-minute window; one announce key per device, shared with every teammate at pairing, so one advertisement serves all of them. Removing a teammate renews it; the others get it through an authenticated CARD_UPDATE the next time they are seen (`needs_card_update`) |
+| 84 | Sessions | Every connection to the presence service starts with a plaintext routing preamble (team or chat); the purpose-bound handshakes make a false preamble fail. The paired handshake is SIGMA-style with signatures over the transcript hash naming both devices; the responder proves itself only to a verified teammate |
+| 85 | Chat | Chat version 3 adds TEAMMATE_IDENT: a teammate opened from a bubble skips the code by signing the chat transcript; strangers and older peers compare the code as before. A chat from a bubble reaches the teammate through its presence (preamble `chat`), so it works without their chat window open; the window shows "Teammate" and waits up to 3 s for the proof before showing the code |
+| 86 | Visibility | Who can see me: Nobody / Teammates (default) / Everyone nearby. Everyone nearby also advertises the display name on the chat service while the chat window does not (it yields to the window); an incoming chat opens Nearby Chat as the responder. Only teammates can be pinged |
+| 87 | Pings | A sound when FX Vault is frontmost, otherwise a notification with the sound (Focus applies); the Dock icon bounces once. Limits: 1 per teammate every 10 s (sender), 5 per teammate per minute (receiver). Mute per teammate and Mute all still bounce the bubble |
+| 88 | Energy | Advertising and listening while unlocked; browsing only while the main window is visible and FX Vault is active; a person stays 30 s after the last sighting; `last_seen_at` written at most once a minute |
+
+App side (v0.5.0): `TeamPresenceManager` (`App/Managers`, owned by `AppViewModel`, a lock
+observer) runs presence: the listener, the browsers (`TeamPresenceNetworking`: live
+`NWTeamListener`/`NWNearbyBrowser`/`NWNearbyTransport`, inert in previews, a fake network in
+tests), incoming routing, pings (`PingAlerting`: `SystemPingAlerts`), card updates and the
+`people` the toolbar's `NearbyPresenceView` draws. A chat it starts goes to
+`AppViewModel.startChat(_:)`, a one-slot mailbox (`takePendingChatStart()`, `chatStartRequests`)
+that the Nearby Chat window reads (`NearbyChatViewModel.startPendingChat()`); the main window
+registers the window opener (`setChatWindowOpener`). Preferences › Teammates is
+`TeammatesSettingsScreen`/`ViewModel`; Add Teammate is `AddTeammateSheet`/`ViewModel` (the
+presenter starts and closes the view model). Visibility and Mute all live in
+`PreferencesManager` (`nearbyVisibility`, `mutesAllPings`).
+
+### As built in v0.6.0 (shared spaces between teammates, experimental)
+
+| # | Area | Decision |
+|---|---|---|
+| 89 | Placement | The space core (log rules, versions, keys, marker, gate) lives in SharingKit `Space/`, not in a new SpaceKit target as S10 proposed: it needs the teammate device keys, cards and sessions SharingKit already owns. SyncEngine sees only `SyncSpaceCoordinating` (marker texts and `SpaceGateDecision`, which moved to VaultCore), so it stays independent of SharingKit |
+| 90 | Versions | Every version is a full snapshot of the scope as GitHub holds it (S3): last pushed values and GitHub's `updatedAt` of every row with a synced name; an unverified push keeps the previous version's entry. A version is recorded only after a verified push, a share (genesis) or a member change, and only when the items changed. Receivers apply only the newest content version |
+| 91 | Marker | `FXVAULT_SPACE` is a reserved name (`NameRule.reservedName`), split off every variable listing, written only by `setSpaceMarker`. Its writes are not journaled: `spaces.claimed_version` stays set from the claim until the `published` marker is confirmed by a re-read, and `SpaceClaimReconciler` finishes or drops it at unlock |
+| 92 | Gate | Strict (Q1): behind, another member's live claim, forked, an invalid marker or not being a member block every item change of the scope; other scopes still sync. A claim older than 15 minutes is offered as Take Over… with a confirmation and recorded in the next version's note (Q3). Renaming or deleting a shared environment is blocked |
+| 93 | Receive | A space this Mac lacks arrives as its whole log (verified from genesis, this device a member at the head), so a member added later bootstraps; a known space accepts versions that follow its head, in order; nothing advances while this Mac holds a claim in it. Local drafts stay on top (Keep Mine) and are reported; History › Restore takes a teammate's value |
+| 94 | Sessions | A spaces service (preamble `0x03`) over the paired handshake, pull-only: heads, then one version per fetch in chunks. A responder that sees the peer ahead pulls back in its own session. Sync runs when a sharing teammate is seen, every 2 minutes while FX Vault is active, after a publish (members are told), and on Get Updates from Teammates |
+| 95 | Remote (Q4) | Off by default; per teammate on both Macs; spaces service only; an un-advertised TCP listener on a chosen port answering only allowed teammates; 5 failed sessions in 10 minutes close it for 10 minutes; outgoing only to the typed address with the teammate's key proven. In the background only remote teammates are synced |
+| 96 | Members | Adding wraps every epoch key so far for the new member (Q2); removing starts a new epoch and returns the secrets to rotate. Both write the marker like a push (claim, version, publish) |
+| 97 | Drift | A finding in a shared scope whose marker is ahead is a teammate's change (S9): Keep Local and Accept GitHub are not offered; Get Updates from Teammates is. Once the version arrives, its snapshot explains GitHub's change and the finding disappears |
+| 98 | History | Item versions show a 4-byte fingerprint every member computes the same way (epoch-1 key); revealing an older value asks for Touch ID or the master password (`ReauthPurpose.spaceHistory`) and re-masks after 30 s |
+
+App side (v0.6.0): `SpaceSyncManager` (`App/Managers`, owned by `AppViewModel`, a lock observer,
+started with presence) pulls and answers spaces sessions through `TeamPresenceManager`
+(`spacesTransport(to:)`, `spacesConnectionHandler`, `teammateSeenHandler`) and, for remote
+teammates, `SpaceRemoteNetworking` (live `NWSpaceListener`/`NWNearbyTransport`, inert in
+previews, recorded in tests); `SpaceExchangeAdapter` implements `TeamSpaceExchanging` over
+`SpaceRepository`. Screens: `Spaces/ShareSpaceScreen` (scope menu › Share with Teammates…),
+`Spaces/SpaceScreen` (History, Members; opened from the scope menu or the detail header's
+"Shared · vN" chip); the Sync sheet groups a blocked shared scope into one issue with Get Updates
+from Teammates or Take Over…, and asks "What changed?"; drift review shows teammates' changes;
+Preferences › Teammates › Outside this network holds the port and each teammate's switch and
+address (`remoteSpacePort`).
+
 ## App shell
 
 App target `FXVault`, `MainActor` by default; everything is internal (`@testable import` in
@@ -867,6 +982,17 @@ AppTests).
     `copyItems(_:to:repositoryID:conflicts:)` adds the rest as pending adds in one
     `ItemEditBatch` (a tombstone of the name comes back). Secrets without a value are left out
     and named in the notice.
+    v0.4.1 any repository and linked copies: the copied items (`CopiedItemsModel`: ids, names,
+    source repository and scope) live in `ClipboardManager` (`copyItems(_:)`, `itemsToPaste`,
+    `forgetCopiedItems()` on lock and quit), so ⌘V pastes into any repository's detail. Copy To
+    ends with "Another Repository…", which presents `MainSheet.copyToRepository`
+    (`CopyToRepositoryScreen`/`ViewModel`: the vault's repositories by account, searchable, the
+    chosen repository's scopes with the read-only reason, the same Replace / Keep question, then
+    the outcome with Show). A linked row shows `LinkedChip` (link symbol and count) next to its
+    name; the chip and the row menu's Show Linked Copies open `LinkedCopiesPopover`
+    (`RepoDetailViewModel.linkedPopoverRowID` / `linkedCopies`): each place with its comparison,
+    a click opens it (`MainActions.open(_:_:)` selects the repository, then the scope through
+    `ScopeListViewModel.select(scope:)`), and Unlink.
     v0.4.0 header actions menu: an `ellipsis` outline circle after Clone and Refresh
     (`ScopeActionsMenu`) shows the scope list's `ScopeContextMenu` for the selected scope
     (Settings, Rename, Duplicate, Export .env, Share, Revert Changes, Delete… for an environment;

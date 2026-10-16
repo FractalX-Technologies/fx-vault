@@ -11,6 +11,8 @@ struct RemoteEnvironmentConfigModel: Sendable {
     var patterns: [GHBranchPolicyDTO] = []
     var secrets: [GHSecretDTO] = []
     var variables: [GHVariableListingModel] = []
+    /// The environment's shared space marker (v0.6.0, S4), or nil.
+    var spaceMarker: String?
 }
 
 /// Everything an import stores, read with B3, B5 and B6–B9 (§8). Variable values are
@@ -21,6 +23,8 @@ struct RemoteRepoConfigModel: Sendable {
     var variables: [GHVariableListingModel] = []
     var failures: [ImportReadFailureModel] = []
     var skipped: [SkippedRemoteNameModel] = []
+    /// The repository level's shared space marker (v0.6.0, S4), or nil.
+    var spaceMarker: String?
 
     /// Wipes every listed variable value.
     func wipe() {
@@ -44,11 +48,12 @@ struct RemoteConfigReader {
         do {
             try await readEnvironments(into: &config)
             config.secrets = try await secrets(environment: nil, into: &config)
-            config.variables = try await variables(environment: nil, into: &config)
+            (config.variables, config.spaceMarker) = try await variables(environment: nil, into: &config)
             for index in config.environments.indices {
                 let name = config.environments[index].name
                 config.environments[index].secrets = try await secrets(environment: name, into: &config)
-                config.environments[index].variables = try await variables(environment: name, into: &config)
+                (config.environments[index].variables, config.environments[index].spaceMarker) =
+                    try await variables(environment: name, into: &config)
             }
         } catch {
             config.wipe()
@@ -140,16 +145,20 @@ struct RemoteConfigReader {
         return result
     }
 
+    /// The scope's variables (the shared space marker split off, S4) and its marker.
     private func variables(environment: String?, into config: inout RemoteRepoConfigModel) async throws(GHError)
-        -> [GHVariableListingModel]
+        -> ([GHVariableListingModel], String?)
     {
         let listed: [GHVariableListingModel]
+        let marker: String?
         do {
-            listed = try await scheduler.listVariables(repo, environment: environment)
+            let scope = try await scheduler.listVariableScope(repo, environment: environment)
+            listed = scope.variables
+            marker = scope.spaceMarker
         } catch {
             guard Self.isScopeFailure(error) else { throw error }
             config.failures.append(ImportReadFailureModel(target: .variables(environment: environment), error: error))
-            return []
+            return ([], nil)
         }
         var seen: Set<String> = []
         var result: [GHVariableListingModel] = []
@@ -166,6 +175,6 @@ struct RemoteConfigReader {
                 createdAt: variable.createdAt
             ))
         }
-        return result
+        return (result, marker)
     }
 }

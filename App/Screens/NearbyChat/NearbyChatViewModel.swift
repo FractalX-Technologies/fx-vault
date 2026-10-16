@@ -33,7 +33,15 @@ final class NearbyChatViewModel: LockObserving {
     /// Nearby Macs with Nearby Chat open (this Mac left out), by advertised (unverified) name.
     private(set) var peers: [NearbyPeerModel] = []
     /// True while this Mac advertises itself.
-    private(set) var isVisible = false
+    private(set) var isVisible = false {
+        didSet {
+            if isVisible != oldValue {
+                app.setChatWindowAdvertising(isVisible)
+            }
+        }
+    }
+    /// The teammate who proved who they are instead of comparing the code (v0.5.0).
+    private(set) var verifiedTeammateName: String?
     /// The name this Mac is visible under.
     private(set) var displayName = ""
     /// The local user pressed "Codes match".
@@ -87,6 +95,8 @@ final class NearbyChatViewModel: LockObserving {
     /// Failed handshakes in a row (the interception warning). Only chats that reached the code
     /// comparison, or that this Mac started, count.
     @ObservationIgnored private(set) var tracker = NearbyFailureTracker()
+    /// A chat through teammate presence: the code waits a moment for the teammate's proof.
+    @ObservationIgnored private var expectsTeammate = false
     @ObservationIgnored private let tasks = TaskBag()
 
     /// - Parameters:
@@ -160,9 +170,47 @@ final class NearbyChatViewModel: LockObserving {
         identity = fixedIdentity ?? .nearby(preferences: dependencies.preferences)
         displayName = identity.displayName
         readvertiseCount = 0
+        if let pending = app.takePendingChatStart() {
+            await startPending(pending)
+            return
+        }
         step = .browsing
         startDiscovery()
         await advertise()
+    }
+
+    /// A chat from a bubble or a connection to this Mac's presence (v0.5.0) arrived while the
+    /// window is open: it replaces the people list; an ongoing chat keeps going and the new one
+    /// is refused.
+    func startPendingChat() async {
+        switch step {
+        case .connecting, .comparing, .chatting:
+            app.takePendingChatStart()?.transport.close()
+        default:
+            guard let pending = app.takePendingChatStart() else { return }
+            tearDown()
+            guard isVaultUnlocked else {
+                pending.transport.close()
+                step = .locked
+                return
+            }
+            identity = fixedIdentity ?? .nearby(preferences: dependencies.preferences)
+            displayName = identity.displayName
+            await startPending(pending)
+        }
+    }
+
+    private func startPending(_ start: NearbyChatStartModel) async {
+        expectsTeammate = start.expectsTeammate
+        step = .connecting(peerName: start.peerName)
+        let conversation = dependencies.chat.makeConversation(
+            role: start.role,
+            transport: start.transport,
+            localName: identity.displayName,
+            clock: dependencies.clock,
+            team: app.teamPresence.chatIdentity(expecting: start.teammate)
+        )
+        await run(conversation)
     }
 
     /// Connects to `peer` (this Mac becomes the initiator): stops advertising and browsing.
@@ -177,7 +225,8 @@ final class NearbyChatViewModel: LockObserving {
             role: .initiator,
             transport: transport,
             localName: identity.displayName,
-            clock: dependencies.clock
+            clock: dependencies.clock,
+            team: app.teamPresence.chatIdentity()
         )
         step = .connecting(peerName: peer.chatDisplayName)
         await run(conversation)
@@ -237,7 +286,8 @@ final class NearbyChatViewModel: LockObserving {
             role: .responder,
             transport: advertisement.transport,
             localName: identity.displayName,
-            clock: dependencies.clock
+            clock: dependencies.clock,
+            team: app.teamPresence.chatIdentity()
         )
         await run(conversation)
     }
@@ -308,11 +358,30 @@ final class NearbyChatViewModel: LockObserving {
             step = .connecting(peerName: name.isEmpty ? nil : name)
         case .sasReady(let sas):
             isCodeConfirmed = false
-            step = .comparing(sas)
+            guard expectsTeammate, verifiedTeammateName == nil else {
+                step = .comparing(sas)
+                return
+            }
+            // Through teammate presence: the proof normally arrives within milliseconds; the
+            // code shows only if it does not (an older teammate, or not a teammate after all).
+            let generation = generation
+            let clock = dependencies.clock
+            tasks.set("code-delay", Task { [weak self] in
+                try? await clock.sleep(for: Timeouts.teammateProofWait)
+                guard let self, self.generation == generation, !Task.isCancelled else { return }
+                if case .connecting = self.step {
+                    self.step = .comparing(sas)
+                }
+            })
+        case .teammateVerified(let card):
+            tasks.cancel("code-delay")
+            verifiedTeammateName = card.name
+            peerName = card.name
         case .peerConfirmedSAS:
             isPeerCodeConfirmed = true
         case .verified:
-            if case .comparing(let sas) = step {
+            tasks.cancel("code-delay")
+            if case .comparing(let sas) = step, verifiedTeammateName == nil {
                 peerName = sas.peerName
             }
             tracker.recordSuccess()
@@ -665,6 +734,9 @@ final class NearbyChatViewModel: LockObserving {
         isCodeConfirmed = false
         isPeerCodeConfirmed = false
         peerName = nil
+        verifiedTeammateName = nil
+        expectsTeammate = false
+        tasks.cancel("code-delay")
         savedCount = 0
         discoveryError = nil
         visibilityError = nil
@@ -703,4 +775,10 @@ final class NearbyChatViewModel: LockObserving {
             )
         )
     }
+}
+
+extension Timeouts {
+    /// How long a chat through teammate presence waits for the teammate's proof before it shows
+    /// the code (v0.5.0).
+    static let teammateProofWait: Duration = .seconds(3)
 }

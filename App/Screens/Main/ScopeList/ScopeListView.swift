@@ -22,7 +22,11 @@ struct ScopeListView: View {
                         viewModel.selectedScopeID = scope.id
                         isListFocused = true
                     } label: {
-                        ScopeRow(scope: scope, isSelected: viewModel.selectedScopeID == scope.id)
+                        ScopeRow(
+                            scope: scope,
+                            isSelected: viewModel.selectedScopeID == scope.id,
+                            isShared: viewModel.space(of: scope) != nil
+                        )
                     }
                     .buttonStyle(.plain)
                     .id(scope.id)
@@ -73,6 +77,8 @@ struct ScopeListView: View {
 private struct ScopeRow: View {
     let scope: ConfigScopeSummaryModel
     let isSelected: Bool
+    /// Shared with teammates (v0.6.0).
+    var isShared = false
 
     var body: some View {
         HStack(spacing: Theme.Spacing.mediumMinus) {
@@ -91,6 +97,13 @@ private struct ScopeRow: View {
             }
             .padding(.vertical, Theme.Spacing.xSmall)
             Spacer(minLength: 0)
+            if isShared {
+                Image(systemName: "person.2")
+                    .font(Theme.Typography.monoLabel)
+                    .foregroundStyle(Theme.Colors.brand)
+                    .help(SpaceCopy.chipHelp)
+                    .accessibilityLabel(SpaceCopy.spaceEyebrow)
+            }
             if scope.valueMissingCount > 0 {
                 let help = String(
                     localized: "main.scopes.valueMissing.help",
@@ -181,6 +194,16 @@ struct ScopeContextMenu: View {
             viewModel.share(scope)
         }
         .disabled(!viewModel.canExport(scope))
+        if viewModel.space(of: scope) != nil {
+            Button(SpaceCopy.showMenu) {
+                viewModel.showSpace(scope)
+            }
+        } else {
+            Button(SpaceCopy.shareMenu) {
+                viewModel.shareWithTeammates(scope)
+            }
+            .disabled(!viewModel.canShareWithTeammates(scope))
+        }
         if scope.environment != nil {
             Divider()
             if viewModel.canRevert(scope) {

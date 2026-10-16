@@ -31,6 +31,11 @@ public struct ConfigItemModel: Sendable, Hashable, Identifiable {
     /// Derived by the repository layer (fingerprints never leave it); see
     /// ``ConfigSyncStatus/derive(_:)``.
     public var syncStatus: ConfigSyncStatus
+    /// The group of linked copies this item belongs to (v0.4.1), or nil.
+    public var linkID: ItemLinkID?
+    /// How many live items (this one included) share ``linkID``, set by the item observation;
+    /// 0 when the item is not linked or the count was not loaded. The table shows the link from 2.
+    public var linkCount: Int
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -49,6 +54,8 @@ public struct ConfigItemModel: Sendable, Hashable, Identifiable {
         provenance: ConfigProvenance = .local,
         shareOrigin: ShareOriginModel? = nil,
         syncStatus: ConfigSyncStatus,
+        linkID: ItemLinkID? = nil,
+        linkCount: Int = 0,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -66,8 +73,15 @@ public struct ConfigItemModel: Sendable, Hashable, Identifiable {
         self.provenance = provenance
         self.shareOrigin = shareOrigin
         self.syncStatus = syncStatus
+        self.linkID = linkID
+        self.linkCount = linkCount
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+
+    /// True when at least one other live item shares this item's link (v0.4.1).
+    public var isLinked: Bool {
+        linkID != nil && linkCount > 1
     }
 
     /// True once GitHub has the item under ``syncedName``.

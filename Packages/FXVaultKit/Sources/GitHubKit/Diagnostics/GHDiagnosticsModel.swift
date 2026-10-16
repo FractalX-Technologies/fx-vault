@@ -304,6 +304,7 @@ extension NameRule {
         case .invalidFirstCharacter: "invalidFirstCharacter"
         case .leadingDigit: "leadingDigit"
         case .reservedPrefix: "reservedPrefix"
+        case .reservedName: "reservedName"
         case .dotName: "dotName"
         case .gitSuffix: "gitSuffix"
         case .controlCharacter: "controlCharacter"

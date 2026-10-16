@@ -1,4 +1,5 @@
 import Foundation
+import SharingKit
 import VaultCore
 import VaultCrypto
 import VaultStore
@@ -14,6 +15,9 @@ struct DEKRotationReportModel: Sendable, Hashable {
     /// `synced_fp` values that could not be recomputed (no plaintext available) and were cleared,
     /// so the item shows as modified and is pushed again on the next sync.
     var syncedFingerprintsCleared = 0
+    /// Secret fields re-encrypted: this device's teammate keys and teammates' announce keys
+    /// (v0.5.0), and shared space keys (v0.6.0).
+    var secretFields = 0
 }
 
 /// Re-encrypts every encrypted column under a new DEK inside the caller's transaction (§5.2
@@ -26,15 +30,22 @@ struct DEKRotationReportModel: Sendable, Hashable {
 /// - a `synced_fp` without `synced_value_ct` is recomputed from the current value when the two
 ///   matched under the old key, otherwise cleared (see ``DEKRotationReportModel``).
 ///
+/// Then `device_identity.secret_ct`, every `teammates.announce_ct` (v0.5.0) and every
+/// `space_keys.key_ct` (v0.6.0) are opened under the old keys and sealed under the new ones.
+///
 /// Any decryption failure aborts the whole transaction: a rotation never leaves rows under two
 /// different DEKs.
 struct DEKRotator {
     let repoStore: RepoStore
     let configStore: ConfigStore
+    let teamStore: TeamStore
+    let spaceStore: SpaceStore
 
     init(database: VaultDatabase) {
         repoStore = RepoStore(database: database)
         configStore = ConfigStore(database: database)
+        teamStore = TeamStore(database: database)
+        spaceStore = SpaceStore(database: database)
     }
 
     func reencryptAll(
@@ -49,7 +60,37 @@ struct DEKRotator {
                 try configStore.updateItem(record, in: tx)
             }
         }
+        if var identity = try teamStore.fetchIdentity(in: tx), let deviceID = TeamDeviceID(hex: identity.deviceID) {
+            let aad = TeamRepository.identityAAD(deviceID: deviceID)
+            identity.secretCiphertext = try reseal(identity.secretCiphertext, for: aad, from: oldKeys, to: newKeys)
+            try teamStore.saveIdentity(identity, in: tx)
+            report.secretFields += 1
+        }
+        for var teammate in try teamStore.fetchTeammates(in: tx) {
+            guard let deviceID = TeamDeviceID(hex: teammate.deviceID) else { throw VaultError.corrupted(.invalidStoredValue) }
+            let aad = TeamRepository.announceAAD(deviceID: deviceID)
+            teammate.announceCiphertext = try reseal(teammate.announceCiphertext, for: aad, from: oldKeys, to: newKeys)
+            try teamStore.saveTeammate(teammate, in: tx)
+            report.secretFields += 1
+        }
+        for var key in try spaceStore.fetchAllKeys(in: tx) {
+            let aad = SpaceRepository.keyAAD(spaceID: key.spaceID, epoch: key.epoch)
+            key.keyCiphertext = try reseal(key.keyCiphertext, for: aad, from: oldKeys, to: newKeys)
+            try spaceStore.saveKey(key, in: tx)
+            report.secretFields += 1
+        }
         return report
+    }
+
+    private func reseal(
+        _ blob: Data,
+        for aad: SecretFieldAAD,
+        from oldKeys: borrowing UnlockedKeys,
+        to newKeys: borrowing UnlockedKeys
+    ) throws -> Data {
+        let plaintext = try oldKeys.open(blob, for: aad)
+        defer { plaintext.wipe() }
+        return try newKeys.seal(plaintext, for: aad)
     }
 
     // MARK: - Private

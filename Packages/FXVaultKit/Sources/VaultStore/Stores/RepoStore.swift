@@ -58,12 +58,14 @@ public struct RepoStore: Sendable {
 
     /// The repository with GitHub node id `githubID`.
     public func fetch(githubID: String) throws -> RepoModel? {
-        try database.read { tx in
-            try RepositoryRecord
-                .filter(RepositoryRecord.CodingKeys.githubID == githubID)
-                .fetchOne(tx.db)?
-                .model
-        }
+        try database.read { try fetch(githubID: githubID, in: $0) }
+    }
+
+    public func fetch(githubID: String, in tx: StoreTransaction) throws -> RepoModel? {
+        try RepositoryRecord
+            .filter(RepositoryRecord.CodingKeys.githubID == githubID)
+            .fetchOne(tx.db)?
+            .model
     }
 
     // MARK: - Writes

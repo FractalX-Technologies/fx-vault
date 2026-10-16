@@ -3,7 +3,7 @@ import GRDB
 import VaultCore
 
 /// Environments, config items and deployment branch patterns (§6 `v3_config`,
-/// `v5_create_policies`, `v6_sharing`).
+/// `v5_create_policies`, `v6_sharing`, `v9_item_links`).
 ///
 /// Integrity checks beyond the schema:
 /// - an item or pattern must belong to an environment of the same repository
@@ -280,14 +280,66 @@ public struct ConfigStore: Sendable {
         }
     }
 
-    /// Item models of one repository (optionally one scope), now and after each change.
+    /// Item models of one repository (optionally one scope), now and after each change, each with
+    /// its ``ConfigItemModel/linkCount`` (v0.4.1).
     public func observeItems(
         repositoryID: RepoID,
         scope: ConfigScope? = nil
     ) -> AsyncThrowingStream<[ConfigItemModel], any Error> {
         database.observe { db in
-            try Self.itemStates(repositoryID: repositoryID, scope: scope, db: db).map(\.model)
+            let states = try Self.itemStates(repositoryID: repositoryID, scope: scope, db: db)
+            let counts = try Self.linkCounts(of: states, db: db)
+            return states.map { state in
+                var model = state.model
+                model.linkCount = state.linkID.flatMap { counts[$0] } ?? 0
+                return model
+            }
         }
+    }
+
+    // MARK: - Linked copies (v0.4.1)
+
+    /// The live rows (tombstones excluded) of one link group in every repository, ciphertexts
+    /// included, ordered by repository, scope and name.
+    public func fetchLinkedItemRecords(linkID: ItemLinkID, in tx: StoreTransaction) throws -> [ConfigItemRecord] {
+        try ConfigItemRecord
+            .filter(ConfigItemRecord.CodingKeys.linkID == linkID.uuidString)
+            .filter(ConfigItemRecord.CodingKeys.isDeleted == false)
+            .order(
+                ConfigItemRecord.CodingKeys.repositoryID,
+                ConfigItemRecord.CodingKeys.environmentID,
+                ConfigItemRecord.CodingKeys.name
+            )
+            .fetchAll(tx.db)
+    }
+
+    /// Sets or clears `link_id` on `itemIDs`. Link metadata only: no other column changes, so the
+    /// rows' values, AADs and sync state are untouched.
+    public func setLinkID(_ linkID: ItemLinkID?, itemIDs: [ConfigItemID], in tx: StoreTransaction) throws {
+        guard !itemIDs.isEmpty else { return }
+        try ConfigItemRecord
+            .filter(keys: itemIDs.map(\.uuidString))
+            .updateAll(tx.db, ConfigItemRecord.CodingKeys.linkID.set(to: linkID?.uuidString))
+    }
+
+    /// Live rows per link group of `states`, across every repository.
+    static func linkCounts(of states: [ConfigItemState], db: Database) throws -> [ItemLinkID: Int] {
+        let linkIDs = Set(states.compactMap(\.linkID).map(\.uuidString))
+        guard !linkIDs.isEmpty else { return [:] }
+        let rows = try Row.fetchAll(
+            db,
+            ConfigItemRecord
+                .select(ConfigItemRecord.CodingKeys.linkID, count(ConfigItemRecord.CodingKeys.id))
+                .filter(linkIDs.contains(ConfigItemRecord.CodingKeys.linkID))
+                .filter(ConfigItemRecord.CodingKeys.isDeleted == false)
+                .group(ConfigItemRecord.CodingKeys.linkID)
+        )
+        var counts: [ItemLinkID: Int] = [:]
+        for row in rows {
+            guard let text: String = row[0], let linkID = ItemLinkID(uuidString: text) else { continue }
+            counts[linkID] = row[1]
+        }
+        return counts
     }
 
     // MARK: - Pending-change inputs (§7.1)

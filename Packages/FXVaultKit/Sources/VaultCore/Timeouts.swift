@@ -105,4 +105,11 @@ public enum Timeouts {
     public static let nearbySession: Duration = .seconds(10 * secondsPerMinute)
     /// A share package older than this raises the replay warning.
     public static let shareReplayMaxAge: Duration = .seconds(7 * secondsPerDay)
+
+    // MARK: - Shared spaces (v0.6.0, S6)
+
+    /// Longest space sync session between two teammates (handshake, heads, every version).
+    public static let spaceSyncSession: Duration = .seconds(2 * secondsPerMinute)
+    /// How often an unlocked Mac syncs its spaces with the teammates it can reach.
+    public static let spaceSyncInterval: Duration = .seconds(2 * secondsPerMinute)
 }

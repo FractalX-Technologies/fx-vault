@@ -119,18 +119,21 @@ public struct ChatRepository: Sendable {
     /// - Parameters:
     ///   - role: `.initiator` connected to a browsed peer; `.responder` advertises.
     ///   - localName: this Mac's display name (sanitized before it is sent).
+    ///   - team: this Mac's teammate keys and teammates (v0.5.0), so a teammate skips the code.
     public func makeConversation(
         role: NearbyRole,
         transport: any NearbyTransport,
         localName: String,
-        clock: (any VaultClock)? = nil
+        clock: (any VaultClock)? = nil,
+        team: TeamChatIdentityModel? = nil
     ) -> NearbyChatConversation {
         NearbyChatConversation(
             session: NearbyChatSession(
                 role: role,
                 localName: DisplayNameSanitizer.sanitize(localName),
                 transport: transport,
-                clock: clock ?? self.clock
+                clock: clock ?? self.clock,
+                team: team
             ),
             vault: session,
             builder: builder,

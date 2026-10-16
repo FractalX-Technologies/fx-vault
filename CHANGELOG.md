@@ -3,6 +3,54 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.6.0
+
+### Added
+
+- **Copy secrets and variables to any repository.** ⌘C on the table, then ⌘V in any other scope
+  of any repository in your vault, whatever account it belongs to. Copy To › **Another
+  Repository…** lists every repository by account, with a search field, and the chosen
+  repository's scopes (the ones your account cannot change are disabled with the reason). As
+  before, the copies are changes for the next Sync, names the target already has ask Replace or
+  Keep Existing, and values never reach the clipboard.
+- **Linked copies.** Every copy stays linked to the item it came from. A link chip with the number
+  of places shows next to the name; click it (or choose Show Linked Copies) to see every place
+  with **Same value**, **Differs** or **Value missing**, open one, or Unlink. When you give a
+  linked item a new value, the editor lists its copies (the ones that still had the old value
+  are checked), and Save updates them too, so rotating a shared key is one edit and one Sync.
+
+- **Teammates nearby.** Settings › Teammates › Add Teammate… pairs two Macs once, after both
+  people compare a 6-digit code. Teammates who are nearby then appear as bubbles next to Sync while
+  FX Vault is open; click one to Ping (their Mac plays a sound, or shows a notification when FX
+  Vault is in the background) or Chat, which opens Nearby Chat already connected and verified,
+  with no code to compare. Your Mac is visible to your teammates only, under a name that changes
+  every 15 minutes; choose Nobody or Everyone nearby instead, mute a teammate's pings or all of
+  them, and remove a teammate (your Mac then uses a new name nearby). Teammates' Macs need 0.6.
+- **Shared scopes (experimental).** Right-click a scope › **Share with Teammates…** keeps it in
+  sync between you and the teammates you choose, with no server. Every push becomes a version
+  your teammates get Mac to Mac (nearby, or at an address you allow), with its values, author,
+  time and an optional "What changed?" note, so a teammate's rotated secret arrives with its
+  value. Before anyone pushes, FX Vault checks a small signed version marker on GitHub: if a
+  teammate published something you do not have yet, that scope is not pushed until you **Get
+  Updates from Teammates**, so nobody overwrites anyone. A push that a teammate left unfinished
+  can be taken over after you confirm. **Shared with Teammates…** shows every version, the
+  versions of each item with a short fingerprint, reveals an older value after Touch ID or your
+  password, and restores it as your next change; add or remove members there (a removed member
+  gets no new versions, and FX Vault lists the secrets they received so you can rotate them).
+  Drift review shows a teammate's change as such, and offers Get Updates instead of Keep Local.
+- **Shared scopes outside the local network.** Settings › Teammates › Outside this network: turn
+  a teammate on (on both Macs) and type their address (for example a Tailscale name) to sync
+  shared scopes when you are not nearby. Off by default, used only for shared scopes, never
+  advertised, and only teammates you turned on are answered.
+
+### Changed
+
+- Nearby Chat speaks chat version 3: chats with 0.4 or older still work and compare the code.
+- Copied items are kept by the app instead of the repository you copied from, so a paste works
+  after you open another repository. They are still forgotten when FX Vault locks.
+- `FXVAULT_SPACE` is reserved: FX Vault uses it for the shared scope marker, never lists it with
+  your variables, and refuses it as a name.
+
 ## 0.4.0
 
 ### Added

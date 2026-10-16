@@ -147,6 +147,10 @@ public enum NearbyAbortReason: Sendable, Hashable {
     case secondPeer
     /// The peer sent ABORT with this reason code (unauthenticated before keys).
     case peerAborted(NearbyAbortCode)
+    /// A teammate card or AUTH signature did not verify (v0.5.0).
+    case signatureInvalid
+    /// A paired handshake from a device that is not a teammate, or not the expected one (v0.5.0).
+    case teammateNotRecognized
 
     /// The one-byte code sent in an ABORT frame for this reason.
     var code: NearbyAbortCode {
@@ -160,7 +164,8 @@ public enum NearbyAbortReason: Sendable, Hashable {
         case .cancelled, .disconnected, .secondPeer, .peerAborted: .cancelled
         case .timeout: .timeout
         case .unexpectedMessage, .sequenceMismatch, .sequenceExhausted, .oversizeFrame,
-             .malformedFrame, .payloadMismatch, .payloadTooLarge, .unknownItemIDs, .invalidPackage:
+             .malformedFrame, .payloadMismatch, .payloadTooLarge, .unknownItemIDs, .invalidPackage,
+             .signatureInvalid, .teammateNotRecognized:
             .protocolError
         }
     }

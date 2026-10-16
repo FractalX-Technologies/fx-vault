@@ -93,6 +93,16 @@ public typealias BranchPatternID = Identifier<BranchPatternModel>
 public typealias SharePackageID = Identifier<ShareOriginModel>
 /// `run_id` of one sync run in `sync_journal`.
 public typealias SyncRunID = Identifier<SyncRunTag>
+/// `config_items.link_id`: the group of linked copies an item belongs to (v0.4.1).
+public typealias ItemLinkID = Identifier<ItemLinkTag>
+/// A shared space: one scope of one repository shared by teammates (v0.6.0).
+public typealias SpaceID = Identifier<SpaceTag>
 
 /// Phantom tag for ``SyncRunID``.
 public enum SyncRunTag {}
+
+/// Phantom tag for ``ItemLinkID``.
+public enum ItemLinkTag {}
+
+/// Phantom tag for ``SpaceID``.
+public enum SpaceTag {}

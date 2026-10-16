@@ -35,6 +35,8 @@ public enum NameRule: Sendable, Hashable {
     case leadingDigit
     /// Starts with `GITHUB_` (GitHub secrets and variables).
     case reservedPrefix
+    /// A name FX Vault uses itself (`FXVAULT_SPACE`, the shared space marker).
+    case reservedName
     /// `.` or `..` (repository names).
     case dotName
     /// Ends with `.git` (repository names).

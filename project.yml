@@ -48,10 +48,12 @@ targets:
         # Geist Sans and Geist Mono (OFL 1.1, App/Resources/Fonts). The synced App folder copies
         # them flat into Contents/Resources, so the path is "." (relative to Resources).
         ATSApplicationFontsPath: .
-        NSLocalNetworkUsageDescription: FX Vault uses the local network to share configuration and chat with a nearby teammate.
+        NSLocalNetworkUsageDescription: FX Vault uses the local network to share configuration, chat, see your teammates nearby and keep shared scopes in sync with them.
         NSBonjourServices:
           - _fxvault-share._tcp
           - _fxvault-chat._tcp
+          - _fxvault-pair._tcp
+          - _fxvault-team._tcp
         UTExportedTypeDeclarations:
           - UTTypeIdentifier: io.fractalx.fxvault.share
             UTTypeDescription: FX Vault Share

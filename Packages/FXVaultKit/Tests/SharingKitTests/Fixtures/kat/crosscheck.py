@@ -15,6 +15,21 @@ Usage (from a venv with `cryptography` installed):
   python3 crosscheck.py --write nearby_kat.json
   python3 crosscheck.py --chat-lines         # chat vectors as key=value lines
   python3 crosscheck.py --write-chat chat_kat.json
+  python3 crosscheck.py --team-lines         # teammate vectors (v0.5.0) as key=value lines
+  python3 crosscheck.py --write-team team_kat.json
+
+v0.5.0 adds fxvault-team/v1 (pairing labels "fxvault/pair/v1", presence and paired-handshake
+labels "fxvault/team/v1"): device ids, cards, pseudonyms, the paired handshake's transcript,
+keys and AUTH messages, and Ed25519 signatures (RFC 8032, deterministic here; CryptoKit signs
+with randomness, so Swift verifies these signatures instead of reproducing them).
+
+v0.6.0 adds fxvault-space/v1 (labels "fxvault/space/v1"): a two-version log (Ana's genesis,
+Ben's publish) with its headers, keyrings, payload ciphertexts (HKDF-SHA256 + AES-256-GCM with
+fixed nonces), hashes and Ed25519 signatures; HPKE wraps of the epoch key (RFC 9180, X25519 /
+HKDF-SHA256 / ChaCha20-Poly1305, random ephemerals: Swift opens them); a signed marker in its
+canonical JSON; and a value fingerprint.
+  python3 crosscheck.py --space-lines        # shared space vectors (v0.6.0) as key=value lines
+  python3 crosscheck.py --write-space space_kat.json
 """
 import hashlib
 import hmac
@@ -22,15 +37,21 @@ import json
 import struct
 import sys
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hpke
+import base64
+import uuid
 
 P = 2**255 - 19
 A24 = 121665
 
 SHARE_PREFIX = b'fxvault/nearby/v1'
 CHAT_PREFIX = b'fxvault/chat/v1'
+PAIR_PREFIX = b'fxvault/pair/v1'
+TEAM_PREFIX = b'fxvault/team/v1'
 
 
 def clamp(k):
@@ -211,6 +232,222 @@ def chat_vectors():
     return inputs, outputs
 
 
+def ed25519_public(seed):
+    return Ed25519PrivateKey.from_private_bytes(seed).public_key().public_bytes(
+        serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+
+
+def device_id(sign_pk, agree_pk):
+    return hashlib.sha256(lp(TEAM_PREFIX + b'/device-id') + lp(sign_pk) + lp(agree_pk)).digest()[:16]
+
+
+def card(sign_pk, agree_pk, announce, login, display, mac):
+    data = bytes([1]) + device_id(sign_pk, agree_pk) + sign_pk + agree_pk + announce
+    for text in (login, display, mac):
+        raw = text.encode()
+        data += struct.pack('>H', len(raw)) + raw
+    return data
+
+
+def pseudonym(announce, window):
+    return hmac.new(announce, lp(TEAM_PREFIX + b'/announce') + struct.pack('>Q', window), hashlib.sha256).digest()[:16].hex()
+
+
+TEAM_WINDOW = 1988888
+
+
+def team_vectors():
+    """fxvault-team/v1 vectors (v0.5.0): two devices, Ana (initiator) and Ben (responder)."""
+    base = (9).to_bytes(32, 'little')
+    ana_seed, ana_agree, ana_announce = bytes(range(0x80, 0xA0)), bytes(range(0xA0, 0xC0)), bytes(range(0xC0, 0xE0))
+    ben_seed, ben_agree, ben_announce = bytes(range(0x10, 0x30)), bytes(range(0x30, 0x50)), bytes(range(0x50, 0x70))
+    ana_sign_pk, ben_sign_pk = ed25519_public(ana_seed), ed25519_public(ben_seed)
+    ana_agree_pk, ben_agree_pk = x25519(ana_agree, base), x25519(ben_agree, base)
+    ana_id, ben_id = device_id(ana_sign_pk, ana_agree_pk), device_id(ben_sign_pk, ben_agree_pk)
+    ana_card = card(ana_sign_pk, ana_agree_pk, ana_announce, 'user-a', 'Ana', "Ana's Mac")
+
+    # The paired handshake: the chat vectors' ephemerals and nonces.
+    eph_i, eph_r = bytes(range(0x00, 0x20)), bytes(range(0x20, 0x40))
+    n_i, n_r = bytes(range(0x40, 0x60)), bytes(range(0x60, 0x80))
+    eph_pk_i, eph_pk_r = x25519(eph_i, base), x25519(eph_r, base)
+    ss = x25519(eph_i, eph_pk_r)
+    assert ss == X25519PrivateKey.from_private_bytes(eph_r).exchange(X25519PublicKey.from_public_bytes(eph_pk_i))
+    th = hashlib.sha256(lp(TEAM_PREFIX + b'/transcript') + bytes([1]) + lp(eph_pk_i) + lp(n_i)
+                        + lp(eph_pk_r) + lp(n_r)).digest()
+    k_i2r = hkdf(ss, th, TEAM_PREFIX + b'/key/i2r', 32)
+    k_r2i = hkdf(ss, th, TEAM_PREFIX + b'/key/r2i', 32)
+    auth_i_message = lp(TEAM_PREFIX + b'/auth-i') + lp(th) + lp(ana_id) + lp(ben_id)
+    auth_r_message = lp(TEAM_PREFIX + b'/auth-r') + lp(th) + lp(ana_id) + lp(ben_id)
+    auth_i_signature = Ed25519PrivateKey.from_private_bytes(ana_seed).sign(auth_i_message)
+    auth_r_signature = Ed25519PrivateKey.from_private_bytes(ben_seed).sign(auth_r_message)
+    hello_i = bytes([0x51, 1]) + eph_pk_i + n_i
+
+    # Pairing: the nearby handshake with the pair labels, then Ana's signed card.
+    c_pair = commitment(1, 1, eph_pk_i, n_i, PAIR_PREFIX)
+    th_pair = transcript(1, 1, 1, 1, 1, c_pair, eph_pk_i, n_i, "Ana's Mac", eph_pk_r, n_r, "Ben's Mac", PAIR_PREFIX)
+    card_message_i = lp(PAIR_PREFIX + b'/card') + b'I' + lp(th_pair) + lp(ana_card)
+    card_signature_i = Ed25519PrivateKey.from_private_bytes(ana_seed).sign(card_message_i)
+    chat_ident_message_i = lp(TEAM_PREFIX + b'/chat-ident') + b'I' + lp(th)
+
+    outputs = {
+        'AUTH_I_i2r_seq0': seal_frame(k_i2r, 0x53, 0, ana_id + auth_i_signature).hex(),
+        'C_pair': c_pair.hex(),
+        'HELLO_I': hello_i.hex(),
+        'PING_i2r_seq1': seal_frame(k_i2r, 0x60, 1, b'').hex(),
+        'PREAMBLE_chat': bytes([0x50, 1, 2]).hex(),
+        'PREAMBLE_team': bytes([0x50, 1, 1]).hex(),
+        'TH': th.hex(),
+        'TH_pair': th_pair.hex(),
+        'ana_agreement_pk': ana_agree_pk.hex(),
+        'ana_card': ana_card.hex(),
+        'ana_device_id': ana_id.hex(),
+        'ana_pseudonym': pseudonym(ana_announce, TEAM_WINDOW),
+        'ana_pseudonym_next': pseudonym(ana_announce, TEAM_WINDOW + 1),
+        'ana_signing_pk': ana_sign_pk.hex(),
+        'auth_i_message': auth_i_message.hex(),
+        'auth_i_signature': auth_i_signature.hex(),
+        'auth_r_message': auth_r_message.hex(),
+        'auth_r_signature': auth_r_signature.hex(),
+        'ben_device_id': ben_id.hex(),
+        'ben_signing_pk': ben_sign_pk.hex(),
+        'card_message_i': card_message_i.hex(),
+        'card_signature_i': card_signature_i.hex(),
+        'chat_ident_message_i': chat_ident_message_i.hex(),
+        'ephPkI': eph_pk_i.hex(),
+        'ephPkR': eph_pk_r.hex(),
+        'k_i2r': k_i2r.hex(),
+        'k_r2i': k_r2i.hex(),
+        'shared_secret': ss.hex(),
+    }
+    inputs = {
+        'anaSigningSeed': ana_seed.hex(), 'anaAgreementKey': ana_agree.hex(), 'anaAnnounceKey': ana_announce.hex(),
+        'benSigningSeed': ben_seed.hex(), 'benAgreementKey': ben_agree.hex(), 'benAnnounceKey': ben_announce.hex(),
+        'anaLogin': 'user-a', 'anaDisplayName': 'Ana', 'anaMacName': "Ana's Mac",
+        'ephI': eph_i.hex(), 'ephR': eph_r.hex(), 'nI': n_i.hex(), 'nR': n_r.hex(),
+        'window': TEAM_WINDOW,
+        'pairLabelPrefix': PAIR_PREFIX.decode(), 'teamLabelPrefix': TEAM_PREFIX.decode(),
+    }
+    return inputs, outputs
+
+
+SPACE_PREFIX = b'fxvault/space/v1'
+
+
+def space_header(space_id, version, parent, epoch, kind, author, created_ms):
+    return (bytes([1]) + space_id + struct.pack('>Q', version) + parent + struct.pack('>I', epoch)
+            + bytes([kind]) + author + struct.pack('>q', created_ms))
+
+
+def space_member(device, sign_pk, agree_pk, login, display, mac):
+    data = device + sign_pk + agree_pk
+    for text in (login, display, mac):
+        raw = text.encode()
+        data += struct.pack('>H', len(raw)) + raw
+    return data
+
+
+def space_wrap_info(space_id, epoch, device):
+    return lp(SPACE_PREFIX + b'/wrap') + space_id + struct.pack('>I', epoch) + device
+
+
+def space_snapshot(reason, items):
+    data = bytes([1]) + lp(reason.encode()) + struct.pack('>I', len(items))
+    for kind, name, value, updated_ms in sorted(items, key=lambda item: (item[0], item[1])):
+        data += bytes([1 if kind == 'secret' else 2]) + lp(name.encode())
+        data += bytes([1]) + lp(value.encode())
+        data += bytes([1]) + struct.pack('>q', updated_ms)
+    return data
+
+
+def space_version(header, keyring, plaintext, epoch_key, space_id, nonce, author_seed):
+    payload_key = hkdf(epoch_key, space_id, SPACE_PREFIX + b'/payload', 32)
+    aad = hashlib.sha256(lp(header) + lp(keyring)).digest()
+    ciphertext = nonce + AESGCM(payload_key).encrypt(nonce, plaintext, aad)
+    digest = hashlib.sha256(lp(SPACE_PREFIX + b'/version') + lp(header) + lp(keyring) + lp(ciphertext)).digest()
+    signature = Ed25519PrivateKey.from_private_bytes(author_seed).sign(lp(SPACE_PREFIX + b'/signature') + lp(digest))
+    wire = lp(header) + lp(keyring) + lp(ciphertext) + signature
+    return ciphertext, digest, signature, wire
+
+
+def space_vectors():
+    """fxvault-space/v1 vectors (v0.6.0): Ana shares a scope with Ben (v1), Ben publishes (v2)."""
+    base = (9).to_bytes(32, 'little')
+    ana_seed, ana_agree, ana_announce = bytes(range(0x80, 0xA0)), bytes(range(0xA0, 0xC0)), bytes(range(0xC0, 0xE0))
+    ben_seed, ben_agree, ben_announce = bytes(range(0x10, 0x30)), bytes(range(0x30, 0x50)), bytes(range(0x50, 0x70))
+    ana_sign_pk, ben_sign_pk = ed25519_public(ana_seed), ed25519_public(ben_seed)
+    ana_agree_pk, ben_agree_pk = x25519(ana_agree, base), x25519(ben_agree, base)
+    ana_id, ben_id = device_id(ana_sign_pk, ana_agree_pk), device_id(ben_sign_pk, ben_agree_pk)
+
+    space_id = bytes(range(0xE0, 0xF0))
+    epoch_key = bytes(range(0x70, 0x90))
+    nonce1, nonce2 = bytes(range(0x90, 0x9C)), bytes(range(0xA0, 0xAC))
+    created1, created2 = 1790000000000, 1790000060000
+    suite = hpke.Suite(hpke.KEM.X25519, hpke.KDF.HKDF_SHA256, hpke.AEAD.CHACHA20_POLY1305)
+
+    wraps = b''
+    for device, agree_pk in ((ana_id, ana_agree_pk), (ben_id, ben_agree_pk)):
+        sealed = suite.encrypt(epoch_key, X25519PublicKey.from_public_bytes(agree_pk), info=space_wrap_info(space_id, 1, device))
+        wraps += device + struct.pack('>I', 1) + lp(sealed[:32]) + lp(sealed[32:])
+    binding = bytes([1]) + lp(b'R_repo-a') + lp(b'owner-a') + lp(b'repo-a') + bytes([1]) + lp(b'production')
+    members = (space_member(ana_id, ana_sign_pk, ana_agree_pk, 'user-a', 'Ana', "Ana's Mac")
+               + space_member(ben_id, ben_sign_pk, ben_agree_pk, 'user-b', 'Ben', "Ben's Mac"))
+    keyring1 = bytes([1]) + binding + struct.pack('>H', 2) + members + struct.pack('>H', 2) + wraps
+    header1 = space_header(space_id, 1, bytes(32), 1, 1, ana_id, created1)
+    plain1 = space_snapshot('shared', [
+        ('secret', 'API_KEY', 'v1', 1789999990000),
+        ('variable', 'BASE_URL', 'https://example.com', 1789999990000),
+    ])
+    ct1, hash1, sig1, wire1 = space_version(header1, keyring1, plain1, epoch_key, space_id, nonce1, ana_seed)
+
+    header2 = space_header(space_id, 2, hash1, 1, 2, ben_id, created2)
+    plain2 = space_snapshot('rotate', [
+        ('secret', 'API_KEY', 'v2', 1790000050000),
+        ('variable', 'BASE_URL', 'https://example.com', 1789999990000),
+    ])
+    ct2, hash2, sig2, wire2 = space_version(header2, b'', plain2, epoch_key, space_id, nonce2, ben_seed)
+
+    at = '2026-09-21T13:21:00.123Z'
+    space_text = str(uuid.UUID(bytes=space_id))
+    marker_message = (lp(SPACE_PREFIX + b'/marker') + space_id + struct.pack('>Q', 2) + bytes([2])
+                      + lp(hash2) + lp(ben_id) + lp(at.encode()) + lp(b'user-b'))
+    marker_signature = Ed25519PrivateKey.from_private_bytes(ben_seed).sign(marker_message)
+    marker = json.dumps({
+        'at': at, 'by': 'user-b', 'dev': ben_id.hex(), 'f': 1, 'head': hash2.hex(),
+        'sig': base64.b64encode(marker_signature).decode(), 'space': space_text, 'state': 'published', 'v': 2,
+    }, sort_keys=True, separators=(',', ':'))
+
+    fingerprint_key = hkdf(epoch_key, space_id, SPACE_PREFIX + b'/fingerprint', 32)
+    fingerprint = hmac.new(fingerprint_key, bytes([1]) + lp(b'API_KEY') + lp(b'v2'), hashlib.sha256).digest()[:4].hex()
+
+    outputs = {
+        'ana_device_id': ana_id.hex(),
+        'ben_device_id': ben_id.hex(),
+        'fingerprint_API_KEY_v2': fingerprint,
+        'hash1': hash1.hex(),
+        'hash2': hash2.hex(),
+        'header1': header1.hex(),
+        'header2': header2.hex(),
+        'keyring1': keyring1.hex(),
+        'marker': marker,
+        'marker_message': marker_message.hex(),
+        'payload1': ct1.hex(),
+        'payload2': ct2.hex(),
+        'plaintext1': plain1.hex(),
+        'plaintext2': plain2.hex(),
+        'signature1': sig1.hex(),
+        'signature2': sig2.hex(),
+        'wire1': wire1.hex(),
+        'wire2': wire2.hex(),
+    }
+    inputs = {
+        'anaSigningSeed': ana_seed.hex(), 'anaAgreementKey': ana_agree.hex(), 'anaAnnounceKey': ana_announce.hex(),
+        'benSigningSeed': ben_seed.hex(), 'benAgreementKey': ben_agree.hex(), 'benAnnounceKey': ben_announce.hex(),
+        'spaceID': space_text, 'epochKey': epoch_key.hex(), 'nonce1': nonce1.hex(), 'nonce2': nonce2.hex(),
+        'created1': created1, 'created2': created2, 'spaceLabelPrefix': SPACE_PREFIX.decode(),
+    }
+    return inputs, outputs
+
+
 def write_document(path, description, inputs, outputs):
     document = {'description': description, 'inputs': inputs, 'outputs': outputs}
     with open(path, 'w') as handle:
@@ -219,6 +456,31 @@ def write_document(path, description, inputs, outputs):
 
 
 def main():
+    if len(sys.argv) >= 2 and sys.argv[1] in ('--space-lines', '--write-space'):
+        inputs, outputs = space_vectors()
+        if sys.argv[1] == '--write-space' and len(sys.argv) >= 3:
+            write_document(
+                sys.argv[2],
+                'FX Vault shared spaces (fxvault-space/v1, v0.6.0) known-answer vectors. Generated by crosscheck.py '
+                '(Ed25519 signatures are RFC 8032 deterministic and HPKE wraps use random ephemerals; Swift verifies '
+                'and opens them, and reproduces everything else byte for byte).',
+                inputs, outputs)
+        else:
+            for key in sorted(outputs):
+                sys.stdout.write(f'space_{key}={outputs[key]}\n')
+        return
+    if len(sys.argv) >= 2 and sys.argv[1] in ('--team-lines', '--write-team'):
+        inputs, outputs = team_vectors()
+        if sys.argv[1] == '--write-team' and len(sys.argv) >= 3:
+            write_document(
+                sys.argv[2],
+                'FX Vault teammates (fxvault-team/v1, v0.5.0) known-answer vectors. Generated by crosscheck.py '
+                '(Ed25519 signatures are RFC 8032 deterministic; Swift verifies them).',
+                inputs, outputs)
+        else:
+            for key in sorted(outputs):
+                sys.stdout.write(f'team_{key}={outputs[key]}\n')
+        return
     if len(sys.argv) >= 2 and sys.argv[1] in ('--chat-lines', '--write-chat'):
         inputs, outputs = chat_vectors()
         if sys.argv[1] == '--write-chat' and len(sys.argv) >= 3:

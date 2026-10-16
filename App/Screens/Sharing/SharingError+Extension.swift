@@ -177,6 +177,22 @@ nonisolated extension SharingError: PresentableError {
                     defaultValue: "That choice isn't available for this item."
                 )
             )
+        case .spaceVersionInvalid, .spaceLogInvalid:
+            ErrorPresentationModel(
+                title: String(localized: "share.error.space.title", defaultValue: "A shared space update was refused"),
+                message: String(
+                    localized: "share.error.space.message",
+                    defaultValue: "It didn't come from a member of the space, or it was changed on the way. Nothing was stored."
+                )
+            )
+        case .teamCardInvalid, .teamKeysInvalid:
+            ErrorPresentationModel(
+                title: String(localized: "share.error.teamKeys.title", defaultValue: "Teammate keys unreadable"),
+                message: String(
+                    localized: "share.error.teamKeys.message",
+                    defaultValue: "FX Vault couldn't read the stored teammate keys. Remove the teammate and pair again."
+                )
+            )
         }
     }
 }

@@ -71,6 +71,8 @@ struct SyncHarness {
     let catalog: RepoCatalogRepository
     let sync: SyncRepository
     let drift: DriftRepository
+    /// Shared spaces (v0.6.0); Sync gates and publishes through it.
+    let spaces: SpaceRepository
 
     static func make(github: GitHubSimulator = GitHubSimulator(), cloner: (any RepoCloning)? = nil) async throws -> SyncHarness {
         let database = try DatabaseFactory.inMemory()
@@ -85,6 +87,7 @@ struct SyncHarness {
         _ = try await manager.create(password: SyncFixture.password)
         let clock = SteppingClock()
         let schedulers = SimulatorSchedulerProvider(runner: github, clock: clock)
+        let spaces = SpaceRepository(session: session, schedulers: schedulers, clock: clock)
         return SyncHarness(
             database: database,
             session: session,
@@ -94,8 +97,9 @@ struct SyncHarness {
             schedulers: schedulers,
             config: ConfigRepository(session: session, clock: clock),
             catalog: RepoCatalogRepository(session: session, schedulers: schedulers, clock: clock),
-            sync: SyncRepository(session: session, schedulers: schedulers, cloner: cloner, clock: clock),
-            drift: DriftRepository(session: session, schedulers: schedulers, clock: clock)
+            sync: SyncRepository(session: session, schedulers: schedulers, cloner: cloner, clock: clock, spaces: spaces),
+            drift: DriftRepository(session: session, schedulers: schedulers, clock: clock, spaces: spaces),
+            spaces: spaces
         )
     }
 
@@ -111,9 +115,14 @@ struct SyncHarness {
     }
 
     /// Preflight, run (deletions confirmed by default) and wait for the outcome.
-    func runSync(includeDeletions: Bool = true, cloneFolder: URL? = nil) async throws -> SyncRunOutcomeModel {
-        let review = try await sync.preflight()
-        let handle = try await sync.startRun(review, includeDeletions: includeDeletions, cloneFolder: cloneFolder)
+    func runSync(
+        includeDeletions: Bool = true,
+        cloneFolder: URL? = nil,
+        spaceTakeovers: Set<SpaceID> = [],
+        spaceReason: String? = nil
+    ) async throws -> SyncRunOutcomeModel {
+        let review = try await sync.preflight(spaceTakeovers: spaceTakeovers)
+        let handle = try await sync.startRun(review, includeDeletions: includeDeletions, cloneFolder: cloneFolder, spaceReason: spaceReason)
         return await handle.outcome()
     }
 

@@ -24,13 +24,23 @@ struct ChatConversationView: View {
                 .foregroundStyle(Theme.Colors.success)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                Text(verbatim: viewModel.peerName ?? String(localized: "chat.peer.unknown", defaultValue: "Nearby Mac"))
-                    .fxTextStyle(.headline)
-                    .foregroundStyle(Theme.Colors.ink)
-                Text(String(
-                    localized: "chat.header.note",
-                    defaultValue: "Codes matched. End-to-end encrypted; messages are never saved."
-                ))
+                HStack(spacing: Theme.Spacing.small) {
+                    Text(verbatim: viewModel.peerName ?? String(localized: "chat.peer.unknown", defaultValue: "Nearby Mac"))
+                        .fxTextStyle(.headline)
+                        .foregroundStyle(Theme.Colors.ink)
+                    if viewModel.verifiedTeammateName != nil {
+                        StatusChip(title: String(localized: "chat.header.teammate", defaultValue: "Teammate"), tone: .success)
+                    }
+                }
+                Text(viewModel.verifiedTeammateName == nil
+                    ? String(
+                        localized: "chat.header.note",
+                        defaultValue: "Codes matched. End-to-end encrypted; messages are never saved."
+                    )
+                    : String(
+                        localized: "chat.header.note.teammate",
+                        defaultValue: "Your teammate's Mac proved who it is. End-to-end encrypted; messages are never saved."
+                    ))
                 .fxTextStyle(.caption)
                 .foregroundStyle(Theme.Colors.mutedText)
             }

@@ -14,6 +14,10 @@ enum MainSheet: Hashable, Identifiable {
     /// Add, edit, fill or convert/move one secret or variable.
     case itemEditor(ItemEditorContext)
 
+    // CopyToRepository/
+    /// Copy To › Another Repository… (v0.4.1): linked copies into any repository of the vault.
+    case copyToRepository(CopyToRepositoryContext)
+
     // Environment/
     case newEnvironment(NewEnvironmentContext)
     /// Name and deployment branch policy (`BranchPolicyEditor`).
@@ -38,6 +42,12 @@ enum MainSheet: Hashable, Identifiable {
     case nearbySend(NearbySendContext)
     case nearbyReceive(NearbyReceiveContext)
 
+    // Spaces/ (v0.6.0)
+    /// Scope menu › Share with Teammates…: choose teammates, version 1, the marker on GitHub.
+    case shareSpace(ShareSpaceContext)
+    /// A shared scope: its history and members.
+    case space(SpaceContext)
+
     // Main/ (owned by the main window)
     /// "Add repository by name…" for one account (§10 Column 1).
     case addRepositoryByName(AddRepositoryContext)
@@ -50,7 +60,7 @@ enum MainSheet: Hashable, Identifiable {
     /// (v0.2.0). Nearby sharing is peer-to-peer and works without an internet route.
     var needsInternet: Bool {
         switch self {
-        case .sync, .createRepository, .addRepositoryByName:
+        case .sync, .createRepository, .addRepositoryByName, .shareSpace:
             true
         default:
             false
@@ -59,6 +69,13 @@ enum MainSheet: Hashable, Identifiable {
 }
 
 // MARK: - Contexts
+
+/// What ``CopyToRepositoryScreen`` copies (v0.4.1): items of one scope, by id.
+struct CopyToRepositoryContext: Hashable {
+    let itemIDs: [ConfigItemID]
+    let sourceRepositoryID: RepoID
+    let sourceScope: ConfigScope
+}
 
 /// What ``ItemEditorScreen`` edits. `scope` is where the item is (or will be) and `kind` the
 /// table the user was looking at.
@@ -81,6 +98,17 @@ struct ItemEditorContext: Hashable {
     /// Fill: start with "Already matches GitHub (don't push)" checked. Only the drift review
     /// sets it, after "Accept GitHub" (the user chose GitHub's value).
     var fillMatchesGitHub = false
+}
+
+/// Share with Teammates… for one scope (v0.6.0).
+struct ShareSpaceContext: Hashable {
+    let repositoryID: RepoID
+    let scope: ConfigScope
+}
+
+/// A shared scope's sheet (v0.6.0).
+struct SpaceContext: Hashable {
+    let spaceID: SpaceID
 }
 
 /// "+ New Environment" in the scopes column.

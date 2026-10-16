@@ -6,10 +6,13 @@ public struct SyncPlanModel: Sendable, Hashable {
     /// The preflight's run id: the executor journals under it.
     public var runID: SyncRunID
     public var repositories: [RepoPlanModel]
+    /// "What changed?" (v0.6.0): the reason every shared space version of this run records.
+    public var spaceReason: String?
 
-    public init(runID: SyncRunID, repositories: [RepoPlanModel]) {
+    public init(runID: SyncRunID, repositories: [RepoPlanModel], spaceReason: String? = nil) {
         self.runID = runID
         self.repositories = repositories
+        self.spaceReason = spaceReason
     }
 
     /// Changes the run will attempt.
@@ -28,17 +31,21 @@ public struct RepoPlanModel: Sendable, Hashable, Identifiable {
     public var blocked: [SyncBlockedChangeModel]
     /// Deletions left out because the user did not confirm them (§7.5).
     public var unconfirmedDeletions: [ConfigChangeModel]
+    /// Shared scopes the steps may write (S5): claimed before their first write.
+    public var spaces: [SyncSpaceGateModel]
 
     public init(
         snapshot: RepoSnapshotModel,
         steps: [SyncStepModel],
         blocked: [SyncBlockedChangeModel],
-        unconfirmedDeletions: [ConfigChangeModel]
+        unconfirmedDeletions: [ConfigChangeModel],
+        spaces: [SyncSpaceGateModel] = []
     ) {
         self.snapshot = snapshot
         self.steps = steps
         self.blocked = blocked
         self.unconfirmedDeletions = unconfirmedDeletions
+        self.spaces = spaces
     }
 
     public var id: RepoID {

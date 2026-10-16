@@ -40,13 +40,14 @@ struct NearbyKeyExchange: Sendable {
     private(set) var localConfirmed = false
     private(set) var remoteConfirmed = false
 
+    /// The transcript hash once keys exist (v0.5.0: a teammate signs it to skip the code).
+    private(set) var transcriptHash: Data?
+
     private let localName: Data
     private var hasStarted = false
     private var keyMaterial: NearbyKeyMaterial?
     private var helloI: HelloInitiator?
-    private var keys: NearbySessionKeys?
-    private var sendSequence: UInt64 = 0
-    private var receiveSequence: UInt64 = 0
+    private var channel: NearbyChannel?
 
     /// - Parameters:
     ///   - localName: this Mac's display name; sanitized (NFC, ≤ 63 bytes) before sending.
@@ -68,7 +69,7 @@ struct NearbyKeyExchange: Sendable {
 
     /// True once the shared secret was derived (REVEAL sent or received).
     var hasKeys: Bool {
-        keys != nil
+        channel != nil
     }
 
     /// True once both users confirmed the code.
@@ -108,7 +109,7 @@ struct NearbyKeyExchange: Sendable {
     /// Processes one plaintext frame. Only valid before keys exist; anything out of order is
     /// `.unexpectedMessage`.
     mutating func receivePlaintext(_ frame: Data) throws(NearbyFailure) -> PlaintextOutcome {
-        guard hasStarted, keys == nil else { throw NearbyFailure(.unexpectedMessage) }
+        guard hasStarted, channel == nil else { throw NearbyFailure(.unexpectedMessage) }
         let decoded = try NearbyHandshakeFrame.decode(frame)
         switch (role, decoded) {
         case (_, .abort(let code)):
@@ -222,12 +223,10 @@ struct NearbyKeyExchange: Sendable {
         peerName: Data
     ) -> NearbySASModel {
         let labels = purpose.labels
-        let derived = NearbyCrypto.deriveSession(
-            sharedSecret: secret,
-            transcriptHash: NearbyCrypto.transcriptHash(transcript, labels: labels),
-            labels: labels
-        )
-        keys = derived
+        let hash = NearbyCrypto.transcriptHash(transcript, labels: labels)
+        let derived = NearbyCrypto.deriveSession(sharedSecret: secret, transcriptHash: hash, labels: labels)
+        channel = NearbyChannel(role: role, keys: derived)
+        transcriptHash = hash
         keyMaterial = nil
         version = transcript.version
         let model = NearbySASModel(value: derived.sasValue, peerName: Self.displayName(peerName))
@@ -243,7 +242,7 @@ struct NearbyKeyExchange: Sendable {
 
     /// "Codes match": the encrypted CONFIRM frame. Only once, and only after keys exist.
     mutating func confirm() throws(NearbyFailure) -> Data {
-        guard keys != nil, !localConfirmed else { throw NearbyFailure(.unexpectedMessage) }
+        guard channel != nil, !localConfirmed else { throw NearbyFailure(.unexpectedMessage) }
         localConfirmed = true
         return try seal(NearbyProtocol.confirmMessageType, NearbyProtocol.confirmBody)
     }
@@ -260,15 +259,7 @@ struct NearbyKeyExchange: Sendable {
 
     /// Seals one frame with this direction's key and the next sequence number.
     mutating func seal(_ type: UInt8, _ body: Data) throws(NearbyFailure) -> Data {
-        guard let keys else { throw NearbyFailure(.unexpectedMessage) }
-        let frame = try NearbyEncryptedFrame.seal(
-            rawType: type,
-            sequence: sendSequence,
-            body: body,
-            key: keys.sendingKey(for: role)
-        )
-        sendSequence += 1
-        return frame
+        try withChannel { channel throws(NearbyFailure) in try channel.seal(type, body) }
     }
 
     /// Splits `bytes` into frames of at most `maxChunk` plaintext bytes each, prefixing every
@@ -279,45 +270,31 @@ struct NearbyKeyExchange: Sendable {
         prefix: Data = Data(),
         maxChunk: Int = NearbyProtocol.maxFramePlaintextBytes
     ) throws(NearbyFailure) -> [Data] {
-        let chunkLimit = maxChunk - prefix.count
-        guard chunkLimit > 0 else { throw NearbyFailure(.oversizeFrame) }
-        var frames: [Data] = []
-        var offset = 0
-        repeat {
-            let length = min(chunkLimit, bytes.count - offset)
-            guard var slice = bytes.bytes(at: offset, length: length) else {
-                throw NearbyFailure(.malformedFrame)
-            }
-            var chunk = prefix
-            chunk.append(slice)
-            defer {
-                slice.wipe()
-                chunk.wipe()
-            }
-            frames.append(try seal(type, chunk))
-            offset += length
-        } while offset < bytes.count
-        return frames
+        try withChannel { channel throws(NearbyFailure) in
+            try channel.sealChunks(type, bytes, prefix: prefix, maxChunk: maxChunk)
+        }
     }
 
     /// Opens the peer's next frame and returns its authenticated type byte.
     mutating func open(_ frame: Data) throws(NearbyFailure) -> (type: UInt8, body: Data) {
-        guard let keys else { throw NearbyFailure(.unexpectedMessage) }
-        guard receiveSequence < Limits.maxNearbySequence else { throw NearbyFailure(.sequenceExhausted) }
-        let opened = try NearbyEncryptedFrame.open(
-            raw: frame,
-            expectedSequence: receiveSequence,
-            key: keys.receivingKey(for: role)
-        )
-        receiveSequence += 1
-        return opened
+        try withChannel { channel throws(NearbyFailure) in try channel.open(frame) }
+    }
+
+    /// Runs `body` on the channel and keeps its new sequence numbers. Before keys exist every
+    /// channel operation is `.unexpectedMessage`.
+    private mutating func withChannel<Result>(
+        _ body: (inout NearbyChannel) throws(NearbyFailure) -> Result
+    ) throws(NearbyFailure) -> Result {
+        guard var current = channel else { throw NearbyFailure(.unexpectedMessage) }
+        defer { channel = current }
+        return try body(&current)
     }
 
     /// After keys exist, a plaintext ABORT is accepted only until the first encrypted frame
     /// from the peer has arrived (the peer may not have keys yet). Returns its code, or nil when
     /// `frame` is not such an ABORT.
     func plaintextAbortCode(_ frame: Data) throws(NearbyFailure) -> NearbyAbortCode? {
-        guard receiveSequence == 0, frame.first == NearbyMessageType.abort.rawValue else { return nil }
+        guard channel?.hasReceived != true, frame.first == NearbyMessageType.abort.rawValue else { return nil }
         guard case .abort(let code) = try NearbyHandshakeFrame.decode(frame) else { return nil }
         return NearbyAbortCode(rawValue: code) ?? .protocolError
     }
@@ -325,7 +302,7 @@ struct NearbyKeyExchange: Sendable {
     /// The ABORT frame for a local reason: encrypted once keys exist, plaintext before, none
     /// before the handshake started.
     mutating func abortFrame(code: NearbyAbortCode) -> Data? {
-        if keys != nil {
+        if channel != nil {
             return try? seal(NearbyMessageType.abort.rawValue, Data([code.rawValue]))
         }
         guard hasStarted else { return nil }
@@ -335,8 +312,9 @@ struct NearbyKeyExchange: Sendable {
     /// Drops every key and the handshake secrets. `SymmetricKey` storage is released (CryptoKit
     /// zeroes it on deallocation); there is no way to resume. The code stays readable.
     mutating func wipe() {
-        keys = nil
+        channel = nil
         keyMaterial = nil
         helloI = nil
+        transcriptHash = nil
     }
 }

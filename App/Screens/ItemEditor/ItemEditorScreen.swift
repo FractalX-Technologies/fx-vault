@@ -16,6 +16,11 @@ struct ItemEditorScreen: View {
         _viewModel = State(initialValue: ItemEditorViewModel(context: context, dependencies: dependencies))
     }
 
+    /// A screen over an existing view model (previews and snapshots).
+    init(viewModel: ItemEditorViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
+
     var body: some View {
         @Bindable var viewModel = viewModel
         ConfigEditorSheet(
@@ -102,6 +107,9 @@ private struct ItemEditorForm: View {
             }
             if viewModel.offersPushOnNextSync || viewModel.isPushAlreadyRequested {
                 pushField
+            }
+            if viewModel.offersLinkedUpdate {
+                linkedField
             }
         }
     }
@@ -239,6 +247,31 @@ private struct ItemEditorForm: View {
                     defaultValue: "Sends the value in FX Vault to GitHub on the next Sync even if it did not change, so GitHub matches FX Vault."
                 )))
             }
+        }
+    }
+
+    // MARK: - Linked copies (v0.4.1)
+
+    private var linkedField: some View {
+        ConfigSheetField(String(localized: "itemEditor.linked.header", defaultValue: "Linked copies")) {
+            ForEach(viewModel.linkedCopies) { copy in
+                FXCheckboxRow(
+                    title: String(
+                        localized: "itemEditor.linked.row",
+                        defaultValue: "\(copy.repositoryFullName) · \(copy.placeDetail(itemName: viewModel.item?.name ?? "")) (\(copy.comparison.title))"
+                    ),
+                    isOn: Binding(
+                        get: { viewModel.linkedSelection.contains(copy.itemID) && copy.isEditable },
+                        set: { viewModel.setLinkedCopy(copy.itemID, included: $0) }
+                    )
+                )
+                .disabled(!copy.isEditable || !viewModel.canEdit)
+                .help(copy.editBlock?.presentation.message ?? "")
+            }
+            ConfigEditorNoteView(note: .info(String(
+                localized: "itemEditor.linked.note",
+                defaultValue: "Checked copies get the new value too, as changes for the next Sync. Copies that still had the current value are checked."
+            )))
         }
     }
 

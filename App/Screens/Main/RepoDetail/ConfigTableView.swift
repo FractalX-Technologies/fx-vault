@@ -2,9 +2,10 @@ import SwiftUI
 import UniformTypeIdentifiers
 import VaultCore
 
-/// The one table of the detail column (§10; mockup Main): Name, Value (masked with an eye
-/// toggle, "Value missing", or plaintext for variables), Updated and Status, with the row actions
-/// Reveal, Copy, Edit, Convert/Move…, Push on Next Sync (secrets), Revert and Delete.
+/// The one table of the detail column (§10; mockup Main): Name (with the Linked chip of a linked
+/// copy, v0.4.1), Value (masked with an eye toggle, "Value missing", or plaintext for variables),
+/// Updated and Status, with the row actions Reveal, Copy, Edit, Convert/Move…, Copy To, linked
+/// copies, Push on Next Sync (secrets), Revert and Delete.
 ///
 /// A native `Table` (selection, keyboard, context menus, double-click to edit) styled with
 /// `.fxTable()`: a card with 16 pt corners, 52 pt rows, mono names and timestamps, mono
@@ -17,7 +18,12 @@ struct ConfigTableView: View {
         Table(rows, selection: $viewModel.selection) {
             TableColumn(Self.header(String(localized: "main.table.name", defaultValue: "Name"))) { row in
                 VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                    TableNameText(name: row.name, isDeleted: row.isDeleted)
+                    HStack(spacing: Theme.Spacing.smallMinus) {
+                        TableNameText(name: row.name, isDeleted: row.isDeleted)
+                        if row.isLinked {
+                            LinkedChip(row: row, viewModel: viewModel)
+                        }
+                    }
                     if let syncedName = row.syncedName {
                         Text(String(localized: "main.table.renamedFrom", defaultValue: "Renamed from \(syncedName)"))
                             .font(Theme.Typography.caption)
@@ -66,8 +72,8 @@ struct ConfigTableView: View {
         .onDeleteCommand {
             viewModel.deleteSelection()
         }
-        // ⌘C copies the selected items (v0.4.0): ⌘V in another scope pastes them. Disabled (the
-        // Copy menu item greyed) with nothing selected.
+        // ⌘C copies the selected items (v0.4.0): ⌘V in another scope or repository pastes them as
+        // linked copies (v0.4.1). Disabled (the Copy menu item greyed) with nothing selected.
         .onCommand(#selector(NSText.copy(_:)), perform: viewModel.selection.isEmpty ? nil : { viewModel.copySelection() })
         .overlay {
             if rows.isEmpty {
@@ -118,8 +124,9 @@ struct ConfigTableView: View {
     }
 }
 
-/// "Copy To ›" (v0.4.0): the repository's other scopes; the ones this account may not change are
-/// listed disabled. The copies are pending adds there, values re-encrypted in the vault.
+/// "Copy To ›" (v0.4.0): the repository's other scopes, the ones this account may not change
+/// listed disabled, then "Another Repository…" (v0.4.1). The copies are pending adds there,
+/// values re-encrypted in the vault, linked to their sources.
 struct CopyToMenu: View {
     let title: String
     let rows: [ConfigRowModel]
@@ -136,6 +143,12 @@ struct CopyToMenu: View {
                 }
                 .disabled(!target.isEditable)
             }
+            if !targets.isEmpty {
+                Divider()
+            }
+            Button(String(localized: "main.table.copyTo.otherRepository", defaultValue: "Another Repository…")) {
+                viewModel.copyToOtherRepository(rows)
+            }
         } label: {
             if showsChevron {
                 HStack(spacing: Theme.Spacing.smallMinus) {
@@ -148,7 +161,7 @@ struct CopyToMenu: View {
                 Text(title)
             }
         }
-        .disabled(targets.isEmpty || rows.isEmpty)
+        .disabled(rows.isEmpty)
     }
 }
 
@@ -214,6 +227,14 @@ private struct ConfigRowActions: View {
         .disabled(!viewModel.canEdit || row.isDeleted)
         if !row.isDeleted {
             CopyToMenu(title: String(localized: "main.table.copyTo", defaultValue: "Copy To"), rows: [row], viewModel: viewModel)
+        }
+        if row.isLinked {
+            Button(String(localized: "main.table.linked.show", defaultValue: "Show Linked Copies")) {
+                viewModel.showLinkedCopies(of: row)
+            }
+            Button(String(localized: "main.table.linked.unlink", defaultValue: "Unlink")) {
+                viewModel.unlink(row)
+            }
         }
         if row.canPushOnNextSync {
             Button(String(localized: "main.table.pushOnNextSync", defaultValue: "Push on Next Sync")) {

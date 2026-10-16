@@ -385,6 +385,15 @@ private struct RepoDetailChips: View {
                 StatusChip(title: capability.chipTitle, tint: capability.chipTint)
             }
         }
+        if let space = viewModel.space {
+            Button {
+                viewModel.showSpace()
+            } label: {
+                StatusChip(title: SpaceCopy.chip(version: space.headVersion, isPublishing: space.isPublishing), tone: .brand)
+            }
+            .buttonStyle(.plain)
+            .help(SpaceCopy.chipHelp)
+        }
         if let error = viewModel.driftError {
             Label(error.title, systemImage: "exclamationmark.triangle")
                 .font(Theme.Typography.caption)

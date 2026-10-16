@@ -112,6 +112,11 @@ struct DriftReviewScreen: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+                    if let banner = viewModel.teammateChangesBanner {
+                        Banner(.info, message: banner, action: .init(title: SpaceCopy.getUpdates) {
+                            Task { await viewModel.getTeammateUpdates() }
+                        })
+                    }
                     if !viewModel.rows.isEmpty {
                         ConfigSheetList(viewModel.rows) { row in
                             DriftFindingRow(

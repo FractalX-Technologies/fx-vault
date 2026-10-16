@@ -24,6 +24,9 @@ import VaultData
 ///   Next Sync", which re-sends the value even when it did not change.
 /// - The value lives only in this view model's `value` while the sheet is open; it is dropped
 ///   after a save and on lock, and never appears in notes, warnings, alerts or logs.
+/// - A linked item (v0.4.1, L4) lists its other places when a new value is entered: the ones
+///   that still have the item's current value start checked, the ones the account cannot change
+///   are disabled. Saving updates the checked copies too (`ConfigRepository.updateLinkedCopies`).
 @Observable
 final class ItemEditorViewModel: LockObserving {
     enum LoadState: Equatable {
@@ -79,6 +82,10 @@ final class ItemEditorViewModel: LockObserving {
     /// The pending secret → variable confirmation.
     var confirmation: ItemEditorConfirmationModel?
     var alert: ErrorPresentationModel?
+    /// The other places of a linked item being edited (v0.4.1), compared with its current value.
+    private(set) var linkedCopies: [LinkedCopyModel] = []
+    /// The linked copies the save also updates.
+    var linkedSelection: Set<ConfigItemID> = []
     private(set) var isSaving = false
     /// True when the last save stripped trailing CR/LF (D32).
     private(set) var didStripTrailingNewlines = false
@@ -146,6 +153,10 @@ final class ItemEditorViewModel: LockObserving {
         case .edit:
             if item.kind == .variable, item.hasValue {
                 try loadValue(of: item.id)
+            }
+            if item.isLinked {
+                linkedCopies = try dependencies.config.linkedCopies(of: item.id)
+                linkedSelection = Set(linkedCopies.filter { $0.isEditable && $0.comparison == .same }.map(\.itemID))
             }
         case .fill:
             guard item.kind == .secret, !item.hasValue else {
@@ -654,12 +665,29 @@ final class ItemEditorViewModel: LockObserving {
         didStripTrailingNewlines = result.didStripTrailingNewlines
     }
 
+    /// True when the save offers to update the item's linked copies too (a new value).
+    var offersLinkedUpdate: Bool {
+        isEditing && !linkedCopies.isEmpty && newValue != nil
+    }
+
+    func setLinkedCopy(_ id: ConfigItemID, included: Bool) {
+        if included {
+            linkedSelection.insert(id)
+        } else {
+            linkedSelection.remove(id)
+        }
+    }
+
     /// Rename, then the value, then the kind (an item not yet on GitHub), then Push on Next
-    /// Sync: each step validated up front by ``canSave``.
+    /// Sync, then the checked linked copies (v0.4.1): each step validated up front by
+    /// ``canSave``.
     private func edit() throws(ConfigRepositoryError) {
         guard let item else { throw .itemNotFound }
         let config = dependencies.config
         let shouldRequestPush = requestsPush
+        let linkedTargets = offersLinkedUpdate
+            ? linkedCopies.filter { $0.isEditable && linkedSelection.contains($0.itemID) }.map(\.itemID)
+            : []
         var id = item.id
         if isNameChanged {
             id = try config.renameItem(id, to: normalizedName)
@@ -674,6 +702,9 @@ final class ItemEditorViewModel: LockObserving {
         }
         if shouldRequestPush {
             try config.requestPush(id)
+        }
+        if !linkedTargets.isEmpty {
+            try config.updateLinkedCopies(from: id, to: linkedTargets)
         }
     }
 
@@ -712,6 +743,8 @@ final class ItemEditorViewModel: LockObserving {
     func vaultDidLock() {
         clearValue()
         confirmation = nil
+        linkedCopies = []
+        linkedSelection = []
     }
 
     // MARK: - Helpers

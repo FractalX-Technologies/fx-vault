@@ -66,8 +66,12 @@ struct NearbyChatMachine: Sendable {
 
     let role: NearbyRole
     private(set) var phase: NearbyChatPhase = .idle
+    /// The teammate who proved who they are with TEAMMATE_IDENT (chat version 3).
+    private(set) var verifiedTeammate: TeamCardModel?
 
     private var exchange: NearbyKeyExchange
+    private let team: TeamChatIdentityModel?
+    private var hasSentIdent = false
     private var outgoing: [ChatAttachmentID: OutgoingOffer] = [:]
     private var incoming: [ChatAttachmentID: IncomingOffer] = [:]
     private var transfer: IncomingTransfer?
@@ -84,8 +88,16 @@ struct NearbyChatMachine: Sendable {
     ///   - keyMaterial: fresh per session; tests inject fixed material.
     ///   - maxVersion: the chat version to offer; nil is ``NearbyChatProtocol/maxVersion`` (tests
     ///     pin 1 to act as a 0.2.x or 0.3.x Mac).
-    init(role: NearbyRole, localName: String, keyMaterial: NearbyKeyMaterial = .random(), maxVersion: UInt8? = nil) {
+    ///   - team: this Mac's teammate keys and teammates, so a teammate can skip the code (v0.5.0).
+    init(
+        role: NearbyRole,
+        localName: String,
+        keyMaterial: NearbyKeyMaterial = .random(),
+        maxVersion: UInt8? = nil,
+        team: TeamChatIdentityModel? = nil
+    ) {
         self.role = role
+        self.team = team
         exchange = NearbyKeyExchange(
             role: role,
             purpose: .chat,
@@ -396,8 +408,73 @@ struct NearbyChatMachine: Sendable {
             phase = .comparingCodes
             var events: [NearbyChatEvent] = role == .initiator ? [.peerConnected(name: sas.peerName)] : []
             events.append(.sasReady(sas))
-            return NearbyChatStep(frames: reply.map { [$0] } ?? [], events: events)
+            var frames = reply.map { [$0] } ?? []
+            // I opened this chat from a teammate's bubble: prove who it is right after REVEAL.
+            if role == .initiator, team?.expectedPeer != nil, teammateVerificationApplies {
+                frames.append(try identFrame())
+            }
+            return NearbyChatStep(frames: frames, events: events)
         }
+    }
+
+    // MARK: - Teammates (chat version 3)
+
+    /// True once keys exist, both Macs speak chat v3 and this Mac knows teammates.
+    private var teammateVerificationApplies: Bool {
+        team != nil && (exchange.version ?? 0) >= NearbyChatProtocol.teammateVerificationVersion
+    }
+
+    /// TEAMMATE_IDENT: this device's id and its signature over the transcript and its role.
+    private mutating func identFrame() throws(NearbyFailure) -> Data {
+        guard let team, let transcriptHash = exchange.transcriptHash else { throw NearbyFailure(.unexpectedMessage) }
+        var body = team.keys.deviceID.bytes
+        body.append(try team.keys.sign(Self.identMessage(role: role, transcriptHash: transcriptHash)))
+        hasSentIdent = true
+        return try seal(.teammateIdent, body)
+    }
+
+    /// The peer's TEAMMATE_IDENT. R: an unknown device is ignored (the people compare the code);
+    /// I: it must be the teammate whose bubble was used. A known device with a bad signature
+    /// aborts. A valid one confirms the code here (and R proves itself in turn).
+    private mutating func receivedIdent(_ body: Data) throws(NearbyFailure) -> NearbyChatStep {
+        guard let team, teammateVerificationApplies, verifiedTeammate == nil,
+              let transcriptHash = exchange.transcriptHash
+        else { throw NearbyFailure(.unexpectedMessage) }
+        var reader = NearbyByteReader(body)
+        guard let deviceID = TeamDeviceID(bytes: try reader.bytes(TeamProtocol.deviceIDBytes)) else {
+            throw NearbyFailure(.malformedFrame)
+        }
+        let signature = try reader.bytes(TeamProtocol.signatureBytes)
+        try reader.requireEnd()
+        guard let card = team.teammates.first(where: { $0.deviceID == deviceID }),
+              team.expectedPeer == nil || team.expectedPeer == deviceID
+        else {
+            if role == .initiator { throw NearbyFailure(.teammateNotRecognized) }
+            return .none
+        }
+        let peerRole: NearbyRole = role == .initiator ? .responder : .initiator
+        guard card.isValidSignature(signature, for: Self.identMessage(role: peerRole, transcriptHash: transcriptHash)) else {
+            throw NearbyFailure(.signatureInvalid)
+        }
+        verifiedTeammate = card
+        var step = NearbyChatStep(events: [.teammateVerified(card)])
+        if !hasSentIdent {
+            step.frames.append(try identFrame())
+        }
+        if !exchange.localConfirmed {
+            step.frames.append(try exchange.confirm())
+        }
+        advanceIfBothConfirmed(&step)
+        return step
+    }
+
+    /// `LP(chat-ident label) ‖ u8(role) ‖ LP(TH)`.
+    static func identMessage(role: NearbyRole, transcriptHash: Data) -> Data {
+        var message = Data()
+        message.appendLengthPrefixed(TeamProtocol.chatIdentLabel)
+        message.append(role.wireByte)
+        message.appendLengthPrefixed(transcriptHash)
+        return message
     }
 
     private mutating func receiveEncrypted(_ frame: Data, at date: Date) throws(NearbyFailure) -> NearbyChatStep {
@@ -428,6 +505,8 @@ struct NearbyChatMachine: Sendable {
             var step = NearbyChatStep(events: [.peerConfirmedSAS])
             advanceIfBothConfirmed(&step)
             return step
+        case (.teammateIdent, .comparingCodes):
+            return try receivedIdent(body)
         case (.text, .chatting):
             return try receivedText(body, at: date)
         case (.attachmentOffer, .chatting):
@@ -573,7 +652,7 @@ struct NearbyChatMachine: Sendable {
     private static func countsTowardFloodLimit(_ type: NearbyChatMessageType) -> Bool {
         switch type {
         case .text, .attachmentOffer, .attachmentRequest, .attachmentDecline, .ping: true
-        case .confirm, .attachmentPayload, .pong, .close, .abort: false
+        case .confirm, .attachmentPayload, .pong, .close, .abort, .teammateIdent: false
         }
     }
 

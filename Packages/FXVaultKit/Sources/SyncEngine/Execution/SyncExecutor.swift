@@ -21,6 +21,8 @@ import VaultCore
 ///   `gh repo create` is never retried and is reconciled with B2 (``RepositoryAdoption``).
 /// - ``cancel()`` stops after the command in flight: completed items stay synced, unverified ones
 ///   stay pending, the rest is skipped.
+/// - Shared scopes (v0.6.0, S5): the space marker is claimed and re-read before a shared scope's
+///   first write, and published after the repository's steps (``SyncSpaceCoordinating``).
 ///
 /// An executor runs one plan; create a new one per run.
 public actor SyncExecutor {
@@ -31,6 +33,7 @@ public actor SyncExecutor {
     let persistence: any SyncPersisting
     let values: any SyncValueProviding
     let clock: any VaultClock
+    let spaces: (any SyncSpaceCoordinating)?
     let progressContinuation: AsyncStream<SyncProgressEventModel>.Continuation
     private let cancelRequested = OSAllocatedUnfairLock(initialState: false)
     private var hasStarted = false
@@ -42,17 +45,21 @@ public actor SyncExecutor {
     private var warnings: [SyncWarningModel] = []
     private var completedCount = 0
     private var totalCount = 0
+    /// "What changed?" of the shared space versions this run publishes.
+    private(set) var spaceReason: String?
 
     public init(
         schedulers: SyncSchedulerRegistry,
         persistence: any SyncPersisting,
         values: any SyncValueProviding,
-        clock: any VaultClock
+        clock: any VaultClock,
+        spaces: (any SyncSpaceCoordinating)? = nil
     ) {
         self.schedulers = schedulers
         self.persistence = persistence
         self.values = values
         self.clock = clock
+        self.spaces = spaces
         (progress, progressContinuation) = AsyncStream.makeStream(of: SyncProgressEventModel.self)
     }
 
@@ -68,6 +75,7 @@ public actor SyncExecutor {
         guard !hasStarted else { throw .alreadyRunning }
         hasStarted = true
         totalCount = plan.changeCount
+        spaceReason = plan.spaceReason
         plannedChangeIDs = Set(plan.repositories.flatMap { $0.changes.map(\.id) })
         progressContinuation.yield(.started(total: totalCount))
 
@@ -125,6 +133,11 @@ public actor SyncExecutor {
         /// Item set changes verified in this run (the delete half of a rename needs it).
         var verifiedSets: Set<String> = []
         let rows: [ConfigItemID: ConfigItemSnapshotModel]
+        /// Shared scopes claimed in this run, with their `--env` value, published after the
+        /// repository's steps (S5).
+        var claimedSpaces: [(gate: SyncSpaceGateModel, environmentName: String?)] = []
+        /// Shared scopes whose claim failed or was lost: the outcome of their remaining changes.
+        var lostSpaces: [ConfigScope: SyncChangeOutcomeModel] = [:]
 
         var repositoryID: RepoID {
             plan.snapshot.repository.id
@@ -161,12 +174,17 @@ public actor SyncExecutor {
                 continue
             }
             do {
+                if let lost = try await claimSharedScope(of: step, run: &run) {
+                    for change in step.changes { finish(change, lost) }
+                    continue
+                }
                 try await execute(step, run: &run)
             } catch {
                 stop(.from(error))
                 skipRemaining(step.changes, reason: .runStopped(.from(error)))
             }
         }
+        await publishClaimedSpaces(run)
     }
 
     private func execute(_ step: SyncStepModel, run: inout RepoRun) async throws(SyncError) {

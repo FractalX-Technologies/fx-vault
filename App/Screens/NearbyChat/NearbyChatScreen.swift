@@ -47,6 +47,9 @@ struct NearbyChatScreen: View {
         .onChange(of: viewModel.isNearbyAvailable) {
             Task { await viewModel.refreshAvailability() }
         }
+        .onChange(of: app.chatStartRequests) {
+            Task { await viewModel.startPendingChat() }
+        }
         .sheet(item: $viewModel.picker, onDismiss: viewModel.pickerDismissed) { picker in
             ChatAttachmentPickerSheet(viewModel: picker)
         }

@@ -16,6 +16,7 @@ final class PreferencesViewModel: LockObserving {
         case general
         case security
         case accounts
+        case teammates
         case advanced
 
         var id: String {
@@ -34,6 +35,7 @@ final class PreferencesViewModel: LockObserving {
 
     let security: SecuritySettingsViewModel
     let accounts: AccountsSettingsViewModel
+    let teammates: TeammatesSettingsViewModel
 
     @ObservationIgnored private let app: AppViewModel
 
@@ -41,6 +43,7 @@ final class PreferencesViewModel: LockObserving {
         self.app = app
         security = SecuritySettingsViewModel(app: app)
         accounts = AccountsSettingsViewModel(app: app)
+        teammates = TeammatesSettingsViewModel(app: app)
         app.addLockObserver(self)
     }
 

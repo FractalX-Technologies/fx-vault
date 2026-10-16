@@ -49,8 +49,18 @@ FXVault/
 │   │   │   │                        # scope rows (pure helper + modifier)
 │   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel
 │   │   │   ├── ScopeList/           # ScopeListView/ViewModel ("Repository" + environments)
-│   │   │   ├── RepoDetail/          # RepoDetailScreen/ViewModel, ConfigTableView
+│   │   │   ├── RepoDetail/          # RepoDetailScreen/ViewModel, ConfigTableView,
+│   │   │   │                        # LinkedCopiesView (Linked chip and popover, v0.4.1)
+│   │   │   ├── Presence/            # NearbyPresenceView (toolbar bubbles, person popover, v0.5.0)
 │   │   │   └── AddRepository/       # AddRepositorySheet/ViewModel (Add repository by name)
+│   │   ├── CopyToRepository/        # CopyToRepositoryScreen/ViewModel (Copy To › Another
+│   │   │                            # Repository…, v0.4.1)
+│   │   ├── Team/                    # TeammatesSettingsScreen/ViewModel (Preferences › Teammates,
+│   │   │                            # Outside this network since v0.6.0), AddTeammateSheet/ViewModel
+│   │   │                            # (pairing), v0.5.0
+│   │   ├── Spaces/                  # ShareSpaceScreen/ViewModel (Share with Teammates…),
+│   │   │                            # SpaceScreen/ViewModel (History, Members), SpaceCopy,
+│   │   │                            # SpaceRepositoryError+Extension (v0.6.0)
 │   │   ├── ItemEditor/              # ItemEditorScreen/ViewModel (add, edit, fill, convert/move),
 │   │   │                            # ItemEditorModels, ItemEditorError, ConfigRepository+Editor,
 │   │   │                            # ConfigKind+ItemEditor, CredentialReason+ItemEditor extensions
@@ -97,11 +107,13 @@ FXVault/
 │   │                                # StepCounter, SyncToolbarButton, TableStyling,
 │   │                                # WindowBackground, SheetChrome (SheetHeader,
 │   │                                # SheetCallout, FXCheckboxRow, InlineErrorView,
-│   │                                # FXLinkButtonStyle, fxSheetContent)
+│   │                                # FXLinkButtonStyle, fxSheetContent), FlowLayout (v0.6.0)
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
 │   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe,
 │   │                                # ConnectivityMonitor (NWPathMonitor, path sources),
-│   │                                # WiFiRadio (CoreWLAN power state), GitHubReachability
+│   │                                # WiFiRadio (CoreWLAN power state), GitHubReachability,
+│   │                                # TeamPresenceManager, TeamPresenceNetworking, PingAlertManager (v0.5.0),
+│   │                                # SpaceSyncManager, SpaceSyncNetworking (v0.6.0)
 │   ├── Helpers/
 │   │   ├── AppIdentity.swift        # FX Vault vs FX Vault Dev (bundle id, window title, DEV)
 │   │   ├── AppLog.swift             # os.Logger categories
@@ -154,7 +166,8 @@ FXVault/
 │   ├── Sources/
 │   │   ├── VaultCore/               # Identifiers, SecretBytes, Clock (VaultClock), Limits, Timeouts
 │   │   │   ├── Models/              # Account, Repo, RepoCapability, Environment, ConfigItem,
-│   │   │   │                        # ConfigKind, BranchPattern, DeploymentBranchPolicy
+│   │   │   │                        # ConfigKind, BranchPattern, DeploymentBranchPolicy,
+│   │   │   │                        # Teammate (v0.5.0), SpaceGateDecision (v0.6.0)
 │   │   │   ├── Validation/          # PathSegment, GitHubName, EnvironmentName, RepoName,
 │   │   │   │                        # OwnerLogin, GitHubHost, BranchPattern validators,
 │   │   │   │                        # DisplayNameSanitizer, ValueNormalizer, ScopeCapacity,
@@ -168,10 +181,12 @@ FXVault/
 │   │   │                            # PasswordStrength, CryptoError, CryptoDomain, SecureRandom
 │   │   ├── VaultStore/              # (only GRDB import)
 │   │   │   ├── Database/            # VaultDatabase, DatabaseFactory, DatabaseTimestamp, StoreConstants
-│   │   │   ├── Migrations/          # VaultMigrator, MigrationSQL (v1–v6, frozen)
+│   │   │   ├── Migrations/          # VaultMigrator, MigrationSQL (v1–v11, frozen)
 │   │   │   ├── Records/             # Vault/KeyWrap, Account, Repository, Environment/BranchPattern,
-│   │   │   │                        # ConfigItem/ConfigItemState, SyncJournal/ImportedSharePackage
-│   │   │   ├── Stores/              # VaultRecord, Account, Repo, Config, SyncJournal, SharePackage
+│   │   │   │                        # ConfigItem/ConfigItemState, SyncJournal/ImportedSharePackage,
+│   │   │   │                        # Team (v0.5.0), Space (spaces, keys, versions, addresses; v0.6.0)
+│   │   │   ├── Stores/              # VaultRecord, Account, Repo, Config, SyncJournal, SharePackage,
+│   │   │   │                        # Team (v0.5.0), Space (v0.6.0)
 │   │   │   └── Errors/              # StoreError
 │   │   ├── GitHubKit/
 │   │   │   ├── Process/             # CommandRunning, CommandSpec, StdinPayload, ProcessRunner,
@@ -206,7 +221,15 @@ FXVault/
 │   │   │   ├── Nearby/              # NearbyProtocol, NearbyPurpose, NearbyCrypto, NearbyFrame,
 │   │   │   │                        # NearbyKeyExchange (shared handshake), NearbyHandshake,
 │   │   │   │                        # NearbySession, NearbyTransport, NearbyLengthFramer,
-│   │   │   │                        # NWNearbyTransport
+│   │   │   │                        # NWNearbyTransport, NearbyChannel (encrypted channel)
+│   │   │   ├── Team/                # fxvault-team/v1 (v0.5.0): TeamProtocol, TeamIdentity,
+│   │   │   │                        # TeamPseudonym, TeamPairingMachine, TeamSessionMachine,
+│   │   │   │                        # TeamSessions (sessions, router, preamble/watched
+│   │   │   │                        # transports), NWTeamListener; v0.6.0: TeamSpaceWire,
+│   │   │   │                        # TeamSpaceExchanging, NWSpaceListener (remote, Q4)
+│   │   │   ├── Space/               # fxvault-space/v1 (v0.6.0): SpaceModels, SpaceLog (+ keychain,
+│   │   │   │                        # crypto), SpaceVersionBuilder (+ snapshot codec), SpaceMarker
+│   │   │   │                        # (marker, gate)
 │   │   │   ├── Chat/                # fxvault-chat/v1: NearbyChatProtocol (+ chat Limits/Timeouts),
 │   │   │   │                        # NearbyChatModels, ChatTextSanitizer, NearbyChatMachine,
 │   │   │   │                        # NearbyChatSession
@@ -225,7 +248,9 @@ FXVault/
 │   │   │       │                    # SyncPlanner(+PlanModel), SyncExecutor(+Environments, +Items),
 │   │   │       │                    # WriteVerifier, SyncReconciler, DeletionPreviewLoader,
 │   │   │       │                    # RepositoryAdoption, SyncJournalWriter, SyncResultModel,
-│   │   │       │                    # SyncError, SyncExecutionConstants
+│   │   │       │                    # SyncError, SyncExecutionConstants; v0.6.0:
+│   │   │       │                    # SyncSpaceCoordinating, SyncExecutor+Spaces,
+│   │   │       │                    # SpaceClaimReconciler
 │   │   │       └── Testing/         # InMemorySyncVault (reference fake for the seams)
 │   │   └── VaultData/
 │   │       ├── Session/             # VaultSession (+Extension: openLive / inMemory)
@@ -240,11 +265,17 @@ FXVault/
 │   │       ├── Accounts/            # GitHubEnvironmentRepository (+Models)
 │   │       ├── Catalog/             # RepoCatalogRepository (+Models), RemoteConfigReader,
 │   │       │                        # RepoImportWriter
+│   │       ├── Team/                # TeamRepository (device keys, teammates; v0.5.0),
+│   │       │                        # TeamRepository+Remote (remote access, v0.6.0)
+│   │       ├── Spaces/              # SpaceRepository (+Coordinating, +Exchange), SpaceSnapshots
+│   │       │                        # (builder, applier), SpaceMarkerTarget, SpaceRepositoryModels
+│   │       │                        # (v0.6.0)
 │   │       ├── Config/              # ConfigRepository, ConfigRepositoryError
 │   │       │   ├── Models/          # BranchPolicyDraftModel, ConfigScopeSummaryModel,
 │   │       │   │                    # ItemWriteResultModel
 │   │       │   └── Support/         # ConfigFieldCipher, EnvironmentEditor, ItemEditBatch,
-│   │       │                        # ItemMutationWriter, ObservationMapper, RepoSnapshotMapper
+│   │       │                        # ItemMutationWriter, ObservationMapper, RepoSnapshotMapper,
+│   │       │                        # ConfigItemRecord+Extension (row transitions, v0.6.0)
 │   │       ├── EnvFiles/            # EnvFileRepository, EnvFileError, EnvExportAuthorizationModel,
 │   │       │   │                    # ReauthGate+EnvExport, GitServiceGitignoreChecker
 │   │       │   └── Models/          # EnvExportModels, EnvImportModels
@@ -272,8 +303,8 @@ FXVault/
 │       │                                         # Live/ (opt-in live E2E: FXV_LIVE_E2E*, plus a
 │       │                                         # GitHubSimulator dry run that always runs)
 │       ├── VaultCryptoTests/Fixtures/kat/        # generate_kat.py + kat_vectors.json
-│       ├── SharingKitTests/Fixtures/             # nearby_kat.json, chat_kat.json, kat/ (crosscheck.py,
-│       │                                         # reference),
+│       ├── SharingKitTests/Fixtures/             # nearby_kat.json, chat_kat.json, team_kat.json,
+│       │                                         # space_kat.json, kat/ (crosscheck.py, reference),
 │       │                                         # item-v1-0.1.1.json (package written by 0.1.1)
 │       ├── VaultDataTests/Fixtures/Sharing/      # repository-v1-0.1.1.fxvault (file written by 0.1.1)
 │       ├── GitHubKitTests/Fixtures/              # gh/, api/, ssh/, shell/ (sanitized)

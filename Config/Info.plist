@@ -45,11 +45,13 @@
 	<array>
 		<string>_fxvault-share._tcp</string>
 		<string>_fxvault-chat._tcp</string>
+		<string>_fxvault-pair._tcp</string>
+		<string>_fxvault-team._tcp</string>
 	</array>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright (c) 2026 FractalX. MIT License.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>FX Vault uses the local network to share configuration and chat with a nearby teammate.</string>
+	<string>FX Vault uses the local network to share configuration, chat, see your teammates nearby and keep shared scopes in sync with them.</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

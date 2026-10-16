@@ -44,6 +44,16 @@ nonisolated extension NearbyAbortModel {
             )
         case .payloadTooLarge:
             String(localized: "chat.abort.tooLarge", defaultValue: "An attachment was too large to send.")
+        case .teammateNotRecognized:
+            String(
+                localized: "chat.abort.teammateNotRecognized",
+                defaultValue: "The other Mac is not the teammate you chose, so the chat was stopped."
+            )
+        case .signatureInvalid:
+            String(
+                localized: "chat.abort.signatureInvalid",
+                defaultValue: "The other Mac couldn't prove it is your teammate, so the chat was stopped."
+            )
         case .unexpectedMessage, .commitmentMismatch, .invalidKey, .decryptionFailed, .sequenceMismatch,
              .sequenceExhausted, .oversizeFrame, .malformedFrame, .payloadMismatch, .unknownItemIDs, .invalidPackage,
              .peerAborted:

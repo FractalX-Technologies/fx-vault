@@ -29,6 +29,8 @@ struct GitHubNameValidatorTests {
         ("github_token", .reservedPrefix),
         ("Github_Sha", .reservedPrefix),
         ("GITHUB_", .reservedPrefix),
+        ("FXVAULT_SPACE", .reservedName),
+        ("fxvault_space", .reservedName),
         ("API KEY", .invalidCharacter),
         ("API-KEY", .invalidCharacter),
         ("API.KEY", .invalidCharacter),

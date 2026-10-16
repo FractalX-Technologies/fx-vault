@@ -24,6 +24,24 @@ environments and accounts, with a local encrypted vault and the GitHub CLI.
   repository; keep yours or accept GitHub's.
 - **New repositories.** Stage a repository with its environments, secrets and variables, create
   everything in one Sync, and clone it through your SSH alias.
+- **Teammates nearby.** Pair once with a teammate's Mac (Settings › Teammates › Add Teammate…,
+  compare a 6-digit code). From then on, while FX Vault is open, teammates who are nearby appear
+  as bubbles next to Sync: click one to **Ping** (their Mac plays a sound) or **Chat** (no code
+  needed between teammates). Only your teammates recognize your Mac: it shows up under a name that
+  changes every 15 minutes. Choose Nobody, Teammates or Everyone nearby, and mute pings per
+  teammate or all at once.
+- **Shared scopes (experimental).** Share a repository level or an environment with paired
+  teammates: every push becomes a signed version they get Mac to Mac (nearby, or at an address
+  you allow, such as a Tailscale name), with its values, author and time. Before anyone pushes,
+  FX Vault checks a small signed marker on GitHub and asks you to get your teammates' newer
+  versions first, so nobody overwrites anyone. History shows every version and restores an older
+  value. No server and no extra repository: GitHub holds only the marker.
+- **Copy once, use everywhere.** Select secrets or variables, press ⌘C, open any other scope of
+  any repository in the vault (any account) and press ⌘V, or choose **Copy To › Another
+  Repository…**. Each copy stays **linked** to its item: a link chip with the number of places
+  sits next to the name, and its popover lists every place with Same value or Differs. When you
+  change a linked item's value, the editor offers to update the copies too, so a rotation is one
+  edit and one Sync.
 - **Paste many at once.** Copy a whole `.env` and press ⌘V on the secrets or variables table
   (or choose **Paste Multiple…** in the Add menu): a live preview lists every `KEY=value` as
   you edit, with line numbers for problem lines. Rows start as the tab's kind (Variables or

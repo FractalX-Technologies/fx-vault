@@ -17,12 +17,15 @@ public enum NearbyChatProtocol {
     /// Size of an attachment id on the wire.
     static let attachmentIDBytes = ChatAttachmentID.byteCount
     /// The highest chat version this Mac offers in HELLO. 1: text and single-item attachments
-    /// (v0.2.0). 2 (v0.4.0): configuration attachments too. The frame format is unchanged, so a
-    /// chat between 0.4.0 and an older version negotiates 1 and works as before.
-    public static let maxVersion: UInt8 = 2
+    /// (v0.2.0). 2 (v0.4.0): configuration attachments too. 3 (v0.5.0): teammates prove who they
+    /// are with TEAMMATE_IDENT instead of comparing the code. The frame format is unchanged, so a
+    /// chat with an older version negotiates its version and works as before.
+    public static let maxVersion: UInt8 = 3
     /// The negotiated version from which a chat carries configuration attachments (a whole
     /// repository or environment, scope `repository` or `environment`).
     public static let configurationAttachmentsVersion: UInt8 = 2
+    /// The negotiated version from which teammates may skip the code (TEAMMATE_IDENT).
+    public static let teammateVerificationVersion: UInt8 = 3
 }
 
 /// Encrypted chat frame types. HELLO_I, HELLO_R, REVEAL_I and the plaintext ABORT are the share
@@ -43,6 +46,9 @@ public enum NearbyChatMessageType: UInt8, Sendable, Hashable, CaseIterable {
     case attachmentPayload = 0x23
     /// Body: `id(16)`. The receiver dismissed an offer, or the sender withdrew a requested one.
     case attachmentDecline = 0x24
+    /// Chat version 3, while comparing codes: `deviceID(16) ‖ Ed25519(LP(chat-ident label) ‖
+    /// u8(role) ‖ LP(TH))`. A teammate's valid IDENT confirms the code for the receiver.
+    case teammateIdent = 0x25
     /// Empty body. Sent every ``Timeouts/chatKeepaliveInterval`` while chatting.
     case ping = 0x30
     /// Empty body. The answer to one PING.

@@ -44,14 +44,16 @@ public actor NearbyChatSession {
     /// - Parameters:
     ///   - role: `.initiator` browses and connects; `.responder` advertises.
     ///   - localName: this Mac's display name; sanitized before sending.
+    ///   - team: this Mac's teammate keys and teammates (v0.5.0), so a teammate skips the code.
     public init(
         role: NearbyRole,
         localName: String,
         transport: any NearbyTransport,
-        clock: any VaultClock = SystemClock()
+        clock: any VaultClock = SystemClock(),
+        team: TeamChatIdentityModel? = nil
     ) {
         self.init(
-            machine: NearbyChatMachine(role: role, localName: localName),
+            machine: NearbyChatMachine(role: role, localName: localName, team: team),
             transport: transport,
             clock: clock
         )

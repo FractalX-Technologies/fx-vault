@@ -76,6 +76,10 @@ enum SyncFixActionModel: Hashable {
     case learnMore(URL)
     /// Clone a repository the run created (retry, or after a clone folder was chosen).
     case clone(RepoID)
+    /// A shared scope is behind or forked (v0.6.0): pull from teammates, then preflight again.
+    case getTeammateUpdates
+    /// A teammate's push never finished (Q3): confirm, then preflight again taking it over.
+    case takeOverSpace(SpaceID, login: String)
 }
 
 /// One line of the summary, the deletion review or the result: a title (names only), the
@@ -203,7 +207,12 @@ enum SyncPresentationBuilder {
         var blocked: [SyncIssueModel] = []
         var remoteChanged: [SyncIssueModel] = []
         var dependentCount = 0
+        var spaceCounts: [SpaceID: Int] = [:]
         for entry in preflight.blocked {
+            if case .space(let block) = entry.reason {
+                spaceCounts[block.spaceID, default: 0] += 1
+                continue
+            }
             let issue = SyncIssueModel(
                 id: entry.change.id,
                 title: SyncCopy.changeTitle(entry.change),
@@ -220,17 +229,49 @@ enum SyncPresentationBuilder {
                 blocked.append(issue)
             }
         }
+        let spaceIssues = preflight.spaces.filter { !$0.allowsPush }.map { gate in
+            SyncIssueModel(
+                id: "space-\(gate.spaceID.uuidString)",
+                title: SyncCopy.spaceTitle(scope: scopeName(gate.scope, snapshot: preflight.snapshot)),
+                reason: [SyncCopy.spaceBlock(gate.decision), spaceCounts[gate.spaceID].map(SyncCopy.spaceBlockedCount)]
+                    .compactMap { $0 }
+                    .joined(separator: " "),
+                fix: spaceFix(gate)
+            )
+        }
+        var notes = summary.notes.map(SyncCopy.note)
+        if preflight.spaces.contains(where: \.allowsPush) {
+            notes.append(SyncCopy.spacePublishNote)
+        }
         return SyncSummaryRepoModel(
             id: repository.id,
             fullName: repository.fullName,
             newRepository: summary.newRepository.map(SyncCopy.newRepositoryLine),
             scopes: scopes,
-            blocked: blocked,
+            blocked: spaceIssues + blocked,
             dependentCount: dependentCount,
             remoteChanged: remoteChanged,
-            notes: summary.notes.map(SyncCopy.note),
+            notes: notes,
             pendingCount: summary.pendingCount
         )
+    }
+
+    /// "Repository" or the environment's name.
+    static func scopeName(_ scope: ConfigScope, snapshot: RepoSnapshotModel) -> String {
+        guard let id = scope.environmentID else { return SyncCopy.scopeLabel(.repository) }
+        return snapshot.environment(id).map { $0.syncedName ?? $0.name } ?? ""
+    }
+
+    /// Behind or forked: get the teammates' versions. A stale push: take it over (Q3).
+    static func spaceFix(_ gate: SyncSpaceGateModel) -> SyncFixActionModel? {
+        switch gate.decision {
+        case .behind, .forked:
+            .getTeammateUpdates
+        case .publishing(let login, _, true):
+            .takeOverSpace(gate.spaceID, login: login)
+        case .publishing, .invalidMarker, .notAMember, .clear, .ahead:
+            nil
+        }
     }
 
     static func credentialRows(_ review: SyncReviewModel) -> [SyncCredentialRowModel] {
@@ -305,8 +346,15 @@ enum SyncPresentationBuilder {
             return editorContext(change, mode: ItemEditorContext.Mode.fill).map(SyncFixActionModel.fillValue)
         case .change(.remoteChanged):
             return .reviewDrift(change.repositoryID)
-        case .change(.renameNeedsValues), .change(.dependsOn), .dependsOn, .scopeFull, .readOnly(.archived), .protectionRulesPresent:
+        case .change(.renameNeedsValues), .change(.dependsOn), .dependsOn, .scopeFull, .readOnly(.archived), .protectionRulesPresent,
+             .sharedEnvironment:
             return nil
+        case .space(let block):
+            switch block.decision {
+            case .behind, .forked: return .getTeammateUpdates
+            case .publishing(let login, _, true): return .takeOverSpace(block.spaceID, login: login)
+            default: return nil
+            }
         case .readOnly(.adminRequired), .readOnly(.unavailable):
             return repository.map(askAdmin)
         case .missingScopes:

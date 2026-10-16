@@ -202,3 +202,26 @@ struct AADBuilderTests {
         #expect(FieldLocation.configItemSyncedValue.column == "synced_value_ct")
     }
 }
+
+/// Secret fields (v0.5.0): teammate keys sealed under `K_field` with their own AAD.
+@Suite("Secret fields")
+struct SecretFieldTests {
+    @Test func roundTripsAndBindsTableColumnRowAndDEKVersion() throws {
+        let keys = try UnlockedKeys.generate(vaultID: Data(repeating: 7, count: Limits.vaultIDBytes))
+        let field = SecretFieldAAD(table: "device_identity", column: "secret_ct", rowKey: Data([1]))
+        let blob = try keys.seal(SecretBytes(utf8: "device-keys"), for: field)
+        let opened = try keys.open(blob, for: field)
+        #expect(opened.utf8String() == "device-keys")
+        opened.wipe()
+
+        for other in [
+            SecretFieldAAD(table: "teammates", column: "secret_ct", rowKey: Data([1])),
+            SecretFieldAAD(table: "device_identity", column: "announce_ct", rowKey: Data([1])),
+            SecretFieldAAD(table: "device_identity", column: "secret_ct", rowKey: Data([2])),
+        ] {
+            #expect(throws: VaultError.corrupted(.fieldDecryptionFailed)) { try keys.open(blob, for: other) }
+        }
+        #expect(throws: VaultError.corrupted(.fieldDecryptionFailed)) { try keys.rotated().open(blob, for: field) }
+        #expect(field.encoded(dekVersion: 1).starts(with: [0, 0, 0, 23] + Array("fxvault/v1/secret-field".utf8)))
+    }
+}

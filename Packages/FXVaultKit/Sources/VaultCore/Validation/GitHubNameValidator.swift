@@ -9,6 +9,9 @@ import Foundation
 public enum GitHubNameValidator {
     /// GitHub reserves this prefix.
     public static let reservedPrefix = "GITHUB_"
+    /// The variable FX Vault writes in a shared scope (v0.6.0, S4): its version marker. Reserved
+    /// for user items.
+    public static let spaceMarkerName = "FXVAULT_SPACE"
     /// Replacement prefix offered by ``suggestedFix(for:)`` for reserved names.
     public static let suggestedPrefix = "GH_"
     private static let underscore: Character = "_"
@@ -28,7 +31,7 @@ public enum GitHubNameValidator {
     }
 
     /// The first rule `name` breaks, or nil. Order: empty, characters, leading digit, reserved
-    /// prefix, length.
+    /// prefix, reserved name, length.
     public static func violation(in name: String) -> NameRule? {
         if name.isEmpty { return .empty }
         if let unsafe = UnicodeScalarPolicy.firstViolation(in: name) {
@@ -37,6 +40,7 @@ public enum GitHubNameValidator {
         guard name.unicodeScalars.allSatisfy(isAllowed) else { return .invalidCharacter }
         if let first = name.unicodeScalars.first, isDigit(first) { return .leadingDigit }
         if normalize(name).hasPrefix(reservedPrefix) { return .reservedPrefix }
+        if normalize(name) == spaceMarkerName { return .reservedName }
         if name.utf8.count > Limits.maxConfigNameLength {
             return .tooLong(maxLength: Limits.maxConfigNameLength)
         }

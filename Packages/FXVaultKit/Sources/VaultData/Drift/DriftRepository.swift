@@ -31,6 +31,8 @@ public actor DriftRepository {
     private let schedulers: any GHSchedulerProviding
     private let clock: any VaultClock
     private let config: ConfigRepository
+    /// Shared spaces (v0.6.0, S9); nil checks every scope as unshared.
+    private let spaces: SpaceRepository?
     private var reports: [RepoID: CachedReport] = [:]
     /// Pending-verification misses per row (§7.3 step 6). Kept in memory: the schema has no
     /// column for them, so a relaunch starts counting again.
@@ -42,11 +44,13 @@ public actor DriftRepository {
         session: VaultSession,
         schedulers: any GHSchedulerProviding,
         clock: any VaultClock = SystemClock(),
-        writePolicy: WriteCollaboratorPolicy = .default
+        writePolicy: WriteCollaboratorPolicy = .default,
+        spaces: SpaceRepository? = nil
     ) {
         self.session = session
         self.schedulers = schedulers
         self.clock = clock
+        self.spaces = spaces
         config = ConfigRepository(session: session, clock: clock, writePolicy: writePolicy)
     }
 
@@ -119,12 +123,35 @@ public actor DriftRepository {
             unreadable: listed.failures,
             verifiedItems: pass.verified,
             expiredItems: pass.expired,
-            skippedNames: listed.skipped
+            skippedNames: listed.skipped,
+            spaces: behindSpaces(local, listed: listed)
         )
         Self.log.info(
             "Drift check: \(drifts.count, privacy: .public) findings, \(listed.failures.count, privacy: .public) unreadable reads"
         )
         return cache(report)
+    }
+
+    /// The shared scopes of `local` whose GitHub marker says a teammate is ahead or forked (S9).
+    private func behindSpaces(_ local: RepoSnapshotModel, listed: RemoteRepoConfigModel) -> [DriftSpaceModel] {
+        guard let spaces, let shared = try? spaces.sharedScopeModels(local.repository.id) else { return [] }
+        return shared.compactMap { space in
+            let marker: String?
+            if let id = space.scope.environmentID {
+                guard let environment = local.environment(id) else { return nil }
+                let key = EnvironmentNameValidator.foldKey(environment.syncedName ?? environment.name)
+                marker = listed.environments.first { EnvironmentNameValidator.foldKey($0.name) == key }?.spaceMarker
+            } else {
+                marker = listed.spaceMarker
+            }
+            guard let decision = try? spaces.decideGate(space.spaceID, markerText: marker) else { return nil }
+            switch decision {
+            case .behind, .forked:
+                return DriftSpaceModel(spaceID: space.spaceID, scope: space.scope, decision: decision)
+            case .clear, .ahead, .publishing, .invalidMarker, .notAMember:
+                return nil
+            }
+        }
     }
 
     /// The last report of `repositoryID`, if any (the banner), without checking.

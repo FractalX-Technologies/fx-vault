@@ -13,7 +13,9 @@ import VaultStore
 ///   value (Revert), another row's value (tombstone revival, Convert/Move) or the stored one;
 /// - whenever the row's name, scope or kind differs from the stored row, the stored value is
 ///   re-sealed, because the field AAD binds them;
-/// - `value_fp` is recomputed for the target row id from the plaintext it seals.
+/// - `value_fp` is recomputed for the target row id from the plaintext it seals;
+/// - a row that takes over another row's item (Convert/Move, a rename or move into a tombstone)
+///   takes over its `link_id` too (v0.4.1); every other edit keeps the stored link.
 ///
 /// Every plaintext is wiped before the method returns.
 struct ItemMutationWriter {
@@ -33,12 +35,18 @@ struct ItemMutationWriter {
             switch mutation {
             case .insert(let row, let source):
                 var record = newRecord(for: row, shareOrigin: shareOrigin(of: source, before: before))
+                if let link = movedLink(of: source, before: before) {
+                    record.linkID = link
+                }
                 try fill(&record, row: row, source: source, stored: nil, before: before, newValue: newValue, keys: keys)
                 try store.insertItem(record, in: tx)
             case .update(let row, let source):
                 guard let stored = before[row.id] else { throw ConfigRepositoryError.itemNotFound }
                 var record = stored
                 apply(row, to: &record)
+                if let link = movedLink(of: source, before: before) {
+                    record.linkID = link
+                }
                 try fill(&record, row: row, source: source, stored: stored, before: before, newValue: newValue, keys: keys)
                 try store.updateItem(record, in: tx)
             case .remove(let id):
@@ -113,6 +121,16 @@ struct ItemMutationWriter {
             record.shareOrigin = row.provenance == .share ? record.shareOrigin : nil
         }
         record.updatedAt = now
+    }
+
+    /// The link of the row an item moves from: `.some(link)` (possibly nil) for a move, `nil`
+    /// when the item does not move.
+    private func movedLink(
+        of source: ItemValueSourceModel,
+        before: [ConfigItemID: ConfigItemRecord]
+    ) -> ItemLinkID?? {
+        guard case .movedFrom(let sourceID) = source else { return nil }
+        return .some(before[sourceID]?.linkID)
     }
 
     private func shareOrigin(

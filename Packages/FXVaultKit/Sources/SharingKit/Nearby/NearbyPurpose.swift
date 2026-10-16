@@ -9,6 +9,13 @@ public enum NearbyPurpose: String, Sendable, Hashable, CaseIterable {
     case share
     /// Nearby chat, protocol `fxvault-chat/v1`.
     case chat
+    /// Add Teammate (v0.5.0): the commit-reveal handshake with the pair labels, then the two
+    /// devices exchange their teammate cards (``TeamPairingMachine``).
+    case pair
+    /// Teammate presence (v0.5.0): rotating pseudonyms only teammates recognize, and the paired
+    /// handshake (``TeamSessionMachine``). It never runs the commit-reveal handshake: its labels
+    /// serve the paired handshake's transcript and keys.
+    case team
 
     /// The Bonjour service type advertised and browsed for this purpose. Each must be listed in
     /// `NSBonjourServices` (project.yml).
@@ -16,6 +23,8 @@ public enum NearbyPurpose: String, Sendable, Hashable, CaseIterable {
         switch self {
         case .share: NearbyProtocol.bonjourServiceType
         case .chat: NearbyChatProtocol.bonjourServiceType
+        case .pair: TeamProtocol.pairingServiceType
+        case .team: TeamProtocol.presenceServiceType
         }
     }
 
@@ -26,6 +35,7 @@ public enum NearbyPurpose: String, Sendable, Hashable, CaseIterable {
         switch self {
         case .share: NearbyProtocol.maxVersion
         case .chat: NearbyChatProtocol.maxVersion
+        case .pair, .team: TeamProtocol.version
         }
     }
 
@@ -34,6 +44,8 @@ public enum NearbyPurpose: String, Sendable, Hashable, CaseIterable {
         switch self {
         case .share: .share
         case .chat: .chat
+        case .pair: .pair
+        case .team: .team
         }
     }
 }
@@ -59,4 +71,8 @@ struct NearbyLabels: Sendable, Hashable {
     static let share = NearbyLabels(prefix: NearbyProtocol.labelPrefix)
     /// `fxvault/chat/v1/...` (pinned by chat_kat.json).
     static let chat = NearbyLabels(prefix: NearbyChatProtocol.labelPrefix)
+    /// `fxvault/pair/v1/...` (v0.5.0, pinned by team_kat.json).
+    static let pair = NearbyLabels(prefix: TeamProtocol.pairLabelPrefix)
+    /// `fxvault/team/v1/...` (v0.5.0, pinned by team_kat.json).
+    static let team = NearbyLabels(prefix: TeamProtocol.labelPrefix)
 }

@@ -35,19 +35,23 @@ public struct RepoPreflightModel: Sendable, Hashable, Identifiable {
     /// Combined size of the repository-level variable values after this run (D32-normalized
     /// local values of every live repository variable).
     public var repositoryVariableBytes: Int
+    /// The gate of every shared scope this run touches (v0.6.0, S5).
+    public var spaces: [SyncSpaceGateModel]
 
     public init(
         snapshot: RepoSnapshotModel,
         changeSet: ChangeSetModel,
         executable: [ConfigChangeModel],
         blocked: [SyncBlockedChangeModel],
-        repositoryVariableBytes: Int = 0
+        repositoryVariableBytes: Int = 0,
+        spaces: [SyncSpaceGateModel] = []
     ) {
         self.snapshot = snapshot
         self.changeSet = changeSet
         self.executable = executable
         self.blocked = blocked
         self.repositoryVariableBytes = repositoryVariableBytes
+        self.spaces = spaces
         deletions = executable.filter(\.kind.isDeletion)
     }
 

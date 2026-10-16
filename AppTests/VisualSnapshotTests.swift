@@ -66,6 +66,131 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
+    // MARK: - Linked copies (v0.4.1)
+
+    /// DATABASE_URL copied to the repository level and to staging: the Linked chip with 3.
+    @Test func mainWindowLinked() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let detail = try #require(main.detail)
+        try MainSnapshotFixture.linkDatabaseURL(harness, detail)
+        #expect(await TestFixtures.eventually { detail.rows.first { $0.name == "DATABASE_URL" }?.linkCount == 3 })
+        try await SnapshotOutput.write("main-linked", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
+    @Test func linkedCopiesPopover() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let detail = try #require(main.detail)
+        try MainSnapshotFixture.linkDatabaseURL(harness, detail)
+        #expect(await TestFixtures.eventually { detail.rows.first { $0.name == "DATABASE_URL" }?.linkCount == 3 })
+        let row = try #require(detail.rows.first { $0.name == "DATABASE_URL" })
+        detail.showLinkedCopies(of: row)
+        try await SnapshotOutput.write("linked-popover", size: CGSize(width: Theme.Layout.linkedPopoverWidth, height: 260)) {
+            LinkedCopiesPopover(row: row, viewModel: detail)
+                .background(Theme.Colors.card)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
+    @Test func copyToAnotherRepository() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let detail = try #require(main.detail)
+        let sourceID = detail.repositoryID
+        _ = try await harness.stageRepository(name: "billing-api", environments: [RepoCreationEnvironmentDraftModel(name: "staging")])
+        _ = try await harness.stageRepository(name: "web-app")
+        let row = try #require(detail.rows.first { $0.name == "DATABASE_URL" })
+        let viewModel = CopyToRepositoryViewModel(
+            context: CopyToRepositoryContext(itemIDs: [row.id], sourceRepositoryID: sourceID, sourceScope: detail.scope),
+            dependencies: harness.dependencies(recorder: ActionRecorder())
+        )
+        await viewModel.load()
+        let target = try #require(viewModel.repositories.first { $0.name == "billing-api" })
+        viewModel.select(target)
+        viewModel.selectedTargetID = viewModel.targets.last?.id
+        try await SnapshotOutput.write("copy-to-repository", size: CGSize(width: Theme.Layout.editorSheetWidth, height: SnapshotOutput.sheetHeight)) {
+            CopyToRepositoryScreen(viewModel: viewModel)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
+    @Test func itemEditorLinkedCopies() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let detail = try #require(main.detail)
+        try MainSnapshotFixture.linkDatabaseURL(harness, detail)
+        let row = try #require(detail.rows.first { $0.name == "DATABASE_URL" })
+        let viewModel = ItemEditorViewModel(
+            context: ItemEditorContext(repositoryID: detail.repositoryID, scope: detail.scope, mode: .edit(row.id)),
+            dependencies: harness.dependencies(recorder: ActionRecorder())
+        )
+        await viewModel.load()
+        viewModel.value = "FXV_SNAPSHOT_DATABASE_ROTATED"
+        try await SnapshotOutput.write("item-editor-linked", size: CGSize(width: Theme.Layout.editorSheetWidth, height: SnapshotOutput.linkedEditorHeight)) {
+            ItemEditorScreen(viewModel: viewModel)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
+    // MARK: - Teammates nearby (v0.5.0)
+
+    @Test func presenceBubblesAndPopover() async throws {
+        let (network, ana, ben) = try await TeamPresenceTests.pairedMacs()
+        for name in ["Cleo", "Dev", "Eli", "Fay"] {
+            let other = try await TeamPresenceTests.Mac(name, network: network)
+            try ana.pair(with: other)
+            try other.pair(with: ana)
+            other.presence.start()
+        }
+        ana.presence.start()
+        #expect(await TestFixtures.eventually { ana.presence.people.count == 5 })
+        try await SnapshotOutput.write("presence-bubbles", size: CGSize(width: 260, height: 44)) {
+            NearbyPresenceView(presence: ana.presence)
+                .padding(Theme.Spacing.small)
+                .background(Theme.Colors.ground)
+        }
+        let person = try #require(ana.person("Ben"))
+        try await SnapshotOutput.write("presence-popover", size: CGSize(width: Theme.Layout.presencePopoverWidth, height: 150)) {
+            NearbyPersonPopover(person: person, presence: ana.presence)
+                .background(Theme.Colors.card)
+        }
+        withExtendedLifetime((ben, network)) {}
+    }
+
+    @Test func teammatesSettings() async throws {
+        let (network, ana, ben) = try await TeamPresenceTests.pairedMacs()
+        let cleo = TeamDeviceKeys.generate().card(login: "cleo-b", displayName: "Cleo", macName: "Cleo's MacBook Pro")
+        try ana.harness.data.team.addTeammate(cleo)
+        try ana.harness.data.team.setMuted(true, teammate: cleo.deviceID.hex)
+        let settings = TeammatesSettingsViewModel(app: ana.harness.app)
+        #expect(await TestFixtures.eventually { settings.teammates.count == 2 })
+        try await SnapshotOutput.write("settings-teammates", size: CGSize(width: Theme.Layout.settingsWidth, height: SnapshotOutput.settingsHeight)) {
+            TeammatesSettingsScreen(viewModel: settings)
+        }
+        withExtendedLifetime((ben, network)) {}
+    }
+
+    @Test func addTeammateCode() async throws {
+        let network = FakeNearbyNetwork()
+        let ana = try await TeamPresenceTests.Mac("Ana", network: network)
+        let ben = try await TeamPresenceTests.Mac("Ben", network: network)
+        let anaSheet = AddTeammateViewModel(app: ana.harness.app)
+        let benSheet = AddTeammateViewModel(app: ben.harness.app)
+        await anaSheet.start()
+        await benSheet.start()
+        #expect(await TestFixtures.eventually { !anaSheet.peers.isEmpty })
+        try await SnapshotOutput.write("add-teammate-list", size: CGSize(width: Theme.Layout.addTeammateSheetWidth, height: 460)) {
+            AddTeammateSheet(viewModel: anaSheet)
+        }
+        anaSheet.pair(with: try #require(anaSheet.peers.first))
+        #expect(await TestFixtures.eventually { if case .comparing = anaSheet.step { true } else { false } })
+        try await SnapshotOutput.write("add-teammate-code", size: CGSize(width: Theme.Layout.addTeammateSheetWidth, height: 520)) {
+            AddTeammateSheet(viewModel: anaSheet)
+        }
+        anaSheet.close()
+        benSheet.close()
+    }
+
     /// The sidebar on its own: inside the split view it sits in a macOS 26+ glass view that a
     /// window capture draws blank.
     @Test func mainSidebar() async throws {
@@ -118,6 +243,73 @@ struct VisualSnapshotTests {
             size: CGSize(width: Theme.Layout.syncSheetWidth, height: SnapshotOutput.sheetHeight)
         ) {
             SyncScreen(viewModel: viewModel)
+        }
+    }
+
+    // MARK: - Shared spaces (v0.6.0)
+
+    @Test func sharedSpaces() async throws {
+        let (_, ana, ben, anaRepo, _) = try await SpaceSyncTests.pairedMacs()
+        let cleo = TeamDeviceKeys.generate().card(login: "cleo-b", displayName: "Cleo", macName: "Cleo's MacBook Pro")
+        try ana.harness.data.team.addTeammate(cleo)
+        let share = ShareSpaceViewModel(
+            context: ShareSpaceContext(repositoryID: anaRepo, scope: .repository),
+            dependencies: ana.dependencies()
+        )
+        share.load()
+        share.toggle(ben.keys.deviceID.hex)
+        share.reason = "Start sharing the deploy keys"
+        try await SnapshotOutput.write("space-share", size: CGSize(width: Theme.Layout.editorSheetWidth, height: 560)) {
+            ShareSpaceScreen(viewModel: share)
+        }
+        await share.share()
+        let spaceID = try #require(share.sharedSpaceID)
+        try await ana.harness.data.spaces.addMembers(
+            spaceID,
+            teammateIDs: [cleo.deviceID.hex],
+            me: SpaceLocalIdentityModel(login: "ana", displayName: "Ana", macName: "Ana's Mac")
+        )
+        let space = SpaceViewModel(context: SpaceContext(spaceID: spaceID), dependencies: ana.dependencies())
+        space.load()
+        try await SnapshotOutput.write("space-history", size: CGSize(width: Theme.Layout.editorSheetWidth, height: 560)) {
+            SpaceScreen(viewModel: space)
+        }
+        space.tab = .members
+        try await SnapshotOutput.write("space-members", size: CGSize(width: Theme.Layout.editorSheetWidth, height: 560)) {
+            SpaceScreen(viewModel: space)
+        }
+    }
+
+    @Test func syncSummaryWithASharedScopeBehind() async throws {
+        let fixture = try await SyncSpaceSheetTests.fixture(
+            .behind(version: 9, login: "user-b"),
+            executable: [SyncFixtures.set(.variable, "FEATURE_FLAGS", environment: "staging")]
+        )
+        await fixture.viewModel.load()
+        try await SnapshotOutput.write(
+            "sync-summary-space",
+            size: CGSize(width: Theme.Layout.syncSheetWidth, height: SnapshotOutput.sheetHeight)
+        ) {
+            SyncScreen(viewModel: fixture.viewModel)
+        }
+    }
+
+    @Test func teammatesSettingsRemote() async throws {
+        let network = FakeNearbyNetwork()
+        let ana = try await SpaceSyncTests.Mac("Ana", network: network)
+        let ben = try await SpaceSyncTests.Mac("Ben", network: network)
+        try ana.pair(with: ben)
+        let settings = TeammatesSettingsViewModel(app: ana.harness.app)
+        #expect(await TestFixtures.eventually { settings.teammates.count == 1 })
+        let teammate = try #require(settings.teammates.first)
+        try ana.harness.data.team.setRemoteAccess(
+            teammate.id,
+            isAllowed: true,
+            address: TeamRemoteAddressModel(text: "mac-b.example.ts.net:52731")
+        )
+        #expect(await TestFixtures.eventually { settings.isRemoteAllowed(teammate) })
+        try await SnapshotOutput.write("settings-teammates-remote", size: CGSize(width: Theme.Layout.settingsWidth, height: 760)) {
+            TeammatesSettingsScreen(viewModel: settings)
         }
     }
 
@@ -371,6 +563,16 @@ enum MainSnapshotFixture {
         runner.enqueue(.success("[]"), matching: list("variable", environment: "staging"))
     }
 
+    /// Copies DATABASE_URL (production) to the repository level and to staging, then changes the
+    /// staging copy: three linked places, one of them with another value.
+    static func linkDatabaseURL(_ harness: TestHarness, _ detail: RepoDetailViewModel) throws {
+        let config = harness.data.config
+        let row = try #require(detail.rows.first { $0.name == "DATABASE_URL" })
+        let staging = try #require(try config.scopes(repositoryID: detail.repositoryID).first { $0.environment?.name == "staging" }).scope
+        try config.copyItems([row.id], to: .repository, repositoryID: detail.repositoryID, conflicts: .keep)
+        try config.copyItems([row.id], to: staging, repositoryID: detail.repositoryID, conflicts: .keep)
+    }
+
     /// synced, modified, will push, added, deleted.
     private static func stageChanges(_ harness: TestHarness, repositoryID: RepoID) async throws {
         let config = harness.data.config
@@ -424,6 +626,8 @@ enum SnapshotOutput {
     static let sheetHeight: CGFloat = 640
     /// Sheets that grow with their content (the attachment picker with its list).
     static let tallSheetHeight: CGFloat = 780
+    /// The item editor with its linked copies under the value (v0.4.1).
+    static let linkedEditorHeight: CGFloat = 1_020
     static let settingsHeight: CGFloat = 560
     /// Time for observation streams and layout passes to settle before a window capture.
     static let settleDelay: Duration = .milliseconds(400)

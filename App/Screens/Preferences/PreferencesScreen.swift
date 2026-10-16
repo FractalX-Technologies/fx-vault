@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The Settings window (§10 Preferences): General, Security, Accounts, Advanced.
+/// The Settings window (§10 Preferences): General, Security, Accounts, Teammates (v0.5.0),
+/// Advanced.
 struct PreferencesScreen: View {
     @State private var viewModel: PreferencesViewModel
 
@@ -26,6 +27,11 @@ struct PreferencesScreen: View {
                     Label(String(localized: "settings.tab.accounts", defaultValue: "Accounts"), systemImage: "person.2")
                 }
                 .tag(PreferencesViewModel.Tab.accounts)
+            TeammatesSettingsScreen(viewModel: viewModel.teammates)
+                .tabItem {
+                    Label(String(localized: "settings.tab.teammates", defaultValue: "Teammates"), systemImage: "person.line.dotted.person")
+                }
+                .tag(PreferencesViewModel.Tab.teammates)
             AdvancedSettingsView(viewModel: viewModel)
                 .tabItem {
                     Label(String(localized: "settings.tab.advanced", defaultValue: "Advanced"), systemImage: "slider.horizontal.3")

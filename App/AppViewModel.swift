@@ -80,6 +80,16 @@ final class AppViewModel {
     private(set) var isGHSetupDeferred = false
     /// The result of the launch reconciliation after the last unlock (§7.3), nil until it ran.
     private(set) var lastReconciliation: SyncReconciliationModel?
+    /// Bumped when a chat waits for the Nearby Chat window (``takePendingChatStart()``).
+    private(set) var chatStartRequests = 0
+    /// True while the Nearby Chat window advertises this Mac (Everyone nearby yields to it).
+    private(set) var isChatWindowAdvertising = false
+    /// The gh login this Mac's teammate card names (the first account gh lists), or empty.
+    @ObservationIgnored private(set) var primaryLogin = ""
+    /// Teammates nearby: presence, bubbles and pings (v0.5.0).
+    @ObservationIgnored let teamPresence: TeamPresenceManager
+    /// Shared spaces between teammates (v0.6.0): pulls and answers versions.
+    @ObservationIgnored let spaceSync: SpaceSyncManager
 
     @ObservationIgnored let container: AppContainer
     @ObservationIgnored private var lockObservers: [WeakLockObserver] = []
@@ -90,12 +100,37 @@ final class AppViewModel {
     /// Opens (or brings back) the main window; set by the main window's root view, which has the
     /// SwiftUI `openWindow` action.
     @ObservationIgnored private var mainWindowOpener: (() -> Void)?
+    /// Opens (or brings back) the Nearby Chat window; set by the main window's root view.
+    @ObservationIgnored private var chatWindowOpener: (() -> Void)?
+    /// A chat started from a bubble or a connection, for the Nearby Chat window.
+    @ObservationIgnored private var pendingChatStart: NearbyChatStartModel?
 
     /// The file extension of share files (§9.1; UTType `io.fractalx.fxvault.share`).
     static let shareFileExtension = "fxvault"
 
     init(container: AppContainer) {
         self.container = container
+        let owner = WeakAppViewModel()
+        teamPresence = TeamPresenceManager(
+            team: container.data.team,
+            preferences: container.preferences,
+            networking: container.teamNetworking,
+            alerts: container.pingAlerts,
+            clock: container.presenceClock,
+            localLogin: { owner.app?.primaryLogin ?? "" },
+            isAppActive: { NSApp?.isActive ?? false },
+            isChatWindowAdvertising: { owner.app?.isChatWindowAdvertising ?? false },
+            startChat: { owner.app?.startChat($0) }
+        )
+        spaceSync = SpaceSyncManager(
+            spaces: container.data.spaces,
+            team: container.data.team,
+            preferences: container.preferences,
+            networking: container.spaceNetworking,
+            clock: container.presenceClock,
+            presence: teamPresence,
+            isAppActive: { NSApp?.isActive ?? false }
+        )
         phase = switch container.vaultManager.state {
         case .noVault: .onboarding
         case .locked: .locked
@@ -109,9 +144,27 @@ final class AppViewModel {
             await self?.refreshGHStatus()
         }
         observePendingCounts()
+        owner.app = self
+        addLockObserver(teamPresence)
+        addLockObserver(spaceSync)
+        let spaceSync = spaceSync
+        teamPresence.spacesConnectionHandler = { spaceSync.answerNearby($0) }
+        teamPresence.teammateSeenHandler = { spaceSync.teammateSeen($0) }
         if phase == .unlocked {
             startReconciliation()
+            startTeammates()
         }
+    }
+
+    /// Who this Mac is in the shared spaces it creates or changes (v0.6.0).
+    var spaceIdentity: SpaceLocalIdentityModel {
+        SpaceLocalIdentityModel.local(login: primaryLogin, preferences: container.preferences)
+    }
+
+    /// Presence and space sync, after an unlock.
+    private func startTeammates() {
+        teamPresence.start()
+        spaceSync.start()
     }
 
     // MARK: - Lock procedure (§5.8)
@@ -148,6 +201,7 @@ final class AppViewModel {
         reconciliationTask?.cancel()
         reconciliationTask = nil
         container.clipboard.clearIfOwned()
+        container.clipboard.forgetCopiedItems()
         if container.hasSideEffects, NSApp.modalWindow != nil {
             NSApp.abortModal()
         }
@@ -184,6 +238,7 @@ final class AppViewModel {
         container.autoLock.recordInteraction()
         phase = .unlocked
         startReconciliation()
+        startTeammates()
     }
 
     /// Called when onboarding's Done step closes.
@@ -197,6 +252,7 @@ final class AppViewModel {
             container.autoLock.recordInteraction()
             phase = .unlocked
             startReconciliation()
+            startTeammates()
         }
     }
 
@@ -319,6 +375,9 @@ final class AppViewModel {
         ghStatus = await container.ghStatusProbe.probe(refreshingShell: refreshingShell)
         if ghStatus.isReady {
             isGHSetupDeferred = false
+            if container.hasSideEffects, let login = try? await container.data.github.accounts().first?.account.login {
+                primaryLogin = login
+            }
         }
     }
 
@@ -393,11 +452,48 @@ final class AppViewModel {
         mainWindowOpener?()
     }
 
+    // MARK: - Nearby Chat window (v0.5.0)
+
+    /// Called by the main window's root view with its `openWindow` action.
+    func setChatWindowOpener(_ opener: @escaping () -> Void) {
+        chatWindowOpener = opener
+    }
+
+    /// Hands `start` to the Nearby Chat window and opens it.
+    func startChat(_ start: NearbyChatStartModel) {
+        guard phase == .unlocked else {
+            start.transport.close()
+            return
+        }
+        pendingChatStart?.transport.close()
+        pendingChatStart = start
+        chatStartRequests += 1
+        if container.hasSideEffects {
+            NSApp.activate()
+        }
+        chatWindowOpener?()
+    }
+
+    /// The chat waiting for the Nearby Chat window, once.
+    func takePendingChatStart() -> NearbyChatStartModel? {
+        defer { pendingChatStart = nil }
+        return pendingChatStart
+    }
+
+    /// The Nearby Chat window started or stopped advertising this Mac.
+    func setChatWindowAdvertising(_ isAdvertising: Bool) {
+        guard isChatWindowAdvertising != isAdvertising else { return }
+        isChatWindowAdvertising = isAdvertising
+        teamPresence.chatWindowAdvertisingChanged()
+    }
+
+
     // MARK: - App lifecycle
 
     /// `applicationWillTerminate`: clear our clipboard contents, drop the keys and checkpoint.
     func applicationWillTerminate() {
         container.clipboard.clearIfOwned()
+        container.clipboard.forgetCopiedItems()
         container.autoLock.stop()
         container.connectivity.stop()
         pendingCountsTask?.cancel()
@@ -452,6 +548,11 @@ final class AppViewModel {
     func makeMainViewModel() -> MainViewModel {
         MainViewModel(app: self)
     }
+}
+
+/// Lets the presence manager's closures reach the view model that owns it.
+private final class WeakAppViewModel {
+    weak var app: AppViewModel?
 }
 
 private struct WeakLockObserver {
