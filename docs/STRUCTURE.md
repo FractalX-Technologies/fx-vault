@@ -49,12 +49,20 @@ FXVault/
 │   │   │   │                        # scope rows (pure helper + modifier)
 │   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel,
 │   │   │   │                        # SidebarFoldersSection, SidebarTeammatesSection (v0.7.0)
-│   │   │   ├── ScopeList/           # ScopeListView/ViewModel ("Repository" + environments)
+│   │   │   ├── ScopeList/           # ScopeListView/ViewModel (Overview, "Build · GitHub Actions":
+│   │   │   │                        # Repository + environments, "Runtime": destination rows,
+│   │   │   │                        # Add Destination, DestinationContextMenu; v0.8.0)
 │   │   │   ├── RepoDetail/          # RepoDetailScreen/ViewModel, ConfigTableView (generic over
 │   │   │   │                        # ConfigTableModel, v0.7.0), ConfigDetailControls,
 │   │   │   │                        # ConfigValueRevealer, ItemCopyFlow, LinkedCopiesView (Linked
 │   │   │   │                        # chip and popover, v0.4.1)
 │   │   │   ├── Folder/              # FolderDetailScreen/ViewModel (column 3 of a folder, v0.7.0)
+│   │   │   ├── Destination/         # v0.8.0: DestinationDetailScreen/ViewModel (column 3 of a
+│   │   │   │                        # destination), DestinationCopy, StageOverviewScreen/ViewModel/
+│   │   │   │                        # Copy (the stage matrix and fxvault.yml check),
+│   │   │   │                        # AddDestinationScreen/ViewModel (+ AddDestinationCopy),
+│   │   │   │                        # DestinationSettingsScreen, DestinationDriftScreen (Refresh
+│   │   │   │                        # findings, Keep Mine / Use Remote)
 │   │   │   ├── Presence/            # NearbyPresenceView (toolbar people button, person popover,
 │   │   │   │                        # nearby list; v0.5.0, compact since v0.7.0)
 │   │   │   └── AddRepository/       # AddRepositorySheet/ViewModel (Add repository by name)
@@ -77,7 +85,8 @@ FXVault/
 │   │   │                            # EnvironmentDirectoryModel, EnvironmentPlanNoteView,
 │   │   │                            # EnvironmentNameField (mono name input)
 │   │   ├── Sync/                    # SyncScreen/ViewModel, SyncService (seam), SyncModels,
-│   │   │                            # SyncCopy, Summary/Deletions/Run/Result views, SyncIssueRow
+│   │   │                            # SyncCopy, Summary/Deletions/Run/Result views, SyncIssueRow,
+│   │   │                            # DestinationSyncPresentation, DestinationSyncCopy (v0.8.0)
 │   │   ├── Drift/                   # DriftReviewScreen/ViewModel, DriftService (seam), DriftCopy,
 │   │   │                            # DriftFindingRow, DriftBannerView
 │   │   ├── CreateRepo/              # CreateRepoScreen/ViewModel, CreateRepoFormView, item and
@@ -101,7 +110,8 @@ FXVault/
 │   │   │                            # ViewModel, NearbyChatCopy (aborts, ChatError, NearbyChatError),
 │   │   │                            # AppViewModel+NearbyChat (dependencies of the window)
 │   │   └── Preferences/             # PreferencesScreen/ViewModel, General, Security(+ViewModel),
-│   │                                # Accounts(+ViewModel), Advanced
+│   │                                # Accounts(+ViewModel), Advanced, Destinations(+ViewModel:
+│   │                                # az sign-in, Supabase and Vercel connections; v0.8.0)
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
 │   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,
 │   │   │                            # PasswordStrengthMeter, NewPasswordFields,
@@ -131,9 +141,11 @@ FXVault/
 │   │   ├── Extensions/              # localized error text (+Extension) for VaultError,
 │   │   │                            # ValidationError, GHError, GitError, GitHubEnvironmentError,
 │   │   │                            # RepoCatalogError, ConfigRepositoryError, RepoCreationError,
-│   │   │                            # SyncRepositoryError, DriftRepositoryError; Error,
-│   │   │                            # Duration, PasswordStrengthModel, RepoCapabilityModel,
-│   │   │                            # GHAccountSummaryModel, BranchPatternType
+│   │   │                            # SyncRepositoryError, DriftRepositoryError,
+│   │   │                            # DestinationError (v0.8.0); Error, Duration,
+│   │   │                            # PasswordStrengthModel, RepoCapabilityModel,
+│   │   │                            # GHAccountSummaryModel, BranchPatternType,
+│   │   │                            # DestinationProvider/DestinationModel titles, symbols (v0.8.0)
 │   │   └── Theme/                   # Theme (+ Layout, Opacity, Stroke, Shadow), Colors,
 │   │                                # Typography (+ TextStyle, .fxTextStyle), FontRegistry,
 │   │                                # Spacing, Radius, Durations
@@ -158,7 +170,9 @@ FXVault/
 │   │                                # Connectivity (monitor, GitHub reachability, offline gating),
 │   │                                # SyncConnectivity (Sync and drift review reporting, offline
 │   │                                # Sync sheet), SharingScopeTreeModel (tri-state tree),
-│   │                                # NearbyChat (window, picker, save preview, wipe)
+│   │                                # NearbyChat (window, picker, save preview, wipe),
+│   │                                # DestinationViewModel (scope column, detail, Add
+│   │                                # Destination, Overview, Preferences; v0.8.0)
 │   ├── DesignTokenTests.swift       # v0.3.0: every color set's light/dark values, Geist
 │   │                                # registration and fallback, OFL credits, AppIcon set
 │   ├── DesignComponentTests.swift   # v0.3.0: component resolution rules, light/dark render
@@ -172,16 +186,19 @@ FXVault/
 ├── Packages/FXVaultKit/
 │   ├── Package.swift                # tools 6.1, macOS 14, Swift 6, MemberImportVisibility
 │   ├── Package.resolved             # committed: GRDB.swift 7.11.1, swift-sodium 0.11.0
+│   │                                # (DestinationKit adds no dependency: Foundation URLSession)
 │   ├── Sources/
 │   │   ├── VaultCore/               # Identifiers, SecretBytes, Clock (VaultClock), Limits, Timeouts
 │   │   │   ├── Models/              # Account, Repo, RepoCapability, Environment, ConfigItem,
 │   │   │   │                        # ConfigKind, BranchPattern, DeploymentBranchPolicy,
 │   │   │   │                        # Teammate (v0.5.0), SpaceGateDecision (v0.6.0),
-│   │   │   │                        # Folder/FolderItem, ItemPlace (v0.7.0)
+│   │   │   │                        # Folder/FolderItem, ItemPlace (v0.7.0), Destination
+│   │   │   │                        # (provider, target, destination, item, connection; v0.8.0)
 │   │   │   ├── Validation/          # PathSegment, GitHubName, EnvironmentName, FolderName (v0.7.0), RepoName,
 │   │   │   │                        # OwnerLogin, GitHubHost, BranchPattern validators,
 │   │   │   │                        # DisplayNameSanitizer, ValueNormalizer, ScopeCapacity,
-│   │   │   │                        # NameAvailability, UnicodeScalarPolicy
+│   │   │   │                        # NameAvailability, UnicodeScalarPolicy, DestinationRules
+│   │   │   │                        # (remote names, targets, PublicNamePrefixes; v0.8.0)
 │   │   │   ├── Errors/              # VaultError, ValidationError
 │   │   │   └── Extensions/          # Duration+Extension
 │   │   ├── VaultCrypto/             # Argon2id (only Clibsodium import), KDFParameters,
@@ -189,16 +206,19 @@ FXVault/
 │   │   │                            # KeyHierarchy, RecoveryKey, CrockfordBase32,
 │   │   │                            # ValueFingerprinter, UnlockedKeys, VaultKeyring,
 │   │   │                            # PasswordStrength, CryptoError, CryptoDomain, SecureRandom
-│   │   │                            # (AADBuilder: FieldAAD, SecretFieldAAD, FolderFieldAAD)
+│   │   │                            # (AADBuilder: FieldAAD, SecretFieldAAD, FolderFieldAAD,
+│   │   │                            # DestinationFieldAAD v0.8.0)
 │   │   ├── VaultStore/              # (only GRDB import)
 │   │   │   ├── Database/            # VaultDatabase, DatabaseFactory, DatabaseTimestamp, StoreConstants
-│   │   │   ├── Migrations/          # VaultMigrator, MigrationSQL (v1–v12, frozen)
+│   │   │   ├── Migrations/          # VaultMigrator, MigrationSQL (v1–v13, frozen)
 │   │   │   ├── Records/             # Vault/KeyWrap, Account, Repository, Environment/BranchPattern,
 │   │   │   │                        # ConfigItem/ConfigItemState, SyncJournal/ImportedSharePackage,
 │   │   │   │                        # Team (v0.5.0), Space (spaces, keys, versions, addresses; v0.6.0),
-│   │   │   │                        # Folder/FolderItem (v0.7.0)
+│   │   │   │                        # Folder/FolderItem (v0.7.0), Destination (destinations,
+│   │   │   │                        # settings, items, connections, journal; v0.8.0)
 │   │   │   ├── Stores/              # VaultRecord, Account, Repo, Config, SyncJournal, SharePackage,
-│   │   │   │                        # Team (v0.5.0), Space (v0.6.0), Folder (+LinkCountQuery, v0.7.0)
+│   │   │   │                        # Team (v0.5.0), Space (v0.6.0), Folder (+LinkCountQuery, v0.7.0),
+│   │   │   │                        # Destination (v0.8.0)
 │   │   │   └── Errors/              # StoreError
 │   │   ├── GitHubKit/
 │   │   │   ├── Process/             # CommandRunning, CommandSpec, StdinPayload, ProcessRunner,
@@ -209,7 +229,8 @@ FXVault/
 │   │   │   │                        # (account listing, unusable accounts), ScopeChecker
 │   │   │   ├── Commands/            # GHCommand (GHOperation, GHArgumentPolicy), GHCommandService,
 │   │   │   │                        # GHCommandScheduler(+Extension), GHRepoRef, argv builders
-│   │   │   ├── API/                 # GHEnvironmentsAPI, GitHubPath, APIResponseParser, JSONValue
+│   │   │   ├── API/                 # GHEnvironmentsAPI, GitHubPath, APIResponseParser, JSONValue,
+│   │   │   │                        # GHManifestAPI (fxvault.yml from the default branch, v0.8.0)
 │   │   │   ├── DTOs/                # GHRepoDTO, GHSecretDTO, GHVariableDTO, GHEnvironmentDTO,
 │   │   │   │                        # GHBranchPolicyDTO, GHJSONDecoding
 │   │   │   ├── Errors/              # GHError, GHStderrClassifier, StderrRedactor
@@ -225,6 +246,11 @@ FXVault/
 │   │   │   ├── Import/              # EnvImportPlanner
 │   │   │   ├── Files/               # SecureFileWriter, CloudSyncDetector
 │   │   │   ├── Git/                 # GitignoreChecker (+ GitExposureInspector), GitignoreEditor
+│   │   │   ├── Manifest/            # fxvault.yml (v0.8.0): ManifestTokenizer, ManifestTreeBuilder,
+│   │   │   │                        # ManifestSchemaMapper, ManifestParser, ManifestSerializer,
+│   │   │   │                        # ManifestModel, ManifestTargetModel, ManifestVarModel,
+│   │   │   │                        # ManifestIssue, ManifestIdentifierValidator,
+│   │   │   │                        # ManifestEnvExample (.env.example), EnvToolsLimits+ManifestExtension
 │   │   │   └── Internal/            # ASCII, PathResolver
 │   │   ├── SharingKit/              # ShareError
 │   │   │   ├── Model/               # SharePackageModel, SharePackageCoder, SharePackageValidator
@@ -264,6 +290,21 @@ FXVault/
 │   │   │       │                    # SyncSpaceCoordinating, SyncExecutor+Spaces,
 │   │   │       │                    # SpaceClaimReconciler
 │   │   │       └── Testing/         # InMemorySyncVault (reference fake for the seams)
+│   │   ├── DestinationKit/          # v0.8.0, depends on VaultCore and GitHubKit (GHFileInspecting):
+│   │   │   │                        # HTTPS clients for runtime destinations; no database, no UI
+│   │   │   ├── HTTP/                # URLSessionTransport (ephemeral, no redirects),
+│   │   │   │                        # DestinationHostPolicy (host allowlist), ProviderHTTPClient
+│   │   │   │                        # (auth, retries), ProviderErrorMapper, HTTPModels
+│   │   │   ├── JSON/                # JSONBodyWriter, SecretJSONDocument (scanner over SecretBytes),
+│   │   │   │                        # SecretByteBuffer, JSONByte
+│   │   │   ├── Remotes/             # DestinationRemoting (+ DestinationRemoteFactory, remote item
+│   │   │   │                        # models), AzureKeyVaultRemote, SupabaseRemote, VercelRemote
+│   │   │   ├── Accounts/            # SupabaseAccountClient, VercelAccountClient (pickers, checks)
+│   │   │   ├── Azure/               # AzureCLILocator (trusted az), AzureCLITokenProvider
+│   │   │   │                        # (+ AccessTokenProviding)
+│   │   │   ├── Errors/              # DestinationError
+│   │   │   ├── Support/             # DestinationConstants
+│   │   │   └── Testing/             # FakeHTTPTransport (tests and previews)
 │   │   └── VaultData/
 │   │       ├── Session/             # VaultSession (+Extension: openLive / inMemory)
 │   │       ├── Vault/               # VaultManager, VaultState, PasswordRules, ReauthGate,
@@ -292,6 +333,15 @@ FXVault/
 │   │       ├── Folders/             # FolderRepository (v0.7.0)
 │   │       │   ├── Models/          # FolderSaveModels (Save as Folder)
 │   │       │   └── Support/         # FolderFieldCipher, FolderItemWriter
+│   │       ├── Destinations/        # v0.8.0: DestinationRepository (CRUD, items, copies,
+│   │       │   │                    # connections), DestinationSyncRepository (review, run,
+│   │       │   │                    # refresh, resolve, import; live remote provider),
+│   │       │   │                    # DestinationAccessRepository (+ ShellResolvingAzureTokens)
+│   │       │   ├── Models/          # DestinationSyncModels
+│   │       │   ├── Overview/        # StageOverviewRepository, StageOverviewBuilder,
+│   │       │   │                    # StageOverviewModels, ManifestDraftBuilder
+│   │       │   └── Support/         # DestinationFieldCipher (+ ConnectionTokenCipher),
+│   │       │                        # DestinationItemWriter, PublicValuePolicy
 │   │       ├── EnvFiles/            # EnvFileRepository, EnvFileError, EnvExportAuthorizationModel,
 │   │       │   │                    # ReauthGate+EnvExport, GitServiceGitignoreChecker
 │   │       │   └── Models/          # EnvExportModels, EnvImportModels
@@ -316,15 +366,27 @@ FXVault/
 │       ├── VaultDataTests/                       # VaultManagerTests/, AccountsTests/, CatalogTests/,
 │       │                                         # ConfigTests/, EnvFilesTests/, SyncTests/ (+Support/),
 │       │                                         # CreationTests/, DriftTests/, SharingTests/, ChatTests/,
+│       │                                         # TeamTests/, SpacesTests/, FoldersTests/,
+│       │                                         # DestinationsTests/ (repository, sync with a fake
+│       │                                         # remote, stage overview; v0.8.0),
 │       │                                         # Live/ (opt-in live E2E: FXV_LIVE_E2E*, plus a
-│       │                                         # GitHubSimulator dry run that always runs)
+│       │                                         # GitHubSimulator dry run that always runs;
+│       │                                         # LiveDestinationTests, opt-in FXV_LIVE_DEST_*)
+│       ├── VaultStoreTests/                      # Store, Constraint, Observation, Migration (seed
+│       │                                         # ladder to v13), SyncJournalStore, DestinationStore
+│       ├── DestinationKitTests/                  # v0.8.0: HTTP policy, retries, JSON writer and
+│       │                                         # scanner, Key Vault, Supabase, Vercel, az, factory;
+│       │                                         # Fixtures/ keyvault/, supabase/, vercel/ (synthetic)
 │       ├── VaultCryptoTests/Fixtures/kat/        # generate_kat.py + kat_vectors.json
+│       │                                         # (destination_field vectors since v0.8.0)
 │       ├── SharingKitTests/Fixtures/             # nearby_kat.json, chat_kat.json, team_kat.json,
 │       │                                         # space_kat.json, kat/ (crosscheck.py, reference),
 │       │                                         # item-v1-0.1.1.json (package written by 0.1.1)
 │       ├── VaultDataTests/Fixtures/Sharing/      # repository-v1-0.1.1.fxvault (file written by 0.1.1)
-│       ├── GitHubKitTests/Fixtures/              # gh/, api/, ssh/, shell/ (sanitized)
-│       └── EnvToolsTests/Fixtures/sample.env     # placeholder values only
+│       ├── GitHubKitTests/Fixtures/              # gh/, api/ (manifest-get-* since v0.8.0), ssh/,
+│       │                                         # shell/ (sanitized)
+│       └── EnvToolsTests/Fixtures/               # sample.env (placeholder values only),
+│                                                 # manifest-full.yml (names only, v0.8.0)
 ├── scripts/
 │   ├── ci-local.sh                  # runs the blocking CI checks locally
 │   ├── lint.sh                      # convention checks (force unwraps, print, imports, literal

@@ -1,0 +1,10 @@
+{
+  "failed": [
+    {
+      "error": {
+        "code": "env_value_invalid_type",
+        "message": "The value of NEW_SECRET is invalid"
+      }
+    }
+  ]
+}

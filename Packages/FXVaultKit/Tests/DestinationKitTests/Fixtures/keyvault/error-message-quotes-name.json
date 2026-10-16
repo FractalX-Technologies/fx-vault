@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "Bad Parameter with spaces: DATABASE-URL",
+    "message": "The request URI contains an invalid name: DATABASE_URL"
+  }
+}

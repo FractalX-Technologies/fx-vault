@@ -1,0 +1,11 @@
+{
+  "user": {
+    "id": "user_sample",
+    "email": "user-a@example.invalid",
+    "name": "User A",
+    "username": "user-a",
+    "avatar": null,
+    "defaultTeamId": "team_sample",
+    "version": "northstar"
+  }
+}

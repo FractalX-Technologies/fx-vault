@@ -1,8 +1,10 @@
 # FX Vault - Security model
 
-How FX Vault protects GitHub Actions secrets and variables on a Mac, what it defends against,
-and what it does not. The design is `tasks/todo.md` §5; this document describes the
-implementation (VaultCrypto, VaultStore, VaultData and the app shell). Related:
+How FX Vault protects GitHub Actions secrets and variables on a Mac (and, since v0.8.0, the
+runtime secrets it sends to Azure Key Vault, Supabase and Vercel), what it defends against, and
+what it does not. The design is `tasks/todo.md` §5 (destinations: R1–R12); this document
+describes the implementation (VaultCrypto, VaultStore, VaultData, DestinationKit and the app
+shell). Related:
 [ARCHITECTURE.md](ARCHITECTURE.md), [DATABASE.md](DATABASE.md), [API.md](API.md),
 [SHARING-PROTOCOL.md](SHARING-PROTOCOL.md).
 
@@ -59,10 +61,27 @@ Touch ID   the DEK in a data-protection keychain item (signed builds only, §5)
   kind changes re-seal; DEK rotation re-seals every folder value. Folder items live in their own
   tables, which no sync path reads: they reach GitHub only after the user copies them into a
   repository scope and syncs. Folder names are plaintext, like repository names.
-- **Plaintext on disk:** names (repositories, environments, items, folders), GitHub ids,
-  timestamps, branch patterns, the sync journal (names and row-bound push fingerprints, never
-  values), `link_id` (which items are linked copies of each other, v0.4.1; groups may include
-  folder items since v0.7.0) and preferences. No group
+- **Destinations (v0.8.0):** `destination_items.value_ct` is AES-256-GCM under K_field with
+  `DestinationFieldAAD`: the field layout above with table `destination_items`, the destination
+  id in the repository's place and no environment, so a destination blob never opens as a
+  repository or folder item (or in another destination, row, kind or name). `value_fp` and
+  `synced_fp` are row-bound fingerprints. A secret can have no value (`value_ct` NULL): Supabase
+  and Vercel `sensitive` variables never return theirs. Supabase and Vercel personal access
+  tokens are `provider_connections.token_ct`, sealed under K_field with a secret-field AAD
+  (table `provider_connections`, column `token_ct`, the connection id, DEK version). DEK
+  rotation re-seals every destination value and token and recomputes the fingerprints (a
+  `synced_fp` that cannot be recomputed is cleared, so the item is pushed again). Key Vault
+  access tokens are never stored (§10.4).
+- **Plaintext on disk:** names (repositories, environments, items, folders, destinations),
+  GitHub ids, timestamps, branch patterns, the sync journal (names and row-bound push
+  fingerprints, never values), `link_id` (which items are linked copies of each other, v0.4.1;
+  groups may include folder items since v0.7.0 and destination items since v0.8.0) and
+  preferences. Since v0.8.0 also each destination's target (`settings_json`: vault name and
+  tenant, Supabase project ref, Vercel project, team and environment) and stage, connection
+  labels and account hints (a Vercel username, a Supabase project count), the providers' item
+  ids and change markers (`remote_ref`, `remote_version`, `pre_write_version`; for Supabase a
+  keyed form of the listed digest, never the digest itself) and the destination journal (names,
+  change markers, row-bound fingerprints). No group
   fingerprint is stored: whether linked copies hold the same value is computed when it is shown
   (decrypted in memory, compared in constant time, wiped).
 - Repositories write ciphertext only through `VaultSession.write`, whose keys are checked
@@ -103,7 +122,9 @@ repository write that was in flight fails with `.locked` and installs or commits
 **Phase B** (after Phase A): lock observers dismiss sheets and wipe on-screen key material, the
 clipboard is cleared if FX Vault still owns it, a running modal panel is aborted, the database
 is checkpointed. The sync, drift and nearby stages add: cancel the active sync run
-(`SyncRunHandle.cancel()`), `DriftRepository.reset()`, cancel nearby sessions. Since v0.2.0 the
+(`SyncRunHandle.cancel()`), `DriftRepository.reset()`, cancel nearby sessions. Since v0.8.0 it
+also drops the cached Key Vault tokens (`ShellResolvingAzureTokens.reset()`; each copy is zeroed
+when its last reference goes). Since v0.2.0 the
 Nearby Chat window is a lock observer too: a lock (including sleep and screen lock, which always
 lock) closes the chat (CLOSE to the peer), stops advertising and browsing, discards an open
 import preview and wipes the transcript, the typed message and every received value.
@@ -171,7 +192,8 @@ the official signed release.") and every keychain call refuses with `.unsignedBu
 Revealing an older value in a shared scope's history (v0.6.0) also asks for Touch ID or the
 master password (`ReauthPurpose.spaceHistory`); the value is masked again after 30 seconds.
 
-`.env` export (also of a folder, v0.7.0), `.fxvault` export (also of a folder), nearby send and
+`.env` export (also of a folder, v0.7.0, or a destination, v0.8.0), `.fxvault` export (also of
+a folder), nearby send and
 attaching a secret, a variable, (v0.4.0) a whole repository or (v0.7.0) a folder in Nearby Chat
 (`ShareAuthorizationPurpose.nearbySend`, asked before the picker opens; Send Folder opens the
 picker on the folder and still asks), and saving a repository or folder received in chat as a
@@ -200,6 +222,16 @@ another.
   copy the account cannot change is never written. Folders (v0.7.0) take part the same way: a
   copy into a folder is saved at once, a copy from a folder into a scope is a pending change for
   the next Sync, and a teammate's copy of a folder never changes a repository by itself.
+  Destinations (v0.8.0) too: a copy into a destination is a pending change for its next Sync.
+- **Destinations (v0.8.0):** a push goes from decryption into a JSON body written straight into
+  `SecretBytes` (`JSONBodyWriter`: the value never becomes a Swift `String`), handed to
+  URLSession as a private copy that is zeroed when Foundation releases it, and wiped after the
+  last attempt. Answers are read into a `SecretByteBuffer` (at most 16 MiB) and parsed by the
+  secret JSON scanner (`SecretJSONDocument`), which unescapes a value into new `SecretBytes`
+  and never runs `JSONDecoder` over a provider answer; bodies are wiped once read. A value read
+  from a provider (Use Remote, the import after Add Destination) is encrypted for its row in the
+  write that records it and wiped. Values are decrypted for a destination only to be sent or to
+  check a public name (§10.4).
 - **Clipboard:** current host only, Concealed / Transient / source markers, cleared after 30 s,
   on lock and on quit, but only if FX Vault still owns it. The pasteboard is never read in the
   background: only a user paste (⌘V in the detail column, ⌘V or the Paste button in the import
@@ -251,6 +283,15 @@ trusted for that path (below). Details: [API.md](API.md).
   is writable by others (world, or a group other than `wheel` / `admin`). Writable binaries and
   binaries owned by several other users are never offered. A changed owner asks again;
   Settings › Advanced lists the trust with Revoke.
+- **`az` (v0.8.0).** The Azure CLI is run for one command only, `az account get-access-token`
+  for Key Vault ([API.md](API.md) §G.1), through the same runner rules. `AzureCLILocator`
+  searches the login shell's PATH, then `/opt/homebrew/bin` and `/usr/local/bin`; the first `az`
+  that exists decides and must pass gh's trust check (`GHLocator.evaluate`), re-run before every
+  `az` run. There is no consented trust: an `az` owned by another user is refused
+  (`azUntrusted`). Its environment is its own exact allowlist (HOME, the shell's PATH, LANG,
+  TMPDIR, telemetry, color and progress output off), stdin is empty, and no value ever reaches
+  it. The token is read from stdout with the secret JSON scanner and stdout is wiped; stderr is
+  classified only after JWTs and GitHub token patterns are redacted, and never logged.
 
 ## 9. Sync integrity
 
@@ -269,6 +310,19 @@ trusted for that path (below). Details: [API.md](API.md).
 - A write is confirmed by re-listing: a secret by a changed `updatedAt`, a variable by its value
   fingerprint. Unconfirmed writes stay pending and are retried; after 3 failed checks a secret is
   force-pushed on the next Sync.
+- Destinations (v0.8.0), after GitHub's writes: each write is journaled `in_flight` in
+  `destination_journal` (with the item's change marker before the write and the fingerprint of
+  the value being sent) before it is sent; a write that got no answer ends `indeterminate`. The
+  next review settles unfinished rows by listing the destination: a set whose item now has
+  another marker counts as done with the journaled fingerprint as synced (a value edited since
+  stays a change to push), a delete
+  whose item is gone as done, the rest as failed. Each destination is listed right before its
+  writes; an update or delete whose item changed remotely since the last sync (Key Vault
+  `attributes.updated`, Vercel `updatedAt`, the keyed Supabase marker) and an add whose name the
+  destination already has are blocked for Refresh. A write is confirmed by one re-list (Key
+  Vault and Vercel: a new change marker; Supabase: the listed digest equals SHA-256 of the
+  value sent, computed in memory); an unconfirmed write is pushed again on the next Sync.
+  Deletions are sent only after the user confirms them in the Sync sheet.
 
 ## 10. Threat model
 
@@ -294,6 +348,8 @@ trusted for that path (below). Details: [API.md](API.md).
   `~/.zshrc`, `~/.ssh/config` and `PATH` while the vault is locked: such code can already
   replace gh or git. The field AAD still makes kind and scope tampering fail decryption.
 - A compromised gh token or GitHub account.
+- A compromised Supabase or Vercel token, Azure account or `az` login, or the providers
+  themselves (§10.4).
 - Keyloggers.
 - A compromised build machine.
 
@@ -401,6 +457,57 @@ version number, the last author's login and a time. Spaces store every version's
 so the database grows with every push to a shared scope. Logins and names in member lists are
 what each Mac sent when pairing.
 
+### 10.4 Runtime destinations (v0.8.0, experimental)
+
+Endpoints and commands: [API.md](API.md) §G.
+
+**Assets.** The values FX Vault sends to and reads from Azure Key Vault, Supabase (Edge Function
+secrets) and Vercel (project environment variables), the Supabase and Vercel personal access
+tokens, and the Key Vault access tokens `az` issues.
+
+**Network.** v0.8.0 is the first FX Vault code that makes HTTP requests itself: one
+`URLSessionTransport`. Its session is ephemeral with no URL cache, no cookie storage (cookies are
+neither sent nor accepted), no credential storage and no extra headers;
+`Timeouts.destinationRequest` (30 s) applies to each request and to the whole transfer; TLS 1.2
+or later with the system's certificate validation. Every request goes to an allowlisted host
+(`DestinationHostPolicy`): `https` only, no user or password in the URL, port 443, and the host
+exactly `api.supabase.com`, `api.vercel.com` or `<vault>.vault.azure.net` with a valid vault name
+(no other subdomain, trailing dot or IP address). The response URL is checked again, redirects
+are never followed (a 3xx is `disallowedHost`), and a Key Vault `nextLink` must stay on the
+vault's host. URLs are built from validated, percent-encoded segments (`ProviderURL`, the D29
+rules), so a name or id cannot change a request's shape. Values travel only in bodies and tokens
+only in `Authorization`; neither ever goes into a URL or another header, and header values with
+line breaks are refused. An answer larger than 16 MiB, or a listing longer than 400 pages, stops
+with `responseTooLarge`. Logs carry the provider, the method, the status and a value-free error
+code, never a URL, header, body, name or token; provider error messages are never kept, only a
+short identifier code.
+
+**Tokens.** A Supabase or Vercel token is checked with the provider before it is saved (Supabase:
+the project list; Vercel: the user) and stored only sealed (§2). It is opened when a client is
+built (one Sync, Refresh or picker), the opened copy is wiped, and the client keeps its own copy
+only while it lives (zeroed when released); each attempt sends a further copy, wiped when the
+attempt ends. A token must
+be printable ASCII without spaces, so it can never inject a header. Removing a connection deletes
+its token; its destinations stay, without a connection, until another is chosen. Key Vault uses
+the user's `az login` (§8): `az account get-access-token --resource https://vault.azure.net
+[--tenant <id>]` gives a short-lived token that lives only in memory, per tenant, until 5 minutes
+before it expires; it is fetched again once after a 401 and dropped on lock (§4). FX Vault never
+sees the Azure refresh token or the user's Azure credentials.
+
+| Threat | Defense |
+|---|---|
+| A value or token sent to another host | The host allowlist before sending and on the response URL, no redirects, `nextLink` on the same vault only, validated and percent-encoded URL segments, a validated target (vault name, tenant, project ref and ids) before any request exists. |
+| Eavesdropping on the network | TLS 1.2 or later with the system's certificate validation. Nothing is cached or stored by URLSession (ephemeral session, no cookies, no credential storage). |
+| A secret published to every browser | A Vercel item under a public prefix (`NEXT_PUBLIC_`, `VITE_`, `EXPO_PUBLIC_`, `PUBLIC_`, `REACT_APP_`, `NUXT_PUBLIC_`, `GATSBY_`) whose value has a known token prefix, a PEM block or a URL with a password blocks the Sync; a JWT or a long random value only warns, since publishable keys look like that. Mark as Public clears both for that item. The Overview shows the same check. |
+| Overwriting a change made in the provider | Each destination is listed right before its writes; an item whose change marker moved since the last sync, or a new name the provider already has, is blocked until Refresh resolves it (Keep Mine or Use Remote, which lists again and refuses a finding that changed). |
+| Losing data in the provider | Deletions are sent only after the user confirms them in the Sync sheet. Key Vault deletes are soft deletes and FX Vault never purges; a soft-deleted name is recovered before it is written again. A Vercel variable shared with other environments only loses this environment. Removing a destination or a connection deletes nothing remotely. Items FX Vault cannot manage (Key Vault managed or disabled secrets; Vercel system, git-branch and custom-environment variables; `SUPABASE_` secrets; names that are not valid FX Vault names) are listed with the reason and never written. |
+| An interrupted Sync | `destination_journal` and reconciliation by listing (§9). |
+| A planted `az` | gh's trust rules without consented trust, checked again before each run (§8). |
+| Values left in memory | Bodies and answers stay in `SecretBytes`; the secret JSON scanner never turns a value into a `String` (§7). |
+
+**Residual risks:** §11 (destinations).
+
+
 ## 11. Residual risks
 
 - `GH_TOKEN` is visible to same-user processes while gh runs.
@@ -448,6 +555,35 @@ what each Mac sent when pairing.
 - A folder sent to a teammate (v0.7.0) is a copy: removing them as a teammate or deleting the
   folder does not take it back, and FX Vault cannot tell which values they kept. Rotate shared
   keys that must stop working for them, as after any share.
+- **Destinations (v0.8.0, experimental).** The Vercel client and the `az` token path ran live on
+  2026-10-16 (a throwaway Vercel project of a personal account); the Key Vault data plane and
+  the Supabase Management API are tested only against fixtures and fakes so far. The opt-in
+  suite `Tests/VaultDataTests/Live/LiveDestinationTests.swift` covers all three against a
+  throwaway vault and projects.
+- Supabase lists an unkeyed SHA-256 of each secret instead of its value, so anyone with the
+  token (or Supabase access to the project) can test guesses of a low-entropy value against it.
+  FX Vault does not add to that: it compares the digest in memory and stores only a keyed form
+  of it (HMAC under `K_fp`, `DestinationFieldCipher.keyedMarker`) in `remote_version`,
+  `pre_write_version` and the journal. After a DEK rotation a marker that cannot be re-keyed
+  from the synced value shows once as a change at the next Refresh.
+- What a provider keeps is outside FX Vault's control: Key Vault keeps every version of a secret
+  and soft-deleted secrets for the vault's retention period; existing Vercel deployments keep the
+  values they were built with until the next deployment. Deleting a value in FX Vault or in the
+  provider does not revoke it: rotate it.
+- A personal access token reaches whatever the provider grants it (a Vercel token every project
+  of its scope, a Supabase token every project of its organizations). FX Vault calls only the
+  endpoints in API.md §G, but a stolen token, or an unlocked vault, gives that reach.
+- Updating a Vercel variable shared with other environments changes it for all of them (the
+  Sync sheet names them); only a deletion is limited to the destination's environment.
+- `az` keeps its own token cache and refresh tokens (`~/.azure`), outside FX Vault's protection;
+  any process that can run `az` as the user gets the same Key Vault access. Only the `az` file
+  is checked (§8): Homebrew's `az` is a script that starts Homebrew's Python and its packages,
+  which are trusted as installed.
+- The bearer token becomes a Swift `String` in the `URLRequest`'s `Authorization` header, and
+  URLSession and the network stack keep their own copies of bodies and answers; none of these
+  can be wiped. A token typed into the token field is a Swift `String` until it is saved.
+- No certificate pinning: a root certificate the user or a configuration profile trusts can
+  intercept destination traffic, as for any app that uses the system trust store.
 - The Keychain status codes for the Touch ID fallback button, lockout and an enrollment-
   invalidated item follow Apple's documentation and still need confirmation on a signed build
   (RELEASING.md manual checklist). Since v0.1.1 an unexpected `errSecAuthFailed` can no longer

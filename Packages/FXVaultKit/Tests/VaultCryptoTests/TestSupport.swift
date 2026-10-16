@@ -69,6 +69,20 @@ struct KATVectors: Decodable {
         let blobHex: String
     }
 
+    struct DestinationFieldVector: Decodable {
+        let label: String
+        let aesKHex: String
+        let row: String
+        let destination: String
+        let kind: String
+        let name: String
+        let dekVersion: UInt32
+        let plainHex: String
+        let nonceHex: String
+        let aadHex: String
+        let blobHex: String
+    }
+
     struct PasswordWrap: Decodable {
         let text: String
         let saltHex: String
@@ -115,6 +129,7 @@ struct KATVectors: Decodable {
     let hierarchy: Hierarchy
     let field: [FieldVector]
     let folderField: [FolderFieldVector]
+    let destinationField: [DestinationFieldVector]
     let wrap: Wraps
     let recovery: [RecoveryVector]
     let crockford: [CrockfordVector]

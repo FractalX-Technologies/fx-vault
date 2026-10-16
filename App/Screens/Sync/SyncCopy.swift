@@ -532,6 +532,8 @@ nonisolated enum SyncCopy {
             String(localized: "sync.fix.getTeammateUpdates", defaultValue: "Get Updates from Teammates")
         case .takeOverSpace:
             String(localized: "sync.fix.takeOver", defaultValue: "Take Over…")
+        case .openDestination:
+            String(localized: "sync.fix.openDestination", defaultValue: "Show Destination")
         }
     }
 

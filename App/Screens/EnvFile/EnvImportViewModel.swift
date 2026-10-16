@@ -65,6 +65,8 @@ final class EnvImportViewModel: LockObserving {
     let repositoryID: RepoID?
     /// The folder the rows go into (v0.7.0); nil for a repository.
     let folderID: FolderID?
+    /// The destination the rows go into (v0.8.0); nil otherwise.
+    let destinationID: DestinationID?
     private(set) var step: EnvImportStep
     var sourceKind: EnvImportSourceKind {
         didSet {
@@ -112,6 +114,7 @@ final class EnvImportViewModel: LockObserving {
     @ObservationIgnored private let envFiles: EnvFileRepository
     @ObservationIgnored private let config: ConfigRepository
     @ObservationIgnored private let folders: FolderRepository
+    @ObservationIgnored private let destinations: DestinationRepository
     @ObservationIgnored private let clock: any VaultClock
     /// The user's row changes, kept across re-parses of the paste editor.
     @ObservationIgnored private var overrides: [EnvImportRowKey: EnvImportRowOverrideModel] = [:]
@@ -131,16 +134,24 @@ final class EnvImportViewModel: LockObserving {
         case .scope(let repositoryID, let scope):
             self.repositoryID = repositoryID
             folderID = nil
+            destinationID = nil
             targetScope = scope
         case .folder(let id):
             repositoryID = nil
             folderID = id
+            destinationID = nil
+            targetScope = .repository
+        case .destination(let id):
+            repositoryID = nil
+            folderID = nil
+            destinationID = id
             targetScope = .repository
         }
         defaultKind = context.defaultKind
         envFiles = dependencies.envFiles
         config = dependencies.config
         folders = dependencies.folders
+        destinations = dependencies.destinations
         clock = dependencies.clock
         var prefill: SecretBytes?
         // A file passed in the context wins over any paste start.
@@ -350,6 +361,7 @@ final class EnvImportViewModel: LockObserving {
     /// Where the rows go: the chosen scope, or the folder.
     var targetPlace: ItemPlaceModel? {
         if let folderID { return .folder(folderID) }
+        if let destinationID { return .destination(destinationID) }
         return repositoryID.map { .scope(repositoryID: $0, scope: targetScope) }
     }
 
@@ -749,6 +761,12 @@ final class EnvImportViewModel: LockObserving {
             // A folder is its own single target.
             let name = (try? folders.folders())?.first { $0.id == folderID }?.name
             scopeOptions = name.map { [EnvImportScopeOptionModel(scope: .repository, title: $0, isEditable: true)] } ?? []
+            return
+        }
+        if let destinationID {
+            // So is a destination (its items are pending for the next Sync).
+            let title = (try? destinations.destination(destinationID))?.map(\.copyTargetTitle)
+            scopeOptions = title.map { [EnvImportScopeOptionModel(scope: .repository, title: $0, isEditable: true)] } ?? []
             return
         }
         guard let repositoryID else {

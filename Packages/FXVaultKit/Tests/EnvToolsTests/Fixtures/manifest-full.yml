@@ -1,0 +1,18 @@
+# fxvault.yml · names and destinations, never values
+version: 1                         # optional; if present must be 1
+stages: [production, staging]      # required, 1...20 names (EnvironmentNameValidator rules), unique case-insensitively
+
+targets:                           # required mapping; target names: [a-z][a-z0-9-]{0,31}
+  ci:  { provider: github-actions }                       # optional `environment:` mapping stage -> GitHub environment name; default: the stage's own name
+  kv:  { provider: azure-keyvault,
+         vault: { production: kv-sample-prod, staging: kv-sample-stg } }   # or `vault: kv-one` for every stage
+  api: { provider: supabase,
+         project: { production: abcdefghijklmnopqrst, staging: tsrqponmlkjihgfedcba } }   # or one ref for every stage
+  web: { provider: vercel, project: sample-web, team: example-org,
+         environment: { production: production, staging: preview } }      # team optional; environment optional
+
+vars:                              # required mapping (may be empty `{}`)
+  DATABASE_URL:      { secret: true, to: [kv, api] }
+  NEXT_PUBLIC_SUPABASE_URL: { public: true, to: [web] }
+  VERCEL_TOKEN:      { secret: true, to: [ci], stages: [production] }   # `stages` optional subset; default all stages
+  AZURE_CLIENT_ID:   { to: [ci] }  # neither secret nor public: a plain variable

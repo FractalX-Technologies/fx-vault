@@ -58,6 +58,16 @@ extension GHCommandScheduler {
         }
     }
 
+    /// B11: `fxvault.yml` at the root of the default branch, or nil when the repository has none
+    /// (v0.8.0).
+    public func manifest(_ repo: GHRepoRef) async throws(GHError) -> GHManifestFileModel? {
+        do {
+            return try GHManifestAPI.decode(try await run(try GHManifestAPI.get(repo: repo)))
+        } catch .notFound {
+            return nil
+        }
+    }
+
     /// B5: branch policies of a custom-policy environment.
     public func listBranchPolicies(_ repo: GHRepoRef, environment: String) async throws(GHError)
         -> [GHBranchPolicyDTO]

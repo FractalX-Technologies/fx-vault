@@ -15,6 +15,10 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     private(set) var detail: RepoDetailViewModel?
     /// The detail column of the selected folder (v0.7.0).
     private(set) var folderDetail: FolderDetailViewModel?
+    /// The detail column of the selected destination (v0.8.0).
+    private(set) var destinationDetail: DestinationDetailViewModel?
+    /// The detail column while Overview is selected (v0.8.0).
+    private(set) var overview: StageOverviewViewModel?
     /// The sheet on screen (``MainSheet``). Setting another route replaces it.
     var activeSheet: MainSheet? {
         didSet {
@@ -53,6 +57,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             select: { [weak self] id in self?.sidebar.select(repositoryID: id) },
             open: { [weak self] id, scope in self?.open(repositoryID: id, scope: scope) },
             openFolder: { [weak self] id in self?.sidebar.select(folderID: id) },
+            openDestination: { [weak self] id in self?.open(destinationID: id) },
             syncSpaces: { [app] in await app.spaceSync.syncAllAndWait() },
             spacesPublished: { [app] in app.spaceSync.syncAll() },
             spaceIdentity: { [app] in app.spaceIdentity },
@@ -68,6 +73,21 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             scopeList?.select(scope: scope)
         }
     }
+
+    /// Shows a destination (v0.8.0, a linked copy's place): selects its repository, then the
+    /// destination once its column has it.
+    func open(destinationID id: DestinationID) {
+        guard let destination = try? app.container.data.destinations.destination(id) else { return }
+        sidebar.select(repositoryID: destination.repositoryID)
+        if scopeList?.repositoryID == destination.repositoryID {
+            scopeList?.select(destination: id)
+        } else {
+            pendingDestination = id
+        }
+    }
+
+    /// A destination to select once the repository's column exists.
+    @ObservationIgnored private var pendingDestination: DestinationID?
 
     // MARK: - Selection
 
@@ -97,6 +117,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         guard scopeList?.repositoryID != repoID else { return }
         detail = nil
         scopeList = nil
+        destinationDetail = nil
+        overview = nil
         guard let repoID else { return }
         let dependencies = featureDependencies
         let sidebar = sidebar
@@ -109,13 +131,46 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             repository: { sidebar.vaultRepository(repoID) },
             scopeSummary: { [weak scopes] scope in scopes?.scopes.first { $0.scope == scope } }
         )
-        scopes.onSelectionChange = { [weak scopes, weak detail] in
-            guard let scope = scopes?.selectedScope?.scope else { return }
+        scopes.onSelectionChange = { [weak self, weak scopes, weak detail] in
+            guard let scopes else { return }
+            self?.followScopeSelection(scopes)
+            guard let scope = scopes.selectedScope?.scope else { return }
             detail?.select(scope: scope)
         }
         scopeList = scopes
         self.detail = detail
         detail.checkDriftOnOpen()
+        if let pendingDestination {
+            self.pendingDestination = nil
+            scopes.select(destination: pendingDestination)
+        }
+    }
+
+    /// Column 3 follows column 2's selection: a destination's detail, the Overview, or the
+    /// repository detail of the selected scope (v0.8.0).
+    private func followScopeSelection(_ scopes: ScopeListViewModel) {
+        if let destination = scopes.selectedDestination {
+            overview = nil
+            guard destinationDetail?.destinationID != destination.id else { return }
+            let id = destination.id
+            destinationDetail = DestinationDetailViewModel(destination: destination, dependencies: featureDependencies) { [weak scopes] in
+                scopes?.destination(id)
+            }
+            return
+        }
+        destinationDetail = nil
+        if scopes.isOverviewSelected {
+            guard overview?.repositoryID != scopes.repositoryID else { return }
+            let sidebar = sidebar
+            let repositoryID = scopes.repositoryID
+            overview = StageOverviewViewModel(
+                repositoryID: repositoryID,
+                dependencies: featureDependencies,
+                repository: { sidebar.vaultRepository(repositoryID) }
+            )
+            return
+        }
+        overview = nil
     }
 
     // MARK: - Sheets
@@ -202,15 +257,21 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         )))
     }
 
-    /// Import .env (⇧⌘I) needs a selected scope whose items can change, or a folder.
+    /// Import .env (⇧⌘I) needs a selected scope whose items can change, a folder or a
+    /// destination.
     var canImportEnv: Bool {
-        isUnlocked && (folderDetail?.canEdit == true || (scopeList?.selectedScope != nil && detail?.canEdit == true))
+        isUnlocked && (folderDetail?.canEdit == true || destinationDetail?.canEdit == true
+            || (scopeList?.selectedScope != nil && detail?.canEdit == true))
     }
 
     func importEnv() {
         guard canImportEnv else { return }
         if let folderDetail {
             present(.envImport(EnvImportContext(place: .folder(folderDetail.folderID))))
+            return
+        }
+        if let destinationDetail {
+            present(.envImport(EnvImportContext(place: .destination(destinationDetail.destinationID))))
             return
         }
         guard let repo = selectedVaultRepo, let scope = scopeList?.selectedScope else { return }

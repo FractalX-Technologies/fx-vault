@@ -31,6 +31,24 @@ nonisolated extension ConfigRepositoryError {
             String(localized: "error.config.folderNotFound", defaultValue: "This folder is no longer in the vault.")
         case .folderFull(let limit):
             String(localized: "error.config.folderFull", defaultValue: "A folder can hold at most \(limit) secrets and variables.")
+        case .destinationNotFound:
+            String(localized: "error.config.destinationNotFound", defaultValue: "This destination is no longer in the vault.")
+        case .destinationFull(let limit):
+            String(localized: "error.config.destinationFull", defaultValue: "A destination can hold at most \(limit) secrets and variables.")
+        case .tooManyDestinations(let limit):
+            String(localized: "error.config.tooManyDestinations", defaultValue: "A repository can have at most \(limit) destinations.")
+        case .destinationExists:
+            String(
+                localized: "error.config.destinationExists",
+                defaultValue: "This repository already has a destination for that vault, project or environment."
+            )
+        case .connectionNotFound:
+            String(
+                localized: "error.config.connectionNotFound",
+                defaultValue: "Choose a connection for this provider, or add one in Settings › Destinations."
+            )
+        case .tooManyConnections(let limit):
+            String(localized: "error.config.tooManyConnections", defaultValue: "FX Vault keeps at most \(limit) connections.")
         case .environmentDeleted:
             String(
                 localized: "error.config.environmentDeleted",

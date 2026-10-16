@@ -2,8 +2,9 @@
 
 Status: domain and UI stages integrated (Milestones 1–6 package layers and every app screen).
 Every package module is implemented and tested: VaultCore, VaultCrypto, VaultStore, GitHubKit,
-EnvTools, SharingKit, **SyncEngine** (pure change model plus execution) and **VaultData** (vault
-core plus the accounts, catalog, config, `.env`, sync, creation, drift and sharing repositories).
+EnvTools, SharingKit, **SyncEngine** (pure change model plus execution), **DestinationKit**
+(v0.8.0, runtime destinations over HTTPS) and **VaultData** (vault core plus the accounts,
+catalog, config, `.env`, sync, creation, drift, sharing and destination repositories).
 The app builds every repository in `AppContainer`, detects gh, shows `GHSetupScreen`, and runs the
 three-column main window on live data (sidebar, scopes, detail table, toolbar and menu commands,
 Preferences › Accounts, `.fxvault` open handling), and every feature sheet (item editor,
@@ -47,15 +48,17 @@ SharingKit are pure domain services called by repositories.
 |---|---|---|---|
 | `VaultCore` | none | done | Models, typed ids, validation, `SecretBytes`, `VaultClock`, `Limits`, `Timeouts`, errors |
 | `VaultCrypto` | VaultCore, Clibsodium | done | Argon2id, field encryption, key wrap, recovery key, keyring, password strength |
-| `VaultStore` | VaultCore, GRDB | done | Database factory, migrations v1–v8, records, stores, observation. Stores blobs only |
-| `GitHubKit` | VaultCore | done | Process runner, shell probe, gh locator/auth, command builders, scheduler, gh api for environments, ssh and git |
-| `EnvTools` | VaultCore | done | .env parsing/serialization, key normalization, credential heuristics, secure file writes, iCloud and gitignore checks |
+| `VaultStore` | VaultCore, GRDB | done | Database factory, migrations v1–v13, records, stores, observation. Stores blobs only |
+| `GitHubKit` | VaultCore | done | Process runner, shell probe, gh locator/auth, command builders, scheduler, gh api for environments and `fxvault.yml`, ssh and git |
+| `EnvTools` | VaultCore | done | .env parsing/serialization, key normalization, credential heuristics, secure file writes, iCloud and gitignore checks, the `fxvault.yml` parser and serializer (v0.8.0) |
+| `DestinationKit` | VaultCore, GitHubKit | done (v0.8.0, experimental) | HTTPS clients for runtime destinations (Azure Key Vault, Supabase Edge Function secrets, Vercel environment variables), the host allowlist, the `az` token provider, the Supabase and Vercel account lists, `DestinationError`. No database, no keys |
 | `SharingKit` | VaultCore (+ CryptoKit, Network) | done | Share payload, `.fxvault` codec, passphrases, nearby protocol and transport, import planner. Key derivation is injected (`KeyDeriving`), so no VaultCrypto dependency |
 | `SyncEngine` | VaultCore, VaultCrypto, GitHubKit | done | Change derivation, edit planning, summary, drift detection, preflight, planning, execution, verification, launch reconciliation. No database and no keys: VaultData plugs in through `SyncPersisting` and `SyncValueProviding` |
 | `VaultData` | all of the above | done | `VaultSession`, `VaultManager`, `ReauthGate`, Touch ID, and the repositories view models use |
 
 The `FXVaultKit` library product exposes VaultData, VaultCore, SyncEngine, SharingKit, EnvTools,
-GitHubKit and VaultCrypto. VaultStore is internal to the package (reached through VaultData).
+GitHubKit, VaultCrypto and DestinationKit (v0.8.0). VaultStore is internal to the package
+(reached through VaultData).
 `scripts/lint.sh` fails if `import GRDB` appears outside VaultStore, `import Clibsodium`
 outside VaultCrypto (only `Argon2id.swift` imports it), or `import VaultStore` in `App/` or
 `AppTests/` (the app opens the vault with `VaultSession.openLive()` / `.inMemory()`).
@@ -70,6 +73,9 @@ argv matchers) and `SteppingClock`, shared by SyncEngineTests and VaultDataTests
   wiped on `wipe()` and `deinit`, redacted in every textual representation, constant-time `==`).
   Known unavoidable copies: `gh variable list` JSON decoding, Foundation JSON coders in
   SharingKit, CryptoKit key types. They are short-lived and documented at each site.
+  DestinationKit (v0.8.0) writes and scans provider JSON directly over `SecretBytes`
+  (`JSONBodyWriter`, `SecretJSONDocument`; no `JSONDecoder` for values); the buffers inside
+  `URLSession` and the network stack cannot be wiped (SECURITY-MODEL.md).
 - **No plaintext values on disk.** The database stores AES-256-GCM blobs plus HMAC fingerprints.
 - **Typed throws everywhere** (`throws(ValidationError)`, `throws(GHError)`, ...). Packages
   carry no user-facing text; the app maps errors to localized strings in `+Extension.swift` files.
@@ -86,8 +92,9 @@ argv matchers) and `SteppingClock`, shared by SyncEngineTests and VaultDataTests
   `NearbySession`, `SyncExecutor` (one per run) and the VaultData repositories that do I/O
   (`GitHubEnvironmentRepository`, `RepoCatalogRepository`, `SyncRepository`,
   `RepoCreationRepository`, `DriftRepository`, `SharingRepository`, the nearby sender and
-  receiver). Lock-protected classes: `SecretBytes`, `VaultKeyring`, `GHTokenCache`,
-  `ManualClock`, `FakeCommandRunner`.
+  receiver; v0.8.0: `DestinationSyncRepository`, `AzureCLITokenProvider`,
+  `ShellResolvingAzureTokens`). Lock-protected classes: `SecretBytes`, `VaultKeyring`,
+  `GHTokenCache`, `ManualClock`, `FakeCommandRunner`.
 - Database writes are synchronous only (DATABASE.md, "Transactions").
 - Argon2id is synchronous; callers (VaultData) run it in an `@concurrent` function off the main
   actor.
@@ -109,6 +116,23 @@ This is the contract for the next stage (the feature screens). Everything listed
   `ItemPlaceModel` `.scope(repositoryID:scope:) | .folder(FolderID)` (where copy and paste,
   `.env` import and export and the item editor act), `FolderNameValidator` (1–64 scalars, NFC,
   no control/bidi/zero-width characters or edge whitespace; `foldKey`).
+- **Destinations (v0.8.0, experimental):** ids `DestinationID`, `ConnectionID`;
+  `DestinationProvider` `.azureKeyVault | .supabase | .vercel` (`holdsVariables`,
+  `returnsValues`, `usesConnection`, `storedKind(for:)`: Key Vault and Supabase hold secrets
+  only), `VercelEnvironment`, `DestinationTargetModel` (vault name and optional tenant; Supabase
+  project ref; Vercel project, team and environment; `targetKey`, `displayName`),
+  `DestinationModel` (stage, connection, counts, `stageKey`), `DestinationItemModel` (never a
+  value; `isPublicAllowed`, `syncStatus`, `linkCount`), `ConnectionModel` (label, provider,
+  `accountHint`; never the token), and `ItemPlaceModel.destination(DestinationID)`.
+  `DestinationRules`: Key Vault names map `_` ↔ `-` (`remoteName(for:provider:)`,
+  `localName(forRemoteName:provider:)`), Supabase and Vercel names must already be uppercase
+  (`NameRule.notUppercase`), `SUPABASE_` is reserved (`NameRule.reservedByProvider`), a variable
+  in a secrets-only provider is `ValidationError.kindNotSupported`, targets are checked by
+  `validate(_ target:)` (`ValidationError.invalidDestinationTarget(DestinationTargetRule)`);
+  `PublicNamePrefixes` (`NEXT_PUBLIC_`, `VITE_`, `EXPO_PUBLIC_`, …). New `Limits` (Key Vault value
+  size, items per destination, destinations per repository, connections, response and manifest
+  sizes) and `Timeouts` (`destinationRequest`, `azAccessToken`, `accessTokenRefreshMargin`,
+  rate-limit backoff).
 - **Models:** `AccountModel` (id = lowercase login), `RepoModel` (+ `OwnerType`,
   `RepoVisibility`, `RepoOrigin`, `ViewerPermission`, `RepoCreateSpecModel`),
   `RepoCapabilityModel` `.full | .repoLevelOnly | .readOnly(ReadOnlyReason)` with
@@ -159,6 +183,11 @@ Key hierarchy (plan §5.1): a random 32-byte DEK per vault; HKDF-SHA256 derives 
   (ops 1, 8 MiB; for tests and previews only). The composition root chooses.
 - **Field encryption:** `FieldAAD.value(of:)` / `.syncedValue(of:)` bind table, column, row id,
   repository id, environment id, kind, name and DEK version; blob = `0x01 ‖ nonce ‖ ct ‖ tag`.
+  `DestinationFieldAAD` (v0.8.0) reuses the layout with table `destination_items` and the
+  destination in the repository's place (`seal(_:for:)` / `open(_:for:)` overloads;
+  `destination_field` KAT vectors from `generate_kat.py`), so a destination blob never opens as
+  a repository or folder item. Connection tokens are sealed as secret fields (`SecretFieldAAD`,
+  table `provider_connections`).
 - **`RecoveryKey`**: 56 Crockford base32 characters (14 groups of 4) encoding 32 key bytes plus
   a 3-byte checksum; forgiving input (I/L/O, case, separators), canonical output.
 - **`PasswordStrength.evaluate`**: local zxcvbn-style estimate; acceptable at ≥ 12 characters
@@ -171,9 +200,11 @@ Key hierarchy (plan §5.1): a random 32-byte DEK per vault; HKDF-SHA256 derives 
 See [DATABASE.md](DATABASE.md). `DatabaseFactory.openLive()/openOnDisk(directory:)/inMemory()`,
 `VaultMigrator`, `VaultDatabase.read/write/checkpointTruncate`, records for every table, and the
 stores `VaultRecordStore`, `AccountStore`, `RepoStore`, `ConfigStore`, `SyncJournalStore`,
-`SharePackageStore`, `TeamStore`, `SpaceStore` and `FolderStore` (v0.7.0), each with convenience
-and `in tx:` forms plus `AsyncThrowingStream` observation. `LinkCountQuery` counts link groups
-across `config_items` and `folder_items`. `ConfigItemState` is the ciphertext-free projection; `RepoPendingInputsModel`
+`SharePackageStore`, `TeamStore`, `SpaceStore`, `FolderStore` (v0.7.0) and `DestinationStore`
+(v0.8.0: destinations, their items, provider connections, the destination journal, pending
+counts per repository), each with convenience and `in tx:` forms plus `AsyncThrowingStream`
+observation. `LinkCountQuery` counts link groups across `config_items`, `folder_items` and
+`destination_items`. `ConfigItemState` is the ciphertext-free projection; `RepoPendingInputsModel`
 is the change-derivation input. All failures are `StoreError`.
 
 ### GitHubKit
@@ -201,6 +232,11 @@ See [API.md](API.md) for the command catalog.
   `GHBranchPolicyDTO`, `GHLicenseTemplateModel`), `GHWriteRecordModel` (throttle seed).
 - **ssh/git:** `SSHConfigParser`, `SSHAliasValidator`, `SSHAliasResolver` (D1, D2),
   `GitService` (D3 clone, D4–D6).
+- **`fxvault.yml` (v0.8.0):** `GHManifestAPI.get(repo:)` (B11, `GET
+  repos/{o}/{r}/contents/fxvault.yml` on the default branch through `GitHubPath.rootFile`) and
+  `decode(_:)` (base64 file → `GHManifestFileModel` text and blob sha; at most
+  `Limits.maxManifestBytes`, UTF-8 only; stdout wiped); `GHCommandScheduler.manifest(_:)` returns
+  nil when the file does not exist. Read only: FX Vault never writes to a repository's files.
 - **Diagnostics** (v0.3.1): `GHDiagnosticsCollector(runner:identity:workingDirectory:fileInspector:)
   .collect(shell:overridePath:trustedBinary:) -> GHDiagnosticsModel` (Encodable, explicit nulls;
   runs only `gh --version` and A3; no token, no variable values), `GHDiagnosticsModel.unavailable`.
@@ -237,6 +273,55 @@ See [API.md](API.md) for the command catalog.
   symlinks, exclusive rename, `F_FULLFSYNC`), `CloudSyncDetector.status(for:)`.
 - **Git:** `protocol GitignoreChecker` (VaultData implements it over `GitService`),
   `GitExposureInspector.inspect(fileURL:using:)`, `GitignoreEditor`.
+- **Manifest (v0.8.0, `Manifest/`):** `ManifestParser.parse(_:) -> ManifestParseResult` (a strict
+  YAML subset: `ManifestTokenizer` → `ManifestTreeBuilder` → `ManifestSchemaMapper`; every problem
+  a line-numbered `ManifestIssue`, `issues(onLine:)`), `ManifestModel` (stages, targets
+  `ManifestTargetModel` with a `ManifestProvider` and per-stage `ManifestLocation`, vars
+  `ManifestVarModel` with kind, `secret`, `public`, targets and stages; `vars(for:)`,
+  `vars(sentTo:stage:)`, `location(of:at:)`), `ManifestIdentifierValidator`,
+  `ManifestSerializer.render(_:)` (round-trips through the parser) and
+  `ManifestEnvExample.render(_:target:stage:)` (`.env.example`, names only).
+
+### DestinationKit
+
+Pure transport and decoding for runtime destinations (v0.8.0, tasks/todo.md R3–R5; see
+[API.md](API.md) for the endpoints and [SECURITY-MODEL.md](SECURITY-MODEL.md) for networking).
+No database, no keys, no user-facing text.
+
+- **HTTP:** `protocol HTTPTransporting` with `URLSessionTransport` (one ephemeral `URLSession`: no
+  cache, cookies or credential storage, `Timeouts.destinationRequest`, TLS 1.2+, redirects never
+  followed, response capped at `Limits.maxDestinationResponseBytes` in a wipeable buffer) and
+  `FakeHTTPTransport` (`Testing/`). `DestinationHostPolicy` allows only HTTPS to
+  `api.supabase.com`, `api.vercel.com` and `<vault>.vault.azure.net` (default port, no userinfo),
+  checked before sending and on the final URL; `ProviderURL` builds paths from validated,
+  percent-encoded segments (D29 rules). `HTTPRequestModel` carries the bearer token and a
+  `SecretBytes` body; nothing is logged.
+- **JSON:** `JSONBodyWriter` and `SecretJSONDocument` write and scan request and response bodies
+  in `SecretBytes` (`SecretByteBuffer`), so values never become Strings.
+- **Remotes:** `protocol DestinationRemoting` (`list()`, `readValue(of:)`, `setValue(_:name:kind:
+  existing:)`, `delete(_:)`) implemented by `AzureKeyVaultRemote` (api-version 7.4; soft delete
+  only, a soft-deleted name is recovered before a set), `SupabaseRemote` (Edge Function secrets;
+  values never returned, listed as digests) and `VercelRemote` (`encrypted` / `plain`; a
+  variable shared with other environments only loses this one on delete);
+  `DestinationRemoteFactory(transport:azureTokens:clock:)`. `RemoteDestinationItemModel` (never a
+  value: remote and FX Vault name, `DestinationUnusableReason`, kind, version marker, digest,
+  `isValueReadable`, `otherTargets`), `RemoteWriteResultModel`.
+- **Accounts:** `SupabaseAccountClient.projects(token:)`, `VercelAccountClient.user/teams/projects`
+  (the Add Destination pickers and token checks).
+- **Azure:** `protocol AccessTokenProviding`; `actor AzureCLITokenProvider` runs `az account
+  get-access-token --resource https://vault.azure.net [--tenant]` through `CommandRunning`
+  (absolute path of a trusted `az` from `AzureCLILocator`, which reuses `GHFileInspecting`;
+  argv, empty stdin, an allowlisted environment), caches the token per tenant in memory until
+  `Timeouts.accessTokenRefreshMargin` before expiry, and shares one run between concurrent calls.
+- **Errors:** `DestinationError` (`az` not installed, untrusted, not signed in, failed; token
+  missing, unauthorized, forbidden, not found, deleted but recoverable, conflict, rate limited,
+  invalid request with a sanitized code, value too large, server, network, timeout, decoding,
+  cancelled, disallowed host, response too large); `ProviderErrorMapper` keeps provider codes as
+  short identifiers only (messages may quote names). `ProviderHTTPClient` retries idempotent
+  requests (GET, PUT, DELETE, Supabase's upserting POST): 429 after `Retry-After` (a longer wait
+  than `Timeouts.destinationMaxRetryAfter` fails at once) or
+  `Timeouts.destinationRateLimitBackoff`, 5xx and network
+  errors with a growing backoff; Key Vault recover and Vercel POST and PATCH are sent once.
 
 ### SharingKit
 
@@ -553,6 +638,71 @@ one `VaultSession.write` and throws `ConfigRepositoryError` (`.folderNotFound`, 
   `previewFolderAttachment(_:into:scope:)`; `FolderPackageTargeting` converts a folder package for
   a repository scope.
 
+**Destinations** (`Destinations/`, v0.8.0, experimental; tasks/todo.md R1–R12). No GitHub path
+(planner, preflight, executor, drift, spaces, sharing) reads the destination tables, so a
+destination item never reaches GitHub except as a copy in a repository scope.
+- `struct DestinationRepository(session:clock:)`; every mutation is one `VaultSession.write` and
+  throws `ConfigRepositoryError` (`.destinationNotFound`, `.destinationFull`,
+  `.tooManyDestinations`, `.destinationExists`, `.connectionNotFound`, `.tooManyConnections`).
+  Destinations: `createDestination(…)`, `updateDestination(_:stage:connectionID:)`,
+  `deleteDestination(_:)` (FX Vault only; nothing is deleted remotely), `reorderDestinations`,
+  `destination(_:)`, `destinations(repositoryID:)`, `observeDestinations(repositoryID:)`,
+  `pendingCounts()` / `observePendingCounts()`. Items: `addItem`, `editItem`, `fillValue`,
+  `deleteItems`, `revertItems`, `requestPush`, `setPublicAllowed(_:allowed:)` (Mark as Public),
+  `reveal(_:)`, `items(destinationID:)`, `observeItems(destinationID:)`, `copyConflicts(_:to:)`,
+  `copyItems(_:to:conflicts:)`. Connections: `connections()`, `observeConnections()`,
+  `addConnection(provider:label:token:accountHint:)`, `renameConnection`, `replaceToken`,
+  `deleteConnection` (its destinations stay and need another connection); `token(of:)` is
+  internal.
+- `DestinationItemWriter` is the only writer of `destination_items` (names by `DestinationRules`;
+  a pushed row deleted or renamed leaves a tombstone the next Sync deletes remotely, since
+  providers have no rename; a variable in a secrets-only provider becomes a secret).
+  `DestinationFieldCipher` seals values with `DestinationFieldAAD`, `ConnectionTokenCipher`
+  tokens with `SecretFieldAAD`. `PublicValuePolicy` (R10): under a Vercel public prefix, a known
+  token format, a private key or a URL with a password blocks; a JWT or a long random value
+  only warns; Mark as Public clears both.
+- `actor DestinationSyncRepository(session:remotes:clock:)` (R5, R6): `review(repositoryID:) ->
+  DestinationReviewModel` (lists each destination with pending changes; blocks with
+  `DestinationBlockReason` `.valueMissing`, `.connectionMissing`, `.listingFailed`,
+  `.remoteChanged`, `.existsRemotely`, `.publicCredential(prefix:)`, `.invalidName`; warns for
+  public token-looking values; a change carries the remote name and, in Vercel, the other
+  environments that share the variable),
+  `run(_:includeDeletions:progress:) -> DestinationRunResultModel` (re-lists right before
+  writing, journals each write `in_flight` in `destination_journal` with the fingerprint of the
+  value sent, writes, then re-lists once to confirm: Key Vault and Vercel by a new version,
+  Supabase by the value's digest, which is held in memory and stored only as a keyed marker
+  (`DestinationFieldCipher.keyedMarker`); an unconfirmed write is sent again next Sync), `refresh(destinationID:) -> DestinationRefreshModel` (remote
+  adds, changes and deletions since the last sync as `DestinationDriftModel`s, plus the items
+  FX Vault cannot use), `resolve(_:choice:destinationID:)` (`.keepMine` / `.useRemote`, after
+  listing again; `.stale` when the remote moved) and `importRemote(destinationID:)` (right after
+  Add Destination). The journal is reconciled against each listing. Remotes come from
+  `protocol DestinationRemoteProviding` (`LiveDestinationRemoteProvider` over
+  `DestinationRemoteFactory`; a fake in tests). Errors: `DestinationSyncError` (`.config`,
+  `.remote(DestinationError)`, `.connectionMissing`, `.stale`).
+- `struct DestinationAccessRepository`: `check(_:provider:)` (a token before it is saved; returns
+  the account hint), `supabaseProjects(connectionID:)`, `vercelScopes(connectionID:)`,
+  `vercelProjects(connectionID:teamID:)`, `checkAzure(tenantID:)`. `actor
+  ShellResolvingAzureTokens` builds the `AzureCLITokenProvider` on first use with the probed
+  login-shell environment (`github.shellEnvironment()`); `reset()` drops every cached token.
+- Overview (`Overview/`, R8, R9): `struct StageOverviewRepository(session:schedulers:)`:
+  `stages(repositoryID:manifest:)` (the manifest's, then the destinations', then the GitHub
+  environments, by fold key), `overview(repositoryID:stage:manifest:) -> StageOverviewModel`
+  (columns: GitHub (repository level plus the environment named like the stage) and each
+  destination of the stage; rows: every name plus the manifest's vars; cells
+  `StageOverviewCellModel` `.synced`, `.willPush`, `.willDelete`, `.valueMissing`, `.missing`,
+  `.extra`, `.differs` (a linked copy with another value), `.blocked`, `.notUsed`; a
+  `StageOverviewCycle` per row (build, runtime, public); findings `StageOverviewFindingModel`
+  including `.destinationNotAdded`; values decrypted only to compare and classify, then wiped),
+  `manifest(repositoryID:) -> ManifestStateModel` (`.none`, `.read(sha:result:)`, `.unavailable`)
+  and `draftManifest(repositoryID:)` (`ManifestDraftBuilder`: an `fxvault.yml` describing the
+  repository now, names only). `StageOverviewBuilder` is pure.
+- Across places: `ItemCopySource` reads a row of any of the three tables and one `link_id` group
+  spans them; `LinkedCopyPlaceModel.destination(…)`; `ConfigRepository+Links`,
+  `EnvFileRepository` (import into and export from a destination) and Reveal take destination
+  items; `ItemCopyResultModel.madeSecret` names variables that became secrets in a secrets-only
+  provider. `DEKRotator` re-seals destination values and connection tokens and re-derives their
+  synced fingerprints (clearing one that no longer matches).
+
 **Team** (`Team/`, v0.5.0). `struct TeamRepository(session:clock:)`: `deviceKeys()` (created on
 first use), `teammates()`, `observeTeammates()`, `teammateCards()` (announce keys opened),
 `addTeammate(_:)`, `applyCardUpdate(_:)`, `removeTeammate(id:)` (renews the announce key, marks
@@ -646,11 +796,16 @@ let vault = try VaultManager(session: session, policy: .production, biometricSto
 let reauth = ReauthGate(manager: vault)
 // After every unlock (AppViewModel): await the gh probe, then try await data.sync.prepareAfterUnlock()
 // Lock Phase B (AppViewModel): end SyncActivity, await data.sync.currentRun?.cancel(),
-//   await data.drift.reset(), clear the clipboard, abort modals, checkpoint.
+//   await data.drift.reset(), await data.azureTokens.reset() (v0.8.0), clear the clipboard,
+//   abort modals, checkpoint.
 ```
 
 - One instance of each repository for the process (`VaultDataComponents`): `github`, `catalog`,
-  `config`, `envFiles`, `sync`, `creation`, `cloner`, `drift`, `sharing`, `chat`.
+  `config`, `envFiles`, `sync`, `creation`, `cloner`, `drift`, `sharing`, `chat`, and since
+  v0.8.0 `destinations`, `overview`, `destinationSync`, `destinationAccess` and `azureTokens`
+  (`ShellResolvingAzureTokens`). `make(…transport:)` takes the HTTP transport
+  (`URLSessionTransport()` by default; one transport for every destination call);
+  `makeOffline` passes a `FakeHTTPTransport`, so previews and tests never reach a provider.
 - git needs the probed login-shell environment (PATH, `SSH_AUTH_SOCK`). `GitServiceProvider`
   resolves it on first use through `github.shellEnvironment()`; `ShellResolvingRepoCloner`
   (`RepoCloning`, also `sync`'s cloner) and `ShellResolvingGitignoreChecker` (`envFiles`) use it.
@@ -678,6 +833,10 @@ let reauth = ReauthGate(manager: vault)
 - Sheets that show values conform to `LockObserving` or live under a phase-switched screen.
 - `.env` export needs `ReauthGate.authorizeEnvExport`; `.fxvault` export and nearby send need
   `ReauthGate.authorizeShare`.
+- Destination items are written only through `DestinationRepository` (its internal
+  `DestinationItemWriter`) and destination remotes are reached only through
+  `DestinationSyncRepository` and `DestinationAccessRepository`, over the one
+  `HTTPTransporting` of `VaultDataComponents` (v0.8.0).
 
 ### Decisions to confirm (domain and UI stages)
 
@@ -874,6 +1033,41 @@ from Teammates or Take Over…, and asks "What changed?"; drift review shows tea
 Preferences › Teammates › Outside this network holds the port and each teammate's switch and
 address (`remoteSpacePort`).
 
+### As built in v0.8.0 (runtime destinations, stage overview, fxvault.yml)
+
+Requested by Bryan (2026-10-16): besides GitHub Actions variables (build time), teams keep
+runtime values for backends and frontends, often in Azure Key Vault. The open questions were
+taken as recommended: the providers are Azure Key Vault, Supabase and Vercel; Key Vault is the
+team's shared source, which FX Vault edits as one more remote; the manifest lives in each
+repository. Destinations, the Overview and the manifest check ship marked **Experimental**.
+
+| # | Area | Decision |
+|---|---|---|
+| 106 | Model (R1) | A **destination** is a place outside GitHub that one vault repository's code reads at runtime: an Azure Key Vault, one Supabase project's Edge Function secrets, or one Vercel project environment (production, preview or development). It has an optional **stage** (environment-name rules, suggested from the repository's GitHub environments). Removing a destination from FX Vault never deletes anything remotely |
+| 107 | Storage (R2) | Separate tables (`provider_connections`, `destinations`, `destination_items`, `destination_journal`; migration `v13_destinations`), values sealed with `DestinationFieldAAD`, row-bound fingerprints; DEK rotation re-seals values and connection tokens. As with folders, no GitHub path reads them, so a destination item is never pushed to GitHub by mistake; copy, links, the table and the item editor still work through `ItemPlaceModel.destination` |
+| 108 | Names (R3) | GitHub's naming rules plus the provider's: Key Vault and Supabase hold secrets only (a copied variable becomes a secret, `ItemCopyResultModel.madeSecret`); Supabase reserves `SUPABASE_`; Supabase and Vercel names must already be uppercase; Vercel secret → `encrypted`, variable → `plain`, and a remote `sensitive` value imports as a secret with its value missing. Key Vault names map `DATABASE_URL` ↔ `DATABASE-URL`; a remote name that cannot map back is listed as not usable with its reason, never dropped |
+| 109 | Access (R4) | Key Vault through the user's `az login` (`az account get-access-token`, absolute path of a trusted `az`, argv, allowlisted environment; the token in memory only, reset on lock); the data plane over HTTPS (api-version 7.4). Supabase and Vercel through personal access tokens added in Settings › Destinations, sealed in the vault and checked when added. One ephemeral `URLSession` to three allowlisted hosts; values only in request bodies. The Supabase CLI cannot take a value on stdin and the Vercel CLI needs a linked folder, so HTTPS keeps every value out of argv and files |
+| 110 | Sync (R5) | One Sync review covers GitHub and the repository's destinations, grouped by destination. Destination writes run after GitHub's (a run with only destination changes skips GitHub), each journaled in `destination_journal` (`in_flight` first, with the pre-write version and the fingerprint of the value sent; the plan's `dest\|…` key in `sync_journal` became this table of its own) and confirmed by re-listing. An item that changed remotely since the last sync is blocked ("changed in <provider>"). Key Vault deletes are soft deletes (never purged); re-adding a soft-deleted name recovers it first |
+| 111 | Drift (R6) | Refresh lists the destination; remote adds, changes and deletes since the last sync show as a banner with Review (Keep Mine / Use <provider>). A Supabase change can only mark the value missing (the API returns digests) |
+| 112 | UI (R7) | The scope column gains **Overview** at the top, a BUILD · GITHUB ACTIONS label over the GitHub scopes and a RUNTIME section with "+ Add Destination". The destination detail reuses the configuration table through `ConfigTableModel`. **Deviation from the canvas:** the stage switcher moved into the Overview header (a repository can have many environments); GitHub scopes stay as they are |
+| 113 | Overview (R8) | Per stage: GitHub (repository level plus the environment named like the stage) and every destination of that stage as columns; every name in them plus the manifest's vars as rows; cells Synced, Will push, Will delete, Value missing, Missing, Extra, Differs, Blocked, — |
+| 114 | Manifest (R9) | `fxvault.yml` is read from the default branch (B11, names only) and parsed as a strict YAML subset with line-numbered issues. FX Vault never writes to the repository: it generates an `fxvault.yml` and a `.env.example` per target to copy. The check adds Missing (including a destination not added yet, fixed with Add Destination), Extra, Blocked and kind mismatches; without a manifest the Overview still works, without Missing and Extra |
+| 115 | Public values (R10) | A Vercel item under a public prefix whose value looks like a credential blocks Sync with two fixes: change the value, or Mark as Public (per item, for keys meant to be public) |
+| 116 | Scope (R11) | Not in v0.8: a Local destination (Export .env covers it), Vercel git-branch and custom environments (listed as not usable), Key Vault certificates, keys and purge, destinations in `.fxvault` packages, chat and shared scopes |
+| 117 | Experimental (R12) | Destinations, the Overview and the manifest check carry the Experimental tag: they talk to three new services, and live checks were limited to the accounts on the release Mac (Vercel live; Key Vault and Supabase through fakes) |
+
+App side (v0.8.0): `Screens/Main/Destination/` (`DestinationDetailViewModel`/`Screen`,
+`StageOverviewViewModel`/`Screen`, `AddDestinationViewModel`/`Screen`,
+`DestinationSettingsScreen`, `DestinationDriftScreen`, `DestinationCopy`, `StageOverviewCopy`),
+`Screens/Sync/DestinationSyncPresentation` and `DestinationSyncCopy`,
+`Screens/Preferences/DestinationsSettingsViewModel`/`Screen`; helpers
+`DestinationModel+Extension` and `DestinationError+Extension`. `ScopeListViewModel` adds the
+Overview and destination rows (`selectedDestination`, `isOverviewSelected`, `select(destination:)`)
+and `MainViewModel` builds `destinationDetail` or `overview` for column 3
+(`followScopeSelection`); `MainActions.openDestination` shows a destination (a linked copy's
+place, an Overview cell). `AppViewModel` adds the destinations' pending counts to the Sync count
+and the Dock badge and resets the Azure tokens on lock.
+
 ## App shell
 
 App target `FXVault`, `MainActor` by default; everything is internal (`@testable import` in
@@ -892,7 +1086,9 @@ AppTests).
 - `@Observable AppViewModel`: `phase: VaultPhase`, `ghStatus` / `isCheckingGH` /
   `refreshGHStatus()` (the last status stays while re-checking), `showsGHSetup` /
   `deferGHSetup()`, `pendingChangeCount` and `pendingCounts` (observed from
-  `ConfigRepository.observePendingCounts()`; also the Dock badge), `isSyncing` /
+  `ConfigRepository.observePendingCounts()`; also the Dock badge; since v0.8.0 the count adds
+  `destinationPendingCounts` from `DestinationRepository.observePendingCounts()`, and
+  `pendingChangeCount(of:)` gives one repository's GitHub plus destination changes), `isSyncing` /
   `beginSyncActivity() -> SyncActivity`, `pendingImports` / `openShareFiles(_:)` /
   `takeNextPendingImport()`, `setMainWindowOpener(_:)` / `requestMainWindow()`,
   `lastReconciliation` (launch reconciliation after each unlock, after the gh probe),
@@ -991,6 +1187,9 @@ AppTests).
   `gh auth login` command and **Check Again**, which reloads the tab and, through
   `AppViewModel.accountsDidChange()` / `accountsRevision`, the main window's sidebar; the aliases
   load before gh detection, so they show while gh is missing),
+  **Destinations** (v0.8.0, `DestinationsSettingsViewModel`: the Azure CLI sign-in with Check and
+  Copy az login; the Supabase and Vercel connections with Rename…, Replace Token… and Remove…;
+  Add Connection…, whose token is checked with the provider before it is saved),
   Advanced (v0.3.1: the trusted gh with its owner and **Revoke**).
 - `Main` (§10.4), `MainViewModel` owns:
   - `SidebarViewModel` (`Main/Sidebar`): vault repositories observed (work without gh), gh
@@ -1005,6 +1204,26 @@ AppTests).
   - `ScopeListViewModel` (`Main/ScopeList`): "Repository" plus environments
     (`observeScopes`), pending dot, value-missing count, context menu Settings / Rename /
     Duplicate / Export .env / Share / Revert / Delete (confirmed), "+ New Environment" (admin).
+    v0.8.0 (R7): **Overview** first, the GitHub scopes under BUILD · GITHUB ACTIONS, then RUNTIME
+    with the Experimental tag: one row per destination (`observeDestinations`; provider symbol,
+    name, provider · stage, value-missing warning, pending dot, count) with the
+    `DestinationContextMenu` (Settings…, Export .env…, Remove from FX Vault…, confirmed) and
+    "+ Add Destination" (`.addDestination`). A selection is a scope, a destination
+    (`selectedDestination`) or the Overview (`isOverviewSelected`); Up and Down walk all three
+    (`rowIDs`). `MainViewModel.followScopeSelection` puts the matching view model in column 3:
+  - `DestinationDetailViewModel` (`Main/Destination`, v0.8.0): the header (DESTINATION · RUNTIME,
+    title, provider / stage / Experimental tags, how it is reached, Refresh, the actions menu),
+    the STAGE / TARGET / NAMES AND VALUES card, the Refresh banner (changes → `.destinationDrift`,
+    items FX Vault cannot use), and the same `ConfigTableView` through `ConfigTableModel` with
+    the Status column (Secrets | Variables for Vercel; SECRETS · n where the provider holds secrets
+    only). Rows add Mark as Public / Not Meant to Be Public; Copy To lists the repository's
+    scopes, the folders and the other destinations; ⌘C / ⌘V and `.env` import work as for scopes.
+    Refresh is disabled offline.
+  - `StageOverviewViewModel` (`Main/Destination`, v0.8.0, R8–R9): the stages
+    (`overview.stages`), the selected stage's matrix (rebuilt when scopes or destinations change),
+    `fxvault.yml` read once on open and on Read Again, the manifest panel (parse issues,
+    findings with Add Destination for a missing target, Copy .env.example per target, Copy
+    fxvault.yml for This Repository); a cell opens its place (`actions.openPlace`).
   - `RepoDetailViewModel` (`Main/RepoDetail`): header (owner/name, visibility, capability chip,
     Clone, Refresh, drift banner, deployment branches with Edit, plan note on private
     repositories, read-only explanation) and `ConfigTableView` (Secrets | Variables over one
@@ -1104,6 +1323,20 @@ AppTests).
     with fixes, stop reason, warnings, clones). Clone from the result asks for a folder through
     `ClonePanel.folder(preferences:)` when none is set. Afterwards it requests `.drift(id)` and,
     for a created repository, `.catalog`.
+    v0.8.0 (R5): the summary also reviews the destinations of the sync's repositories
+    (`destinationSync.review`) and shows each destination as one more section of its repository
+    (`DestinationSyncPresentation`: blocked changes with a fix, `SyncFixActionModel.openDestination`,
+    public-value warnings, Vercel variables shared with other environments); their deletions join
+    the deletion review. The run sends GitHub's changes first (skipped when there are none), then
+    each destination's (`destinationSync.run`); a cancelled run skips them. The result lists
+    every destination outcome (`DestinationChangeOutcome`: confirmed, sent but not confirmed yet,
+    failed, blocked when listed again, not sent).
+  - `Main/Destination` sheets (v0.8.0): Add Destination (`AddDestinationViewModel`, provider,
+    stage with the Stages menu, target, connection or a new token checked before it is saved,
+    then `importRemote` and Open Destination; a manifest suggestion pre-fills it), the
+    destination's Settings… (stage and connection; the target never changes) and the drift
+    review (`DestinationDriftScreen`: each finding with Keep Mine / Use <provider>, Use
+    <provider> for All).
   - `Drift` (§7.7): `DriftReviewViewModel` over `DriftServicing` (`LiveDriftService`): findings
     in the plan's wording, Keep Local / Accept GitHub (no default), confirmation before removing
     local data, a secret's Accept GitHub chains to the item editor in fill mode, stale findings
@@ -1198,7 +1431,9 @@ add row; used by Environment Settings, New Environment and New Repository). Help
 **Errors** (`App/Helpers/Extensions`): `ErrorPresentationModel`, `Error.presentation`,
 `Error.isCancellation`; localized `VaultError`, `ValidationError`, `PasswordPolicyError`,
 `GHError` (keys `error.gh.*`), `GitError`, `GitHubEnvironmentError`, `RepoCatalogError`,
-`ConfigRepositoryError`, `RepoCreationError`, `SyncRepositoryError`, `DriftRepositoryError`.
+`ConfigRepositoryError`, `RepoCreationError`, `SyncRepositoryError`, `DriftRepositoryError`,
+and since v0.8.0 `DestinationError` (`localizedMessage(provider:)`), `DestinationSyncError` and
+`DestinationUnusableReason` (`DestinationError+Extension.swift`).
 Feature-owned and feature-only errors conform to `PresentableError` (`errorPresentation`) in the
 feature's folder: `EnvFileError` (`EnvFile/EnvFileError+Extension.swift`), `SharingError`
 (`Sharing/SharingError+Extension.swift`, one "Wrong passphrase or damaged file" message for a
@@ -1235,6 +1470,13 @@ another route replaces the sheet; closing it sets `activeSheet` to nil (and open
 | `.nearbySend` | `Sharing/` | `NearbySendScreen` | `NearbySendContext(selection: ShareSelectionModel?)` |
 | `.nearbyReceive` | `Sharing/` | `NearbyReceiveScreen` | `NearbyReceiveContext()` |
 | `.addRepositoryByName` | `Main/AddRepository/` | `AddRepositorySheet` (main window's own) | `AddRepositoryContext(accountLogin)` |
+| `.addDestination` (v0.8.0) | `Main/Destination/` | `AddDestinationScreen` | `AddDestinationContext(repositoryID, suggestion: AddDestinationSuggestion? = nil)` (a manifest target to start from) |
+| `.destinationSettings` (v0.8.0) | `Main/Destination/` | `DestinationSettingsScreen` | `DestinationSettingsContext(destinationID)` |
+| `.destinationDrift` (v0.8.0) | `Main/Destination/` | `DestinationDriftScreen` | `DestinationDriftContext(destinationID, findings: [DestinationDriftModel])` |
+
+Since v0.8.0 `ItemEditorContext(destinationID:mode:)`, `EnvImportContext(place:
+.destination(id))` and `EnvExportContext(destinationID:)` act on a destination, and
+`.addDestination` and `.destinationDrift` are `needsInternet` routes.
 
 Every entry view is `struct XScreen: View { init(context: XContext, dependencies:
 FeatureDependencies) }` (all `App/Screens/<Folder>/<XScreen>.swift`). The one non-sheet entry is
@@ -1259,6 +1501,7 @@ so view-model tests construct it with a `TestHarness`.
 |---|---|
 | `session` | The vault session (`authorizeEnvExport` / `authorizeShare` need it). |
 | `config`, `catalog`, `github`, `sync`, `drift`, `envFiles`, `sharing`, `creation`, `chat` | The VaultData repositories (one instance each; `chat` is Nearby Chat's `ChatRepository`). |
+| `destinations`, `overview`, `destinationSync`, `destinationAccess` | v0.8.0: destinations and connections, the stage Overview and `fxvault.yml`, destination Sync / Refresh / import, token checks and the Add Destination pickers. `destinationCopyTargets(repositoryID:excluding:)` gives Copy To › Destinations; `copyConflicts` / `copyItems` take a `.destination` place. |
 | `cloner` | Clone (`RepoCloning`); never `creation.clone`. |
 | `reauth` | `ReauthGate`. |
 | `clipboard` | `ClipboardManager` (values: `copy`, commands: `copyCommand`). |
@@ -1291,6 +1534,9 @@ so view-model tests construct it with a `TestHarness`.
 - **gh availability:** `actions.isGitHubReady()` before offering gh-backed actions.
 - **Select a repository:** `actions.select(repoID)` selects it in the sidebar, at once or as soon
   as the vault observation lists it (New Repository uses it after staging).
+- **Show a place:** `actions.openPlace(ItemPlaceModel)` opens a scope, a folder or (v0.8.0,
+  `openDestination`) a destination: its repository first, then the destination row once the scope
+  column lists it.
 - **Re-authentication:** `try await dependencies.reauth.authorizeEnvExport(with:
   .biometrics(FeatureDependencies.reauthPrompt(for: .export)), session: dependencies.session)` or
   `.password(text)`; for shares `authorizeShare(.fileExport / .nearbySend, with:session:)`. Treat

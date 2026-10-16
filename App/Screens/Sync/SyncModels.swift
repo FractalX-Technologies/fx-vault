@@ -80,6 +80,9 @@ enum SyncFixActionModel: Hashable {
     case getTeammateUpdates
     /// A teammate's push never finished (Q3): confirm, then preflight again taking it over.
     case takeOverSpace(SpaceID, login: String)
+    /// A destination change needs a Refresh, a connection or its settings (v0.8.0): show the
+    /// destination.
+    case openDestination(DestinationID)
 }
 
 /// One line of the summary, the deletion review or the result: a title (names only), the

@@ -46,6 +46,8 @@ final class ItemEditorViewModel: LockObserving {
     private(set) var repository: RepoModel?
     /// The folder of a folder item (v0.7.0).
     private(set) var folder: FolderModel?
+    /// The destination of a destination item (v0.8.0).
+    private(set) var destination: DestinationModel?
     /// The live scopes of the repository (Convert/Move targets and scope titles).
     private(set) var scopeOptions: [ItemScopeOptionModel] = []
     /// Every item of the context scope or folder (tombstones included), for duplicate checks.
@@ -129,6 +131,10 @@ final class ItemEditorViewModel: LockObserving {
             await loadFolder(folderID)
             return
         }
+        if case .destination(let destinationID) = context.place {
+            loadDestination(destinationID)
+            return
+        }
         guard case .scope(let repositoryID, let scope) = context.place else { return }
         do {
             let config = dependencies.config
@@ -152,6 +158,30 @@ final class ItemEditorViewModel: LockObserving {
             }
             if let id = editedID {
                 try prepare(itemID: id, in: items)
+            }
+            loadState = .ready
+        } catch {
+            loadState = .unavailable(error.presentation)
+        }
+    }
+
+    /// A destination item's sheet (v0.8.0): the destination and its items.
+    private func loadDestination(_ destinationID: DestinationID) {
+        do {
+            guard let destination = try dependencies.destinations.destination(destinationID) else {
+                throw ConfigRepositoryError.destinationNotFound
+            }
+            let items = try dependencies.destinations.items(destinationID: destinationID).map(EditorItemModel.init)
+            self.destination = destination
+            siblings = items
+            if !destination.provider.holdsVariables {
+                kind = .secret
+            }
+            if let id = editedID {
+                switch context.mode {
+                case .edit, .fill: try prepare(itemID: id, in: items)
+                case .add, .move: throw ConfigRepositoryError.itemNotFound
+                }
             }
             loadState = .ready
         } catch {
@@ -295,6 +325,9 @@ final class ItemEditorViewModel: LockObserving {
         if let folder {
             return String(localized: "itemEditor.subtitle.folder", defaultValue: "In the folder \(folder.name)")
         }
+        if let destination {
+            return String(localized: "itemEditor.subtitle.destination", defaultValue: "In \(destination.copyTargetTitle)")
+        }
         guard let repository else { return nil }
         return String(
             localized: "itemEditor.subtitle",
@@ -304,6 +337,7 @@ final class ItemEditorViewModel: LockObserving {
 
     func scopeTitle(_ scope: ConfigScope) -> String {
         if let folder { return folder.name }
+        if let destination { return destination.copyTargetTitle }
         return scopeOptions.first { $0.scope == scope }?.title ?? Self.repositoryTitle
     }
 
@@ -322,7 +356,8 @@ final class ItemEditorViewModel: LockObserving {
 
     /// The kind picker can change (adding, or editing an item not yet on GitHub).
     var isKindEditable: Bool {
-        switch context.mode {
+        if let destination, !destination.provider.holdsVariables { return false }
+        return switch context.mode {
         case .add: true
         case .edit: item?.isKindAndScopeLocked == false
         case .fill, .move: false
@@ -710,6 +745,8 @@ final class ItemEditorViewModel: LockObserving {
             try dependencies.config.addItem(repositoryID: repositoryID, scope: scope, kind: kind, name: normalizedName, value: bytes)
         case .folder(let folderID):
             try dependencies.folders.addItem(folderID: folderID, kind: kind, name: normalizedName, value: bytes)
+        case .destination(let destinationID):
+            try dependencies.destinations.addItem(destinationID: destinationID, kind: kind, name: normalizedName, value: bytes)
         }
         didStripTrailingNewlines = result.didStripTrailingNewlines
     }
@@ -737,6 +774,20 @@ final class ItemEditorViewModel: LockObserving {
         let linkedTargets = offersLinkedUpdate
             ? linkedCopies.filter { $0.isEditable && linkedSelection.contains($0.itemID) }.map(\.itemID)
             : []
+        if case .destination = context.place {
+            // One transaction for name, kind and value, pending for the next Sync (v0.8.0).
+            let bytes = newValue.map { SecretBytes(utf8: $0) }
+            defer { bytes?.wipe() }
+            let result = try dependencies.destinations.editItem(item.id, name: normalizedName, kind: kind, value: bytes)
+            didStripTrailingNewlines = result.didStripTrailingNewlines
+            if shouldRequestPush {
+                try dependencies.destinations.requestPush([result.itemID])
+            }
+            if !linkedTargets.isEmpty {
+                try config.updateLinkedCopies(from: result.itemID, to: linkedTargets)
+            }
+            return
+        }
         if case .folder = context.place {
             // One transaction for name, kind and value; nothing is pending (v0.7.0).
             let bytes = newValue.map { SecretBytes(utf8: $0) }
@@ -772,6 +823,14 @@ final class ItemEditorViewModel: LockObserving {
         guard let item else { throw .itemNotFound }
         let bytes = SecretBytes(utf8: value)
         defer { bytes.wipe() }
+        if case .destination = context.place {
+            didStripTrailingNewlines = try dependencies.destinations.fillValue(
+                item.id,
+                value: bytes,
+                alreadyMatchesRemote: fillMatchesGitHub
+            ).didStripTrailingNewlines
+            return
+        }
         let result = try dependencies.config.fillValue(
             item.id,
             value: bytes,

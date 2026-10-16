@@ -1,7 +1,8 @@
 # FX Vault
 
 A native macOS app for managing GitHub Actions secrets and variables across repositories,
-environments and accounts, with a local encrypted vault and the GitHub CLI.
+environments and accounts, with a local encrypted vault and the GitHub CLI, and, experimentally,
+the secrets your code reads at runtime in Azure Key Vault, Supabase and Vercel.
 
 **Status: Beta.** Under active development; expect breaking changes before 1.0.
 
@@ -24,6 +25,18 @@ environments and accounts, with a local encrypted vault and the GitHub CLI.
   repository; keep yours or accept GitHub's.
 - **New repositories.** Stage a repository with its environments, secrets and variables, create
   everything in one Sync, and clone it through your SSH alias.
+- **Runtime destinations (experimental).** Next to a repository's GitHub scopes, add the places
+  its code reads at runtime: an **Azure Key Vault** (through your `az login`), a **Supabase**
+  project's Edge Function secrets or a **Vercel** environment (with a personal access token,
+  encrypted in the vault). A destination works like a scope (table, paste, `.env`, ⌘C / ⌘V,
+  linked copies), and Sync pushes its changes after GitHub's, in the same review. Changes made
+  in the provider are never overwritten: Refresh lists them first. Public names such as
+  `NEXT_PUBLIC_` never receive a value that looks like a credential.
+- **Overview and `fxvault.yml`.** See one stage (for example production) across GitHub and its
+  destinations, name by name, with its cycle (Build, Runtime or Public) and what Sync will do in
+  each place. An optional, names-only `fxvault.yml` at the root of the repository says what each
+  stage needs; the Overview checks it, copies a `.env.example` per target, and can write a first
+  `fxvault.yml` from what the repository has.
 - **Folders.** Keep the secrets and variables you use in several repositories in folders of your
   own ("Mobile App", "Stripe test") at the top of the sidebar (New Folder…, ⇧⌘N). A folder never
   goes to GitHub by itself: copy its items into any repository with ⌘C / ⌘V or Copy To, and every
@@ -81,6 +94,8 @@ environments and accounts, with a local encrypted vault and the GitHub CLI.
 
 - macOS 14 Sonoma or later
 - [GitHub CLI](https://cli.github.com) (`gh`) 2.97.0 or later, logged in (`gh auth login`)
+- Only for Azure Key Vault destinations: the [Azure CLI](https://learn.microsoft.com/cli/azure/)
+  (`az`), signed in (`az login`)
 - `git`, and an SSH key or host alias for GitHub, to clone repositories and for **New
   Repository** with cloning (the Xcode Command Line Tools provide `git`)
 
@@ -258,8 +273,11 @@ Neither contains a token, a secret, or the value of an environment variable.
   cleared 30 seconds after a copy.
 - `.env` export and every share need a fresh Touch ID or master-password check.
 - Every GitHub operation goes through `gh` with values passed on stdin, never as arguments.
-- Nothing leaves your Mac except what Sync sends to GitHub and what you choose to share or send
-  in Nearby Chat. Chat messages are never written to disk.
+- Runtime destinations are reached over HTTPS only at the Azure Key Vault, Supabase and Vercel
+  API hosts, with no cookies, cache or redirects; their tokens are encrypted in the vault, and
+  the Azure token stays in memory until the vault locks.
+- Nothing leaves your Mac except what Sync sends to GitHub and your destinations, and what you
+  choose to share or send in Nearby Chat. Chat messages are never written to disk.
 - Nearby sharing and chat are end-to-end encrypted after a 6-digit code that both people
   compare; a mismatch means someone is in the middle, and nothing is sent.
 
@@ -284,7 +302,8 @@ the local CI script, and [docs/RELEASING.md](docs/RELEASING.md) for signed build
 - [docs/STRUCTURE.md](docs/STRUCTURE.md): repository layout
 - [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md): keys, lock, Touch ID, threat model
 - [docs/DATABASE.md](docs/DATABASE.md): the local encrypted vault schema
-- [docs/API.md](docs/API.md): every gh, git and ssh command the app runs
+- [docs/API.md](docs/API.md): every gh, git, ssh and az command the app runs, and the HTTPS
+  endpoints of runtime destinations
 - [docs/SHARING-PROTOCOL.md](docs/SHARING-PROTOCOL.md): `.fxvault` files, nearby sharing and
   Nearby Chat
 - [docs/RELEASING.md](docs/RELEASING.md): signing, notarization, the Homebrew cask and the

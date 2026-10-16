@@ -130,6 +130,7 @@ schemes:
         - package: FXVaultKit/SharingKitTests
         - package: FXVaultKit/SyncEngineTests
         - package: FXVaultKit/VaultDataTests
+        - package: FXVaultKit/DestinationKitTests
     profile:
       config: Debug                          # a Release build opens and migrates the real vault (RELEASING.md)
     analyze:

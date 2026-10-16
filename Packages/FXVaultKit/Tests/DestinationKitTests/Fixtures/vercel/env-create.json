@@ -1,0 +1,13 @@
+{
+  "created": {
+    "type": "encrypted",
+    "value": "eyFIXTURECIPHERTEXTgggggggggggggggg",
+    "target": ["production"],
+    "id": "env_created",
+    "key": "NEW_SECRET",
+    "createdAt": 1790000100000,
+    "updatedAt": 1790000100000,
+    "decrypted": false
+  },
+  "failed": []
+}

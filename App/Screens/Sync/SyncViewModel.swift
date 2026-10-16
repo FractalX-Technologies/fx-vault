@@ -23,6 +23,8 @@ import VaultData
 final class SyncViewModel: LockObserving {
     private(set) var step: SyncSheetStepModel = .loading
     private(set) var review: SyncReviewModel?
+    /// The destination changes of the repositories in this sync (v0.8.0), reviewed after GitHub's.
+    private(set) var destinationReviews: [DestinationReviewModel] = []
     private(set) var repositories: [SyncSummaryRepoModel] = []
     private(set) var credentialRows: [SyncCredentialRowModel] = []
     /// "Push these as variables anyway" (§5.13). Required when ``credentialRows`` is not empty.
@@ -106,6 +108,7 @@ final class SyncViewModel: LockObserving {
                 spaceTakeovers: spaceTakeovers
             )
             dependencies.gitHubReachability.recordSuccess()
+            destinationReviews = await reviewDestinations(review)
             apply(review)
             step = .summary
         } catch {
@@ -114,9 +117,33 @@ final class SyncViewModel: LockObserving {
         }
     }
 
+    /// The destination reviews of the sync's repositories (all repositories with destination
+    /// changes when the sync covers every repository).
+    private func reviewDestinations(_ review: SyncReviewModel) async -> [DestinationReviewModel] {
+        let counts = (try? dependencies.destinations.pendingCounts()) ?? [:]
+        let ids = context.repositoryIDs.map { Array($0) } ?? Array(counts.keys)
+        var reviews: [DestinationReviewModel] = []
+        for id in ids.sorted() where (counts[id] ?? 0) > 0 {
+            let destinationReview = await dependencies.destinationSync.review(repositoryID: id)
+            if !destinationReview.isEmpty {
+                reviews.append(destinationReview)
+            }
+        }
+        return reviews
+    }
+
     private func apply(_ review: SyncReviewModel) {
         self.review = review
-        repositories = SyncPresentationBuilder.summary(review)
+        var names: [RepoID: String] = [:]
+        for repository in review.preflight.repositories {
+            names[repository.id] = repository.snapshot.repository.fullName
+        }
+        let config = dependencies.config
+        repositories = DestinationSyncPresentation.merge(
+            SyncPresentationBuilder.summary(review),
+            with: destinationReviews,
+            fullName: { names[$0] ?? (try? config.changeSet(repositoryID: $0))??.repository.fullName ?? "" }
+        )
         credentialRows = SyncPresentationBuilder.credentialRows(review)
         credentialsConfirmed = false
         deletionPreviews = nil
@@ -140,9 +167,21 @@ final class SyncViewModel: LockObserving {
         )
     }
 
-    /// Executable changes across repositories.
+    /// Executable changes across repositories and their destinations.
     var executableCount: Int {
+        gitHubExecutableCount + destinationExecutableCount
+    }
+
+    private var gitHubExecutableCount: Int {
         review?.preflight.executableCount ?? 0
+    }
+
+    private var destinationExecutableCount: Int {
+        destinationReviews.reduce(0) { $0 + $1.executableCount }
+    }
+
+    private var destinationDeletionCount: Int {
+        destinationReviews.reduce(0) { $0 + $1.deletions.count }
     }
 
     /// The run pushes to a shared scope: "What changed?" is offered.
@@ -158,7 +197,7 @@ final class SyncViewModel: LockObserving {
     }
 
     var deletionCount: Int {
-        review?.deletionCount ?? 0
+        (review?.deletionCount ?? 0) + destinationDeletionCount
     }
 
     /// Executable changes that are not deletions ("Sync Without Deleting" needs one).
@@ -234,12 +273,17 @@ final class SyncViewModel: LockObserving {
 
     /// The deletion review rows; empty while the live fetch runs.
     var deletionRows: [SyncDeletionRepoModel] {
-        deletionPreviews.map(SyncPresentationBuilder.deletions) ?? []
+        guard let deletionPreviews else { return [] }
+        return DestinationSyncPresentation.mergeDeletions(
+            SyncPresentationBuilder.deletions(deletionPreviews),
+            with: destinationReviews,
+            fullName: fullName(of:)
+        )
     }
 
-    /// "Delete N items on GitHub".
+    /// "Delete N items".
     var deletionTotal: Int {
-        deletionPreviews?.map(\.deletionCount).reduce(0, +) ?? deletionCount
+        (deletionPreviews?.map(\.deletionCount).reduce(0, +)).map { $0 + destinationDeletionCount } ?? deletionCount
     }
 
     var hasUnknownContents: Bool {
@@ -270,28 +314,63 @@ final class SyncViewModel: LockObserving {
 
         progress = SyncRunProgressModel(total: includeDeletions ? executableCount : nonDeletionCount)
         step = .progress
-        let run: any SyncRunControlling
-        do {
-            let reason = spaceReason.trimmingCharacters(in: .whitespacesAndNewlines)
-            run = try await service.startRun(
-                review,
-                includeDeletions: includeDeletions,
-                cloneFolder: dependencies.preferences.cloneFolderURL,
-                spaceReason: reason.isEmpty ? nil : reason
-            )
-        } catch {
-            dependencies.gitHubReachability.record(error)
-            alert = error.presentation
-            step = .summary
-            return
+        let gitHubCount = includeDeletions ? gitHubExecutableCount : gitHubExecutableCount - (review.deletionCount)
+        var outcome: SyncRunOutcomeModel?
+        if gitHubCount > 0 {
+            let run: any SyncRunControlling
+            do {
+                let reason = spaceReason.trimmingCharacters(in: .whitespacesAndNewlines)
+                run = try await service.startRun(
+                    review,
+                    includeDeletions: includeDeletions,
+                    cloneFolder: dependencies.preferences.cloneFolderURL,
+                    spaceReason: reason.isEmpty ? nil : reason
+                )
+            } catch {
+                dependencies.gitHubReachability.record(error)
+                alert = error.presentation
+                step = .summary
+                return
+            }
+            self.run = run
+            for await event in run.progress {
+                apply(event)
+            }
+            outcome = await run.outcome()
+            self.run = nil
         }
-        self.run = run
-        for await event in run.progress {
-            apply(event)
+        let destinationResults = await runDestinations(includeDeletions: includeDeletions, after: progress.completed)
+        show(outcome, destinationResults: destinationResults)
+    }
+
+    /// The destination changes, after GitHub's (v0.8.0). A cancelled run skips them.
+    private func runDestinations(includeDeletions: Bool, after completed: Int) async -> [DestinationRunResultModel] {
+        guard !progress.isCancelling else { return [] }
+        let sync = dependencies.destinationSync
+        var results: [DestinationRunResultModel] = []
+        let names = Dictionary(
+            destinationReviews.flatMap { $0.sections.flatMap(\.changes) }.map { ($0.id, $0.name) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        progress.completed = completed
+        for review in destinationReviews where review.executableCount > 0 {
+            progress.phase = .writing
+            let result = await sync.run(review, includeDeletions: includeDeletions) { [weak self] event in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    switch event {
+                    case .started(let id):
+                        progress.currentName = names[id]
+                    case .finished:
+                        progress.completed = min(progress.total, progress.completed + 1)
+                    }
+                }
+            }
+            results.append(result)
         }
-        let outcome = await run.outcome()
-        self.run = nil
-        show(outcome)
+        progress.currentName = nil
+        progress.completed = progress.total
+        return results
     }
 
     private func apply(_ event: SyncProgressEventModel) {
@@ -329,25 +408,40 @@ final class SyncViewModel: LockObserving {
         run.cancel()
     }
 
-    private func show(_ outcome: SyncRunOutcomeModel) {
+    private func show(_ outcome: SyncRunOutcomeModel?, destinationResults: [DestinationRunResultModel]) {
         self.outcome = outcome
-        resultSections = SyncPresentationBuilder.resultSections(outcome.result, repositories: repositoryModels)
-        clones = outcome.clones.map { clone in
+        var sections = outcome.map { SyncPresentationBuilder.resultSections($0.result, repositories: repositoryModels) } ?? []
+        let destinationRows = DestinationSyncPresentation.resultRows(destinationResults, reviews: destinationReviews)
+        for kind in SyncResultSectionModel.Kind.allCases {
+            guard let rows = destinationRows[kind], !rows.isEmpty else { continue }
+            if let index = sections.firstIndex(where: { $0.kind == kind }) {
+                sections[index] = SyncResultSectionModel(kind: kind, rows: sections[index].rows + rows)
+            } else {
+                sections.append(SyncResultSectionModel(kind: kind, rows: rows))
+            }
+        }
+        resultSections = sections.sorted { lhs, rhs in
+            (SyncResultSectionModel.Kind.allCases.firstIndex(of: lhs.kind) ?? 0)
+                < (SyncResultSectionModel.Kind.allCases.firstIndex(of: rhs.kind) ?? 0)
+        }
+        clones = outcome?.clones.map { clone in
             SyncCloneRowModel(id: clone.repositoryID, fullName: fullName(of: clone.repositoryID), state: cloneState(clone.state))
-        }
+        } ?? []
         step = .result
-        reportReachability(outcome.result)
-        if publishesSharedVersions, !outcome.result.succeeded.isEmpty {
-            dependencies.actions.spacesPublished()
+        if let outcome {
+            reportReachability(outcome.result)
+            if publishesSharedVersions, !outcome.result.succeeded.isEmpty {
+                dependencies.actions.spacesPublished()
+            }
+            AppLog.ui.info(
+                """
+                Sync finished: \(outcome.result.succeeded.count, privacy: .public) succeeded, \
+                \(outcome.result.failed.count, privacy: .public) failed, \(outcome.result.skipped.count, privacy: .public) skipped, \
+                \(outcome.result.blocked.count, privacy: .public) blocked
+                """
+            )
+            requestRefresh(after: outcome.result)
         }
-        AppLog.ui.info(
-            """
-            Sync finished: \(outcome.result.succeeded.count, privacy: .public) succeeded, \
-            \(outcome.result.failed.count, privacy: .public) failed, \(outcome.result.skipped.count, privacy: .public) skipped, \
-            \(outcome.result.blocked.count, privacy: .public) blocked
-            """
-        )
-        requestRefresh(after: outcome.result)
     }
 
     /// Reports the run to `GitHubReachability`: the last change that says anything about GitHub
@@ -391,7 +485,7 @@ final class SyncViewModel: LockObserving {
     }
 
     private func fullName(of id: RepoID) -> String {
-        repositoryModels[id]?.fullName ?? ""
+        repositoryModels[id]?.fullName ?? (try? dependencies.config.changeSet(repositoryID: id))??.repository.fullName ?? ""
     }
 
     /// The stop reason line, when the run stopped early.
@@ -461,6 +555,8 @@ final class SyncViewModel: LockObserving {
             Task { await getTeammateUpdates() }
         case .takeOverSpace(let spaceID, let login):
             pendingTakeover = (spaceID, login)
+        case .openDestination(let destinationID):
+            dependencies.actions.openPlace(.destination(destinationID))
         }
     }
 

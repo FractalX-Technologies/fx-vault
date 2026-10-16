@@ -1,0 +1,9 @@
+{
+  "error": {
+    "code": "Conflict",
+    "message": "Secret DATABASE-URL is currently in a deleted but recoverable state, and its name cannot be reused; in this state, the secret can only be recovered or purged.",
+    "innererror": {
+      "code": "ObjectIsDeletedButRecoverable"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "abcdefghijklmnopqrst",
+    "ref": "abcdefghijklmnopqrst",
+    "organization_id": "org-sample-a",
+    "organization_slug": "org-sample-a",
+    "name": "sample-backend",
+    "region": "eu-central-1",
+    "created_at": "2026-01-01T00:00:00.000000Z",
+    "status": "ACTIVE_HEALTHY",
+    "database": {
+      "host": "db.abcdefghijklmnopqrst.supabase.co",
+      "version": "15.8.1",
+      "postgres_engine": "15",
+      "release_channel": "ga"
+    }
+  },
+  {
+    "id": "zyxwvutsrqponmlkjihg",
+    "organization_id": "org-sample-b",
+    "name": "sample-paused",
+    "region": "us-east-1",
+    "created_at": "2026-02-01T00:00:00.000000Z",
+    "status": "INACTIVE"
+  }
+]

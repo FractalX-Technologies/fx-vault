@@ -23,6 +23,8 @@ protocol ConfigTableModel: AnyObject, Observable {
     var scopeCopyTargets: [ItemCopyTargetModel] { get }
     /// Copy To › Folder: the folders (this one left out).
     var folderCopyTargets: [ItemCopyTargetModel] { get }
+    /// Copy To › Destinations: the repository's destinations (v0.8.0; this one left out).
+    var destinationCopyTargets: [ItemCopyTargetModel] { get }
     /// A copy waiting for "Replace or keep?".
     var pendingCopy: ItemCopyRequestModel? { get set }
 
@@ -44,4 +46,11 @@ protocol ConfigTableModel: AnyObject, Observable {
     func showLinkedCopies(of row: ConfigRowModel)
     func openLinkedCopy(_ copy: LinkedCopyModel)
     func unlink(_ row: ConfigRowModel)
+}
+
+extension ConfigTableModel {
+    /// No destinations by default (a folder belongs to no repository).
+    var destinationCopyTargets: [ItemCopyTargetModel] {
+        []
+    }
 }

@@ -1,0 +1,13 @@
+{
+  "created": [
+    {
+      "type": "plain",
+      "value": "fixture",
+      "target": ["production"],
+      "id": "env_created_array",
+      "key": "NEW_VARIABLE",
+      "updatedAt": 1790000200000
+    }
+  ],
+  "failed": []
+}

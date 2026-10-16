@@ -3,6 +3,58 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.8.0
+
+### Added
+
+- **Runtime destinations (experimental).** Next to a repository's GitHub scopes, a new RUNTIME
+  section lists the places its code reads at runtime: an **Azure Key Vault**, the Edge Function
+  secrets of a **Supabase** project, or one environment of a **Vercel** project. Add
+  Destination… imports the names already there (and the values the provider returns), then the
+  destination works like a scope: the same table, Add, Paste Multiple…, `.env` import and
+  export, ⌘C / ⌘V and Copy To › Destinations, with every copy linked, so one rotation in FX
+  Vault reaches GitHub and the runtime in the same Sync. Nothing changes in the provider until
+  you Sync.
+- **Sync sends destination changes after GitHub,** in the same review: what will be pushed (and
+  as which name: Key Vault writes `DATABASE-URL` for `DATABASE_URL`), what is blocked and why,
+  and deletions, which wait for your confirmation (Key Vault deletes are soft deletes). If the
+  destination changed since your last sync, nothing is overwritten: **Refresh** lists the
+  changes and lets you keep yours or use theirs.
+- **Public names are checked.** Names starting with `NEXT_PUBLIC_`, `VITE_`, `EXPO_PUBLIC_` and
+  the like end up in the browser: a value that looks like a credential (a known token prefix, a
+  private key, a URL with a password) is not sent to one, and a token-looking value asks you to
+  Mark as Public first.
+- **Overview.** The first row of the scope column shows one stage (for example production)
+  across GitHub and every destination with that stage: one row per name, its cycle (Build,
+  Runtime or Public), and what Sync will do in each place, so a key that is in GitHub but missing
+  from the runtime stands out. Click a cell to open that place.
+- **`fxvault.yml`.** An optional, names-only file at the root of the repository that says which
+  names each stage needs and where. When it is on the default branch, the Overview checks the
+  stage against it (missing, extra, a secret stored as a variable, a destination not added yet),
+  and Show Check copies a `.env.example` per target. Copy fxvault.yml for This Repository writes
+  one from what the repository has today.
+- **Settings › Destinations.** Checks your Azure CLI sign-in (FX Vault asks `az` for a
+  short-lived Key Vault token when it syncs and keeps it in memory until the vault locks), and
+  keeps your Supabase and Vercel personal access tokens, encrypted in the vault, with Rename…,
+  Replace Token… and Remove….
+
+### Changed
+
+- The scope column is split into BUILD · GITHUB ACTIONS (the repository and its environments)
+  and RUNTIME (its destinations).
+- The Sync badge and the pending dots count destination changes too.
+- FX Vault makes its first HTTPS requests of its own, only to the Azure Key Vault, Supabase and
+  Vercel APIs, with no cookies, cache or redirects. GitHub still goes through `gh`.
+
+### Known limits
+
+- Destinations are experimental. The Vercel round trip was checked against a real project; Key
+  Vault and Supabase were checked against simulated responses only.
+- Supabase never returns secret values: FX Vault compares digests, and a secret imported from
+  Supabase has no value in FX Vault until you fill it.
+- At the default window width, the Overview scrolls sideways when a stage has three or more
+  places.
+
 ## 0.7.0
 
 ### Added

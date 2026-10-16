@@ -66,6 +66,10 @@ final class CopyToRepositoryViewModel {
                 itemNames = items.filter { ids.contains($0.id) && !$0.isDeleted }.map(\.name)
             case .folder(let folderID):
                 itemNames = try dependencies.folders.items(folderID: folderID).filter { ids.contains($0.id) }.map(\.name)
+            case .destination(let destinationID):
+                itemNames = try dependencies.destinations.items(destinationID: destinationID)
+                    .filter { ids.contains($0.id) && !$0.isDeleted }
+                    .map(\.name)
             }
             isLoaded = true
         } catch {

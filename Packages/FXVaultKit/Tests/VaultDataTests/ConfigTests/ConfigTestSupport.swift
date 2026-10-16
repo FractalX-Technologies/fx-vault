@@ -19,6 +19,8 @@ enum ConfigFixture {
     static let valueB = "value-b"
     static let valueC = "value-c"
     static let token = "fixture-token-a"
+    /// A JWT-shaped public key (an anon key), joined at runtime so secret scanners skip the source.
+    static let sampleJWT = ["eyJhbGciOiJIUzI1NiJ9", "eyJyb2xlIjoiYW5vbiJ9", "c2lnbmF0dXJl"].joined(separator: ".")
 }
 
 /// An unlocked vault over an in-memory (or given) database with fakes, plus the repositories

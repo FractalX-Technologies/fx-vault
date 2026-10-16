@@ -83,6 +83,7 @@ extension ConfigRepository {
             defer { value.wipe() }
             var repositoryTargets: [ConfigItemRecord] = []
             var folderTargets: [FolderItemRecord] = []
+            var destinationTargets: [DestinationItemRecord] = []
             for targetID in Set(targetIDs) where targetID != id {
                 guard let target = try ItemCopySource.load(targetID, database: database, in: tx),
                       !target.isDeleted,
@@ -92,6 +93,8 @@ extension ConfigRepository {
                     repositoryTargets.append(record)
                 } else if let record = target.folderRecord {
                     folderTargets.append(record)
+                } else if let record = target.destinationRecord {
+                    destinationTargets.append(record)
                 }
             }
             for (repositoryID, records) in Dictionary(grouping: repositoryTargets, by: \.repositoryID) {
@@ -115,7 +118,11 @@ extension ConfigRepository {
             for record in folderTargets {
                 try folderWriter.editValue(record.id, value: value)
             }
-            return repositoryTargets.count + folderTargets.count
+            let destinationWriter = DestinationItemWriter(store: DestinationStore(database: database), keys: keys, tx: tx, now: now)
+            for record in destinationTargets {
+                try destinationWriter.editValue(record.id, value: value)
+            }
+            return repositoryTargets.count + folderTargets.count + destinationTargets.count
         }
         Self.linkLog.info("Updated \(count, privacy: .public) linked copies")
         return count
@@ -150,6 +157,28 @@ extension ConfigRepository {
                 comparison: comparison,
                 syncStatus: record.model.syncStatus,
                 editBlock: editBlock(for: record, repository: repository, environment: environment)
+            )
+        }
+        if let record = other.destinationRecord {
+            let destinations = DestinationStore(database: session.database)
+            guard let destination = try destinations.fetchDestination(id: record.destinationID, in: tx),
+                  let repository = try RepoStore(database: session.database).fetch(id: destination.repositoryID, in: tx)
+            else { return nil }
+            return LinkedCopyModel(
+                itemID: record.id,
+                place: .destination(
+                    destination.id,
+                    repositoryID: repository.id,
+                    repositoryFullName: repository.fullName,
+                    provider: destination.provider,
+                    displayName: try destination.target().displayName,
+                    stage: destination.stage
+                ),
+                kind: record.kind,
+                name: record.name,
+                comparison: comparison,
+                syncStatus: record.syncStatus,
+                editBlock: nil
             )
         }
         guard let record = other.folderRecord,
@@ -192,7 +221,8 @@ extension ConfigRepository {
         return value == otherValue ? .same : .differs
     }
 
-    /// Folders first (by name), then repositories by account, repository, scope and name.
+    /// Folders first (by name), then repositories by account, repository, scope and name, then
+    /// destinations by repository, name and item name.
     private static func placeOrder(_ lhs: LinkedCopyModel, _ rhs: LinkedCopyModel) -> Bool {
         sortKey(lhs) < sortKey(rhs)
     }
@@ -203,6 +233,8 @@ extension ConfigRepository {
             (0, name.lowercased(), "", "", copy.name)
         case .scope(_, let account, let fullName, _, let environment):
             (1, account.lowercased(), fullName.lowercased(), environment ?? "", copy.name)
+        case .destination(_, _, let fullName, _, let displayName, _):
+            (2, fullName.lowercased(), displayName.lowercased(), "", copy.name)
         }
     }
 }

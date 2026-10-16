@@ -258,4 +258,77 @@ enum MigrationSQL {
         CREATE UNIQUE INDEX folder_items_name ON folder_items(folder_id, kind, name);
         CREATE INDEX folder_items_link ON folder_items(link_id) WHERE link_id IS NOT NULL;
         """
+
+    // MARK: v13_destinations (v0.8.0). FROZEN.
+
+    /// Runtime destinations of repositories (tasks/todo.md R1–R5): the Supabase and Vercel tokens
+    /// FX Vault keeps (sealed), the destinations (one remote place each, unique per repository),
+    /// their items (values sealed with their own AAD; a write-only remote value is NULL) and the
+    /// journal of destination writes. No GitHub sync path reads these tables.
+    static let v13Destinations = """
+        CREATE TABLE provider_connections (
+          id TEXT PRIMARY KEY CHECK (length(id) = 36),
+          provider TEXT NOT NULL CHECK (provider IN ('supabase','vercel')),
+          label TEXT NOT NULL CHECK (length(label) BETWEEN 1 AND 64),
+          token_ct BLOB NOT NULL,
+          account_hint TEXT CHECK (account_hint IS NULL OR length(account_hint) BETWEEN 1 AND 255),
+          last_validated_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL);
+        CREATE TABLE destinations (
+          id TEXT PRIMARY KEY CHECK (length(id) = 36),
+          repository_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+          provider TEXT NOT NULL CHECK (provider IN ('azure_keyvault','supabase','vercel')),
+          target_key TEXT NOT NULL CHECK (length(target_key) BETWEEN 1 AND 255),
+          settings_json TEXT NOT NULL,
+          stage TEXT CHECK (stage IS NULL OR length(stage) BETWEEN 1 AND 255),
+          stage_key TEXT,
+          connection_id TEXT REFERENCES provider_connections(id) ON DELETE SET NULL,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          last_refreshed_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          CHECK ((stage IS NULL) = (stage_key IS NULL)));
+        CREATE UNIQUE INDEX destinations_repo_target ON destinations(repository_id, target_key);
+        CREATE TABLE destination_items (
+          id TEXT PRIMARY KEY CHECK (length(id) = 36),
+          destination_id TEXT NOT NULL REFERENCES destinations(id) ON DELETE CASCADE,
+          kind TEXT NOT NULL CHECK (kind IN ('secret','variable')),
+          name TEXT NOT NULL CHECK (name = upper(name) AND length(name) BETWEEN 1 AND 255),
+          value_ct BLOB,
+          value_fp BLOB,
+          is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          synced_name TEXT CHECK (synced_name IS NULL OR synced_name = upper(synced_name)),
+          synced_kind TEXT CHECK (synced_kind IS NULL OR synced_kind IN ('secret','variable')),
+          synced_fp BLOB,
+          remote_ref TEXT,
+          remote_version TEXT,
+          force_push INTEGER NOT NULL DEFAULT 0 CHECK (force_push IN (0, 1)),
+          verify_state TEXT NOT NULL DEFAULT 'verified' CHECK (verify_state IN ('verified','pending')),
+          pre_write_version TEXT,
+          is_public_allowed INTEGER NOT NULL DEFAULT 0 CHECK (is_public_allowed IN (0, 1)),
+          link_id TEXT CHECK (link_id IS NULL OR length(link_id) = 36),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          CHECK (kind = 'secret' OR value_ct IS NOT NULL),
+          CHECK ((value_ct IS NULL) = (value_fp IS NULL)),
+          CHECK ((synced_name IS NULL) = (synced_kind IS NULL)),
+          CHECK (is_deleted = 0 OR synced_name IS NOT NULL));
+        CREATE UNIQUE INDEX destination_items_name ON destination_items(destination_id, name);
+        CREATE INDEX destination_items_link ON destination_items(link_id) WHERE link_id IS NOT NULL;
+        CREATE TABLE destination_journal (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          run_id TEXT NOT NULL,
+          destination_id TEXT REFERENCES destinations(id) ON DELETE SET NULL,
+          item_id TEXT,
+          op TEXT NOT NULL CHECK (op IN ('set','delete','recover')),
+          item_name TEXT NOT NULL,
+          state TEXT NOT NULL CHECK (state IN ('in_flight','succeeded','failed','indeterminate','reconciled')),
+          error_code TEXT,
+          pre_write_version TEXT,
+          pushed_fp BLOB,
+          started_at TEXT NOT NULL,
+          finished_at TEXT);
+        CREATE INDEX destination_journal_time ON destination_journal(started_at);
+        """
 }

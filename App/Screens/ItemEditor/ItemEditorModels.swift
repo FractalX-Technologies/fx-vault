@@ -76,9 +76,28 @@ struct EditorItemModel: Hashable, Identifiable {
         scope = nil
     }
 
+    /// A destination item (v0.8.0): pending until the next Sync, like a repository item; its kind
+    /// changes in place where the provider stores variables.
+    init(_ item: DestinationItemModel) {
+        id = item.id
+        kind = item.kind
+        name = item.name
+        hasValue = item.hasValue
+        isDeleted = item.isDeleted
+        isLinked = item.isLinked
+        isSynced = item.isSynced
+        syncedName = item.syncedName
+        syncStatus = item.syncStatus
+        scope = nil
+        isDestinationItem = true
+    }
+
+    /// True for a destination item, whose kind is not locked by a sync.
+    private(set) var isDestinationItem = false
+
     /// Kind and scope can no longer change (D11): only for an item on GitHub.
     var isKindAndScopeLocked: Bool {
-        isSynced
+        isSynced && !isDestinationItem
     }
 
     /// `name` case-folded.

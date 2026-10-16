@@ -68,6 +68,8 @@ final class AppViewModel {
     private(set) var pendingChangeCount = 0
     /// Pending and blocked counts per repository (live, from `ConfigRepository`).
     private(set) var pendingCounts: PendingCountsModel = .empty
+    /// Pending destination changes per repository (live, from `DestinationRepository`, v0.8.0).
+    private(set) var destinationPendingCounts: [RepoID: Int] = [:]
     /// True while at least one ``SyncActivity`` is active (the Sync button shows progress).
     private(set) var isSyncing = false
     /// Incremented by every lock that dropped keys or left a phase.
@@ -100,6 +102,7 @@ final class AppViewModel {
     @ObservationIgnored private(set) var ghProbeTask: Task<Void, Never>?
     @ObservationIgnored private(set) var reconciliationTask: Task<Void, Never>?
     @ObservationIgnored private var pendingCountsTask: Task<Void, Never>?
+    @ObservationIgnored private var destinationCountsTask: Task<Void, Never>?
     /// Opens (or brings back) the main window; set by the main window's root view, which has the
     /// SwiftUI `openWindow` action.
     @ObservationIgnored private var mainWindowOpener: (() -> Void)?
@@ -210,9 +213,11 @@ final class AppViewModel {
         }
         let sync = container.data.sync
         let drift = container.data.drift
+        let azureTokens = container.data.azureTokens
         Task {
             await sync.currentRun?.cancel()
             await drift.reset()
+            await azureTokens.reset()
         }
         let manager = container.vaultManager
         Task.detached(priority: .utility) {
@@ -322,8 +327,9 @@ final class AppViewModel {
         container.dockBadge.showBadge(count: pendingChangeCount)
     }
 
-    /// Follows `ConfigRepository.observePendingCounts()` for the whole app lifetime. The stream
-    /// needs no keys, so the Dock badge stays right while locked.
+    /// Follows `ConfigRepository.observePendingCounts()` and (v0.8.0) the destinations' pending
+    /// changes for the whole app lifetime. The streams need no keys, so the Dock badge stays right
+    /// while locked.
     private func observePendingCounts() {
         let config = container.data.config
         pendingCountsTask = Task { [weak self] in
@@ -331,12 +337,33 @@ final class AppViewModel {
                 for try await counts in config.observePendingCounts() {
                     guard let self else { return }
                     pendingCounts = counts
-                    setPendingChangeCount(counts.total)
+                    updatePendingChangeCount()
                 }
             } catch {
                 AppLog.vault.error("Pending count observation ended")
             }
         }
+        let destinations = container.data.destinations
+        destinationCountsTask = Task { [weak self] in
+            do {
+                for try await counts in destinations.observePendingCounts() {
+                    guard let self else { return }
+                    destinationPendingCounts = counts
+                    updatePendingChangeCount()
+                }
+            } catch {
+                AppLog.vault.error("Destination pending count observation ended")
+            }
+        }
+    }
+
+    private func updatePendingChangeCount() {
+        setPendingChangeCount(pendingCounts.total + destinationPendingCounts.values.reduce(0, +))
+    }
+
+    /// GitHub and destination changes waiting in one repository (the sidebar).
+    func pendingChangeCount(of repositoryID: RepoID) -> Int {
+        pendingCounts.counts(for: repositoryID).pending + (destinationPendingCounts[repositoryID] ?? 0)
     }
 
     /// Starts a sync activity (the sync sheet holds it for the whole run).
@@ -500,6 +527,7 @@ final class AppViewModel {
         container.autoLock.stop()
         container.connectivity.stop()
         pendingCountsTask?.cancel()
+        destinationCountsTask?.cancel()
         guard container.vaultManager.state != .noVault else { return }
         container.vaultManager.lock()
         do {

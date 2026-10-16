@@ -18,11 +18,15 @@ public struct ItemCopyResultModel: Sendable, Hashable {
     public var kept = 0
     /// Secrets that have no value in the vault (GitHub never returns one), by name: not copied.
     public var withoutValue: [String] = []
+    /// Variables copied into a destination that holds secrets only (Key Vault, Supabase), by name:
+    /// copied as secrets (v0.8.0).
+    public var madeSecret: [String] = []
 
-    public init(added: Int = 0, replaced: Int = 0, kept: Int = 0, withoutValue: [String] = []) {
+    public init(added: Int = 0, replaced: Int = 0, kept: Int = 0, withoutValue: [String] = [], madeSecret: [String] = []) {
         self.added = added
         self.replaced = replaced
         self.kept = kept
         self.withoutValue = withoutValue
+        self.madeSecret = madeSecret
     }
 }

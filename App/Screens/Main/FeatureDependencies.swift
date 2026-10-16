@@ -25,6 +25,8 @@ struct MainActions {
     var open: (RepoID, ConfigScope) -> Void = { _, _ in }
     /// Selects a folder in the sidebar (a linked copy's place, v0.7.0).
     var openFolder: (FolderID) -> Void = { _ in }
+    /// Selects a repository and one of its destinations (a linked copy's place, v0.8.0).
+    var openDestination: (DestinationID) -> Void = { _ in }
     /// Get Updates from Teammates (v0.6.0): pulls every shared space, returns when done.
     var syncSpaces: () async -> Void = {}
     /// A Sync run published shared versions: members are told right away.
@@ -34,11 +36,12 @@ struct MainActions {
     /// Versions teammates brought in (the space screens reload on change).
     var spaceSyncCount: () -> Int = { 0 }
 
-    /// Shows a scope of a repository or a folder.
+    /// Shows a scope of a repository, a folder or a destination.
     func openPlace(_ place: ItemPlaceModel) {
         switch place {
         case .scope(let repositoryID, let scope): open(repositoryID, scope)
         case .folder(let id): openFolder(id)
+        case .destination(let id): openDestination(id)
         }
     }
 
@@ -81,6 +84,14 @@ struct FeatureDependencies {
     let spaces: SpaceRepository
     /// Folders of secrets and variables (v0.7.0).
     let folders: FolderRepository
+    /// Runtime destinations and provider connections (v0.8.0).
+    let destinations: DestinationRepository
+    /// The stage Overview and `fxvault.yml` (v0.8.0).
+    let overview: StageOverviewRepository
+    /// Destination Sync, Refresh and import (v0.8.0).
+    let destinationSync: DestinationSyncRepository
+    /// Token checks and the Add Destination pickers (v0.8.0).
+    let destinationAccess: DestinationAccessRepository
     /// Staging, owners, templates and name checks. Clone through ``cloner``.
     let creation: RepoCreationRepository
     let cloner: any RepoCloning
@@ -121,6 +132,10 @@ struct FeatureDependencies {
         team = data.team
         spaces = data.spaces
         folders = data.folders
+        destinations = data.destinations
+        overview = data.overview
+        destinationSync = data.destinationSync
+        destinationAccess = data.destinationAccess
         creation = data.creation
         cloner = data.cloner
         reauth = container.reauth
@@ -147,12 +162,13 @@ struct FeatureDependencies {
         clipboard.copy(text)
     }
 
-    /// The names among `ids` that `place` (a repository scope or a folder, v0.7.0) already
-    /// holds: the copy asks whether to replace or keep them.
+    /// The names among `ids` that `place` (a repository scope, a folder or, v0.8.0, a
+    /// destination) already holds: the copy asks whether to replace or keep them.
     func copyConflicts(_ ids: [ConfigItemID], to place: ItemPlaceModel) throws(ConfigRepositoryError) -> [String] {
         switch place {
         case .scope(let repositoryID, let scope): try config.copyConflicts(ids, to: scope, repositoryID: repositoryID)
         case .folder(let folderID): try folders.copyConflicts(ids, to: folderID)
+        case .destination(let destinationID): try destinations.copyConflicts(ids, to: destinationID)
         }
     }
 
@@ -168,7 +184,16 @@ struct FeatureDependencies {
             try config.copyItems(ids, to: scope, repositoryID: repositoryID, conflicts: conflicts)
         case .folder(let folderID):
             try folders.copyItems(ids, to: folderID, conflicts: conflicts)
+        case .destination(let destinationID):
+            try destinations.copyItems(ids, to: destinationID, conflicts: conflicts)
         }
+    }
+
+    /// Copy To › Destination targets (v0.8.0): the destinations of `repositoryID` but `excluded`.
+    func destinationCopyTargets(repositoryID: RepoID, excluding excluded: DestinationID? = nil) -> [ItemCopyTargetModel] {
+        ((try? destinations.destinations(repositoryID: repositoryID)) ?? [])
+            .filter { $0.id != excluded }
+            .map { ItemCopyTargetModel(place: .destination($0.id), title: $0.copyTargetTitle, isEditable: true) }
     }
 
     /// Copy To › Folder targets (v0.7.0): every folder but `excluded`, by sidebar order.

@@ -1,0 +1,13 @@
+{
+  "projects": [
+    {
+      "accountId": "team_sample",
+      "id": "prj_third",
+      "name": "sample-api"
+    }
+  ],
+  "pagination": {
+    "count": 1,
+    "next": null
+  }
+}

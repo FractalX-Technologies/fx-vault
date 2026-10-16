@@ -1,10 +1,12 @@
-# FX Vault - gh, git and ssh command catalog
+# FX Vault - gh, git, ssh and az commands, and provider endpoints
 
 FX Vault has no server API. Every GitHub operation is a child process: the GitHub CLI (`gh`),
 `/usr/bin/git` or `/usr/bin/ssh`. This catalog is the implemented form of plan §8 and lives in
 `Packages/FXVaultKit/Sources/GitHubKit`. Operation ids (`A1`, `B3`, `C5`, ...) are the raw
 values of `GHOperation`; each builder's `logTemplate` (shown below) is the only form of a command
-that is ever logged.
+that is ever logged. Since v0.8.0 the runtime destinations (Azure Key Vault, Supabase, Vercel)
+are reached over HTTPS by `Packages/FXVaultKit/Sources/DestinationKit`, with Key Vault tokens
+from `az` (section G).
 
 ## Conventions
 
@@ -30,8 +32,8 @@ that is ever logged.
   An hourly budget that would need more than a minute's wait throws `.writeBudgetExhausted`.
 - **Success is exit code 0.** Native commands expose no HTTP status; stdout is parsed only on
   success and failures are classified from stderr plus the exit code (section E).
-- **`gh api`** (written `API` below) is used only for environments and deployment branch
-  policies. It always sends `-H "Accept: application/vnd.github+json"`,
+- **`gh api`** (written `API` below) is used only for environments, deployment branch
+  policies and (B11, v0.8.0) reading `fxvault.yml`. It always sends `-H "Accept: application/vnd.github+json"`,
   `-H "X-GitHub-Api-Version: 2026-03-10"` and an explicit `-X <METHOD>`. `GitHubPath`
   percent-encodes each segment (ASCII unreserved set; `a/b c` becomes `a%2Fb%20c`) and throws on
   dot segments and their encoded forms. List reads use `--paginate --slurp`; single-object reads
@@ -62,6 +64,7 @@ Each child gets an exact allowlist, never the app's own environment.
 | gh | `HOME USER LOGNAME TMPDIR PATH LANG GH_CONFIG_DIR XDG_CONFIG_HOME XDG_CACHE_HOME XDG_STATE_HOME GH_HOST GH_PROMPT_DISABLED GH_NO_UPDATE_NOTIFIER GH_NO_EXTENSION_UPDATE_NOTIFIER GH_PAGER PAGER NO_COLOR CLICOLOR GH_SPINNER_DISABLED GH_TELEMETRY DO_NOT_TRACK GH_TOKEN` (token only for operations that need it) |
 | git | `HOME USER PATH SSH_AUTH_SOCK LANG GIT_TERMINAL_PROMPT GIT_CONFIG_NOSYSTEM GIT_SSH_COMMAND` (`/usr/bin/ssh -o BatchMode=yes -o ConnectTimeout=15`) |
 | ssh | `HOME USER PATH SSH_AUTH_SOCK LANG` |
+| az (v0.8.0) | `HOME PATH LANG TMPDIR AZURE_CONFIG_DIR AZURE_CORE_COLLECT_TELEMETRY AZURE_CORE_NO_COLOR AZURE_CORE_ONLY_SHOW_ERRORS`, built by `AzureCLITokenProvider.environment`: PATH is the login shell's, `LANG=en_US.UTF-8`, telemetry `no`, color off, only errors shown; TMPDIR when known; `AZURE_CONFIG_DIR` only when one is configured (the app passes none, so `az` uses `~/.azure`) |
 
 Never passed, even when set in the app's environment: `GH_DEBUG DEBUG GITHUB_TOKEN
 GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN GH_REPO GH_FORCE_TTY CLICOLOR_FORCE GH_EDITOR
@@ -103,6 +106,7 @@ while every foreign owner is that uid. Symlinks are resolved;
 | B6/B7 secrets | `gh secret list --repo={o}/{r} [--env={e}] --json name,updatedAt` | `GHSecretsCommands.list` / `decodeList` | gh follows every page. |
 | B8/B9 variables | `gh variable list --repo={o}/{r} [--env={e}] --json name,value,updatedAt,createdAt` | `GHVariablesCommands.list` / `decodeList` | Values become `SecretBytes` (`GHVariableListingModel`); stdout is wiped. The JSON decoder's transient `String` copies cannot be wiped. Since v0.6.0 the shared space marker `FXVAULT_SPACE` is split off every listing (`splitSpaceMarker`; `GHCommandScheduler.listVariables` never returns it, `listVariableScope` returns it beside the variables). |
 | B10g / B10l | `gh repo gitignore list`, `gh repo license list` | `GHTemplatesCommands` | Plain text by line; license key column first. |
+| B11 manifest (v0.8.0) | `gh api -X GET -i repos/{o}/{r}/contents/fxvault.yml` | `GHManifestAPI.get(repo:)` / `decode` | The path comes from `GitHubPath.rootFile`. No `ref`, so GitHub answers from the default branch. `GHCommandScheduler.manifest(_:)` returns nil on a 404 (no file). The answer must be a `file` with `base64` encoding, at most `Limits.maxManifestBytes` (64 KiB) before and after decoding, and UTF-8; anything else (a directory named `fxvault.yml`, another encoding) is `.malformedOutput`. Returns the text and the blob sha; stdout is wiped. The file holds names only; FX Vault never writes it. |
 
 ## C. Write
 
@@ -218,6 +222,7 @@ case-insensitive, seeded once from the journal's write start times over the last
 | `DriftRepository` | B2–B9 | Full re-list on open (debounced `Timeouts.driftDebounce`, 2 min); a resolution re-reads the subject's scope and fails with `.stale` when it changed again |
 | `RepoCreationRepository` | B2, B10g, B10l, D3 | Name availability, owner and template pickers (templates cached per account), clone through the mapped SSH alias |
 | `SharingRepository` | B3, B5, B6–B9 (optional, `RemoteConfigReader`) | Lets the import plan show what GitHub already lists |
+| `StageOverviewRepository` | B11 | v0.8.0: the Overview's `fxvault.yml`, through the scheduler of the repository's account. A 404 is "no fxvault.yml" (`.none`); gh not ready, a repository not on GitHub yet or any failure is "could not be read" (`.unavailable`, logged with `GHError.logCode` only) |
 
 - **404 on deletes.** C6, C8 and C9 count a `.notFound` as done only after a successful re-list
   of the same scope (B3 for C9); a failed re-list leaves the change pending.
@@ -333,3 +338,182 @@ a variable through gh; empty values; C3 POST of an existing pattern; whether a P
 and on the Free organization's private repository the stderr of an environment PUT with a
 custom policy, a branch-policy POST and environment secret and variable sets, with how
 `GHStderrClassifier` reads each. The report replaces the account and organization names.
+
+## G. Runtime destinations (HTTPS, v0.8.0)
+
+DestinationKit's clients (`AzureKeyVaultRemote`, `SupabaseRemote`, `VercelRemote`,
+`SupabaseAccountClient`, `VercelAccountClient`) send every request through `ProviderHTTPClient`
+and one `HTTPTransporting`: `URLSessionTransport` in the app, `FakeHTTPTransport` in tests,
+previews and the offline build. No other code makes HTTP requests. Security rules:
+[SECURITY-MODEL.md](SECURITY-MODEL.md) §10.4. Destinations are experimental.
+
+### Conventions
+
+- **Hosts.** `https` only, port 443, no user or password; the host is exactly `api.supabase.com`,
+  `api.vercel.com` or `<vault>.vault.azure.net` (`DestinationHostPolicy`), checked before sending
+  and on the response URL. Redirects are refused: a 3xx is `.disallowedHost`.
+- **Targets and URLs.** Targets are validated before a client exists (`DestinationRules.validate`):
+  a vault name of 3–24 letters, digits and single dashes that starts with a letter and ends with a
+  letter or digit; a tenant that is a UUID or a domain; a Supabase project ref of 20 lowercase
+  letters; Vercel project and team ids of 1–100 `[A-Za-z0-9._-]`. `ProviderURL.make` joins
+  segments that pass `PathSegmentValidator`, percent-encoded with the unreserved set (as
+  `GitHubPath`); query keys and values are encoded the same way.
+- **Headers.** `Accept: application/json`, `Content-Type: application/json` with a body,
+  `User-Agent: FXVault`, `Authorization: Bearer <token>`. Callers cannot set `Authorization`,
+  `User-Agent`, `Cookie`, `Host` or `Content-Length`; a header value with a line break is refused.
+  A token must be printable ASCII without spaces (`.tokenMissing` otherwise).
+- **Bodies and answers.** Bodies are written by `JSONBodyWriter` straight into `SecretBytes`.
+  Answers are read into a `SecretByteBuffer` (at most `Limits.maxDestinationResponseBytes`,
+  16 MiB, `.responseTooLarge` beyond) and parsed by `SecretJSONDocument` (RFC 8259, nesting up to
+  64, duplicate keys refused), then wiped. Values never become `String`s.
+- **Timeouts.** `Timeouts.destinationRequest` (30 s) per request and per transfer.
+- **Pagination.** At most 400 pages per listing (`.responseTooLarge` after). A Key Vault `nextLink`
+  seen twice is `.decoding`; a Vercel page that adds no new id ends the listing.
+- **Logs.** `DestinationLog` (category `destinations`, debug): provider, method, status and
+  `DestinationError.logCode`. Never a URL, header, body, name or token.
+
+### Retries (`ProviderHTTPClient.send`)
+
+| Failure | Behaviour |
+|---|---|
+| 401 on Key Vault | Drop the tenant's cached `az` token and send once more with a new one (any request: one that was refused was not applied). A second 401 is `.unauthorized`. Supabase and Vercel: `.unauthorized` at once. |
+| 429 | Idempotent requests: wait `Retry-After` (seconds or an HTTP date) or `Timeouts.destinationRateLimitBackoff` (10 s), at most `Limits.rateLimitRetries` (2) times. A `Retry-After` longer than `Timeouts.destinationMaxRetryAfter` (60 s) is thrown at once. |
+| 5xx, `.network`, `.timeout` | Idempotent requests: at most `Limits.idempotentRetries` (2) more times, after `Timeouts.idempotentRetryBackoff` × attempt (2 s, then 4 s). |
+| anything else | Thrown to the caller. |
+
+Idempotent: GET, PUT, DELETE and Supabase's upserting POST. Sent once: Key Vault recover, Vercel
+POST and PATCH. Bodies are encoded once and wiped after the last attempt; each attempt gets its
+own token copy.
+
+### Errors (`ProviderErrorMapper`, `URLSessionTransport.map`)
+
+| Answer | `DestinationError` |
+|---|---|
+| 401 | `.unauthorized` |
+| 402 | `.forbidden` |
+| 403 | `.forbidden`; `.conflict(code:)` when the code says "already exists" (Vercel `…ALREADY_EXISTS…`, `…ENV_CONFLICT…`) |
+| 404, 410 | `.notFound` |
+| 409 | `.deletedButRecoverable` for Key Vault's `ObjectIsDeletedButRecoverable`, else `.conflict(code:)` |
+| 413 | `.valueTooLarge` |
+| 429 | `.rateLimited(retryAfter:)` after the retries |
+| 3xx | `.disallowedHost` |
+| other 4xx | `.conflict(code:)` for an "already exists" code, else `.invalidRequest(code:)` |
+| 5xx | `.server(status:)` after the retries |
+| URLSession timeout | `.timeout` |
+| cancelled | `.cancelled` |
+| redirect, ATS or bad URL errors | `.disallowedHost` |
+| unreadable answer | `.decoding` |
+| no connection, DNS, lost connection, TLS failure | `.network` |
+
+Only the provider's error code is read from an error body, then sanitized to 1–64 characters of
+`[A-Za-z0-9_.-]`: Key Vault `error.innererror.code`, then `error.code`; Vercel `error.code`;
+Supabase a top-level `code`, then `error.code`. Messages are never read (they may quote names).
+FX Vault's own refusals are `.invalidRequest` with a `LocalCode` (`writeOnly`, `missingRemoteRef`,
+`invalidHeader`; `fakeUnmatched` in tests) and never reach a provider (`reachedProvider` is false).
+
+### G.1 Azure Key Vault (data plane, api-version 7.4)
+
+**Token.** `AzureCLITokenProvider` runs, through `CommandRunning` (the `ProcessRunner` rules of
+section "Child process rules": absolute path, argv array, empty working directory, no inherited
+descriptors):
+
+```
+<az> account get-access-token --resource https://vault.azure.net [--tenant <tenant>] --output json
+```
+
+- The binary comes from `AzureCLILocator`: the login shell's PATH directories, then
+  `/opt/homebrew/bin` and `/usr/local/bin` (an override path exists in the API, not in the app).
+  The first `az` that exists decides and must pass `GHLocator.evaluate` (no consented trust),
+  otherwise `.azUntrusted(path:)`; none at all is `.azNotInstalled`. It is located again before
+  every run.
+- The tenant must be a UUID or a domain (`DestinationRules.isValidTenantID`), so it can never
+  become a flag. Environment: the az row of "Child environments". Empty stdin,
+  `Timeouts.azAccessToken` (60 s).
+- stdout: `accessToken` (read with the secret JSON scanner; printable ASCII, else `.decoding`) and
+  `expires_on` (unix seconds, a number or text) or, from older `az`, `expiresOn` (local time).
+  stdout is wiped. The token is cached per tenant until `expires_on` −
+  `Timeouts.accessTokenRefreshMargin` (5 min); concurrent callers share one run; callers get
+  copies.
+- Failures: the binary missing at launch (ENOENT) → `.azNotInstalled`; another launch failure →
+  `.azFailed(exitCode: -1)`; the timeout → `.timeout`; stderr containing `az login` (checked after
+  JWTs and GitHub token patterns are redacted) → `.azNotSignedIn`; anything else →
+  `.azFailed(exitCode:)`. stderr is never logged.
+
+**Endpoints** (`https://<vault>.vault.azure.net`, every request with `api-version=7.4`):
+
+| Call | Request | Body | Reads | Notes |
+|---|---|---|---|---|
+| list | `GET /secrets?api-version=7.4&maxresults=25`, then each `nextLink` | | `value[]`: `id`, `attributes.enabled`, `attributes.updated`, `managed`; `nextLink` | The name is the path segment after `secrets` in `id`; `attributes.updated` (unix seconds) is the change marker. A disabled secret is unusable and unreadable, a managed one (it backs a certificate) unusable. `nextLink` must stay on the vault's host. |
+| read | `GET /secrets/<name>` | | `value` | Enabled secrets only. |
+| set | `PUT /secrets/<name>` | `{"value": …}` | `attributes.updated` | Creates a new version; the old version's content type and tags are not copied. Value at most `Limits.maxKeyVaultValueBytes` (25 KiB). |
+| recover | `POST /deletedsecrets/<name>/recover` | | | Only after a set answered 409 `ObjectIsDeletedButRecoverable`. Then `GET /secrets/<name>` every `Timeouts.verifyRetryInterval` (2 s) for up to `verifyRetryWindow` (60 s) until it is back (a 404 keeps waiting, a 403 counts as back), and the PUT again. Sent once. |
+| delete | `DELETE /secrets/<name>` | | | A soft delete. FX Vault never purges. |
+
+Names: FX Vault's name with `_` → `-` on the way out (1–127 letters, digits and dashes, checked
+again before the URL is built); on the way in `-` → `_`, uppercased. A listed name that cannot
+become a valid FX Vault name is unusable (`DestinationUnusableReason.invalidName`).
+
+### G.2 Supabase (Management API, `https://api.supabase.com/v1`)
+
+| Call | Request | Body | Reads | Notes |
+|---|---|---|---|---|
+| projects | `GET /v1/projects` | | array: `ref` (or `id`), `name`, `region`, `organization_id`, `status` | `SupabaseAccountClient`: the token check before a connection is saved (the project count is its account hint) and the Add Destination picker. Not paginated. |
+| list | `GET /v1/projects/<ref>/secrets` | | array: `name`, `value`, `updated_at` | `value` is a digest of the secret, never the secret; lowercased, it is the change marker. `SUPABASE_` names are the platform's (unusable, `.system`); lowercase names are unusable (`notUppercase`). |
+| read | | | | Refused before sending (`.invalidRequest(writeOnly)`): the API returns no values. |
+| set | `POST /v1/projects/<ref>/secrets` | `[{"name": …, "value": …}]` | | An upsert, retried like a PUT. The answer has no version: the confirming re-list compares the listed digest with SHA-256 of the value (lowercase hex). Value at most `Limits.maxValueBytes` (48,000 bytes). |
+| delete | `DELETE /v1/projects/<ref>/secrets` | `["<NAME>"]` | | |
+
+### G.3 Vercel (REST API, `https://api.vercel.com`)
+
+Project requests add `teamId=<team id>` when the project belongs to a team (the projects list:
+when a team is chosen; `user` and `teams` never).
+
+| Call | Request | Body | Reads | Notes |
+|---|---|---|---|---|
+| user | `GET /v2/user` | | `user.id`, `user.username`, `user.defaultTeamId` | The token check before a connection is saved; the username is its account hint. No email is read. |
+| teams | `GET /v2/teams?limit=100`, `pagination.next` → `until` | | `teams[]`: `id`, `slug`, `name` | |
+| projects | `GET /v10/projects?limit=100`, `pagination.next` → `until` (a number) or `from` (a token) | | `projects[]` or an array: `id`, `name` | Project objects embed environment variables, so these answers go through the scanner too. |
+| list | `GET /v10/projects/<id>/env`, `pagination.next` → `until` | | `envs[]`, an array or one variable: `id`, `key`, `type`, `target`, `gitBranch`, `customEnvironmentIds`, `system`, `visibility`, `updatedAt`; `hiddenProductionEnvCount` | Values are not decrypted. Only variables whose `target` (a string or an array) includes the destination's environment. For production, `hiddenProductionEnvCount` > 0 is `.forbidden` instead of an incomplete list. Kind: `visibility` `config` → variable, `secret` → secret; otherwise `plain` → variable, any other type → secret. Unusable: system, git-branch and custom-environment variables, lowercase names. `updatedAt` (ms) is the change marker. |
+| read | `GET /v1/projects/<id>/env/<env id>` | | `type`, `decrypted`, `value` | Refused before sending for `sensitive` and system variables (`writeOnly`); a `sensitive` or system answer is refused too, and an `encrypted` one with `decrypted: false` is `.decoding`. |
+| create | `POST /v10/projects/<id>/env?upsert=true` | `{"key", "value", "type", "target": [<environment>]}` | `created` (an object or the first element): `id`, `updatedAt`; `failed[]` | A `failed` entry throws (`.conflict` for an "already exists" code, else `.invalidRequest`). Sent once. |
+| update | `PATCH /v9/projects/<id>/env/<env id>` | `{"value", "type"}` | `id`, `updatedAt` | Changes the variable for every environment in its `target` (the Sync sheet names them). Sent once. |
+| delete | `DELETE /v9/projects/<id>/env/<env id>`; for a variable shared with other environments, `PATCH` of the same path | `{"target": [<other environments>]}` for the PATCH | | A shared variable only loses this environment. The DELETE is idempotent; the PATCH is sent once. |
+
+Types: a variable is written as `plain`; a secret as `encrypted`, or `sensitive` when the existing
+variable's value is not readable (it stays `sensitive`). Env ids must be Vercel identifiers
+(`.invalidRequest(missingRemoteRef)` otherwise). Values at most `Limits.maxValueBytes`.
+
+### G.4 Who calls what (VaultData)
+
+| Caller | Calls | Notes |
+|---|---|---|
+| `DestinationSyncRepository.review` | list | Every destination of the repository with pending changes (others are not contacted); settles `destination_journal` rows left unfinished |
+| `DestinationSyncRepository.run` | list, set (Key Vault: recover), delete, list | Lists right before the writes (change-marker checks), journals each write `in_flight`, one confirming re-list; deletions only with `includeDeletions` (the user confirmed them) |
+| `DestinationSyncRepository.refresh` | list | Refresh: remote adds, changes and deletions since the last sync |
+| `DestinationSyncRepository.resolve` | list, read | Keep Mine / Use Remote; refreshes first and throws `.stale` when a finding no longer holds; values are read only for Use Remote |
+| `DestinationSyncRepository.importRemote` | list, read | Right after Add Destination: every usable remote item the vault does not have, with its value where the provider returns one |
+| `DestinationAccessRepository` | Supabase projects, Vercel user, teams and projects, the `az` token | The token check before a connection is saved, the Add Destination pickers, Settings › Destinations › Check |
+| `ShellResolvingAzureTokens` | `az` | Creates `AzureCLITokenProvider` once the login-shell probe (A2) is in; `reset()` on lock |
+
+Clients come from `DestinationRemoteFactory(transport:azureTokens:clock:)` through
+`LiveDestinationRemoteProvider`; the token of a Supabase or Vercel connection is opened for the
+call and wiped.
+
+### G.5 Tests and observed behavior
+
+- `FakeHTTPTransport` answers scripted requests and records them (unmatched requests get
+  `.invalidRequest(fakeUnmatched)`); fixtures are in
+  `Tests/DestinationKitTests/Fixtures/{keyvault,supabase,vercel}`. VaultData's sync tests use an
+  in-memory remote.
+- The opt-in live suite `Tests/VaultDataTests/Live/LiveDestinationTests.swift` is never run in CI.
+  Each provider runs only when its variables are set: `FXV_LIVE_DEST_KEYVAULT` (optional
+  `FXV_LIVE_DEST_TENANT`), `FXV_LIVE_DEST_VERCEL_PROJECT` and `FXV_LIVE_DEST_VERCEL_TOKEN`
+  (optional `FXV_LIVE_DEST_VERCEL_TEAM`), `FXV_LIVE_DEST_SUPABASE_REF` and
+  `FXV_LIVE_DEST_SUPABASE_TOKEN`; `FXV_LIVE_DEST_AZ_TOKEN=1` only fetches an `az` token. It writes
+  and deletes names starting with `FXV_E2E_` and needs a throwaway vault or project.
+- **Recorded on 2026-10-16:** the Vercel round trip passed against a throwaway project of a
+  personal account (import, add a secret and a plain variable, a `NEXT_PUBLIC_` value blocked
+  until Mark as Public, list and read back, an update by PATCH confirmed by re-list, deletion);
+  the project was deleted afterwards. The `az` token test passed without contacting a vault. The
+  Key Vault data plane and the Supabase Management API have not run live yet: their behavior
+  above comes from the clients and their fixtures.

@@ -74,6 +74,21 @@ public enum Limits {
     /// share package and one chat card.
     public static let maxFolderItems = 1000
 
+    // MARK: - Destinations (v0.8.0)
+
+    /// Largest Key Vault secret value, in bytes (Azure: 25 KiB).
+    public static let maxKeyVaultValueBytes = 25 * bytesPerKiB
+    /// Most secrets and variables one destination holds. Local choice, as for folders.
+    public static let maxDestinationItems = 1000
+    /// Most destinations one repository has. Local choice.
+    public static let maxDestinationsPerRepository = 32
+    /// Most provider connections (Supabase and Vercel tokens) in a vault. Local choice.
+    public static let maxConnections = 32
+    /// Largest HTTP response body FX Vault reads from a provider.
+    public static let maxDestinationResponseBytes = 16 * bytesPerMiB
+    /// Largest `fxvault.yml` FX Vault reads.
+    public static let maxManifestBytes = 64 * bytesPerKiB
+
     // MARK: - Write throttle and retries (D12, §7.3)
 
     /// FX Vault's own cap on gh write commands per minute, per account.

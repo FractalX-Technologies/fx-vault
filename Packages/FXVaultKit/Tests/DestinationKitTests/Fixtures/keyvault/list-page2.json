@@ -1,0 +1,23 @@
+{
+  "value": [
+    {
+      "id": "https://kv-sample-prod.vault.azure.net/secrets/GITHUB-SAMPLE",
+      "attributes": {
+        "enabled": true,
+        "created": 1789990005,
+        "updated": 1790000005,
+        "recoveryLevel": "Recoverable+Purgeable"
+      }
+    },
+    {
+      "id": "https://kv-sample-prod.vault.azure.net/secrets/SERVICE-ENDPOINT",
+      "attributes": {
+        "enabled": true,
+        "created": 1789990006,
+        "updated": 1790000006,
+        "recoveryLevel": "Recoverable+Purgeable"
+      }
+    }
+  ],
+  "nextLink": null
+}

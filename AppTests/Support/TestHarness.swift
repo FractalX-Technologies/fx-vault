@@ -392,6 +392,8 @@ final class ActionRecorder {
     var openings: [OpenedScope] = []
     /// Folders shown (v0.7.0: a new folder, a linked copy's folder).
     var openedFolders: [FolderID] = []
+    /// Destinations shown (v0.8.0).
+    var openedDestinations: [DestinationID] = []
     /// Get Updates from Teammates calls (v0.6.0).
     var spaceSyncs = 0
     /// Publishes members were told about (v0.6.0).
@@ -415,6 +417,7 @@ extension TestHarness {
             select: { recorder.selections.append($0) },
             open: { recorder.openings.append(ActionRecorder.OpenedScope(repositoryID: $0, scope: $1)) },
             openFolder: { recorder.openedFolders.append($0) },
+            openDestination: { recorder.openedDestinations.append($0) },
             syncSpaces: { recorder.spaceSyncs += 1 },
             spacesPublished: { recorder.spacePublishes += 1 },
             spaceIdentity: { SpaceLocalIdentityModel(login: TestFixtures.account, displayName: "Ana", macName: "Ana's Mac") }

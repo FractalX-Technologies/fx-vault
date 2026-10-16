@@ -1,0 +1,17 @@
+{
+  "envs": [
+    {
+      "type": "encrypted",
+      "value": "eyFIXTURECIPHERTEXTaaaaaaaaaaaaaaaa",
+      "target": ["production"],
+      "id": "env_page_one",
+      "key": "PAGE_ONE",
+      "updatedAt": 1790000000000
+    }
+  ],
+  "pagination": {
+    "count": 1,
+    "next": 1789999999999,
+    "prev": null
+  }
+}

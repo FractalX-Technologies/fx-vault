@@ -27,6 +27,7 @@ public struct EnvFileRepository: Sendable {
     public let session: VaultSession
     private let config: ConfigRepository
     private let folders: FolderRepository
+    private let destinations: DestinationRepository
     private let gitignoreChecker: any GitignoreChecker
     private let cloudSyncDetector: CloudSyncDetector
     private let fileWriter: SecureFileWriter
@@ -49,6 +50,7 @@ public struct EnvFileRepository: Sendable {
         self.session = session
         config = ConfigRepository(session: session, clock: clock, writePolicy: writePolicy)
         folders = FolderRepository(session: session, clock: clock)
+        destinations = DestinationRepository(session: session, clock: clock)
         self.gitignoreChecker = gitignoreChecker
         self.cloudSyncDetector = cloudSyncDetector
         self.fileWriter = fileWriter
@@ -140,6 +142,16 @@ public struct EnvFileRepository: Sendable {
             return Set(selections.filter {
                 taken.contains(ConfigRepository.TargetKey(kind: $0.kind, name: GitHubNameValidator.foldKey($0.name)))
             }.map(\.candidateIndex))
+        case .destination(let destinationID):
+            // A destination holds one item per name, whatever its kind.
+            let items: [DestinationItemModel]
+            do {
+                items = try destinations.items(destinationID: destinationID)
+            } catch {
+                throw .config(error)
+            }
+            let taken = Set(items.filter { !$0.isDeleted }.map(\.nameKey))
+            return Set(selections.filter { taken.contains(GitHubNameValidator.foldKey($0.name)) }.map(\.candidateIndex))
         }
     }
 
@@ -157,6 +169,8 @@ public struct EnvFileRepository: Sendable {
             return try applyImport(preview, selections: selections, repositoryID: repositoryID, scope: scope)
         case .folder(let folderID):
             return try applyFolderImport(preview, selections: selections, folderID: folderID)
+        case .destination(let destinationID):
+            return try applyDestinationImport(preview, selections: selections, destinationID: destinationID)
         }
     }
 
@@ -237,6 +251,11 @@ public struct EnvFileRepository: Sendable {
                 let items = try FolderStore(database: session.database).fetchItems(folderID: folderID)
                 return Self.preview(of: items.map {
                     ExportCandidate(kind: $0.kind, name: $0.name, nameKey: $0.nameKey, hasValue: true, isDeleted: false)
+                })
+            case .destination(let destinationID):
+                let items = try DestinationStore(database: session.database).fetchItems(destinationID: destinationID)
+                return Self.preview(of: items.map {
+                    ExportCandidate(kind: $0.kind, name: $0.name, nameKey: $0.nameKey, hasValue: $0.hasValue, isDeleted: $0.isDeleted)
                 })
             }
         } catch {
@@ -383,6 +402,55 @@ public struct EnvFileRepository: Sendable {
         return EnvImportResultModel(added: added, overwritten: overwritten, skipped: skipped, strippedTrailingNewlines: stripped)
     }
 
+    /// Imports into a destination (v0.8.0): pending changes for the next Sync, existing names
+    /// skipped or overwritten; variables become secrets where the provider holds secrets only.
+    private func applyDestinationImport(
+        _ preview: EnvImportPreviewModel,
+        selections: [EnvImportSelectionModel],
+        destinationID: DestinationID
+    ) throws(EnvFileError) -> EnvImportResultModel {
+        var added: [String] = []
+        var overwritten: [String] = []
+        var skipped: [EnvImportSkipModel] = []
+        var stripped: [String] = []
+        do throws(ConfigRepositoryError) {
+            try destinations.write { keys, tx, now in
+                let writer = DestinationItemWriter(store: DestinationStore(database: session.database), keys: keys, tx: tx, now: now)
+                _ = try writer.requireDestination(destinationID)
+                var seen: Set<String> = []
+                for selection in selections {
+                    let name: String
+                    let candidate: EnvImportCandidateModel
+                    switch Self.resolve(selection, in: preview, seen: &seen) {
+                    case .accepted(let validName, let accepted):
+                        (name, candidate) = (validName, accepted)
+                    case .skipped(let skip):
+                        skipped.append(skip)
+                        continue
+                    }
+                    if let existing = try writer.liveRow(destinationID: destinationID, name: name) {
+                        guard selection.onConflict == .overwrite else {
+                            skipped.append(EnvImportSkipModel(selection, name: name, reason: .existingItem))
+                            continue
+                        }
+                        try writer.editValue(existing.id, value: candidate.value)
+                        overwritten.append(name)
+                    } else {
+                        try writer.add(destinationID: destinationID, kind: selection.kind, name: name, value: candidate.value)
+                        added.append(name)
+                    }
+                    if candidate.didStripTrailingNewlines {
+                        stripped.append(name)
+                    }
+                }
+            }
+        } catch {
+            throw .config(error)
+        }
+        Self.log.info("Imported \(added.count, privacy: .public) new and \(overwritten.count, privacy: .public) overwritten item(s) into a destination")
+        return EnvImportResultModel(added: added, overwritten: overwritten, skipped: skipped, strippedTrailingNewlines: stripped)
+    }
+
     /// One selection after validation.
     private enum SelectionResolution {
         case accepted(name: String, candidate: EnvImportCandidateModel)
@@ -472,6 +540,10 @@ public struct EnvFileRepository: Sendable {
                         .map(ItemCopySource.init)
                 case .folder(let folderID):
                     try FolderStore(database: session.database).fetchItemRecords(folderID: folderID, in: tx).map(ItemCopySource.init)
+                case .destination(let destinationID):
+                    try DestinationStore(database: session.database)
+                        .fetchItemRecords(destinationID: destinationID, in: tx)
+                        .map(ItemCopySource.init)
                 }
                 var byName: [String: DotEnvEntryModel] = [:]
                 let ordered = sources.filter { !$0.isDeleted && names.contains($0.name) }

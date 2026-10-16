@@ -12,7 +12,8 @@ public enum LinkedValueComparison: Sendable, Hashable {
     case unknown
 }
 
-/// Where a linked copy is (v0.7.0): a scope of a vault repository, or a folder.
+/// Where a linked copy is (v0.7.0): a scope of a vault repository, a folder, or (v0.8.0) a
+/// destination of a repository.
 public enum LinkedCopyPlaceModel: Sendable, Hashable {
     case scope(
         repositoryID: RepoID,
@@ -22,6 +23,14 @@ public enum LinkedCopyPlaceModel: Sendable, Hashable {
         environmentName: String?
     )
     case folder(FolderID, name: String)
+    case destination(
+        DestinationID,
+        repositoryID: RepoID,
+        repositoryFullName: String,
+        provider: DestinationProvider,
+        displayName: String,
+        stage: String?
+    )
 }
 
 /// Another place of a linked item (v0.4.1; folders since v0.7.0): one row of the Linked chip's
@@ -64,11 +73,12 @@ public struct LinkedCopyModel: Sendable, Hashable, Identifiable {
         editBlock == nil
     }
 
-    /// `owner/name`, or the folder's name.
+    /// `owner/name`, the folder's name, or the destination's name.
     public var placeName: String {
         switch place {
         case .scope(_, _, let fullName, _, _): fullName
         case .folder(_, let name): name
+        case .destination(_, _, _, _, let displayName, _): displayName
         }
     }
 
@@ -77,6 +87,7 @@ public struct LinkedCopyModel: Sendable, Hashable, Identifiable {
         switch place {
         case .scope(let repositoryID, _, _, let scope, _): .scope(repositoryID: repositoryID, scope: scope)
         case .folder(let id, _): .folder(id)
+        case .destination(let id, _, _, _, _, _): .destination(id)
         }
     }
 }

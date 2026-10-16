@@ -375,6 +375,47 @@ foreground color, so `.primary` text still turns white on selected rows.
   "Shared · v7" ("· publishing" while a claim is open) that opens the space sheet. When a
   teammate's version arrives, "Got v7 from Ana" shows as a caption before the bubbles for 8 s
   (the ping outcome wins while it shows).
+- Runtime destinations in the scope column (v0.8.0, canvas "FX Vault Destinations"): an
+  **Overview** row first (`square.grid.2x2` in `mutedText`, `.callout`, the scope row
+  background); `SectionLabel` BUILD · GITHUB ACTIONS over the GitHub scopes; after "New
+  Environment", `SectionLabel` RUNTIME with an Experimental `StatusChip.tag`, then one 2-line
+  row per destination: the provider symbol in `monoLabel` `mutedText`
+  (`destinationSymbolWidth`, so names line up), the name in `.callout` (`.calloutEmphasized`
+  when selected; tail-truncated) over "provider · stage" in `.caption` `mutedText`, then the
+  value-missing `exclamationmark.triangle` in `warning`, the 6 pt `brand` pending dot and the
+  count in `monoLabel` subtle, on `.fxRowBackground(style: .scope)`. "Add Destination" is a dashed
+  `hairlineStrong` row like "New Environment". A destination's context menu (and the detail's
+  ••• menu): Settings…, Export .env…, Remove from FX Vault… (destructive confirmation).
+- Destination detail (v0.8.0, canvas board 3): `SectionLabel` DESTINATION · RUNTIME, the name in
+  `.largeTitle` (middle-truncated), `StatusChip.tag`s for the provider, the stage (or "No stage")
+  and Experimental, then how it is reached ("via Azure CLI sign-in", "via Vercel API token") in
+  `.monoMeta` `subtleText`; Refresh (secondary, a small `ProgressView` while listing, disabled
+  offline) and the ••• outline circle, beside the title or under it (`ViewThatFits`). A
+  `container` card holds STAGE (`.callout`), TARGET (`.monoMeta`) and NAMES AND VALUES (the
+  provider's rules in `.caption` `mutedText`), side by side or stacked. The Refresh banner is
+  `.info` with Review ("2 changes in Key Vault since your last sync"), `.info` with a checkmark
+  when nothing changed, and a `.warning` for items FX Vault cannot use (their names as help).
+  Then the same table as a repository with the Status column: Vercel keeps the Secrets /
+  Variables `SegmentedPill`; Key Vault and Supabase hold secrets only, so the pill gives way to a
+  `SectionLabel` "SECRETS · 4". Add actions, multi-selection and the linked chip are unchanged.
+- Stage Overview (v0.8.0, canvas boards 1, 2 and 5): `SectionLabel` STAGE · ALL DESTINATIONS
+  with an Experimental tag, the stage in `.largeTitle`, tags for "2 destinations" and the
+  `fxvault.yml` state ("No fxvault.yml in the repository", "fxvault.yml could not be read", …).
+  The header's actions hold the stage picker (a native menu `Picker`, only with two or more
+  stages; it replaced the canvas' stage switcher), Show Check / Hide Check (outline) and Read
+  Again (secondary). The findings banner is `.warning` ("1 thing to fix in production", "…, by
+  fxvault.yml" when a manifest was applied) or `.info` "This stage matches fxvault.yml." and has
+  no action of its own: Show Check sits in the header. The matrix is a `Grid` in a `container`
+  card: NAME (`.monoName`, linked count as a neutral chip), CYCLE (a `StatusChip.tag`: Build,
+  Runtime, Public; the canvas' "who reads what"), then one column per place with a
+  `SectionLabel` title and the environment or destination in `.monoMeta`; each cell is a
+  `StatusChip` (Synced `.neutral`, Will push `.brand`, Missing / Extra / Differs / Value
+  missing `.warning`, Blocked / Will delete `.danger`) that opens the place, or "—" in
+  `subtleText` where the place does not use the name. The matrix scrolls sideways inside its
+  card when the stage has more places than fit. A legend in `.caption` `subtleText` follows; Show
+  Check opens the manifest panel (a `container` card: parse issues with their line as a chip,
+  findings with Add Destination where a destination is missing, Copy .env.example (a menu per
+  target) and Copy fxvault.yml for This Repository, both outline).
 
 ### Sheets (board SyncReview)
 
@@ -424,6 +465,27 @@ foreground color, so `.primary` text still turns white on selected rows.
 - The item editor's "Linked copies" field (v0.4.1) appears under the value once a new value is
   typed: one `FXCheckboxRow` per place ("owner/name · scope · account (Same value)") and an info
   note.
+- Add Destination (v0.8.0) is a `ConfigEditorSheet` (`destinationSheetWidth`, eyebrow RUNTIME):
+  PROVIDER as a `SegmentedPill` (Azure Key Vault / Supabase / Vercel) with a one-line note under
+  it; STAGE as a rounded field with a Stages menu (the repository's environments) and its note;
+  then the target: VAULT NAME and TENANT (OPTIONAL) as mono rounded fields for Key Vault, or a
+  CONNECTION picker (an existing connection or New Token…, which shows NAME and ACCESS TOKEN
+  fields and how to create a token) and the project, team and environment pickers for Supabase
+  and Vercel. The primary is "Add and Import". Afterwards the fields give way to the import
+  result ("4 items imported from the destination.", the ones without a value, the names left as
+  they are) with Open Destination.
+- A destination's Settings… (v0.8.0) is a `ConfigEditorSheet` with STAGE and, for Supabase and
+  Vercel, the CONNECTION picker and a note pointing to Settings › Destinations.
+- Destination drift review (v0.8.0) is a `ConfigEditorSheet` titled with the banner's sentence:
+  a `ConfigSheetList` with each name in `.monoName`, what happened in the provider as a caption,
+  and Keep Mine (outline) / Use Key Vault (secondary) per row; the footer has Close and "Use Key
+  Vault for All" (primary). A value the provider does not return says so in the row.
+- The Sync sheet (v0.8.0, canvas board 4) shows each destination as one more scope of its
+  repository ("Key Vault · kv-example-prod · via Azure CLI sign-in"), its lines as "DATABASE_URL
+  as DATABASE-URL" where the provider stores another name, blocked changes as issues with a fix
+  (Show Destination), public-value warnings and Vercel variables shared with other environments.
+  Destination deletions join the deletion review; the result shows "Confirmed in the
+  destination", "Sent, but the destination did not list it yet…" or "Not sent" per item.
 
 - Content on `card` (`.fxSheetBackground()`), padding 32, gap 22–24.
 - Header: `SectionLabel` (REVIEW BEFORE SYNC) + `.title` + `mutedText` `.body` line.
@@ -453,6 +515,15 @@ foreground color, so `.primary` text still turns white on selected rows.
 Native `Settings` + `TabView` + `Form`; the window gets `.fxWindowBackground()`. Use
 `SectionLabel` for group titles inside custom sections, `StatusChip` for states, and
 `.fxButtonStyle(.secondary)` for row actions. Do not restyle native toggles and pickers.
+
+Destinations (v0.8.0, tab symbol `server.rack`) uses the Preferences sections: AZURE KEY VAULT
+(one row "Azure CLI" with its state, Check (secondary) and, when something is wrong, Copy az
+login (outline); the footnote says the token stays in memory) and SUPABASE AND VERCEL (one row per
+connection: its name, "provider · account" as the detail, a ••• menu with Rename…, Replace
+Token… and Remove…; then Add Connection… (outline); the footnote says tokens are encrypted in the
+vault). Add Connection… and Replace Token… are a `ConfigEditorSheet` (provider pill and name when
+adding, the token in a mono `SecureField`, "Check and Save" as the primary; a failed check shows
+under the field in `danger`).
 
 ### `.env`, sharing, nearby and chat (sheet pattern)
 
@@ -530,6 +601,11 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 | Lock | `DotGridBackground`, `BrandMark`, `.display`, `FXTextField(.pill)`, `FXButtonStyle` |
 | Onboarding | `StepCounter`, `.largeTitle`, `.lead`, `FXTextField(.rounded)`, `SectionLabel` |
 | SyncReview | `.fxSheetBackground`, `Card(.container)`, `.title`, `.statusLine`, `FXButtonStyle(.large)` |
+| FX Vault Destinations 1: stage matrix (v0.8.0) | `StageOverviewScreen` (`OverviewHeader`, `OverviewMatrix`, `OverviewCell`); the stage switcher moved into the header's picker |
+| FX Vault Destinations 2: who reads what | The CYCLE column (`StageOverviewCycle`: Build, Runtime, Public) and the legend |
+| FX Vault Destinations 3: Key Vault destination | `DestinationDetailScreen`, the RUNTIME rows of `ScopeListView` |
+| FX Vault Destinations 4: multi-provider Sync review | `DestinationSyncPresentation` sections in the Sync sheet |
+| FX Vault Destinations 5: manifest | `OverviewManifestPanel`, the findings banner |
 
 ## Known limits
 
@@ -551,6 +627,10 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
   dividers). With the sidebar collapsed, or the scope column narrowed below its default, a long
   title can still reach the divider.
 - Tracking is not part of `Font`; text styled with a bare `Theme.Typography` font has no tracking.
+- The Overview matrix (v0.8.0) takes each column's ideal width inside a horizontal `ScrollView`,
+  so at the default window width (1,120 pt, sidebar shown) a stage with three or more places
+  scrolls sideways and the last column starts clipped at the card's edge. Collapsing the sidebar
+  or widening the window shows it whole.
 
 ## Visual snapshots
 
@@ -568,7 +648,11 @@ Each screen gives `<name>-<light|dark>.window.png` (an offscreen window): the re
 window captures (9 screens × 2 appearances = 18 files; v0.6.0 adds `space-share`,
 `space-history`, `space-members`, `sync-summary-space` and `settings-teammates-remote`; v0.7.0
 adds `main-folder`, `main-folder-variables`, `main-sidebar-teammates`, `presence-popover-folder`,
-`folder-destination` and `folder-destination-new`). SwiftUI `ImageRenderer` is not used: it
+`folder-destination` and `folder-destination-new`; v0.8.0 adds `main-destination-keyvault`,
+`main-destination-vercel`, `main-overview`, `add-destination` and `settings-destinations`, over
+`MainSnapshotFixture.destinations` (`kv-example-prod` and `example-web · Production`)).
+The offscreen window capture leaves the repository sidebar blank or black in some captures; the
+running app draws it normally. SwiftUI `ImageRenderer` is not used: it
 cannot draw AppKit-backed views (`ScrollView`, `List`, `Table`, text fields, toggles, the split
 view), which came out blank or as placeholders. A window capture cannot draw the macOS 26+ glass
 sidebar, so the sidebar also has its own snapshot (`main-sidebar`).

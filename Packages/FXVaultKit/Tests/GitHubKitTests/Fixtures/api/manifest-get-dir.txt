@@ -1,0 +1,8 @@
+HTTP/2.0 200 OK
+Access-Control-Allow-Origin: *
+Content-Type: application/json; charset=utf-8
+Date: Thu, 01 Jan 2026 00:00:00 GMT
+Server: github.com
+X-Github-Api-Version-Selected: 2026-03-10
+
+{"type":"dir","encoding":"none","size":0,"sha":"abc","content":""}

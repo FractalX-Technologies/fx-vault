@@ -67,3 +67,19 @@ Patterns and rules learned from corrections during this project. Read at the sta
 ## 2026-10-15 - Wall-clock bounds in tests and the session-start CI check
 **Pattern:** `main` had been red since the previous release's plan commit: two ProcessRunner tests required a run to finish in < 5 s, and the hosted macos-26 runner took 6.2–6.4 s (the whole test process stalls there). The session started work without checking CI, so the red `main` was found only at release time.
 **Rule:** Check the latest CI run on `main` at session start (`gh run list --branch main --limit 3`). A wall-clock bound in a test proves only what it must (for example "well before the child's natural exit"), never runner latency.
+
+## 2026-10-16 - Check whose tenant a cloud subscription belongs to before creating anything
+**Pattern:** The only Azure subscription signed in on this Mac belonged to a client's tenant. Creating a test Key Vault there would have put FractalX test resources (and a billing line) in a client's account.
+**Rule:** Before any live test that creates cloud resources, read the subscription's tenant (`az account show --query tenantDefaultDomain`) and use it only when it is FractalX's own. Otherwise test against fakes and say so in the report; ask Bryan for a sandbox.
+
+## 2026-10-16 - GRDB database methods are not reentrant, in tests too
+**Pattern:** A test read the store from inside a `write { }` closure and crashed the whole VaultData test run with "Database methods are not reentrant" (SerializedDatabase.swift:137).
+**Rule:** In tests and code alike, never call a store or repository method from inside a GRDB `read`/`write` closure; use the `db` handle you were given, or do the second call after the closure returns.
+
+## 2026-10-16 - Xcode auto-updates break explicit-module caches mid-session
+**Pattern:** Xcode updated itself during the session; the next build failed on precompiled modules built with the old SDK.
+**Rule:** After an Xcode update (`xcodebuild -version` changed), delete `<derivedData>/SDKExplicitPrecompiledModules` and the ModuleCache before chasing compile errors.
+
+## 2026-10-16 - Every count string needs a singular variant
+**Pattern:** Snapshot review showed "1 things to fix" and "1 projects": the catalog has no plural variations, so `"\(count) things"` is wrong for one.
+**Rule:** Write `count == 1 ? "...one" : "..."` (two keys, as FolderCopy does) for every user-visible count, and review the snapshots with a count of one.

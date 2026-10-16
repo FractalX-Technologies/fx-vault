@@ -153,6 +153,17 @@
                ReferencedContainer = "container:Packages/FXVaultKit">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DestinationKitTests"
+               BuildableName = "DestinationKitTests"
+               BlueprintName = "DestinationKitTests"
+               ReferencedContainer = "container:Packages/FXVaultKit">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

@@ -20,6 +20,16 @@ struct DEKRotationReportModel: Sendable, Hashable {
     var secretFields = 0
     /// Folder item values re-encrypted (and their fingerprints recomputed), v0.7.0.
     var folderValues = 0
+    /// Destination item values re-encrypted (and their fingerprints recomputed), v0.8.0.
+    var destinationValues = 0
+    /// Destination `synced_fp` values that could not be recomputed and were cleared (the item is
+    /// pushed again on the next Sync), v0.8.0.
+    var destinationSyncedFingerprintsCleared = 0
+    /// Supabase change markers re-keyed under the new `K_fp` (the others stay and show as a
+    /// change at the next Refresh), v0.8.0.
+    var destinationMarkersRekeyed = 0
+    /// Provider connection tokens re-encrypted, v0.8.0.
+    var connectionTokens = 0
 }
 
 /// Re-encrypts every encrypted column under a new DEK inside the caller's transaction (§5.2
@@ -44,6 +54,7 @@ struct DEKRotator {
     let teamStore: TeamStore
     let spaceStore: SpaceStore
     let folderStore: FolderStore
+    let destinationStore: DestinationStore
 
     init(database: VaultDatabase) {
         repoStore = RepoStore(database: database)
@@ -51,6 +62,7 @@ struct DEKRotator {
         teamStore = TeamStore(database: database)
         spaceStore = SpaceStore(database: database)
         folderStore = FolderStore(database: database)
+        destinationStore = DestinationStore(database: database)
     }
 
     func reencryptAll(
@@ -95,7 +107,73 @@ struct DEKRotator {
                 report.folderValues += 1
             }
         }
+        try reencryptDestinations(from: oldKeys, to: newKeys, report: &report, in: tx)
         return report
+    }
+
+    /// Destination item values (with their fingerprints) and provider connection tokens (v0.8.0).
+    /// A `synced_fp` is recomputed from the value when the two matched under the old key and
+    /// cleared otherwise, as for repository items without `synced_value_ct`. A Supabase change
+    /// marker is keyed under `K_fp` (`DestinationFieldCipher.keyedMarker`): it is re-keyed when
+    /// the value's digest gives the stored marker under the old key, and kept otherwise (it then
+    /// differs from every listing, which Refresh reports as a change: the safe direction).
+    private func reencryptDestinations(
+        from oldKeys: borrowing UnlockedKeys,
+        to newKeys: borrowing UnlockedKeys,
+        report: inout DEKRotationReportModel,
+        in tx: StoreTransaction
+    ) throws {
+        for destination in try destinationStore.fetchAllDestinationRecords(in: tx) {
+            for var item in try destinationStore.fetchItemRecords(destinationID: destination.id, in: tx) {
+                guard let ciphertext = item.valueCiphertext else {
+                    if item.syncedFingerprint != nil {
+                        item.syncedFingerprint = nil
+                        report.destinationSyncedFingerprintsCleared += 1
+                        try destinationStore.updateItem(item, in: tx)
+                    }
+                    continue
+                }
+                let aad = DestinationFieldCipher.valueAAD(of: item)
+                let plaintext = try oldKeys.open(ciphertext, for: aad)
+                defer { plaintext.wipe() }
+                if destination.provider == .supabase, let marker = item.remoteVersion {
+                    let digest = DestinationFieldCipher.supabaseDigest(of: plaintext)
+                    let remoteName = DestinationRules.remoteName(for: item.syncedName ?? item.name, provider: .supabase)
+                    let old = DestinationFieldCipher.keyedMarker(digest: digest, remoteName: remoteName, destinationID: destination.id, keys: oldKeys)
+                    if old == marker {
+                        item.remoteVersion = DestinationFieldCipher.keyedMarker(
+                            digest: digest,
+                            remoteName: remoteName,
+                            destinationID: destination.id,
+                            keys: newKeys
+                        )
+                        report.destinationMarkersRekeyed += 1
+                    }
+                }
+                if let synced = item.syncedFingerprint {
+                    if oldKeys.fingerprintMatches(synced, value: plaintext, rowID: item.id) {
+                        item.syncedFingerprint = newKeys.fingerprint(plaintext, rowID: item.id)
+                    } else {
+                        item.syncedFingerprint = nil
+                        report.destinationSyncedFingerprintsCleared += 1
+                    }
+                }
+                item.valueCiphertext = try newKeys.seal(plaintext, for: aad)
+                item.valueFingerprint = newKeys.fingerprint(plaintext, rowID: item.id)
+                try destinationStore.updateItem(item, in: tx)
+                report.destinationValues += 1
+            }
+        }
+        for var connection in try destinationStore.fetchConnectionRecords(in: tx) {
+            connection.tokenCiphertext = try reseal(
+                connection.tokenCiphertext,
+                for: ConnectionTokenCipher.aad(of: connection.id),
+                from: oldKeys,
+                to: newKeys
+            )
+            try destinationStore.updateConnection(connection, in: tx)
+            report.connectionTokens += 1
+        }
     }
 
     private func reseal(

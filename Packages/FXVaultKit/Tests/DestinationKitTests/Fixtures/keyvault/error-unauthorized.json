@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "Unauthorized",
+    "message": "AKV10032: Invalid issuer. Expected one of https://sts.windows.net/00000000-0000-0000-0000-000000000001/, found https://sts.windows.net/00000000-0000-0000-0000-000000000002/."
+  }
+}

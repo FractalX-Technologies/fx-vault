@@ -14,15 +14,16 @@ struct MigrationTests {
         "vaults", "key_wraps", "accounts", "repositories", "environments", "config_items",
         "sync_journal", "deployment_branch_patterns", "imported_share_packages", "device_identity", "teammates",
         "spaces", "space_keys", "space_versions", "teammate_addresses", "folders", "folder_items",
+        "provider_connections", "destinations", "destination_items", "destination_journal",
     ]
 
     @Test func migrationIdentifiersAreFrozenAndOrdered() {
         #expect(Migration.allCases.map(\.rawValue) == [
             "v1_vault", "v2_accounts_repos", "v3_config", "v4_sync_journal", "v5_create_policies", "v6_sharing",
             "v7_journal_fingerprints", "v8_force_push_requested_at", "v9_item_links", "v10_teammates",
-            "v11_spaces", "v12_folders",
+            "v11_spaces", "v12_folders", "v13_destinations",
         ])
-        #expect(Migration.latest == .v12Folders)
+        #expect(Migration.latest == .v13Destinations)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -300,6 +301,9 @@ struct MigrationTests {
     static let seedLinkID = "44444444-4444-4444-8444-444444444444"
     static let seedFolderID = "77777777-7777-4777-8777-777777777777"
     static let seedFolderItemID = "88888888-8888-4888-8888-888888888888"
+    static let seedConnectionID = "99999999-9999-4999-8999-999999999999"
+    static let seedDestinationID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    static let seedDestinationItemID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
 
     static func seed(_ database: VaultDatabase, upTo version: Migration) throws {
         try database.write { tx in
@@ -376,6 +380,23 @@ struct MigrationTests {
                     seedFolderItemID, seedFolderID, Data(repeating: 7, count: 40), Data(repeating: 8, count: 32),
                     seedLinkID, seedTime, seedTime,
                 ])
+            guard version >= .v13Destinations else { return }
+            try db.execute(sql: """
+                INSERT INTO provider_connections (id, provider, label, token_ct, created_at, updated_at)
+                VALUES (?, 'vercel', 'Sample Vercel', ?, ?, ?)
+                """, arguments: [seedConnectionID, Data(repeating: 5, count: 48), seedTime, seedTime])
+            try db.execute(sql: """
+                INSERT INTO destinations (id, repository_id, provider, target_key, settings_json, stage, stage_key,
+                  connection_id, sort_order, created_at, updated_at)
+                VALUES (?, ?, 'azure_keyvault', 'kv|kv-sample-prod', ?, 'Production', 'production', NULL, 0, ?, ?)
+                """, arguments: [seedDestinationID, seedRepoID, #"{"vaultName":"kv-sample-prod","version":1}"#, seedTime, seedTime])
+            try db.execute(sql: """
+                INSERT INTO destination_items (id, destination_id, kind, name, value_ct, value_fp, link_id, created_at, updated_at)
+                VALUES (?, ?, 'secret', 'API_URL', ?, ?, ?, ?, ?)
+                """, arguments: [
+                    seedDestinationItemID, seedDestinationID, Data(repeating: 7, count: 40), Data(repeating: 8, count: 32),
+                    seedLinkID, seedTime, seedTime,
+                ])
         }
     }
 
@@ -441,7 +462,19 @@ struct MigrationTests {
         #expect(folders.map(\.name) == ["Mobile App"])
         #expect(folders.first?.variableCount == 1)
         let folderID = try #require(FolderID(uuidString: seedFolderID))
-        #expect(try FolderStore(database: database).fetchItems(folderID: folderID).map(\.linkCount) == [2])
-        #expect(linkCount == 2)
+        let destinations = try DestinationStore(database: database).fetchDestinations(repositoryID: repoID)
+        guard version >= .v13Destinations else {
+            #expect(destinations.isEmpty)
+            #expect(try FolderStore(database: database).fetchItems(folderID: folderID).map(\.linkCount) == [2])
+            #expect(linkCount == 2)
+            return
+        }
+        #expect(destinations.map(\.target) == [.azureKeyVault(vaultName: "kv-sample-prod", tenantID: nil)])
+        #expect(destinations.first?.stageKey == "production")
+        #expect(destinations.first?.secretCount == 1)
+        #expect(destinations.first?.pendingCount == 1)
+        #expect(try DestinationStore(database: database).fetchConnections().map(\.label) == ["Sample Vercel"])
+        #expect(try FolderStore(database: database).fetchItems(folderID: folderID).map(\.linkCount) == [3])
+        #expect(linkCount == 3)
     }
 }

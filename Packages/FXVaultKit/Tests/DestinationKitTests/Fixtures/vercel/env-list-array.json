@@ -1,0 +1,10 @@
+[
+  {
+    "type": "plain",
+    "value": "1",
+    "target": ["development"],
+    "id": "env_dev",
+    "key": "DEBUG_LEVEL",
+    "updatedAt": 1790000000000
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "decrypted": false,
+  "type": "encrypted",
+  "target": ["production"],
+  "id": "env_database",
+  "key": "DATABASE_URL",
+  "value": "eyFIXTURECIPHERTEXTaaaaaaaaaaaaaaaa"
+}

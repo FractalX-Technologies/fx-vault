@@ -178,6 +178,24 @@ public struct UnlockedKeys: Sendable {
         }
     }
 
+    /// Encrypts a destination item's value (v0.8.0) under `K_field` and this DEK version.
+    public func seal(_ value: SecretBytes, for field: DestinationFieldAAD) throws(CryptoError) -> Data {
+        try FieldCipher.seal(value, key: material.fieldKey, aad: field.encoded(dekVersion: dekVersion))
+    }
+
+    /// Decrypts a destination item's value. The caller wipes the result.
+    ///
+    /// - Throws: `.corrupted(.unsupportedFormatVersion)` or `.corrupted(.fieldDecryptionFailed)`.
+    public func open(_ blob: Data, for field: DestinationFieldAAD) throws(VaultError) -> SecretBytes {
+        do {
+            return try FieldCipher.open(blob, key: material.fieldKey, aad: field.encoded(dekVersion: dekVersion))
+        } catch .unsupportedFormat(_) {
+            throw .corrupted(.unsupportedFormatVersion)
+        } catch {
+            throw .corrupted(.fieldDecryptionFailed)
+        }
+    }
+
     /// The row-bound fingerprint of `value` under `K_fp`.
     public func fingerprint(_ value: SecretBytes, rowID: ConfigItemID) -> Data {
         ValueFingerprinter.fingerprint(of: value, rowID: rowID, key: material.fingerprintKey)

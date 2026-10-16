@@ -186,7 +186,8 @@ public struct FolderStore: Sendable {
     }
 }
 
-/// Live members of link groups across `config_items` (not deleted) and `folder_items` (v0.7.0).
+/// Live members of link groups across `config_items` (not deleted), `folder_items` (v0.7.0) and
+/// `destination_items` (not deleted, v0.8.0).
 enum LinkCountQuery {
     static func counts(of linkIDs: Set<ItemLinkID>, db: Database) throws -> [ItemLinkID: Int] {
         guard !linkIDs.isEmpty else { return [:] }
@@ -200,6 +201,10 @@ enum LinkCountQuery {
             SQLRequest(literal: """
                 SELECT link_id, COUNT(id) FROM folder_items
                 WHERE link_id IN \(texts) GROUP BY link_id
+                """),
+            SQLRequest(literal: """
+                SELECT link_id, COUNT(id) FROM destination_items
+                WHERE is_deleted = 0 AND link_id IN \(texts) GROUP BY link_id
                 """),
         ]
         for request in requests {

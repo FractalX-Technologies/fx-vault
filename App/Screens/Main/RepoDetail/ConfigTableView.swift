@@ -177,7 +177,8 @@ enum ConfigTableFormat {
 }
 
 /// "Copy To ›" (v0.4.0): the repository's other scopes, the ones this account may not change
-/// listed disabled, the folders (v0.7.0), then "Another Repository…" (v0.4.1). Copies into a
+/// listed disabled, the folders (v0.7.0), the repository's destinations (v0.8.0), then "Another
+/// Repository…" (v0.4.1). Copies into a
 /// scope are pending adds there and copies into a folder are saved at once; values are
 /// re-encrypted in the vault and every copy is linked to its source.
 struct CopyToMenu<Model: ConfigTableModel>: View {
@@ -190,6 +191,7 @@ struct CopyToMenu<Model: ConfigTableModel>: View {
     var body: some View {
         let targets = viewModel.scopeCopyTargets
         let folders = viewModel.folderCopyTargets
+        let destinations = viewModel.destinationCopyTargets
         Menu {
             ForEach(targets) { target in
                 Button(target.title) {
@@ -209,7 +211,19 @@ struct CopyToMenu<Model: ConfigTableModel>: View {
                     }
                 }
             }
-            if !targets.isEmpty || !folders.isEmpty {
+            if !destinations.isEmpty {
+                if !targets.isEmpty || !folders.isEmpty {
+                    Divider()
+                }
+                Section(String(localized: "main.table.copyTo.destinations", defaultValue: "Destinations")) {
+                    ForEach(destinations) { target in
+                        Button(target.title) {
+                            viewModel.copy(rows, to: target)
+                        }
+                    }
+                }
+            }
+            if !targets.isEmpty || !folders.isEmpty || !destinations.isEmpty {
                 Divider()
             }
             Button(String(localized: "main.table.copyTo.otherRepository", defaultValue: "Another Repository…")) {

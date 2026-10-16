@@ -144,7 +144,8 @@ private struct LinkedCopyRow: View {
 }
 
 extension LinkedCopyModel {
-    /// "staging · user-a", "Repository · user-a" or "Folder" (v0.7.0), with the copy's name when
+    /// "staging · user-a", "Repository · user-a", "Folder" (v0.7.0) or "Key Vault · production ·
+    /// owner/name" (v0.8.0), with the copy's name when
     /// it differs from `itemName` (a renamed copy).
     func placeDetail(itemName: String) -> String {
         let parts: [String] = switch place {
@@ -152,6 +153,8 @@ extension LinkedCopyModel {
             [environmentName ?? String(localized: "main.scopes.repository", defaultValue: "Repository"), accountLogin]
         case .folder:
             [String(localized: "main.linked.folder", defaultValue: "Folder")]
+        case .destination(_, _, let repositoryFullName, let provider, _, let stage):
+            [provider.shortTitle] + [stage, repositoryFullName].compactMap { $0 }
         }
         let named = name == itemName ? parts : [parts[0], name] + parts.dropFirst()
         return named.joined(separator: " · ")

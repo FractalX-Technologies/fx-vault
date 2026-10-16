@@ -15,7 +15,7 @@ nonisolated extension ValidationError {
         case .valueTooLarge(let limit):
             String(
                 localized: "error.validation.valueTooLarge",
-                defaultValue: "The value is larger than GitHub's limit of \(limit) bytes."
+                defaultValue: "The value is larger than the limit of \(limit) bytes."
             )
         case .emptyValue:
             String(localized: "error.validation.emptyValue", defaultValue: "Enter a value. GitHub does not store empty values.")
@@ -36,6 +36,39 @@ nonisolated extension ValidationError {
                 localized: "error.validation.lockedAfterSync",
                 defaultValue: "The kind and scope cannot change after the item is on GitHub."
             )
+        case .kindNotSupported:
+            String(
+                localized: "error.validation.kindNotSupported",
+                defaultValue: "This destination holds secrets only. Add it as a secret."
+            )
+        case .invalidDestinationTarget(let rule):
+            rule.localizedMessage
+        }
+    }
+}
+
+nonisolated extension DestinationTargetRule {
+    var localizedMessage: String {
+        switch self {
+        case .keyVaultName:
+            String(
+                localized: "error.destination.keyVaultName",
+                defaultValue: "Key Vault names have 3 to 24 letters, digits and dashes, start with a letter and have no two dashes in a row."
+            )
+        case .tenantID:
+            String(
+                localized: "error.destination.tenantID",
+                defaultValue: "Enter a tenant ID (a UUID) or a domain such as contoso.onmicrosoft.com, or leave it empty."
+            )
+        case .supabaseProjectRef:
+            String(
+                localized: "error.destination.supabaseProjectRef",
+                defaultValue: "A Supabase project reference is 20 lowercase letters."
+            )
+        case .vercelProject:
+            String(localized: "error.destination.vercelProject", defaultValue: "Choose a Vercel project.")
+        case .vercelTeam:
+            String(localized: "error.destination.vercelTeam", defaultValue: "Choose a Vercel team or your personal account.")
         }
     }
 }
@@ -57,6 +90,13 @@ nonisolated extension NameRule {
             String(localized: "error.name.reservedPrefix", defaultValue: "Names starting with GITHUB_ are reserved by GitHub.")
         case .reservedName:
             String(localized: "error.name.reservedName", defaultValue: "FX Vault uses this name for shared spaces.")
+        case .reservedByProvider:
+            String(localized: "error.name.reservedByProvider", defaultValue: "Names starting with SUPABASE_ are reserved by Supabase.")
+        case .notUppercase:
+            String(
+                localized: "error.name.notUppercase",
+                defaultValue: "The name has lowercase letters. FX Vault keeps names in uppercase, so it leaves this one as it is."
+            )
         case .dotName:
             String(localized: "error.name.dotName", defaultValue: "The name cannot be . or ..")
         case .gitSuffix:

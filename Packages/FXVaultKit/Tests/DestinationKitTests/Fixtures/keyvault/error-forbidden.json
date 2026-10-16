@@ -1,0 +1,9 @@
+{
+  "error": {
+    "code": "Forbidden",
+    "message": "Caller is not authorized to perform action on resource. Action: 'Microsoft.KeyVault/vaults/secrets/setSecret/action' Resource: '/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-sample/providers/microsoft.keyvault/vaults/kv-sample-prod/secrets/database-url'",
+    "innererror": {
+      "code": "ForbiddenByRbac"
+    }
+  }
+}

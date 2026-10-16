@@ -1,0 +1,13 @@
+{
+  "projects": [
+    {
+      "accountId": "team_sample",
+      "id": "prj_second",
+      "name": "sample-docs"
+    }
+  ],
+  "pagination": {
+    "count": 1,
+    "next": "FIXTURE+CONTINUATION/TOKEN="
+  }
+}

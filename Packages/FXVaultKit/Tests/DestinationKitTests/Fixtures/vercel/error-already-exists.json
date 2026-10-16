@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "ENV_ALREADY_EXISTS",
+    "message": "The environment variable cannot be created because it already exists"
+  }
+}

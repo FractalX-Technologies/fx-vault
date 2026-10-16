@@ -532,6 +532,64 @@ struct VisualSnapshotTests {
         fixture.close()
     }
 
+    // MARK: - Destinations (v0.8.0)
+
+    /// A Key Vault destination of the repository with pending items, then a Vercel destination
+    /// with a public name, then the Overview.
+    @Test func destinations() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let scopes = try #require(main.scopeList)
+        let ids = try MainSnapshotFixture.destinations(harness, repositoryID: scopes.repositoryID)
+        #expect(await TestFixtures.eventually { scopes.destinations.count == 2 })
+        scopes.select(destination: ids.vault)
+        let vault = try #require(main.destinationDetail)
+        #expect(await TestFixtures.eventually { vault.items.count == 4 })
+        try await SnapshotOutput.write("main-destination-keyvault", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        scopes.select(destination: ids.web)
+        let web = try #require(main.destinationDetail)
+        web.kind = .variable
+        #expect(await TestFixtures.eventually { web.items.count == 2 })
+        try await SnapshotOutput.write("main-destination-vercel", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        scopes.selectOverview()
+        let overview = try #require(main.overview)
+        #expect(await TestFixtures.eventually { overview.overview?.rows.isEmpty == false })
+        try await SnapshotOutput.write("main-overview", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
+    @Test func addDestinationSheet() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let scopes = try #require(main.scopeList)
+        let screen = AddDestinationScreen(
+            context: AddDestinationContext(repositoryID: scopes.repositoryID),
+            dependencies: harness.dependencies(recorder: ActionRecorder())
+        )
+        try await SnapshotOutput.write("add-destination", size: CGSize(width: Theme.Layout.destinationSheetWidth, height: 640)) {
+            screen
+        }
+        withExtendedLifetime(harness) {}
+    }
+
+    @Test func destinationsSettings() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        try harness.data.destinations.addConnection(provider: .vercel, label: "Example Vercel", token: SecretBytes(utf8: "FXV_SNAPSHOT_TOKEN"), accountHint: "user-a")
+        try harness.data.destinations.addConnection(provider: .supabase, label: "Example Supabase", token: SecretBytes(utf8: "FXV_SNAPSHOT_TOKEN"), accountHint: "3")
+        let settings = DestinationsSettingsViewModel(app: harness.app)
+        #expect(await TestFixtures.eventually { settings.connections.count == 2 })
+        try await SnapshotOutput.write(
+            "settings-destinations",
+            size: CGSize(width: Theme.Layout.settingsWidth, height: SnapshotOutput.settingsHeight)
+        ) {
+            DestinationsSettingsScreen(viewModel: settings)
+        }
+    }
+
     @Test func preferencesSecurityTab() async throws {
         let harness = try await TestHarness(vault: .unlocked)
         try await harness.enableTouchID()
@@ -556,6 +614,32 @@ enum MainSnapshotFixture {
     static let name = TestFixtures.repoName
     static var fullName: String { "\(owner)/\(name)" }
     nonisolated static let production = "production"
+
+    /// A Key Vault and a Vercel destination for `production`, with pending items (one public name
+    /// with a secret-looking value).
+    static func destinations(_ harness: TestHarness, repositoryID: RepoID) throws -> (vault: DestinationID, web: DestinationID) {
+        let destinations = harness.data.destinations
+        let vault = try destinations.createDestination(
+            repositoryID: repositoryID,
+            target: .azureKeyVault(vaultName: "kv-example-prod", tenantID: nil),
+            stage: production,
+            connectionID: nil
+        )
+        for name in ["DATABASE_URL", "STRIPE_SECRET_KEY", "OPENAI_API_KEY"] {
+            try destinations.addItem(destinationID: vault, kind: .secret, name: name, value: SecretBytes(utf8: "FXV_SNAPSHOT_\(name)"))
+        }
+        try destinations.addItem(destinationID: vault, kind: .secret, name: "RESEND_API_KEY", value: SecretBytes(utf8: "FXV_SNAPSHOT_RESEND"))
+        let connection = try destinations.addConnection(provider: .vercel, label: "Example Vercel", token: SecretBytes(utf8: "FXV_SNAPSHOT_TOKEN"), accountHint: "user-a")
+        let web = try destinations.createDestination(
+            repositoryID: repositoryID,
+            target: .vercel(projectID: "prj_example", projectName: "example-web", teamID: nil, environment: .production),
+            stage: production,
+            connectionID: connection
+        )
+        try destinations.addItem(destinationID: web, kind: .variable, name: "NEXT_PUBLIC_API_URL", value: SecretBytes(utf8: "https://api.example.invalid"))
+        try destinations.addItem(destinationID: web, kind: .variable, name: "NEXT_PUBLIC_STRIPE_KEY", value: SecretBytes(utf8: "sk_live_" + String(repeating: "x", count: 24)))
+        return (vault, web)
+    }
 
     static func make() async throws -> (TestHarness, MainViewModel) {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: nil)

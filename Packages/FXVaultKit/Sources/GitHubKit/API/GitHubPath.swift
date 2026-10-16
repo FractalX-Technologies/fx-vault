@@ -7,7 +7,7 @@ import VaultCore
 /// Each dynamic segment must pass `PathSegmentValidator` (no empty strings, no `.`/`..` or
 /// encoded forms, no separators, no control/bidi/zero-width characters) and is then encoded
 /// with the RFC 3986 unreserved set, so `/`, `?`, `#`, `%` and spaces can never change the
-/// request's shape. Only `environments` and branch-policy paths are built (D4).
+/// request's shape. Only `environments`, branch-policy and (v0.8.0) root-file content paths are built (D4).
 public struct GitHubPath: Sendable, Hashable, CustomStringConvertible {
     /// The encoded path, without a leading slash, with the query string if any.
     public let rendered: String
@@ -22,6 +22,7 @@ public struct GitHubPath: Sendable, Hashable, CustomStringConvertible {
     private static let reposSegment = "repos"
     private static let environmentsSegment = "environments"
     private static let branchPoliciesSegment = "deployment-branch-policies"
+    private static let contentsSegment = "contents"
     private static let perPageKey = "per_page"
 
     /// Validates and encodes `segments`. Literal segments are validated too.
@@ -87,6 +88,11 @@ public struct GitHubPath: Sendable, Hashable, CustomStringConvertible {
             segments: [reposSegment, repo.owner, repo.name, environmentsSegment, environment, branchPoliciesSegment],
             query: paginated ? [(perPageKey, String(GHConstants.apiPerPage))] : []
         )
+    }
+
+    /// `repos/{o}/{r}/contents/{file}` at the root of the default branch (v0.8.0: `fxvault.yml`).
+    static func rootFile(_ repo: GHRepoRef, name: String) throws(GHError) -> GitHubPath {
+        try GitHubPath(segments: [reposSegment, repo.owner, repo.name, contentsSegment, name])
     }
 
     /// `repos/{o}/{r}/environments/{e}/deployment-branch-policies/{id}`

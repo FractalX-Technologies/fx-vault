@@ -33,6 +33,19 @@ public enum Timeouts {
     /// `ConnectTimeout` passed to `ssh -T` when verifying an alias (argv, seconds).
     public static let sshVerifyConnectTimeoutSeconds = 10
 
+    // MARK: - Destinations (v0.8.0)
+
+    /// One HTTPS request to Key Vault, Supabase or Vercel.
+    public static let destinationRequest: Duration = .seconds(30)
+    /// `az account get-access-token` (it may refresh the login first).
+    public static let azAccessToken: Duration = .seconds(60)
+    /// An access token is refreshed this long before it expires.
+    public static let accessTokenRefreshMargin: Duration = .seconds(5 * secondsPerMinute)
+    /// Wait before retrying a provider request after HTTP 429 without `Retry-After`.
+    public static let destinationRateLimitBackoff: Duration = .seconds(10)
+    /// Longest `Retry-After` FX Vault honors before the run stops.
+    public static let destinationMaxRetryAfter: Duration = .seconds(60)
+
     // MARK: - Sync (D12, §7.3)
 
     /// Fixed wait after a rate-limit error (gh exposes no `retry-after`).

@@ -52,6 +52,7 @@ let package = Package(
                 "EnvTools",
                 "GitHubKit",
                 "VaultCrypto",
+                "DestinationKit",
             ]
         ),
     ],
@@ -64,6 +65,7 @@ let package = Package(
         + module("VaultStore", dependencies: ["VaultCore", grdb], testDependencies: [grdb])
         + module("GitHubKit", dependencies: ["VaultCore"])
         + module("EnvTools", dependencies: ["VaultCore"])
+        + module("DestinationKit", dependencies: ["VaultCore", "GitHubKit"], testDependencies: ["VaultCore", "GitHubKit"])
         + module("SharingKit", dependencies: ["VaultCore"], resources: [.process("Resources")])
         + module(
             "SyncEngine",
@@ -80,6 +82,7 @@ let package = Package(
                 "EnvTools",
                 "SharingKit",
                 "SyncEngine",
+                "DestinationKit",
             ],
             // Every module the tests import, listed explicitly instead of reached transitively.
             testDependencies: [
@@ -90,6 +93,7 @@ let package = Package(
                 "EnvTools",
                 "SharingKit",
                 "SyncEngine",
+                "DestinationKit",
                 testSupport,
             ]
         )

@@ -4,14 +4,21 @@ import VaultCore
 import VaultData
 
 /// Column 2 (§10): "Repository" then one row per environment, with the pending dot and the
-/// value-missing count, "+ New Environment" and the environment context menu.
+/// value-missing count, "+ New Environment" and the environment context menu. Since v0.8.0
+/// (tasks/todo.md R7) also **Overview** at the top and the RUNTIME destinations with
+/// "+ Add Destination"; a selection is a scope, a destination or the overview.
 ///
-/// Observes `ConfigRepository.observeScopes(repositoryID:)`, so every local change (a new
-/// environment, a deletion, a sync) shows at once.
+/// Observes `ConfigRepository.observeScopes(repositoryID:)` and
+/// `DestinationRepository.observeDestinations(repositoryID:)`, so every local change (a new
+/// environment or destination, a deletion, a sync) shows at once.
 @Observable
 final class ScopeListViewModel {
     let repositoryID: RepoID
     private(set) var scopes: [ConfigScopeSummaryModel] = []
+    /// The repository's runtime destinations (v0.8.0), in their order.
+    private(set) var destinations: [DestinationModel] = []
+    /// The destination waiting for the "Remove destination?" confirmation.
+    var pendingDestinationRemoval: DestinationModel?
     var selectedScopeID: ConfigScopeSummaryModel.ID? = ScopeListViewModel.repositoryScopeID {
         didSet {
             if selectedScopeID != oldValue {
@@ -29,12 +36,22 @@ final class ScopeListViewModel {
     @ObservationIgnored var onSelectionChange: (() -> Void)?
     /// A scope asked for before the scopes arrived (opening a linked copy, v0.4.1).
     @ObservationIgnored private var requestedScope: ConfigScope?
+    /// A destination asked for before the destinations arrived (v0.8.0).
+    @ObservationIgnored private var requestedDestination: DestinationID?
     @ObservationIgnored private let dependencies: FeatureDependencies
     @ObservationIgnored private let repository: () -> RepoModel?
     @ObservationIgnored private let tasks = TaskBag()
 
     /// `ConfigScopeSummaryModel.id` of the repository scope.
     static let repositoryScopeID = ConfigScopeLevel.repository.rawValue
+    /// The selection id of the Overview row (v0.8.0).
+    static let overviewID = "overview"
+    private static let destinationIDPrefix = "destination|"
+
+    /// The selection id of a destination row (v0.8.0).
+    static func selectionID(of destination: DestinationID) -> String {
+        destinationIDPrefix + destination.uuidString
+    }
 
     /// - Parameter repository: the live vault row (capability, visibility).
     init(repositoryID: RepoID, dependencies: FeatureDependencies, repository: @escaping () -> RepoModel?) {
@@ -43,6 +60,48 @@ final class ScopeListViewModel {
         self.repository = repository
         observe()
         observeSpaces()
+        observeDestinations()
+    }
+
+    private func observeDestinations() {
+        let stream = dependencies.destinations.observeDestinations(repositoryID: repositoryID)
+        tasks.set("destinations", Task { [weak self] in
+            do {
+                for try await destinations in stream {
+                    self?.apply(destinations: destinations)
+                }
+            } catch {
+                self?.apply(destinations: [])
+            }
+        })
+    }
+
+    /// Applies a new snapshot of the destinations; a selected destination that disappeared falls
+    /// back to "Repository".
+    func apply(destinations: [DestinationModel]) {
+        self.destinations = destinations
+        if let requestedDestination, destinations.contains(where: { $0.id == requestedDestination }) {
+            self.requestedDestination = nil
+            selectedScopeID = Self.selectionID(of: requestedDestination)
+        }
+        if let selectedScopeID, selectedScopeID.hasPrefix(Self.destinationIDPrefix), selectedDestination == nil {
+            self.selectedScopeID = scopes.isEmpty ? nil : Self.repositoryScopeID
+        }
+        onSelectionChange?()
+    }
+
+    /// Selects a destination now, or as soon as the destinations include it.
+    func select(destination: DestinationID) {
+        if destinations.contains(where: { $0.id == destination }) {
+            requestedDestination = nil
+            selectedScopeID = Self.selectionID(of: destination)
+        } else {
+            requestedDestination = destination
+        }
+    }
+
+    func selectOverview() {
+        selectedScopeID = Self.overviewID
     }
 
     private func observeSpaces() {
@@ -93,7 +152,7 @@ final class ScopeListViewModel {
             self.requestedScope = nil
             selectedScopeID = summary.id
         }
-        if let selectedScopeID, !scopes.contains(where: { $0.id == selectedScopeID }) {
+        if let selectedScopeID, !isOtherSelectionID(selectedScopeID), !scopes.contains(where: { $0.id == selectedScopeID }) {
             self.selectedScopeID = scopes.isEmpty ? nil : Self.repositoryScopeID
         } else if selectedScopeID == nil, !scopes.isEmpty {
             selectedScopeID = Self.repositoryScopeID
@@ -105,6 +164,32 @@ final class ScopeListViewModel {
 
     var selectedScope: ConfigScopeSummaryModel? {
         scopes.first { $0.id == selectedScopeID }
+    }
+
+    /// The selected destination (v0.8.0), or nil.
+    var selectedDestination: DestinationModel? {
+        guard let selectedScopeID, selectedScopeID.hasPrefix(Self.destinationIDPrefix) else { return nil }
+        return destinations.first { Self.selectionID(of: $0.id) == selectedScopeID }
+    }
+
+    /// True while the Overview row is selected (v0.8.0).
+    var isOverviewSelected: Bool {
+        selectedScopeID == Self.overviewID
+    }
+
+    /// The live destination with `id` (the detail column reads its counts).
+    func destination(_ id: DestinationID) -> DestinationModel? {
+        destinations.first { $0.id == id }
+    }
+
+    /// Every row id in column order, for Up and Down.
+    var rowIDs: [String] {
+        [Self.overviewID] + scopes.map(\.id) + destinations.map { Self.selectionID(of: $0.id) }
+    }
+
+    /// Overview and destination ids are not scopes: a scope snapshot never resets them.
+    private func isOtherSelectionID(_ id: String) -> Bool {
+        id == Self.overviewID || id.hasPrefix(Self.destinationIDPrefix)
     }
 
     var environments: [ConfigScopeSummaryModel] {
@@ -167,6 +252,39 @@ final class ScopeListViewModel {
             return .environment(environment.id)
         }
         return .repository(repositoryID)
+    }
+
+    // MARK: - Destinations (v0.8.0)
+
+    /// "+ Add Destination": any account that imported the repository may add one; the provider
+    /// decides what it may write.
+    func addDestination() {
+        dependencies.actions.present(.addDestination(AddDestinationContext(repositoryID: repositoryID)))
+    }
+
+    /// Settings…: the stage and (Supabase, Vercel) the connection.
+    func openSettings(_ destination: DestinationModel) {
+        dependencies.actions.present(.destinationSettings(DestinationSettingsContext(destinationID: destination.id)))
+    }
+
+    func exportEnv(_ destination: DestinationModel) {
+        guard destination.itemCount > 0 else { return }
+        dependencies.actions.present(.envExport(EnvExportContext(destinationID: destination.id)))
+    }
+
+    func requestRemoval(_ destination: DestinationModel) {
+        pendingDestinationRemoval = destination
+    }
+
+    /// Removes the destination from the vault (nothing is deleted remotely).
+    func confirmRemoval() {
+        guard let destination = pendingDestinationRemoval else { return }
+        pendingDestinationRemoval = nil
+        do {
+            try dependencies.destinations.deleteDestination(destination.id)
+        } catch {
+            alert = error.presentation
+        }
     }
 
     // MARK: - Shared spaces (v0.6.0)

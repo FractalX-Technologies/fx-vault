@@ -1,0 +1,9 @@
+{
+  "error": {
+    "code": "Conflict",
+    "message": "Secret DATABASE-URL is currently being deleted.",
+    "innererror": {
+      "code": "ObjectIsBeingDeleted"
+    }
+  }
+}

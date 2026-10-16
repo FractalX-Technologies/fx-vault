@@ -1,3 +1,4 @@
+import DestinationKit
 import EnvTools
 import Foundation
 import GitHubKit
@@ -43,6 +44,16 @@ struct VaultDataComponents {
     let spaces: SpaceRepository
     /// Folders of secrets and variables (v0.7.0).
     let folders: FolderRepository
+    /// Runtime destinations of repositories and the provider connections (v0.8.0).
+    let destinations: DestinationRepository
+    /// The stage Overview and `fxvault.yml` (v0.8.0).
+    let overview: StageOverviewRepository
+    /// Destination Sync, Refresh and import over HTTPS (v0.8.0).
+    let destinationSync: DestinationSyncRepository
+    /// Token checks and the Add Destination pickers (v0.8.0).
+    let destinationAccess: DestinationAccessRepository
+    /// The `az` tokens; reset on lock.
+    let azureTokens: ShellResolvingAzureTokens
 
     /// Builds every repository over `session`.
     ///
@@ -64,7 +75,8 @@ struct VaultDataComponents {
         sshConfigParser: SSHConfigParser? = nil,
         fileInspector: any GHFileInspecting = SystemGHFileInspector(),
         deriver: any KeyDeriving = Argon2idSharingDeriver(),
-        writePolicy: WriteCollaboratorPolicy = .default
+        writePolicy: WriteCollaboratorPolicy = .default,
+        transport: any HTTPTransporting = URLSessionTransport()
     ) -> VaultDataComponents {
         let github = GitHubEnvironmentRepository(
             database: session.database,
@@ -93,6 +105,17 @@ struct VaultDataComponents {
         )
         let sharing = SharingRepository(session: session, schedulers: github, deriver: deriver, clock: clock, writePolicy: writePolicy)
         let spaces = SpaceRepository(session: session, schedulers: github, clock: clock)
+        let azureTokens = ShellResolvingAzureTokens(
+            github: github,
+            runner: runner,
+            identity: identity,
+            workingDirectory: workingDirectory,
+            fileInspector: fileInspector,
+            clock: clock
+        )
+        let remotes = LiveDestinationRemoteProvider(
+            factory: DestinationRemoteFactory(transport: transport, azureTokens: azureTokens, clock: clock)
+        )
         return VaultDataComponents(
             session: session,
             github: github,
@@ -119,7 +142,12 @@ struct VaultDataComponents {
             chat: ChatRepository(session: session, sharing: sharing, clock: clock),
             team: TeamRepository(session: session, clock: clock),
             spaces: spaces,
-            folders: FolderRepository(session: session, clock: clock)
+            folders: FolderRepository(session: session, clock: clock),
+            destinations: DestinationRepository(session: session, clock: clock),
+            overview: StageOverviewRepository(session: session, schedulers: github),
+            destinationSync: DestinationSyncRepository(session: session, remotes: remotes, clock: clock),
+            destinationAccess: DestinationAccessRepository(session: session, transport: transport, azureTokens: azureTokens, clock: clock),
+            azureTokens: azureTokens
         )
     }
 
@@ -151,7 +179,8 @@ struct VaultDataComponents {
                 sshDirectory: home.appendingPathComponent(OfflineSandbox.sshDirectoryName, isDirectory: true),
                 homeDirectory: home
             ),
-            fileInspector: fileInspector
+            fileInspector: fileInspector,
+            transport: FakeHTTPTransport()
         )
     }
 

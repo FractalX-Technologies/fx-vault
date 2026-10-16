@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "SecretNotFound",
+    "message": "A secret with (name/id) DATABASE-URL was not found in this key vault. If you recently deleted this secret you may be able to recover it using the correct recovery command."
+  }
+}

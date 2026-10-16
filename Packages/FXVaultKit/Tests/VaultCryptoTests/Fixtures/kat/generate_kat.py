@@ -176,6 +176,26 @@ def main():
             "blob_hex": (b"\x01" + nonce + sealed).hex(),
         })
 
+    # --- Destination item values (v0.8.0): the §5.4 layout with the destination in the
+    # repository's place, no environment, and the table name destination_items. ---
+    destination = uuid.UUID("5d4c3b2a-1f0e-4a9b-8c7d-6e5f4a3b2c1d")
+    destination_cases = [
+        ("destination-secret-value", row, destination, "secret", "FXV_FIXTURE_DESTINATION", 1,
+         b"FXV_FIXTURE_DESTINATION_VALUE", seq(0xA4, 12)),
+        ("destination-variable-v3", row, destination, "variable", "FXV_FIXTURE_DESTINATION_VAR", 3,
+         "destination ✓ value".encode(), seq(0xB4, 12)),
+    ]
+    vectors["destination_field"] = []
+    for label, r, d, kind, name, ver, plain, nonce in destination_cases:
+        aad = field_aad("destination_items", "value_ct", r, d, None, kind, name, ver)
+        sealed = AESGCM(k_field).encrypt(nonce, plain, aad)
+        vectors["destination_field"].append({
+            "label": label, "aes_k_hex": k_field.hex(), "row": str(r), "destination": str(d),
+            "kind": kind, "name": name, "dek_version": ver, "plain_hex": plain.hex(),
+            "nonce_hex": nonce.hex(), "aad_hex": aad.hex(),
+            "blob_hex": (b"\x01" + nonce + sealed).hex(),
+        })
+
     # --- DEK wraps (§5.2): 62 bytes = fmt || aead || nonce || ct(32) || tag. ---
     pw_text = "FXV fixture pässwörd ✓"
     pw = unicodedata.normalize("NFC", pw_text).encode()

@@ -359,6 +359,11 @@ final class RepoDetailViewModel: LockObserving {
         dependencies.folderCopyTargets()
     }
 
+    /// Copy To › Destinations (v0.8.0): this repository's destinations.
+    var destinationCopyTargets: [ItemCopyTargetModel] {
+        dependencies.destinationCopyTargets(repositoryID: repositoryID)
+    }
+
     /// The repository's other scopes, where Copy To copies; those the account may not change
     /// are listed disabled. Other repositories are offered by "Other Repository…".
     var copyTargets: [ItemCopyTargetModel] {

@@ -93,6 +93,7 @@ final class EnvExportViewModel: LockObserving {
     @ObservationIgnored private let envFiles: EnvFileRepository
     @ObservationIgnored private let config: ConfigRepository
     @ObservationIgnored private let folders: FolderRepository
+    @ObservationIgnored private let destinations: DestinationRepository
     @ObservationIgnored private let reauth: ReauthGate
     @ObservationIgnored private let session: VaultSession
     @ObservationIgnored private let tasks = TaskBag()
@@ -112,6 +113,7 @@ final class EnvExportViewModel: LockObserving {
         self.envFiles = envFiles
         config = dependencies.config
         folders = dependencies.folders
+        destinations = dependencies.destinations
         reauth = dependencies.reauth
         session = dependencies.session
         self.touchIDStatus = touchIDStatus
@@ -352,6 +354,12 @@ final class EnvExportViewModel: LockObserving {
 
     /// The `# ` line at the top of the file (names only).
     private var headerComment: String {
+        if case .destination = place {
+            return String(
+                localized: "envExport.file.header.destination",
+                defaultValue: "Exported by FX Vault from \(repositoryName) (\(scopeTitle)). Plaintext values: never commit this file."
+            )
+        }
         if case .folder = place {
             return String(
                 localized: "envExport.file.header.folder",
@@ -376,6 +384,12 @@ final class EnvExportViewModel: LockObserving {
                 // The folder's name in the title; no clone folder to start the save panel in.
                 repositoryName = try folders.folders().first { $0.id == folderID }?.name ?? ""
                 scopeTitle = ""
+            case .destination(let destinationID):
+                let destination = try destinations.destination(destinationID)
+                let repository = try destination.flatMap { try config.changeSet(repositoryID: $0.repositoryID)?.repository }
+                repositoryName = repository?.fullName ?? ""
+                suggestedDirectory = repository?.clonePath.map { URL(filePath: $0, directoryHint: .isDirectory) }
+                scopeTitle = destination?.copyTargetTitle ?? ""
             }
         } catch {
             alert = error.presentation
@@ -398,6 +412,17 @@ final class EnvExportViewModel: LockObserving {
             })
         case .folder(let folderID):
             let stream = folders.observeItems(folderID: folderID)
+            tasks.set("items", Task { [weak self] in
+                do {
+                    for try await _ in stream {
+                        self?.apply([])
+                    }
+                } catch {
+                    AppLog.ui.error("Export item observation ended")
+                }
+            })
+        case .destination(let destinationID):
+            let stream = destinations.observeItems(destinationID: destinationID)
             tasks.set("items", Task { [weak self] in
                 do {
                     for try await _ in stream {

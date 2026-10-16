@@ -1,0 +1,14 @@
+{
+  "teams": [
+    {
+      "id": "team_other",
+      "slug": "example-org-b",
+      "name": null
+    }
+  ],
+  "pagination": {
+    "count": 1,
+    "next": null,
+    "prev": 1700000000000
+  }
+}

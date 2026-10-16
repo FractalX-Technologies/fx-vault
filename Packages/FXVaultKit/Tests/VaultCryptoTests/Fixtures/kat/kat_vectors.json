@@ -144,6 +144,34 @@
       "blob_hex": "01e0e1e2e3e4e5e6e7e8e9eaeb745cd6c4a971db67869b1f0258910a0f2f9f248ff55ab2d97962ee32c72a7846"
     }
   ],
+  "destination_field": [
+    {
+      "label": "destination-secret-value",
+      "aes_k_hex": "31eb070cde213b7071fbfe1de1d564a948dc2ac27c435883068dd3f1eb9e9314",
+      "row": "0b7e2f5a-9c41-4d3e-a6b2-7f8e9d0c1b2a",
+      "destination": "5d4c3b2a-1f0e-4a9b-8c7d-6e5f4a3b2c1d",
+      "kind": "secret",
+      "name": "FXV_FIXTURE_DESTINATION",
+      "dek_version": 1,
+      "plain_hex": "4658565f464958545552455f44455354494e4154494f4e5f56414c5545",
+      "nonce_hex": "a4a5a6a7a8a9aaabacadaeaf",
+      "aad_hex": "0000001066787661756c742f76312f6669656c640000001164657374696e6174696f6e5f6974656d730000000876616c75655f6374000000100b7e2f5a9c414d3ea6b27f8e9d0c1b2a000000105d4c3b2a1f0e4a9b8c7d6e5f4a3b2c1d0000000000000006736563726574000000174658565f464958545552455f44455354494e4154494f4e00000001",
+      "blob_hex": "01a4a5a6a7a8a9aaabacadaeaf418cea619c98498910428b1ac1d6231979300639f352027e4b4ac77ff51a0ea6a2bc0a8f3a961bfe585d5fda39"
+    },
+    {
+      "label": "destination-variable-v3",
+      "aes_k_hex": "31eb070cde213b7071fbfe1de1d564a948dc2ac27c435883068dd3f1eb9e9314",
+      "row": "0b7e2f5a-9c41-4d3e-a6b2-7f8e9d0c1b2a",
+      "destination": "5d4c3b2a-1f0e-4a9b-8c7d-6e5f4a3b2c1d",
+      "kind": "variable",
+      "name": "FXV_FIXTURE_DESTINATION_VAR",
+      "dek_version": 3,
+      "plain_hex": "64657374696e6174696f6e20e29c932076616c7565",
+      "nonce_hex": "b4b5b6b7b8b9babbbcbdbebf",
+      "aad_hex": "0000001066787661756c742f76312f6669656c640000001164657374696e6174696f6e5f6974656d730000000876616c75655f6374000000100b7e2f5a9c414d3ea6b27f8e9d0c1b2a000000105d4c3b2a1f0e4a9b8c7d6e5f4a3b2c1d00000000000000087661726961626c650000001b4658565f464958545552455f44455354494e4154494f4e5f56415200000003",
+      "blob_hex": "01b4b5b6b7b8b9babbbcbdbebf057e66bca1b60ffff47a51fd692b5c8b968b8026124aa1d8694feff246df991d6b87669513"
+    }
+  ],
   "wrap": {
     "password": {
       "text": "FXV fixture pässwörd ✓",

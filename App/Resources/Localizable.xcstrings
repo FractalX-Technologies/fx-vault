@@ -177,6 +177,402 @@
         }
       }
     },
+    "addDestination.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add and Import"
+          }
+        }
+      }
+    },
+    "addDestination.added" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Destination added"
+          }
+        }
+      }
+    },
+    "addDestination.az.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Needs the Azure CLI signed in (az login) with permission to read and set secrets in the vault."
+          }
+        }
+      }
+    },
+    "addDestination.checkToken" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check and Save"
+          }
+        }
+      }
+    },
+    "addDestination.chooseProject" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose a project"
+          }
+        }
+      }
+    },
+    "addDestination.connection" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connection"
+          }
+        }
+      }
+    },
+    "addDestination.environment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Environment"
+          }
+        }
+      }
+    },
+    "addDestination.importFailed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The destination was added, but its items could not be listed: %@ Use Refresh once that is fixed."
+          }
+        }
+      }
+    },
+    "addDestination.imported" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld items imported from the destination."
+          }
+        }
+      }
+    },
+    "addDestination.imported.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 item imported from the destination."
+          }
+        }
+      }
+    },
+    "addDestination.newToken" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Token…"
+          }
+        }
+      }
+    },
+    "addDestination.note.keyVault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets only. FX Vault uses your az login; the token never leaves memory."
+          }
+        }
+      }
+    },
+    "addDestination.note.supabase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Edge Function secrets of one project, through a Supabase access token."
+          }
+        }
+      }
+    },
+    "addDestination.note.vercel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "One environment of one project, through a Vercel access token."
+          }
+        }
+      }
+    },
+    "addDestination.open" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open Destination"
+          }
+        }
+      }
+    },
+    "addDestination.personal" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal account"
+          }
+        }
+      }
+    },
+    "addDestination.personal.named" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal · %@"
+          }
+        }
+      }
+    },
+    "addDestination.project" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Project"
+          }
+        }
+      }
+    },
+    "addDestination.projectRef" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Project reference"
+          }
+        }
+      }
+    },
+    "addDestination.provider" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Provider"
+          }
+        }
+      }
+    },
+    "addDestination.stage.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The Overview lines it up with the GitHub environment of the same name."
+          }
+        }
+      }
+    },
+    "addDestination.stages" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Stages"
+          }
+        }
+      }
+    },
+    "addDestination.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A place outside GitHub this repository's code reads at runtime. Nothing is changed there until you Sync."
+          }
+        }
+      }
+    },
+    "addDestination.team" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Team"
+          }
+        }
+      }
+    },
+    "addDestination.tenant" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tenant (optional)"
+          }
+        }
+      }
+    },
+    "addDestination.tenant.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default tenant of az"
+          }
+        }
+      }
+    },
+    "addDestination.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Destination"
+          }
+        }
+      }
+    },
+    "addDestination.token" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Access token"
+          }
+        }
+      }
+    },
+    "addDestination.token.supabase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create one at supabase.com › Account › Access Tokens. FX Vault keeps it encrypted in the vault."
+          }
+        }
+      }
+    },
+    "addDestination.token.vercel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create one at vercel.com › Account Settings › Tokens. FX Vault keeps it encrypted in the vault."
+          }
+        }
+      }
+    },
+    "addDestination.tokenLabel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "addDestination.tokenLabel.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ token"
+          }
+        }
+      }
+    },
+    "addDestination.unusable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Left as they are: %@."
+          }
+        }
+      }
+    },
+    "addDestination.vault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Vault name"
+          }
+        }
+      }
+    },
+    "addDestination.withoutValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld of them have no value in FX Vault: the provider never returns it. Fill them to copy or rotate them."
+          }
+        }
+      }
+    },
+    "addDestination.withoutValue.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 of them has no value in FX Vault: the provider never returns it. Fill it to copy or rotate it."
+          }
+        }
+      }
+    },
     "app.window.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2322,6 +2718,17 @@
         }
       }
     },
+    "common.save" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save"
+          }
+        }
+      }
+    },
     "connectivity.banner.github" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -3455,6 +3862,743 @@
         }
       }
     },
+    "destination.access.az" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "via Azure CLI sign-in"
+          }
+        }
+      }
+    },
+    "destination.access.supabase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "via Supabase API token"
+          }
+        }
+      }
+    },
+    "destination.access.vercel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "via Vercel API token"
+          }
+        }
+      }
+    },
+    "destination.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Destination"
+          }
+        }
+      }
+    },
+    "destination.add.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add an Azure Key Vault, a Supabase project or a Vercel environment this repository's code reads at runtime"
+          }
+        }
+      }
+    },
+    "destination.copiedItem.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied %@. Open a scope, folder or destination and paste it with ⌘V: the copy stays linked to this item."
+          }
+        }
+      }
+    },
+    "destination.copiedItems.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied %lld items. Open a scope, folder or destination and paste them with ⌘V: the copies stay linked to these items."
+          }
+        }
+      }
+    },
+    "destination.delete.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Items already in the destination are deleted there by the next Sync, after you confirm. Their linked copies elsewhere stay."
+          }
+        }
+      }
+    },
+    "destination.detail.connectionMissing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This destination has no connection. Choose one in its settings before the next Sync."
+          }
+        }
+      }
+    },
+    "destination.detail.drift" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld changes in %2$@ since your last sync"
+          }
+        }
+      }
+    },
+    "destination.detail.drift.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 change in %@ since your last sync"
+          }
+        }
+      }
+    },
+    "destination.detail.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Destination · Runtime"
+          }
+        }
+      }
+    },
+    "destination.detail.noDrift" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No changes since your last sync"
+          }
+        }
+      }
+    },
+    "destination.detail.noStage" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No stage"
+          }
+        }
+      }
+    },
+    "destination.detail.refresh" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Refresh"
+          }
+        }
+      }
+    },
+    "destination.detail.refresh.failed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The destination could not be listed"
+          }
+        }
+      }
+    },
+    "destination.detail.refresh.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "List the destination and show what changed there since the last sync"
+          }
+        }
+      }
+    },
+    "destination.detail.review" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Review"
+          }
+        }
+      }
+    },
+    "destination.detail.rules" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Names and values"
+          }
+        }
+      }
+    },
+    "destination.detail.secretsOnly" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets · %lld"
+          }
+        }
+      }
+    },
+    "destination.detail.stage" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Stage"
+          }
+        }
+      }
+    },
+    "destination.detail.target" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Target"
+          }
+        }
+      }
+    },
+    "destination.detail.unusable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld items in the destination cannot be used by FX Vault"
+          }
+        }
+      }
+    },
+    "destination.detail.unusable.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 item in the destination cannot be used by FX Vault"
+          }
+        }
+      }
+    },
+    "destination.error.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The destination could not be reached"
+          }
+        }
+      }
+    },
+    "destination.experimental" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Experimental"
+          }
+        }
+      }
+    },
+    "destination.experimental.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Destinations are new: Sync, Refresh and the Overview may still change."
+          }
+        }
+      }
+    },
+    "destination.menu.remove" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove from FX Vault…"
+          }
+        }
+      }
+    },
+    "destination.menu.settings" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Settings…"
+          }
+        }
+      }
+    },
+    "destination.overview.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Every name a stage needs, across GitHub and the runtime destinations"
+          }
+        }
+      }
+    },
+    "destination.overview.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Overview"
+          }
+        }
+      }
+    },
+    "destination.paste.same" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "These items are already in this destination. Open another scope, folder or destination to paste them."
+          }
+        }
+      }
+    },
+    "destination.provider.keyVault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Azure Key Vault"
+          }
+        }
+      }
+    },
+    "destination.provider.keyVault.short" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Key Vault"
+          }
+        }
+      }
+    },
+    "destination.provider.supabase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Supabase"
+          }
+        }
+      }
+    },
+    "destination.provider.vercel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Vercel"
+          }
+        }
+      }
+    },
+    "destination.remove.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove Destination"
+          }
+        }
+      }
+    },
+    "destination.remove.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ and its items are removed from FX Vault. Nothing is deleted in the provider, and pending changes are dropped."
+          }
+        }
+      }
+    },
+    "destination.remove.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove this destination?"
+          }
+        }
+      }
+    },
+    "destination.rules.keyVault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets only. Key Vault names allow letters, digits and dashes: FX Vault keeps your names and writes DATABASE-URL for DATABASE_URL. Deletes are soft deletes."
+          }
+        }
+      }
+    },
+    "destination.rules.supabase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets only, for Edge Functions. Supabase never returns values, so FX Vault compares digests. Names starting with SUPABASE_ are reserved."
+          }
+        }
+      }
+    },
+    "destination.rules.vercel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets are encrypted variables, variables are plain. A variable shared with other environments changes for all of them. NEXT_PUBLIC_ names are public in the browser."
+          }
+        }
+      }
+    },
+    "destination.section.runtime" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Runtime"
+          }
+        }
+      }
+    },
+    "destination.table.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add one, paste KEY=value lines with ⌘V, import a .env file, or copy items here from a scope or folder."
+          }
+        }
+      }
+    },
+    "destination.table.fill" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Fill Value…"
+          }
+        }
+      }
+    },
+    "destination.table.markPublic" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mark as Public"
+          }
+        }
+      }
+    },
+    "destination.table.unmarkPublic" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not Meant to Be Public"
+          }
+        }
+      }
+    },
+    "destination.unusable.customEnvironment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Also used by a custom Vercel environment"
+          }
+        }
+      }
+    },
+    "destination.unusable.disabled" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Disabled in Key Vault"
+          }
+        }
+      }
+    },
+    "destination.unusable.gitBranch" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only for one Git branch in Vercel"
+          }
+        }
+      }
+    },
+    "destination.unusable.managed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Managed by a Key Vault certificate"
+          }
+        }
+      }
+    },
+    "destination.unusable.system" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Set by the provider itself"
+          }
+        }
+      }
+    },
+    "destination.valueMissing.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld secrets have no value in FX Vault"
+          }
+        }
+      }
+    },
+    "destination.vercel.development" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Development"
+          }
+        }
+      }
+    },
+    "destination.vercel.preview" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Preview"
+          }
+        }
+      }
+    },
+    "destination.vercel.production" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Production"
+          }
+        }
+      }
+    },
+    "destinationDrift.added" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Added in %@. Use it to bring it into FX Vault; Keep Mine deletes it there on the next Sync."
+          }
+        }
+      }
+    },
+    "destinationDrift.added.conflict" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Added in %@ while you added it here. Keep Mine sends yours on the next Sync."
+          }
+        }
+      }
+    },
+    "destinationDrift.added.writeOnly" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Added in %@, which does not return its value: it comes in without one. Keep Mine deletes it there on the next Sync."
+          }
+        }
+      }
+    },
+    "destinationDrift.changed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Changed in %@ since your last sync. Use it to take the new value; Keep Mine sends yours on the next Sync."
+          }
+        }
+      }
+    },
+    "destinationDrift.changed.writeOnly" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Changed in %@, which does not return values: using it leaves the value missing here."
+          }
+        }
+      }
+    },
+    "destinationDrift.deleted" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Deleted in %@. Use it to remove it here; Keep Mine adds it again on the next Sync."
+          }
+        }
+      }
+    },
+    "destinationDrift.keepMine" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep Mine"
+          }
+        }
+      }
+    },
+    "destinationDrift.useRemote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use %@"
+          }
+        }
+      }
+    },
+    "destinationDrift.useRemoteAll" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use %@ for All"
+          }
+        }
+      }
+    },
+    "destinationSettings.connection.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add, check or replace tokens in Settings › Destinations."
+          }
+        }
+      }
+    },
+    "destinationSettings.noConnection" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose a connection"
+          }
+        }
+      }
+    },
     "drift.accept.added" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -4270,6 +5414,17 @@
       }
     },
     "envExport.file.header" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Exported by FX Vault from %1$@ (%2$@). Plaintext values: never commit this file."
+          }
+        }
+      }
+    },
+    "envExport.file.header.destination" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
@@ -5952,6 +7107,50 @@
         }
       }
     },
+    "error.config.connectionNotFound" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose a connection for this provider, or add one in Settings › Destinations."
+          }
+        }
+      }
+    },
+    "error.config.destinationExists" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This repository already has a destination for that vault, project or environment."
+          }
+        }
+      }
+    },
+    "error.config.destinationFull" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A destination can hold at most %lld secrets and variables."
+          }
+        }
+      }
+    },
+    "error.config.destinationNotFound" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This destination is no longer in the vault."
+          }
+        }
+      }
+    },
     "error.config.environmentDeleted" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6062,6 +7261,28 @@
         }
       }
     },
+    "error.config.tooManyConnections" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault keeps at most %lld connections."
+          }
+        }
+      }
+    },
+    "error.config.tooManyDestinations" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A repository can have at most %lld destinations."
+          }
+        }
+      }
+    },
     "error.config.tooManyPatterns" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6168,6 +7389,292 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Repository not created or cloned"
+          }
+        }
+      }
+    },
+    "error.destination.azFailed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The Azure CLI could not give FX Vault a Key Vault token. Run az account get-access-token --resource https://vault.azure.net in Terminal to see why."
+          }
+        }
+      }
+    },
+    "error.destination.azNotInstalled" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The Azure CLI (az) was not found. Install it with Homebrew (brew install azure-cli), then run az login."
+          }
+        }
+      }
+    },
+    "error.destination.azNotSignedIn" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The Azure CLI is not signed in. Run az login in Terminal, then try again."
+          }
+        }
+      }
+    },
+    "error.destination.azUntrusted" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault does not run %@: another user can change it. Reinstall the Azure CLI in a folder only you or root can write."
+          }
+        }
+      }
+    },
+    "error.destination.cancelled" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cancelled."
+          }
+        }
+      }
+    },
+    "error.destination.conflict" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ refused the change because of a conflict. Refresh, then try again."
+          }
+        }
+      }
+    },
+    "error.destination.decoding" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ sent an answer FX Vault could not read."
+          }
+        }
+      }
+    },
+    "error.destination.deletedButRecoverable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Key Vault holds a deleted secret with this name that could not be recovered. Recover or purge it in Azure, then sync again."
+          }
+        }
+      }
+    },
+    "error.destination.disallowedHost" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ pointed FX Vault to another server, so it stopped."
+          }
+        }
+      }
+    },
+    "error.destination.forbidden" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The account has no permission for this in %@ (for Key Vault: read and set secrets)."
+          }
+        }
+      }
+    },
+    "error.destination.invalidRequest" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ refused the request."
+          }
+        }
+      }
+    },
+    "error.destination.keyVaultName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Key Vault names have 3 to 24 letters, digits and dashes, start with a letter and have no two dashes in a row."
+          }
+        }
+      }
+    },
+    "error.destination.network" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ could not be reached. Check the internet connection."
+          }
+        }
+      }
+    },
+    "error.destination.notFound" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ does not have this vault, project or item, or the account cannot see it."
+          }
+        }
+      }
+    },
+    "error.destination.rateLimited" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ asked FX Vault to slow down. Try again in a minute."
+          }
+        }
+      }
+    },
+    "error.destination.server" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ had a problem. Try again later."
+          }
+        }
+      }
+    },
+    "error.destination.stale" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The destination changed again while you were deciding. Refresh and review once more."
+          }
+        }
+      }
+    },
+    "error.destination.supabaseProjectRef" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A Supabase project reference is 20 lowercase letters."
+          }
+        }
+      }
+    },
+    "error.destination.tenantID" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter a tenant ID (a UUID) or a domain such as contoso.onmicrosoft.com, or leave it empty."
+          }
+        }
+      }
+    },
+    "error.destination.timeout" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ did not answer in time. The change may have gone through: Refresh before trying again."
+          }
+        }
+      }
+    },
+    "error.destination.tokenMissing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This destination has no connection. Choose one in its Settings…"
+          }
+        }
+      }
+    },
+    "error.destination.unauthorized" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ did not accept the credentials. Replace the token in Settings › Destinations, or sign in again."
+          }
+        }
+      }
+    },
+    "error.destination.valueNotUTF8" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ holds a value that is not text, so FX Vault left it as it is."
+          }
+        }
+      }
+    },
+    "error.destination.valueTooLarge" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The value is too large for %@."
+          }
+        }
+      }
+    },
+    "error.destination.vercelProject" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose a Vercel project."
+          }
+        }
+      }
+    },
+    "error.destination.vercelTeam" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose a Vercel team or your personal account."
           }
         }
       }
@@ -6997,6 +8504,28 @@
         }
       }
     },
+    "error.name.notUppercase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The name has lowercase letters. FX Vault keeps names in uppercase, so it leaves this one as it is."
+          }
+        }
+      }
+    },
+    "error.name.reservedByProvider" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Names starting with SUPABASE_ are reserved by Supabase."
+          }
+        }
+      }
+    },
     "error.name.reservedName" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7162,6 +8691,17 @@
         }
       }
     },
+    "error.validation.kindNotSupported" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This destination holds secrets only. Add it as a secret."
+          }
+        }
+      }
+    },
     "error.validation.lockedAfterSync" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7212,7 +8752,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "The value is larger than GitHub's limit of %lld bytes."
+            "value" : "The value is larger than the limit of %lld bytes."
           }
         }
       }
@@ -9032,6 +10572,17 @@
         }
       }
     },
+    "itemEditor.subtitle.destination" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "In %@"
+          }
+        }
+      }
+    },
     "itemEditor.subtitle.folder" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9468,6 +11019,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Choose the folder FX Vault clones repositories into. You can change it in Settings › General."
+          }
+        }
+      }
+    },
+    "main.detail.actions" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Actions"
           }
         }
       }
@@ -10286,6 +11848,17 @@
         }
       }
     },
+    "main.scopes.build" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Build · GitHub Actions"
+          }
+        }
+      }
+    },
     "main.scopes.delete" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10880,6 +12453,17 @@
         }
       }
     },
+    "main.table.copyTo.destinations" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Destinations"
+          }
+        }
+      }
+    },
     "main.table.copyTo.folders" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11089,6 +12673,17 @@
         }
       }
     },
+    "main.table.several.push" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Push %lld on Next Sync"
+          }
+        }
+      }
+    },
     "main.table.several.pushOnNextSync" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11151,6 +12746,600 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Value"
+          }
+        }
+      }
+    },
+    "manifest.construct.alias" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "aliases (*)"
+          }
+        }
+      }
+    },
+    "manifest.construct.anchor" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "anchors (&)"
+          }
+        }
+      }
+    },
+    "manifest.construct.blockScalar" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "block values (| and >)"
+          }
+        }
+      }
+    },
+    "manifest.construct.complexKey" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "complex keys (?)"
+          }
+        }
+      }
+    },
+    "manifest.construct.directive" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "directives (%)"
+          }
+        }
+      }
+    },
+    "manifest.construct.documents" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "several documents"
+          }
+        }
+      }
+    },
+    "manifest.construct.tag" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "tags (!)"
+          }
+        }
+      }
+    },
+    "manifest.issue.duplicateKey" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is already on line %2$lld."
+          }
+        }
+      }
+    },
+    "manifest.issue.duplicateReference" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is listed twice; the repeat was ignored."
+          }
+        }
+      }
+    },
+    "manifest.issue.duplicateStage" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Stage %@ is listed twice."
+          }
+        }
+      }
+    },
+    "manifest.issue.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The file is empty."
+          }
+        }
+      }
+    },
+    "manifest.issue.escape" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only \\\", \\\\, \\n and \\t escapes are supported."
+          }
+        }
+      }
+    },
+    "manifest.issue.fileTooLarge" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The file is larger than %lld bytes."
+          }
+        }
+      }
+    },
+    "manifest.issue.githubEnvironment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Target %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "manifest.issue.indentation" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This line is not indented like its block."
+          }
+        }
+      }
+    },
+    "manifest.issue.missingColon" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Write this line as key: value."
+          }
+        }
+      }
+    },
+    "manifest.issue.missingField" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ needs %2$@."
+          }
+        }
+      }
+    },
+    "manifest.issue.mixed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A list item and a key: value are mixed here."
+          }
+        }
+      }
+    },
+    "manifest.issue.nesting" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Values nest deeper than %lld levels."
+          }
+        }
+      }
+    },
+    "manifest.issue.noStages" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "List at least one stage."
+          }
+        }
+      }
+    },
+    "manifest.issue.noTargets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ needs at least one target in to."
+          }
+        }
+      }
+    },
+    "manifest.issue.nonScalarKey" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keys must be plain or quoted names."
+          }
+        }
+      }
+    },
+    "manifest.issue.projectRef" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Target %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "manifest.issue.provider" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Target %@: provider is github-actions, azure-keyvault, supabase or vercel."
+          }
+        }
+      }
+    },
+    "manifest.issue.publicPrefix" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is a secret, but %2$@ names are public in the browser."
+          }
+        }
+      }
+    },
+    "manifest.issue.secretAndPublic" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ cannot be both secret and public."
+          }
+        }
+      }
+    },
+    "manifest.issue.stageName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Stage %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "manifest.issue.supabasePrefix" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@: names starting with SUPABASE_ are reserved by Supabase."
+          }
+        }
+      }
+    },
+    "manifest.issue.tab" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Indent with spaces, not tabs."
+          }
+        }
+      }
+    },
+    "manifest.issue.targetName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Target %@: use lowercase letters, digits and dashes, starting with a letter."
+          }
+        }
+      }
+    },
+    "manifest.issue.tooManyStages" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use at most %lld stages."
+          }
+        }
+      }
+    },
+    "manifest.issue.tooManyTargets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use at most %lld targets."
+          }
+        }
+      }
+    },
+    "manifest.issue.tooManyVars" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use at most %lld vars."
+          }
+        }
+      }
+    },
+    "manifest.issue.undeclaredStage" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is not in stages."
+          }
+        }
+      }
+    },
+    "manifest.issue.undefinedTarget" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@ is not in targets."
+          }
+        }
+      }
+    },
+    "manifest.issue.unexpected" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Something here is not allowed."
+          }
+        }
+      }
+    },
+    "manifest.issue.unknownField" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is not a field FX Vault knows; it was ignored."
+          }
+        }
+      }
+    },
+    "manifest.issue.unsupported" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "fxvault.yml does not support %@."
+          }
+        }
+      }
+    },
+    "manifest.issue.unterminatedFlow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A [ or { is never closed."
+          }
+        }
+      }
+    },
+    "manifest.issue.unterminatedQuote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A quoted value does not close on its line."
+          }
+        }
+      }
+    },
+    "manifest.issue.varName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "manifest.issue.varUppercase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@: write names in uppercase, as GitHub stores them."
+          }
+        }
+      }
+    },
+    "manifest.issue.vault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Target %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "manifest.issue.vercelEnvironment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Target %@: environment is production, preview or development."
+          }
+        }
+      }
+    },
+    "manifest.issue.vercelProject" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Target %@: project is a Vercel project name or prj_ id."
+          }
+        }
+      }
+    },
+    "manifest.issue.vercelTeam" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Target %@: team is a Vercel team slug or team_ id."
+          }
+        }
+      }
+    },
+    "manifest.issue.version" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only version: 1 is supported."
+          }
+        }
+      }
+    },
+    "manifest.issue.wrongType" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ should be %2$@."
+          }
+        }
+      }
+    },
+    "manifest.type.boolean" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "true or false"
+          }
+        }
+      }
+    },
+    "manifest.type.integer" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "a number"
+          }
+        }
+      }
+    },
+    "manifest.type.mapping" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "a mapping"
+          }
+        }
+      }
+    },
+    "manifest.type.sequence" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "a list"
+          }
+        }
+      }
+    },
+    "manifest.type.text" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "text"
+          }
+        }
+      }
+    },
+    "manifest.type.textOrMapping" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "text or a per-stage mapping"
           }
         }
       }
@@ -12310,6 +14499,556 @@
         }
       }
     },
+    "overview.cell.blocked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Blocked"
+          }
+        }
+      }
+    },
+    "overview.cell.differs" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Differs"
+          }
+        }
+      }
+    },
+    "overview.cell.extra" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Extra"
+          }
+        }
+      }
+    },
+    "overview.cell.missing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Missing"
+          }
+        }
+      }
+    },
+    "overview.cell.notUsed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not used here"
+          }
+        }
+      }
+    },
+    "overview.cell.open" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show this place"
+          }
+        }
+      }
+    },
+    "overview.cell.synced" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Synced"
+          }
+        }
+      }
+    },
+    "overview.cell.valueMissing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Value missing"
+          }
+        }
+      }
+    },
+    "overview.cell.willDelete" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Will delete"
+          }
+        }
+      }
+    },
+    "overview.cell.willPush" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Will push"
+          }
+        }
+      }
+    },
+    "overview.column.cycle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cycle"
+          }
+        }
+      }
+    },
+    "overview.column.github" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub"
+          }
+        }
+      }
+    },
+    "overview.column.name" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "overview.column.repositoryLevel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository"
+          }
+        }
+      }
+    },
+    "overview.cycle.build" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Build"
+          }
+        }
+      }
+    },
+    "overview.cycle.public" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Public"
+          }
+        }
+      }
+    },
+    "overview.cycle.runtime" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Runtime"
+          }
+        }
+      }
+    },
+    "overview.destinations" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld destinations"
+          }
+        }
+      }
+    },
+    "overview.destinations.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 destination"
+          }
+        }
+      }
+    },
+    "overview.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Stage · All destinations"
+          }
+        }
+      }
+    },
+    "overview.finding.addDestination" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Destination"
+          }
+        }
+      }
+    },
+    "overview.finding.blocked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ in %2$@ is public, and its value looks like a secret. Change the value, or Mark as Public."
+          }
+        }
+      }
+    },
+    "overview.finding.destination" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "fxvault.yml sends names to %1$@ (%2$@), which this repository has no destination for."
+          }
+        }
+      }
+    },
+    "overview.finding.extra" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is in %2$@, but fxvault.yml does not send it there."
+          }
+        }
+      }
+    },
+    "overview.finding.kind" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is a secret in fxvault.yml, but a variable in %2$@."
+          }
+        }
+      }
+    },
+    "overview.finding.missing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is in fxvault.yml for %2$@, which does not have it."
+          }
+        }
+      }
+    },
+    "overview.findings.banner" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld things to fix in %2$@, by fxvault.yml"
+          }
+        }
+      }
+    },
+    "overview.findings.banner.noManifest" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld things to fix in %2$@"
+          }
+        }
+      }
+    },
+    "overview.findings.banner.noManifest.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 thing to fix in %@"
+          }
+        }
+      }
+    },
+    "overview.findings.banner.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 thing to fix in %@, by fxvault.yml"
+          }
+        }
+      }
+    },
+    "overview.findings.none" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This stage matches fxvault.yml."
+          }
+        }
+      }
+    },
+    "overview.issue.line" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Line %lld"
+          }
+        }
+      }
+    },
+    "overview.legend" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Missing: fxvault.yml sends the name here. Extra: here, but fxvault.yml does not send it here. Differs: another place of this stage holds another value. Blocked: a public name with a secret-looking value. —: not used here."
+          }
+        }
+      }
+    },
+    "overview.linked.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Linked copies"
+          }
+        }
+      }
+    },
+    "overview.manifest.copyDraft" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy fxvault.yml for This Repository"
+          }
+        }
+      }
+    },
+    "overview.manifest.copyDraft.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy an fxvault.yml that describes this repository now (names only), to commit at its root"
+          }
+        }
+      }
+    },
+    "overview.manifest.copyExample" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy .env.example"
+          }
+        }
+      }
+    },
+    "overview.manifest.draftCopied" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied fxvault.yml. Commit it at the root of the repository; FX Vault reads it from the default branch."
+          }
+        }
+      }
+    },
+    "overview.manifest.exampleCopied" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied the .env.example for %@."
+          }
+        }
+      }
+    },
+    "overview.manifest.hide" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Check"
+          }
+        }
+      }
+    },
+    "overview.manifest.invalid" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "fxvault.yml has errors"
+          }
+        }
+      }
+    },
+    "overview.manifest.none" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No fxvault.yml in the repository"
+          }
+        }
+      }
+    },
+    "overview.manifest.read" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "fxvault.yml on the default branch"
+          }
+        }
+      }
+    },
+    "overview.manifest.readAgain" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Read Again"
+          }
+        }
+      }
+    },
+    "overview.manifest.reading" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reading fxvault.yml…"
+          }
+        }
+      }
+    },
+    "overview.manifest.show" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show Check"
+          }
+        }
+      }
+    },
+    "overview.manifest.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "fxvault.yml"
+          }
+        }
+      }
+    },
+    "overview.manifest.unavailable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "fxvault.yml could not be read"
+          }
+        }
+      }
+    },
+    "overview.noStages" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a destination with a stage, or an environment, to see a stage across GitHub and its destinations."
+          }
+        }
+      }
+    },
+    "overview.stage" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Stage"
+          }
+        }
+      }
+    },
     "passphrase.copy" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -13256,6 +15995,303 @@
         }
       }
     },
+    "settings.destinations.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Connection…"
+          }
+        }
+      }
+    },
+    "settings.destinations.azCopied" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied az login. Run it in Terminal, then check again."
+          }
+        }
+      }
+    },
+    "settings.destinations.azure" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Azure Key Vault"
+          }
+        }
+      }
+    },
+    "settings.destinations.azure.checking" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Checking…"
+          }
+        }
+      }
+    },
+    "settings.destinations.azure.footnote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault asks your Azure CLI sign-in for a short-lived Key Vault token when it syncs; the token stays in memory."
+          }
+        }
+      }
+    },
+    "settings.destinations.azure.signedIn" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Signed in"
+          }
+        }
+      }
+    },
+    "settings.destinations.azure.status" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Azure CLI"
+          }
+        }
+      }
+    },
+    "settings.destinations.azure.unknown" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not checked yet"
+          }
+        }
+      }
+    },
+    "settings.destinations.check" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check"
+          }
+        }
+      }
+    },
+    "settings.destinations.connections" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Supabase and Vercel"
+          }
+        }
+      }
+    },
+    "settings.destinations.connections.footnote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal access tokens, encrypted in the vault. Removing one keeps its destinations; choose another in their settings."
+          }
+        }
+      }
+    },
+    "settings.destinations.copyLogin" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy az login"
+          }
+        }
+      }
+    },
+    "settings.destinations.editor.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Connection"
+          }
+        }
+      }
+    },
+    "settings.destinations.editor.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Destinations"
+          }
+        }
+      }
+    },
+    "settings.destinations.editor.replace" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Replace Token"
+          }
+        }
+      }
+    },
+    "settings.destinations.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No tokens yet. Add one here, or while adding a Supabase or Vercel destination."
+          }
+        }
+      }
+    },
+    "settings.destinations.projects" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ projects"
+          }
+        }
+      }
+    },
+    "settings.destinations.projects.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 project"
+          }
+        }
+      }
+    },
+    "settings.destinations.remove" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove…"
+          }
+        }
+      }
+    },
+    "settings.destinations.remove.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove Connection"
+          }
+        }
+      }
+    },
+    "settings.destinations.remove.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The token is deleted from FX Vault. Its destinations stay and need another connection before the next Sync."
+          }
+        }
+      }
+    },
+    "settings.destinations.remove.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove this connection?"
+          }
+        }
+      }
+    },
+    "settings.destinations.rename" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rename…"
+          }
+        }
+      }
+    },
+    "settings.destinations.rename.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rename"
+          }
+        }
+      }
+    },
+    "settings.destinations.rename.field" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "settings.destinations.rename.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rename Connection"
+          }
+        }
+      }
+    },
+    "settings.destinations.replace" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Replace Token…"
+          }
+        }
+      }
+    },
     "settings.general.autoLock" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -13846,6 +16882,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Advanced"
+          }
+        }
+      }
+    },
+    "settings.tab.destinations" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Destinations"
           }
         }
       }
@@ -17678,6 +20725,193 @@
         }
       }
     },
+    "sync.destination.asRemote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "as %@"
+          }
+        }
+      }
+    },
+    "sync.destination.blocked.connection" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The destination has no connection. Choose one in its settings."
+          }
+        }
+      }
+    },
+    "sync.destination.blocked.exists" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ already has this name. Refresh the destination to keep yours or use theirs."
+          }
+        }
+      }
+    },
+    "sync.destination.blocked.listing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ could not be listed, so nothing is sent there: %2$@"
+          }
+        }
+      }
+    },
+    "sync.destination.blocked.public" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ names are public in the browser, and this value looks like a secret. Change the value, or Mark as Public in the destination."
+          }
+        }
+      }
+    },
+    "sync.destination.blocked.remoteChanged" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It changed in %@ since the last sync. Refresh the destination and review the change."
+          }
+        }
+      }
+    },
+    "sync.destination.blocked.valueMissing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The value is not in FX Vault (the provider never returned it). Fill it first."
+          }
+        }
+      }
+    },
+    "sync.destination.confirmed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirmed in the destination"
+          }
+        }
+      }
+    },
+    "sync.destination.deletion" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete %1$@ in %2$@"
+          }
+        }
+      }
+    },
+    "sync.destination.deletion.keeps" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only this environment: %@ keep it."
+          }
+        }
+      }
+    },
+    "sync.destination.deletions" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld deleted"
+          }
+        }
+      }
+    },
+    "sync.destination.publicWarning" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ in %2$@ is public (%3$@) and its value looks like a token. Fine for a key meant to be public."
+          }
+        }
+      }
+    },
+    "sync.destination.shared" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is shared with %2$@ on Vercel: they get the new value too."
+          }
+        }
+      }
+    },
+    "sync.destination.skipped" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not sent"
+          }
+        }
+      }
+    },
+    "sync.destination.unconfirmed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sent, but the destination did not list it yet. The next Sync sends it again."
+          }
+        }
+      }
+    },
+    "sync.destination.writes" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld will push"
+          }
+        }
+      }
+    },
+    "sync.destination.writesAndDeletions" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld will push · %2$lld deleted"
+          }
+        }
+      }
+    },
     "sync.eyebrow.review" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -17872,6 +21106,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Learn More"
+          }
+        }
+      }
+    },
+    "sync.fix.openDestination" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show Destination"
           }
         }
       }

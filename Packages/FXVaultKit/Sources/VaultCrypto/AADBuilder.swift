@@ -230,3 +230,42 @@ public struct FolderFieldAAD: Sendable, Hashable {
         )
     }
 }
+
+/// The identity a destination item's value is bound to (v0.8.0, `destination_items.value_ct`):
+/// row, destination, kind and name. The layout is ``FieldAAD``'s with the destination in the
+/// repository's place and no environment; the table name `destination_items` keeps a destination
+/// blob from opening as a repository or folder item. Renaming the item or changing its kind
+/// re-seals the value.
+public struct DestinationFieldAAD: Sendable, Hashable {
+    /// Table name as written into the AAD.
+    public static let table = "destination_items"
+    /// Column name as written into the AAD.
+    public static let column = "value_ct"
+
+    public let rowID: ConfigItemID
+    public let destinationID: DestinationID
+    public let kind: ConfigKind
+    public let name: String
+
+    public init(rowID: ConfigItemID, destinationID: DestinationID, kind: ConfigKind, name: String) {
+        self.rowID = rowID
+        self.destinationID = destinationID
+        self.kind = kind
+        self.name = name
+    }
+
+    /// `LP("fxvault/v1/field") ‖ LP("destination_items") ‖ LP("value_ct") ‖ LP(row 16B) ‖
+    /// LP(destination 16B) ‖ LP(empty) ‖ LP(kind) ‖ LP(name) ‖ u32be(dek_version)`.
+    public func encoded(dekVersion: UInt32) -> Data {
+        FieldAAD.encode(
+            table: Self.table,
+            column: Self.column,
+            row: rowID.bytes,
+            container: destinationID.bytes,
+            environment: [],
+            kind: kind,
+            name: name,
+            dekVersion: dekVersion
+        )
+    }
+}

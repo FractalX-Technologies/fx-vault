@@ -52,6 +52,14 @@ enum MainSheet: Hashable, Identifiable {
     /// New Folder… (optionally with items to copy in) and Rename….
     case folderName(FolderNameContext)
 
+    // Main/Destination/ (v0.8.0)
+    /// "+ Add Destination" for a repository (optionally from a manifest suggestion).
+    case addDestination(AddDestinationContext)
+    /// A destination's Settings…: its stage and connection.
+    case destinationSettings(DestinationSettingsContext)
+    /// Refresh's findings for one destination: Keep Mine or Use Remote.
+    case destinationDrift(DestinationDriftContext)
+
     // Main/ (owned by the main window)
     /// "Add repository by name…" for one account (§10 Column 1).
     case addRepositoryByName(AddRepositoryContext)
@@ -64,7 +72,7 @@ enum MainSheet: Hashable, Identifiable {
     /// (v0.2.0). Nearby sharing is peer-to-peer and works without an internet route.
     var needsInternet: Bool {
         switch self {
-        case .sync, .createRepository, .addRepositoryByName, .shareSpace:
+        case .sync, .createRepository, .addRepositoryByName, .shareSpace, .addDestination, .destinationDrift:
             true
         default:
             false
@@ -73,6 +81,24 @@ enum MainSheet: Hashable, Identifiable {
 }
 
 // MARK: - Contexts
+
+/// "+ Add Destination" (v0.8.0).
+struct AddDestinationContext: Hashable {
+    let repositoryID: RepoID
+    /// A manifest target the repository has no destination for yet, to start from.
+    var suggestion: AddDestinationSuggestion?
+}
+
+/// A destination's Settings… (v0.8.0).
+struct DestinationSettingsContext: Hashable {
+    let destinationID: DestinationID
+}
+
+/// Refresh's findings for one destination (v0.8.0).
+struct DestinationDriftContext: Hashable {
+    let destinationID: DestinationID
+    let findings: [DestinationDriftModel]
+}
 
 /// What ``CopyToRepositoryScreen`` copies (v0.4.1): items of one scope, by id.
 struct CopyToRepositoryContext: Hashable {
@@ -122,6 +148,13 @@ struct ItemEditorContext: Hashable {
     init(folderID: FolderID, mode: Mode) {
         place = .folder(folderID)
         self.mode = mode
+    }
+
+    /// Add, edit or fill an item of a destination (v0.8.0).
+    init(destinationID: DestinationID, mode: Mode, fillMatchesGitHub: Bool = false) {
+        place = .destination(destinationID)
+        self.mode = mode
+        self.fillMatchesGitHub = fillMatchesGitHub
     }
 }
 
@@ -264,6 +297,10 @@ struct EnvExportContext: Hashable {
 
     init(folderID: FolderID) {
         place = .folder(folderID)
+    }
+
+    init(destinationID: DestinationID) {
+        place = .destination(destinationID)
     }
 }
 

@@ -19,6 +19,10 @@ public enum ValidationError: Error, Sendable, Hashable {
     case nameReservedByPendingChange
     /// Kind or scope cannot change once the item is synced (D11).
     case lockedAfterSync
+    /// The destination holds secrets only (Key Vault, Supabase; v0.8.0 R3).
+    case kindNotSupported
+    /// A destination's vault name, project, team or tenant broke the provider's rules (v0.8.0).
+    case invalidDestinationTarget(DestinationTargetRule)
 }
 
 /// The rule a name broke. Shared by every name validator.
@@ -37,6 +41,11 @@ public enum NameRule: Sendable, Hashable {
     case reservedPrefix
     /// A name FX Vault uses itself (`FXVAULT_SPACE`, the shared space marker).
     case reservedName
+    /// A prefix the destination's provider reserves (`SUPABASE_` in Supabase; v0.8.0).
+    case reservedByProvider
+    /// A name a case-sensitive provider (Supabase, Vercel) stores with lowercase letters: FX Vault
+    /// keeps names in uppercase, so it leaves this item as it is (v0.8.0).
+    case notUppercase
     /// `.` or `..` (repository names).
     case dotName
     /// Ends with `.git` (repository names).
@@ -69,4 +78,18 @@ public enum PathSegmentRule: Sendable, Hashable {
     case bidiCharacter
     /// Contains a zero-width or other invisible formatting character.
     case zeroWidthCharacter
+}
+
+/// The destination identifier that broke its provider's rules (v0.8.0).
+public enum DestinationTargetRule: Sendable, Hashable {
+    /// Key Vault names: 3–24 letters, digits and dashes, starting with a letter.
+    case keyVaultName
+    /// A Microsoft Entra tenant id or domain.
+    case tenantID
+    /// Supabase project references: 20 lowercase letters.
+    case supabaseProjectRef
+    /// A Vercel project name or id.
+    case vercelProject
+    /// A Vercel team id.
+    case vercelTeam
 }

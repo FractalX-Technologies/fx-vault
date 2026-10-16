@@ -1,0 +1,10 @@
+{
+  "decrypted": true,
+  "type": "encrypted",
+  "target": ["production", "preview"],
+  "id": "env_database",
+  "key": "DATABASE_URL",
+  "createdAt": 1789990000000,
+  "updatedAt": 1790000000123,
+  "value": "fixture-value-1 \\ end"
+}

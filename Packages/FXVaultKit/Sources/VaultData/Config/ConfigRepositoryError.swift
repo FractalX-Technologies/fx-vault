@@ -17,6 +17,18 @@ public enum ConfigRepositoryError: Error, Sendable, Hashable {
     case folderNotFound
     /// The folder already holds `limit` secrets and variables (v0.7.0).
     case folderFull(limit: Int)
+    /// No destination with that id (v0.8.0).
+    case destinationNotFound
+    /// The destination already holds `limit` secrets and variables (v0.8.0).
+    case destinationFull(limit: Int)
+    /// The repository already has `limit` destinations (v0.8.0).
+    case tooManyDestinations(limit: Int)
+    /// The repository already has a destination for the same vault, project or environment.
+    case destinationExists
+    /// No provider connection with that id, or one for another provider (v0.8.0).
+    case connectionNotFound
+    /// The vault already holds `limit` provider connections (v0.8.0).
+    case tooManyConnections(limit: Int)
     /// The environment is deleted (a tombstone pending deletion on GitHub): revert it first.
     case environmentDeleted
     /// The viewer cannot change this scope (§2 Permissions, `RepoCapabilityModel`).
