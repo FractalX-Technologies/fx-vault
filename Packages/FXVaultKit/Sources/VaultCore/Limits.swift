@@ -56,6 +56,8 @@ public enum Limits {
     /// (`handle_shortcode`) share it: GitHub counts the underscore and the short code toward the
     /// 39 characters ("Username considerations for external authentication").
     public static let maxOwnerLoginLength = 39
+    /// Longest folder name, in Unicode scalars (v0.7.0). Local choice.
+    public static let maxFolderNameLength = 64
     /// Longest deployment branch or tag pattern, in Unicode scalars.
     public static let maxBranchPatternLength = 255
     /// Most deployment branch patterns accepted per environment (share validator, §9.3).
@@ -65,6 +67,12 @@ public enum Limits {
     /// Percent-decoding passes ``PathSegmentValidator`` applies when looking for hidden dot
     /// segments (`%2E`, `%252E`, ...). Local choice.
     public static let maxPercentDecodingPasses = 4
+
+    // MARK: - Folders (v0.7.0)
+
+    /// Most secrets and variables one folder holds. Local choice: keeps a folder within one
+    /// share package and one chat card.
+    public static let maxFolderItems = 1000
 
     // MARK: - Write throttle and retries (D12, §7.3)
 

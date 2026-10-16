@@ -48,6 +48,10 @@ enum MainSheet: Hashable, Identifiable {
     /// A shared scope: its history and members.
     case space(SpaceContext)
 
+    // Folders/ (v0.7.0)
+    /// New Folder… (optionally with items to copy in) and Rename….
+    case folderName(FolderNameContext)
+
     // Main/ (owned by the main window)
     /// "Add repository by name…" for one account (§10 Column 1).
     case addRepositoryByName(AddRepositoryContext)
@@ -73,8 +77,17 @@ enum MainSheet: Hashable, Identifiable {
 /// What ``CopyToRepositoryScreen`` copies (v0.4.1): items of one scope, by id.
 struct CopyToRepositoryContext: Hashable {
     let itemIDs: [ConfigItemID]
-    let sourceRepositoryID: RepoID
-    let sourceScope: ConfigScope
+    /// The scope or folder (v0.7.0) the items are in.
+    let source: ItemPlaceModel
+
+    init(itemIDs: [ConfigItemID], source: ItemPlaceModel) {
+        self.itemIDs = itemIDs
+        self.source = source
+    }
+
+    init(itemIDs: [ConfigItemID], sourceRepositoryID: RepoID, sourceScope: ConfigScope) {
+        self.init(itemIDs: itemIDs, source: .scope(repositoryID: sourceRepositoryID, scope: sourceScope))
+    }
 }
 
 /// What ``ItemEditorScreen`` edits. `scope` is where the item is (or will be) and `kind` the
@@ -92,12 +105,35 @@ struct ItemEditorContext: Hashable {
         case move(ConfigItemID)
     }
 
-    let repositoryID: RepoID
-    let scope: ConfigScope
+    /// A scope of a repository, or a folder (v0.7.0: add and edit only).
+    let place: ItemPlaceModel
     let mode: Mode
     /// Fill: start with "Already matches GitHub (don't push)" checked. Only the drift review
     /// sets it, after "Accept GitHub" (the user chose GitHub's value).
     var fillMatchesGitHub = false
+
+    init(repositoryID: RepoID, scope: ConfigScope, mode: Mode, fillMatchesGitHub: Bool = false) {
+        place = .scope(repositoryID: repositoryID, scope: scope)
+        self.mode = mode
+        self.fillMatchesGitHub = fillMatchesGitHub
+    }
+
+    /// Add or edit an item of a folder.
+    init(folderID: FolderID, mode: Mode) {
+        place = .folder(folderID)
+        self.mode = mode
+    }
+}
+
+/// New Folder… or Rename… (v0.7.0).
+struct FolderNameContext: Hashable {
+    enum Mode: Hashable {
+        /// A new folder; `itemIDs` are copied into it (rows dropped on "New Folder").
+        case create(itemIDs: [ConfigItemID])
+        case rename(FolderID)
+    }
+
+    let mode: Mode
 }
 
 /// Share with Teammates… for one scope (v0.6.0).
@@ -154,9 +190,9 @@ struct EnvImportContext: Hashable {
         case pasted(EnvPasteBuffer)
     }
 
-    let repositoryID: RepoID
-    /// The target scope the sheet preselects (the scope that is open); still changeable.
-    let scope: ConfigScope
+    /// The scope the sheet preselects (the scope that is open; still changeable), or a folder
+    /// (v0.7.0), the only target then.
+    let place: ItemPlaceModel
     /// A file chosen before the sheet opened (drag and drop); nil lets the sheet offer a file
     /// picker or paste.
     let fileURL: URL?
@@ -172,8 +208,11 @@ struct EnvImportContext: Hashable {
         defaultKind: ConfigKind? = nil,
         start: Start = .chooser
     ) {
-        self.repositoryID = repositoryID
-        self.scope = scope
+        self.init(place: .scope(repositoryID: repositoryID, scope: scope), fileURL: fileURL, defaultKind: defaultKind, start: start)
+    }
+
+    init(place: ItemPlaceModel, fileURL: URL? = nil, defaultKind: ConfigKind? = nil, start: Start = .chooser) {
+        self.place = place
         self.fileURL = fileURL
         self.defaultKind = defaultKind
         self.start = start
@@ -215,10 +254,17 @@ final class EnvPasteBuffer: Hashable, CustomStringConvertible {
     }
 }
 
-/// Export .env… of one scope.
+/// Export .env… of one scope or (v0.7.0) one folder.
 struct EnvExportContext: Hashable {
-    let repositoryID: RepoID
-    let scope: ConfigScope
+    let place: ItemPlaceModel
+
+    init(repositoryID: RepoID, scope: ConfigScope) {
+        place = .scope(repositoryID: repositoryID, scope: scope)
+    }
+
+    init(folderID: FolderID) {
+        place = .folder(folderID)
+    }
 }
 
 /// Share › File… (`.fxvault` export).

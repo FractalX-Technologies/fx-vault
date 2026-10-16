@@ -32,7 +32,7 @@ struct ChatAttachmentCardView: View {
                         .font(Theme.Typography.callout)
                         .foregroundStyle(Theme.Colors.subtleText)
                         .accessibilityHidden(true)
-                    Text(verbatim: card.offer.itemName ?? card.offer.repositoryFullName)
+                    Text(verbatim: card.offer.itemName ?? card.offer.folderName ?? card.offer.repositoryFullName)
                         .fxTextStyle(.mono)
                         .foregroundStyle(Theme.Colors.ink)
                         .lineLimit(1)
@@ -58,11 +58,13 @@ struct ChatAttachmentCardView: View {
     }
 
     private var kindTitle: String {
-        card.offer.kind?.editorTitle ?? String(localized: "chat.card.repository.kind", defaultValue: "Repository")
+        if card.offer.folderName != nil { return FolderCopy.eyebrow }
+        return card.offer.kind?.editorTitle ?? String(localized: "chat.card.repository.kind", defaultValue: "Repository")
     }
 
     private var symbol: String {
-        switch card.offer.kind {
+        if card.offer.folderName != nil { return "folder" }
+        return switch card.offer.kind {
         case .secret: "key"
         case .variable: "textformat"
         case nil: "book.closed"
@@ -71,6 +73,9 @@ struct ChatAttachmentCardView: View {
 
     /// `owner/name · production`, `owner/name · Repository`, or for a whole repository its counts.
     private var scopeLine: String {
+        if case .folder(let summary) = card.offer.content {
+            return FolderCopy.counts(secrets: summary.secretCount, variables: summary.variableCount)
+        }
         if case .configuration(let summary) = card.offer.content {
             // Automatic grammar agreement: "1 environment · 3 secrets · 1 variable".
             let counts = String(AttributedString(
@@ -90,7 +95,37 @@ struct ChatAttachmentCardView: View {
     }
 
     private var statusLine: String {
-        card.offer.isConfiguration ? configurationStatusLine : itemStatusLine
+        if card.offer.folderName != nil { return folderStatusLine }
+        return card.offer.isConfiguration ? configurationStatusLine : itemStatusLine
+    }
+
+    /// The status of a folder copy (v0.7.0); the shared states keep the repository's texts.
+    private var folderStatusLine: String {
+        switch card.status {
+        case .awaitingPeer:
+            String(
+                localized: "chat.card.folder.awaitingPeer",
+                defaultValue: "Offered. The values are sent only if your teammate saves it or saves it as a file."
+            )
+        case .sent:
+            String(localized: "chat.card.folder.sent", defaultValue: "Your teammate received it. The values were sent once; later changes are not sent.")
+        case .dismissedByPeer:
+            String(
+                localized: "chat.card.folder.dismissedByPeer",
+                defaultValue: "Not sent. Your teammate dismissed it, or the folder changed since you attached it."
+            )
+        case .offered:
+            String(
+                localized: "chat.card.folder.offered",
+                defaultValue: "The values are not shown. Save… keeps it as a folder or imports it into one of your repositories."
+            )
+        case .readyToSave:
+            String(localized: "chat.card.folder.readyToSave", defaultValue: "Arrived. Save it as a folder, import it into a repository, or save it as a file.")
+        case .saved:
+            String(localized: "chat.card.folder.saved", defaultValue: "Saved to your vault. Nothing was synced.")
+        default:
+            configurationStatusLine
+        }
     }
 
     /// The status of a whole repository (v0.4.0).
@@ -174,7 +209,7 @@ struct ChatAttachmentCardView: View {
 
     @ViewBuilder
     private var actions: some View {
-        if card.offer.isConfiguration {
+        if card.offer.isPackage {
             configurationActions
         } else {
             itemActions
@@ -186,7 +221,9 @@ struct ChatAttachmentCardView: View {
     private var configurationActions: some View {
         if card.isAwaitingDecision || card.canReview {
             HStack(spacing: Theme.Spacing.small) {
-                Button(String(localized: "chat.card.repository.importInto", defaultValue: "Import Into…")) {
+                Button(card.offer.folderName != nil
+                    ? String(localized: "chat.card.folder.save", defaultValue: "Save…")
+                    : String(localized: "chat.card.repository.importInto", defaultValue: "Import Into…")) {
                     Task { await viewModel.handleConfiguration(card.id, .importInto) }
                 }
                 .fxButtonStyle(.primary)

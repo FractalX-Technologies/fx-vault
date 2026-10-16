@@ -136,7 +136,7 @@ struct RepoDetailCopyTests {
             Issue.record("expected the .env import")
             return
         }
-        #expect(context.scope == fixture.staging)
+        #expect(context.place == .scope(repositoryID: fixture.repositoryID, scope: fixture.staging))
     }
 
     @Test func secretsWithoutAValueAreNotCopied() async throws {
@@ -214,8 +214,7 @@ struct RepoDetailCopyTests {
             return
         }
         #expect(context.itemIDs == model.selectedRows.map(\.id))
-        #expect(context.sourceRepositoryID == fixture.repositoryID)
-        #expect(context.sourceScope == .repository)
+        #expect(context.source == .scope(repositoryID: fixture.repositoryID, scope: .repository))
     }
 
     @Test func linkedCopiesPopoverListsOpensAndUnlinks() async throws {
@@ -232,7 +231,7 @@ struct RepoDetailCopyTests {
         #expect(model.linkedPopoverRowID == row.id)
         let copy = try #require(model.linkedCopies.first)
         #expect(model.linkedCopies.count == 1)
-        #expect(copy.environmentName == "staging")
+        #expect(copy.itemPlace == .scope(repositoryID: fixture.repositoryID, scope: fixture.staging))
         #expect(copy.comparison == .same)
         #expect(copy.placeDetail(itemName: "NEW_A") == "staging · user-a")
         #expect(copy.placeDetail(itemName: "OTHER") == "staging · NEW_A · user-a")

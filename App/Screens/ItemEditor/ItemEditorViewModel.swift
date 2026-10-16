@@ -27,6 +27,9 @@ import VaultData
 /// - A linked item (v0.4.1, L4) lists its other places when a new value is entered: the ones
 ///   that still have the item's current value start checked, the ones the account cannot change
 ///   are disabled. Saving updates the checked copies too (`ConfigRepository.updateLinkedCopies`).
+/// - A folder item (v0.7.0) is added and edited the same way (``ItemEditorContext/place``), saved
+///   at once through `FolderRepository`; it has no fill, move or push, and its kind stays
+///   editable.
 @Observable
 final class ItemEditorViewModel: LockObserving {
     enum LoadState: Equatable {
@@ -39,12 +42,14 @@ final class ItemEditorViewModel: LockObserving {
     let context: ItemEditorContext
     private(set) var loadState: LoadState = .loading
     /// The edited item (nil while adding).
-    private(set) var item: ConfigItemModel?
+    private(set) var item: EditorItemModel?
     private(set) var repository: RepoModel?
+    /// The folder of a folder item (v0.7.0).
+    private(set) var folder: FolderModel?
     /// The live scopes of the repository (Convert/Move targets and scope titles).
     private(set) var scopeOptions: [ItemScopeOptionModel] = []
-    /// Every item of the context scope (tombstones included), for duplicate checks.
-    private(set) var siblings: [ConfigItemModel] = []
+    /// Every item of the context scope or folder (tombstones included), for duplicate checks.
+    private(set) var siblings: [EditorItemModel] = []
 
     /// Add and edit: the kind picker (locked once synced, D11).
     var kind: ConfigKind
@@ -100,25 +105,42 @@ final class ItemEditorViewModel: LockObserving {
         kind = initialKind
         targetKind = initialKind
         fillMatchesGitHub = context.fillMatchesGitHub
-        targetScope = context.scope
+        targetScope = Self.scope(of: context.place)
         dependencies.actions.addLockObserver(self)
+    }
+
+    /// The context's scope; `.repository` for a folder, which has none.
+    private static func scope(of place: ItemPlaceModel) -> ConfigScope {
+        if case .scope(_, let scope) = place { return scope }
+        return .repository
+    }
+
+    /// The context's scope (see ``scope(of:)``).
+    private var scope: ConfigScope {
+        Self.scope(of: context.place)
     }
 
     // MARK: - Loading
 
-    /// Reads the repository, the scopes and the scope's items. Call once when the sheet opens.
+    /// Reads the repository, the scopes and the scope's items (or the folder and its items).
+    /// Call once when the sheet opens.
     func load() async {
+        if case .folder(let folderID) = context.place {
+            await loadFolder(folderID)
+            return
+        }
+        guard case .scope(let repositoryID, let scope) = context.place else { return }
         do {
             let config = dependencies.config
-            let repository = try config.editorRepository(context.repositoryID)
-            let scopes = try config.scopes(repositoryID: context.repositoryID)
-            if let current = scopes.first(where: { $0.scope == context.scope }), current.isDeleted {
+            let repository = try config.editorRepository(repositoryID)
+            let scopes = try config.scopes(repositoryID: repositoryID)
+            if let current = scopes.first(where: { $0.scope == scope }), current.isDeleted {
                 throw ConfigRepositoryError.environmentDeleted
             }
-            guard scopes.contains(where: { $0.scope == context.scope }) else {
+            guard scopes.contains(where: { $0.scope == scope }) else {
                 throw ConfigRepositoryError.environmentNotFound
             }
-            let items = try await config.editorItems(repositoryID: context.repositoryID, scope: context.scope)
+            let items = try await config.editorItems(repositoryID: repositoryID, scope: scope).map(EditorItemModel.init)
             self.repository = repository
             siblings = items
             scopeOptions = scopes.filter { !$0.isDeleted }.map { summary in
@@ -137,7 +159,26 @@ final class ItemEditorViewModel: LockObserving {
         }
     }
 
-    private func prepare(itemID: ConfigItemID, in items: [ConfigItemModel]) throws {
+    /// A folder item's sheet: the folder and its items.
+    private func loadFolder(_ folderID: FolderID) async {
+        do {
+            guard let folder = try dependencies.folders.folders().first(where: { $0.id == folderID }) else {
+                throw ConfigRepositoryError.folderNotFound
+            }
+            let items = try dependencies.folders.items(folderID: folderID).map(EditorItemModel.init)
+            self.folder = folder
+            siblings = items
+            if let id = editedID {
+                guard case .edit = context.mode else { throw ConfigRepositoryError.itemNotFound }
+                try prepare(itemID: id, in: items)
+            }
+            loadState = .ready
+        } catch {
+            loadState = .unavailable(error.presentation)
+        }
+    }
+
+    private func prepare(itemID: ConfigItemID, in items: [EditorItemModel]) throws {
         guard let item = items.first(where: { $0.id == itemID }) else {
             throw ConfigRepositoryError.itemNotFound
         }
@@ -165,7 +206,7 @@ final class ItemEditorViewModel: LockObserving {
         case .move:
             let opposite = item.kind.editorOpposite
             targetKind = canMove(to: opposite) ? opposite : item.kind
-            targetScope = item.scope
+            targetScope = item.scope ?? .repository
         }
     }
 
@@ -249,24 +290,28 @@ final class ItemEditorViewModel: LockObserving {
         }
     }
 
-    /// "In production of owner/name".
+    /// "In production of owner/name", or "In the folder Mobile App" (v0.7.0).
     var subtitle: String? {
+        if let folder {
+            return String(localized: "itemEditor.subtitle.folder", defaultValue: "In the folder \(folder.name)")
+        }
         guard let repository else { return nil }
         return String(
             localized: "itemEditor.subtitle",
-            defaultValue: "In \(scopeTitle(context.scope)) of \(repository.fullName)"
+            defaultValue: "In \(scopeTitle(scope)) of \(repository.fullName)"
         )
     }
 
     func scopeTitle(_ scope: ConfigScope) -> String {
-        scopeOptions.first { $0.scope == scope }?.title ?? Self.repositoryTitle
+        if let folder { return folder.name }
+        return scopeOptions.first { $0.scope == scope }?.title ?? Self.repositoryTitle
     }
 
     // MARK: - Capability
 
-    /// Why the context scope is read-only, or nil when it can be changed.
+    /// Why the context scope is read-only, or nil when it can be changed (a folder always can).
     var readOnlyReason: RepoCapabilityModel.ReadOnlyReason? {
-        repository?.capability.readOnlyReason(for: context.scope.level)
+        repository?.capability.readOnlyReason(for: scope.level)
     }
 
     var canEdit: Bool {
@@ -334,7 +379,7 @@ final class ItemEditorViewModel: LockObserving {
 
     /// A deleted item of this scope and kind with the name: adding or renaming revives it
     /// (§7.1).
-    private var revivedSibling: ConfigItemModel? {
+    private var revivedSibling: EditorItemModel? {
         guard isNameEditable, isNameChanged, !isNameTaken else { return nil }
         return siblings.first { $0.id != editedID && $0.isDeleted && $0.kind == kind && $0.nameKey == nameKey }
     }
@@ -352,7 +397,7 @@ final class ItemEditorViewModel: LockObserving {
         if isNameTaken {
             return .error(String(
                 localized: "itemEditor.name.taken",
-                defaultValue: "Another item of this kind in \(scopeTitle(context.scope)) already uses this name."
+                defaultValue: "Another item of this kind in \(scopeTitle(scope)) already uses this name."
             ))
         }
         if revivedSibling != nil {
@@ -473,11 +518,11 @@ final class ItemEditorViewModel: LockObserving {
         case .switchToSecret:
             kind = .secret
         case .convertToSecret:
-            guard let item else { return }
+            guard let item, let repositoryID = context.place.repositoryID, let itemScope = item.scope else { return }
             clearValue()
             dependencies.actions.present(.itemEditor(ItemEditorContext(
-                repositoryID: context.repositoryID,
-                scope: item.scope,
+                repositoryID: repositoryID,
+                scope: itemScope,
                 mode: .move(item.id)
             )))
         }
@@ -530,6 +575,11 @@ final class ItemEditorViewModel: LockObserving {
         return targetKind != item.kind || targetScope != item.scope
     }
 
+    /// The item's scope title for the move notes (repository items only).
+    private func itemScopeTitle(_ item: EditorItemModel) -> String {
+        scopeTitle(item.scope ?? .repository)
+    }
+
     /// What Convert/Move does on GitHub, and why a value-missing secret cannot become a
     /// variable.
     var moveNotes: [ConfigEditorNoteModel] {
@@ -545,7 +595,7 @@ final class ItemEditorViewModel: LockObserving {
         if item.isSynced {
             notes.append(.info(String(
                 localized: "itemEditor.move.synced",
-                defaultValue: "The next Sync creates it as a \(targetKind.editorTitle.lowercased()) in \(scopeTitle(targetScope)) and deletes it from \(scopeTitle(item.scope)) on GitHub."
+                defaultValue: "The next Sync creates it as a \(targetKind.editorTitle.lowercased()) in \(scopeTitle(targetScope)) and deletes it from \(itemScopeTitle(item)) on GitHub."
             )))
         } else {
             notes.append(.info(String(
@@ -655,13 +705,12 @@ final class ItemEditorViewModel: LockObserving {
     private func add() throws(ConfigRepositoryError) {
         let bytes = SecretBytes(utf8: value)
         defer { bytes.wipe() }
-        let result = try dependencies.config.addItem(
-            repositoryID: context.repositoryID,
-            scope: context.scope,
-            kind: kind,
-            name: normalizedName,
-            value: bytes
-        )
+        let result = switch context.place {
+        case .scope(let repositoryID, let scope):
+            try dependencies.config.addItem(repositoryID: repositoryID, scope: scope, kind: kind, name: normalizedName, value: bytes)
+        case .folder(let folderID):
+            try dependencies.folders.addItem(folderID: folderID, kind: kind, name: normalizedName, value: bytes)
+        }
         didStripTrailingNewlines = result.didStripTrailingNewlines
     }
 
@@ -688,6 +737,17 @@ final class ItemEditorViewModel: LockObserving {
         let linkedTargets = offersLinkedUpdate
             ? linkedCopies.filter { $0.isEditable && linkedSelection.contains($0.itemID) }.map(\.itemID)
             : []
+        if case .folder = context.place {
+            // One transaction for name, kind and value; nothing is pending (v0.7.0).
+            let bytes = newValue.map { SecretBytes(utf8: $0) }
+            defer { bytes?.wipe() }
+            didStripTrailingNewlines = try dependencies.folders.editItem(item.id, name: normalizedName, kind: kind, value: bytes)
+                .didStripTrailingNewlines
+            if !linkedTargets.isEmpty {
+                try config.updateLinkedCopies(from: item.id, to: linkedTargets)
+            }
+            return
+        }
         var id = item.id
         if isNameChanged {
             id = try config.renameItem(id, to: normalizedName)
@@ -698,7 +758,7 @@ final class ItemEditorViewModel: LockObserving {
             didStripTrailingNewlines = try config.editValue(id, value: bytes).didStripTrailingNewlines
         }
         if kind != item.kind {
-            id = try config.moveItem(id, toKind: kind, scope: item.scope)
+            id = try config.moveItem(id, toKind: kind, scope: item.scope ?? scope)
         }
         if shouldRequestPush {
             try config.requestPush(id)

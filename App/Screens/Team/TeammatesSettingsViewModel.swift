@@ -40,13 +40,7 @@ final class TeammatesSettingsViewModel: LockObserving {
 
     var visibility: NearbyVisibility {
         get { app.container.preferences.nearbyVisibility }
-        set {
-            guard newValue != app.container.preferences.nearbyVisibility else { return }
-            app.container.preferences.nearbyVisibility = newValue
-            if isUnlocked {
-                app.teamPresence.start()
-            }
-        }
+        set { app.setNearbyVisibility(newValue) }
     }
 
     var mutesAllPings: Bool {

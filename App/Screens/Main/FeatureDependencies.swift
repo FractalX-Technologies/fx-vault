@@ -23,6 +23,8 @@ struct MainActions {
     let select: (RepoID) -> Void
     /// Selects a vault repository and one of its scopes (a linked copy's place, v0.4.1).
     var open: (RepoID, ConfigScope) -> Void = { _, _ in }
+    /// Selects a folder in the sidebar (a linked copy's place, v0.7.0).
+    var openFolder: (FolderID) -> Void = { _ in }
     /// Get Updates from Teammates (v0.6.0): pulls every shared space, returns when done.
     var syncSpaces: () async -> Void = {}
     /// A Sync run published shared versions: members are told right away.
@@ -31,6 +33,14 @@ struct MainActions {
     var spaceIdentity: () -> SpaceLocalIdentityModel = { SpaceLocalIdentityModel(login: "", displayName: "", macName: "") }
     /// Versions teammates brought in (the space screens reload on change).
     var spaceSyncCount: () -> Int = { 0 }
+
+    /// Shows a scope of a repository or a folder.
+    func openPlace(_ place: ItemPlaceModel) {
+        switch place {
+        case .scope(let repositoryID, let scope): open(repositoryID, scope)
+        case .folder(let id): openFolder(id)
+        }
+    }
 
     /// Actions that do nothing (SwiftUI previews).
     static let inert = MainActions(
@@ -69,6 +79,8 @@ struct FeatureDependencies {
     let team: TeamRepository
     /// Shared spaces (v0.6.0): share a scope, members, history.
     let spaces: SpaceRepository
+    /// Folders of secrets and variables (v0.7.0).
+    let folders: FolderRepository
     /// Staging, owners, templates and name checks. Clone through ``cloner``.
     let creation: RepoCreationRepository
     let cloner: any RepoCloning
@@ -108,6 +120,7 @@ struct FeatureDependencies {
         chat = data.chat
         team = data.team
         spaces = data.spaces
+        folders = data.folders
         creation = data.creation
         cloner = data.cloner
         reauth = container.reauth
@@ -122,8 +135,8 @@ struct FeatureDependencies {
         touchIDStatus = { try? vaultManager.biometricUnlockStatus() }
     }
 
-    /// Decrypts the item's value, copies it with the clipboard privacy markers (cleared after
-    /// 30 s, on lock and on quit) and wipes the decrypted bytes.
+    /// Decrypts the item's value (a repository or folder item), copies it with the clipboard
+    /// privacy markers (cleared after 30 s, on lock and on quit) and wipes the decrypted bytes.
     ///
     /// - Throws: `.valueMissing`, `.itemNotFound`, `.vault(.locked)`, `.unexpected` for bytes
     ///   that are not UTF-8 (never stored by FX Vault).
@@ -132,6 +145,37 @@ struct FeatureDependencies {
         defer { value.wipe() }
         guard let text = value.utf8String() else { throw .unexpected }
         clipboard.copy(text)
+    }
+
+    /// The names among `ids` that `place` (a repository scope or a folder, v0.7.0) already
+    /// holds: the copy asks whether to replace or keep them.
+    func copyConflicts(_ ids: [ConfigItemID], to place: ItemPlaceModel) throws(ConfigRepositoryError) -> [String] {
+        switch place {
+        case .scope(let repositoryID, let scope): try config.copyConflicts(ids, to: scope, repositoryID: repositoryID)
+        case .folder(let folderID): try folders.copyConflicts(ids, to: folderID)
+        }
+    }
+
+    /// Copies items into a repository scope (pending for Sync) or a folder (at once), each copy
+    /// linked to its source.
+    func copyItems(
+        _ ids: [ConfigItemID],
+        to place: ItemPlaceModel,
+        conflicts: ItemCopyConflictPolicy
+    ) throws(ConfigRepositoryError) -> ItemCopyResultModel {
+        switch place {
+        case .scope(let repositoryID, let scope):
+            try config.copyItems(ids, to: scope, repositoryID: repositoryID, conflicts: conflicts)
+        case .folder(let folderID):
+            try folders.copyItems(ids, to: folderID, conflicts: conflicts)
+        }
+    }
+
+    /// Copy To › Folder targets (v0.7.0): every folder but `excluded`, by sidebar order.
+    func folderCopyTargets(excluding excluded: FolderID? = nil) -> [ItemCopyTargetModel] {
+        ((try? folders.folders()) ?? [])
+            .filter { $0.id != excluded }
+            .map { ItemCopyTargetModel(place: .folder($0.id), title: $0.name, isEditable: true) }
     }
 
     /// The Touch ID prompt for a re-authentication (D24: texts are built in the app).

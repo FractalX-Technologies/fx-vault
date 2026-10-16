@@ -118,6 +118,12 @@ struct NearbyChatMachine: Sendable {
         (exchange.version ?? 0) >= NearbyChatProtocol.configurationAttachmentsVersion
     }
 
+    /// True once keys exist and both Macs speak chat v4 or later (v0.7.0): a folder may be
+    /// attached. False with a 0.6 or older peer.
+    var acceptsFolderAttachments: Bool {
+        (exchange.version ?? 0) >= NearbyChatProtocol.folderAttachmentsVersion
+    }
+
     /// True when nothing sensitive is held: no keys, no offers, no partial payload.
     var holdsNothing: Bool {
         !exchange.hasKeys && outgoing.isEmpty && incoming.isEmpty && transfer == nil
@@ -251,7 +257,14 @@ struct NearbyChatMachine: Sendable {
         if stripped.scope != .secret, !acceptsConfigurationAttachments {
             throw .peerNeedsUpdate
         }
-        guard Self.attachmentViolation(stripped, acceptsConfiguration: acceptsConfigurationAttachments) == nil,
+        if stripped.isFolder, !acceptsFolderAttachments {
+            throw .peerNeedsUpdate
+        }
+        guard Self.attachmentViolation(
+            stripped,
+            acceptsConfiguration: acceptsConfigurationAttachments,
+            acceptsFolder: acceptsFolderAttachments
+        ) == nil,
               outgoing[id] == nil,
               incoming[id] == nil,
               let offer = ChatAttachmentOfferModel(id: id, direction: .sent, manifest: stripped)
@@ -564,7 +577,11 @@ struct NearbyChatMachine: Sendable {
         } catch {
             throw NearbyFailure(NearbyHandshake.abortReason(for: error))
         }
-        if let reason = Self.attachmentViolation(manifest, acceptsConfiguration: acceptsConfigurationAttachments) {
+        if let reason = Self.attachmentViolation(
+            manifest,
+            acceptsConfiguration: acceptsConfigurationAttachments,
+            acceptsFolder: acceptsFolderAttachments
+        ) {
             throw NearbyFailure(reason)
         }
         guard let offer = ChatAttachmentOfferModel(id: id, direction: .received, manifest: manifest) else {
@@ -672,8 +689,13 @@ struct NearbyChatMachine: Sendable {
 
     /// Chat attachments are one secret or variable that has a value (scope `secret`) or, in a
     /// chat v2 (v0.4.0), a whole repository or environment (scope `repository` or `environment`,
-    /// values present or missing). Every one must pass the share validator (manifest mode).
-    static func attachmentViolation(_ manifest: SharePackageModel, acceptsConfiguration: Bool) -> NearbyAbortReason? {
+    /// values present or missing), or in a chat v4 (v0.7.0) a folder. Every one must pass the
+    /// share validator (manifest mode).
+    static func attachmentViolation(
+        _ manifest: SharePackageModel,
+        acceptsConfiguration: Bool,
+        acceptsFolder: Bool = false
+    ) -> NearbyAbortReason? {
         if let violation = SharePackageValidator.violation(in: manifest, mode: .manifest) {
             return .invalidPackage(violation)
         }
@@ -686,6 +708,8 @@ struct NearbyChatMachine: Sendable {
             return nil
         case .repository, .environment:
             return acceptsConfiguration ? nil : .invalidPackage(.scopeMismatch(manifest.scope))
+        case .folder:
+            return acceptsFolder ? nil : .invalidPackage(.scopeMismatch(manifest.scope))
         }
     }
 

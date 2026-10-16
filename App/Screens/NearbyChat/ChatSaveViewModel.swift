@@ -18,6 +18,10 @@ import VaultData
 /// the same preview planned for that repository. Cancel before Continue keeps the received
 /// values in the conversation (nothing was planned yet), so the card can still import them or
 /// save them as a file.
+///
+/// v0.7.0: a copy of a folder first asks where it goes (``FolderDestinationModel``): saved as a
+/// folder at once, or imported into a repository scope through the same preview. Cancel there
+/// keeps the received values in the conversation too.
 @Observable
 final class ChatSaveViewModel: Identifiable, LockObserving {
     /// How the sheet ended (``finish()``).
@@ -32,6 +36,10 @@ final class ChatSaveViewModel: Identifiable, LockObserving {
     enum Step: Equatable {
         /// A configuration: which repository of this vault (v0.4.0).
         case choosingTarget
+        /// A copy of a folder: where it goes (v0.7.0).
+        case choosingFolderDestination
+        /// The folder copy was saved as a folder.
+        case folderSaved
         case preparing
         case preview
         case applying
@@ -44,6 +52,12 @@ final class ChatSaveViewModel: Identifiable, LockObserving {
     let itemName: String
     /// A whole repository (v0.4.0).
     let isConfiguration: Bool
+    /// A copy of a folder (v0.7.0).
+    let isFolder: Bool
+    /// Where a copy of a folder goes.
+    private(set) var destination: FolderDestinationModel?
+    /// "Saved 3 items in Mobile App."
+    private(set) var folderNotice: String?
     private(set) var step: Step = .preparing
     /// The repositories a configuration can be imported into.
     private(set) var targets: [ChatImportTargetModel] = []
@@ -72,8 +86,9 @@ final class ChatSaveViewModel: Identifiable, LockObserving {
         onFinish: @escaping (Outcome) -> Void
     ) {
         id = card.id
-        itemName = card.offer.itemName ?? card.offer.repositoryFullName
+        itemName = card.offer.itemName ?? card.offer.folderName ?? card.offer.repositoryFullName
         isConfiguration = card.offer.isConfiguration
+        isFolder = card.offer.folderName != nil
         self.conversation = conversation
         self.dependencies = dependencies
         self.onFinish = onFinish
@@ -86,6 +101,43 @@ final class ChatSaveViewModel: Identifiable, LockObserving {
         if card.offer.isConfiguration {
             step = .choosingTarget
             loadTargets(for: card.offer)
+        } else if isFolder {
+            step = .choosingFolderDestination
+            destination = FolderDestinationModel(manifest: card.offer.manifest, dependencies: dependencies)
+        }
+    }
+
+    // MARK: - Folder destination (v0.7.0)
+
+    var canContinueFolder: Bool {
+        step == .choosingFolderDestination && destination?.canContinue == true
+    }
+
+    /// Saves the received folder as a folder, or plans it for the chosen repository scope.
+    func continueFolder() async {
+        guard canContinueFolder, let destination else { return }
+        if let target = destination.saveTarget {
+            do {
+                let saved = try await conversation.saveFolderAttachment(id, as: target, conflicts: destination.conflicts)
+                folderNotice = FolderDestinationCopy.saved(saved, folderName: dependencies.folders.folderName(saved.folderID))
+                step = .folderSaved
+                dependencies.actions.openFolder(saved.folderID)
+            } catch {
+                alert = error.presentation
+            }
+        } else if let target = destination.importTarget {
+            step = .preparing
+            do {
+                show(try await conversation.previewFolderAttachment(
+                    id,
+                    into: target.repositoryID,
+                    scope: target.scope,
+                    checkGitHub: dependencies.checksGitHub
+                ))
+            } catch {
+                failure = error.presentation
+                step = .failed
+            }
         }
     }
 
@@ -203,8 +255,8 @@ final class ChatSaveViewModel: Identifiable, LockObserving {
     /// planned yet (Cancel at the repository choice keeps it), and reports the outcome.
     func finish() {
         let outcome: Outcome = switch step {
-        case .done: .imported
-        case .choosingTarget: .kept
+        case .done, .folderSaved: .imported
+        case .choosingTarget, .choosingFolderDestination: .kept
         case .preparing, .preview, .applying, .failed: .wiped
         }
         if outcome == .kept {
@@ -231,7 +283,7 @@ final class ChatSaveViewModel: Identifiable, LockObserving {
 
     func vaultDidLock() {
         close()
-        if step != .done {
+        if step != .done, step != .folderSaved {
             step = .failed
         }
     }

@@ -14,10 +14,17 @@ struct ChatSaveSheet: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
             SheetHeader(
                 label: ShareSheetLabel.nearbyChat,
-                title: viewModel.isConfiguration
+                title: viewModel.isFolder
+                    ? String(localized: "chat.save.folder.title", defaultValue: "Save a Folder")
+                    : viewModel.isConfiguration
                     ? String(localized: "chat.save.repository.title", defaultValue: "Import Into a Repository")
                     : String(localized: "chat.save.title", defaultValue: "Save to My Vault"),
-                subtitle: viewModel.step == .choosingTarget
+                subtitle: viewModel.step == .choosingFolderDestination
+                    ? String(
+                        localized: "chat.save.folder.subtitle",
+                        defaultValue: "\(viewModel.itemName), received in Nearby Chat. Save it as a folder, or import its items into one of your repositories."
+                    )
+                    : viewModel.step == .choosingTarget
                     ? String(
                         localized: "chat.save.repository.subtitle",
                         defaultValue: "\(viewModel.itemName), received in Nearby Chat. Choose one of your repositories, then review everything before it is imported."
@@ -44,6 +51,14 @@ struct ChatSaveSheet: View {
         switch viewModel.step {
         case .choosingTarget:
             ChatImportTargetList(viewModel: viewModel)
+        case .choosingFolderDestination:
+            if let destination = viewModel.destination {
+                FolderDestinationView(model: destination)
+            }
+        case .folderSaved:
+            if let notice = viewModel.folderNotice {
+                SheetCallout(systemImage: "checkmark.circle", tint: Theme.Colors.success, text: notice)
+            }
         case .preparing:
             NearbyProgressRow(text: String(localized: "chat.save.preparing", defaultValue: "Preparing the preview…"))
         case .preview, .applying:
@@ -88,12 +103,24 @@ struct ChatSaveSheet: View {
         HStack(spacing: Theme.Spacing.mediumMinus) {
             Spacer()
             switch viewModel.step {
-            case .done, .failed:
+            case .done, .failed, .folderSaved:
                 Button(String(localized: "common.done", defaultValue: "Done")) {
                     viewModel.finish()
                 }
                 .fxButtonStyle(.primary, size: .large)
                 .keyboardShortcut(.defaultAction)
+            case .choosingFolderDestination:
+                Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
+                    viewModel.finish()
+                }
+                .fxButtonStyle(.secondary, size: .large)
+                .keyboardShortcut(.cancelAction)
+                Button(viewModel.destination?.choice == .repository ? FolderDestinationCopy.continueTitle : FolderDestinationCopy.saveTitle) {
+                    Task { await viewModel.continueFolder() }
+                }
+                .fxButtonStyle(.primary, size: .large)
+                .keyboardShortcut(.defaultAction)
+                .disabled(!viewModel.canContinueFolder)
             case .choosingTarget:
                 Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                     viewModel.finish()

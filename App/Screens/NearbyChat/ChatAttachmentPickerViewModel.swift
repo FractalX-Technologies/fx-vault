@@ -19,38 +19,49 @@ final class ChatAttachmentPickerViewModel: Identifiable, LockObserving {
         case sending
     }
 
-    /// One secret or variable, or a whole repository (v0.4.0).
+    /// One secret or variable, a whole repository (v0.4.0) or a folder (v0.7.0).
     enum Mode: Hashable {
         case item
         case repository
+        case folder
     }
 
     let id = UUID()
     let reauth: ShareReauthModel
     /// False with a teammate on FX Vault 0.3 or earlier: the Repository tab explains it.
     let acceptsRepositories: Bool
+    /// False with a teammate on FX Vault 0.6 or earlier: the Folder tab explains it (v0.7.0).
+    let acceptsFolders: Bool
     private(set) var step: Step = .authenticating
     var mode: Mode = .item
     var query = ""
     var selectedID: ConfigItemID?
     var selectedRepositoryID: RepoID?
+    var selectedFolderID: FolderID?
     private(set) var items: [ChatAttachableItemModel] = []
     private(set) var repositories: [ChatAttachableRepositoryModel] = []
+    /// The folders that hold something (v0.7.0).
+    private(set) var folders: [FolderModel] = []
     private(set) var loadError: ErrorPresentationModel?
 
     @ObservationIgnored private let chat: ChatRepository
+    @ObservationIgnored private let folderRepository: FolderRepository
     @ObservationIgnored private let onPick: (ChatAttachmentChoiceModel, ShareAuthorizationModel) async -> Void
 
     /// - Parameters:
     ///   - acceptsRepositories: whether the teammate's FX Vault can receive a whole repository.
+    ///   - acceptsFolders: whether it can receive a folder (v0.7.0).
     ///   - onPick: offers the choice with the authorization (consumed by the offer).
     init(
         dependencies: FeatureDependencies,
         acceptsRepositories: Bool = false,
+        acceptsFolders: Bool = false,
         onPick: @escaping (ChatAttachmentChoiceModel, ShareAuthorizationModel) async -> Void
     ) {
         chat = dependencies.chat
+        folderRepository = dependencies.folders
         self.acceptsRepositories = acceptsRepositories
+        self.acceptsFolders = acceptsFolders
         self.onPick = onPick
         reauth = ShareReauthModel(
             purpose: .nearbySend,
@@ -88,10 +99,12 @@ final class ChatAttachmentPickerViewModel: Identifiable, LockObserving {
         do {
             items = try chat.attachableItems()
             repositories = try chat.attachableRepositories()
+            folders = try folderRepository.folders().filter { $0.itemCount > 0 }
             loadError = nil
         } catch {
             items = []
             repositories = []
+            folders = []
             loadError = error.presentation
         }
     }
@@ -140,6 +153,16 @@ final class ChatAttachmentPickerViewModel: Identifiable, LockObserving {
         repositories.first { $0.id == selectedRepositoryID }
     }
 
+    /// The folders matching ``query`` (v0.7.0).
+    var matchingFolders: [FolderModel] {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return needle.isEmpty ? folders : folders.filter { $0.name.localizedCaseInsensitiveContains(needle) }
+    }
+
+    var selectedFolder: FolderModel? {
+        folders.first { $0.id == selectedFolderID }
+    }
+
     /// What Attach would send in the current tab, or nil.
     var choice: ChatAttachmentChoiceModel? {
         switch mode {
@@ -147,6 +170,8 @@ final class ChatAttachmentPickerViewModel: Identifiable, LockObserving {
             selectedItem.map(ChatAttachmentChoiceModel.item)
         case .repository:
             acceptsRepositories ? selectedRepository.map(ChatAttachmentChoiceModel.repository) : nil
+        case .folder:
+            acceptsFolders ? selectedFolder.map(ChatAttachmentChoiceModel.folder) : nil
         }
     }
 
@@ -168,6 +193,7 @@ final class ChatAttachmentPickerViewModel: Identifiable, LockObserving {
         reauth.reset()
         items = []
         repositories = []
+        folders = []
     }
 
     func vaultDidLock() {

@@ -40,6 +40,8 @@ struct PreferencesScreen: View {
         }
         .frame(width: Theme.Layout.settingsWidth)
         .frame(minHeight: Theme.Layout.settingsMinHeight)
+        .onAppear { viewModel.showRequestedTab() }
+        .onChange(of: viewModel.requestedTab) { viewModel.showRequestedTab() }
         .background(WindowAccessor { window in
             // Its sheets can show a recovery key: never restore this window with state (§5.11).
             window.isRestorable = false

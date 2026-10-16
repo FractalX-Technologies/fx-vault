@@ -5,9 +5,9 @@ import VaultData
 /// The Linked chip of a table row (v0.4.1, tasks/todo.md L3): a link symbol and the number of
 /// places that share the item's link. A click opens ``LinkedCopiesPopover``; the row menu's Show
 /// Linked Copies opens the same popover.
-struct LinkedChip: View {
+struct LinkedChip<Model: ConfigTableModel>: View {
     let row: ConfigRowModel
-    @Bindable var viewModel: RepoDetailViewModel
+    @Bindable var viewModel: Model
 
     var body: some View {
         Button {
@@ -28,8 +28,8 @@ struct LinkedChip: View {
         }
         .buttonStyle(.plain)
         .fixedSize()
-        .help(Self.help(count: row.linkCount))
-        .accessibilityLabel(Self.help(count: row.linkCount))
+        .help(LinkedChipText.help(count: row.linkCount))
+        .accessibilityLabel(LinkedChipText.help(count: row.linkCount))
         .popover(isPresented: isPresented, arrowEdge: .bottom) {
             LinkedCopiesPopover(row: row, viewModel: viewModel)
         }
@@ -42,6 +42,10 @@ struct LinkedChip: View {
         )
     }
 
+}
+
+/// The Linked chip's help text.
+enum LinkedChipText {
     static func help(count: Int) -> String {
         String(localized: "main.table.linked.help", defaultValue: "Linked copy: the same item is in \(count) places")
     }
@@ -49,9 +53,9 @@ struct LinkedChip: View {
 
 /// The other places of a linked item (v0.4.1): account · repository, scope, how the value
 /// compares, the sync status, and Open. Footer: Unlink.
-struct LinkedCopiesPopover: View {
+struct LinkedCopiesPopover<Model: ConfigTableModel>: View {
     let row: ConfigRowModel
-    let viewModel: RepoDetailViewModel
+    let viewModel: Model
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
@@ -112,7 +116,7 @@ private struct LinkedCopyRow: View {
         Button(action: onOpen) {
             HStack(alignment: .center, spacing: Theme.Spacing.mediumMinus) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                    Text(verbatim: copy.repositoryFullName)
+                    Text(verbatim: copy.placeName)
                         .fxTextStyle(.monoName)
                         .foregroundStyle(Theme.Colors.ink)
                         .lineLimit(1)
@@ -135,17 +139,22 @@ private struct LinkedCopyRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(String(localized: "main.linked.open.help", defaultValue: "Show \(copy.name) in \(copy.repositoryFullName)"))
+        .help(String(localized: "main.linked.open.help", defaultValue: "Show \(copy.name) in \(copy.placeName)"))
     }
 }
 
 extension LinkedCopyModel {
-    /// "staging · user-a" or "Repository · user-a", with the copy's name when it differs from
-    /// `itemName` (a renamed copy).
+    /// "staging · user-a", "Repository · user-a" or "Folder" (v0.7.0), with the copy's name when
+    /// it differs from `itemName` (a renamed copy).
     func placeDetail(itemName: String) -> String {
-        let scope = environmentName ?? String(localized: "main.scopes.repository", defaultValue: "Repository")
-        let parts = name == itemName ? [scope, accountLogin] : [scope, name, accountLogin]
-        return parts.joined(separator: " · ")
+        let parts: [String] = switch place {
+        case .scope(_, let accountLogin, _, _, let environmentName):
+            [environmentName ?? String(localized: "main.scopes.repository", defaultValue: "Repository"), accountLogin]
+        case .folder:
+            [String(localized: "main.linked.folder", defaultValue: "Folder")]
+        }
+        let named = name == itemName ? parts : [parts[0], name] + parts.dropFirst()
+        return named.joined(separator: " · ")
     }
 }
 

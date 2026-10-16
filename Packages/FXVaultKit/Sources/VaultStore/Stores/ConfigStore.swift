@@ -322,24 +322,9 @@ public struct ConfigStore: Sendable {
             .updateAll(tx.db, ConfigItemRecord.CodingKeys.linkID.set(to: linkID?.uuidString))
     }
 
-    /// Live rows per link group of `states`, across every repository.
+    /// Live rows per link group of `states`, across every repository and folder (v0.7.0).
     static func linkCounts(of states: [ConfigItemState], db: Database) throws -> [ItemLinkID: Int] {
-        let linkIDs = Set(states.compactMap(\.linkID).map(\.uuidString))
-        guard !linkIDs.isEmpty else { return [:] }
-        let rows = try Row.fetchAll(
-            db,
-            ConfigItemRecord
-                .select(ConfigItemRecord.CodingKeys.linkID, count(ConfigItemRecord.CodingKeys.id))
-                .filter(linkIDs.contains(ConfigItemRecord.CodingKeys.linkID))
-                .filter(ConfigItemRecord.CodingKeys.isDeleted == false)
-                .group(ConfigItemRecord.CodingKeys.linkID)
-        )
-        var counts: [ItemLinkID: Int] = [:]
-        for row in rows {
-            guard let text: String = row[0], let linkID = ItemLinkID(uuidString: text) else { continue }
-            counts[linkID] = row[1]
-        }
-        return counts
+        try LinkCountQuery.counts(of: Set(states.compactMap(\.linkID)), db: db)
     }
 
     // MARK: - Pending-change inputs (§7.1)

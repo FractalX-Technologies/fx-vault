@@ -103,7 +103,12 @@ This is the contract for the next stage (the feature screens). Everything listed
 
 - **Ids:** `Identifier<Tag>` (UUID; `uuidString` lowercase for the database, `bytes` 16 raw
   bytes for the AAD; Codable as the string). Typealiases `RepoID`, `EnvironmentID`,
-  `ConfigItemID`, `BranchPatternID`, `SharePackageID`, `SyncRunID`.
+  `ConfigItemID`, `BranchPatternID`, `SharePackageID`, `SyncRunID`, `FolderID` (v0.7.0).
+- **Folders (v0.7.0):** `FolderModel` (name, sort order, counts), `FolderItemModel` (id is a
+  `ConfigItemID`; never a value; `linkCount` across folders and repositories),
+  `ItemPlaceModel` `.scope(repositoryID:scope:) | .folder(FolderID)` (where copy and paste,
+  `.env` import and export and the item editor act), `FolderNameValidator` (1–64 scalars, NFC,
+  no control/bidi/zero-width characters or edge whitespace; `foldKey`).
 - **Models:** `AccountModel` (id = lowercase login), `RepoModel` (+ `OwnerType`,
   `RepoVisibility`, `RepoOrigin`, `ViewerPermission`, `RepoCreateSpecModel`),
   `RepoCapabilityModel` `.full | .repoLevelOnly | .readOnly(ReadOnlyReason)` with
@@ -166,8 +171,9 @@ Key hierarchy (plan §5.1): a random 32-byte DEK per vault; HKDF-SHA256 derives 
 See [DATABASE.md](DATABASE.md). `DatabaseFactory.openLive()/openOnDisk(directory:)/inMemory()`,
 `VaultMigrator`, `VaultDatabase.read/write/checkpointTruncate`, records for every table, and the
 stores `VaultRecordStore`, `AccountStore`, `RepoStore`, `ConfigStore`, `SyncJournalStore`,
-`SharePackageStore`, each with convenience and `in tx:` forms plus `AsyncThrowingStream`
-observation. `ConfigItemState` is the ciphertext-free projection; `RepoPendingInputsModel`
+`SharePackageStore`, `TeamStore`, `SpaceStore` and `FolderStore` (v0.7.0), each with convenience
+and `in tx:` forms plus `AsyncThrowingStream` observation. `LinkCountQuery` counts link groups
+across `config_items` and `folder_items`. `ConfigItemState` is the ciphertext-free projection; `RepoPendingInputsModel`
 is the change-derivation input. All failures are `StoreError`.
 
 ### GitHubKit
@@ -521,6 +527,32 @@ one `VaultSession.write` and throws `ConfigRepositoryError`.
   value-missing copy is filled with a push requested now).
 - `RepoSnapshotMapper` is the only `ConfigItemState` → `ConfigItemSnapshotModel` mapping.
 
+**Folders** (`Folders/`, v0.7.0). `struct FolderRepository(session:clock:)`; every mutation is
+one `VaultSession.write` and throws `ConfigRepositoryError` (`.folderNotFound`, `.folderFull`).
+- Folders: `createFolder(named:)`, `renameFolder(_:to:)`, `deleteFolder(_:)`,
+  `reorderFolders(_:)`, `folders()`, `observeFolders()`.
+- Items: `addItem(folderID:kind:name:value:)`, `editItem(_:name:kind:value:)` (one transaction;
+  re-seals for a new name or kind), `deleteItems(_:)` (final: no tombstones), `reveal(_:)`,
+  `items(folderID:)`, `observeItems(folderID:)`.
+- Copy: `copyConflicts(_:to:)`, `copyItems(_:to:conflicts:)` (sources from any scope or folder,
+  each copy linked). `ConfigRepository.copyItems` takes folder sources too, and
+  `linkedCopies(of:)`, `unlink(_:)`, `updateLinkedCopies(from:to:)` and `reveal(_:)` take either
+  kind of item: `ItemCopySource` reads a row of either table; `LinkedCopyModel.place` is
+  `.scope(…)` or `.folder(id, name)`.
+- Received copies: `save(_:as:conflicts:)` (Save as Folder, `FolderSaveTargetModel`
+  `.newFolder(name:) | .existing(FolderID)`), `wasImported(_:)`.
+- `FolderItemWriter` is the only writer of `folder_items` (names by `GitHubNameValidator`,
+  unique per folder and kind, at most `Limits.maxFolderItems`); `FolderFieldCipher` seals with
+  `FolderFieldAAD`. `EnvFileRepository` imports into and exports from a place
+  (`conflictingCandidates(for:in:place:)`, `applyImport(_:selections:place:)`,
+  `exportPreview(place:)`, `export(place:…)`); `DEKRotator` re-seals folder values.
+- Sharing: `ShareSelectionModel.folder(_)` builds a folder package (schema 3);
+  `SharingRepository.openFileContents` returns `ShareOpenedFileModel` `.repository(draft) |
+  .folder(ShareFolderDraftModel)`, with `saveFolder(_:as:conflicts:)` and
+  `importDraft(_:into:scope:)`; `NearbyChatConversation.offerFolder`, `saveFolderAttachment`,
+  `previewFolderAttachment(_:into:scope:)`; `FolderPackageTargeting` converts a folder package for
+  a repository scope.
+
 **Team** (`Team/`, v0.5.0). `struct TeamRepository(session:clock:)`: `deviceKeys()` (created on
 first use), `teammates()`, `observeTeammates()`, `teammateCards()` (announce keys opened),
 `addTeammate(_:)`, `applyCardUpdate(_:)`, `removeTeammate(id:)` (renews the announce key, marks
@@ -805,6 +837,30 @@ presenter starts and closes the view model). Visibility and Mute all live in
 | 96 | Members | Adding wraps every epoch key so far for the new member (Q2); removing starts a new epoch and returns the secrets to rotate. Both write the marker like a push (claim, version, publish) |
 | 97 | Drift | A finding in a shared scope whose marker is ahead is a teammate's change (S9): Keep Local and Accept GitHub are not offered; Get Updates from Teammates is. Once the version arrives, its snapshot explains GitHub's change and the finding disappears |
 | 98 | History | Item versions show a 4-byte fingerprint every member computes the same way (epoch-1 key); revealing an older value asks for Touch ID or the master password (`ReauthPurpose.spaceHistory`) and re-masks after 30 s |
+
+### As built in v0.7.0 (folders, sending a copy, teammates in the sidebar)
+
+| # | Area | Decision |
+|---|---|---|
+| 99 | Storage | Folders are separate tables (`folders`, `folder_items`, migration `v12_folders`) rather than a pseudo-repository or a nullable `config_items.repository_id`: no sync path reads them, so a folder item reaches GitHub only as a copy the user puts in a repository scope. A folder item always has a value |
+| 100 | Ids and links | Folder item ids are `ConfigItemID`s (never colliding with `config_items`), so copy and paste, Reveal and linked copies take either kind through `ItemCopySource`. One `link_id` group spans both tables; editing a folder item offers to update its repository copies (pending for Sync) and the reverse |
+| 101 | Encryption | `FolderFieldAAD` reuses the §5.4 field layout (table `folder_items`, the folder in the repository's place, no environment) instead of a new label, so the VaultCrypto KAT generator covers it (`folder_field` vectors) and a folder blob never opens as a repository item |
+| 102 | App reuse | The detail table, Copy To, the linked chip and popover are generic over `ConfigTableModel`, implemented by `RepoDetailViewModel` and `FolderDetailViewModel`; reveal and re-mask (`ConfigValueRevealer`) and "Replace or keep?" (`ItemCopyFlow`) are shared. A folder's table has no Status column and its row menu no sync actions. The item editor, `.env` import and export and Copy to Another Repository take an `ItemPlaceModel` |
+| 103 | Sending (Q1) | Bryan chose to send a copy now and sync folders later. A folder travels as share schema 3 (scope `folder`, a `folder` object on the wire, items at repository level in memory) in Nearby Chat version 4 or a `.fxvault` file; the receiver chooses Save as Folder (new or merged, Keep mine by default) or Import Into a repository scope (the folder converted with `intoRepository` and planned as usual). The planner and nearby share refuse a folder package |
+| 104 | Send Folder | From a teammate's popover or the folder's menu: the verified teammate chat opens and the attachment picker opens on the folder once the chat is verified, so Touch ID or the master password still comes before anything is offered |
+| 105 | Sidebar (Q2) | FOLDERS (with New Folder, ⇧⌘N) sits above ACCOUNTS; TEAMMATES is pinned above the footer with every paired teammate (nearby first, green dot, last seen, muted), others nearby, and the visibility menu; Add Teammate… opens Settings › Teammates (`AppViewModel.requestedPreferencesTab`). The toolbar's avatar stack became one people button with the count and a popover |
+
+Later (not in v0.7): synced folders (`fxvault-folder/v1`: per-author signed chains, version
+vectors, deterministic replay, last writer wins per item with the conflict shown; design notes in
+tasks/todo.md), dragging rows onto a folder or repository in the sidebar, and reordering folders
+by drag (the order is stored and `reorderFolders` exists).
+
+App side (v0.7.0): `Screens/Main/Folder/` (`FolderDetailViewModel`, `FolderDetailScreen`),
+`Screens/Folders/` (`FolderOverviewView` for column 2, `FolderContextMenu`, `FolderNameScreen`,
+`FolderDestinationModel`/`View` for received copies, `FolderCopy`),
+`Screens/Main/Sidebar/SidebarFoldersSection`, `SidebarTeammatesSection`; `MainViewModel`
+builds a `FolderDetailViewModel` for `SidebarViewModel.selectedFolderID` (a repository and a
+folder are never selected together); `MainActions.openFolder`; `NearbyChatStartModel.folderToSend`.
 
 App side (v0.6.0): `SpaceSyncManager` (`App/Managers`, owned by `AppViewModel`, a lock observer,
 started with presence) pulls and answers spaces sessions through `TeamPresenceManager`

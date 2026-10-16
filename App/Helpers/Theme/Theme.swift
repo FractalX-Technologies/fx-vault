@@ -212,6 +212,8 @@ enum Theme {
         static let presenceOverlap: CGFloat = 6
         /// Width of a person's popover and of the "+N" list.
         static let presencePopoverWidth: CGFloat = 300
+        /// The sidebar's TEAMMATES section scrolls beyond this height (v0.7.0).
+        static let sidebarTeammatesMaxHeight: CGFloat = 220
         /// The Add Teammate sheet.
         static let addTeammateSheetWidth: CGFloat = 520
         /// The people list in Add Teammate.

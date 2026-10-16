@@ -20,9 +20,13 @@ import VaultStore
 /// ``EnvExportAuthorizationModel`` from `ReauthGate`, serializes with `DotEnvSerializer` and
 /// writes a 0600 file with `SecureFileWriter`; ``addGitignoreEntry(relativePath:repositoryRoot:)``
 /// applies the offered `.gitignore` line. Value-missing secrets are never exported (§7.8).
+///
+/// Folders (v0.7.0): the `place:` overloads import into and export from a folder as well as a
+/// repository scope; a folder import is final (a folder never syncs).
 public struct EnvFileRepository: Sendable {
     public let session: VaultSession
     private let config: ConfigRepository
+    private let folders: FolderRepository
     private let gitignoreChecker: any GitignoreChecker
     private let cloudSyncDetector: CloudSyncDetector
     private let fileWriter: SecureFileWriter
@@ -44,6 +48,7 @@ public struct EnvFileRepository: Sendable {
     ) {
         self.session = session
         config = ConfigRepository(session: session, clock: clock, writePolicy: writePolicy)
+        folders = FolderRepository(session: session, clock: clock)
         self.gitignoreChecker = gitignoreChecker
         self.cloudSyncDetector = cloudSyncDetector
         self.fileWriter = fileWriter
@@ -114,6 +119,47 @@ public struct EnvFileRepository: Sendable {
         return result
     }
 
+    /// The candidates of `selections` that would collide with a live item of `place` (same name
+    /// and kind): the table's Conflict column (v0.7.0).
+    public func conflictingCandidates(
+        for selections: [EnvImportSelectionModel],
+        in preview: EnvImportPreviewModel,
+        place: ItemPlaceModel
+    ) throws(EnvFileError) -> Set<Int> {
+        switch place {
+        case .scope(let repositoryID, let scope):
+            return Set(try conflicts(for: selections, in: preview, repositoryID: repositoryID, scope: scope).keys)
+        case .folder(let folderID):
+            let items: [FolderItemModel]
+            do {
+                items = try folders.items(folderID: folderID)
+            } catch {
+                throw .config(error)
+            }
+            let taken = Set(items.map { ConfigRepository.TargetKey(kind: $0.kind, name: $0.nameKey) })
+            return Set(selections.filter {
+                taken.contains(ConfigRepository.TargetKey(kind: $0.kind, name: GitHubNameValidator.foldKey($0.name)))
+            }.map(\.candidateIndex))
+        }
+    }
+
+    /// Imports the selected candidates into `place` in one transaction: a repository scope
+    /// (``applyImport(_:selections:repositoryID:scope:)``) or a folder (v0.7.0), where existing
+    /// names are skipped or overwritten the same way and the import is final.
+    @discardableResult
+    public func applyImport(
+        _ preview: EnvImportPreviewModel,
+        selections: [EnvImportSelectionModel],
+        place: ItemPlaceModel
+    ) throws(EnvFileError) -> EnvImportResultModel {
+        switch place {
+        case .scope(let repositoryID, let scope):
+            return try applyImport(preview, selections: selections, repositoryID: repositoryID, scope: scope)
+        case .folder(let folderID):
+            return try applyFolderImport(preview, selections: selections, folderID: folderID)
+        }
+    }
+
     /// Imports the selected candidates into `scope` in one transaction (§7.1 rules apply: a
     /// deleted name is revived, an existing one is skipped or overwritten). Invalid names,
     /// unusable values and duplicates within the import are skipped and reported.
@@ -177,9 +223,22 @@ public struct EnvFileRepository: Sendable {
 
     /// The names an export of `scope` writes and leaves out (no decryption).
     public func exportPreview(repositoryID: RepoID, scope: ConfigScope) throws(EnvFileError) -> EnvExportPreviewModel {
+        try exportPreview(place: .scope(repositoryID: repositoryID, scope: scope))
+    }
+
+    /// The names an export of a scope or folder (v0.7.0) writes and leaves out (no decryption).
+    public func exportPreview(place: ItemPlaceModel) throws(EnvFileError) -> EnvExportPreviewModel {
         do {
-            let items = try ConfigStore(database: session.database).fetchItems(repositoryID: repositoryID, scope: scope)
-            return Self.preview(of: items)
+            switch place {
+            case .scope(let repositoryID, let scope):
+                let items = try ConfigStore(database: session.database).fetchItems(repositoryID: repositoryID, scope: scope)
+                return Self.preview(of: items)
+            case .folder(let folderID):
+                let items = try FolderStore(database: session.database).fetchItems(folderID: folderID)
+                return Self.preview(of: items.map {
+                    ExportCandidate(kind: $0.kind, name: $0.name, nameKey: $0.nameKey, hasValue: true, isDeleted: false)
+                })
+            }
         } catch {
             throw .config(.wrap(error))
         }
@@ -208,14 +267,28 @@ public struct EnvFileRepository: Sendable {
         existingFile: SecureFileWriter.ExistingFilePolicy = .fail,
         headerComments: [String] = []
     ) throws(EnvFileError) -> EnvExportResultModel {
-        try authorization.consume(for: session)
-        let preview = try exportPreview(repositoryID: repositoryID, scope: scope)
-        let contents = try serialize(
-            repositoryID: repositoryID,
-            scope: scope,
-            names: Set(preview.exportedNames),
+        try export(
+            place: .scope(repositoryID: repositoryID, scope: scope),
+            to: fileURL,
+            authorization: authorization,
+            existingFile: existingFile,
             headerComments: headerComments
         )
+    }
+
+    /// Writes a scope or a folder (v0.7.0) as a `.env` file at `fileURL` (mode 0600, never
+    /// through a symlink), under the same rules as a scope export.
+    @discardableResult
+    public func export(
+        place: ItemPlaceModel,
+        to fileURL: URL,
+        authorization: EnvExportAuthorizationModel,
+        existingFile: SecureFileWriter.ExistingFilePolicy = .fail,
+        headerComments: [String] = []
+    ) throws(EnvFileError) -> EnvExportResultModel {
+        try authorization.consume(for: session)
+        let preview = try exportPreview(place: place)
+        let contents = try serialize(place: place, names: Set(preview.exportedNames), headerComments: headerComments)
         defer { contents.wipe() }
         do {
             try fileWriter.write(contents, to: fileURL, existingFile: existingFile)
@@ -262,6 +335,54 @@ public struct EnvFileRepository: Sendable {
 
     // MARK: - Private
 
+    /// ``applyImport(_:selections:place:)`` into a folder: one transaction, final.
+    private func applyFolderImport(
+        _ preview: EnvImportPreviewModel,
+        selections: [EnvImportSelectionModel],
+        folderID: FolderID
+    ) throws(EnvFileError) -> EnvImportResultModel {
+        var added: [String] = []
+        var overwritten: [String] = []
+        var skipped: [EnvImportSkipModel] = []
+        var stripped: [String] = []
+        do throws(ConfigRepositoryError) {
+            try folders.write { keys, tx, now in
+                let writer = FolderItemWriter(store: FolderStore(database: session.database), keys: keys, tx: tx, now: now)
+                _ = try writer.requireFolder(folderID)
+                var seen: Set<String> = []
+                for selection in selections {
+                    let name: String
+                    let candidate: EnvImportCandidateModel
+                    switch Self.resolve(selection, in: preview, seen: &seen) {
+                    case .accepted(let validName, let accepted):
+                        (name, candidate) = (validName, accepted)
+                    case .skipped(let skip):
+                        skipped.append(skip)
+                        continue
+                    }
+                    if let existing = try writer.row(folderID: folderID, kind: selection.kind, name: name) {
+                        guard selection.onConflict == .overwrite else {
+                            skipped.append(EnvImportSkipModel(selection, name: name, reason: .existingItem))
+                            continue
+                        }
+                        try writer.editValue(existing.id, value: candidate.value)
+                        overwritten.append(name)
+                    } else {
+                        try writer.add(folderID: folderID, kind: selection.kind, name: name, value: candidate.value)
+                        added.append(name)
+                    }
+                    if candidate.didStripTrailingNewlines {
+                        stripped.append(name)
+                    }
+                }
+            }
+        } catch {
+            throw .config(error)
+        }
+        Self.log.info("Imported \(added.count, privacy: .public) new and \(overwritten.count, privacy: .public) overwritten item(s) into a folder")
+        return EnvImportResultModel(added: added, overwritten: overwritten, skipped: skipped, strippedTrailingNewlines: stripped)
+    }
+
     /// One selection after validation.
     private enum SelectionResolution {
         case accepted(name: String, candidate: EnvImportCandidateModel)
@@ -293,7 +414,22 @@ public struct EnvFileRepository: Sendable {
         return .accepted(name: name, candidate: candidate)
     }
 
+    /// What an export decides on for one item (repository or folder).
+    struct ExportCandidate {
+        let kind: ConfigKind
+        let name: String
+        let nameKey: String
+        let hasValue: Bool
+        let isDeleted: Bool
+    }
+
     static func preview(of items: [ConfigItemModel]) -> EnvExportPreviewModel {
+        preview(of: items.map {
+            ExportCandidate(kind: $0.kind, name: $0.name, nameKey: $0.nameKey, hasValue: $0.hasValue, isDeleted: $0.isDeleted)
+        })
+    }
+
+    static func preview(of items: [ExportCandidate]) -> EnvExportPreviewModel {
         var exported: [String] = []
         var valueMissing: [String] = []
         var collisions: [String] = []
@@ -320,24 +456,29 @@ public struct EnvFileRepository: Sendable {
         )
     }
 
-    /// Decrypts the exported items and serializes them in name order.
+    /// Decrypts the exported items of a scope or folder and serializes them in name order.
     private func serialize(
-        repositoryID: RepoID,
-        scope: ConfigScope,
+        place: ItemPlaceModel,
         names: Set<String>,
         headerComments: [String]
     ) throws(EnvFileError) -> SecretBytes {
         let entries: [DotEnvEntryModel]
         do {
             entries = try session.read { keys, tx in
-                let records = try ConfigStore(database: session.database)
-                    .fetchItemRecords(repositoryID: repositoryID, scope: scope, in: tx)
+                let sources: [ItemCopySource] = switch place {
+                case .scope(let repositoryID, let scope):
+                    try ConfigStore(database: session.database)
+                        .fetchItemRecords(repositoryID: repositoryID, scope: scope, in: tx)
+                        .map(ItemCopySource.init)
+                case .folder(let folderID):
+                    try FolderStore(database: session.database).fetchItemRecords(folderID: folderID, in: tx).map(ItemCopySource.init)
+                }
                 var byName: [String: DotEnvEntryModel] = [:]
-                let ordered = records.filter { !$0.isDeleted && names.contains($0.name) }
+                let ordered = sources.filter { !$0.isDeleted && names.contains($0.name) }
                     .sorted { ($0.kind == .secret ? 0 : 1) < ($1.kind == .secret ? 0 : 1) }
-                for record in ordered where byName[record.name] == nil {
-                    guard let value = try ConfigFieldCipher.openValue(of: record, keys: keys) else { continue }
-                    byName[record.name] = DotEnvEntryModel(key: record.name, value: value)
+                for source in ordered where byName[source.name] == nil {
+                    guard let value = try source.openValue(keys: keys) else { continue }
+                    byName[source.name] = DotEnvEntryModel(key: source.name, value: value)
                 }
                 return byName.keys.sorted().compactMap { byName[$0] }
             }

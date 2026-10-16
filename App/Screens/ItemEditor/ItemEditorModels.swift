@@ -33,3 +33,56 @@ struct CredentialWarningModel: Hashable {
     let reasons: [String]
     let action: Action?
 }
+
+/// The item the editor works on (v0.7.0): a repository item or a folder item, with the facts the
+/// form needs. A folder item is never on GitHub, so its kind stays editable and nothing is pending.
+struct EditorItemModel: Hashable, Identifiable {
+    let id: ConfigItemID
+    let kind: ConfigKind
+    let name: String
+    let hasValue: Bool
+    let isDeleted: Bool
+    let isLinked: Bool
+    let isSynced: Bool
+    let syncedName: String?
+    /// Nil for a folder item.
+    let syncStatus: ConfigSyncStatus?
+    /// The repository scope; nil for a folder item.
+    let scope: ConfigScope?
+
+    init(_ item: ConfigItemModel) {
+        id = item.id
+        kind = item.kind
+        name = item.name
+        hasValue = item.hasValue
+        isDeleted = item.isDeleted
+        isLinked = item.isLinked
+        isSynced = item.isSynced
+        syncedName = item.syncedName
+        syncStatus = item.syncStatus
+        scope = item.scope
+    }
+
+    init(_ item: FolderItemModel) {
+        id = item.id
+        kind = item.kind
+        name = item.name
+        hasValue = true
+        isDeleted = false
+        isLinked = item.isLinked
+        isSynced = false
+        syncedName = nil
+        syncStatus = nil
+        scope = nil
+    }
+
+    /// Kind and scope can no longer change (D11): only for an item on GitHub.
+    var isKindAndScopeLocked: Bool {
+        isSynced
+    }
+
+    /// `name` case-folded.
+    var nameKey: String {
+        GitHubNameValidator.foldKey(name)
+    }
+}

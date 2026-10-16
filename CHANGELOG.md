@@ -3,6 +3,35 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.7.0
+
+### Added
+
+- **Folders.** Create folders of your own at the top of the sidebar (New Folder…, ⇧⌘N), for
+  example "Mobile App", to keep the secrets and variables you use in several repositories. A
+  folder belongs to no repository and never reaches GitHub by itself. Copy its items into any
+  repository scope with ⌘C / ⌘V, Copy To or Copy To › Another Repository…, or copy items from a
+  repository into a folder; every copy stays linked, so a new value in the folder offers to
+  update its copies in your repositories (as changes for the next Sync). Folders have the same
+  table, Paste Multiple…, `.env` import and export, Rename… and Delete Folder….
+- **Send a copy of a folder.** From the folder's ••• menu (Send to Teammate, Share as File…) or a
+  teammate's card in the sidebar (Send Folder): a chat with your teammate opens with the folder
+  attached after Touch ID or your master password, or an encrypted `.fxvault` file is written.
+  The other person saves it as a folder (a new one, or merged into theirs, keeping their own
+  values unless they choose Replace) or imports it into one of their repositories through the
+  usual import preview. They get their own copy; later changes are not sent.
+- **Teammates in the sidebar.** Every paired teammate is listed at the bottom of the sidebar:
+  nearby first with a green dot, otherwise when they were last seen; Ping, Chat and Send Folder
+  from their card; who can see this Mac from the eye menu; Add Teammate… when you have none.
+
+### Changed
+
+- The bubbles next to Sync became one people button with the number of people nearby; its
+  popover lists them with Ping and Chat.
+- Nearby Chat speaks chat version 4 (folders). Chats with 0.6 and older still work; their Folder
+  tab explains the update.
+- A `.fxvault` file of a folder needs FX Vault 0.7 or later to open.
+
 ## 0.6.0
 
 ### Added

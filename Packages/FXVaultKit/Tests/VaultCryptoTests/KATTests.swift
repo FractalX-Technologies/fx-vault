@@ -89,6 +89,44 @@ struct KATTests {
         #expect(opened.withUnsafeBytes { Data($0) }.hex == vector.plainHex)
     }
 
+    @Test func folderFieldAADAndBlobs() throws {
+        #expect(!vectors.folderField.isEmpty)
+        let keys = UnlockedKeys(
+            dek: SymmetricKey(data: try hexData(vectors.hierarchy.dekHex)),
+            vaultID: try hexData(vectors.hierarchy.vaultIdHex),
+            dekVersion: 1
+        )
+        for vector in vectors.folderField {
+            let field = FolderFieldAAD(
+                rowID: try #require(ConfigItemID(uuidString: vector.row)),
+                folderID: try #require(FolderID(uuidString: vector.folder)),
+                kind: try #require(ConfigKind(rawValue: vector.kind)),
+                name: vector.name
+            )
+            let aad = field.encoded(dekVersion: vector.dekVersion)
+            #expect(aad.hex == vector.aadHex, "AAD \(vector.label)")
+
+            let key = SymmetricKey(data: try hexData(vector.aesKHex))
+            let nonce = try AES.GCM.Nonce(data: try hexData(vector.nonceHex))
+            let blob = try FieldCipher.seal(SecretBytes(try hexData(vector.plainHex)), key: key, aad: aad, nonce: nonce)
+            #expect(blob.hex == vector.blobHex, "blob \(vector.label)")
+            if vector.dekVersion == 1 {
+                let opened = try keys.open(try hexData(vector.blobHex), for: field)
+                #expect(opened.withUnsafeBytes { Data($0) }.hex == vector.plainHex, "open \(vector.label)")
+                // A folder blob never opens as a repository item with the same ids and name.
+                let asItem = FieldAAD(
+                    location: .configItemValue,
+                    rowID: field.rowID,
+                    repositoryID: RepoID(field.folderID.uuid),
+                    environmentID: nil,
+                    kind: field.kind,
+                    name: field.name
+                )
+                #expect(throws: VaultError.self) { try keys.open(try hexData(vector.blobHex), for: asItem) }
+            }
+        }
+    }
+
     // MARK: DEK wraps (§5.2)
 
     @Test func passwordWrapLayoutAndAAD() throws {

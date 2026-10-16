@@ -230,4 +230,32 @@ enum MigrationSQL {
           last_connected_at TEXT,
           CHECK ((host IS NULL) = (port IS NULL)));
         """
+
+    // MARK: v12_folders (v0.7.0). FROZEN.
+
+    /// Folders of secrets and variables that belong to no repository: the folders (unique by
+    /// fold key, in the user's order) and their items. A folder item always has a value
+    /// (sealed with its own AAD) and may share a `link_id` group with repository items.
+    static let v12Folders = """
+        CREATE TABLE folders (
+          id TEXT PRIMARY KEY CHECK (length(id) = 36),
+          name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 64),
+          name_key TEXT NOT NULL,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL);
+        CREATE UNIQUE INDEX folders_name_key ON folders(name_key);
+        CREATE TABLE folder_items (
+          id TEXT PRIMARY KEY CHECK (length(id) = 36),
+          folder_id TEXT NOT NULL REFERENCES folders(id) ON DELETE CASCADE,
+          kind TEXT NOT NULL CHECK (kind IN ('secret','variable')),
+          name TEXT NOT NULL CHECK (name = upper(name) AND length(name) BETWEEN 1 AND 255),
+          value_ct BLOB NOT NULL,
+          value_fp BLOB NOT NULL,
+          link_id TEXT CHECK (link_id IS NULL OR length(link_id) = 36),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL);
+        CREATE UNIQUE INDEX folder_items_name ON folder_items(folder_id, kind, name);
+        CREATE INDEX folder_items_link ON folder_items(link_id) WHERE link_id IS NOT NULL;
+        """
 }

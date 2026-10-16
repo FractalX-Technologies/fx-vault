@@ -13,6 +13,9 @@ import VaultData
 ///    in the vault gets a one-click import, then the package is planned again.
 /// 4. **Apply** in one transaction; nothing syncs automatically.
 ///
+/// A copy of a folder (v0.7.0) asks where it goes instead (``FolderDestinationModel``): saved as
+/// a folder at once, or imported into a repository scope through the same preview.
+///
 /// Values never reach this view model: the draft (VaultData) holds them until applied, and is
 /// discarded on close and on lock.
 @Observable
@@ -24,6 +27,10 @@ final class ShareImportViewModel: LockObserving {
         case preview
         case applying
         case done
+        /// A copy of a folder: where it goes (v0.7.0).
+        case folderDestination
+        /// The folder copy was saved as a folder.
+        case folderSaved
         /// The file cannot be read or its header is invalid (nothing to retry here).
         case failed
     }
@@ -36,6 +43,12 @@ final class ShareImportViewModel: LockObserving {
     private(set) var passphraseError: ErrorPresentationModel?
     private(set) var editor: ShareImportPlanEditor?
     private(set) var result: ShareImportResultModel?
+    /// Where a copy of a folder goes (v0.7.0).
+    private(set) var destination: FolderDestinationModel?
+    /// "Saved 3 items in Mobile App."
+    private(set) var folderNotice: String?
+    /// The folder copy was imported or saved before (a note, never a block).
+    private(set) var wasFolderImported = false
     /// Why the file cannot be opened (``Step/failed``).
     private(set) var failure: ErrorPresentationModel?
     private(set) var isImportingRepository = false
@@ -47,6 +60,7 @@ final class ShareImportViewModel: LockObserving {
     @ObservationIgnored private let importer: ShareRepositoryImporter
     @ObservationIgnored private var file: ShareFileModel?
     @ObservationIgnored private var draft: ShareImportDraftModel?
+    @ObservationIgnored private var folderDraft: ShareFolderDraftModel?
 
     init(context: ShareImportContext, dependencies: FeatureDependencies) {
         self.context = context
@@ -92,17 +106,61 @@ final class ShareImportViewModel: LockObserving {
         guard canOpen, let file else { return }
         step = .opening
         do {
-            let opened = try await dependencies.sharing.openFile(
+            let opened = try await dependencies.sharing.openFileContents(
                 file,
                 passphrase: passphrase,
                 checkGitHub: dependencies.checksGitHub
             )
             passphrase = ""
-            show(opened)
+            switch opened {
+            case .repository(let draft):
+                show(draft)
+            case .folder(let draft):
+                showFolder(draft)
+            }
         } catch {
             passphraseError = Self.presentation(of: error)
             step = .passphrase
         }
+    }
+
+    // MARK: - Step 3: a folder's destination (v0.7.0)
+
+    var canContinueFolder: Bool {
+        step == .folderDestination && destination?.canContinue == true && folderDraft != nil
+    }
+
+    /// Saves the folder copy as a folder, or plans it for the chosen repository scope.
+    func continueFolder() async {
+        guard canContinueFolder, let destination, let folderDraft else { return }
+        do {
+            if let target = destination.saveTarget {
+                let saved = try await dependencies.sharing.saveFolder(folderDraft, as: target, conflicts: destination.conflicts)
+                self.folderDraft = nil
+                folderNotice = FolderDestinationCopy.saved(saved, folderName: dependencies.folders.folderName(saved.folderID))
+                step = .folderSaved
+                dependencies.actions.openFolder(saved.folderID)
+            } else if let target = destination.importTarget {
+                let planned = try await dependencies.sharing.importDraft(
+                    folderDraft,
+                    into: target.repositoryID,
+                    scope: target.scope,
+                    checkGitHub: dependencies.checksGitHub
+                )
+                self.folderDraft = nil
+                show(planned)
+            }
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    private func showFolder(_ opened: ShareFolderDraftModel) {
+        folderDraft?.discard()
+        folderDraft = opened
+        wasFolderImported = opened.wasImported
+        destination = FolderDestinationModel(manifest: opened.manifest, dependencies: dependencies)
+        step = .folderDestination
     }
 
     // MARK: - Step 3: preview
@@ -173,7 +231,7 @@ final class ShareImportViewModel: LockObserving {
 
     func vaultDidLock() {
         discard()
-        if step != .done, step != .failed {
+        if step != .done, step != .failed, step != .folderSaved {
             step = file == nil ? .reading : .passphrase
         }
     }
@@ -181,6 +239,8 @@ final class ShareImportViewModel: LockObserving {
     private func discard() {
         draft?.discard()
         draft = nil
+        folderDraft?.discard()
+        folderDraft = nil
         editor = nil
         passphrase = ""
     }

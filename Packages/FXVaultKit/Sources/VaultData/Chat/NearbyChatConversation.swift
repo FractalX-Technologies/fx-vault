@@ -299,6 +299,78 @@ public actor NearbyChatConversation {
         }
     }
 
+    // MARK: - Folders (sender, v0.7.0)
+
+    /// True once both Macs speak chat v4 (FX Vault 0.7 or later): a folder can be attached.
+    /// Check it before asking for Touch ID or the master password.
+    public var acceptsFolderAttachments: Bool {
+        get async { await session.acceptsFolderAttachments }
+    }
+
+    /// Offers a copy of a folder: only its name and counts travel now. The values are read,
+    /// inside `VaultSession.read`, only when the peer asks, and only if nothing changed since the
+    /// offer (an item added, removed, renamed or with a new value, or the folder renamed).
+    ///
+    /// - Parameter authorization: from `ReauthGate.authorizeShare(.nearbySend, …)`; consumed here.
+    /// - Throws: `.chat(.peerNeedsUpdate)` with a 0.6 or older peer (before the authorization is
+    ///   used), `.sharing(.authorizationInvalid)`, `.sharing(.config(.folderNotFound))`,
+    ///   `.sharing(.nothingToShare)`, `.sharing(.vault(.locked))`, `.chat(…)`.
+    @discardableResult
+    public func offerFolder(
+        _ folderID: FolderID,
+        senderName: String,
+        appVersion: String,
+        authorization: ShareAuthorizationModel
+    ) async throws(NearbyChatError) -> ChatAttachmentOfferModel {
+        guard await session.acceptsFolderAttachments else { throw .chat(.peerNeedsUpdate) }
+        let manifest: SharePackageModel
+        let fingerprints: [ConfigItemID: Data]
+        do {
+            try authorization.consume(.nearbySend, for: vault)
+            manifest = try builder.build(.folder(folderID), senderName: senderName, appVersion: appVersion, includeValues: false)
+            fingerprints = try Self.storedFingerprints(ofFolder: folderID, vault: vault)
+        } catch {
+            throw .sharing(error)
+        }
+        let builder = builder
+        let vault = vault
+        let provider: ChatConfigurationPayloadProvider = {
+            let fresh = try builder.build(.folder(folderID), senderName: senderName, appVersion: appVersion, includeValues: true)
+            var isHandedOver = false
+            defer {
+                if !isHandedOver {
+                    fresh.wipeValues()
+                }
+            }
+            var payload = manifest
+            if let repository = fresh.repository.withEntryIDs(of: manifest.repository) {
+                payload.repository = repository
+            }
+            guard try Self.storedFingerprints(ofFolder: folderID, vault: vault) == fingerprints,
+                  payload.manifest() == manifest.manifest(),
+                  payload.flattenedItems.allSatisfy({ $0.item.value != nil })
+            else { throw NearbyChatError.attachmentUnavailable }
+            isHandedOver = true
+            return payload
+        }
+        do {
+            return try await session.offerConfiguration(manifest: manifest, payloadProvider: provider)
+        } catch {
+            throw .chat(error)
+        }
+    }
+
+    /// The stored value fingerprints (`value_fp`, keyed, never values) of a folder's items.
+    private static func storedFingerprints(ofFolder folderID: FolderID, vault: VaultSession) throws(SharingError) -> [ConfigItemID: Data] {
+        let database = vault.database
+        return try performSharing {
+            try vault.read { _, tx in
+                let records = try FolderStore(database: database).fetchItemRecords(folderID: folderID, in: tx)
+                return Dictionary(records.map { ($0.id, $0.valueFingerprint) }, uniquingKeysWith: { first, _ in first })
+            }
+        }
+    }
+
     // MARK: - Attachments (receiver)
 
     /// "Save to my vault": asks the peer for the value of its offer. The value arrives as
@@ -342,6 +414,51 @@ public actor NearbyChatConversation {
             } else {
                 package
             }
+            return try await sharing.draft(for: planned, mode: .payload, checkGitHub: checkGitHub)
+        } catch {
+            throw .sharing(error)
+        }
+    }
+
+    /// v0.7.0 "Save as Folder": saves a received copy of a folder as a new folder or into one of
+    /// this vault's folders (``FolderRepository/save(_:as:conflicts:)``), then wipes the values.
+    ///
+    /// - Throws: `.attachmentUnavailable` (not received, not a folder, already saved or wiped),
+    ///   `.sharing(.config(…))` (a taken name, a full folder, `.vault(.locked)`).
+    @discardableResult
+    public func saveFolderAttachment(
+        _ id: ChatAttachmentID,
+        as target: FolderSaveTargetModel,
+        conflicts: ItemCopyConflictPolicy
+    ) throws(NearbyChatError) -> FolderSaveResultModel {
+        guard let package = received[id], package.isFolder else { throw .attachmentUnavailable }
+        let result: FolderSaveResultModel
+        do {
+            result = try FolderRepository(session: vault, clock: builder.clock).save(package, as: target, conflicts: conflicts)
+        } catch {
+            throw .sharing(.config(error))
+        }
+        received.removeValue(forKey: id)?.wipeValues()
+        return result
+    }
+
+    /// v0.7.0 "Import Into…" for a received copy of a folder: plans its items for `scope` of the
+    /// vault repository `repositoryID` (the share import preview, §9.5); the values move into the
+    /// returned draft.
+    ///
+    /// - Throws: `.attachmentUnavailable`, `.sharing(.repositoryNotFound)`,
+    ///   `.sharing(.environmentNotFound)`, `.sharing(.vault(.locked))`, `.sharing(…)`.
+    public func previewFolderAttachment(
+        _ id: ChatAttachmentID,
+        into repositoryID: RepoID,
+        scope: ConfigScope,
+        checkGitHub: Bool
+    ) async throws(NearbyChatError) -> ShareImportDraftModel {
+        guard let package = received[id], package.isFolder else { throw .attachmentUnavailable }
+        received.removeValue(forKey: id)
+        defer { package.wipeValues() }
+        do {
+            let planned = try FolderPackageTargeting.package(package, into: repositoryID, scope: scope, vault: vault)
             return try await sharing.draft(for: planned, mode: .payload, checkGitHub: checkGitHub)
         } catch {
             throw .sharing(error)

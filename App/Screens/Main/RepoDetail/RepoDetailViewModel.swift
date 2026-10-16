@@ -87,21 +87,38 @@ struct ItemCopyRequestModel: Hashable {
     }
 }
 
-/// A scope of a vault repository Copy To offers, and whether its account may add items there.
+/// A place Copy To offers (a scope of a vault repository or, v0.7.0, a folder), and whether
+/// items can be added there.
 struct ItemCopyTargetModel: Hashable, Identifiable {
-    struct ID: Hashable {
-        let repositoryID: RepoID
-        let scope: ConfigScope
-    }
-
-    let repositoryID: RepoID
-    let scope: ConfigScope
-    /// "staging" in the same repository, "owner/name · staging" in another one.
+    let place: ItemPlaceModel
+    /// "staging" in the same repository, "owner/name · staging" in another one, or a folder's
+    /// name.
     let title: String
     let isEditable: Bool
 
-    var id: ID {
-        ID(repositoryID: repositoryID, scope: scope)
+    init(place: ItemPlaceModel, title: String, isEditable: Bool) {
+        self.place = place
+        self.title = title
+        self.isEditable = isEditable
+    }
+
+    init(repositoryID: RepoID, scope: ConfigScope, title: String, isEditable: Bool) {
+        self.init(place: .scope(repositoryID: repositoryID, scope: scope), title: title, isEditable: isEditable)
+    }
+
+    var id: ItemPlaceModel {
+        place
+    }
+
+    /// The repository of a scope target; nil for a folder.
+    var repositoryID: RepoID? {
+        place.repositoryID
+    }
+
+    /// The scope of a scope target; nil for a folder.
+    var scope: ConfigScope? {
+        if case .scope(_, let scope) = place { return scope }
+        return nil
     }
 }
 
@@ -125,8 +142,8 @@ final class RepoDetailViewModel: LockObserving {
         }
     }
     private(set) var items: [ConfigItemModel] = []
-    private(set) var revealedValues: [ConfigItemID: String] = [:]
-    private(set) var variableValues: [ConfigItemID: String] = [:]
+    /// Revealed secrets and decrypted variables (shared with folders, v0.7.0).
+    let values: ConfigValueRevealer
     var selection: Set<ConfigItemID> = []
     private(set) var driftReport: DriftReportModel?
     /// Why the last drift check failed (shown as a small note); nil otherwise.
@@ -137,8 +154,8 @@ final class RepoDetailViewModel: LockObserving {
     private(set) var notice: String?
     /// The items waiting for the "Delete?" confirmation.
     var pendingDeletion: ConfigDeletionModel?
-    /// A copy waiting for "Replace or keep?".
-    var pendingCopy: ItemCopyRequestModel?
+    /// Copy and paste with "Replace or keep?" (shared with folders, v0.7.0).
+    let copyFlow: ItemCopyFlow
     /// The row whose linked copies popover is open (v0.4.1).
     var linkedPopoverRowID: ConfigItemID? {
         didSet {
@@ -152,8 +169,6 @@ final class RepoDetailViewModel: LockObserving {
     /// The shared spaces of this repository (v0.6.0), by scope.
     private(set) var spaces: [ConfigScope: SpaceSummaryModel] = [:]
 
-    /// The scheduled re-mask of each revealed value (internal so tests can await it).
-    @ObservationIgnored private(set) var remaskTasks: [ConfigItemID: Task<Void, Never>] = [:]
     @ObservationIgnored private(set) var driftTask: Task<Void, Never>?
     /// A drift check was asked for while offline and skipped: the reconnect check re-lists.
     @ObservationIgnored private var missedDriftCheckOffline = false
@@ -174,6 +189,8 @@ final class RepoDetailViewModel: LockObserving {
     ) {
         self.repositoryID = repositoryID
         self.dependencies = dependencies
+        values = ConfigValueRevealer(config: dependencies.config, clock: dependencies.clock)
+        copyFlow = ItemCopyFlow(dependencies: dependencies)
         repositoryProvider = repository
         scopeProvider = scopeSummary
         dependencies.actions.addLockObserver(self)
@@ -287,13 +304,31 @@ final class RepoDetailViewModel: LockObserving {
     }
 
     func display(for row: ConfigRowModel) -> ConfigValueDisplayModel {
-        guard row.hasValue else { return .missing }
-        switch row.kind {
-        case .secret:
-            return revealedValues[row.id].map(ConfigValueDisplayModel.revealed) ?? .masked
-        case .variable:
-            return variableValues[row.id].map(ConfigValueDisplayModel.plain) ?? .masked
-        }
+        values.display(for: row)
+    }
+
+    /// A repository scope shows each row's sync status.
+    var showsSyncStatus: Bool {
+        true
+    }
+
+    var revealedValues: [ConfigItemID: String] {
+        values.revealedValues
+    }
+
+    var variableValues: [ConfigItemID: String] {
+        values.variableValues
+    }
+
+    /// The scheduled re-mask of each revealed value (internal so tests can await it).
+    var remaskTasks: [ConfigItemID: Task<Void, Never>] {
+        values.remaskTasks
+    }
+
+    /// A copy waiting for "Replace or keep?".
+    var pendingCopy: ItemCopyRequestModel? {
+        get { copyFlow.pendingCopy }
+        set { copyFlow.pendingCopy = newValue }
     }
 
     // MARK: - Selection (v0.4.0)
@@ -313,6 +348,16 @@ final class RepoDetailViewModel: LockObserving {
     }
 
     // MARK: - Copy and paste (v0.4.0; any repository and linked since v0.4.1)
+
+    /// Copy To: the repository's other scopes (``copyTargets``).
+    var scopeCopyTargets: [ItemCopyTargetModel] {
+        copyTargets
+    }
+
+    /// Copy To › Folder (v0.7.0): every folder of the vault.
+    var folderCopyTargets: [ItemCopyTargetModel] {
+        dependencies.folderCopyTargets()
+    }
 
     /// The repository's other scopes, where Copy To copies; those the account may not change
     /// are listed disabled. Other repositories are offered by "Other Repository…".
@@ -338,8 +383,7 @@ final class RepoDetailViewModel: LockObserving {
         dependencies.clipboard.copyItems(CopiedItemsModel(
             ids: rows.map(\.id),
             names: rows.map(\.name),
-            sourceRepositoryID: repositoryID,
-            sourceScope: scope
+            source: .scope(repositoryID: repositoryID, scope: scope)
         ))
         notice = rows.count == 1
             ? String(
@@ -363,15 +407,18 @@ final class RepoDetailViewModel: LockObserving {
         guard !ids.isEmpty else { return }
         dependencies.actions.present(.copyToRepository(CopyToRepositoryContext(
             itemIDs: ids,
-            sourceRepositoryID: repositoryID,
-            sourceScope: scope
+            source: .scope(repositoryID: repositoryID, scope: scope)
         )))
     }
 
     func confirmCopy(replacing: Bool) {
-        guard let request = pendingCopy else { return }
-        pendingCopy = nil
-        performCopy(request, conflicts: replacing ? .replace : .keep)
+        do {
+            if let (request, result) = try copyFlow.confirm(replacing: replacing) {
+                notice = result.notice(target: request.target.title)
+            }
+        } catch {
+            alert = error.presentation
+        }
     }
 
     /// ⌘V while the pasteboard still holds names FX Vault copied: their items, not the text.
@@ -383,7 +430,7 @@ final class RepoDetailViewModel: LockObserving {
             )
             return
         }
-        guard copied.sourceRepositoryID != repositoryID || copied.sourceScope != scope else {
+        guard copied.source != .scope(repositoryID: repositoryID, scope: scope) else {
             notice = String(
                 localized: "main.detail.paste.sameScope.linked",
                 defaultValue: "These items are already in this scope. Open another scope or repository to paste them."
@@ -400,29 +447,10 @@ final class RepoDetailViewModel: LockObserving {
 
     /// Asks "Replace or keep?" when the target already has some of the names, otherwise copies.
     private func requestCopy(ids: [ConfigItemID], to target: ItemCopyTargetModel) {
-        guard !ids.isEmpty, target.isEditable else { return }
         do {
-            let conflicts = try dependencies.config.copyConflicts(ids, to: target.scope, repositoryID: target.repositoryID)
-            let request = ItemCopyRequestModel(ids: ids, target: target, conflicts: conflicts)
-            if conflicts.isEmpty {
-                performCopy(request, conflicts: .keep)
-            } else {
-                pendingCopy = request
+            if let result = try copyFlow.request(ids, to: target) {
+                notice = result.notice(target: target.title)
             }
-        } catch {
-            alert = error.presentation
-        }
-    }
-
-    private func performCopy(_ request: ItemCopyRequestModel, conflicts: ItemCopyConflictPolicy) {
-        do {
-            let result = try dependencies.config.copyItems(
-                request.ids,
-                to: request.target.scope,
-                repositoryID: request.target.repositoryID,
-                conflicts: conflicts
-            )
-            notice = result.notice(target: request.target.title)
         } catch {
             alert = error.presentation
         }
@@ -440,10 +468,10 @@ final class RepoDetailViewModel: LockObserving {
         }
     }
 
-    /// Shows a linked copy's repository and scope.
+    /// Shows a linked copy's repository and scope, or its folder (v0.7.0).
     func openLinkedCopy(_ copy: LinkedCopyModel) {
         linkedPopoverRowID = nil
-        dependencies.actions.open(copy.repositoryID, copy.scope)
+        dependencies.actions.openPlace(copy.itemPlace)
     }
 
     /// Takes `row` out of its link group; its copies stay where they are.
@@ -468,7 +496,7 @@ final class RepoDetailViewModel: LockObserving {
         self.scope = scope
         selection.removeAll()
         remaskAll()
-        variableValues.removeAll()
+        values.clearVariables()
         items = []
         observeItems()
     }
@@ -486,35 +514,20 @@ final class RepoDetailViewModel: LockObserving {
         })
     }
 
-    /// Applies a new snapshot of the scope's items.
+    /// Applies a new snapshot of the scope's items: revealed rows that are gone are masked and the
+    /// variables decrypted for plaintext display (a locked vault shows them masked).
     func apply(_ items: [ConfigItemModel]) {
         self.items = items
-        let ids = Set(items.map(\.id))
-        for id in revealedValues.keys where !ids.contains(id) {
-            hide(id)
-        }
-        loadVariableValues()
-    }
-
-    /// Decrypts the scope's variables for plaintext display. A locked vault shows them masked.
-    private func loadVariableValues() {
-        var values: [ConfigItemID: String] = [:]
-        for item in items where item.kind == .variable && item.hasValue {
-            do {
-                let value = try dependencies.config.reveal(item.id)
-                values[item.id] = value.utf8String()
-                value.wipe()
-            } catch {
-                continue
-            }
-        }
-        variableValues = values
+        values.follow(
+            liveIDs: Set(items.map(\.id)),
+            variableIDs: items.filter { $0.kind == .variable && $0.hasValue }.map(\.id)
+        )
     }
 
     // MARK: - Reveal and copy (§5.9, §5.11)
 
     func isRevealed(_ id: ConfigItemID) -> Bool {
-        revealedValues[id] != nil
+        values.isRevealed(id)
     }
 
     func toggleReveal(_ id: ConfigItemID) {
@@ -528,38 +541,19 @@ final class RepoDetailViewModel: LockObserving {
     /// Decrypts one secret for display and schedules its re-mask.
     func reveal(_ id: ConfigItemID) {
         do {
-            let value = try dependencies.config.reveal(id)
-            defer { value.wipe() }
-            guard let text = value.utf8String() else { throw ConfigRepositoryError.unexpected }
-            revealedValues[id] = text
+            try values.reveal(id)
         } catch {
             alert = error.presentation
-            return
-        }
-        remaskTasks[id]?.cancel()
-        let clock = dependencies.clock
-        remaskTasks[id] = Task { [weak self] in
-            do {
-                try await clock.sleep(for: Timeouts.revealRemask)
-            } catch {
-                return
-            }
-            self?.hide(id)
         }
     }
 
     func hide(_ id: ConfigItemID) {
-        remaskTasks.removeValue(forKey: id)?.cancel()
-        revealedValues.removeValue(forKey: id)
+        values.hide(id)
     }
 
     /// Masks every revealed value (resign active, scope change, lock).
     func remaskAll() {
-        for task in remaskTasks.values {
-            task.cancel()
-        }
-        remaskTasks.removeAll()
-        revealedValues.removeAll()
+        values.remaskAll()
     }
 
     /// Copies the value through `ClipboardManager` (concealed, cleared after 30 s).
@@ -850,7 +844,7 @@ final class RepoDetailViewModel: LockObserving {
 
     func vaultDidLock() {
         remaskAll()
-        variableValues.removeAll()
+        values.clearVariables()
         driftTask?.cancel()
         driftReport = nil
         pendingDeletion = nil
@@ -858,6 +852,8 @@ final class RepoDetailViewModel: LockObserving {
         linkedPopoverRowID = nil
     }
 }
+
+extension RepoDetailViewModel: ConfigTableModel {}
 
 extension ItemCopyResultModel {
     /// "Copied 3 items to staging." with what was kept or left out.

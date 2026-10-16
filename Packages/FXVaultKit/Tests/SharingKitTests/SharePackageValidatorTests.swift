@@ -29,6 +29,7 @@ struct SharePackageValidatorTests {
         // Header
         Case(label: "schema", mutate: { $0.schema = "io.example.share" }, expected: .unsupportedSchema),
         Case(label: "schema version 3", mutate: { $0.schemaVersion = 3 }, expected: .unsupportedSchemaVersion(3)),
+        Case(label: "schema version 4", mutate: { $0.schemaVersion = 4 }, expected: .unsupportedSchemaVersion(4)),
         Case(label: "schema version 0", mutate: { $0.schemaVersion = 0 }, expected: .unsupportedSchemaVersion(0)),
         Case(label: "empty producer", mutate: { $0.producer.app = "" }, expected: .invalidProducer),
         Case(label: "producer bidi", mutate: { $0.producer.version = "1.0\u{202E}" }, expected: .invalidProducer),

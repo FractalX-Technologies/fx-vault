@@ -11,67 +11,57 @@ import VaultStore
 /// not change how a row syncs. Whether two copies hold the same value is never stored: it is
 /// computed here when it is asked for (decrypted in memory, compared in constant time, wiped).
 extension ConfigRepository {
-    /// The other live places of `id`'s link group, each compared with `id`'s value, ordered by
-    /// account, repository, scope (repository level first) and name. Empty when `id` is not
-    /// linked or is the group's only live item.
+    /// The other live places of `id`'s link group (repository scopes and folders, v0.7.0), each
+    /// compared with `id`'s value: folders first by name, then by account, repository, scope
+    /// (repository level first) and name. `id` may be a repository or a folder item. Empty when
+    /// `id` is not linked or is the group's only live item.
     ///
     /// - Throws: `.itemNotFound`, `.vault` (locked).
     public func linkedCopies(of id: ConfigItemID) throws(ConfigRepositoryError) -> [LinkedCopyModel] {
         try performConfig {
             try session.read { keys, tx in
-                guard let item = try store.fetchItemRecord(id: id, in: tx) else {
+                guard let item = try ItemCopySource.load(id, database: session.database, in: tx) else {
                     throw ConfigRepositoryError.itemNotFound
                 }
                 guard let linkID = item.linkID else { return [] }
-                let others = try store.fetchLinkedItemRecords(linkID: linkID, in: tx).filter { $0.id != id }
+                let others = try ItemCopySource.linkGroup(linkID, database: session.database, in: tx).filter { $0.id != id }
                 guard !others.isEmpty else { return [] }
-                let value = try ConfigFieldCipher.openValue(of: item, keys: keys)
+                let value = try item.openValue(keys: keys)
                 defer { value?.wipe() }
-                let repositories = RepoStore(database: session.database)
                 var copies: [LinkedCopyModel] = []
                 for other in others {
-                    guard let repository = try repositories.fetch(id: other.repositoryID, in: tx) else { continue }
-                    let environment = try other.environmentID.flatMap { try store.fetchEnvironment(id: $0, in: tx) }
-                    copies.append(LinkedCopyModel(
-                        itemID: other.id,
-                        repositoryID: other.repositoryID,
-                        accountLogin: repository.accountLogin,
-                        repositoryFullName: repository.fullName,
-                        scope: other.scope,
-                        environmentName: environment?.name,
-                        kind: other.kind,
-                        name: other.name,
-                        comparison: try Self.compare(value, with: other, keys: keys),
-                        syncStatus: other.model.syncStatus,
-                        editBlock: editBlock(for: other, repository: repository, environment: environment)
-                    ))
+                    guard let copy = try linkedCopy(other, comparedWith: value, keys: keys, in: tx) else { continue }
+                    copies.append(copy)
                 }
                 return copies.sorted(by: Self.placeOrder)
             }
         }
     }
 
-    /// Takes `id` out of its link group. When only one live item of the group is left, that
-    /// item is unlinked too. Link metadata only: always allowed, nothing becomes pending.
+    /// Takes `id` (a repository or folder item) out of its link group. When only one live item of
+    /// the group is left, that item is unlinked too. Link metadata only: always allowed, nothing
+    /// becomes pending.
     public func unlink(_ id: ConfigItemID) throws(ConfigRepositoryError) {
         try write { _, tx, _ in
-            guard let item = try store.fetchItemRecord(id: id, in: tx) else {
+            let database = session.database
+            guard let item = try ItemCopySource.load(id, database: database, in: tx) else {
                 throw ConfigRepositoryError.itemNotFound
             }
             guard let linkID = item.linkID else { return }
-            try store.setLinkID(nil, itemIDs: [id], in: tx)
-            let rest = try store.fetchLinkedItemRecords(linkID: linkID, in: tx)
+            try ItemCopySource.setLinkID(nil, itemIDs: [id], database: database, in: tx)
+            let rest = try ItemCopySource.linkGroup(linkID, database: database, in: tx)
             if rest.count == 1 {
-                try store.setLinkID(nil, itemIDs: rest.map(\.id), in: tx)
+                try ItemCopySource.setLinkID(nil, itemIDs: rest.map(\.id), database: database, in: tx)
             }
         }
         Self.linkLog.info("Unlinked one item")
     }
 
-    /// "Also update linked copies" (L4): gives each of `targetIDs` the local value of `id`, in
-    /// one transaction across their repositories. Each target becomes an ordinary pending change
-    /// (a value-missing secret is filled with a push requested now, D27), so the next Sync pushes
-    /// them through the usual review. Nothing is written when one of them fails.
+    /// "Also update linked copies" (L4): gives each of `targetIDs` the value of `id`, in one
+    /// transaction across their repositories and folders (v0.7.0). A repository target becomes
+    /// an ordinary pending change (a value-missing secret is filled with a push requested now,
+    /// D27), so the next Sync pushes it through the usual review; a folder target changes at
+    /// once. Nothing is written when one of them fails.
     ///
     /// - Returns: how many copies were updated.
     /// - Throws: `.itemNotFound` (a target is gone, deleted or no longer in `id`'s group),
@@ -83,22 +73,28 @@ extension ConfigRepository {
     ) throws(ConfigRepositoryError) -> Int {
         guard !targetIDs.isEmpty else { return 0 }
         let count = try write { keys, tx, now in
-            guard let source = try store.fetchItemRecord(id: id, in: tx), let linkID = source.linkID else {
+            let database = session.database
+            guard let source = try ItemCopySource.load(id, database: database, in: tx), let linkID = source.linkID else {
                 throw ConfigRepositoryError.itemNotFound
             }
-            guard let value = try ConfigFieldCipher.openValue(of: source, keys: keys) else {
+            guard let value = try source.openValue(keys: keys) else {
                 throw ConfigRepositoryError.valueMissing
             }
             defer { value.wipe() }
-            var targets: [ConfigItemRecord] = []
+            var repositoryTargets: [ConfigItemRecord] = []
+            var folderTargets: [FolderItemRecord] = []
             for targetID in Set(targetIDs) where targetID != id {
-                guard let target = try store.fetchItemRecord(id: targetID, in: tx),
+                guard let target = try ItemCopySource.load(targetID, database: database, in: tx),
                       !target.isDeleted,
                       target.linkID == linkID
                 else { throw ConfigRepositoryError.itemNotFound }
-                targets.append(target)
+                if let record = target.configRecord {
+                    repositoryTargets.append(record)
+                } else if let record = target.folderRecord {
+                    folderTargets.append(record)
+                }
             }
-            for (repositoryID, records) in Dictionary(grouping: targets, by: \.repositoryID) {
+            for (repositoryID, records) in Dictionary(grouping: repositoryTargets, by: \.repositoryID) {
                 var batch = try ItemEditBatch(
                     repositoryID: repositoryID,
                     keys: keys,
@@ -115,7 +111,11 @@ extension ConfigRepository {
                     }
                 }
             }
-            return targets.count
+            let folderWriter = FolderItemWriter(store: FolderStore(database: database), keys: keys, tx: tx, now: now)
+            for record in folderTargets {
+                try folderWriter.editValue(record.id, value: value)
+            }
+            return repositoryTargets.count + folderTargets.count
         }
         Self.linkLog.info("Updated \(count, privacy: .public) linked copies")
         return count
@@ -124,6 +124,47 @@ extension ConfigRepository {
     // MARK: - Private
 
     private static let linkLog = Logger(subsystem: ConfigConstants.logSubsystem, category: ConfigConstants.logCategory)
+
+    /// One place of a link group, or nil when its repository or folder is gone.
+    private func linkedCopy(
+        _ other: ItemCopySource,
+        comparedWith value: SecretBytes?,
+        keys: borrowing UnlockedKeys,
+        in tx: StoreTransaction
+    ) throws -> LinkedCopyModel? {
+        let comparison = try Self.compare(value, with: other, keys: keys)
+        if let record = other.configRecord {
+            guard let repository = try RepoStore(database: session.database).fetch(id: record.repositoryID, in: tx) else { return nil }
+            let environment = try record.environmentID.flatMap { try store.fetchEnvironment(id: $0, in: tx) }
+            return LinkedCopyModel(
+                itemID: record.id,
+                place: .scope(
+                    repositoryID: record.repositoryID,
+                    accountLogin: repository.accountLogin,
+                    repositoryFullName: repository.fullName,
+                    scope: record.scope,
+                    environmentName: environment?.name
+                ),
+                kind: record.kind,
+                name: record.name,
+                comparison: comparison,
+                syncStatus: record.model.syncStatus,
+                editBlock: editBlock(for: record, repository: repository, environment: environment)
+            )
+        }
+        guard let record = other.folderRecord,
+              let folder = try FolderStore(database: session.database).fetchFolder(id: record.folderID, in: tx)
+        else { return nil }
+        return LinkedCopyModel(
+            itemID: record.id,
+            place: .folder(folder.id, name: folder.name),
+            kind: record.kind,
+            name: record.name,
+            comparison: comparison,
+            syncStatus: nil,
+            editBlock: nil
+        )
+    }
 
     /// Why `record` cannot take a new value, or nil (the checks of `ItemEditBatch.requireEditable`).
     private func editBlock(
@@ -142,18 +183,26 @@ extension ConfigRepository {
 
     private static func compare(
         _ value: SecretBytes?,
-        with record: ConfigItemRecord,
+        with other: ItemCopySource,
         keys: borrowing UnlockedKeys
     ) throws -> LinkedValueComparison {
-        guard let other = try ConfigFieldCipher.openValue(of: record, keys: keys) else { return .valueMissing }
-        defer { other.wipe() }
+        guard let otherValue = try other.openValue(keys: keys) else { return .valueMissing }
+        defer { otherValue.wipe() }
         guard let value else { return .unknown }
-        return value == other ? .same : .differs
+        return value == otherValue ? .same : .differs
     }
 
+    /// Folders first (by name), then repositories by account, repository, scope and name.
     private static func placeOrder(_ lhs: LinkedCopyModel, _ rhs: LinkedCopyModel) -> Bool {
-        let left = (lhs.accountLogin.lowercased(), lhs.repositoryFullName.lowercased(), lhs.environmentName ?? "", lhs.name)
-        let right = (rhs.accountLogin.lowercased(), rhs.repositoryFullName.lowercased(), rhs.environmentName ?? "", rhs.name)
-        return left < right
+        sortKey(lhs) < sortKey(rhs)
+    }
+
+    private static func sortKey(_ copy: LinkedCopyModel) -> (Int, String, String, String, String) {
+        switch copy.place {
+        case .folder(_, let name):
+            (0, name.lowercased(), "", "", copy.name)
+        case .scope(_, let account, let fullName, _, let environment):
+            (1, account.lowercased(), fullName.lowercased(), environment ?? "", copy.name)
+        }
     }
 }

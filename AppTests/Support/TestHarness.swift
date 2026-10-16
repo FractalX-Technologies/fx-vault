@@ -390,6 +390,8 @@ final class ActionRecorder {
     var refreshes: [MainRefreshRequest] = []
     var selections: [RepoID] = []
     var openings: [OpenedScope] = []
+    /// Folders shown (v0.7.0: a new folder, a linked copy's folder).
+    var openedFolders: [FolderID] = []
     /// Get Updates from Teammates calls (v0.6.0).
     var spaceSyncs = 0
     /// Publishes members were told about (v0.6.0).
@@ -412,6 +414,7 @@ extension TestHarness {
             isGitHubReady: { isGitHubReady },
             select: { recorder.selections.append($0) },
             open: { recorder.openings.append(ActionRecorder.OpenedScope(repositoryID: $0, scope: $1)) },
+            openFolder: { recorder.openedFolders.append($0) },
             syncSpaces: { recorder.spaceSyncs += 1 },
             spacesPublished: { recorder.spacePublishes += 1 },
             spaceIdentity: { SpaceLocalIdentityModel(login: TestFixtures.account, displayName: "Ana", macName: "Ana's Mac") }

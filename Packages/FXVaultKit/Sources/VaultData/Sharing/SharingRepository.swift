@@ -165,6 +165,23 @@ public actor SharingRepository {
         passphrase: String,
         checkGitHub: Bool = true
     ) async throws(SharingError) -> ShareImportDraftModel {
+        switch try await openFileContents(file, passphrase: passphrase, checkGitHub: checkGitHub) {
+        case .repository(let draft):
+            return draft
+        case .folder(let draft):
+            draft.discard()
+            throw .share(.invalidPackage(.scopeMismatch(.folder)))
+        }
+    }
+
+    /// Decrypts the file like ``openFile(_:passphrase:checkGitHub:)``, and also opens a copy of a
+    /// folder (v0.7.0): a repository package comes back planned, a folder as a
+    /// ``ShareFolderDraftModel`` for "Save as Folder" or "Import Into…".
+    public func openFileContents(
+        _ file: ShareFileModel,
+        passphrase: String,
+        checkGitHub: Bool = true
+    ) async throws(SharingError) -> ShareOpenedFileModel {
         guard !session.isLocked else { throw .vault(.locked) }
         let normalized: SecretBytes
         do {
@@ -180,7 +197,46 @@ public actor SharingRepository {
             throw .share(error)
         }
         defer { package.wipeValues() }
-        return try await draft(for: package, mode: .payload, checkGitHub: checkGitHub)
+        guard package.isFolder else {
+            return .repository(try await draft(for: package, mode: .payload, checkGitHub: checkGitHub))
+        }
+        let wasImported = try importedPackageIDs().contains(package.packageID)
+        return .folder(ShareFolderDraftModel(package: ShareImportPlanning.copyingValues(of: package), wasImported: wasImported))
+    }
+
+    /// "Save as Folder" for a copy of a folder opened from a file (``FolderRepository/save(_:as:conflicts:)``);
+    /// closes the draft and wipes its values.
+    @discardableResult
+    public func saveFolder(
+        _ draft: ShareFolderDraftModel,
+        as target: FolderSaveTargetModel,
+        conflicts: ItemCopyConflictPolicy
+    ) throws(SharingError) -> FolderSaveResultModel {
+        guard !draft.isClosed else { throw .draftClosed }
+        let result: FolderSaveResultModel
+        do {
+            result = try FolderRepository(session: session, clock: clock).save(draft.package, as: target, conflicts: conflicts)
+        } catch {
+            throw .config(error)
+        }
+        try draft.close()
+        return result
+    }
+
+    /// "Import Into…" for a copy of a folder opened from a file: plans its items for `scope` of
+    /// `repositoryID` (the usual preview, then ``apply(_:plan:confirmReplay:)``). The values move
+    /// are copied into the returned draft and this one is closed and wiped.
+    public func importDraft(
+        _ draft: ShareFolderDraftModel,
+        into repositoryID: RepoID,
+        scope: ConfigScope,
+        checkGitHub: Bool = true
+    ) async throws(SharingError) -> ShareImportDraftModel {
+        guard !draft.isClosed else { throw .draftClosed }
+        let planned = try FolderPackageTargeting.package(draft.package, into: repositoryID, scope: scope, vault: session)
+        let imported = try await self.draft(for: planned, mode: .payload, checkGitHub: checkGitHub)
+        try draft.close()
+        return imported
     }
 
     /// Plans the draft's package again against the current vault, for example after the

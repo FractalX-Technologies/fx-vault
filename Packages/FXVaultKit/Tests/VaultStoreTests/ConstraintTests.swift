@@ -128,6 +128,44 @@ struct ConstraintTests {
         #expect(try seeded.integer("SELECT COUNT(*) FROM space_versions") == 0)
     }
 
+    @Test func folderTablesCheckNamesValuesAndCascade() throws {
+        let seeded = try SeededDatabase()
+        let folder = UUID().uuidString.lowercased()
+        let blob = "x'" + String(repeating: "07", count: 40) + "'"
+        try seeded.execute("INSERT INTO folders (id, name, name_key, created_at, updated_at) VALUES ('\(folder)', 'Mobile App', 'mobile app', 't', 't')")
+        #expect(throws: Self.unique) {
+            try seeded.execute("INSERT INTO folders (id, name, name_key, created_at, updated_at) VALUES ('\(UUID().uuidString.lowercased())', 'MOBILE APP', 'mobile app', 't', 't')")
+        }
+        #expect(throws: Self.check) {
+            try seeded.execute("INSERT INTO folders (id, name, name_key, created_at, updated_at) VALUES ('\(UUID().uuidString.lowercased())', '', '', 't', 't')")
+        }
+        #expect(throws: Self.check) {
+            try seeded.execute("INSERT INTO folders (id, name, name_key, created_at, updated_at) VALUES ('folder-a', 'Other', 'other', 't', 't')")
+        }
+        func insertItem(_ name: String, kind: String = "secret", value: String? = nil, fingerprint: String? = nil, folderID: String? = nil) throws {
+            let id = UUID().uuidString.lowercased()
+            let valueSQL = value ?? blob
+            let fingerprintSQL = fingerprint ?? blob
+            try seeded.execute("""
+                INSERT INTO folder_items (id, folder_id, kind, name, value_ct, value_fp, created_at, updated_at)
+                VALUES ('\(id)', '\(folderID ?? folder)', '\(kind)', '\(name)', \(valueSQL), \(fingerprintSQL), 't', 't')
+                """)
+        }
+        try insertItem("API_KEY")
+        try insertItem("API_KEY", kind: "variable")
+        #expect(throws: Self.unique) { try insertItem("API_KEY") }
+        #expect(throws: Self.check) { try insertItem("api_key_lower") }
+        #expect(throws: Self.check) { try insertItem("OTHER", kind: "token") }
+        #expect(throws: StoreError.constraintViolation(.notNull)) { try insertItem("NO_VALUE", value: "NULL") }
+        #expect(throws: StoreError.constraintViolation(.notNull)) { try insertItem("NO_FP", fingerprint: "NULL") }
+        #expect(throws: Self.foreignKey) { try insertItem("ORPHAN", folderID: UUID().uuidString.lowercased()) }
+        #expect(throws: Self.check) {
+            try seeded.execute("UPDATE folder_items SET link_id = 'group-a'")
+        }
+        try seeded.execute("DELETE FROM folders")
+        #expect(try seeded.integer("SELECT COUNT(*) FROM folder_items") == 0)
+    }
+
     @Test func kindIsAnEnum() throws {
         let seeded = try SeededDatabase()
         #expect(throws: Self.check) {

@@ -20,6 +20,8 @@ public enum ShareSelectionModel: Sendable, Hashable {
     case repository(RepoID)
     /// Any combination inside one repository (see ``ShareSubsetModel``).
     case subset(ShareSubsetModel)
+    /// A copy of a folder with every item (`folder` scope, v0.7.0).
+    case folder(FolderID)
 }
 
 /// Any combination of whole environments and individual items of one repository: repository
@@ -48,8 +50,10 @@ public struct ShareSubsetModel: Sendable, Hashable {
 /// What an export would contain, for the confirmation step (names and counts, never values).
 public struct ShareExportPreviewModel: Sendable, Hashable {
     public var scope: ShareScope
-    /// `owner/name`.
+    /// `owner/name`; empty for a folder.
     public var repositoryFullName: String
+    /// The folder's name for a folder copy (v0.7.0); nil otherwise.
+    public var folderName: String?
     public var environmentNames: [String]
     public var itemCount: Int
     /// Secrets whose value is missing locally: shared by name only (§7.8).
@@ -64,10 +68,12 @@ public struct ShareExportPreviewModel: Sendable, Hashable {
         environmentNames: [String],
         itemCount: Int,
         valueMissingNames: [String],
-        summary: ShareContentSummaryModel
+        summary: ShareContentSummaryModel,
+        folderName: String? = nil
     ) {
         self.scope = scope
         self.repositoryFullName = repositoryFullName
+        self.folderName = folderName
         self.environmentNames = environmentNames
         self.itemCount = itemCount
         self.valueMissingNames = valueMissingNames
@@ -180,6 +186,60 @@ public final class ShareImportDraftModel: Sendable {
             return closed
         }
         if wasClosed { throw .draftClosed }
+    }
+}
+
+/// A `.fxvault` file opened with its passphrase (v0.7.0): a repository package planned against
+/// this vault, or a copy of a folder to save as a folder or import into a repository scope.
+public enum ShareOpenedFileModel: Sendable {
+    case repository(ShareImportDraftModel)
+    case folder(ShareFolderDraftModel)
+}
+
+/// A copy of a folder opened from a `.fxvault` file (v0.7.0), waiting for "Save as Folder" or
+/// "Import Into…". Holds the values until one of them, ``discard()`` or release wipes them.
+public final class ShareFolderDraftModel: Sendable {
+    /// The package without values, for display.
+    public let manifest: SharePackageModel
+    /// True when this package was imported or saved before (shown as a note, never a block).
+    public let wasImported: Bool
+    let package: SharePackageModel
+    private let isClosedState = OSAllocatedUnfairLock(initialState: false)
+
+    init(package: SharePackageModel, wasImported: Bool) {
+        self.package = package
+        manifest = package.manifest()
+        self.wasImported = wasImported
+    }
+
+    deinit {
+        package.wipeValues()
+    }
+
+    /// The sender's folder name.
+    public var folderName: String {
+        manifest.folder?.name ?? ""
+    }
+
+    /// Rejects the copy: wipes the values. Idempotent.
+    public func discard() {
+        isClosedState.withLock { $0 = true }
+        package.wipeValues()
+    }
+
+    /// True once saved, imported or discarded.
+    public var isClosed: Bool {
+        isClosedState.withLock { $0 }
+    }
+
+    /// Closes the draft and wipes its values; throws when it was already closed.
+    func close() throws(SharingError) {
+        let wasClosed = isClosedState.withLock { closed in
+            defer { closed = true }
+            return closed
+        }
+        if wasClosed { throw .draftClosed }
+        package.wipeValues()
     }
 }
 

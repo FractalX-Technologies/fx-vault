@@ -40,6 +40,23 @@ struct MainWindowLayoutTests {
         withExtendedLifetime(harness) {}
     }
 
+    /// A folder's detail (v0.7.0) fits the narrowest detail column too, and its main window keeps
+    /// the window height with FOLDERS and TEAMMATES in the sidebar.
+    @Test func folderDetailFitsItsNarrowestColumn() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        main.sidebar.selectedFolderID = try MainSnapshotFixture.mobileFolder(harness, main)
+        let folder = try #require(main.folderDetail)
+        #expect(await TestFixtures.eventually { folder.items.count == 3 })
+        let controller = NSHostingController(rootView: FolderDetailScreen(viewModel: folder, main: main).fxWindowBackground())
+        #expect(controller.sizeThatFits(in: .zero).width <= Theme.Layout.detailMinWidth)
+
+        let size = CGSize(width: Theme.Layout.windowDefaultWidth, height: Theme.Layout.windowDefaultHeight)
+        let window = Self.window(showing: MainScreen(viewModel: main), contentSize: size)
+        defer { window.close() }
+        #expect(window.frame.height == size.height)
+        withExtendedLifetime(harness) {}
+    }
+
     /// An offscreen titled window (full-size content, like the app's main window) laid out at
     /// `contentSize`.
     private static func window(showing view: some View, contentSize: CGSize) -> NSWindow {

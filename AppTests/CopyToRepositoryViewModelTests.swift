@@ -92,10 +92,10 @@ struct CopyToRepositoryViewModelTests {
         #expect(model.result == ItemCopyResultModel(added: 1))
         #expect(model.resultNotice == "Copied 1 item to \(TestFixtures.owner)/other-repo · staging.")
         #expect(!model.canCopy)
-        #expect(try await fixture.value("API_TOKEN", in: fixture.otherID, scope: staging.target.scope) == EditorFixtures.secretValue)
+        #expect(try await fixture.value("API_TOKEN", in: fixture.otherID, scope: try #require(staging.target.scope)) == EditorFixtures.secretValue)
 
         model.showTarget()
-        #expect(fixture.recorder.openings == [ActionRecorder.OpenedScope(repositoryID: fixture.otherID, scope: staging.target.scope)])
+        #expect(fixture.recorder.openings == [ActionRecorder.OpenedScope(repositoryID: fixture.otherID, scope: try #require(staging.target.scope))])
     }
 
     @Test func aNameTheScopeHasAsksReplaceOrKeep() async throws {

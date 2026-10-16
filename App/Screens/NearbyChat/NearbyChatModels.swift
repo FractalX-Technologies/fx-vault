@@ -133,9 +133,17 @@ struct ChatAttachmentCardModel: Identifiable, Equatable {
         direction == .received && (status == .readyToSave || status == .savedToFile)
     }
 
-    /// "Save as File…" for an arrived configuration that was not imported yet.
+    /// "Save as File…" for an arrived configuration or folder that was not imported yet.
     var canSaveAsFile: Bool {
-        offer.isConfiguration && direction == .received && (status == .readyToSave || status == .savedToFile)
+        offer.isPackage && direction == .received && (status == .readyToSave || status == .savedToFile)
+    }
+}
+
+extension ChatAttachmentOfferModel {
+    /// A whole repository (v0.4.0) or a copy of a folder (v0.7.0): Save…, Save as File… and
+    /// Dismiss, with the values requested first.
+    var isPackage: Bool {
+        isConfiguration || folderName != nil
     }
 }
 
@@ -143,6 +151,8 @@ struct ChatAttachmentCardModel: Identifiable, Equatable {
 enum ChatAttachmentChoiceModel: Equatable {
     case item(ChatAttachableItemModel)
     case repository(ChatAttachableRepositoryModel)
+    /// A copy of a folder (v0.7.0).
+    case folder(FolderModel)
 }
 
 /// One group of the attachment picker: a repository level or one environment.

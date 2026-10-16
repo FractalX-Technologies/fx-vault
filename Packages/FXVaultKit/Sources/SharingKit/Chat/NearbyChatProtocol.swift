@@ -18,14 +18,17 @@ public enum NearbyChatProtocol {
     static let attachmentIDBytes = ChatAttachmentID.byteCount
     /// The highest chat version this Mac offers in HELLO. 1: text and single-item attachments
     /// (v0.2.0). 2 (v0.4.0): configuration attachments too. 3 (v0.5.0): teammates prove who they
-    /// are with TEAMMATE_IDENT instead of comparing the code. The frame format is unchanged, so a
-    /// chat with an older version negotiates its version and works as before.
-    public static let maxVersion: UInt8 = 3
+    /// are with TEAMMATE_IDENT instead of comparing the code. 4 (v0.7.0): folder attachments
+    /// (scope `folder`). The frame format is unchanged, so a chat with an older version
+    /// negotiates its version and works as before.
+    public static let maxVersion: UInt8 = 4
     /// The negotiated version from which a chat carries configuration attachments (a whole
     /// repository or environment, scope `repository` or `environment`).
     public static let configurationAttachmentsVersion: UInt8 = 2
     /// The negotiated version from which teammates may skip the code (TEAMMATE_IDENT).
     public static let teammateVerificationVersion: UInt8 = 3
+    /// The negotiated version from which a chat carries a copy of a folder (scope `folder`).
+    public static let folderAttachmentsVersion: UInt8 = 4
 }
 
 /// Encrypted chat frame types. HELLO_I, HELLO_R, REVEAL_I and the plaintext ABORT are the share

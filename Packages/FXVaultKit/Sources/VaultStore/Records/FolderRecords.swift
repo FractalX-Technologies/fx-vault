@@ -1,0 +1,132 @@
+import Foundation
+import GRDB
+import VaultCore
+
+/// One `folders` row (§6 `v12_folders`, v0.7.0).
+public struct FolderRecord: Codable, Sendable, Hashable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "folders"
+
+    public var id: FolderID
+    /// NFC (``FolderNameValidator``).
+    public var name: String
+    /// ``FolderNameValidator/foldKey(_:)`` of ``name``; unique.
+    public var nameKey: String
+    public var sortOrder: Int
+    public var createdAt: Date
+    public var updatedAt: Date
+
+    public init(id: FolderID = FolderID(), name: String, sortOrder: Int, createdAt: Date, updatedAt: Date) {
+        self.id = id
+        self.name = name
+        nameKey = FolderNameValidator.foldKey(name)
+        self.sortOrder = sortOrder
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    /// The domain model with its live item counts.
+    public func model(secretCount: Int = 0, variableCount: Int = 0) -> FolderModel {
+        FolderModel(
+            id: id,
+            name: name,
+            sortOrder: sortOrder,
+            secretCount: secretCount,
+            variableCount: variableCount,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+
+    enum CodingKeys: String, CodingKey, ColumnExpression {
+        case id
+        case name
+        case nameKey = "name_key"
+        case sortOrder = "sort_order"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+
+    public static func databaseDateEncodingStrategy(for column: String) -> DatabaseDateEncodingStrategy {
+        DatabaseTimestamp.encodingStrategy
+    }
+
+    public static func databaseDateDecodingStrategy(for column: String) -> DatabaseDateDecodingStrategy {
+        DatabaseTimestamp.decodingStrategy
+    }
+}
+
+/// One `folder_items` row (§6 `v12_folders`, v0.7.0), ciphertext included. The value is sealed
+/// with `FolderFieldAAD` (row, folder, kind, name) and fingerprinted for its row, like a
+/// repository item's local value.
+public struct FolderItemRecord: Codable, Sendable, Hashable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "folder_items"
+
+    public var id: ConfigItemID
+    public var folderID: FolderID
+    public var kind: ConfigKind
+    /// Uppercase (`CHECK (name = upper(name))`).
+    public var name: String
+    /// `value_ct`, never nil: a folder item always has its value.
+    public var valueCiphertext: Data
+    /// `value_fp`: the row-bound HMAC fingerprint of the value.
+    public var valueFingerprint: Data
+    public var linkID: ItemLinkID?
+    public var createdAt: Date
+    public var updatedAt: Date
+
+    public init(
+        id: ConfigItemID = ConfigItemID(),
+        folderID: FolderID,
+        kind: ConfigKind,
+        name: String,
+        valueCiphertext: Data,
+        valueFingerprint: Data,
+        linkID: ItemLinkID? = nil,
+        createdAt: Date,
+        updatedAt: Date
+    ) {
+        self.id = id
+        self.folderID = folderID
+        self.kind = kind
+        self.name = name
+        self.valueCiphertext = valueCiphertext
+        self.valueFingerprint = valueFingerprint
+        self.linkID = linkID
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    /// The domain model (no ciphertext), with the link group's live count.
+    public func model(linkCount: Int = 0) -> FolderItemModel {
+        FolderItemModel(
+            id: id,
+            folderID: folderID,
+            kind: kind,
+            name: name,
+            linkID: linkID,
+            linkCount: linkCount,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+
+    enum CodingKeys: String, CodingKey, ColumnExpression {
+        case id
+        case folderID = "folder_id"
+        case kind
+        case name
+        case valueCiphertext = "value_ct"
+        case valueFingerprint = "value_fp"
+        case linkID = "link_id"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+
+    public static func databaseDateEncodingStrategy(for column: String) -> DatabaseDateEncodingStrategy {
+        DatabaseTimestamp.encodingStrategy
+    }
+
+    public static func databaseDateDecodingStrategy(for column: String) -> DatabaseDateDecodingStrategy {
+        DatabaseTimestamp.decodingStrategy
+    }
+}

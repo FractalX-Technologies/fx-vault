@@ -155,16 +155,78 @@ public struct FieldAAD: Sendable, Hashable {
     /// `LP("fxvault/v1/field") ‖ LP(table) ‖ LP(column) ‖ LP(row 16B) ‖ LP(repository 16B)
     /// ‖ LP(environment 16B | empty) ‖ LP(kind) ‖ LP(name) ‖ u32be(dek_version)` (§5.4).
     public func encoded(dekVersion: UInt32) -> Data {
+        Self.encode(
+            table: location.table,
+            column: location.column,
+            row: rowID.bytes,
+            container: repositoryID.bytes,
+            environment: environmentID?.bytes ?? [],
+            kind: kind,
+            name: name,
+            dekVersion: dekVersion
+        )
+    }
+
+    /// The field layout shared by repository items and folder items (v0.7.0): the container is
+    /// the repository or the folder, and the table name keeps the two apart.
+    static func encode(
+        table: String,
+        column: String,
+        row: [UInt8],
+        container: [UInt8],
+        environment: [UInt8],
+        kind: ConfigKind,
+        name: String,
+        dekVersion: UInt32
+    ) -> Data {
         var builder = AADBuilder()
         builder.appendLengthPrefixed(CryptoDomain.fieldLabel)
-        builder.appendLengthPrefixed(location.table)
-        builder.appendLengthPrefixed(location.column)
-        builder.appendLengthPrefixed(rowID.bytes)
-        builder.appendLengthPrefixed(repositoryID.bytes)
-        builder.appendLengthPrefixed(environmentID?.bytes ?? [])
+        builder.appendLengthPrefixed(table)
+        builder.appendLengthPrefixed(column)
+        builder.appendLengthPrefixed(row)
+        builder.appendLengthPrefixed(container)
+        builder.appendLengthPrefixed(environment)
         builder.appendLengthPrefixed(kind.rawValue)
         builder.appendLengthPrefixed(name)
         builder.append(uint32BigEndian: dekVersion)
         return builder.data
+    }
+}
+
+/// The identity a folder item's value is bound to (v0.7.0, `folder_items.value_ct`): row,
+/// folder, kind and name. The layout is ``FieldAAD``'s with the folder in the repository's place
+/// and no environment; the table name `folder_items` keeps a folder blob from opening as a
+/// repository item. Renaming the item or changing its kind re-seals the value.
+public struct FolderFieldAAD: Sendable, Hashable {
+    /// Table name as written into the AAD.
+    public static let table = "folder_items"
+    /// Column name as written into the AAD.
+    public static let column = "value_ct"
+
+    public let rowID: ConfigItemID
+    public let folderID: FolderID
+    public let kind: ConfigKind
+    public let name: String
+
+    public init(rowID: ConfigItemID, folderID: FolderID, kind: ConfigKind, name: String) {
+        self.rowID = rowID
+        self.folderID = folderID
+        self.kind = kind
+        self.name = name
+    }
+
+    /// `LP("fxvault/v1/field") ‖ LP("folder_items") ‖ LP("value_ct") ‖ LP(row 16B) ‖
+    /// LP(folder 16B) ‖ LP(empty) ‖ LP(kind) ‖ LP(name) ‖ u32be(dek_version)`.
+    public func encoded(dekVersion: UInt32) -> Data {
+        FieldAAD.encode(
+            table: Self.table,
+            column: Self.column,
+            row: rowID.bytes,
+            container: folderID.bytes,
+            environment: [],
+            kind: kind,
+            name: name,
+            dekVersion: dekVersion
+        )
     }
 }

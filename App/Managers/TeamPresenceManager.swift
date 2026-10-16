@@ -69,6 +69,9 @@ struct NearbyChatStartModel {
     /// The chat came through teammate presence (a bubble, or a connection to the pseudonym):
     /// the window waits a moment for the teammate's proof before it shows the code.
     var expectsTeammate = false
+    /// Send Folder… (v0.7.0): once the chat is verified, the attachment picker opens on this
+    /// folder (Touch ID or the master password still comes first).
+    var folderToSend: FolderID?
 }
 
 /// Teammates nearby (v0.5.0, tasks/todo.md T3–T8): presence, bubbles and pings.
@@ -304,8 +307,9 @@ final class TeamPresenceManager: LockObserving {
     }
 
     /// Opens Nearby Chat with `person`: a teammate through its presence (no code), anyone else
-    /// through the chat service (with the code).
-    func chat(with person: NearbyPersonModel) {
+    /// through the chat service (with the code). `folderToSend` (v0.7.0) opens the attachment
+    /// picker on that folder once the chat is verified.
+    func chat(with person: NearbyPersonModel, sendingFolder folderToSend: FolderID? = nil) {
         popoverPersonID = nil
         switch person.kind {
         case .teammate(let deviceID):
@@ -320,14 +324,21 @@ final class TeamPresenceManager: LockObserving {
                 transport: PreambleTransport(base: transport, service: .chat),
                 peerName: person.name,
                 teammate: card,
-                expectsTeammate: true
+                expectsTeammate: true,
+                folderToSend: folderToSend
             ))
         case .stranger(let serviceName):
             guard let peer = strangers[serviceName]?.peer, let transport = strangerDiscovery?.connect(to: peer) else {
                 show(.unreachable(person.name))
                 return
             }
-            startChat(NearbyChatStartModel(role: .initiator, transport: transport, peerName: person.name, teammate: nil))
+            startChat(NearbyChatStartModel(
+                role: .initiator,
+                transport: transport,
+                peerName: person.name,
+                teammate: nil,
+                folderToSend: folderToSend
+            ))
         }
     }
 

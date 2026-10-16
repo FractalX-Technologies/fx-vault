@@ -52,9 +52,17 @@ Touch ID   the DEK in a data-protection keychain item (signed builds only, §5)
   of each version: headers and member lists in plaintext, item names and values only inside the
   payload, encrypted under the epoch key. Teammates' addresses (`teammate_addresses`) are
   plaintext.
-- **Plaintext on disk:** names (repositories, environments, items), GitHub ids, timestamps,
-  branch patterns, the sync journal (names and row-bound push fingerprints, never values),
-  `link_id` (which items are linked copies of each other, v0.4.1) and preferences. No group
+- **Folders (v0.7.0):** `folder_items.value_ct` is AES-256-GCM under K_field with
+  `FolderFieldAAD`: the field layout above with table `folder_items`, the folder id in the
+  repository's place and no environment, so a folder blob never opens as a repository item (or
+  in another folder, row, kind or name). `value_fp` is the row-bound fingerprint. Renames and
+  kind changes re-seal; DEK rotation re-seals every folder value. Folder items live in their own
+  tables, which no sync path reads: they reach GitHub only after the user copies them into a
+  repository scope and syncs. Folder names are plaintext, like repository names.
+- **Plaintext on disk:** names (repositories, environments, items, folders), GitHub ids,
+  timestamps, branch patterns, the sync journal (names and row-bound push fingerprints, never
+  values), `link_id` (which items are linked copies of each other, v0.4.1; groups may include
+  folder items since v0.7.0) and preferences. No group
   fingerprint is stored: whether linked copies hold the same value is computed when it is shown
   (decrypted in memory, compared in constant time, wiped).
 - Repositories write ciphertext only through `VaultSession.write`, whose keys are checked
@@ -163,10 +171,11 @@ the official signed release.") and every keychain call refuses with `.unsignedBu
 Revealing an older value in a shared scope's history (v0.6.0) also asks for Touch ID or the
 master password (`ReauthPurpose.spaceHistory`); the value is masked again after 30 seconds.
 
-`.env` export, `.fxvault` export, nearby send and attaching a secret, a variable or (v0.4.0) a
-whole repository in Nearby Chat (`ShareAuthorizationPurpose.nearbySend`, asked before the picker
-opens), and saving a repository received in chat as a file (`.fileExport`, v0.4.0), require a
-fresh Touch ID or master-password
+`.env` export (also of a folder, v0.7.0), `.fxvault` export (also of a folder), nearby send and
+attaching a secret, a variable, (v0.4.0) a whole repository or (v0.7.0) a folder in Nearby Chat
+(`ShareAuthorizationPurpose.nearbySend`, asked before the picker opens; Send Folder opens the
+picker on the folder and still asks), and saving a repository or folder received in chat as a
+file (`.fileExport`, v0.4.0), require a fresh Touch ID or master-password
 check through `ReauthGate` (never `.deviceOwnerAuthentication`, which would accept the macOS
 login password). The result is a single-use authorization (`EnvExportAuthorizationModel`,
 `ShareAuthorizationModel`) bound to the session and its key generation: a lock, unlock or
@@ -188,7 +197,9 @@ another.
   own repository's account. FX Vault tells its own copy from other text by `changeCount` only,
   without reading the pasteboard. "Also update linked copies" in the item editor writes the
   new value to the checked copies the same way (one transaction across their repositories); a
-  copy the account cannot change is never written.
+  copy the account cannot change is never written. Folders (v0.7.0) take part the same way: a
+  copy into a folder is saved at once, a copy from a folder into a scope is a pending change for
+  the next Sync, and a teammate's copy of a folder never changes a repository by itself.
 - **Clipboard:** current host only, Concealed / Transient / source markers, cleared after 30 s,
   on lock and on quit, but only if FX Vault still owns it. The pasteboard is never read in the
   background: only a user paste (⌘V in the detail column, ⌘V or the Paste button in the import
@@ -308,6 +319,7 @@ teammate's name, and a peer that sends hostile frames.
 | Leaving traces | Ephemeral: messages live only in memory (the session keeps no history; the window's transcript is dropped), no message is logged or written to disk, and closing the window, End Chat, a lock (also on sleep and screen lock), a disconnect, the idle timeout (10 min) or a missed keepalive end the chat and wipe keys, offers, typed text and received values. Message text cannot be selected; Copy goes through `ClipboardManager` (concealed, this Mac only, cleared after 30 s and on lock). One exception: saving an attachment is a share import, so like any import it records the package id, its dates and the sender's (unverified) display name in `imported_share_packages` (replay detection) and logs "Imported a share package" with the count of changed items; never a value or a message. |
 | An attached value | Sending needs Touch ID or the master password first (ReauthGate, `.nearbySend`). The offer is a manifest without the value; the value is decrypted only when the peer asks, re-read and checked against the offered name, kind and scope and against the stored value fingerprint taken when the user authorized the offer (a value changed since then is never sent: the offer is withdrawn), then wiped. The receiver's UI shows name, kind and scope only; "Save to my vault" moves the value into the normal share import preview (re-encrypted under the receiver's DEK), and Dismiss or the end of the chat wipes it. |
 | An attached repository (v0.4.0) | Only between two Macs on 0.4 or later (chat version 2, negotiated in the transcript); with an older peer nothing is offered and no authorization is used. Sending needs Touch ID or the master password first (`.nearbySend`). The offer carries names and counts only; the values are read only when the peer asks, and sent only if every item's stored value fingerprint and the repository's shape (names, kinds, scopes, branch policies, value states) still equal what the user authorized, otherwise the offer is withdrawn and the values read are wiped. The session wipes them once sent. The receiver chooses where it goes: Import Into… lists their repositories, and those the account cannot change (archived; admin required for environments) are shown with the reason and cannot be chosen; the import is the normal share preview, re-encrypted under the receiver's DEK, and every change waits for their next Sync (deletion and push review included). Save as File… needs the receiver's Touch ID or master password (`.fileExport`) and writes an encrypted `.fxvault` under a fresh six-word passphrase shown once; there is no plaintext export from chat. The received package stays in memory (`SecretBytes`) until an import preview takes it (applied, or wiped on Cancel) or the chat ends. |
+| An attached folder (v0.7.0) | Only between two Macs on 0.7 or later (chat version 4); with an older peer the Folder tab explains the update and nothing is offered or authorized. Sending needs Touch ID or the master password first (`.nearbySend`). The offer is the folder package's manifest (the folder's name, item names and counts); the values are read only when the peer asks, and sent only if every item's stored value fingerprint and the folder's names still equal what the user authorized, otherwise the offer is withdrawn. The receiver chooses Save as Folder (a new folder, or merged into one of theirs where names it has are kept unless they choose Replace) or Import Into… a scope of one of their repositories (the normal share preview, pending for their next Sync), or Save as File… (`.fileExport`, encrypted). A folder package is never planned as a repository (the planner refuses it) and never travels in a nearby share with the code. Each person keeps their own copy: later changes are not sent. |
 | Unwanted visibility | The Mac is advertised only while the chat window lists people (and, since v0.5.0, while Everyone nearby is chosen in Settings › Teammates, §10.2), and only on the link-local Bonjour domain (`local.`, never a wide-area DNS-SD domain); connecting or being connected stops advertising and browsing. The listener accepts one connection. |
 | Disruption by strangers | Anyone nearby can connect to an advertising Mac. A connection that drops, stays silent or sends garbage before its HELLO, or that leaves before the code is shown, returns the window to the people list and advertises again: no "Conversation ended" screen, no failed-handshake count (interception warning), and it never counts toward the listener-failure limit (3 in a row), so a stranger cannot make the Mac invisible. The chip shows "Not visible" while such a connection is held. A Mac that advertises the user's own name stays listed (the own entry is filtered by the name Bonjour actually registered). |
 
@@ -430,8 +442,12 @@ what each Mac sent when pairing.
   (close, lock, sleep, disconnect, timeout). An attached value is decrypted only when the peer
   asks for it (re-read and checked against the offered name, kind and scope) and reaches the
   receiver's vault only through the share import preview; the chat UI never holds a value. A
-  received repository (v0.4.0) waits in memory for Import Into… or Save as File… until the chat
-  ends; a file saved from it is as safe as its passphrase, like any `.fxvault` file.
+  received repository (v0.4.0) or folder (v0.7.0) waits in memory for its choice (Import Into…,
+  Save as Folder, Save as File…) until the chat ends; a file saved from it is as safe as its
+  passphrase, like any `.fxvault` file.
+- A folder sent to a teammate (v0.7.0) is a copy: removing them as a teammate or deleting the
+  folder does not take it back, and FX Vault cannot tell which values they kept. Rotate shared
+  keys that must stop working for them, as after any share.
 - The Keychain status codes for the Touch ID fallback button, lockout and an enrollment-
   invalidated item follow Apple's documentation and still need confirmation on a signed build
   (RELEASING.md manual checklist). Since v0.1.1 an unexpected `errSecAuthFailed` can no longer

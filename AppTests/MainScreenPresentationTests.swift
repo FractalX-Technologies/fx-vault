@@ -55,8 +55,8 @@ struct MainScreenPresentationTests {
         let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 15, hour: 12)))
         let sameYear = try #require(calendar.date(from: DateComponents(year: 2026, month: 3, day: 2, hour: 9, minute: 5)))
         let lastYear = try #require(calendar.date(from: DateComponents(year: 2025, month: 3, day: 2, hour: 9, minute: 5)))
-        let current = ConfigTableView.updatedText(sameYear, now: now, calendar: calendar)
-        let older = ConfigTableView.updatedText(lastYear, now: now, calendar: calendar)
+        let current = ConfigTableFormat.updatedText(sameYear, now: now, calendar: calendar)
+        let older = ConfigTableFormat.updatedText(lastYear, now: now, calendar: calendar)
         #expect(current.contains("·"))
         #expect(!current.contains("2026"))
         #expect(older.contains("2025"))
@@ -64,7 +64,7 @@ struct MainScreenPresentationTests {
     }
 
     @Test func columnTitlesRender() {
-        #expect(ImageRenderer(content: ConfigTableView.header("Updated")).nsImage != nil)
+        #expect(ImageRenderer(content: ConfigTableFormat.header("Updated")).nsImage != nil)
     }
 
     // MARK: - Rendering

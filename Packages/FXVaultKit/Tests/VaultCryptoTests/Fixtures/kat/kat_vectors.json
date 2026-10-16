@@ -116,6 +116,34 @@
       "blob_hex": "01c0c1c2c3c4c5c6c7c8c9cacb892ee96bacaec6f29d14eb45537d0b0ba30b7bf05143eaa50b56137db6dbe99e0708"
     }
   ],
+  "folder_field": [
+    {
+      "label": "folder-secret-value",
+      "aes_k_hex": "31eb070cde213b7071fbfe1de1d564a948dc2ac27c435883068dd3f1eb9e9314",
+      "row": "0b7e2f5a-9c41-4d3e-a6b2-7f8e9d0c1b2a",
+      "folder": "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a",
+      "kind": "secret",
+      "name": "FXV_FIXTURE_FOLDER",
+      "dek_version": 1,
+      "plain_hex": "4658565f464958545552455f464f4c4445525f56414c5545",
+      "nonce_hex": "d0d1d2d3d4d5d6d7d8d9dadb",
+      "aad_hex": "0000001066787661756c742f76312f6669656c640000000c666f6c6465725f6974656d730000000876616c75655f6374000000100b7e2f5a9c414d3ea6b27f8e9d0c1b2a000000103c2b1a098f7e4d6c9b5a4f3e2d1c0b9a0000000000000006736563726574000000124658565f464958545552455f464f4c44455200000001",
+      "blob_hex": "01d0d1d2d3d4d5d6d7d8d9dadb3bd41088da6a106e08f02673df6d1c14c0a255bfd2ccfe2bc039f4f22885d73492d375129a57df38"
+    },
+    {
+      "label": "folder-variable-v4",
+      "aes_k_hex": "31eb070cde213b7071fbfe1de1d564a948dc2ac27c435883068dd3f1eb9e9314",
+      "row": "0b7e2f5a-9c41-4d3e-a6b2-7f8e9d0c1b2a",
+      "folder": "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a",
+      "kind": "variable",
+      "name": "FXV_FIXTURE_FOLDER_VAR",
+      "dek_version": 4,
+      "plain_hex": "666f6c64657220e29c932076616c7565",
+      "nonce_hex": "e0e1e2e3e4e5e6e7e8e9eaeb",
+      "aad_hex": "0000001066787661756c742f76312f6669656c640000000c666f6c6465725f6974656d730000000876616c75655f6374000000100b7e2f5a9c414d3ea6b27f8e9d0c1b2a000000103c2b1a098f7e4d6c9b5a4f3e2d1c0b9a00000000000000087661726961626c65000000164658565f464958545552455f464f4c4445525f56415200000004",
+      "blob_hex": "01e0e1e2e3e4e5e6e7e8e9eaeb745cd6c4a971db67869b1f0258910a0f2f9f248ff55ab2d97962ee32c72a7846"
+    }
+  ],
   "wrap": {
     "password": {
       "text": "FXV fixture pässwörd ✓",

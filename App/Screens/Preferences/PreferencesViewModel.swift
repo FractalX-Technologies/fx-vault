@@ -51,6 +51,18 @@ final class PreferencesViewModel: LockObserving {
         app.phase
     }
 
+    /// The tab another window asked for (v0.7.0), or nil.
+    var requestedTab: Tab? {
+        app.requestedPreferencesTab
+    }
+
+    /// Shows the requested tab once.
+    func showRequestedTab() {
+        guard let tab = app.requestedPreferencesTab else { return }
+        selectedTab = tab
+        app.requestedPreferencesTab = nil
+    }
+
     /// True when the Security and Accounts tabs can be used.
     var isVaultSettingsAvailable: Bool {
         app.phase == .unlocked

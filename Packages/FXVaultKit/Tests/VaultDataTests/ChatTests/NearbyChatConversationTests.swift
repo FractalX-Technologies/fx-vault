@@ -345,6 +345,89 @@ extension NearbyChatConversationTests {
         return repository
     }
 
+    // MARK: - Folders (v0.7.0)
+
+    private func offerFolder(in parties: Parties) async throws -> (FolderID, ChatAttachmentOfferModel) {
+        let folder = try FolderSharingTests.mobileFolder(in: parties.world)
+        let offer = try await parties.sender.offerFolder(
+            folder,
+            senderName: ShareWorld.senderName,
+            appVersion: ShareWorld.appVersion,
+            authorization: parties.world.authorization(.nearbySend)
+        )
+        return (folder, offer)
+    }
+
+    @Test func aFolderIsSavedAsAFolderOrImportedIntoAScope() async throws {
+        let parties = try await parties()
+        defer { parties.world.folder.remove() }
+        try await verified(parties)
+        #expect(await parties.sender.acceptsFolderAttachments)
+
+        let (folder, offer) = try await offerFolder(in: parties)
+        #expect(offer.folderName == "Mobile App")
+        guard case .attachmentOffered(let card) = await parties.receiverEvents.first(where: { $0.isOffer || $0.isChatTerminal }),
+              case .folder(let summary) = card.content
+        else {
+            Issue.record("No folder offer")
+            return
+        }
+        #expect(summary.name == "Mobile App" && summary.secretCount == 1 && summary.variableCount == 1)
+        try await parties.receiver.requestAttachment(card.id)
+        guard case .attachmentReceived(let id, let forwarded) = await parties.receiverEvents.first(where: { $0.isReceived || $0.isChatTerminal }) else {
+            Issue.record("No payload")
+            return
+        }
+        #expect(forwarded.isFolder)
+        #expect(forwarded.flattenedItems.allSatisfy { $0.item.value == nil })
+
+        let saved = try await parties.receiver.saveFolderAttachment(id, as: .newFolder(name: "Mobile App"), conflicts: .keep)
+        #expect(saved.items == ItemCopyResultModel(added: 2))
+        #expect(await parties.receiver.receivedCount == 0)
+        let receiverFolders = FolderRepository(session: parties.world.receiver.session)
+        #expect(try receiverFolders.items(folderID: saved.folderID).map(\.name) == ["API_KEY", "API_URL"])
+        await #expect(throws: NearbyChatError.attachmentUnavailable) {
+            _ = try await parties.receiver.saveFolderAttachment(id, as: .existing(saved.folderID), conflicts: .keep)
+        }
+
+        // A second copy goes into the receiver's repository instead.
+        let second = try await parties.sender.offerFolder(
+            folder,
+            senderName: ShareWorld.senderName,
+            appVersion: ShareWorld.appVersion,
+            authorization: parties.world.authorization(.nearbySend)
+        )
+        _ = await parties.receiverEvents.first { $0.isOffer || $0.isChatTerminal }
+        try await parties.receiver.requestAttachment(second.id)
+        guard case .attachmentReceived(let secondID, _) = await parties.receiverEvents.first(where: { $0.isReceived || $0.isChatTerminal }) else {
+            Issue.record("No second payload")
+            return
+        }
+        let repository = try parties.world.receiver.repository()
+        let draft = try await parties.receiver.previewFolderAttachment(secondID, into: repository.id, scope: .repository, checkGitHub: false)
+        let result = try await parties.world.receiverSharing.apply(draft, plan: draft.plan, confirmReplay: true)
+        #expect(Set(result.added + result.overwritten + result.filled).isSuperset(of: ["API_KEY", "API_URL"]))
+        await parties.sender.close()
+    }
+
+    @Test func aFolderOfferIsWithdrawnWhenAValueChangedSince() async throws {
+        let parties = try await parties()
+        defer { parties.world.folder.remove() }
+        try await verified(parties)
+        let (folder, offer) = try await offerFolder(in: parties)
+        _ = await parties.receiverEvents.first { $0.isOffer || $0.isChatTerminal }
+
+        let folders = FolderRepository(session: parties.world.sender.session)
+        let item = try #require(try folders.items(folderID: folder).first)
+        try folders.editItem(item.id, name: item.name, kind: item.kind, value: SecretBytes(utf8: "edited-after-the-offer"))
+        try await parties.receiver.requestAttachment(offer.id)
+
+        #expect(await parties.receiverEvents.first { $0 == .attachmentDeclined(offer.id) || $0.isChatTerminal }
+            == .attachmentDeclined(offer.id))
+        #expect(await parties.receiver.receivedCount == 0)
+        await parties.sender.close()
+    }
+
     @Test func aWholeRepositoryIsImportedIntoAnotherRepositoryOfTheReceiver() async throws {
         let parties = try await parties()
         defer { parties.world.folder.remove() }

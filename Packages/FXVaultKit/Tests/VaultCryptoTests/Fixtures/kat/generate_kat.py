@@ -156,6 +156,26 @@ def main():
             "blob_hex": (b"\x01" + nonce + sealed).hex(),
         })
 
+    # --- Folder item values (v0.7.0): the §5.4 layout with the folder in the repository's
+    # place, no environment, and the table name folder_items. ---
+    folder = uuid.UUID("3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a")
+    folder_cases = [
+        ("folder-secret-value", row, folder, "secret", "FXV_FIXTURE_FOLDER", 1,
+         b"FXV_FIXTURE_FOLDER_VALUE", seq(0xD0, 12)),
+        ("folder-variable-v4", row, folder, "variable", "FXV_FIXTURE_FOLDER_VAR", 4,
+         "folder ✓ value".encode(), seq(0xE0, 12)),
+    ]
+    vectors["folder_field"] = []
+    for label, r, f, kind, name, ver, plain, nonce in folder_cases:
+        aad = field_aad("folder_items", "value_ct", r, f, None, kind, name, ver)
+        sealed = AESGCM(k_field).encrypt(nonce, plain, aad)
+        vectors["folder_field"].append({
+            "label": label, "aes_k_hex": k_field.hex(), "row": str(r), "folder": str(f),
+            "kind": kind, "name": name, "dek_version": ver, "plain_hex": plain.hex(),
+            "nonce_hex": nonce.hex(), "aad_hex": aad.hex(),
+            "blob_hex": (b"\x01" + nonce + sealed).hex(),
+        })
+
     # --- DEK wraps (§5.2): 62 bytes = fmt || aead || nonce || ct(32) || tag. ---
     pw_text = "FXV fixture pässwörd ✓"
     pw = unicodedata.normalize("NFC", pw_text).encode()

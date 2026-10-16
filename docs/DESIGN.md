@@ -343,14 +343,33 @@ foreground color, so `.primary` text still turns white on selected rows.
 - On macOS 26+ the sidebar's rows scroll under the traffic lights and the sidebar button with the
   system's soft scroll-edge effect, as in Finder; at rest they start below the title bar.
 
-- Teammates nearby (v0.5.0): `NearbyPresenceView` sits before the Sync pill: `avatarSize`
-  circles with initials (`monoLabel`, `surface2` fill, a 2 pt `ground` ring so overlapping
+- Folders (v0.7.0): the sidebar starts with FOLDERS (`SectionLabel` and a quiet `plus` for New
+  Folder…), one 32 pt row per folder (`folder` / `folder.fill` when selected, the name in
+  `.callout` ink, the item count in `monoLabel` subtle, `.fxRowBackground(style: .sidebar)`), or
+  a quiet "New Folder…" row when there is none. A selected folder fills column 2 with
+  `FolderOverviewView` (FOLDER, the folder as a selected scope row with its counts in
+  `.monoMeta`, then how its items reach repositories as a caption) and column 3 with the folder
+  header (FOLDER, the name in `.largeTitle`, a "Never on GitHub" tag, Share as File… outline and a
+  ••• menu) above the same Secrets / Variables pill, add actions and table as a repository, without
+  the Status column.
+- Teammates in the sidebar (v0.7.0): TEAMMATES is pinned above the footer behind a hairline:
+  the label with a visibility menu (an `eye`, `eye.slash` or waves symbol in `mutedText`), then one
+  row per paired teammate (`NearbyAvatar` with the `success` dot only while nearby, the name in
+  `.callout`, "Nearby" in `success` or "Seen 2 hr. ago" in `monoLabel` subtle, a `bell.slash` when
+  muted); nearby first. "Others nearby · N" lists people who are not teammates. With no teammate:
+  one caption and "Add Teammate…". The section scrolls past `sidebarTeammatesMaxHeight`.
+- The toolbar's people button (v0.7.0) replaced the avatar stack: `person.2` and the count in
+  `monoLabel` inside a hairline capsule (`avatarSize` high), ink when someone is nearby; its
+  popover lists the people nearby with Ping and Chat. A ping bounces it.
+- Teammates nearby (v0.5.0, the bubbles until v0.7.0): `NearbyPresenceView` sat before the Sync
+  pill: `avatarSize` circles with initials (`monoLabel`, `surface2` fill, a 2 pt `ground` ring so overlapping
   bubbles stay apart, `presenceOverlap`), a `success` dot for teammates, "+N" after
   `presenceMaxBubbles` (an outlined `surface` circle with its own list). A person scales in with
   the spring; a ping bounces the bubble (`phaseAnimator`). The ping outcome shows as a caption
   before the bubbles for 4 s. The popover (`presencePopoverWidth`): avatar, name in `.headline`,
   Mac name in `.monoMeta`, a Teammate (`.success`) or Nearby (`.neutral`) chip, a caption for
-  strangers, Ping (outline, "Ping (8 s)" while cooling down) and Chat (primary).
+  strangers, Ping (outline, "Ping (8 s)" while cooling down) and Chat (primary); since v0.7.0
+  a "Send Folder ▾" outline menu lists the folders that hold something.
 - Shared spaces (v0.6.0): a shared scope's row in the scopes column shows a `brand`
   `person.2` symbol (help: what it means); the detail header adds a `brand` `StatusChip`
   "Shared · v7" ("· publishing" while a claim is open) that opens the space sheet. When a
@@ -387,6 +406,15 @@ foreground color, so `.primary` text still turns white on selected rows.
   (`portFieldWidth`), then one row per teammate (name, "Sync shared scopes outside this network"
   or the last sync time, a switch) and, when on, a mono "Their address" `FXTextField`; the rules
   are the section footnote.
+- New Folder… and Rename… (v0.7.0) are a `ConfigEditorSheet` with one rounded name field and its
+  live note (invalid, or "Another folder already has this name").
+- A received folder (v0.7.0), in Import Share and in chat's Save a Folder: a `container` card with
+  the folder symbol, its name and counts, a `SegmentedPill` (Save as Folder / Import Into a
+  Repository), then the folder picker (New folder or one of the vault's) with the name field, or
+  "Names the folder already has" as a radio group (Keep mine / Replace with the received values);
+  or the repository and scope pickers (read-only scopes disabled with the reason). An info
+  `SheetCallout` says what happens next. After saving, a `success` callout ("Saved 2 items in
+  Mobile App.").
 - Copy to Another Repository (v0.4.1) is a `ConfigEditorSheet`: a rounded search field, then a
   `container` card (`Theme.Layout.copyTargetListHeight`) with `SectionLabel` account headers,
   repository rows (`.monoName`, chevron, `.fxRowBackground(style: .sidebar)` when chosen) and
@@ -538,7 +566,9 @@ FXV_SNAPSHOTS_DIR=$PWD/.build-snapshots TEST_RUNNER_FXV_SNAPSHOTS_DIR=$PWD/.buil
 
 Each screen gives `<name>-<light|dark>.window.png` (an offscreen window): the review set is these
 window captures (9 screens × 2 appearances = 18 files; v0.6.0 adds `space-share`,
-`space-history`, `space-members`, `sync-summary-space` and `settings-teammates-remote`). SwiftUI `ImageRenderer` is not used: it
+`space-history`, `space-members`, `sync-summary-space` and `settings-teammates-remote`; v0.7.0
+adds `main-folder`, `main-folder-variables`, `main-sidebar-teammates`, `presence-popover-folder`,
+`folder-destination` and `folder-destination-new`). SwiftUI `ImageRenderer` is not used: it
 cannot draw AppKit-backed views (`ScrollView`, `List`, `Table`, text fields, toggles, the split
 view), which came out blank or as placeholders. A window capture cannot draw the macOS 26+ glass
 sidebar, so the sidebar also has its own snapshot (`main-sidebar`).

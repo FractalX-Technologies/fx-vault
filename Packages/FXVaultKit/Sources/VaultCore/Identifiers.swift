@@ -97,6 +97,8 @@ public typealias SyncRunID = Identifier<SyncRunTag>
 public typealias ItemLinkID = Identifier<ItemLinkTag>
 /// A shared space: one scope of one repository shared by teammates (v0.6.0).
 public typealias SpaceID = Identifier<SpaceTag>
+/// Primary key of a `folders` row: a folder of secrets and variables (v0.7.0).
+public typealias FolderID = Identifier<FolderModel>
 
 /// Phantom tag for ``SyncRunID``.
 public enum SyncRunTag {}

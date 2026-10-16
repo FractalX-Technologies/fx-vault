@@ -41,6 +41,8 @@ struct VaultDataComponents {
     /// Shared spaces (v0.6.0): the versioned scopes teammates keep in sync. ``sync`` gates and
     /// publishes through it.
     let spaces: SpaceRepository
+    /// Folders of secrets and variables (v0.7.0).
+    let folders: FolderRepository
 
     /// Builds every repository over `session`.
     ///
@@ -116,7 +118,8 @@ struct VaultDataComponents {
             sharing: sharing,
             chat: ChatRepository(session: session, sharing: sharing, clock: clock),
             team: TeamRepository(session: session, clock: clock),
-            spaces: spaces
+            spaces: spaces,
+            folders: FolderRepository(session: session, clock: clock)
         )
     }
 

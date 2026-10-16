@@ -258,7 +258,7 @@ private struct ItemEditorForm: View {
                 FXCheckboxRow(
                     title: String(
                         localized: "itemEditor.linked.row",
-                        defaultValue: "\(copy.repositoryFullName) · \(copy.placeDetail(itemName: viewModel.item?.name ?? "")) (\(copy.comparison.title))"
+                        defaultValue: "\(copy.placeName) · \(copy.placeDetail(itemName: viewModel.item?.name ?? "")) (\(copy.comparison.title))"
                     ),
                     isOn: Binding(
                         get: { viewModel.linkedSelection.contains(copy.itemID) && copy.isEditable },

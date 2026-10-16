@@ -83,6 +83,12 @@ struct VaultCommands: Commands {
             .keyboardShortcut("n", modifiers: .command)
             .disabled(main?.canCreateRepository != true)
 
+            Button(FolderCopy.newFolder) {
+                main?.newFolder()
+            }
+            .keyboardShortcut("n", modifiers: [.shift, .command])
+            .disabled(viewModel.phase != .unlocked || main == nil)
+
             Button(String(localized: "menu.file.importEnv", defaultValue: "Import .env…")) {
                 main?.importEnv()
             }

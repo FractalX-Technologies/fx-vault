@@ -9,9 +9,11 @@ struct ShareContentSummaryView: View {
     let preview: ShareExportPreviewModel
 
     var body: some View {
-        let lines = ShareSummaryLineModel.lines(for: preview.summary)
+        let lines = ShareSummaryLineModel.lines(for: preview.summary, isFolder: preview.folderName != nil)
         VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            Text(String(
+            Text(preview.folderName.map {
+                String(localized: "share.summary.folderTitle", defaultValue: "Folder \($0)")
+            } ?? String(
                 localized: "share.summary.title",
                 defaultValue: "From \(preview.repositoryFullName)"
             ))
@@ -81,13 +83,16 @@ struct ShareSummaryLineModel: Identifiable, Equatable {
         environmentName.map { "environment/\($0)" } ?? "repository"
     }
 
-    /// The repository level (when it has items), then every environment.
-    static func lines(for summary: ShareContentSummaryModel) -> [ShareSummaryLineModel] {
+    /// The repository level (when it has items), then every environment; a folder (v0.7.0) is
+    /// one line.
+    static func lines(for summary: ShareContentSummaryModel, isFolder: Bool = false) -> [ShareSummaryLineModel] {
         var lines: [ShareSummaryLineModel] = []
         if summary.repositoryLevel.total > 0 {
             lines.append(ShareSummaryLineModel(
                 environmentName: nil,
-                scope: String(localized: "share.summary.repositoryLevel", defaultValue: "Repository level"),
+                scope: isFolder
+                    ? String(localized: "share.summary.folderLevel", defaultValue: "Folder")
+                    : String(localized: "share.summary.repositoryLevel", defaultValue: "Repository level"),
                 counts: counts(summary.repositoryLevel),
                 policy: nil
             ))

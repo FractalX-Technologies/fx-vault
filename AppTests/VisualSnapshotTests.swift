@@ -157,6 +157,81 @@ struct VisualSnapshotTests {
         withExtendedLifetime((ben, network)) {}
     }
 
+    // MARK: - Folders and teammates in the sidebar (v0.7.0)
+
+    /// "Mobile App" with a copied secret, a linked copy and a variable, selected.
+    @Test func mainWindowFolder() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let folderID = try MainSnapshotFixture.mobileFolder(harness, main)
+        main.sidebar.selectedFolderID = folderID
+        let folder = try #require(main.folderDetail)
+        #expect(await TestFixtures.eventually { folder.items.count == 3 })
+        try await SnapshotOutput.write("main-folder", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        folder.kind = .variable
+        try await SnapshotOutput.write("main-folder-variables", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
+    /// The sidebar with FOLDERS on top and TEAMMATES pinned at the bottom (one nearby, one not).
+    @Test func sidebarFoldersAndTeammates() async throws {
+        let (network, ana, ben) = try await TeamPresenceTests.pairedMacs()
+        let cleo = TeamDeviceKeys.generate().card(login: "cleo-b", displayName: "Cleo", macName: "Cleo's MacBook Pro")
+        try ana.harness.data.team.addTeammate(cleo)
+        try ana.harness.data.team.setMuted(true, teammate: cleo.deviceID.hex)
+        let folders = ana.harness.data.folders
+        let mobile = try folders.createFolder(named: "Mobile App")
+        try folders.addItem(folderID: mobile, kind: .secret, name: "FIREBASE_API_KEY", value: SecretBytes(utf8: "FXV_SNAPSHOT_FIREBASE"))
+        try folders.createFolder(named: "Stripe test")
+        let main = ana.harness.app.makeMainViewModel()
+        #expect(await TestFixtures.eventually { main.sidebar.folders.count == 2 && main.sidebar.teammates.count == 2 })
+        #expect(await TestFixtures.eventually { ana.person("Ben") != nil })
+        main.sidebar.selectedFolderID = mobile
+        try await SnapshotOutput.write(
+            "main-sidebar-teammates",
+            size: CGSize(width: Theme.Layout.sidebarIdealWidth, height: Theme.Layout.windowDefaultHeight)
+        ) {
+            SidebarView(main: main)
+                .background(Theme.Colors.surface)
+        }
+        let person = try #require(ana.person("Ben"))
+        try await SnapshotOutput.write("presence-popover-folder", size: CGSize(width: Theme.Layout.presencePopoverWidth, height: 150)) {
+            NearbyPersonPopover(person: person, presence: ana.presence, folders: main.sidebar.folders)
+                .background(Theme.Colors.card)
+        }
+        withExtendedLifetime((ben, network)) {}
+    }
+
+    /// A received copy of a folder: Save as Folder into the folder of the same name.
+    @Test func folderDestination() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: nil)
+        try harness.data.folders.createFolder(named: "Mobile App")
+        let manifest = SharePackageModel.folder(
+            named: "Mobile App",
+            secrets: [ShareItemModel(name: "FIREBASE_API_KEY", value: nil, valueState: .present, githubUpdatedAt: nil, syncState: .pending)],
+            variables: [ShareItemModel(name: "API_URL", value: nil, valueState: .present, githubUpdatedAt: nil, syncState: .pending)],
+            createdAt: harness.container.clock.now,
+            producer: ShareProducerModel(version: "0.7.0"),
+            sender: ShareSenderModel(displayName: "Ben")
+        )
+        let model = FolderDestinationModel(manifest: manifest, dependencies: harness.dependencies(recorder: ActionRecorder(), isGitHubReady: false))
+        try await SnapshotOutput.write("folder-destination", size: CGSize(width: Theme.Layout.shareSheetWidth, height: 420)) {
+            FolderDestinationView(model: model)
+                .padding(Theme.Spacing.xLarge)
+                .background(Theme.Colors.ground)
+        }
+        model.folderChoice = .new
+        model.newFolderName = "Mobile App"
+        try await SnapshotOutput.write("folder-destination-new", size: CGSize(width: Theme.Layout.shareSheetWidth, height: 420)) {
+            FolderDestinationView(model: model)
+                .padding(Theme.Spacing.xLarge)
+                .background(Theme.Colors.ground)
+        }
+    }
+
     @Test func teammatesSettings() async throws {
         let (network, ana, ben) = try await TeamPresenceTests.pairedMacs()
         let cleo = TeamDeviceKeys.generate().card(login: "cleo-b", displayName: "Cleo", macName: "Cleo's MacBook Pro")
@@ -565,6 +640,19 @@ enum MainSnapshotFixture {
 
     /// Copies DATABASE_URL (production) to the repository level and to staging, then changes the
     /// staging copy: three linked places, one of them with another value.
+    /// "Mobile App": DATABASE_URL copied from production (a linked copy), a secret and a
+    /// variable of its own.
+    static func mobileFolder(_ harness: TestHarness, _ main: MainViewModel) throws -> FolderID {
+        let folders = harness.data.folders
+        let id = try folders.createFolder(named: "Mobile App")
+        let detail = try #require(main.detail)
+        let row = try #require(detail.rows.first { $0.name == "DATABASE_URL" })
+        try folders.copyItems([row.id], to: id, conflicts: .keep)
+        try folders.addItem(folderID: id, kind: .secret, name: "FIREBASE_API_KEY", value: SecretBytes(utf8: "FXV_SNAPSHOT_FIREBASE"))
+        try folders.addItem(folderID: id, kind: .variable, name: "API_URL", value: SecretBytes(utf8: "https://api.example.invalid"))
+        return id
+    }
+
     static func linkDatabaseURL(_ harness: TestHarness, _ detail: RepoDetailViewModel) throws {
         let config = harness.data.config
         let row = try #require(detail.rows.first { $0.name == "DATABASE_URL" })

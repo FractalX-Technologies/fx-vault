@@ -20,11 +20,14 @@ struct SidebarView: View {
                 RecoveryKeyReminderView()
                     .padding([.horizontal, .top], Theme.Spacing.medium)
             }
-            if sections.isEmpty {
-                emptyState
-            } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+                    SidebarFoldersSection(main: main)
+                        .padding(.bottom, Theme.Spacing.large)
+                    if sections.isEmpty {
+                        emptyState
+                            .padding(.top, Theme.Spacing.xLarge)
+                    } else {
                         SectionLabel(String(localized: "main.sidebar.accounts", defaultValue: "Accounts"))
                             .padding(.horizontal, Theme.Spacing.small)
                             .padding(.bottom, Theme.Spacing.small)
@@ -32,15 +35,18 @@ struct SidebarView: View {
                             accountSection(account)
                         }
                     }
-                    .padding(.horizontal, Theme.Spacing.medium)
-                    .padding(.vertical, Theme.Spacing.largePlus)
                 }
-                .mainColumnKeyboardSelection(
-                    ids: visibleRepoIDs(in: sections),
-                    selection: $sidebar.selectedRowID,
-                    isFocused: $isListFocused
-                )
+                .padding(.horizontal, Theme.Spacing.medium)
+                .padding(.vertical, Theme.Spacing.largePlus)
             }
+            .mainColumnKeyboardSelection(
+                ids: visibleRepoIDs(in: sections),
+                selection: $sidebar.selectedRowID,
+                isFocused: $isListFocused
+            )
+            HairlineDivider()
+                .padding(.horizontal, Theme.Spacing.medium)
+            SidebarTeammatesSection(main: main)
             SidebarFooter(sidebar: sidebar, autoLockMinutes: main.app.container.preferences.autoLockMinutes)
         }
         .background(Theme.Colors.surface)
@@ -60,6 +66,25 @@ struct SidebarView: View {
                 defaultValue: "\(repo.fullName) and its local secrets, variables and pending changes are deleted from this Mac. Nothing changes on GitHub."
             ))
         }
+        .confirmationDialog(
+            FolderCopy.deleteTitle(sidebar.pendingFolderDeletion?.name ?? ""),
+            isPresented: folderDeletionBinding,
+            titleVisibility: .visible,
+            presenting: sidebar.pendingFolderDeletion
+        ) { _ in
+            Button(FolderCopy.deleteConfirm, role: .destructive) {
+                sidebar.confirmFolderDeletion()
+            }
+        } message: { _ in
+            Text(FolderCopy.deleteMessage)
+        }
+    }
+
+    private var folderDeletionBinding: Binding<Bool> {
+        Binding(
+            get: { main.sidebar.pendingFolderDeletion != nil },
+            set: { if !$0 { main.sidebar.pendingFolderDeletion = nil } }
+        )
     }
 
     /// One account: its row, the catalog error, the owner groups and "Add repository by name…".

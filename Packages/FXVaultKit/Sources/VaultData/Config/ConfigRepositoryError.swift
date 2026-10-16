@@ -13,6 +13,10 @@ public enum ConfigRepositoryError: Error, Sendable, Hashable {
     case environmentNotFound
     /// No item with that id.
     case itemNotFound
+    /// No folder with that id (v0.7.0).
+    case folderNotFound
+    /// The folder already holds `limit` secrets and variables (v0.7.0).
+    case folderFull(limit: Int)
     /// The environment is deleted (a tombstone pending deletion on GitHub): revert it first.
     case environmentDeleted
     /// The viewer cannot change this scope (§2 Permissions, `RepoCapabilityModel`).

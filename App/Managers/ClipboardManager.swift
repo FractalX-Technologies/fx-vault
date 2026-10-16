@@ -7,8 +7,8 @@ import VaultCore
 struct CopiedItemsModel: Hashable {
     let ids: [ConfigItemID]
     let names: [String]
-    let sourceRepositoryID: RepoID
-    let sourceScope: ConfigScope
+    /// The scope or folder (v0.7.0) they were copied from.
+    let source: ItemPlaceModel
 }
 
 /// Copies values to the pasteboard and clears them again (§5.9, D17).

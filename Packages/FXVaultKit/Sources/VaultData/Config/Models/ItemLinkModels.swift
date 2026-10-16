@@ -12,44 +12,42 @@ public enum LinkedValueComparison: Sendable, Hashable {
     case unknown
 }
 
-/// Another place of a linked item (v0.4.1): one row of the Linked chip's popover and of the
-/// "Also update linked copies" list.
+/// Where a linked copy is (v0.7.0): a scope of a vault repository, or a folder.
+public enum LinkedCopyPlaceModel: Sendable, Hashable {
+    case scope(
+        repositoryID: RepoID,
+        accountLogin: String,
+        repositoryFullName: String,
+        scope: ConfigScope,
+        environmentName: String?
+    )
+    case folder(FolderID, name: String)
+}
+
+/// Another place of a linked item (v0.4.1; folders since v0.7.0): one row of the Linked chip's
+/// popover and of the "Also update linked copies" list.
 public struct LinkedCopyModel: Sendable, Hashable, Identifiable {
     public var itemID: ConfigItemID
-    public var repositoryID: RepoID
-    /// The gh account the repository belongs to.
-    public var accountLogin: String
-    /// `owner/name`.
-    public var repositoryFullName: String
-    public var scope: ConfigScope
-    /// The environment's name; nil at repository level.
-    public var environmentName: String?
+    public var place: LinkedCopyPlaceModel
     public var kind: ConfigKind
     public var name: String
     public var comparison: LinkedValueComparison
-    public var syncStatus: ConfigSyncStatus
+    /// The copy's sync status; nil for a folder item (a folder never syncs).
+    public var syncStatus: ConfigSyncStatus?
     /// Why this copy cannot be changed (`.readOnly`, `.environmentDeleted`), or nil.
     public var editBlock: ConfigRepositoryError?
 
     public init(
         itemID: ConfigItemID,
-        repositoryID: RepoID,
-        accountLogin: String,
-        repositoryFullName: String,
-        scope: ConfigScope,
-        environmentName: String?,
+        place: LinkedCopyPlaceModel,
         kind: ConfigKind,
         name: String,
         comparison: LinkedValueComparison,
-        syncStatus: ConfigSyncStatus,
+        syncStatus: ConfigSyncStatus?,
         editBlock: ConfigRepositoryError?
     ) {
         self.itemID = itemID
-        self.repositoryID = repositoryID
-        self.accountLogin = accountLogin
-        self.repositoryFullName = repositoryFullName
-        self.scope = scope
-        self.environmentName = environmentName
+        self.place = place
         self.kind = kind
         self.name = name
         self.comparison = comparison
@@ -64,5 +62,21 @@ public struct LinkedCopyModel: Sendable, Hashable, Identifiable {
     /// True when this copy can take a new value.
     public var isEditable: Bool {
         editBlock == nil
+    }
+
+    /// `owner/name`, or the folder's name.
+    public var placeName: String {
+        switch place {
+        case .scope(_, _, let fullName, _, _): fullName
+        case .folder(_, let name): name
+        }
+    }
+
+    /// The place to open.
+    public var itemPlace: ItemPlaceModel {
+        switch place {
+        case .scope(let repositoryID, _, _, let scope, _): .scope(repositoryID: repositoryID, scope: scope)
+        case .folder(let id, _): .folder(id)
+        }
     }
 }

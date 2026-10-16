@@ -84,6 +84,9 @@ final class AppViewModel {
     private(set) var chatStartRequests = 0
     /// True while the Nearby Chat window advertises this Mac (Everyone nearby yields to it).
     private(set) var isChatWindowAdvertising = false
+    /// A Settings tab another window asked for (the sidebar's Add Teammate…, v0.7.0); the
+    /// Settings window shows it and clears it.
+    var requestedPreferencesTab: PreferencesViewModel.Tab?
     /// The gh login this Mac's teammate card names (the first account gh lists), or empty.
     @ObservationIgnored private(set) var primaryLogin = ""
     /// Teammates nearby: presence, bubbles and pings (v0.5.0).
@@ -535,6 +538,16 @@ final class AppViewModel {
 
     func makeRecoveryResetViewModel() -> RecoveryResetViewModel {
         RecoveryResetViewModel(app: self)
+    }
+
+    /// Who can see this Mac nearby (Preferences › Teammates and the sidebar's TEAMMATES menu):
+    /// saved, and presence restarts with it while unlocked.
+    func setNearbyVisibility(_ visibility: NearbyVisibility) {
+        guard visibility != container.preferences.nearbyVisibility else { return }
+        container.preferences.nearbyVisibility = visibility
+        if phase == .unlocked {
+            teamPresence.start()
+        }
     }
 
     func makePreferencesViewModel() -> PreferencesViewModel {

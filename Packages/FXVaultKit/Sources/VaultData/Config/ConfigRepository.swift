@@ -258,7 +258,8 @@ public struct ConfigRepository: Sendable {
 
     /// The names among `ids` that `scope` of `repositoryID` already holds (same kind, not
     /// deleted): the copy asks whether to replace or keep those items. The sources may belong to
-    /// any repository; deleted and missing ids, and items already in that scope, are ignored here.
+    /// any repository or folder (v0.7.0); deleted and missing ids, and items already in that
+    /// scope, are ignored here.
     public func copyConflicts(
         _ ids: [ConfigItemID],
         to scope: ConfigScope,
@@ -267,10 +268,11 @@ public struct ConfigRepository: Sendable {
         try performConfig {
             let targets = try store.fetchItemRecords(repositoryID: repositoryID, scope: scope).filter { !$0.isDeleted }
             let taken = Set(targets.map { TargetKey(kind: $0.kind, name: GitHubNameValidator.foldKey($0.name)) })
+            let place = ItemPlaceModel.scope(repositoryID: repositoryID, scope: scope)
             return try ids.compactMap { id in
-                guard let source = try store.fetchItemRecord(id: id),
+                guard let source = try ItemCopySource.load(id, database: session.database),
                       !source.isDeleted,
-                      !Self.isInPlace(source, scope: scope, repositoryID: repositoryID),
+                      !source.isIn(place),
                       taken.contains(TargetKey(kind: source.kind, name: GitHubNameValidator.foldKey(source.name)))
                 else { return nil }
                 return source.name
@@ -279,8 +281,8 @@ public struct ConfigRepository: Sendable {
     }
 
     /// Copies items into `scope` of `repositoryID` in one transaction. The sources may be in any
-    /// scope of any repository in the vault (v0.4.1), whatever account it belongs to; the target
-    /// must be editable by its own repository's account. Each item becomes a pending add there
+    /// scope of any repository in the vault (v0.4.1), whatever account it belongs to, or in a
+    /// folder (v0.7.0); the target must be editable by its own repository's account. Each item becomes a pending add there
     /// with its value encrypted for its new row, or, when the target already has the name,
     /// replaces that item's value or keeps it (`conflicts`).
     ///
@@ -306,12 +308,13 @@ public struct ConfigRepository: Sendable {
             )
             try batch.requireEditable(scope)
             var result = ItemCopyResultModel()
+            let place = ItemPlaceModel.scope(repositoryID: repositoryID, scope: scope)
             for id in ids {
-                guard let source = try store.fetchItemRecord(id: id, in: tx), !source.isDeleted else {
+                guard let source = try ItemCopySource.load(id, database: session.database, in: tx), !source.isDeleted else {
                     throw ConfigRepositoryError.itemNotFound
                 }
-                guard !Self.isInPlace(source, scope: scope, repositoryID: repositoryID) else { continue }
-                guard let value = try ConfigFieldCipher.openValue(of: source, keys: keys) else {
+                guard !source.isIn(place) else { continue }
+                guard let value = try source.openValue(keys: keys) else {
                     result.withoutValue.append(source.name)
                     continue
                 }
@@ -331,8 +334,7 @@ public struct ConfigRepository: Sendable {
                     copyID = try batch.add(scope: scope, kind: source.kind, name: source.name, value: value)
                     result.added += 1
                 }
-                let link = source.linkID ?? ItemLinkID()
-                try store.setLinkID(link, itemIDs: source.linkID == nil ? [source.id, copyID] : [copyID], in: tx)
+                try source.link(copy: copyID, database: session.database, in: tx)
             }
             return result
         }
@@ -340,13 +342,8 @@ public struct ConfigRepository: Sendable {
         return result
     }
 
-    /// True when `record` already is in `scope` of `repositoryID` (nothing to copy).
-    private static func isInPlace(_ record: ConfigItemRecord, scope: ConfigScope, repositoryID: RepoID) -> Bool {
-        record.repositoryID == repositoryID && record.scope == scope
-    }
-
     /// The kind and folded name a copy target is matched on.
-    private struct TargetKey: Hashable {
+    struct TargetKey: Hashable {
         let kind: ConfigKind
         let name: String
     }
@@ -388,17 +385,17 @@ public struct ConfigRepository: Sendable {
         Self.log.info("Discarded local changes of one repository")
     }
 
-    /// The decrypted local value of an item, for Reveal, Copy and Edit (§5.12). The caller
-    /// wipes it.
+    /// The decrypted local value of a repository or folder item (v0.7.0), for Reveal, Copy and
+    /// Edit (§5.12). The caller wipes it.
     ///
     /// - Throws: `.valueMissing` for a value-missing secret (§7.8), `.itemNotFound`, `.vault`.
     public func reveal(_ id: ConfigItemID) throws(ConfigRepositoryError) -> SecretBytes {
         try performConfig {
             try session.read { keys, tx in
-                guard let record = try store.fetchItemRecord(id: id, in: tx) else {
+                guard let source = try ItemCopySource.load(id, database: session.database, in: tx) else {
                     throw ConfigRepositoryError.itemNotFound
                 }
-                guard let value = try ConfigFieldCipher.openValue(of: record, keys: keys) else {
+                guard let value = try source.openValue(keys: keys) else {
                     throw ConfigRepositoryError.valueMissing
                 }
                 return value

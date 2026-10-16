@@ -140,17 +140,22 @@ struct ConfigLinkedCopyTests {
 
         let copies = try harness.config.linkedCopies(of: source)
 
-        #expect(copies.map(\.repositoryFullName) == ["owner-a/repo-a", "owner-a/repo-b"])
+        #expect(copies.map(\.placeName) == ["owner-a/repo-a", "owner-a/repo-b"])
         let inStaging = try #require(copies.first)
-        #expect(inStaging.environmentName == "staging")
-        #expect(inStaging.scope == .environment(staging))
+        #expect(inStaging.place == .scope(
+            repositoryID: repoA.id,
+            accountLogin: ConfigFixture.login,
+            repositoryFullName: "owner-a/repo-a",
+            scope: .environment(staging),
+            environmentName: "staging"
+        ))
+        #expect(inStaging.itemPlace == .scope(repositoryID: repoA.id, scope: .environment(staging)))
         #expect(inStaging.comparison == .same)
-        #expect(inStaging.accountLogin == ConfigFixture.login)
         #expect(inStaging.syncStatus == .added)
         #expect(inStaging.isEditable)
         let other = try #require(copies.last)
         #expect(other.itemID == inB.id)
-        #expect(other.environmentName == nil)
+        #expect(other.itemPlace == .scope(repositoryID: repoB.id, scope: .repository))
         #expect(other.comparison == .differs)
         #expect(try harness.config.linkedCopies(of: inB.id).map(\.comparison) == [.differs, .differs])
     }

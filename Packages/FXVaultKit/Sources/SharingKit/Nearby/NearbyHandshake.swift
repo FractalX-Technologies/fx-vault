@@ -170,6 +170,8 @@ public struct NearbyHandshake: Sendable {
         try requirePhase(.readyForManifest)
         let manifest = package.manifest()
         try SharePackageValidator.validate(manifest, mode: .manifest)
+        // A folder travels in Nearby Chat or a file, never in a nearby share (v0.7.0).
+        guard !manifest.isFolder else { throw .invalidPackage(.scopeMismatch(.folder)) }
         let json = try SharePackageCoder.encode(manifest)
         defer { json.wipe() }
         guard json.count <= Limits.maxNearbyPayloadBytes else { throw .payloadTooLarge }
@@ -390,6 +392,7 @@ public struct NearbyHandshake: Sendable {
         } catch {
             throw NearbyFailure(Self.abortReason(for: error))
         }
+        guard !received.isFolder else { throw NearbyFailure(.invalidPackage(.scopeMismatch(.folder))) }
         manifest = received
         buffer = Data()
         phase = .reviewingManifest

@@ -4,8 +4,8 @@ import Observation
 import VaultCore
 import VaultData
 
-/// Column 1 (§10): accounts, owner groups and repositories, with search, Import, Clone, Remove
-/// from vault and Add repository by name.
+/// Column 1 (§10): the folders (v0.7.0), then accounts, owner groups and repositories, with
+/// search, Import, Clone, Remove from vault and Add repository by name.
 ///
 /// - Vault repositories are observed (`ConfigRepository.observeRepositories()`), so imports,
 ///   removals and created repositories appear at once and work without gh.
@@ -16,11 +16,29 @@ final class SidebarViewModel {
     var searchText = ""
     var selectedRowID: SidebarRepoModel.ID? {
         didSet {
-            if selectedRowID != oldValue {
-                onChange?()
+            guard selectedRowID != oldValue else { return }
+            if selectedRowID != nil, selectedFolderID != nil {
+                selectedFolderID = nil
             }
+            onChange?()
         }
     }
+    /// The folders (v0.7.0), in the user's order.
+    private(set) var folders: [FolderModel] = []
+    /// The selected folder: selecting one clears the repository selection, and back.
+    var selectedFolderID: FolderID? {
+        didSet {
+            guard selectedFolderID != oldValue else { return }
+            if selectedFolderID != nil, selectedRowID != nil {
+                selectedRowID = nil
+            }
+            onChange?()
+        }
+    }
+    /// The folder waiting for the "Delete the folder?" confirmation.
+    var pendingFolderDeletion: FolderModel?
+    /// The paired teammates (v0.7.0, the TEAMMATES section), whether nearby or not.
+    private(set) var teammates: [TeammateModel] = []
     private(set) var input = SidebarInputModel()
     private(set) var isLoadingCatalog = false
     /// Why accounts could not be listed at all; nil when they were (or gh is not ready).
@@ -46,6 +64,21 @@ final class SidebarViewModel {
     init(app: AppViewModel) {
         self.app = app
         observeVault()
+        observeFolders()
+        observeTeammates()
+    }
+
+    private func observeTeammates() {
+        let stream = data.team.observeTeammates()
+        tasks.set("teammates", Task { [weak self] in
+            do {
+                for try await teammates in stream {
+                    self?.teammates = teammates
+                }
+            } catch {
+                AppLog.ui.error("Teammate observation ended")
+            }
+        })
     }
 
     private var data: VaultDataComponents {
@@ -108,6 +141,71 @@ final class SidebarViewModel {
 
     func isBusy(_ repo: SidebarRepoModel) -> Bool {
         busyRepoKeys.contains(repo.repoKey)
+    }
+
+    // MARK: - Folders (v0.7.0)
+
+    /// The folders whose name matches the search.
+    var visibleFolders: [FolderModel] {
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return folders }
+        return folders.filter { $0.name.localizedCaseInsensitiveContains(query) }
+    }
+
+    func folder(_ id: FolderID) -> FolderModel? {
+        folders.first { $0.id == id }
+    }
+
+    var selectedFolder: FolderModel? {
+        selectedFolderID.flatMap(folder)
+    }
+
+    /// Selects a folder (a linked copy's place, a new folder). Clears the search.
+    func select(folderID id: FolderID) {
+        searchText = ""
+        selectedFolderID = id
+    }
+
+    /// "Delete Folder": removes it with its items; copies in repositories stay.
+    func confirmFolderDeletion() {
+        guard let folder = pendingFolderDeletion else { return }
+        pendingFolderDeletion = nil
+        do {
+            try data.folders.deleteFolder(folder.id)
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    /// Puts `moved` right before `target` (a folder dragged onto another one).
+    func moveFolder(_ moved: FolderID, before target: FolderID) {
+        var order = folders.map(\.id)
+        guard moved != target, let from = order.firstIndex(of: moved) else { return }
+        order.remove(at: from)
+        guard let to = order.firstIndex(of: target) else { return }
+        order.insert(moved, at: to)
+        do {
+            try data.folders.reorderFolders(order)
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    private func observeFolders() {
+        let stream = data.folders.observeFolders()
+        tasks.set("folders", Task { [weak self] in
+            do {
+                for try await folders in stream {
+                    guard let self else { return }
+                    self.folders = folders
+                    if let id = selectedFolderID, !folders.contains(where: { $0.id == id }) {
+                        selectedFolderID = nil
+                    }
+                }
+            } catch {
+                AppLog.ui.error("Folder observation ended")
+            }
+        })
     }
 
     // MARK: - Loading

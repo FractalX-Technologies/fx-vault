@@ -172,7 +172,14 @@ final class ShareExportViewModel: LockObserving {
     }
 
     var selection: ShareSelectionModel? {
-        tree?.selection
+        if let folderSelection { return folderSelection }
+        return tree?.selection
+    }
+
+    /// A folder (v0.7.0) is shared whole: no scope tree.
+    private var folderSelection: ShareSelectionModel? {
+        guard case .vault(let context) = source, case .folder = context.selection else { return nil }
+        return context.selection
     }
 
     var canCreate: Bool {
@@ -331,6 +338,10 @@ final class ShareExportViewModel: LockObserving {
     // MARK: - Loading
 
     private func loadTree() async {
+        if folderSelection != nil {
+            await refreshPreview()
+            return
+        }
         switch source {
         case .vault(let context):
             isLoadingTree = true

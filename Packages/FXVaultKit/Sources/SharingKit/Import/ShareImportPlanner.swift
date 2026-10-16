@@ -30,6 +30,8 @@ public enum ShareImportPlanner {
         fingerprint: @escaping ShareFingerprinter
     ) throws(ShareError) -> ShareImportPlanModel {
         try SharePackageValidator.validate(package, mode: mode)
+        // A folder is planned only once retargeted at a repository (`intoRepository`, v0.7.0).
+        guard !package.isFolder else { throw .invalidPackage(.scopeMismatch(.folder)) }
         let senderName = package.sender.displayName.isEmpty ? nil : package.sender.displayName
         let origin = ShareOriginModel(packageID: package.packageID, senderName: senderName)
         let blockReason = blockReason(for: package.repository, local: local.repository)

@@ -597,6 +597,7 @@ public final class VaultManager: Sendable {
             """
             DEK rotated to version \(newKeys.dekVersion, privacy: .public): \
             \(report.values, privacy: .public) values, \(report.syncedValues, privacy: .public) synced values, \
+            \(report.folderValues, privacy: .public) folder values, \
             \(report.syncedFingerprintsCleared, privacy: .public) synced fingerprints cleared
             """
         )

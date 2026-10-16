@@ -143,6 +143,12 @@ public actor NearbyChatSession {
         machine.acceptsConfigurationAttachments
     }
 
+    /// True once both Macs speak chat v4 or later (v0.7.0): a folder can be offered with
+    /// ``offerConfiguration(manifest:payloadProvider:)``. False with a 0.6 or older peer.
+    public var acceptsFolderAttachments: Bool {
+        machine.acceptsFolderAttachments
+    }
+
     /// Offers a whole repository or environment (v0.4.0; `manifest`: scope `repository` or
     /// `environment`; values are stripped). Only names and counts travel now.
     /// `payloadProvider` runs only if the peer requests it and must return the offered manifest

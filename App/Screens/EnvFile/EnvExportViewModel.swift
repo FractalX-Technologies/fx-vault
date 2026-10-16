@@ -66,8 +66,8 @@ enum EnvExportDefaultAction: Equatable {
 /// decrypts: values exist only inside the repository during the write.
 @Observable
 final class EnvExportViewModel: LockObserving {
-    let repositoryID: RepoID
-    let scope: ConfigScope
+    /// The scope or folder (v0.7.0) being exported.
+    let place: ItemPlaceModel
     private(set) var step: EnvExportStep = .authenticate
     /// The master password field (cleared after every attempt and on lock).
     var password = ""
@@ -92,6 +92,7 @@ final class EnvExportViewModel: LockObserving {
     @ObservationIgnored private var authorization: EnvExportAuthorizationModel?
     @ObservationIgnored private let envFiles: EnvFileRepository
     @ObservationIgnored private let config: ConfigRepository
+    @ObservationIgnored private let folders: FolderRepository
     @ObservationIgnored private let reauth: ReauthGate
     @ObservationIgnored private let session: VaultSession
     @ObservationIgnored private let tasks = TaskBag()
@@ -107,10 +108,10 @@ final class EnvExportViewModel: LockObserving {
         envFiles: EnvFileRepository,
         touchIDStatus: BiometricUnlockStatus?
     ) {
-        repositoryID = context.repositoryID
-        scope = context.scope
+        place = context.place
         self.envFiles = envFiles
         config = dependencies.config
+        folders = dependencies.folders
         reauth = dependencies.reauth
         session = dependencies.session
         self.touchIDStatus = touchIDStatus
@@ -324,14 +325,12 @@ final class EnvExportViewModel: LockObserving {
         isWorking = true
         defer { isWorking = false }
         let envFiles = envFiles
-        let repositoryID = repositoryID
-        let scope = scope
+        let place = place
         let headerComments = [headerComment]
         do {
             let result = try await Task.detached {
                 try envFiles.export(
-                    repositoryID: repositoryID,
-                    scope: scope,
+                    place: place,
                     to: choice.fileURL,
                     authorization: authorization,
                     existingFile: choice.existingFile,
@@ -353,7 +352,13 @@ final class EnvExportViewModel: LockObserving {
 
     /// The `# ` line at the top of the file (names only).
     private var headerComment: String {
-        String(
+        if case .folder = place {
+            return String(
+                localized: "envExport.file.header.folder",
+                defaultValue: "Exported by FX Vault from the folder \(repositoryName). Plaintext values: never commit this file."
+            )
+        }
+        return String(
             localized: "envExport.file.header",
             defaultValue: "Exported by FX Vault from \(repositoryName) (\(scopeTitle)). Plaintext values: never commit this file."
         )
@@ -361,10 +366,17 @@ final class EnvExportViewModel: LockObserving {
 
     private func loadHeader() {
         do {
-            let repository = try config.changeSet(repositoryID: repositoryID)?.repository
-            repositoryName = repository?.fullName ?? ""
-            suggestedDirectory = repository?.clonePath.map { URL(filePath: $0, directoryHint: .isDirectory) }
-            scopeTitle = try config.scopes(repositoryID: repositoryID).first { $0.scope == scope }?.title ?? ""
+            switch place {
+            case .scope(let repositoryID, let scope):
+                let repository = try config.changeSet(repositoryID: repositoryID)?.repository
+                repositoryName = repository?.fullName ?? ""
+                suggestedDirectory = repository?.clonePath.map { URL(filePath: $0, directoryHint: .isDirectory) }
+                scopeTitle = try config.scopes(repositoryID: repositoryID).first { $0.scope == scope }?.title ?? ""
+            case .folder(let folderID):
+                // The folder's name in the title; no clone folder to start the save panel in.
+                repositoryName = try folders.folders().first { $0.id == folderID }?.name ?? ""
+                scopeTitle = ""
+            }
         } catch {
             alert = error.presentation
         }
@@ -372,21 +384,36 @@ final class EnvExportViewModel: LockObserving {
 
     /// Keeps the preview and the unverified share names current while the sheet is open.
     private func observeItems() {
-        let stream = config.observeItems(repositoryID: repositoryID, scope: scope)
-        tasks.set("items", Task { [weak self] in
-            do {
-                for try await items in stream {
-                    self?.apply(items)
+        switch place {
+        case .scope(let repositoryID, let scope):
+            let stream = config.observeItems(repositoryID: repositoryID, scope: scope)
+            tasks.set("items", Task { [weak self] in
+                do {
+                    for try await items in stream {
+                        self?.apply(items)
+                    }
+                } catch {
+                    AppLog.ui.error("Export item observation ended")
                 }
-            } catch {
-                AppLog.ui.error("Export item observation ended")
-            }
-        })
+            })
+        case .folder(let folderID):
+            let stream = folders.observeItems(folderID: folderID)
+            tasks.set("items", Task { [weak self] in
+                do {
+                    for try await _ in stream {
+                        self?.apply([])
+                    }
+                } catch {
+                    AppLog.ui.error("Export item observation ended")
+                }
+            })
+        }
     }
 
+    /// `items`: the scope's rows (a folder has no share provenance to warn about).
     private func apply(_ items: [ConfigItemModel]) {
         do {
-            let preview = try envFiles.exportPreview(repositoryID: repositoryID, scope: scope)
+            let preview = try envFiles.exportPreview(place: place)
             self.preview = preview
             unverifiedShareNames = Self.unverifiedShareNames(in: items, preview: preview)
         } catch {

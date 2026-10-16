@@ -18,6 +18,8 @@ struct DEKRotationReportModel: Sendable, Hashable {
     /// Secret fields re-encrypted: this device's teammate keys and teammates' announce keys
     /// (v0.5.0), and shared space keys (v0.6.0).
     var secretFields = 0
+    /// Folder item values re-encrypted (and their fingerprints recomputed), v0.7.0.
+    var folderValues = 0
 }
 
 /// Re-encrypts every encrypted column under a new DEK inside the caller's transaction (§5.2
@@ -30,8 +32,9 @@ struct DEKRotationReportModel: Sendable, Hashable {
 /// - a `synced_fp` without `synced_value_ct` is recomputed from the current value when the two
 ///   matched under the old key, otherwise cleared (see ``DEKRotationReportModel``).
 ///
-/// Then `device_identity.secret_ct`, every `teammates.announce_ct` (v0.5.0) and every
-/// `space_keys.key_ct` (v0.6.0) are opened under the old keys and sealed under the new ones.
+/// Then `device_identity.secret_ct`, every `teammates.announce_ct` (v0.5.0), every
+/// `space_keys.key_ct` (v0.6.0) and every `folder_items.value_ct` (v0.7.0, with `value_fp`
+/// recomputed) are opened under the old keys and sealed under the new ones.
 ///
 /// Any decryption failure aborts the whole transaction: a rotation never leaves rows under two
 /// different DEKs.
@@ -40,12 +43,14 @@ struct DEKRotator {
     let configStore: ConfigStore
     let teamStore: TeamStore
     let spaceStore: SpaceStore
+    let folderStore: FolderStore
 
     init(database: VaultDatabase) {
         repoStore = RepoStore(database: database)
         configStore = ConfigStore(database: database)
         teamStore = TeamStore(database: database)
         spaceStore = SpaceStore(database: database)
+        folderStore = FolderStore(database: database)
     }
 
     func reencryptAll(
@@ -78,6 +83,17 @@ struct DEKRotator {
             key.keyCiphertext = try reseal(key.keyCiphertext, for: aad, from: oldKeys, to: newKeys)
             try spaceStore.saveKey(key, in: tx)
             report.secretFields += 1
+        }
+        for folder in try folderStore.fetchFolderRecords(in: tx) {
+            for var item in try folderStore.fetchItemRecords(folderID: folder.id, in: tx) {
+                let aad = FolderFieldCipher.valueAAD(of: item)
+                let plaintext = try oldKeys.open(item.valueCiphertext, for: aad)
+                defer { plaintext.wipe() }
+                item.valueCiphertext = try newKeys.seal(plaintext, for: aad)
+                item.valueFingerprint = newKeys.fingerprint(plaintext, rowID: item.id)
+                try folderStore.updateItem(item, in: tx)
+                report.folderValues += 1
+            }
         }
         return report
     }

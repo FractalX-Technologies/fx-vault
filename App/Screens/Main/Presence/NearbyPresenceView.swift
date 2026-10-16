@@ -1,13 +1,15 @@
 import SwiftUI
+import VaultCore
 
-/// Teammates nearby (v0.5.0, T5): an avatar stack in the main window's toolbar, next to Sync.
-/// One circle with initials per person (a dot for teammates), "+N" after
-/// ``Theme/Layout/presenceMaxBubbles``. A person scales in when seen; a ping from them bounces
-/// their bubble. A click opens ``NearbyPersonPopover`` (Ping, Chat).
+/// Teammates nearby in the toolbar (v0.5.0, T5; compact since v0.7.0, N2): the latest ping or
+/// shared-scope notice, then one people button with the number of people nearby. Its popover
+/// lists them with Ping and Chat; the sidebar's TEAMMATES section lists every teammate. A ping
+/// bounces the button.
 struct NearbyPresenceView: View {
     @Bindable var presence: TeamPresenceManager
     /// "Got v9 from Ana" (v0.6.0), when a teammate's version arrived.
     var spaceSync: SpaceSyncManager?
+    @State private var isShowingList = false
 
     var body: some View {
         let people = presence.people
@@ -27,64 +29,101 @@ struct NearbyPresenceView: View {
                     .lineLimit(1)
                     .transition(.opacity)
             }
-            HStack(spacing: -Theme.Layout.presenceOverlap) {
-                ForEach(people.prefix(Theme.Layout.presenceMaxBubbles)) { person in
-                    NearbyBubble(person: person, presence: presence)
-                        .transition(.scale.combined(with: .opacity))
+            Button {
+                isShowingList = true
+            } label: {
+                HStack(spacing: Theme.Spacing.xSmall) {
+                    Image(systemName: people.isEmpty ? "person.2" : "person.2.fill")
+                        .font(Theme.Typography.caption)
+                    Text(verbatim: "\(people.count)")
+                        .font(Theme.Typography.monoLabel)
                 }
-                if people.count > Theme.Layout.presenceMaxBubbles {
-                    NearbyOverflowBubble(people: Array(people.dropFirst(Theme.Layout.presenceMaxBubbles)), presence: presence)
+                .foregroundStyle(people.isEmpty ? Theme.Colors.subtleText : Theme.Colors.ink)
+                .padding(.horizontal, Theme.Spacing.small)
+                .frame(height: Theme.Layout.avatarSize)
+                .overlay(Capsule.pill.strokeBorder(Theme.Colors.hairlineStrong, lineWidth: Theme.Stroke.hairline))
+                .contentShape(Capsule.pill)
+            }
+            .buttonStyle(.plain)
+            .phaseAnimator([1.0, 1.25, 0.95, 1.0], trigger: presence.bounceCount) { content, scale in
+                content.scaleEffect(scale)
+            } animation: { _ in
+                Theme.Durations.spring
+            }
+            .help(NearbyPresenceCopy.help(count: people.count))
+            .accessibilityLabel(NearbyPresenceCopy.help(count: people.count))
+            .popover(isPresented: $isShowingList, arrowEdge: .bottom) {
+                NearbyPeopleList(people: people, presence: presence) {
+                    isShowingList = false
                 }
             }
         }
-        .animation(Theme.Durations.spring, value: people.map(\.id))
         .animation(Theme.Durations.interactionAnimation, value: presence.feedback)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(String(localized: "presence.accessibility", defaultValue: "People nearby"))
     }
 }
 
-/// One person's circle.
-private struct NearbyBubble: View {
-    let person: NearbyPersonModel
-    @Bindable var presence: TeamPresenceManager
+/// The people nearby with Ping (teammates) and Chat; an empty list says how teammates appear.
+struct NearbyPeopleList: View {
+    let people: [NearbyPersonModel]
+    let presence: TeamPresenceManager
+    let onDone: () -> Void
 
     var body: some View {
-        Button {
-            presence.popoverPersonID = person.id
-        } label: {
-            NearbyAvatar(person: person)
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            SectionLabel(NearbyPresenceCopy.listTitle)
+            if people.isEmpty {
+                Text(NearbyPresenceCopy.empty)
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(people) { person in
+                HStack(spacing: Theme.Spacing.mediumMinus) {
+                    NearbyAvatar(person: person)
+                    Text(verbatim: person.name)
+                        .fxTextStyle(.callout)
+                        .foregroundStyle(Theme.Colors.ink)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    if person.isTeammate {
+                        Button(String(localized: "presence.ping", defaultValue: "Ping")) {
+                            presence.ping(person)
+                            onDone()
+                        }
+                        .fxButtonStyle(.outline)
+                        .disabled(!presence.canPing(person))
+                    }
+                    Button(String(localized: "presence.chat", defaultValue: "Chat")) {
+                        presence.popoverPersonID = nil
+                        presence.chat(with: person)
+                        onDone()
+                    }
+                    .fxButtonStyle(.outline)
+                }
+            }
         }
-        .buttonStyle(.plain)
-        .phaseAnimator([1.0, 1.25, 0.95, 1.0], trigger: bounceTrigger) { content, scale in
-            content.scaleEffect(scale)
-        } animation: { _ in
-            Theme.Durations.spring
-        }
-        .help(person.isTeammate
-            ? String(localized: "presence.teammate.help", defaultValue: "\(person.name), your teammate, is nearby")
-            : String(localized: "presence.nearby.help", defaultValue: "\(person.name) is nearby"))
-        .popover(isPresented: isPresented, arrowEdge: .bottom) {
-            NearbyPersonPopover(person: person, presence: presence)
-        }
-    }
-
-    /// Changes only for this bubble's pings.
-    private var bounceTrigger: Int {
-        presence.bouncingPersonID == person.id ? presence.bounceCount : 0
-    }
-
-    private var isPresented: Binding<Bool> {
-        Binding(
-            get: { presence.popoverPersonID == person.id },
-            set: { if !$0, presence.popoverPersonID == person.id { presence.popoverPersonID = nil } }
-        )
+        .padding(Theme.Spacing.large)
+        .frame(width: Theme.Layout.presencePopoverWidth)
     }
 }
 
-/// Initials in a circle; teammates get a dot.
+/// Texts of the toolbar's people button.
+enum NearbyPresenceCopy {
+    static let listTitle = String(localized: "presence.list.title", defaultValue: "Nearby now")
+    static let empty = String(
+        localized: "presence.list.empty",
+        defaultValue: "Nobody nearby. Teammates appear here, and in the sidebar, while their Mac is close with FX Vault open."
+    )
+
+    static func help(count: Int) -> String {
+        String(localized: "presence.button.help", defaultValue: "People nearby: \(count)")
+    }
+}
+
+/// Initials in a circle; teammates get a dot (in the sidebar only while nearby, v0.7.0).
 struct NearbyAvatar: View {
     let person: NearbyPersonModel
+    var showsDot: Bool?
 
     var body: some View {
         Text(verbatim: person.initials)
@@ -94,7 +133,7 @@ struct NearbyAvatar: View {
             .background(Theme.Colors.surface2, in: Circle())
             .overlay(Circle().strokeBorder(Theme.Colors.ground, lineWidth: Theme.Stroke.emphasis))
             .overlay(alignment: .bottomTrailing) {
-                if person.isTeammate {
+                if showsDot ?? person.isTeammate {
                     Circle()
                         .fill(Theme.Colors.success)
                         .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
@@ -106,53 +145,12 @@ struct NearbyAvatar: View {
     }
 }
 
-/// "+N": the people beyond the stack, each with its own row.
-private struct NearbyOverflowBubble: View {
-    let people: [NearbyPersonModel]
-    @Bindable var presence: TeamPresenceManager
-    @State private var isShowingList = false
-
-    var body: some View {
-        Button {
-            isShowingList = true
-        } label: {
-            Text(verbatim: "+\(people.count)")
-                .font(Theme.Typography.monoLabel)
-                .foregroundStyle(Theme.Colors.mutedText)
-                .frame(width: Theme.Layout.avatarSize, height: Theme.Layout.avatarSize)
-                .background(Theme.Colors.surface, in: Circle())
-                .overlay(Circle().strokeBorder(Theme.Colors.hairlineStrong, lineWidth: Theme.Stroke.hairline))
-        }
-        .buttonStyle(.plain)
-        .popover(isPresented: $isShowingList, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                ForEach(people) { person in
-                    Button {
-                        isShowingList = false
-                        presence.popoverPersonID = nil
-                        presence.chat(with: person)
-                    } label: {
-                        HStack(spacing: Theme.Spacing.mediumMinus) {
-                            NearbyAvatar(person: person)
-                            Text(verbatim: person.name)
-                                .fxTextStyle(.callout)
-                                .foregroundStyle(Theme.Colors.ink)
-                            Spacer(minLength: 0)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(Theme.Spacing.large)
-            .frame(width: Theme.Layout.presencePopoverWidth)
-        }
-    }
-}
-
-/// A person's popover: name, Mac, teammate or nearby, and Ping (teammates) and Chat.
+/// A person's popover: name, Mac, teammate or nearby, and Ping (teammates) and Chat; Send
+/// Folder (v0.7.0) when there are folders with items.
 struct NearbyPersonPopover: View {
     let person: NearbyPersonModel
     let presence: TeamPresenceManager
+    var folders: [FolderModel] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
@@ -197,6 +195,31 @@ struct NearbyPersonPopover: View {
                     presence.chat(with: person)
                 }
                 .fxButtonStyle(.primary)
+                let sendable = folders.filter { $0.itemCount > 0 }
+                if !sendable.isEmpty {
+                    Menu {
+                        ForEach(sendable) { folder in
+                            Button(folder.name) {
+                                presence.chat(with: person, sendingFolder: folder.id)
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: Theme.Spacing.smallMinus) {
+                            Text(FolderCopy.sendFolder)
+                            Image(systemName: "chevron.down")
+                                .font(Theme.Typography.monoLabel)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .menuIndicator(.hidden)
+                    .menuStyle(.button)
+                    .fxButtonStyle(.outline)
+                    .fixedSize()
+                    .help(String(
+                        localized: "presence.sendFolder.help",
+                        defaultValue: "Opens a chat with \(person.name) and attaches the folder after Touch ID or your password. They get their own copy."
+                    ))
+                }
             }
         }
         .padding(Theme.Spacing.large)

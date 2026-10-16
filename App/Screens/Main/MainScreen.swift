@@ -44,6 +44,7 @@ struct MainScreen: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
                 viewModel.detail?.remaskAll()
+                viewModel.folderDetail?.remaskAll()
                 // Teammates nearby browses only while FX Vault is active (T8).
                 viewModel.app.teamPresence.setBrowsing(false)
             }
@@ -347,6 +348,8 @@ private struct MainSheetContent: View {
             ShareSpaceScreen(context: context, dependencies: dependencies)
         case .space(let context):
             SpaceScreen(context: context, dependencies: dependencies)
+        case .folderName(let context):
+            FolderNameScreen(context: context, dependencies: dependencies)
         case .addRepositoryByName(let context):
             AddRepositorySheet(viewModel: AddRepositoryViewModel(
                 context: context,
@@ -365,7 +368,9 @@ private struct ScopeColumnView: View {
     let main: MainViewModel
 
     var body: some View {
-        if let scopeList = main.scopeList {
+        if main.folderDetail != nil, let folder = main.sidebar.selectedFolder {
+            FolderOverviewView(folder: folder, main: main)
+        } else if let scopeList = main.scopeList {
             ScopeListView(viewModel: scopeList)
         } else {
             EmptyStateView(
@@ -389,7 +394,9 @@ private struct DetailColumnView: View {
 
     var body: some View {
         Group {
-            if let detail = main.detail {
+            if let folderDetail = main.folderDetail {
+                FolderDetailScreen(viewModel: folderDetail, main: main)
+            } else if let detail = main.detail {
                 RepoDetailScreen(viewModel: detail, main: main)
             } else {
                 VStack(spacing: 0) {

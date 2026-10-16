@@ -54,6 +54,21 @@ struct KATVectors: Decodable {
         let blobHex: String
     }
 
+    /// A folder item value (v0.7.0): the field layout with the folder as container.
+    struct FolderFieldVector: Decodable {
+        let label: String
+        let aesKHex: String
+        let row: String
+        let folder: String
+        let kind: String
+        let name: String
+        let dekVersion: UInt32
+        let plainHex: String
+        let nonceHex: String
+        let aadHex: String
+        let blobHex: String
+    }
+
     struct PasswordWrap: Decodable {
         let text: String
         let saltHex: String
@@ -99,6 +114,7 @@ struct KATVectors: Decodable {
     let argon2id: [Argon2idVector]
     let hierarchy: Hierarchy
     let field: [FieldVector]
+    let folderField: [FolderFieldVector]
     let wrap: Wraps
     let recovery: [RecoveryVector]
     let crockford: [CrockfordVector]

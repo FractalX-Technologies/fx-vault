@@ -179,6 +179,9 @@ struct ShareScopeTreeModel: Equatable {
             let environments = subset.environmentIDs.compactMap { leaves[.environment($0)] }
             let items = subset.itemIDs.compactMap { leaves[.item($0)] }
             return (environments + items).reduce(into: []) { $0.formUnion($1) }
+        case .folder:
+            // A folder is shared whole, without the scope tree (v0.7.0).
+            return []
         }
     }
 
@@ -263,6 +266,9 @@ struct ShareScopeTreeLoader {
                 throw SharingError.repositoryNotFound
             }
             return repository.id
+        case .folder:
+            // A folder is shared whole, without a repository tree (v0.7.0).
+            throw SharingError.repositoryNotFound
         }
     }
 

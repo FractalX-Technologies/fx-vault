@@ -68,6 +68,21 @@ public enum ChatAttachmentContentModel: Sendable, Equatable {
     case item(kind: ConfigKind, name: String, environmentName: String?)
     /// A whole repository's or environment's configuration (v0.4.0, chat v2).
     case configuration(ChatConfigurationSummaryModel)
+    /// A copy of a folder (v0.7.0, chat v4).
+    case folder(ChatFolderSummaryModel)
+}
+
+/// What a folder attachment card shows (v0.7.0): the folder's name and counts.
+public struct ChatFolderSummaryModel: Sendable, Equatable {
+    public let name: String
+    public let secretCount: Int
+    public let variableCount: Int
+
+    init(_ manifest: SharePackageModel) {
+        name = manifest.folder?.name ?? ""
+        secretCount = manifest.repository.secrets.count
+        variableCount = manifest.repository.variables.count
+    }
 }
 
 /// The counts a configuration attachment card shows (v0.4.0).
@@ -94,7 +109,7 @@ public struct ChatAttachmentOfferModel: Sendable, Equatable, Identifiable {
     public let id: ChatAttachmentID
     public let direction: ChatDirection
     public let content: ChatAttachmentContentModel
-    /// `owner/name`.
+    /// `owner/name`; empty for a folder.
     public let repositoryFullName: String
     /// The offered package with every value null. The receiver can preview it with the share
     /// import planner before asking for the values.
@@ -111,16 +126,23 @@ public struct ChatAttachmentOfferModel: Sendable, Equatable, Identifiable {
             content = .item(kind: located.kind, name: located.item.name, environmentName: located.environmentName)
         case .repository, .environment:
             content = .configuration(ChatConfigurationSummaryModel(manifest))
+        case .folder:
+            content = .folder(ChatFolderSummaryModel(manifest))
         }
         self.id = id
         self.direction = direction
-        repositoryFullName = manifest.repository.fullName
+        repositoryFullName = manifest.isFolder ? "" : manifest.repository.fullName
         self.manifest = manifest
     }
 
     /// True for a whole repository or environment (v0.4.0).
     public var isConfiguration: Bool {
         if case .configuration = content { true } else { false }
+    }
+
+    /// The folder's name for a folder copy (v0.7.0); nil otherwise.
+    public var folderName: String? {
+        if case .folder(let summary) = content { summary.name } else { nil }
     }
 
     /// The item's kind; nil for a configuration.
@@ -196,7 +218,8 @@ public enum ChatError: Error, Sendable, Hashable {
     /// v2, a configuration (scope `repository` or `environment`), or it breaks a share validator
     /// rule.
     case invalidAttachment
-    /// The peer runs FX Vault 0.3 or earlier (chat v1): it cannot receive a configuration.
+    /// The peer runs FX Vault 0.3 or earlier (chat v1): it cannot receive a configuration; or
+    /// FX Vault 0.6 or earlier (chat v3 or below): it cannot receive a folder (v0.7.0).
     case peerNeedsUpdate
     /// ``Limits/chatMaxOpenAttachments`` offers are already open.
     case tooManyAttachments

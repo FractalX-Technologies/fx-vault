@@ -12,7 +12,8 @@ import VaultStore
 /// `synced` for the receiver only when nothing is pending locally and its last push was
 /// verified. An environment carries its branch policy only when the selection names the
 /// environment itself; one reached through some of its items is a partial environment (no
-/// policy, schema v2). The package is written with the lowest schema version that holds it.
+/// policy, schema v2). The package is written with the lowest schema version that holds it. A
+/// folder (v0.7.0) becomes a folder package (schema v3) with every item and its value.
 struct ShareExportBuilder: Sendable {
     let session: VaultSession
     let clock: any VaultClock
@@ -29,9 +30,74 @@ struct ShareExportBuilder: Sendable {
         appVersion: String,
         includeValues: Bool
     ) throws(SharingError) -> SharePackageModel {
+        let package = if case .folder(let folderID) = selection {
+            try folderPackage(folderID, senderName: senderName, appVersion: appVersion, includeValues: includeValues)
+        } else {
+            try repositoryPackage(selection, senderName: senderName, appVersion: appVersion, includeValues: includeValues)
+        }
+        guard package.itemCount > 0 || !package.repository.environments.isEmpty else {
+            package.wipeValues()
+            throw .nothingToShare
+        }
+        do {
+            try SharePackageValidator.validate(package, mode: includeValues ? .payload : .manifest)
+        } catch {
+            package.wipeValues()
+            throw .share(error)
+        }
+        return package
+    }
+
+    /// A folder's items, each with its value when asked for (a folder item always has one).
+    private func folderPackage(
+        _ folderID: FolderID,
+        senderName: String,
+        appVersion: String,
+        includeValues: Bool
+    ) throws(SharingError) -> SharePackageModel {
         let database = session.database
         let createdAt = clock.now
-        let package = try performSharing {
+        return try performSharing {
+            try session.read { keys, tx in
+                let store = FolderStore(database: database)
+                guard let folder = try store.fetchFolder(id: folderID, in: tx) else {
+                    throw SharingError.config(.folderNotFound)
+                }
+                let records = try store.fetchItemRecords(folderID: folderID, in: tx)
+                let keys = copy keys
+                func items(_ kind: ConfigKind) throws -> [ShareItemModel] {
+                    try records.filter { $0.kind == kind }.map { record in
+                        ShareItemModel(
+                            name: record.name,
+                            value: includeValues ? try FolderFieldCipher.openValue(of: record, keys: keys) : nil,
+                            valueState: .present,
+                            githubUpdatedAt: nil,
+                            syncState: .pending
+                        )
+                    }
+                }
+                return SharePackageModel.folder(
+                    named: folder.name,
+                    secrets: try items(.secret),
+                    variables: try items(.variable),
+                    createdAt: createdAt,
+                    producer: ShareProducerModel(version: appVersion),
+                    sender: ShareSenderModel(displayName: DisplayNameSanitizer.sanitize(senderName))
+                )
+            }
+        }
+    }
+
+    /// The rows of a repository selection.
+    private func repositoryPackage(
+        _ selection: ShareSelectionModel,
+        senderName: String,
+        appVersion: String,
+        includeValues: Bool
+    ) throws(SharingError) -> SharePackageModel {
+        let database = session.database
+        let createdAt = clock.now
+        return try performSharing {
             try session.read { keys, tx in
                 let rows = try ShareSelectionRows.load(selection, database: database, tx: tx)
                 let keys = copy keys
@@ -77,30 +143,20 @@ struct ShareExportBuilder: Sendable {
                 )
             }
         }
-        guard package.itemCount > 0 || !package.repository.environments.isEmpty else {
-            package.wipeValues()
-            throw .nothingToShare
-        }
-        do {
-            try SharePackageValidator.validate(package, mode: includeValues ? .payload : .manifest)
-        } catch {
-            package.wipeValues()
-            throw .share(error)
-        }
-        return package
     }
 
     /// The names and counts of a package (no values).
     static func preview(_ package: SharePackageModel) -> ShareExportPreviewModel {
         ShareExportPreviewModel(
             scope: package.scope,
-            repositoryFullName: package.repository.fullName,
+            repositoryFullName: package.isFolder ? "" : package.repository.fullName,
             environmentNames: package.repository.environments.map(\.name),
             itemCount: package.itemCount,
             valueMissingNames: package.flattenedItems
                 .filter { $0.item.valueState == .missing }
                 .map(\.item.name),
-            summary: package.contentSummary
+            summary: package.contentSummary,
+            folderName: package.folder?.name
         )
     }
 
@@ -173,6 +229,9 @@ private struct ShareSelectionRows {
             )
         case .subset(let subset):
             return try loadSubset(subset, config: config, repositories: repositories, tx: tx)
+        case .folder:
+            // Folders are built by ``ShareExportBuilder/folderPackage(_:senderName:appVersion:includeValues:)``.
+            throw SharingError.unexpected
         }
     }
 

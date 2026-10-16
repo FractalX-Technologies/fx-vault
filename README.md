@@ -24,10 +24,19 @@ environments and accounts, with a local encrypted vault and the GitHub CLI.
   repository; keep yours or accept GitHub's.
 - **New repositories.** Stage a repository with its environments, secrets and variables, create
   everything in one Sync, and clone it through your SSH alias.
+- **Folders.** Keep the secrets and variables you use in several repositories in folders of your
+  own ("Mobile App", "Stripe test") at the top of the sidebar (New Folder…, ⇧⌘N). A folder never
+  goes to GitHub by itself: copy its items into any repository with ⌘C / ⌘V or Copy To, and every
+  copy stays linked, so changing a value in the folder offers to update the repositories that
+  use it. Folders take Paste Multiple…, `.env` import and export too.
+- **Send a folder to a teammate.** From the folder's menu or a teammate's card: a verified chat
+  opens with the folder attached (after Touch ID or your master password), or save it as an
+  encrypted `.fxvault` file. The teammate saves it as a folder of their own or imports it into
+  one of their repositories. Each person keeps their own copy.
 - **Teammates nearby.** Pair once with a teammate's Mac (Settings › Teammates › Add Teammate…,
-  compare a 6-digit code). From then on, while FX Vault is open, teammates who are nearby appear
-  as bubbles next to Sync: click one to **Ping** (their Mac plays a sound) or **Chat** (no code
-  needed between teammates). Only your teammates recognize your Mac: it shows up under a name that
+  compare a 6-digit code). Your teammates are always listed at the bottom of the sidebar, with a
+  green dot while they are nearby and FX Vault is open: click one to **Ping** (their Mac plays a
+  sound), **Chat** (no code needed between teammates) or **Send Folder**. Only your teammates recognize your Mac: it shows up under a name that
   changes every 15 minutes. Choose Nobody, Teammates or Everyone nearby, and mute pings per
   teammate or all at once.
 - **Shared scopes (experimental).** Share a repository level or an environment with paired

@@ -45,9 +45,15 @@ public enum SharePackageViolation: Sendable, Hashable {
     /// `environment`-scope package, or when it carries no items (a partial environment must
     /// carry at least one item).
     case branchPolicyRequired
+    /// A folder's name failed ``FolderNameValidator`` in strict NFC mode (v0.7.0).
+    case invalidFolderName(ValidationError)
+    /// A folder holds more than `limit` secrets and variables (v0.7.0).
+    case tooManyFolderItems(limit: Int)
 }
 
-/// Checks every §9.3 rule on a decoded or about-to-be-sent package (schema v1 and v2).
+/// Checks every §9.3 rule on a decoded or about-to-be-sent package (schema v1 and v2, and v3
+/// folders: a valid folder name, no repository or environments, at most
+/// ``Limits/maxFolderItems`` items, every item with a value).
 ///
 /// Run on every boundary: after decrypting a `.fxvault`, on a received nearby MANIFEST and
 /// PAYLOAD, and before exporting.
@@ -80,11 +86,50 @@ public enum SharePackageValidator {
         }
         if let violation = producerViolation(package.producer) { return violation }
         if !isSanitized(package.sender.displayName) { return .invalidSenderName }
+        if package.isFolder || package.folder != nil {
+            return folderViolation(package, mode: mode)
+        }
+        if !SharePackageModel.repositorySchemaVersions.contains(package.schemaVersion) {
+            return .unsupportedSchemaVersion(package.schemaVersion)
+        }
         if let violation = repositoryViolation(package.repository) { return violation }
         if let violation = entryIDViolation(package) { return violation }
         if let violation = itemsViolation(package.repository, mode: mode) { return violation }
         if let violation = partialEnvironmentViolation(package) { return violation }
         return scopeViolation(package)
+    }
+
+    // MARK: - Folders (v0.7.0)
+
+    private static func folderViolation(_ package: SharePackageModel, mode: Mode) -> SharePackageViolation? {
+        let repository = package.repository
+        guard package.isFolder,
+              let folder = package.folder,
+              package.schemaVersion >= SharePackageModel.folderSchemaVersion,
+              repository.host == GitHubHostValidator.host,
+              repository.owner.isEmpty,
+              repository.name.isEmpty,
+              repository.githubRepoID == nil,
+              repository.environments.isEmpty
+        else { return .scopeMismatch(package.scope) }
+        if let error = FolderNameValidator.violation(in: folder.name, requireNFC: true) {
+            return .invalidFolderName(error)
+        }
+        if package.itemCount > Limits.maxFolderItems {
+            return .tooManyFolderItems(limit: Limits.maxFolderItems)
+        }
+        if let violation = entryIDViolation(package) { return violation }
+        for (items, kind) in [(repository.secrets, ConfigKind.secret), (repository.variables, .variable)] {
+            var keys = Set<String>()
+            for item in items {
+                guard item.valueState == .present else { return .valueStateMismatch }
+                if let violation = itemViolation(item, mode: mode) { return violation }
+                guard keys.insert(GitHubNameValidator.foldKey(item.name)).inserted else {
+                    return .duplicateItem(kind: kind, level: .repository)
+                }
+            }
+        }
+        return nil
     }
 
     // MARK: - Header fields
@@ -278,6 +323,8 @@ public enum SharePackageValidator {
             isValid = repositoryItemCount == 0 && repository.environments.count == 1
         case .repository:
             isValid = true
+        case .folder:
+            isValid = false
         }
         return isValid ? nil : .scopeMismatch(package.scope)
     }

@@ -68,6 +68,10 @@ final class NearbyChatViewModel: LockObserving {
     /// Whether the teammate's FX Vault can receive a whole repository (chat v2), known once the
     /// codes match.
     private(set) var peerAcceptsRepositories = false
+    /// Whether it can receive a folder (chat v4, v0.7.0).
+    private(set) var peerAcceptsFolders = false
+    /// Send Folder… (v0.7.0): the folder the picker opens on once the chat is verified.
+    @ObservationIgnored private var folderToSend: FolderID?
     /// The open "Save to my vault" import preview.
     var saveSheet: ChatSaveViewModel?
     var alert: ErrorPresentationModel?
@@ -202,6 +206,7 @@ final class NearbyChatViewModel: LockObserving {
 
     private func startPending(_ start: NearbyChatStartModel) async {
         expectsTeammate = start.expectsTeammate
+        folderToSend = start.folderToSend
         step = .connecting(peerName: start.peerName)
         let conversation = dependencies.chat.makeConversation(
             role: start.role,
@@ -387,6 +392,11 @@ final class NearbyChatViewModel: LockObserving {
             tracker.recordSuccess()
             step = .chatting
             peerAcceptsRepositories = await conversation?.acceptsConfigurationAttachments ?? false
+            peerAcceptsFolders = await conversation?.acceptsFolderAttachments ?? false
+            if let folderID = folderToSend {
+                folderToSend = nil
+                attach(folder: folderID)
+            }
         case .message(let message):
             appendMessage(message)
         case .attachmentOffered(let offer):
@@ -532,15 +542,23 @@ final class NearbyChatViewModel: LockObserving {
         step == .chatting && picker == nil
     }
 
-    /// "Attach…": re-authenticate, then choose one item or a whole repository.
+    /// "Attach…": re-authenticate, then choose one item, a whole repository or a folder.
     func attach() {
         guard canAttach else { return }
         picker = ChatAttachmentPickerViewModel(
             dependencies: dependencies,
-            acceptsRepositories: peerAcceptsRepositories
+            acceptsRepositories: peerAcceptsRepositories,
+            acceptsFolders: peerAcceptsFolders
         ) { [weak self] choice, authorization in
             await self?.offer(choice, authorization: authorization)
         }
+    }
+
+    /// Send Folder… (v0.7.0): the picker on its Folder tab with `folderID` chosen.
+    func attach(folder folderID: FolderID) {
+        attach()
+        picker?.mode = .folder
+        picker?.selectedFolderID = folderID
     }
 
     /// The picker closed without sending.
@@ -565,6 +583,13 @@ final class NearbyChatViewModel: LockObserving {
             case .repository(let repository):
                 try await conversation.offerRepository(
                     repository.id,
+                    senderName: identity.displayName,
+                    appVersion: identity.appVersion,
+                    authorization: authorization
+                )
+            case .folder(let folder):
+                try await conversation.offerFolder(
+                    folder.id,
                     senderName: identity.displayName,
                     appVersion: identity.appVersion,
                     authorization: authorization
@@ -596,7 +621,7 @@ final class NearbyChatViewModel: LockObserving {
     /// "Import Into…" or "Save as File…" on a received configuration (v0.4.0): asks for the
     /// values first, then runs the action when they arrive; an arrived one runs it at once.
     func handleConfiguration(_ id: ChatAttachmentID, _ action: ChatAttachmentCardModel.ConfigurationAction) async {
-        guard let card = cards[id], card.offer.isConfiguration, card.direction == .received else { return }
+        guard let card = cards[id], card.offer.isPackage, card.direction == .received else { return }
         if card.isAwaitingDecision {
             updateCard(id) { $0.pendingAction = action }
             await save(id)
@@ -747,6 +772,7 @@ final class NearbyChatViewModel: LockObserving {
         fileSheet?.close()
         fileSheet = nil
         peerAcceptsRepositories = false
+        peerAcceptsFolders = false
     }
 
     /// Listener failures in a row before the window stops trying (a failing listener must not

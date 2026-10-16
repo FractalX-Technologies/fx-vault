@@ -7,7 +7,7 @@ pinned in `Tests/SharingKitTests/Fixtures/nearby_kat.json`, `chat_kat.json`, `te
 (`Fixtures/kat/crosscheck.py`, Python `cryptography`; `Fixtures/kat/NearbyProtocolReference.swift`)
 produce byte-identical output.
 
-## 1. Payload: `SharePackageModel` (schema 1 and 2)
+## 1. Payload: `SharePackageModel` (schema 1 and 2; 3 for folders, §1.3)
 
 JSON, keys sorted, dates ISO-8601 UTC with `Z`. `value` and `githubUpdatedAt` are always present
 (explicit `null` when absent). `deploymentBranchPolicy` is an object, or an explicit `null` for a
@@ -67,8 +67,42 @@ partial environment (schema 2 only, §1.1).
   file" and a nearby MANIFEST aborts. The workaround is to check the whole environment (v1) or
   to update the receiver.
 - A v1 document with a `null` or missing policy is rejected (`branchPolicyRequired`); a v2
-  document may also contain only whole environments. Versions other than 1 and 2 are
-  `unsupportedSchemaVersion`.
+  document may also contain only whole environments. A repository package with a version other
+  than 1 and 2 is `unsupportedSchemaVersion` (`SharePackageModel.repositorySchemaVersions`);
+  version 3 is a folder (§1.3).
+
+### 1.3 Folders: schema 3 (v0.7.0)
+
+A copy of a folder is scope `folder`, `schemaVersion` 3, and carries a `folder` object instead of
+`repository`:
+
+```json
+{ "schema": "io.fractalx.fxvault.share", "schemaVersion": 3, "packageId": "<uuid>",
+  "createdAt": "…", "producer": {…}, "sender": {…}, "scope": "folder",
+  "folder": {"name": "Mobile App",
+             "secrets":   [{"id": "<uuid>", "name": "FIREBASE_API_KEY", "value": "<utf-8> | null",
+                           "valueState": "present", "githubUpdatedAt": null, "syncState": "pending"}],
+             "variables": [ ... same shape ... ]} }
+```
+
+- The validator requires a valid folder name (`FolderNameValidator`, NFC), at most
+  `Limits.maxFolderItems` (1,000) items, every item `valueState: present` (a folder item always
+  has a value), unique names per kind, and GitHub item names. A document with both `folder` and
+  `repository`, or a `folder` with any other scope, does not decode.
+- In memory (`SharePackageModel`) the items sit at repository level of a `repository` block with
+  an empty owner and name and no environments, so manifests, filtering, summaries and wiping work
+  unchanged; `folder` holds the name.
+- **Import Into a repository**: `SharePackageModel.intoRepository(owner:name:githubRepoID:environmentName:)`
+  turns the folder into an ordinary package for the chosen repository, its items at repository
+  level or in a partial environment (schema 2) of the chosen environment, with the same package
+  id. Only that converted package is planned: `ShareImportPlanner` refuses a folder package, and
+  nearby share (§4) refuses one in either direction.
+- **Save as Folder**: `FolderRepository.save(_:as:conflicts:)` writes the items into a new folder
+  (by default named as the sender's) or merges them into an existing folder (names it has are
+  kept unless Replace is chosen), normalizes values (D32) and records the package id in
+  `imported_share_packages` like an import.
+- 0.6 and older reject version 3 (`unsupportedSchemaVersion`): a `.fxvault` folder file shows
+  "Wrong passphrase or damaged file" there.
 
 ### 1.2 Branch policy rule
 
@@ -485,6 +519,13 @@ Since v0.4.0 (§7.1):
 - **Mixed fleets.** Until every Mac runs 0.2.0, share whole environments (v1) with 0.1.x users,
   and use a shared network for nearby sharing with them.
 
+Since v0.7.0 (§1.3, §10.8):
+
+| Feature | 0.7.0 with 0.7.0 | 0.7.0 with 0.6 or older |
+|---|---|---|
+| A folder in Nearby Chat | Chat version 4: one card; Save as Folder, Import Into…, Save as File… | Not offered: the Folder tab says the other Mac needs FX Vault 0.7 or later; nothing is sent |
+| A `.fxvault` file of a folder (schema 3) | Saved as a folder or imported into a scope | Rejected: "Wrong passphrase or damaged file" |
+
 ## 10. Teammates: `fxvault-team/v1` (v0.5.0)
 
 Implemented in `Packages/FXVaultKit/Sources/SharingKit/Team`. Known-answer vectors:
@@ -553,6 +594,16 @@ The initiator sends it right after REVEAL when the chat was opened from a teamma
 responder verifies it against its teammates, answers with its own and confirms the code; the
 initiator confirms once it verified the expected teammate. A 0.4 or older peer negotiates 2 or 1
 and the people compare the code.
+
+### 10.8 Chat version 4 (v0.7.0)
+
+`NearbyChatProtocol.maxVersion` is 4. Frames and labels are unchanged. At a negotiated version of
+4 an attachment may be a folder package (§1.3, scope `folder`), offered and fetched like a whole
+repository (`ATTACHMENT_OFFER` with the manifest, `ATTACHMENT_REQUEST`, chunked
+`ATTACHMENT_PAYLOAD` up to the configuration limit, 16 MiB). The sender refuses to offer a folder
+to a peer below 4 (`ChatError.peerNeedsUpdate`) before any authorization is used; a receiver below
+4 that gets one aborts with `invalidPackage(scopeMismatch(folder))`. The receiver's card shows the
+folder's name and counts; values travel only after Save…
 
 ## 11. Shared spaces: `fxvault-space/v1` (v0.6.0, experimental)
 

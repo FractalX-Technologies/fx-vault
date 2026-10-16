@@ -162,8 +162,7 @@ struct RepoDetailViewModelTests {
         await model.handlePaste([NSItemProvider(object: text as NSString)])
 
         let context = try Self.importContext(fixture.recorder)
-        #expect(context.repositoryID == fixture.repositoryID)
-        #expect(context.scope == .repository)
+        #expect(context.place == .scope(repositoryID: fixture.repositoryID, scope: .repository))
         #expect(context.defaultKind == .variable)
         #expect(context.fileURL == nil)
         guard case .pasted(let buffer) = context.start else {

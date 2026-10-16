@@ -18,6 +18,10 @@ public enum ShareScope: String, Sendable, Hashable, Codable, CaseIterable {
     /// Any other combination: all or some repository-level items, whole environments (with
     /// their branch policy) and partial environments (selected items, no policy), in any mix.
     case repository
+    /// A copy of a folder (v0.7.0, schema v3): its name and its secrets and variables, every one
+    /// with a value. It belongs to no repository; the receiver saves it as a folder or imports it
+    /// into a repository scope it chooses (``SharePackageModel/intoRepository(owner:name:githubRepoID:environmentName:)``).
+    case folder
 }
 
 /// The sender's view of an item's sync state.
@@ -38,7 +42,10 @@ public enum ShareSyncState: String, Sendable, Hashable, Codable, CaseIterable {
 /// policy on every environment; v2 (0.2.0) also allows a *partial* environment, one that carries
 /// only selected items and `deploymentBranchPolicy: null`. A package is always written with the
 /// lowest version that can hold it (``requiredSchemaVersion(for:)``), so anything 0.1.x can express
-/// is still readable by 0.1.x.
+/// is still readable by 0.1.x. v3 (0.7.0) is a folder (scope ``ShareScope/folder``): on the wire a
+/// `folder` object (`name`, `secrets`, `variables`) replaces `repository`; in memory the items are
+/// at repository level of a ``repository`` with an empty owner and name, so manifests, filters,
+/// summaries and wiping work unchanged. Older versions refuse v3 as an unsupported version.
 public struct SharePackageModel: Sendable, Equatable {
     /// The only accepted `schema` value.
     public static let schemaIdentifier = "io.fractalx.fxvault.share"
@@ -46,10 +53,14 @@ public struct SharePackageModel: Sendable, Equatable {
     public static let wholeEnvironmentsSchemaVersion = 1
     /// Environments may omit their branch policy when only some of their items are shared.
     public static let partialEnvironmentsSchemaVersion = 2
+    /// A folder (v0.7.0).
+    public static let folderSchemaVersion = 3
     /// The newest `schemaVersion` this build reads and writes.
-    public static let currentSchemaVersion = partialEnvironmentsSchemaVersion
+    public static let currentSchemaVersion = folderSchemaVersion
     /// Every `schemaVersion` this build accepts.
     public static let supportedSchemaVersions = wholeEnvironmentsSchemaVersion...currentSchemaVersion
+    /// The versions a repository package (any scope but ``ShareScope/folder``) may carry.
+    public static let repositorySchemaVersions = wholeEnvironmentsSchemaVersion...partialEnvironmentsSchemaVersion
 
     public var schema: String
     public var schemaVersion: Int
@@ -59,9 +70,14 @@ public struct SharePackageModel: Sendable, Equatable {
     public var producer: ShareProducerModel
     public var sender: ShareSenderModel
     public var scope: ShareScope
+    /// The repository and its items; for a folder (scope ``ShareScope/folder``) only the items
+    /// count (owner and name are empty, no environments).
     public var repository: ShareRepositoryModel
+    /// The folder's name; set exactly for scope ``ShareScope/folder`` (v0.7.0).
+    public var folder: ShareFolderModel?
 
-    /// - Parameter schemaVersion: nil writes ``requiredSchemaVersion(for:)`` of `repository`.
+    /// - Parameter schemaVersion: nil writes ``requiredSchemaVersion(for:)`` of `repository`, or
+    ///   ``folderSchemaVersion`` for a folder.
     public init(
         schema: String = SharePackageModel.schemaIdentifier,
         schemaVersion: Int? = nil,
@@ -70,16 +86,74 @@ public struct SharePackageModel: Sendable, Equatable {
         producer: ShareProducerModel,
         sender: ShareSenderModel,
         scope: ShareScope,
-        repository: ShareRepositoryModel
+        repository: ShareRepositoryModel,
+        folder: ShareFolderModel? = nil
     ) {
         self.schema = schema
-        self.schemaVersion = schemaVersion ?? Self.requiredSchemaVersion(for: repository)
+        self.schemaVersion = schemaVersion
+            ?? (scope == .folder ? Self.folderSchemaVersion : Self.requiredSchemaVersion(for: repository))
         self.packageID = packageID
         self.createdAt = createdAt
         self.producer = producer
         self.sender = sender
         self.scope = scope
         self.repository = repository
+        self.folder = folder
+    }
+
+    /// A folder package (v0.7.0): `secrets` and `variables` with their values.
+    public static func folder(
+        named name: String,
+        secrets: [ShareItemModel],
+        variables: [ShareItemModel],
+        packageID: SharePackageID = SharePackageID(),
+        createdAt: Date,
+        producer: ShareProducerModel,
+        sender: ShareSenderModel
+    ) -> SharePackageModel {
+        SharePackageModel(
+            packageID: packageID,
+            createdAt: createdAt,
+            producer: producer,
+            sender: sender,
+            scope: .folder,
+            repository: ShareFolderModel.container(secrets: secrets, variables: variables),
+            folder: ShareFolderModel(name: name)
+        )
+    }
+
+    /// True for a folder (v0.7.0).
+    public var isFolder: Bool {
+        scope == .folder
+    }
+
+    /// A folder package as a repository package for `owner/name` (v0.7.0 "Import Into…"): its
+    /// items at repository level, or in `environmentName` as a partial environment (no branch
+    /// policy, schema v2), so the usual import planner, preview and merge apply. Same package id,
+    /// sender and values (the buffers are shared: wipe one of them). Nil for a package that is
+    /// not a folder.
+    public func intoRepository(owner: String, name: String, githubRepoID: String?, environmentName: String?) -> SharePackageModel? {
+        guard isFolder else { return nil }
+        var target = ShareRepositoryModel(owner: owner, name: name, githubRepoID: githubRepoID)
+        if let environmentName {
+            target.environments = [ShareEnvironmentModel(
+                name: environmentName,
+                deploymentBranchPolicy: nil,
+                secrets: repository.secrets,
+                variables: repository.variables
+            )]
+        } else {
+            target.secrets = repository.secrets
+            target.variables = repository.variables
+        }
+        return SharePackageModel(
+            packageID: packageID,
+            createdAt: createdAt,
+            producer: producer,
+            sender: sender,
+            scope: .repository,
+            repository: target
+        )
     }
 
     /// The lowest schema version that can hold `repository`: v2 only when an environment omits
@@ -183,6 +257,22 @@ public struct SharePackageModel: Sendable, Equatable {
         for located in flattenedItems {
             located.item.value?.wipe()
         }
+    }
+}
+
+/// `folder`: what a folder package (v0.7.0) says about the folder besides its items.
+public struct ShareFolderModel: Sendable, Hashable {
+    /// The sender's folder name (``FolderNameValidator``, NFC).
+    public var name: String
+
+    public init(name: String) {
+        self.name = name
+    }
+
+    /// The in-memory holder of a folder's items: a repository block with no owner, name or
+    /// environments.
+    static func container(secrets: [ShareItemModel], variables: [ShareItemModel]) -> ShareRepositoryModel {
+        ShareRepositoryModel(owner: "", name: "", githubRepoID: nil, secrets: secrets, variables: variables)
     }
 }
 

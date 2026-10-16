@@ -91,6 +91,14 @@ extension SharePackageModel: Codable {
         case sender
         case scope
         case repository
+        case folder
+    }
+
+    /// A folder package (v0.7.0) carries `folder` instead of `repository`.
+    private enum FolderCodingKeys: String, CodingKey {
+        case name
+        case secrets
+        case variables
     }
 
     public init(from decoder: any Decoder) throws {
@@ -102,7 +110,23 @@ extension SharePackageModel: Codable {
         producer = try container.decode(ShareProducerModel.self, forKey: .producer)
         sender = try container.decode(ShareSenderModel.self, forKey: .sender)
         scope = try container.decode(ShareScope.self, forKey: .scope)
-        repository = try container.decode(ShareRepositoryModel.self, forKey: .repository)
+        guard scope == .folder else {
+            guard !container.contains(.folder) else {
+                throw DecodingError.dataCorruptedError(forKey: .folder, in: container, debugDescription: "Unexpected folder")
+            }
+            repository = try container.decode(ShareRepositoryModel.self, forKey: .repository)
+            folder = nil
+            return
+        }
+        guard !container.contains(.repository) else {
+            throw DecodingError.dataCorruptedError(forKey: .repository, in: container, debugDescription: "Unexpected repository")
+        }
+        let content = try container.nestedContainer(keyedBy: FolderCodingKeys.self, forKey: .folder)
+        folder = ShareFolderModel(name: try content.decode(String.self, forKey: .name))
+        repository = ShareFolderModel.container(
+            secrets: try content.decodeIfPresent([ShareItemModel].self, forKey: .secrets) ?? [],
+            variables: try content.decodeIfPresent([ShareItemModel].self, forKey: .variables) ?? []
+        )
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -114,7 +138,14 @@ extension SharePackageModel: Codable {
         try container.encode(producer, forKey: .producer)
         try container.encode(sender, forKey: .sender)
         try container.encode(scope, forKey: .scope)
-        try container.encode(repository, forKey: .repository)
+        guard scope == .folder, let folder else {
+            try container.encode(repository, forKey: .repository)
+            return
+        }
+        var content = container.nestedContainer(keyedBy: FolderCodingKeys.self, forKey: .folder)
+        try content.encode(folder.name, forKey: .name)
+        try content.encode(repository.secrets, forKey: .secrets)
+        try content.encode(repository.variables, forKey: .variables)
     }
 }
 

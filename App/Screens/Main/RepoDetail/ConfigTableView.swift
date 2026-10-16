@@ -4,76 +4,73 @@ import VaultCore
 
 /// The one table of the detail column (§10; mockup Main): Name (with the Linked chip of a linked
 /// copy, v0.4.1), Value (masked with an eye toggle, "Value missing", or plaintext for variables),
-/// Updated and Status, with the row actions Reveal, Copy, Edit, Convert/Move…, Copy To, linked
-/// copies, Push on Next Sync (secrets), Revert and Delete.
+/// Updated and, for a repository scope, Status. The row and selection menus come from the
+/// owner: a repository scope (``ConfigRowActions``) or, v0.7.0, a folder, which has no sync
+/// state.
 ///
 /// A native `Table` (selection, keyboard, context menus, double-click to edit) styled with
 /// `.fxTable()`: a card with 16 pt corners, 52 pt rows, mono names and timestamps, mono
 /// uppercase column titles.
-struct ConfigTableView: View {
-    @Bindable var viewModel: RepoDetailViewModel
+struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: View>: View {
+    @Bindable var viewModel: Model
+    let rowMenu: (ConfigRowModel) -> RowMenu
+    let selectionMenu: ([ConfigRowModel]) -> SelectionMenu
+    /// The empty state's message when items can be added.
+    var emptyMessage = String(
+        localized: "main.table.empty.pasteMessage",
+        defaultValue: "Add one, paste KEY=value lines with ⌘V, or import a .env file."
+    )
+
+    init(
+        viewModel: Model,
+        emptyMessage: String? = nil,
+        @ViewBuilder rowMenu: @escaping (ConfigRowModel) -> RowMenu,
+        @ViewBuilder selectionMenu: @escaping ([ConfigRowModel]) -> SelectionMenu
+    ) {
+        self.viewModel = viewModel
+        self.rowMenu = rowMenu
+        self.selectionMenu = selectionMenu
+        if let emptyMessage {
+            self.emptyMessage = emptyMessage
+        }
+    }
 
     var body: some View {
         let rows = viewModel.rows
-        Table(rows, selection: $viewModel.selection) {
-            TableColumn(Self.header(String(localized: "main.table.name", defaultValue: "Name"))) { row in
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                    HStack(spacing: Theme.Spacing.smallMinus) {
-                        TableNameText(name: row.name, isDeleted: row.isDeleted)
-                        if row.isLinked {
-                            LinkedChip(row: row, viewModel: viewModel)
-                        }
+        Group {
+            if viewModel.showsSyncStatus {
+                Table(rows, selection: $viewModel.selection) {
+                    commonColumns
+                    TableColumn(Self.header(String(localized: "main.table.status", defaultValue: "Status"))) { row in
+                        StatusChip(status: row.status)
+                            .fxTableCell()
                     }
-                    if let syncedName = row.syncedName {
-                        Text(String(localized: "main.table.renamedFrom", defaultValue: "Renamed from \(syncedName)"))
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(Theme.Colors.mutedText)
-                            .lineLimit(1)
-                    }
+                    .width(Theme.Layout.tableStatusMinWidth)
                 }
-                .fxTableCell()
+            } else {
+                Table(rows, selection: $viewModel.selection) {
+                    commonColumns
+                }
             }
-            .width(min: Theme.Layout.tableNameMinWidth, ideal: Theme.Layout.tableNameIdealWidth)
-            TableColumn(Self.header(String(localized: "main.table.value", defaultValue: "Value"))) { row in
-                MaskedValueCell(
-                    display: viewModel.display(for: row),
-                    onToggle: row.kind == .secret && row.hasValue && !row.isDeleted
-                        ? { viewModel.toggleReveal(row.id) }
-                        : nil
-                )
-                .fxTableCell()
-            }
-            .width(min: Theme.Layout.tableValueMinWidth)
-            TableColumn(Self.header(String(localized: "main.table.updated", defaultValue: "Updated"))) { row in
-                TableMetaText(Self.updatedText(row.updatedAt))
-                    .help(row.updatedAt.formatted(date: .complete, time: .shortened))
-                    .fxTableCell()
-            }
-            .width(Theme.Layout.tableDateMinWidth)
-            TableColumn(Self.header(String(localized: "main.table.status", defaultValue: "Status"))) { row in
-                StatusChip(status: row.status)
-                    .fxTableCell()
-            }
-            .width(Theme.Layout.tableStatusMinWidth)
         }
         .fxTable()
         .contextMenu(forSelectionType: ConfigItemID.self) { ids in
             if let id = ids.first, ids.count == 1, let row = rows.first(where: { $0.id == id }) {
-                ConfigRowActions(row: row, viewModel: viewModel)
+                rowMenu(row)
             } else if ids.count > 1 {
-                ConfigSelectionMenu(rows: viewModel.rows(for: ids), viewModel: viewModel)
+                selectionMenu(viewModel.rows(for: ids))
             }
         } primaryAction: { ids in
             if let id = ids.first, let row = rows.first(where: { $0.id == id }) {
                 viewModel.edit(row)
             }
         }
-        // ⌘V is handled by the whole detail column (RepoDetailScreen), not only the table.
+        // ⌘V is handled by the whole detail column, not only the table.
         .onDeleteCommand {
             viewModel.deleteSelection()
         }
-        // ⌘C copies the selected items (v0.4.0): ⌘V in another scope or repository pastes them as
-        // linked copies (v0.4.1). Disabled (the Copy menu item greyed) with nothing selected.
+        // ⌘C copies the selected items (v0.4.0): ⌘V in another scope, repository or folder pastes
+        // them as linked copies (v0.4.1, v0.7.0). Disabled with nothing selected.
         .onCommand(#selector(NSText.copy(_:)), perform: viewModel.selection.isEmpty ? nil : { viewModel.copySelection() })
         .overlay {
             if rows.isEmpty {
@@ -83,10 +80,7 @@ struct ConfigTableView: View {
                         ? String(localized: "main.table.empty.secrets", defaultValue: "No secrets")
                         : String(localized: "main.table.empty.variables", defaultValue: "No variables"),
                     message: viewModel.canEdit
-                        ? String(
-                            localized: "main.table.empty.pasteMessage",
-                            defaultValue: "Add one, paste KEY=value lines with ⌘V, or import a .env file."
-                        )
+                        ? emptyMessage
                         : String(localized: "main.table.empty.readOnly", defaultValue: "Nothing in this scope.")
                 ) {
                     if viewModel.canEdit {
@@ -100,6 +94,64 @@ struct ConfigTableView: View {
         }
     }
 
+    /// Name, Value and Updated (every table); Status follows for a repository scope.
+    @TableColumnBuilder<ConfigRowModel, Never>
+    private var commonColumns: some TableColumnContent<ConfigRowModel, Never> {
+        TableColumn(Self.header(String(localized: "main.table.name", defaultValue: "Name"))) { row in
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+                HStack(spacing: Theme.Spacing.smallMinus) {
+                    TableNameText(name: row.name, isDeleted: row.isDeleted)
+                    if row.isLinked {
+                        LinkedChip(row: row, viewModel: viewModel)
+                    }
+                }
+                if let syncedName = row.syncedName {
+                    Text(String(localized: "main.table.renamedFrom", defaultValue: "Renamed from \(syncedName)"))
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Colors.mutedText)
+                        .lineLimit(1)
+                }
+            }
+            .fxTableCell()
+        }
+        .width(min: Theme.Layout.tableNameMinWidth, ideal: Theme.Layout.tableNameIdealWidth)
+        TableColumn(Self.header(String(localized: "main.table.value", defaultValue: "Value"))) { row in
+            MaskedValueCell(
+                display: viewModel.display(for: row),
+                onToggle: row.kind == .secret && row.hasValue && !row.isDeleted
+                    ? { viewModel.toggleReveal(row.id) }
+                    : nil
+            )
+            .fxTableCell()
+        }
+        .width(min: Theme.Layout.tableValueMinWidth)
+        TableColumn(Self.header(String(localized: "main.table.updated", defaultValue: "Updated"))) { row in
+            TableMetaText(ConfigTableFormat.updatedText(row.updatedAt))
+                .help(row.updatedAt.formatted(date: .complete, time: .shortened))
+                .fxTableCell()
+        }
+        .width(Theme.Layout.tableDateMinWidth)
+    }
+
+    /// A column title in the section-label style.
+    static func header(_ title: String) -> Text {
+        ConfigTableFormat.header(title)
+    }
+}
+
+extension ConfigTableView where Model == RepoDetailViewModel, RowMenu == ConfigRowActions, SelectionMenu == ConfigSelectionMenu {
+    /// The table of a repository scope, with its sync actions.
+    init(viewModel: RepoDetailViewModel) {
+        self.init(viewModel: viewModel) { row in
+            ConfigRowActions(row: row, viewModel: viewModel)
+        } selectionMenu: { rows in
+            ConfigSelectionMenu(rows: rows, viewModel: viewModel)
+        }
+    }
+}
+
+/// The table's text formats, shared by every ``ConfigTableView``.
+enum ConfigTableFormat {
     /// A column title in the section-label style (mono 11, uppercase, +0.08em, subtle). `Table`
     /// takes a `Text`, so the case is applied to the string (in the current locale) rather than
     /// with `textCase`.
@@ -125,17 +177,19 @@ struct ConfigTableView: View {
 }
 
 /// "Copy To ›" (v0.4.0): the repository's other scopes, the ones this account may not change
-/// listed disabled, then "Another Repository…" (v0.4.1). The copies are pending adds there,
-/// values re-encrypted in the vault, linked to their sources.
-struct CopyToMenu: View {
+/// listed disabled, the folders (v0.7.0), then "Another Repository…" (v0.4.1). Copies into a
+/// scope are pending adds there and copies into a folder are saved at once; values are
+/// re-encrypted in the vault and every copy is linked to its source.
+struct CopyToMenu<Model: ConfigTableModel>: View {
     let title: String
     let rows: [ConfigRowModel]
-    let viewModel: RepoDetailViewModel
+    let viewModel: Model
     /// A trailing chevron, for the selection bar's pill (a context menu draws its own arrow).
     var showsChevron = false
 
     var body: some View {
-        let targets = viewModel.copyTargets
+        let targets = viewModel.scopeCopyTargets
+        let folders = viewModel.folderCopyTargets
         Menu {
             ForEach(targets) { target in
                 Button(target.title) {
@@ -143,7 +197,19 @@ struct CopyToMenu: View {
                 }
                 .disabled(!target.isEditable)
             }
-            if !targets.isEmpty {
+            if !folders.isEmpty {
+                if !targets.isEmpty {
+                    Divider()
+                }
+                Section(String(localized: "main.table.copyTo.folders", defaultValue: "Folders")) {
+                    ForEach(folders) { target in
+                        Button(target.title) {
+                            viewModel.copy(rows, to: target)
+                        }
+                    }
+                }
+            }
+            if !targets.isEmpty || !folders.isEmpty {
                 Divider()
             }
             Button(String(localized: "main.table.copyTo.otherRepository", defaultValue: "Another Repository…")) {
@@ -167,7 +233,7 @@ struct CopyToMenu: View {
 
 /// Copy To, Push on Next Sync, Revert and Delete… for several rows (v0.4.0), each for the rows it
 /// applies to.
-private struct ConfigSelectionMenu: View {
+struct ConfigSelectionMenu: View {
     let rows: [ConfigRowModel]
     let viewModel: RepoDetailViewModel
 
@@ -200,7 +266,7 @@ private struct ConfigSelectionMenu: View {
 
 /// Reveal, Copy, Edit (or Fill Value), Convert/Move…, Push on Next Sync, Revert and Delete for
 /// one row.
-private struct ConfigRowActions: View {
+struct ConfigRowActions: View {
     let row: ConfigRowModel
     let viewModel: RepoDetailViewModel
 

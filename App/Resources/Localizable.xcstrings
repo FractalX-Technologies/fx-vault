@@ -826,6 +826,83 @@
         }
       }
     },
+    "chat.card.folder.awaitingPeer" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Offered. The values are sent only if your teammate saves it or saves it as a file."
+          }
+        }
+      }
+    },
+    "chat.card.folder.dismissedByPeer" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not sent. Your teammate dismissed it, or the folder changed since you attached it."
+          }
+        }
+      }
+    },
+    "chat.card.folder.offered" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The values are not shown. Save… keeps it as a folder or imports it into one of your repositories."
+          }
+        }
+      }
+    },
+    "chat.card.folder.readyToSave" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Arrived. Save it as a folder, import it into a repository, or save it as a file."
+          }
+        }
+      }
+    },
+    "chat.card.folder.save" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save…"
+          }
+        }
+      }
+    },
+    "chat.card.folder.saved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved to your vault. Nothing was synced."
+          }
+        }
+      }
+    },
+    "chat.card.folder.sent" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your teammate received it. The values were sent once; later changes are not sent."
+          }
+        }
+      }
+    },
     "chat.card.notSaved" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -1706,6 +1783,61 @@
         }
       }
     },
+    "chat.picker.folder.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No folder with secrets or variables matches."
+          }
+        }
+      }
+    },
+    "chat.picker.folder.peerNeedsUpdate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your teammate's FX Vault cannot receive a folder yet. Ask them to update to FX Vault 0.7 or later, then start a new chat."
+          }
+        }
+      }
+    },
+    "chat.picker.folder.search" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search folders"
+          }
+        }
+      }
+    },
+    "chat.picker.folder.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Every secret and variable of the folder. Your teammate sees its name and counts; the values are sent only if they save it. They get their own copy: later changes are not sent."
+          }
+        }
+      }
+    },
+    "chat.picker.folder.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Attach a Folder"
+          }
+        }
+      }
+    },
     "chat.picker.mode" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -1856,6 +1988,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Attach Secret or Variable"
+          }
+        }
+      }
+    },
+    "chat.save.folder.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@, received in Nearby Chat. Save it as a folder, or import its items into one of your repositories."
+          }
+        }
+      }
+    },
+    "chat.save.folder.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save a Folder"
           }
         }
       }
@@ -4126,6 +4280,17 @@
         }
       }
     },
+    "envExport.file.header.folder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Exported by FX Vault from the folder %@. Plaintext values: never commit this file."
+          }
+        }
+      }
+    },
     "envExport.git.added" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -5809,6 +5974,28 @@
         }
       }
     },
+    "error.config.folderFull" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A folder can hold at most %lld secrets and variables."
+          }
+        }
+      }
+    },
+    "error.config.folderNotFound" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This folder is no longer in the vault."
+          }
+        }
+      }
+    },
     "error.config.itemNotFound" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7283,6 +7470,567 @@
         }
       }
     },
+    "folder.actions" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folder Actions"
+          }
+        }
+      }
+    },
+    "folder.copiedItem.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied %@. Open a scope, repository or another folder and paste it with ⌘V: the copy stays linked to this item."
+          }
+        }
+      }
+    },
+    "folder.copiedItems.notice" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied %lld items. Open a scope, repository or another folder and paste them with ⌘V: the copies stay linked to these items."
+          }
+        }
+      }
+    },
+    "folder.counts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%1$lld secret](inflect: true) · ^[%2$lld variable](inflect: true)"
+          }
+        }
+      }
+    },
+    "folder.delete" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete Folder…"
+          }
+        }
+      }
+    },
+    "folder.delete.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete Folder"
+          }
+        }
+      }
+    },
+    "folder.delete.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Its secrets and variables are removed from this Mac. Copies you pasted into repositories stay where they are."
+          }
+        }
+      }
+    },
+    "folder.delete.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete the folder %@?"
+          }
+        }
+      }
+    },
+    "folder.deleteItems.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "They are removed from this folder now. Copies in repositories and other folders stay."
+          }
+        }
+      }
+    },
+    "folder.deleteItems.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete %lld items?"
+          }
+        }
+      }
+    },
+    "folder.deleteItems.title.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete this item?"
+          }
+        }
+      }
+    },
+    "folder.destination" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Destination"
+          }
+        }
+      }
+    },
+    "folder.destination.chooseRepository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose a repository"
+          }
+        }
+      }
+    },
+    "folder.destination.continue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "folder.destination.folder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folder"
+          }
+        }
+      }
+    },
+    "folder.destination.folderNote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The items are saved in your vault at once. Each person keeps their own copy: later changes are not sent automatically."
+          }
+        }
+      }
+    },
+    "folder.destination.importInto" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import Into a Repository"
+          }
+        }
+      }
+    },
+    "folder.destination.keepMine" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep mine"
+          }
+        }
+      }
+    },
+    "folder.destination.kept" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kept %lld that the folder already had."
+          }
+        }
+      }
+    },
+    "folder.destination.newFolder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New folder"
+          }
+        }
+      }
+    },
+    "folder.destination.replace" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Replace with the received values"
+          }
+        }
+      }
+    },
+    "folder.destination.repository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository"
+          }
+        }
+      }
+    },
+    "folder.destination.repositoryNote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You review everything before it is imported. The items become changes for your next Sync; nothing reaches GitHub before that."
+          }
+        }
+      }
+    },
+    "folder.destination.sameNames" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Names the folder already has"
+          }
+        }
+      }
+    },
+    "folder.destination.save" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save"
+          }
+        }
+      }
+    },
+    "folder.destination.saveAsFolder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save as Folder"
+          }
+        }
+      }
+    },
+    "folder.destination.saved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved ^[%1$lld item](inflect: true) in %2$@."
+          }
+        }
+      }
+    },
+    "folder.destination.scope" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Scope"
+          }
+        }
+      }
+    },
+    "folder.emptyHint" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep secrets and variables you use in several repositories here, for example the keys of a mobile app."
+          }
+        }
+      }
+    },
+    "folder.exportEnv" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Export .env…"
+          }
+        }
+      }
+    },
+    "folder.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folder"
+          }
+        }
+      }
+    },
+    "folder.localHelp" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A folder stays in this vault. Copy its items into a repository to put them on GitHub with the next Sync."
+          }
+        }
+      }
+    },
+    "folder.localTag" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Never on GitHub"
+          }
+        }
+      }
+    },
+    "folder.name.create" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create"
+          }
+        }
+      }
+    },
+    "folder.name.field" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "folder.name.newTitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Folder"
+          }
+        }
+      }
+    },
+    "folder.name.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mobile App"
+          }
+        }
+      }
+    },
+    "folder.name.rename" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rename"
+          }
+        }
+      }
+    },
+    "folder.name.renameTitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rename Folder"
+          }
+        }
+      }
+    },
+    "folder.name.taken" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Another folder already has this name."
+          }
+        }
+      }
+    },
+    "folder.new" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Folder…"
+          }
+        }
+      }
+    },
+    "folder.overviewHint" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy items into any repository with ⌘C and ⌘V or Copy To. Copies stay linked: change a value here and FX Vault offers to update them."
+          }
+        }
+      }
+    },
+    "folder.paste.sameFolder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "These items are already in this folder. Open another folder, scope or repository to paste them."
+          }
+        }
+      }
+    },
+    "folder.rename" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rename…"
+          }
+        }
+      }
+    },
+    "folder.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folders"
+          }
+        }
+      }
+    },
+    "folder.send.nobody" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No teammate nearby"
+          }
+        }
+      }
+    },
+    "folder.sendFolder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send Folder"
+          }
+        }
+      }
+    },
+    "folder.sendToTeammate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send to Teammate"
+          }
+        }
+      }
+    },
+    "folder.share.alreadyImported" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You already saved or imported this copy once. Saving it again changes nothing unless you replace values."
+          }
+        }
+      }
+    },
+    "folder.shareAsFile" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share as File…"
+          }
+        }
+      }
+    },
+    "folder.table.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add one, paste KEY=value lines with ⌘V, import a .env file, or copy items here from a repository."
+          }
+        }
+      }
+    },
     "gh.owner.unnamed" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8280,6 +9028,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "In %1$@ of %2$@"
+          }
+        }
+      }
+    },
+    "itemEditor.subtitle.folder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "In the folder %@"
           }
         }
       }
@@ -9428,6 +10187,17 @@
         }
       }
     },
+    "main.linked.folder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folder"
+          }
+        }
+      }
+    },
     "main.linked.footer" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10106,6 +10876,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Copy To"
+          }
+        }
+      }
+    },
+    "main.table.copyTo.folders" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folders"
           }
         }
       }
@@ -11771,13 +12552,13 @@
         }
       }
     },
-    "presence.accessibility" : {
+    "presence.button.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "People nearby"
+            "value" : "People nearby: %lld"
           }
         }
       }
@@ -11793,13 +12574,24 @@
         }
       }
     },
-    "presence.nearby.help" : {
+    "presence.list.empty" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%@ is nearby"
+            "value" : "Nobody nearby. Teammates appear here, and in the sidebar, while their Mac is close with FX Vault open."
+          }
+        }
+      }
+    },
+    "presence.list.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby now"
           }
         }
       }
@@ -11881,6 +12673,17 @@
         }
       }
     },
+    "presence.sendFolder.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opens a chat with %@ and attaches the folder after Touch ID or your password. They get their own copy."
+          }
+        }
+      }
+    },
     "presence.stranger.note" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11910,17 +12713,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Teammate"
-          }
-        }
-      }
-    },
-    "presence.teammate.help" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@, your teammate, is nearby"
           }
         }
       }
@@ -14642,6 +15434,28 @@
         }
       }
     },
+    "share.summary.folderLevel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folder"
+          }
+        }
+      }
+    },
+    "share.summary.folderTitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folder %@"
+          }
+        }
+      }
+    },
     "share.summary.policyIncluded" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -15199,6 +16013,149 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Import Share"
+          }
+        }
+      }
+    },
+    "sidebar.teammates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammates"
+          }
+        }
+      }
+    },
+    "sidebar.teammates.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Teammate…"
+          }
+        }
+      }
+    },
+    "sidebar.teammates.away" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@. Ping, Chat and Send Folder work when their Mac is nearby with FX Vault open."
+          }
+        }
+      }
+    },
+    "sidebar.teammates.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pair once with a 6-digit code to see each other nearby, ping, chat and send folders."
+          }
+        }
+      }
+    },
+    "sidebar.teammates.muted" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pings muted"
+          }
+        }
+      }
+    },
+    "sidebar.teammates.nearby" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nearby"
+          }
+        }
+      }
+    },
+    "sidebar.teammates.neverSeen" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not seen yet"
+          }
+        }
+      }
+    },
+    "sidebar.teammates.others" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Others nearby · %lld"
+          }
+        }
+      }
+    },
+    "sidebar.teammates.seen" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Seen %@"
+          }
+        }
+      }
+    },
+    "sidebar.teammates.visibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Who can see this Mac"
+          }
+        }
+      }
+    },
+    "sidebar.teammates.visibility.everyone" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Visible to everyone"
+          }
+        }
+      }
+    },
+    "sidebar.teammates.visibility.nobody" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hidden"
+          }
+        }
+      }
+    },
+    "sidebar.teammates.visibility.teammates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Visible to teammates"
           }
         }
       }

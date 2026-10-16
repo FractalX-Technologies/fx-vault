@@ -47,14 +47,23 @@ FXVault/
 │   │   │   │                        # ConnectivityBannerModel, ConnectivityCopy (offline .help)
 │   │   │   ├── MainColumnSelection.swift  # Up/Down selection of the custom-drawn sidebar and
 │   │   │   │                        # scope rows (pure helper + modifier)
-│   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel
+│   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel,
+│   │   │   │                        # SidebarFoldersSection, SidebarTeammatesSection (v0.7.0)
 │   │   │   ├── ScopeList/           # ScopeListView/ViewModel ("Repository" + environments)
-│   │   │   ├── RepoDetail/          # RepoDetailScreen/ViewModel, ConfigTableView,
-│   │   │   │                        # LinkedCopiesView (Linked chip and popover, v0.4.1)
-│   │   │   ├── Presence/            # NearbyPresenceView (toolbar bubbles, person popover, v0.5.0)
+│   │   │   ├── RepoDetail/          # RepoDetailScreen/ViewModel, ConfigTableView (generic over
+│   │   │   │                        # ConfigTableModel, v0.7.0), ConfigDetailControls,
+│   │   │   │                        # ConfigValueRevealer, ItemCopyFlow, LinkedCopiesView (Linked
+│   │   │   │                        # chip and popover, v0.4.1)
+│   │   │   ├── Folder/              # FolderDetailScreen/ViewModel (column 3 of a folder, v0.7.0)
+│   │   │   ├── Presence/            # NearbyPresenceView (toolbar people button, person popover,
+│   │   │   │                        # nearby list; v0.5.0, compact since v0.7.0)
 │   │   │   └── AddRepository/       # AddRepositorySheet/ViewModel (Add repository by name)
 │   │   ├── CopyToRepository/        # CopyToRepositoryScreen/ViewModel (Copy To › Another
 │   │   │                            # Repository…, v0.4.1)
+│   │   ├── Folders/                 # FolderOverviewView (column 2), FolderContextMenu,
+│   │   │                            # FolderNameScreen/ViewModel (New Folder…, Rename…),
+│   │   │                            # FolderDestinationModel/View (a received copy), FolderCopy,
+│   │   │                            # FolderRepository+Extension (v0.7.0)
 │   │   ├── Team/                    # TeammatesSettingsScreen/ViewModel (Preferences › Teammates,
 │   │   │                            # Outside this network since v0.6.0), AddTeammateSheet/ViewModel
 │   │   │                            # (pairing), v0.5.0
@@ -167,8 +176,9 @@ FXVault/
 │   │   ├── VaultCore/               # Identifiers, SecretBytes, Clock (VaultClock), Limits, Timeouts
 │   │   │   ├── Models/              # Account, Repo, RepoCapability, Environment, ConfigItem,
 │   │   │   │                        # ConfigKind, BranchPattern, DeploymentBranchPolicy,
-│   │   │   │                        # Teammate (v0.5.0), SpaceGateDecision (v0.6.0)
-│   │   │   ├── Validation/          # PathSegment, GitHubName, EnvironmentName, RepoName,
+│   │   │   │                        # Teammate (v0.5.0), SpaceGateDecision (v0.6.0),
+│   │   │   │                        # Folder/FolderItem, ItemPlace (v0.7.0)
+│   │   │   ├── Validation/          # PathSegment, GitHubName, EnvironmentName, FolderName (v0.7.0), RepoName,
 │   │   │   │                        # OwnerLogin, GitHubHost, BranchPattern validators,
 │   │   │   │                        # DisplayNameSanitizer, ValueNormalizer, ScopeCapacity,
 │   │   │   │                        # NameAvailability, UnicodeScalarPolicy
@@ -179,14 +189,16 @@ FXVault/
 │   │   │                            # KeyHierarchy, RecoveryKey, CrockfordBase32,
 │   │   │                            # ValueFingerprinter, UnlockedKeys, VaultKeyring,
 │   │   │                            # PasswordStrength, CryptoError, CryptoDomain, SecureRandom
+│   │   │                            # (AADBuilder: FieldAAD, SecretFieldAAD, FolderFieldAAD)
 │   │   ├── VaultStore/              # (only GRDB import)
 │   │   │   ├── Database/            # VaultDatabase, DatabaseFactory, DatabaseTimestamp, StoreConstants
-│   │   │   ├── Migrations/          # VaultMigrator, MigrationSQL (v1–v11, frozen)
+│   │   │   ├── Migrations/          # VaultMigrator, MigrationSQL (v1–v12, frozen)
 │   │   │   ├── Records/             # Vault/KeyWrap, Account, Repository, Environment/BranchPattern,
 │   │   │   │                        # ConfigItem/ConfigItemState, SyncJournal/ImportedSharePackage,
-│   │   │   │                        # Team (v0.5.0), Space (spaces, keys, versions, addresses; v0.6.0)
+│   │   │   │                        # Team (v0.5.0), Space (spaces, keys, versions, addresses; v0.6.0),
+│   │   │   │                        # Folder/FolderItem (v0.7.0)
 │   │   │   ├── Stores/              # VaultRecord, Account, Repo, Config, SyncJournal, SharePackage,
-│   │   │   │                        # Team (v0.5.0), Space (v0.6.0)
+│   │   │   │                        # Team (v0.5.0), Space (v0.6.0), Folder (+LinkCountQuery, v0.7.0)
 │   │   │   └── Errors/              # StoreError
 │   │   ├── GitHubKit/
 │   │   │   ├── Process/             # CommandRunning, CommandSpec, StdinPayload, ProcessRunner,
@@ -270,12 +282,16 @@ FXVault/
 │   │       ├── Spaces/              # SpaceRepository (+Coordinating, +Exchange), SpaceSnapshots
 │   │       │                        # (builder, applier), SpaceMarkerTarget, SpaceRepositoryModels
 │   │       │                        # (v0.6.0)
-│   │       ├── Config/              # ConfigRepository, ConfigRepositoryError
+│   │       ├── Config/              # ConfigRepository (+Links), ConfigRepositoryError
 │   │       │   ├── Models/          # BranchPolicyDraftModel, ConfigScopeSummaryModel,
-│   │       │   │                    # ItemWriteResultModel
+│   │       │   │                    # ItemWriteResultModel, ItemCopyModels, ItemLinkModels
 │   │       │   └── Support/         # ConfigFieldCipher, EnvironmentEditor, ItemEditBatch,
 │   │       │                        # ItemMutationWriter, ObservationMapper, RepoSnapshotMapper,
-│   │       │                        # ConfigItemRecord+Extension (row transitions, v0.6.0)
+│   │       │                        # ConfigItemRecord+Extension (row transitions, v0.6.0),
+│   │       │                        # ItemCopySource (either table, v0.7.0)
+│   │       ├── Folders/             # FolderRepository (v0.7.0)
+│   │       │   ├── Models/          # FolderSaveModels (Save as Folder)
+│   │       │   └── Support/         # FolderFieldCipher, FolderItemWriter
 │   │       ├── EnvFiles/            # EnvFileRepository, EnvFileError, EnvExportAuthorizationModel,
 │   │       │   │                    # ReauthGate+EnvExport, GitServiceGitignoreChecker
 │   │       │   └── Models/          # EnvExportModels, EnvImportModels
@@ -290,7 +306,7 @@ FXVault/
 │   │       │                        # NearbyChatError)
 │   │       └── Sharing/             # SharingRepository (+Models, +Error), ShareAuthorizationModel,
 │   │           │                    # ReauthGate+Share, ShareExportBuilder, ShareImportPlanning,
-│   │           │                    # ShareImporter
+│   │           │                    # ShareImporter, FolderPackageTargeting (v0.7.0)
 │   │           └── Nearby/          # NearbyShareSender, NearbyShareReceiver
 │   └── Tests/<Module>Tests/         # one Swift Testing target per module, each with Fixtures/
 │       ├── FXVaultTestSupport/                   # test-only target (no product): GitHubSimulator

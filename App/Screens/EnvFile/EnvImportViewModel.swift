@@ -61,7 +61,10 @@ private struct EnvImportRowKey: Hashable {
 /// are never logged. Rows, issues and summaries hold names and line numbers only.
 @Observable
 final class EnvImportViewModel: LockObserving {
-    let repositoryID: RepoID
+    /// The repository whose scopes are the targets; nil for a folder (v0.7.0).
+    let repositoryID: RepoID?
+    /// The folder the rows go into (v0.7.0); nil for a repository.
+    let folderID: FolderID?
     private(set) var step: EnvImportStep
     var sourceKind: EnvImportSourceKind {
         didSet {
@@ -108,6 +111,7 @@ final class EnvImportViewModel: LockObserving {
     @ObservationIgnored private(set) var parseTask: Task<Void, Never>?
     @ObservationIgnored private let envFiles: EnvFileRepository
     @ObservationIgnored private let config: ConfigRepository
+    @ObservationIgnored private let folders: FolderRepository
     @ObservationIgnored private let clock: any VaultClock
     /// The user's row changes, kept across re-parses of the paste editor.
     @ObservationIgnored private var overrides: [EnvImportRowKey: EnvImportRowOverrideModel] = [:]
@@ -123,11 +127,20 @@ final class EnvImportViewModel: LockObserving {
     @ObservationIgnored private let tasks = TaskBag()
 
     init(context: EnvImportContext, dependencies: FeatureDependencies) {
-        repositoryID = context.repositoryID
-        targetScope = context.scope
+        switch context.place {
+        case .scope(let repositoryID, let scope):
+            self.repositoryID = repositoryID
+            folderID = nil
+            targetScope = scope
+        case .folder(let id):
+            repositoryID = nil
+            folderID = id
+            targetScope = .repository
+        }
         defaultKind = context.defaultKind
         envFiles = dependencies.envFiles
         config = dependencies.config
+        folders = dependencies.folders
         clock = dependencies.clock
         var prefill: SecretBytes?
         // A file passed in the context wins over any paste start.
@@ -334,6 +347,17 @@ final class EnvImportViewModel: LockObserving {
         issues.lazy.filter { $0.severity == .error }.count
     }
 
+    /// Where the rows go: the chosen scope, or the folder.
+    var targetPlace: ItemPlaceModel? {
+        if let folderID { return .folder(folderID) }
+        return repositoryID.map { .scope(repositoryID: $0, scope: targetScope) }
+    }
+
+    /// True for a folder: there is no scope to choose and nothing is pending for Sync.
+    var isFolder: Bool {
+        folderID != nil
+    }
+
     /// Changes the target scope. Overwrite choices were made for the old scope's items, so
     /// every row goes back to Skip and conflicts are reviewed again for the new scope.
     func selectTarget(_ scope: ConfigScope) {
@@ -506,12 +530,12 @@ final class EnvImportViewModel: LockObserving {
 
     /// Imports the included rows into the target scope in one transaction.
     func importRows() {
-        guard canImport, let preview else { return }
+        guard canImport, let preview, let targetPlace else { return }
         let selections = includedRows.map(\.selection)
         isWorking = true
         defer { isWorking = false }
         do {
-            let result = try envFiles.applyImport(preview, selections: selections, repositoryID: repositoryID, scope: targetScope)
+            let result = try envFiles.applyImport(preview, selections: selections, place: targetPlace)
             clearPreview()
             overrides = [:]
             step = .done(result)
@@ -557,9 +581,9 @@ final class EnvImportViewModel: LockObserving {
         return lines
     }
 
-    /// True when the import created local changes that Sync will push.
+    /// True when the import created local changes that Sync will push (never for a folder).
     func hasPendingChanges(_ result: EnvImportResultModel) -> Bool {
-        !result.added.isEmpty || !result.overwritten.isEmpty
+        !isFolder && (!result.added.isEmpty || !result.overwritten.isEmpty)
     }
 
     // MARK: - Lifetime
@@ -708,9 +732,12 @@ final class EnvImportViewModel: LockObserving {
             return
         }
         let selections = rows.filter { !$0.name.isEmpty }.map(\.selection)
+        guard let targetPlace else {
+            conflictingRowIDs = []
+            return
+        }
         do {
-            let conflicts = try envFiles.conflicts(for: selections, in: preview, repositoryID: repositoryID, scope: targetScope)
-            conflictingRowIDs = Set(conflicts.keys)
+            conflictingRowIDs = try envFiles.conflictingCandidates(for: selections, in: preview, place: targetPlace)
         } catch {
             conflictingRowIDs = []
             alert = error.presentation
@@ -718,6 +745,16 @@ final class EnvImportViewModel: LockObserving {
     }
 
     private func loadScopeOptions() {
+        if let folderID {
+            // A folder is its own single target.
+            let name = (try? folders.folders())?.first { $0.id == folderID }?.name
+            scopeOptions = name.map { [EnvImportScopeOptionModel(scope: .repository, title: $0, isEditable: true)] } ?? []
+            return
+        }
+        guard let repositoryID else {
+            scopeOptions = []
+            return
+        }
         do {
             let capability = try config.changeSet(repositoryID: repositoryID)?.repository.capability
             scopeOptions = try config.scopes(repositoryID: repositoryID)

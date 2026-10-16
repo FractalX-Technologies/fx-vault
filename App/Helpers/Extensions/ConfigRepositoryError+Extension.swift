@@ -27,6 +27,10 @@ nonisolated extension ConfigRepositoryError {
             String(localized: "error.config.environmentNotFound", defaultValue: "This environment is no longer in the vault.")
         case .itemNotFound, .edit(.itemNotFound):
             String(localized: "error.config.itemNotFound", defaultValue: "This item is no longer in the vault.")
+        case .folderNotFound:
+            String(localized: "error.config.folderNotFound", defaultValue: "This folder is no longer in the vault.")
+        case .folderFull(let limit):
+            String(localized: "error.config.folderFull", defaultValue: "A folder can hold at most \(limit) secrets and variables.")
         case .environmentDeleted:
             String(
                 localized: "error.config.environmentDeleted",

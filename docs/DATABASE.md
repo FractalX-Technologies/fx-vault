@@ -344,6 +344,43 @@ CREATE TABLE teammate_addresses (device_id TEXT PRIMARY KEY REFERENCES teammates
 - `SpaceRepository` (VaultData) owns `spaces`, `space_keys` and `space_versions`;
   `TeamRepository` owns `teammate_addresses`.
 
+### v12_folders (v0.7.0)
+
+```sql
+CREATE TABLE folders (id TEXT PRIMARY KEY CHECK (length(id) = 36),
+  name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 64), name_key TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE UNIQUE INDEX folders_name_key ON folders(name_key);
+CREATE TABLE folder_items (id TEXT PRIMARY KEY CHECK (length(id) = 36),
+  folder_id TEXT NOT NULL REFERENCES folders(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('secret','variable')),
+  name TEXT NOT NULL CHECK (name = upper(name) AND length(name) BETWEEN 1 AND 255),
+  value_ct BLOB NOT NULL, value_fp BLOB NOT NULL,
+  link_id TEXT CHECK (link_id IS NULL OR length(link_id) = 36),
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE UNIQUE INDEX folder_items_name ON folder_items(folder_id, kind, name);
+CREATE INDEX folder_items_link ON folder_items(link_id) WHERE link_id IS NOT NULL;
+```
+
+- Folders hold secrets and variables that belong to no repository. They are separate tables on
+  purpose: no sync path (`ChangeSetBuilder`, preflight, executor, drift, scope spaces) reads
+  them, so a folder item can never reach GitHub by itself. Repositories get folder items only as
+  copies written into `config_items`.
+- `name_key` = `FolderNameValidator.foldKey(name)` (case-insensitive, NFC). `sort_order` is the
+  sidebar order; `FolderRepository.reorderFolders` rewrites it.
+- A folder item always has a value (nothing in a folder comes from GitHub), so `value_ct` and
+  `value_fp` are NOT NULL. `value_ct` is sealed with `FolderFieldAAD` (row, folder, kind, name:
+  the §5.4 field layout with table `folder_items`); a rename or kind change re-seals it.
+  `value_fp` is the row-bound fingerprint, as for `config_items`. DEK rotation re-seals both.
+- Folder item ids are `ConfigItemID`s and never collide with `config_items` ids, so copy and
+  paste, linked copies and Reveal take either. A `link_id` group spans both tables:
+  `LinkCountQuery` counts live members of both (`config_items` without tombstones), and
+  `ConfigStore`/`FolderStore` each set `link_id` on their own rows.
+- Deleting a folder cascades to its items; their copies in repositories keep their rows (a copy
+  left alone in its group is no longer shown as linked).
+- `FolderRepository` (VaultData) owns both tables; `ConfigRepository` reads and writes folder
+  items only through `ItemCopySource` (copy, links, Reveal) and `FolderItemWriter`.
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -363,6 +400,8 @@ CREATE TABLE teammate_addresses (device_id TEXT PRIMARY KEY REFERENCES teammates
 | `space_keys` | `SpaceKeyRecord` | `SpaceStore` | Epoch keys, sealed, v0.6.0 |
 | `space_versions` | `SpaceVersionRecord` | `SpaceStore` | Append-only signed versions, v0.6.0 |
 | `teammate_addresses` | `TeammateAddressRecord` | `SpaceStore` | Remote space sync per teammate (Q4), v0.6.0 |
+| `folders` | `FolderRecord` | `FolderStore` | Unique by `name_key`, sidebar order, v0.7.0 |
+| `folder_items` | `FolderItemRecord` (with ciphertext; `FolderItemModel` without) | `FolderStore` | Always with a value; `link_id` groups span `config_items`, v0.7.0 |
 
 ## Transactions
 
@@ -397,8 +436,9 @@ CREATE TABLE teammate_addresses (device_id TEXT PRIMARY KEY REFERENCES teammates
 ## Observation
 
 `AccountStore.observeAll`, `RepoStore.observeAll/observe(id:)`,
-`ConfigStore.observeEnvironments/observeItems/observePendingInputs/observeAllPendingInputs` and
-`SyncJournalStore.observeLatestRun` return `AsyncThrowingStream`s. Each emits the current value,
+`ConfigStore.observeEnvironments/observeItems/observePendingInputs/observeAllPendingInputs`,
+`FolderStore.observeFolders/observeItems` (v0.7.0) and `SyncJournalStore.observeLatestRun` return
+`AsyncThrowingStream`s. Each emits the current value,
 then a new value after every committed change; consecutive equal values are skipped; a failed
 fetch ends the stream with a `StoreError`; observation stops when the consumer stops iterating.
 

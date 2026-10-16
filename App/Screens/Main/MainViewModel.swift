@@ -13,6 +13,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     private(set) var scopeList: ScopeListViewModel?
     /// The detail column of the selected imported repository.
     private(set) var detail: RepoDetailViewModel?
+    /// The detail column of the selected folder (v0.7.0).
+    private(set) var folderDetail: FolderDetailViewModel?
     /// The sheet on screen (``MainSheet``). Setting another route replaces it.
     var activeSheet: MainSheet? {
         didSet {
@@ -50,6 +52,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             isGitHubReady: { [app] in app.ghStatus.isReady },
             select: { [weak self] id in self?.sidebar.select(repositoryID: id) },
             open: { [weak self] id, scope in self?.open(repositoryID: id, scope: scope) },
+            openFolder: { [weak self] id in self?.sidebar.select(folderID: id) },
             syncSpaces: { [app] in await app.spaceSync.syncAllAndWait() },
             spacesPublished: { [app] in app.spaceSync.syncAll() },
             spaceIdentity: { [app] in app.spaceIdentity },
@@ -77,9 +80,19 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         selectedRepo?.importedRepoID.flatMap(sidebar.vaultRepository)
     }
 
-    /// Rebuilds the scopes and detail columns when the selected repository changes (or becomes
-    /// imported, or is removed).
+    /// Rebuilds the scopes and detail columns when the selected repository or folder changes (or
+    /// the repository becomes imported, or is removed).
     private func followSelection() {
+        if let folderID = sidebar.selectedFolderID {
+            guard folderDetail?.folderID != folderID else { return }
+            detail = nil
+            scopeList = nil
+            folderDetail = FolderDetailViewModel(folderID: folderID, dependencies: featureDependencies) { [weak sidebar] in
+                sidebar?.folder(folderID)
+            }
+            return
+        }
+        folderDetail = nil
         let repoID = selectedRepo?.importedRepoID
         guard scopeList?.repositoryID != repoID else { return }
         detail = nil
@@ -120,9 +133,12 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         activeSheet = .shareImport(ShareImportContext(fileURL: url))
     }
 
-    /// The share selection for the current column selection: the environment, or the
-    /// repository.
+    /// The share selection for the current column selection: the environment, the repository,
+    /// or the folder (v0.7.0).
     var currentShareSelection: ShareSelectionModel? {
+        if let folder = sidebar.selectedFolder {
+            return folder.itemCount > 0 ? .folder(folder.id) : nil
+        }
         guard selectedVaultRepo != nil, let scopeList, let scope = scopeList.selectedScope else { return nil }
         return scopeList.shareSelection(for: scope)
     }
@@ -186,14 +202,25 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         )))
     }
 
-    /// Import .env (⇧⌘I) needs a selected scope whose items can change.
+    /// Import .env (⇧⌘I) needs a selected scope whose items can change, or a folder.
     var canImportEnv: Bool {
-        isUnlocked && scopeList?.selectedScope != nil && detail?.canEdit == true
+        isUnlocked && (folderDetail?.canEdit == true || (scopeList?.selectedScope != nil && detail?.canEdit == true))
     }
 
     func importEnv() {
-        guard canImportEnv, let repo = selectedVaultRepo, let scope = scopeList?.selectedScope else { return }
+        guard canImportEnv else { return }
+        if let folderDetail {
+            present(.envImport(EnvImportContext(place: .folder(folderDetail.folderID))))
+            return
+        }
+        guard let repo = selectedVaultRepo, let scope = scopeList?.selectedScope else { return }
         present(.envImport(EnvImportContext(repositoryID: repo.id, scope: scope.scope, fileURL: nil)))
+    }
+
+    /// New Folder… (⇧⌘N, v0.7.0).
+    func newFolder() {
+        guard isUnlocked else { return }
+        present(.folderName(FolderNameContext(mode: .create(itemIDs: []))))
     }
 
     var canShareFile: Bool {

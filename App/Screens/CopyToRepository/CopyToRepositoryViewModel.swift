@@ -29,7 +29,8 @@ struct CopyRepositorySectionModel: Hashable, Identifiable {
 /// Copy To › Another Repository… (v0.4.1, tasks/todo.md L1): every repository of the vault,
 /// whatever account it belongs to, searchable by name, owner or account; choose one, then one of
 /// its scopes. The copies are pending adds there, linked to their sources
-/// (`ConfigRepository.copyItems`), with the same "Replace or keep?" question as a paste.
+/// (`ConfigRepository.copyItems`), with the same "Replace or keep?" question as a paste. The
+/// items may come from a scope or, v0.7.0, a folder.
 @Observable
 final class CopyToRepositoryViewModel {
     private(set) var isLoaded = false
@@ -58,12 +59,14 @@ final class CopyToRepositoryViewModel {
     func load() async {
         do {
             repositories = try await Self.first(dependencies.config.observeRepositories()) ?? []
-            let items = try await Self.first(dependencies.config.observeItems(
-                repositoryID: context.sourceRepositoryID,
-                scope: context.sourceScope
-            )) ?? []
             let ids = Set(context.itemIDs)
-            itemNames = items.filter { ids.contains($0.id) && !$0.isDeleted }.map(\.name)
+            switch context.source {
+            case .scope(let repositoryID, let scope):
+                let items = try await Self.first(dependencies.config.observeItems(repositoryID: repositoryID, scope: scope)) ?? []
+                itemNames = items.filter { ids.contains($0.id) && !$0.isDeleted }.map(\.name)
+            case .folder(let folderID):
+                itemNames = try dependencies.folders.items(folderID: folderID).filter { ids.contains($0.id) }.map(\.name)
+            }
             isLoaded = true
         } catch {
             loadError = error.presentation
@@ -110,7 +113,7 @@ final class CopyToRepositoryViewModel {
         let capability = repository.capability
         targets = summaries
             .filter { !$0.isDeleted }
-            .filter { repository.id != context.sourceRepositoryID || $0.scope != context.sourceScope }
+            .filter { context.source != .scope(repositoryID: repository.id, scope: $0.scope) }
             .map { summary in
                 let reason = capability.readOnlyReason(for: summary.scope.level)
                 return CopyTargetRowModel(
@@ -140,11 +143,7 @@ final class CopyToRepositoryViewModel {
     func copy() {
         guard canCopy, let target = selectedTarget else { return }
         do {
-            let conflicts = try dependencies.config.copyConflicts(
-                context.itemIDs,
-                to: target.scope,
-                repositoryID: target.repositoryID
-            )
+            let conflicts = try dependencies.copyConflicts(context.itemIDs, to: target.place)
             if conflicts.isEmpty {
                 perform(.keep)
             } else {
@@ -169,7 +168,7 @@ final class CopyToRepositoryViewModel {
     /// Shows the scope the items were copied to.
     func showTarget() {
         guard let target = selectedTarget else { return }
-        dependencies.actions.open(target.repositoryID, target.scope)
+        dependencies.actions.openPlace(target.place)
     }
 
     private func perform(_ conflicts: ItemCopyConflictPolicy) {
@@ -177,12 +176,7 @@ final class CopyToRepositoryViewModel {
         isCopying = true
         defer { isCopying = false }
         do {
-            result = try dependencies.config.copyItems(
-                context.itemIDs,
-                to: target.scope,
-                repositoryID: target.repositoryID,
-                conflicts: conflicts
-            )
+            result = try dependencies.copyItems(context.itemIDs, to: target.place, conflicts: conflicts)
         } catch {
             alert = error.presentation
         }

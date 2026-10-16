@@ -50,6 +50,19 @@ struct ShareImportScreen: View {
             if let result = viewModel.result {
                 ShareImportResultView(result: result)
             }
+        case .folderDestination:
+            if let destination = viewModel.destination {
+                VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
+                    if viewModel.wasFolderImported {
+                        Banner(.warning, message: FolderShareCopy.alreadyImported)
+                    }
+                    FolderDestinationView(model: destination)
+                }
+            }
+        case .folderSaved:
+            if let notice = viewModel.folderNotice {
+                SheetCallout(systemImage: "checkmark.circle", tint: Theme.Colors.success, text: notice)
+            }
         case .failed:
             if let failure = viewModel.failure {
                 InlineErrorView(error: failure)
@@ -135,7 +148,7 @@ struct ShareImportScreen: View {
         HStack(spacing: Theme.Spacing.mediumMinus) {
             Spacer()
             switch viewModel.step {
-            case .done, .failed:
+            case .done, .failed, .folderSaved:
                 Button(String(localized: "common.done", defaultValue: "Done")) {
                     dismiss()
                 }
@@ -154,6 +167,14 @@ struct ShareImportScreen: View {
                 }
                 .fxButtonStyle(.primary, size: .large)
                 .disabled(!viewModel.canApply)
+            case .folderDestination:
+                cancelButton
+                Button(viewModel.destination?.choice == .repository ? FolderDestinationCopy.continueTitle : FolderDestinationCopy.saveTitle) {
+                    Task { await viewModel.continueFolder() }
+                }
+                .fxButtonStyle(.primary, size: .large)
+                .keyboardShortcut(.defaultAction)
+                .disabled(!viewModel.canContinueFolder)
             }
         }
     }

@@ -13,16 +13,16 @@ struct MigrationTests {
     static let expectedTables: Set<String> = [
         "vaults", "key_wraps", "accounts", "repositories", "environments", "config_items",
         "sync_journal", "deployment_branch_patterns", "imported_share_packages", "device_identity", "teammates",
-        "spaces", "space_keys", "space_versions", "teammate_addresses",
+        "spaces", "space_keys", "space_versions", "teammate_addresses", "folders", "folder_items",
     ]
 
     @Test func migrationIdentifiersAreFrozenAndOrdered() {
         #expect(Migration.allCases.map(\.rawValue) == [
             "v1_vault", "v2_accounts_repos", "v3_config", "v4_sync_journal", "v5_create_policies", "v6_sharing",
             "v7_journal_fingerprints", "v8_force_push_requested_at", "v9_item_links", "v10_teammates",
-            "v11_spaces",
+            "v11_spaces", "v12_folders",
         ])
-        #expect(Migration.latest == .v11Spaces)
+        #expect(Migration.latest == .v12Folders)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -298,6 +298,8 @@ struct MigrationTests {
     static let seedSourceFingerprint = Data(repeating: 9, count: 32)
     static let seedPushedFingerprint = Data(repeating: 10, count: 32)
     static let seedLinkID = "44444444-4444-4444-8444-444444444444"
+    static let seedFolderID = "77777777-7777-4777-8777-777777777777"
+    static let seedFolderItemID = "88888888-8888-4888-8888-888888888888"
 
     static func seed(_ database: VaultDatabase, upTo version: Migration) throws {
         try database.write { tx in
@@ -362,6 +364,18 @@ struct MigrationTests {
             )
             guard version >= .v9ItemLinks else { return }
             try db.execute(sql: "UPDATE config_items SET link_id = ? WHERE id = ?", arguments: [seedLinkID, seedItemID])
+            guard version >= .v12Folders else { return }
+            try db.execute(
+                sql: "INSERT INTO folders (id, name, name_key, sort_order, created_at, updated_at) VALUES (?, 'Mobile App', 'mobile app', 0, ?, ?)",
+                arguments: [seedFolderID, seedTime, seedTime]
+            )
+            try db.execute(sql: """
+                INSERT INTO folder_items (id, folder_id, kind, name, value_ct, value_fp, link_id, created_at, updated_at)
+                VALUES (?, ?, 'variable', 'API_URL', ?, ?, ?, ?, ?)
+                """, arguments: [
+                    seedFolderItemID, seedFolderID, Data(repeating: 7, count: 40), Data(repeating: 8, count: 32),
+                    seedLinkID, seedTime, seedTime,
+                ])
         }
     }
 
@@ -416,5 +430,18 @@ struct MigrationTests {
             return
         }
         #expect(record.linkID == ItemLinkID(uuidString: seedLinkID))
+        let folders = try FolderStore(database: database).fetchFolders()
+        let link = try #require(ItemLinkID(uuidString: seedLinkID))
+        let linkCount = try database.read { tx in try LinkCountQuery.counts(of: [link], db: tx.db)[link] }
+        guard version >= .v12Folders else {
+            #expect(folders.isEmpty)
+            #expect(linkCount == 1)
+            return
+        }
+        #expect(folders.map(\.name) == ["Mobile App"])
+        #expect(folders.first?.variableCount == 1)
+        let folderID = try #require(FolderID(uuidString: seedFolderID))
+        #expect(try FolderStore(database: database).fetchItems(folderID: folderID).map(\.linkCount) == [2])
+        #expect(linkCount == 2)
     }
 }

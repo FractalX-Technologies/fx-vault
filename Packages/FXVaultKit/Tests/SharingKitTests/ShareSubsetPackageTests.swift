@@ -107,8 +107,9 @@ struct ShareSubsetPackageTests {
         #expect(SharePackageModel.requiredSchemaVersion(for: PackageFactory.sample().repository) == 1)
         #expect(SharePackageModel.requiredSchemaVersion(for: PackageFactory.package().repository) == 1)
         #expect(SharePackageModel.requiredSchemaVersion(for: Self.itemsOnly().repository) == 2)
-        #expect(SharePackageModel.supportedSchemaVersions == 1...2)
-        #expect(SharePackageModel.currentSchemaVersion == 2)
+        #expect(SharePackageModel.supportedSchemaVersions == 1...3)
+        #expect(SharePackageModel.repositorySchemaVersions == 1...2)
+        #expect(SharePackageModel.currentSchemaVersion == SharePackageModel.folderSchemaVersion)
     }
 
     // MARK: - Filtering (nearby DECISION)
