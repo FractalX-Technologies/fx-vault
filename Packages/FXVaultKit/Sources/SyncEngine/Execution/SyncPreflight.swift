@@ -641,9 +641,10 @@ extension SyncPreflight {
 }
 
 /// The throttle cost of a change (D12): one per write, two for a variable update, and one per
-/// pattern a reconcile posts or deletes.
-enum WriteCostEstimator {
-    static func cost(of change: ConfigChangeModel, snapshot: RepoSnapshotModel) -> Int {
+/// pattern a reconcile posts or deletes. Public so VaultData can re-estimate a preflight it
+/// narrowed (held share files, v0.9.0).
+public enum WriteCostEstimator {
+    public static func cost(of change: ConfigChangeModel, snapshot: RepoSnapshotModel) -> Int {
         switch change.operation {
         case .setItem(let set) where set.kind == .variable && !set.isNew:
             Limits.variableUpdateWriteCost

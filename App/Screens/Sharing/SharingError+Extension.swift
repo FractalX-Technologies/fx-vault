@@ -80,6 +80,24 @@ nonisolated extension SharingError: PresentableError {
                     defaultValue: "FX Vault could not write the share file there. Choose another folder."
                 )
             )
+        case .productionNeedsTeammates:
+            ErrorPresentationModel(
+                title: String(localized: "share.error.production.title", defaultValue: "Production goes to teammates only"),
+                message: String(
+                    localized: "share.error.production.message",
+                    defaultValue: "The selection includes a production stage. Send it to paired teammates, or uncheck production to use a passphrase."
+                )
+            )
+        case .invalidRecipients:
+            ErrorPresentationModel(
+                title: String(localized: "share.error.recipients.title", defaultValue: "Choose who gets the file"),
+                message: String(
+                    localized: "share.error.recipients.message",
+                    defaultValue: "Pick 1 to \(Limits.maxShareRecipients) of your paired teammates."
+                )
+            )
+        case .team(let error):
+            (error as any Error).presentation
         case .config(let error):
             (error as any Error).presentation
         case .validation(let error):
@@ -191,6 +209,46 @@ nonisolated extension SharingError: PresentableError {
                 message: String(
                     localized: "share.error.teamKeys.message",
                     defaultValue: "FX Vault couldn't read the stored teammate keys. Remove the teammate and pair again."
+                )
+            )
+        case .notARecipient:
+            ErrorPresentationModel(
+                title: String(localized: "share.error.notRecipient.title", defaultValue: "Not sent to this Mac"),
+                message: String(
+                    localized: "share.error.notRecipient.message",
+                    defaultValue: "This file was sealed for other teammates. Ask the sender to send it to you."
+                )
+            )
+        case .senderNotTeammate:
+            ErrorPresentationModel(
+                title: String(localized: "share.error.unknownSender.title", defaultValue: "Sender isn't your teammate"),
+                message: String(
+                    localized: "share.error.unknownSender.message",
+                    defaultValue: "FX Vault can't check who sealed this file. Pair with the sender first, then open it again."
+                )
+            )
+        case .expired:
+            ErrorPresentationModel(
+                title: String(localized: "share.error.expired.title", defaultValue: "This share file has expired"),
+                message: String(
+                    localized: "share.error.expired.message",
+                    defaultValue: "Ask the sender for a new one."
+                )
+            )
+        case .invalidPairingCard, .pairingOwnCard:
+            ErrorPresentationModel(
+                title: String(localized: "share.error.pairingCard.title", defaultValue: "Couldn't read the teammate card"),
+                message: String(
+                    localized: "share.error.pairingCard.message",
+                    defaultValue: "The card is damaged, is your own, or answers an invitation from another Mac. Start again with a new invitation."
+                )
+            )
+        case .pairingExpired:
+            ErrorPresentationModel(
+                title: String(localized: "share.error.pairingExpired.title", defaultValue: "This invitation has expired"),
+                message: String(
+                    localized: "share.error.pairingExpired.message",
+                    defaultValue: "Invitations last 7 days. Ask for a new one."
                 )
             )
         }

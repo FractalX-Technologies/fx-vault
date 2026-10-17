@@ -39,6 +39,20 @@ public enum ShareError: Error, Sendable, Hashable {
     case spaceVersionInvalid
     /// A space log broke a rule (v0.6.0).
     case spaceLogInvalid(SpaceLogFailure)
+    /// A teammates file (format 2) has no slot for this Mac: it was sealed for other teammates (v0.9.0).
+    case notARecipient
+    /// A teammates file was sealed by a device that is not one of this vault's teammates, so its
+    /// signature cannot be checked (v0.9.0).
+    case senderNotTeammate
+    /// The share file's `expiresAt` has passed (v0.9.0).
+    case expired
+    /// A remote pairing card (`.fxvcard`) is damaged, forged or not a reply to this Mac's
+    /// invitation (v0.9.0).
+    case invalidPairingCard
+    /// A remote pairing invitation is too old, or dated in the future (v0.9.0).
+    case pairingExpired
+    /// The pairing card is this Mac's own (v0.9.0).
+    case pairingOwnCard
 }
 
 /// Why a typed passphrase was rejected (§9.2). Never carries the typed text.

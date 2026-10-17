@@ -94,7 +94,7 @@ struct FolderSharingAppTests {
         #expect(editor.blockReason == nil)
         await model.apply()
         #expect(model.step == .done)
-        #expect(Set(model.result?.added ?? []) == ["production/FIREBASE_API_KEY", "production/API_URL"])
+        #expect(Set(model.result?.added ?? []) == ["\(SharingWorld.environment)/FIREBASE_API_KEY", "\(SharingWorld.environment)/API_URL"])
     }
 
     // MARK: - Nearby Chat

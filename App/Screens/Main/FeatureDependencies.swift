@@ -27,6 +27,9 @@ struct MainActions {
     var openFolder: (FolderID) -> Void = { _ in }
     /// Selects a repository and one of its destinations (a linked copy's place, v0.8.0).
     var openDestination: (DestinationID) -> Void = { _ in }
+    /// Selects a repository's Overview at a stage (nil: the Overview's default), after a project
+    /// share import (v0.9.0).
+    var openOverview: (RepoID, String?) -> Void = { _, _ in }
     /// Get Updates from Teammates (v0.6.0): pulls every shared space, returns when done.
     var syncSpaces: () async -> Void = {}
     /// A Sync run published shared versions: members are told right away.

@@ -2,7 +2,7 @@ import Foundation
 import SharingKit
 import Testing
 import VaultCore
-import VaultData
+@_spi(Testing) import VaultData
 @testable import FXVault
 
 /// Records save-panel and sharing-picker requests instead of showing them.
@@ -144,7 +144,7 @@ struct SharingWorld {
     static let secretValue = "FXV_SHARE_SECRET_VALUE"
     static let receiverSecretValue = "FXV_RECEIVER_OWN_VALUE"
     static let variableValue = "https://share.example.com"
-    static let environment = "production"
+    static let environment = "staging"
     static let identity = ShareLocalIdentityModel(displayName: "Sender Mac", appVersion: "1.0.0")
 
     let sender: TestHarness
@@ -205,7 +205,8 @@ struct SharingWorld {
         receiver.dependencies(recorder: receiverRecorder, isGitHubReady: isGitHubReady)
     }
 
-    /// Exports the whole repository from the sender's vault into the sender's sandbox.
+    /// Exports the whole repository from the sender's vault into the sender's sandbox, as FX Vault
+    /// 0.8 wrote it (format 1, schema 1–3): the file every 0.9 import of an older file starts from.
     func exportFile(_ selection: ShareSelectionModel? = nil) async throws -> (url: URL, passphrase: String) {
         let authorization = try await sender.container.reauth.authorizeShare(
             .fileExport,
@@ -213,7 +214,7 @@ struct SharingWorld {
             session: sender.data.session
         )
         let url = sender.sandbox.appendingPathComponent("Share-\(UUID().uuidString).fxvault")
-        let result = try await sender.data.sharing.exportFile(
+        let result = try await sender.data.sharing.exportLegacyFile(
             selection ?? .repository(senderRepositoryID),
             to: url,
             senderName: Self.identity.displayName,

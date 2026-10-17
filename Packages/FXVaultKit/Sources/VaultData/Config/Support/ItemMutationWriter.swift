@@ -15,7 +15,10 @@ import VaultStore
 ///   re-sealed, because the field AAD binds them;
 /// - `value_fp` is recomputed for the target row id from the plaintext it seals;
 /// - a row that takes over another row's item (Convert/Move, a rename or move into a tombstone)
-///   takes over its `link_id` too (v0.4.1); every other edit keeps the stored link.
+///   takes over its `link_id` too (v0.4.1); every other edit keeps the stored link;
+/// - `share_hold` (v0.9.0) follows the item the same way, so moving or renaming a held row keeps
+///   it held (the value is still the share file's), and is cleared when the row is deleted,
+///   reverted or given a new value: those are the user's own changes, never a share file's.
 ///
 /// Every plaintext is wiped before the method returns.
 struct ItemMutationWriter {
@@ -38,6 +41,7 @@ struct ItemMutationWriter {
                 if let link = movedLink(of: source, before: before) {
                     record.linkID = link
                 }
+                record.shareHold = Self.shareHold(row: row, source: source, kept: nil, before: before)
                 try fill(&record, row: row, source: source, stored: nil, before: before, newValue: newValue, keys: keys)
                 try store.insertItem(record, in: tx)
             case .update(let row, let source):
@@ -47,6 +51,7 @@ struct ItemMutationWriter {
                 if let link = movedLink(of: source, before: before) {
                     record.linkID = link
                 }
+                record.shareHold = Self.shareHold(row: row, source: source, kept: stored.shareHold, before: before)
                 try fill(&record, row: row, source: source, stored: stored, before: before, newValue: newValue, keys: keys)
                 try store.updateItem(record, in: tx)
             case .remove(let id):
@@ -121,6 +126,22 @@ struct ItemMutationWriter {
             record.shareOrigin = row.provenance == .share ? record.shareOrigin : nil
         }
         record.updatedAt = now
+    }
+
+    /// The row's `share_hold` after the edit: the moved item's hold for a move, none for a
+    /// deletion, a Revert or a value the user typed, otherwise `kept`.
+    private static func shareHold(
+        row: ConfigItemSnapshotModel,
+        source: ItemValueSourceModel,
+        kept: SharePackageID?,
+        before: [ConfigItemID: ConfigItemRecord]
+    ) -> SharePackageID? {
+        if row.isDeleted { return nil }
+        switch source {
+        case .movedFrom(let sourceID): return before[sourceID]?.shareHold
+        case .syncedValue, .newValue: return nil
+        case .unchanged, .newValueAsSynced: return kept
+        }
     }
 
     /// The link of the row an item moves from: `.some(link)` (possibly nil) for a move, `nil`

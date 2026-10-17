@@ -18,6 +18,7 @@ final class PreferencesViewModel: LockObserving {
         case accounts
         case teammates
         case destinations
+        case sharing
         case advanced
 
         var id: String {
@@ -38,6 +39,8 @@ final class PreferencesViewModel: LockObserving {
     let accounts: AccountsSettingsViewModel
     let teammates: TeammatesSettingsViewModel
     let destinations: DestinationsSettingsViewModel
+    /// The share files this Mac sent (v0.9.0).
+    let sharing: SharingSettingsViewModel
 
     @ObservationIgnored private let app: AppViewModel
 
@@ -47,6 +50,7 @@ final class PreferencesViewModel: LockObserving {
         accounts = AccountsSettingsViewModel(app: app)
         teammates = TeammatesSettingsViewModel(app: app)
         destinations = DestinationsSettingsViewModel(app: app)
+        sharing = SharingSettingsViewModel(app: app)
         app.addLockObserver(self)
     }
 

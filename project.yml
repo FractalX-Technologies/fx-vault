@@ -64,12 +64,26 @@ targets:
                 - fxvault
               public.mime-type:
                 - application/vnd.fractalx.fxvault
+          - UTTypeIdentifier: io.fractalx.fxvault.teammate-card
+            UTTypeDescription: FX Vault Teammate Card
+            UTTypeConformsTo:
+              - public.data
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - fxvcard
+              public.mime-type:
+                - application/vnd.fractalx.fxvault-card
         CFBundleDocumentTypes:
           - CFBundleTypeName: FX Vault Share
             CFBundleTypeRole: Viewer
             LSHandlerRank: $(FXVAULT_SHARE_HANDLER_RANK)   # Owner; Alternate in Debug
             LSItemContentTypes:
               - io.fractalx.fxvault.share
+          - CFBundleTypeName: FX Vault Teammate Card
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: $(FXVAULT_SHARE_HANDLER_RANK)   # Owner; Alternate in Debug
+            LSItemContentTypes:
+              - io.fractalx.fxvault.teammate-card
     settings:
       base:
         PRODUCT_NAME: FXVault

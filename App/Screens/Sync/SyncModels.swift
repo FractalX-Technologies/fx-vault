@@ -118,6 +118,12 @@ struct SyncSummaryRepoModel: Identifiable, Hashable {
     let notes: [String]
     /// Executable changes of this repository.
     let pendingCount: Int
+
+    /// False when the summary has nothing to say about this repository (every change waits for
+    /// a share file, v0.9.0): the block is left out.
+    var hasContent: Bool {
+        newRepository != nil || !scopes.isEmpty || !blocked.isEmpty || !remoteChanged.isEmpty || !notes.isEmpty || dependentCount > 0
+    }
 }
 
 /// A variable that looks like a credential (§5.13): names and reasons only.

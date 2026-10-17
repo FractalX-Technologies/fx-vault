@@ -56,6 +56,8 @@ final class FakeSyncService: SyncServicing {
         let includeDeletions: Bool
         let cloneFolder: URL?
         var spaceReason: String?
+        /// The share files the From Files review included (v0.9.0).
+        var includeHeld: Set<SharePackageID> = []
     }
 
     private struct State {
@@ -120,11 +122,17 @@ final class FakeSyncService: SyncServicing {
     func startRun(
         _ review: SyncReviewModel,
         includeDeletions: Bool,
+        includeHeld: Set<SharePackageID>,
         cloneFolder: URL?,
         spaceReason: String?
     ) async throws(SyncRepositoryError) -> any SyncRunControlling {
         state.withLock {
-            $0.startedRuns.append(StartedRun(includeDeletions: includeDeletions, cloneFolder: cloneFolder, spaceReason: spaceReason))
+            $0.startedRuns.append(StartedRun(
+                includeDeletions: includeDeletions,
+                cloneFolder: cloneFolder,
+                spaceReason: spaceReason,
+                includeHeld: includeHeld
+            ))
         }
         return run
     }

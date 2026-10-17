@@ -42,8 +42,15 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
                 Table(rows, selection: $viewModel.selection) {
                     commonColumns
                     TableColumn(Self.header(String(localized: "main.table.status", defaultValue: "Status"))) { row in
-                        StatusChip(status: row.status)
-                            .fxTableCell()
+                        Group {
+                            if row.isHeld {
+                                StatusChip(title: HeldShareCopy.chip, tone: .warning)
+                                    .help(viewModel.heldHelp(for: row))
+                            } else {
+                                StatusChip(status: row.status)
+                            }
+                        }
+                        .fxTableCell()
                     }
                     .width(Theme.Layout.tableStatusMinWidth)
                 }

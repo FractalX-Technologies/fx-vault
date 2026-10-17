@@ -6,12 +6,20 @@ import VaultData
 
 /// Opening a `.fxvault` file (§9.1 reader order, §9.5, §10 `ShareImportScreen`), from the
 /// router or a Finder/AirDrop open:
-/// 1. **Read** the file and check its header before any passphrase is asked for.
-/// 2. **Passphrase**: six words (any case or separator, §9.2). A wrong passphrase, a damaged
-///    file and an invalid package all show the one message "Wrong passphrase or damaged file".
+/// 1. **Read** the file and check its header (formats 1 and 2) before any passphrase or key is
+///    used.
+/// 2. **Passphrase**: six words (any case or separator, §9.2), only for a passphrase file. A
+///    wrong passphrase, a damaged file and an invalid package all show the one message "Wrong
+///    passphrase or damaged file". A file sealed for teammates (v0.9.0) opens at once with this
+///    Mac's keys; one sealed for others, from an unpaired sender or past its expiry cannot be
+///    opened here (``Step/failed``).
 /// 3. **Preview** with chips and choices (`ShareImportPlanEditor`); a repository that is not
-///    in the vault gets a one-click import, then the package is planned again.
-/// 4. **Apply** in one transaction; nothing syncs automatically.
+///    in the vault gets a one-click import, then the package is planned again. A project share
+///    (v0.9.0) shows its repositories (✓ in the vault, ⇣ imported from GitHub first, ✕ skipped),
+///    each one's preview, its destinations and folders (``ProjectShareImportEditor``).
+/// 4. **Apply** in one transaction; nothing syncs automatically, and a project share's rows the
+///    remote does not have wait in Sync's From Files review. A project share then opens the
+///    Overview of its first repository at its first stage.
 ///
 /// A copy of a folder (v0.7.0) asks where it goes instead (``FolderDestinationModel``): saved as
 /// a folder at once, or imported into a repository scope through the same preview.
@@ -31,7 +39,13 @@ final class ShareImportViewModel: LockObserving {
         case folderDestination
         /// The folder copy was saved as a folder.
         case folderSaved
-        /// The file cannot be read or its header is invalid (nothing to retry here).
+        /// A project share's repositories, destinations and folders (v0.9.0).
+        case bundlePreview
+        /// Importing a project share's ⇣ repositories from GitHub, then applying it.
+        case bundleApplying
+        /// A project share was imported.
+        case bundleDone
+        /// The file cannot be read or opened (nothing to retry here).
         case failed
     }
 
@@ -43,6 +57,13 @@ final class ShareImportViewModel: LockObserving {
     private(set) var passphraseError: ErrorPresentationModel?
     private(set) var editor: ShareImportPlanEditor?
     private(set) var result: ShareImportResultModel?
+    /// A project share's preview (v0.9.0).
+    private(set) var bundleEditor: ProjectShareImportEditor?
+    private(set) var bundleResult: ShareBundleImportResultModel?
+    /// `owner/name` of the ⇣ repositories whose import from GitHub failed.
+    private(set) var failedRepositories: [String] = []
+    /// Who sent the file (verified for a teammates file).
+    private(set) var sender: ShareFileSenderModel?
     /// Where a copy of a folder goes (v0.7.0).
     private(set) var destination: FolderDestinationModel?
     /// "Saved 3 items in Mobile App."
@@ -58,9 +79,10 @@ final class ShareImportViewModel: LockObserving {
     @ObservationIgnored private let context: ShareImportContext
     @ObservationIgnored private let dependencies: FeatureDependencies
     @ObservationIgnored private let importer: ShareRepositoryImporter
-    @ObservationIgnored private var file: ShareFileModel?
+    @ObservationIgnored private var file: ShareInspectedFileModel?
     @ObservationIgnored private var draft: ShareImportDraftModel?
     @ObservationIgnored private var folderDraft: ShareFolderDraftModel?
+    @ObservationIgnored private var bundleDraft: ShareBundleDraftModel?
 
     init(context: ShareImportContext, dependencies: FeatureDependencies) {
         self.context = context
@@ -76,14 +98,20 @@ final class ShareImportViewModel: LockObserving {
 
     // MARK: - Step 1: read
 
-    /// Reads the file and checks its header (§9.1 steps 1–6) off the main actor.
+    /// Reads the file and checks its header (§9.1 steps 1–6) off the main actor. A teammates
+    /// file opens right away.
     func start() async {
         guard step == .reading else { return }
         let sharing = dependencies.sharing
         let url = context.fileURL
         do {
-            file = try await Task.detached { try sharing.readFile(at: url) }.value
-            step = .passphrase
+            let inspected = try await Task.detached { try sharing.inspectFile(at: url) }.value
+            file = inspected
+            if inspected.needsPassphrase {
+                step = .passphrase
+            } else {
+                await openFile(passphrase: nil)
+            }
         } catch {
             failure = Self.presentation(of: error)
             step = .failed
@@ -91,6 +119,11 @@ final class ShareImportViewModel: LockObserving {
     }
 
     // MARK: - Step 2: passphrase
+
+    /// False for a file sealed for teammates (v0.9.0): it opens without a passphrase.
+    var needsPassphrase: Bool {
+        file?.needsPassphrase ?? true
+    }
 
     /// Words typed so far (letters only; any case or separator).
     var typedWordCount: Int {
@@ -103,24 +136,47 @@ final class ShareImportViewModel: LockObserving {
 
     /// Decrypts, validates and plans the package.
     func open() async {
-        guard canOpen, let file else { return }
+        guard canOpen else { return }
+        await openFile(passphrase: passphrase)
+    }
+
+    private func openFile(passphrase: String?) async {
+        guard let file else { return }
         step = .opening
         do {
-            let opened = try await dependencies.sharing.openFileContents(
+            let opened = try await dependencies.sharing.openShareFile(
                 file,
                 passphrase: passphrase,
                 checkGitHub: dependencies.checksGitHub
             )
-            passphrase = ""
-            switch opened {
+            self.passphrase = ""
+            sender = opened.sender
+            switch opened.document {
             case .repository(let draft):
                 show(draft)
             case .folder(let draft):
                 showFolder(draft)
+            case .bundle(let draft):
+                showBundle(draft)
             }
         } catch {
-            passphraseError = Self.presentation(of: error)
-            step = .passphrase
+            if file.needsPassphrase, !Self.cannotOpenHere(error) {
+                passphraseError = Self.presentation(of: error)
+                step = .passphrase
+            } else {
+                self.passphrase = ""
+                failure = Self.presentation(of: error)
+                step = .failed
+            }
+        }
+    }
+
+    /// Failures a passphrase cannot fix: the file is for other teammates, from an unpaired
+    /// sender, or expired.
+    private static func cannotOpenHere(_ error: SharingError) -> Bool {
+        switch error {
+        case .share(.notARecipient), .share(.senderNotTeammate), .share(.expired): true
+        default: false
         }
     }
 
@@ -222,6 +278,60 @@ final class ShareImportViewModel: LockObserving {
         }
     }
 
+    // MARK: - Project shares (v0.9.0)
+
+    var canApplyBundle: Bool {
+        step == .bundlePreview && bundleEditor?.canApply == true && bundleDraft != nil
+    }
+
+    /// Imports the ⇣ repositories from GitHub when online (the user's choices are carried into
+    /// the new plan), then applies the file in one transaction and opens the Overview.
+    func applyBundle() async {
+        guard canApplyBundle, var draft = bundleDraft, var editor = bundleEditor else { return }
+        step = .bundleApplying
+        do {
+            if editor.needsRepositoryImport, isOnline {
+                let imported = try await dependencies.sharing.importMissingRepositories(of: draft)
+                dependencies.actions.refresh(.catalog)
+                failedRepositories = imported.failedRepositories
+                draft = imported.draft
+                editor = ProjectShareImportEditor(draft: draft, replaying: editor)
+                bundleDraft = draft
+                bundleEditor = editor
+            }
+            let result = try await dependencies.sharing.applyBundle(draft, plan: editor.plan, confirmReplay: editor.confirmsReplay)
+            bundleDraft = nil
+            bundleEditor = nil
+            bundleResult = result
+            step = .bundleDone
+            if let repositoryID = result.firstRepositoryID {
+                dependencies.actions.openOverview(repositoryID, result.firstStage)
+            }
+        } catch .planOutdated {
+            alert = SharingError.planOutdated.presentation
+            await replanBundle(draft, replaying: editor)
+        } catch {
+            alert = error.presentation
+            step = .bundlePreview
+        }
+    }
+
+    private func showBundle(_ opened: ShareBundleDraftModel, replaying previous: ProjectShareImportEditor? = nil) {
+        bundleDraft?.discard()
+        bundleDraft = opened
+        bundleEditor = ProjectShareImportEditor(draft: opened, replaying: previous)
+        step = .bundlePreview
+    }
+
+    private func replanBundle(_ outdated: ShareBundleDraftModel, replaying previous: ProjectShareImportEditor) async {
+        do {
+            showBundle(try await dependencies.sharing.replanBundle(outdated, checkGitHub: dependencies.checksGitHub), replaying: previous)
+        } catch {
+            alert = error.presentation
+            step = .bundlePreview
+        }
+    }
+
     // MARK: - Lifetime
 
     /// The sheet closed: discards the draft (wipes its values) and the typed passphrase.
@@ -231,8 +341,11 @@ final class ShareImportViewModel: LockObserving {
 
     func vaultDidLock() {
         discard()
-        if step != .done, step != .failed, step != .folderSaved {
-            step = file == nil ? .reading : .passphrase
+        switch step {
+        case .done, .failed, .folderSaved, .bundleDone:
+            break
+        default:
+            step = file?.needsPassphrase == false || file == nil ? .reading : .passphrase
         }
     }
 
@@ -241,7 +354,10 @@ final class ShareImportViewModel: LockObserving {
         draft = nil
         folderDraft?.discard()
         folderDraft = nil
+        bundleDraft?.discard()
+        bundleDraft = nil
         editor = nil
+        bundleEditor = nil
         passphrase = ""
     }
 

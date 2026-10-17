@@ -11,6 +11,8 @@
 #   - `import GRDB` / `import Clibsodium` outside the one module allowed to use each
 #     (the app never imports either; D2, §4.2)
 #   - `import VaultStore` in App/ or AppTests/ (the app reaches the database through VaultData)
+#   - `@_spi(Testing) import` in App/ (test-only helpers such as ShareHoldRepository.hold and
+#     SharingRepository.exportLegacyFile are for AppTests/ and the package tests)
 #   - design tokens (docs/DESIGN.md), in App/ outside App/Helpers/Theme and App/Components/Design:
 #     literal colors (Color(red:/white:/hue:), NSColor/CGColor component initializers, hex
 #     helpers, #colorLiteral, named system colors such as .foregroundColor(.red) or Color.blue)
@@ -89,6 +91,16 @@ if [[ ${#app_dirs[@]} -gt 0 ]]; then
   hits="$(scan '^[[:space:]]*(@[A-Za-z_]+[[:space:]]+)*import[[:space:]]+(class |struct |enum |func |var |let )?VaultStore([[:space:]]|\.|$)' "${app_dirs[@]}")"
   if [[ -n "$hits" ]]; then
     echo "lint: import VaultStore is not allowed in App/ or AppTests/ (use VaultData)"
+    echo "$hits" | sed 's/^/  /'
+    failures=$((failures + 1))
+  fi
+fi
+
+# Test-only SPI (`@_spi(Testing)`) is never imported by the app itself.
+if [[ -d App ]]; then
+  hits="$(scan '^[[:space:]]*(@[A-Za-z_]+[[:space:]]+)*@_spi\(Testing\)' App)"
+  if [[ -n "$hits" ]]; then
+    echo "lint: @_spi(Testing) imports are for tests only, not App/"
     echo "$hits" | sed 's/^/  /'
     failures=$((failures + 1))
   fi

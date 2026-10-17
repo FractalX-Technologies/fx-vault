@@ -12,6 +12,9 @@ import VaultData
 /// - **Summary** shows names and counts only, never values: per repository and scope, blocked
 ///   changes with their reason and fix, changes routed to Drift review (D27), the FX Vault write
 ///   limit, and the credential-looking variables the user must confirm (§5.13).
+/// - **From Files** (v0.9.0, P8): rows imported from share files wait until the user includes
+///   their file, one toggle per file, off by default; the summary, the counts and the run follow
+///   the choice (``includedHeldShares``).
 /// - **Deletions** (§7.5) lists every deletion with the environments' live contents; the run
 ///   with deletions needs "I understand this cannot be undone" (and, when a fetch failed, the
 ///   contents-unknown acknowledgement). Neither button is the default.
@@ -25,6 +28,11 @@ final class SyncViewModel: LockObserving {
     private(set) var review: SyncReviewModel?
     /// The destination changes of the repositories in this sync (v0.8.0), reviewed after GitHub's.
     private(set) var destinationReviews: [DestinationReviewModel] = []
+    /// Share files whose imported rows wait for the From Files review (v0.9.0), newest import
+    /// first, limited to the repositories of this sync.
+    private(set) var heldShares: [HeldShareModel] = []
+    /// The share files this run includes; none until the user turns one on.
+    private(set) var includedHeldShares: Set<SharePackageID> = []
     private(set) var repositories: [SyncSummaryRepoModel] = []
     private(set) var credentialRows: [SyncCredentialRowModel] = []
     /// "Push these as variables anyway" (§5.13). Required when ``credentialRows`` is not empty.
@@ -125,7 +133,7 @@ final class SyncViewModel: LockObserving {
         var reviews: [DestinationReviewModel] = []
         for id in ids.sorted() where (counts[id] ?? 0) > 0 {
             let destinationReview = await dependencies.destinationSync.review(repositoryID: id)
-            if !destinationReview.isEmpty {
+            if HeldSharePresentation.hasContent(destinationReview) {
                 reviews.append(destinationReview)
             }
         }
@@ -134,6 +142,52 @@ final class SyncViewModel: LockObserving {
 
     private func apply(_ review: SyncReviewModel) {
         self.review = review
+        let scoped = context.repositoryIDs
+        heldShares = review.heldShares.filter { share in
+            scoped.map { ids in share.repositories.contains { ids.contains($0.id) } } ?? true
+        }
+        includedHeldShares.formIntersection(heldShares.map(\.packageID))
+        credentialRows = []
+        credentialsConfirmed = false
+        deletionPreviews = nil
+        deletionsAcknowledged = false
+        unknownContentsAcknowledged = false
+        present()
+        AppLog.ui.info(
+            "Sync review: \(review.preflight.executableCount, privacy: .public) executable, \(review.deletionCount, privacy: .public) deletions, \(self.heldShares.count, privacy: .public) held files"
+        )
+    }
+
+    /// Turns one share file of the From Files review on or off for this run (v0.9.0).
+    func setIncluded(_ packageID: SharePackageID, _ isIncluded: Bool) {
+        guard step == .summary, heldShares.contains(where: { $0.packageID == packageID }) else { return }
+        if isIncluded {
+            includedHeldShares.insert(packageID)
+        } else {
+            includedHeldShares.remove(packageID)
+        }
+        present()
+    }
+
+    /// The From Files review rows.
+    var heldShareRows: [SyncHeldShareRowModel] {
+        HeldSharePresentation.rows(heldShares, included: includedHeldShares)
+    }
+
+    /// The review as the run would be with the included share files (v0.9.0).
+    private var effectiveReview: SyncReviewModel? {
+        review.map { HeldSharePresentation.effective($0, including: includedHeldShares) }
+    }
+
+    /// The destination reviews with the included share files' held writes.
+    private var effectiveDestinationReviews: [DestinationReviewModel] {
+        destinationReviews.map { HeldSharePresentation.effective($0, including: includedHeldShares) }
+    }
+
+    /// The summary, the credential rows and the progress names of ``effectiveReview``. A change
+    /// in the credential rows asks for the confirmation again.
+    private func present() {
+        guard let review = effectiveReview else { return }
         var names: [RepoID: String] = [:]
         for repository in review.preflight.repositories {
             names[repository.id] = repository.snapshot.repository.fullName
@@ -141,14 +195,14 @@ final class SyncViewModel: LockObserving {
         let config = dependencies.config
         repositories = DestinationSyncPresentation.merge(
             SyncPresentationBuilder.summary(review),
-            with: destinationReviews,
+            with: effectiveDestinationReviews,
             fullName: { names[$0] ?? (try? config.changeSet(repositoryID: $0))??.repository.fullName ?? "" }
         )
-        credentialRows = SyncPresentationBuilder.credentialRows(review)
-        credentialsConfirmed = false
-        deletionPreviews = nil
-        deletionsAcknowledged = false
-        unknownContentsAcknowledged = false
+        let rows = SyncPresentationBuilder.credentialRows(review)
+        if rows != credentialRows {
+            credentialRows = rows
+            credentialsConfirmed = false
+        }
         repositoryModels = [:]
         changeNames = [:]
         environmentNames = [:]
@@ -162,9 +216,6 @@ final class SyncViewModel: LockObserving {
                 environmentNames[RemoteScopeKeyModel.environment(named: name).journalKey] = name
             }
         }
-        AppLog.ui.info(
-            "Sync review: \(review.preflight.executableCount, privacy: .public) executable, \(review.deletionCount, privacy: .public) deletions"
-        )
     }
 
     /// Executable changes across repositories and their destinations.
@@ -173,11 +224,16 @@ final class SyncViewModel: LockObserving {
     }
 
     private var gitHubExecutableCount: Int {
-        review?.preflight.executableCount ?? 0
+        effectiveReview?.preflight.executableCount ?? 0
     }
 
     private var destinationExecutableCount: Int {
-        destinationReviews.reduce(0) { $0 + $1.executableCount }
+        effectiveDestinationReviews.reduce(0) { $0 + $1.executableCount }
+    }
+
+    /// True when every pending change waits for a share file the user has not included.
+    var waitsOnlyForHeldShares: Bool {
+        executableCount == 0 && !heldShares.isEmpty
     }
 
     private var destinationDeletionCount: Int {
@@ -186,7 +242,7 @@ final class SyncViewModel: LockObserving {
 
     /// The run pushes to a shared scope: "What changed?" is offered.
     var publishesSharedVersions: Bool {
-        review?.preflight.repositories.contains { repository in
+        effectiveReview?.preflight.repositories.contains { repository in
             repository.spaces.contains(where: \.allowsPush)
         } ?? false
     }
@@ -197,7 +253,7 @@ final class SyncViewModel: LockObserving {
     }
 
     var deletionCount: Int {
-        (review?.deletionCount ?? 0) + destinationDeletionCount
+        (effectiveReview?.deletionCount ?? 0) + destinationDeletionCount
     }
 
     /// Executable changes that are not deletions ("Sync Without Deleting" needs one).
@@ -207,18 +263,18 @@ final class SyncViewModel: LockObserving {
 
     /// "FX Vault write limit this hour: X of 450".
     var writeBudgetLine: String? {
-        review?.summary.writeBudget.map(SyncCopy.writeBudgetLine)
+        effectiveReview?.summary.writeBudget.map(SyncCopy.writeBudgetLine)
     }
 
     /// The run needs more writes than are left this hour.
     var writeBudgetWarning: String? {
-        guard let preflight = review?.preflight, preflight.exceedsWriteBudget else { return nil }
+        guard let preflight = effectiveReview?.preflight, preflight.exceedsWriteBudget else { return nil }
         return SyncCopy.writeBudgetExceeded(cost: preflight.estimatedWriteCost)
     }
 
     /// Summary warnings that are not per-change (repository variables size, clone folder).
     var summaryWarnings: [String] {
-        guard let review else { return [] }
+        guard let review = effectiveReview else { return [] }
         var warnings: [String] = []
         if review.preflight.repositories.contains(where: \.exceedsRepositoryVariablesSize) {
             warnings.append(SyncCopy.repositoryVariablesTooLarge)
@@ -263,7 +319,7 @@ final class SyncViewModel: LockObserving {
 
     /// Summary → Deletions, with the live fetch of every environment being deleted.
     func reviewDeletions() async {
-        guard let review, canProceed, deletionCount > 0 else { return }
+        guard let review = effectiveReview, canProceed, deletionCount > 0 else { return }
         step = .deletions
         deletionsAcknowledged = false
         unknownContentsAcknowledged = false
@@ -314,7 +370,9 @@ final class SyncViewModel: LockObserving {
 
         progress = SyncRunProgressModel(total: includeDeletions ? executableCount : nonDeletionCount)
         step = .progress
-        let gitHubCount = includeDeletions ? gitHubExecutableCount : gitHubExecutableCount - (review.deletionCount)
+        let included = includedHeldShares
+        let gitHubDeletions = effectiveReview?.deletionCount ?? review.deletionCount
+        let gitHubCount = includeDeletions ? gitHubExecutableCount : gitHubExecutableCount - gitHubDeletions
         var outcome: SyncRunOutcomeModel?
         if gitHubCount > 0 {
             let run: any SyncRunControlling
@@ -323,6 +381,7 @@ final class SyncViewModel: LockObserving {
                 run = try await service.startRun(
                     review,
                     includeDeletions: includeDeletions,
+                    includeHeld: included,
                     cloneFolder: dependencies.preferences.cloneFolderURL,
                     spaceReason: reason.isEmpty ? nil : reason
                 )
@@ -339,23 +398,33 @@ final class SyncViewModel: LockObserving {
             outcome = await run.outcome()
             self.run = nil
         }
-        let destinationResults = await runDestinations(includeDeletions: includeDeletions, after: progress.completed)
+        let destinationResults = await runDestinations(
+            includeDeletions: includeDeletions,
+            includeHeld: included,
+            after: progress.completed
+        )
         show(outcome, destinationResults: destinationResults)
     }
 
-    /// The destination changes, after GitHub's (v0.8.0). A cancelled run skips them.
-    private func runDestinations(includeDeletions: Bool, after completed: Int) async -> [DestinationRunResultModel] {
+    /// The destination changes, after GitHub's (v0.8.0). A cancelled run skips them. The held
+    /// writes of `includeHeld` files run with them (v0.9.0).
+    private func runDestinations(
+        includeDeletions: Bool,
+        includeHeld: Set<SharePackageID>,
+        after completed: Int
+    ) async -> [DestinationRunResultModel] {
         guard !progress.isCancelling else { return [] }
         let sync = dependencies.destinationSync
         var results: [DestinationRunResultModel] = []
+        let effective = effectiveDestinationReviews
         let names = Dictionary(
-            destinationReviews.flatMap { $0.sections.flatMap(\.changes) }.map { ($0.id, $0.name) },
+            effective.flatMap { $0.sections.flatMap(\.changes) }.map { ($0.id, $0.name) },
             uniquingKeysWith: { first, _ in first }
         )
         progress.completed = completed
-        for review in destinationReviews where review.executableCount > 0 {
+        for (review, effectiveReview) in zip(destinationReviews, effective) where effectiveReview.executableCount > 0 {
             progress.phase = .writing
-            let result = await sync.run(review, includeDeletions: includeDeletions) { [weak self] event in
+            let result = await sync.run(review, includeDeletions: includeDeletions, includeHeld: includeHeld) { [weak self] event in
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     switch event {
@@ -411,7 +480,7 @@ final class SyncViewModel: LockObserving {
     private func show(_ outcome: SyncRunOutcomeModel?, destinationResults: [DestinationRunResultModel]) {
         self.outcome = outcome
         var sections = outcome.map { SyncPresentationBuilder.resultSections($0.result, repositories: repositoryModels) } ?? []
-        let destinationRows = DestinationSyncPresentation.resultRows(destinationResults, reviews: destinationReviews)
+        let destinationRows = DestinationSyncPresentation.resultRows(destinationResults, reviews: effectiveDestinationReviews)
         for kind in SyncResultSectionModel.Kind.allCases {
             guard let rows = destinationRows[kind], !rows.isEmpty else { continue }
             if let index = sections.firstIndex(where: { $0.kind == kind }) {

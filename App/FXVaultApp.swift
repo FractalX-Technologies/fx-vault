@@ -94,6 +94,14 @@ struct VaultCommands: Commands {
             }
             .keyboardShortcut("i", modifiers: [.shift, .command])
             .disabled(main?.canImportEnv != true)
+
+            Divider()
+
+            Button(String(localized: "menu.file.shareProject", defaultValue: "Share Project…")) {
+                main?.shareProject()
+            }
+            .keyboardShortcut("s", modifiers: [.option, .command])
+            .disabled(main?.canShareProject != true)
         }
 
         CommandMenu(String(localized: "menu.vault", defaultValue: "Vault")) {

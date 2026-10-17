@@ -166,6 +166,12 @@ final class StageOverviewViewModel {
         }
     }
 
+    /// Share Stage… (v0.9.0): the project share sheet with this repository and stage checked.
+    func shareStage() {
+        guard let stage else { return }
+        dependencies.actions.present(.shareExport(ShareExportContext(selection: .repository(repositoryID), stage: stage)))
+    }
+
     /// Add Destination for a manifest target the repository has no destination for yet.
     func addDestination(for location: ManifestLocation) {
         dependencies.actions.present(.addDestination(AddDestinationContext(

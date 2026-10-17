@@ -45,6 +45,8 @@ final class DestinationDetailViewModel: LockObserving {
     @ObservationIgnored private let dependencies: FeatureDependencies
     @ObservationIgnored private let destinationProvider: () -> DestinationModel?
     @ObservationIgnored private let tasks = TaskBag()
+    /// The senders of the share files that hold rows here, for the Held chip (v0.9.0).
+    @ObservationIgnored private lazy var heldSenders = HeldSenderNames { [dependencies] in dependencies.shareHolds }
 
     /// - Parameter destination: the live destination row (its counts follow the scope column).
     init(destination: DestinationModel, dependencies: FeatureDependencies, live: @escaping () -> DestinationModel?) {
@@ -225,14 +227,28 @@ final class DestinationDetailViewModel: LockObserving {
         row.isDeleted || !row.isSynced || row.status == .willPush
     }
 
+    /// Push on Next Sync. On held rows (v0.9.0) it releases their holds and nothing else, so the
+    /// next Sync sends them.
     func pushOnNextSync(_ rows: [ConfigRowModel]) {
-        let ids = rows.filter(\.canPushOnNextSync).map(\.id)
-        guard !ids.isEmpty else { return }
+        let pushable = rows.filter(\.canPushOnNextSync)
+        let held = pushable.filter(\.isHeld)
+        let ids = pushable.filter { !$0.isHeld }.map(\.id)
         do {
-            try dependencies.destinations.requestPush(ids)
+            if !held.isEmpty {
+                let released = try dependencies.shareHolds.releaseHold(itemIDs: held.map(\.id))
+                notice = HeldShareCopy.released(name: held.count == 1 ? held.first?.name : nil, count: released)
+            }
+            if !ids.isEmpty {
+                try dependencies.destinations.requestPush(ids)
+            }
         } catch {
             alert = error.presentation
         }
+    }
+
+    /// The Held chip's tooltip, naming the share file's sender when it is known.
+    func heldHelp(for row: ConfigRowModel) -> String {
+        HeldShareCopy.chipHelp(sender: row.heldBy.flatMap { heldSenders.name(of: $0) })
     }
 
     // MARK: - Public values (R10)
@@ -479,5 +495,6 @@ extension ConfigRowModel {
         status = item.syncStatus
         syncedName = nil
         linkCount = item.isLinked ? item.linkCount : 0
+        heldBy = item.heldBy
     }
 }

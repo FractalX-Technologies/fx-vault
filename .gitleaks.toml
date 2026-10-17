@@ -15,5 +15,7 @@ paths = [
   '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/chat_kat\.json$''',
   '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/team_kat\.json$''',
   '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/space_kat\.json$''',
+  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/file_v2_kat\.json$''',
+  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/pairing_kat\.json$''',
   '''^Packages/FXVaultKit/Tests/EnvToolsTests/Fixtures/sample\.env$''',
 ]

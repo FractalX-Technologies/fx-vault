@@ -497,6 +497,64 @@ CREATE INDEX destination_journal_time ON destination_journal(started_at);
 - `DestinationRepository` owns `destinations`, `destination_items` and `provider_connections`;
   `DestinationSyncRepository` writes the sync columns and `destination_journal`.
 
+### v14_project_shares (v0.9.0)
+
+```sql
+CREATE TABLE sent_shares (id TEXT PRIMARY KEY CHECK (length(id) = 36),
+  package_id TEXT NOT NULL CHECK (length(package_id) = 36),
+  created_at TEXT NOT NULL, expires_at TEXT NOT NULL,
+  mode TEXT NOT NULL CHECK (mode IN ('passphrase','teammates')),
+  recipients TEXT NOT NULL,  -- JSON array of lowercase device ids; [] for a passphrase file
+  summary TEXT NOT NULL,     -- JSON SentShareSummaryModel: stages and places, names only
+  CHECK (expires_at > created_at));
+CREATE INDEX sent_shares_time ON sent_shares(created_at);
+ALTER TABLE config_items ADD COLUMN share_hold TEXT
+  CHECK (share_hold IS NULL OR (length(share_hold) = 36 AND share_hold = lower(share_hold)));
+CREATE INDEX config_items_share_hold ON config_items(share_hold) WHERE share_hold IS NOT NULL;
+ALTER TABLE destination_items ADD COLUMN share_hold TEXT CHECK (...same...);
+CREATE INDEX destination_items_share_hold ON destination_items(share_hold) WHERE share_hold IS NOT NULL;
+ALTER TABLE imported_share_packages ADD COLUMN sender_device_id TEXT
+  CHECK (sender_device_id IS NULL OR (length(sender_device_id) = 32 AND sender_device_id = lower(sender_device_id)));
+-- teammates rebuilt (teammates_v14, every row copied, old table dropped, renamed):
+--   announce_ct BLOB                (was NOT NULL)
+--   paired_via TEXT NOT NULL DEFAULT 'nearby' CHECK (paired_via IN ('nearby','remote'))
+--   CHECK (announce_ct IS NOT NULL OR paired_via = 'remote')
+```
+
+- `sent_shares` is the sent log of Settings › Sharing (P6): one row per exported file with its
+  package id, expiry, protection mode and recipients, and a summary of the stages and places it
+  carried with the names of their secrets and variables. Names are plaintext metadata, as
+  repository and item names are; no value, fingerprint or passphrase is ever written here. The
+  exporter writes the row before the file and deletes it again if the file write fails.
+  `SentShareStore` inserts, lists newest first, observes and deletes. `expires_at > created_at`
+  compares fixed-width timestamps as text. The JSON columns have no CHECK (no dependency on
+  SQLite's JSON functions); the record types enforce their shape.
+- `share_hold` = the package id of the share file a row was imported from, until Sync's From
+  Files review includes that file (P8). A held row stays out of every sync plan, GitHub or
+  destination. Including a file clears every hold of that package in both tables in one
+  transaction before the run (`ShareHoldStore.clearShareHold(packageIDs:in:)`); Push on Next
+  Sync on a held row clears that row only (`clearShareHold(itemIDs:in:)`). The user's own delete,
+  GitHub-scope Revert or typed value clears the row's hold (`ItemMutationWriter`,
+  `DestinationItemWriter`); a rename or move carries it to the row that holds the item
+  afterwards. `ConfigStore` and `DestinationStore` each have `setShareHold(_:itemIDs:in:)`,
+  `fetchHeldItemStates(packageID:)` and `clearShareHold(packageID:in:)`; these change only this
+  column (values, AADs, fingerprints and sync state are untouched). `ConfigItemState` and
+  `DestinationItemState` carry it as `shareHold`, so filters need no ciphertext; the models
+  expose it as `heldBy`. DEK rotation keeps holds.
+- `imported_share_packages.sender_device_id` is the verified sender of a teammates file (its
+  signature checked against that teammate's key); NULL for a passphrase file, whose sender name
+  is unverified. Sync's From Files review shows "verified" only when it is set.
+- `teammates` is rebuilt so `announce_ct` can be NULL: the inviter of a remote pairing is stored
+  before its announce key arrives (in a teammates file or a nearby card update). The CHECK keeps
+  a nearby-paired row with a key. Every existing row is copied unchanged as `nearby`. The rebuild
+  runs with GRDB's deferred foreign-key checks, so `teammate_addresses` rows survive the drop and
+  still cascade afterwards (`MigrationTests` seeds a teammate at v10 and its address at v11).
+- `TeamRepository.teammateCards()` gives a teammate without a key a fresh random announce key
+  that is never stored, so presence matches none of its pseudonyms while sessions it starts still
+  verify its signing key; `fillAnnounceKeyIfMissing` stores the key from a verified file and never
+  replaces a known one. A remote pairing confirmed by the inviter sets `needs_card_update` on the
+  new teammate. DEK rotation re-seals every non-null `announce_ct` and skips NULL.
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -507,11 +565,11 @@ CREATE INDEX destination_journal_time ON destination_journal(started_at);
 | `repositories` | `RepositoryRecord` | `RepoStore` | Deleting a repository cascades to environments, items, patterns, spaces and destinations and nulls journal rows |
 | `environments` | `EnvironmentRecord` | `ConfigStore` | Patterns are attached when the policy is custom |
 | `deployment_branch_patterns` | `BranchPatternRecord` | `ConfigStore` | |
-| `config_items` | `ConfigItemRecord` (with ciphertext), `ConfigItemState` (read-only projection without ciphertext) | `ConfigStore` | Status is derived with `ConfigSyncStatus.derive(state.syncFacts)`; `link_id` groups linked copies (v0.4.1) |
+| `config_items` | `ConfigItemRecord` (with ciphertext), `ConfigItemState` (read-only projection without ciphertext) | `ConfigStore` | Status is derived with `ConfigSyncStatus.derive(state.syncFacts)`; `link_id` groups linked copies (v0.4.1); `share_hold` (v0.9.0) |
 | `sync_journal` | `SyncJournalRecord` | `SyncJournalStore` | Names and push fingerprints only, never values |
-| `imported_share_packages` | `ImportedSharePackageRecord` | `SharePackageStore` | |
+| `imported_share_packages` | `ImportedSharePackageRecord` | `SharePackageStore` | `sender_device_id` for a teammates file, v0.9.0 |
 | `device_identity` | `DeviceIdentityRecord` | `TeamStore` | Single row (`id = 1`), v0.5.0 |
-| `teammates` | `TeammateRecord` (`TeammateModel` without keys) | `TeamStore` | v0.5.0 |
+| `teammates` | `TeammateRecord` (`TeammateModel` without keys) | `TeamStore` | v0.5.0; `announce_ct` nullable and `paired_via` since v0.9.0 |
 | `spaces` | `SpaceRecord` | `SpaceStore` | One per shared scope, v0.6.0 |
 | `space_keys` | `SpaceKeyRecord` | `SpaceStore` | Epoch keys, sealed, v0.6.0 |
 | `space_versions` | `SpaceVersionRecord` | `SpaceStore` | Append-only signed versions, v0.6.0 |
@@ -520,8 +578,10 @@ CREATE INDEX destination_journal_time ON destination_journal(started_at);
 | `folder_items` | `FolderItemRecord` (with ciphertext; `FolderItemModel` without) | `FolderStore` | Always with a value; `link_id` groups span `config_items`, v0.7.0 |
 | `provider_connections` | `ConnectionRecord` (with the sealed token; `ConnectionModel` without) | `DestinationStore` | Supabase and Vercel tokens, v0.8.0 |
 | `destinations` | `DestinationRecord` (`DestinationSettings` in `settings_json`) | `DestinationStore` | Unique per repository by `target_key`, v0.8.0 |
-| `destination_items` | `DestinationItemRecord` (with ciphertext), `DestinationItemState` (without) | `DestinationStore` | Value optional for secrets; `link_id` groups span all three item tables, v0.8.0 |
+| `destination_items` | `DestinationItemRecord` (with ciphertext), `DestinationItemState` (without) | `DestinationStore` | Value optional for secrets; `link_id` groups span all three item tables, v0.8.0; `share_hold` (v0.9.0) |
 | `destination_journal` | `DestinationJournalRecord` | `DestinationStore` | Destination writes, names and push fingerprints only, v0.8.0 |
+| `sent_shares` | `SentShareRecord` (`SentShareModel`) | `SentShareStore` | Names only, v0.9.0 |
+| holds (`share_hold` on both item tables, the import records) | `HeldShareInputsModel` | `ShareHoldStore` | Read model of Sync's From Files review and bulk release, v0.9.0 |
 
 ## Transactions
 
@@ -554,6 +614,15 @@ CREATE INDEX destination_journal_time ON destination_journal(started_at);
   a transaction across a network call.
 - **Share imports** re-plan, write the rows (re-encrypted with the receiver's keys under new row
   ids, `provenance = share`) and record `imported_share_packages` in the same transaction.
+- **Bundle imports** (v0.9.0) apply everything in one transaction: the re-plan, every ✓
+  repository through the share importer, destinations created or merged, folders, fresh
+  `link_id`s, `share_hold` set after every value write, and one `imported_share_packages` row.
+  Repositories still to be imported from GitHub are imported before it, outside any
+  transaction.
+- **Releasing holds** (v0.9.0): including files in a Sync clears their holds in both tables in
+  one transaction before the run is planned; nothing else in the run changes `share_hold`.
+- **Sent log** (v0.9.0): the `sent_shares` row is its own transaction, written before the file;
+  a failed file write deletes it.
 - Database errors become `StoreError` (`notFound`, `constraintViolation(StoreConstraint)`,
   `busy`, `corruptDatabase`, `database(code:)`, ...) with no SQL or SQLite message text. Errors
   thrown by the caller's own body pass through unchanged.
@@ -564,7 +633,8 @@ CREATE INDEX destination_journal_time ON destination_journal(started_at);
 `ConfigStore.observeEnvironments/observeItems/observePendingInputs/observeAllPendingInputs`,
 `FolderStore.observeFolders/observeItems` (v0.7.0),
 `DestinationStore.observeDestinations/observeItems/observePendingCounts/observeConnections`
-(v0.8.0) and `SyncJournalStore.observeLatestRun` return
+(v0.8.0), `SentShareStore.observe` and `ShareHoldStore.observeInputs` (v0.9.0) and
+`SyncJournalStore.observeLatestRun` return
 `AsyncThrowingStream`s. Each emits the current value,
 then a new value after every committed change; consecutive equal values are skipped; a failed
 fetch ends the stream with a `StoreError`; observation stops when the consumer stops iterating.

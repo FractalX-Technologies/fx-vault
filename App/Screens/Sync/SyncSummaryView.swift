@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// Step 1 (§7.2): per repository and scope what will change (names only), blocked changes with
-/// their fixes, changes routed to Drift review, credential-looking variables, "What changed?"
-/// when the run publishes shared versions (v0.6.0), and the write limit.
+/// their fixes, changes routed to Drift review, the From Files review of rows held by share files
+/// (v0.9.0), credential-looking variables, "What changed?" when the run publishes shared versions
+/// (v0.6.0), and the write limit.
 ///
 /// Board SyncReview: each repository is a hairline card of scope rows (mono scope label, the
 /// counts sentence, the mono names); confirmations are checkbox rows.
@@ -12,7 +13,9 @@ struct SyncSummaryView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
-                if viewModel.executableCount == 0 {
+                if viewModel.waitsOnlyForHeldShares {
+                    Banner(.info, message: HeldShareCopy.onlyHeld, systemImage: "info.circle")
+                } else if viewModel.executableCount == 0 {
                     Banner(
                         .warning,
                         message: String(
@@ -22,9 +25,14 @@ struct SyncSummaryView: View {
                         systemImage: "info.circle"
                     )
                 }
-                ForEach(viewModel.repositories) { repository in
+                ForEach(viewModel.repositories.filter(\.hasContent)) { repository in
                     SyncSummaryRepositoryView(repository: repository, showsName: viewModel.repositories.count > 1) {
                         viewModel.perform($0)
+                    }
+                }
+                if !viewModel.heldShares.isEmpty {
+                    SyncHeldSharesView(rows: viewModel.heldShareRows) { packageID, isIncluded in
+                        viewModel.setIncluded(packageID, isIncluded)
                     }
                 }
                 if !viewModel.credentialRows.isEmpty {

@@ -2,12 +2,12 @@
 
 Implemented in `Packages/FXVaultKit/Sources/SharingKit`. This document records the wire formats
 as built (plan §9 plus the decisions made during M6 implementation). Known-answer vectors are
-pinned in `Tests/SharingKitTests/Fixtures/nearby_kat.json`, `chat_kat.json`, `team_kat.json` and
-`space_kat.json`; the independent generators
-(`Fixtures/kat/crosscheck.py`, Python `cryptography`; `Fixtures/kat/NearbyProtocolReference.swift`)
-produce byte-identical output.
+pinned in `Tests/SharingKitTests/Fixtures/nearby_kat.json`, `chat_kat.json`, `team_kat.json`,
+`space_kat.json`, `file_v2_kat.json` and `pairing_kat.json`; the independent generators
+(`Fixtures/kat/crosscheck.py`, `file_v2_kat.py` and `pairing_kat.py`, Python `cryptography`;
+`Fixtures/kat/NearbyProtocolReference.swift`) produce byte-identical output.
 
-## 1. Payload: `SharePackageModel` (schema 1 and 2; 3 for folders, §1.3)
+## 1. Payload: `SharePackageModel` (schema 1 and 2; 3 for folders, §1.3; 4 for bundles, §1.4)
 
 JSON, keys sorted, dates ISO-8601 UTC with `Z`. `value` and `githubUpdatedAt` are always present
 (explicit `null` when absent). `deploymentBranchPolicy` is an object, or an explicit `null` for a
@@ -50,6 +50,11 @@ partial environment (schema 2 only, §1.1).
 |---|---|---|
 | 1 | 0.1.x, and 0.2.0 whenever possible | Every environment carries its `deploymentBranchPolicy` |
 | 2 | 0.2.0 when needed | Adds **partial environments**: `deploymentBranchPolicy: null` plus at least one item |
+| 3 | 0.7.0, for a folder | A folder instead of a repository (§1.3) |
+| 4 | 0.9.0, every `.fxvault` export | A bundle: repositories with their destinations, folders, link tokens and `expiresAt` (§1.4) |
+
+- **Since 0.9.0** every `.fxvault` file is a schema 4 bundle in format 2 (§2.1), so the
+  lowest-version rule below applies only to nearby share and chat payloads.
 
 - **Lowest version rule.** A package is written with the lowest version that can hold it
   (`SharePackageModel.requiredSchemaVersion(for:)`): 2 only when at least one environment is
@@ -103,6 +108,80 @@ A copy of a folder is scope `folder`, `schemaVersion` 3, and carries a `folder` 
   `imported_share_packages` like an import.
 - 0.6 and older reject version 3 (`unsupportedSchemaVersion`): a `.fxvault` folder file shows
   "Wrong passphrase or damaged file" there.
+
+### 1.4 Bundles: schema 4 (v0.9.0)
+
+A project share (tasks/todo.md P1). Every `.fxvault` export from 0.9 on is a bundle, even for one
+repository or one folder, sealed in format 2 (§2.1). Schemas 1–3 stay readable:
+`ShareDocumentCoder` reads `schemaVersion` first, sends 4 to `ShareBundleCoder` and
+`ShareBundleValidator`, and everything else to `SharePackageCoder` and `SharePackageValidator`.
+Nearby share and chat still carry schemas 1–3 only.
+
+```json
+{ "schema": "io.fractalx.fxvault.share", "schemaVersion": 4, "scope": "bundle",
+  "packageId": "<uuid>", "createdAt": "<date>", "expiresAt": "<date>",
+  "producer": {"app": "FX Vault", "version": "0.9.0"}, "sender": {"displayName": "…"},
+  "stages": ["staging"],
+  "repositories": [ { "host": "github.com", "owner": "owner-a", "name": "example-web", "githubRepoId": "<node id> | null",
+      "secrets": [ITEM], "variables": [ITEM], "environments": [ENV (schema 2: policy or null)],
+      "destinations": [ { "id": "<uuid>", "stage": "staging | null",
+          "target": {"provider": "azureKeyVault", "vaultName": "kv-example-staging", "tenantId": "… | null"}
+                  | {"provider": "supabase", "projectRef": "<20 lowercase letters>"}
+                  | {"provider": "vercel", "projectId": "prj_sample", "projectName": "example-web",
+                     "teamId": "… | null", "environment": "production | preview | development"},
+          "secrets": [ITEM], "variables": [ITEM], "publicNames": ["NEXT_PUBLIC_…"] } ] } ],
+  "folders": [ { "id": "<uuid>", "name": "Mobile App", "secrets": [ITEM], "variables": [ITEM] } ] }
+```
+
+- **Items.** ITEM is the schema 2 item (§1) plus an optional `"link": "<lowercase uuid>"`. The
+  key exists only in bundles: schemas 1–3 never write it and their validator rejects it
+  (`linkNotAllowed`), so older documents stay byte for byte the same.
+- **Link tokens** (P9) are random per export, never the sender's `link_id`. A token is written
+  only when at least two items of the file belong to the same linked-copy group.
+- **`publicNames`** lists the destination items the sender marked public (v0.8.0 R10), so the
+  receiver keeps the mark.
+- **`stages`** are the stages the sender chose; the receiver opens the Overview at the first one.
+- **Never in a bundle:** connection tokens and labels, `az` sessions, GitHub accounts, SSH
+  aliases, value hashes.
+- **Encoding** follows schemas 1–3: sorted keys, whole-second ISO-8601 UTC dates (fractional
+  seconds accepted), explicit `null` for absent values and optionals. A `scope` other than
+  `bundle`, or any decoding failure, is `invalidFile`.
+
+**Validator** (`ShareBundleValidator`, `.manifest` and `.payload` modes):
+
+- **Header.** Schema `io.fractalx.fxvault.share` at version 4; producer and sender as in schema
+  1; `createdAt < expiresAt ≤ createdAt + 30 days + 10 minutes` (`Timeouts.shareMaxExpiry` plus
+  `shareClockSkew`; `invalidExpiry`); `stages` are environment names (strict NFC), unique by fold
+  key (`invalidStage`, `duplicateStage`).
+- **Contents.** 1–50 repositories (`Limits.maxShareRepositories`), or none and at least one
+  folder (`emptyBundle`, `tooManyRepositories`); repositories unique by owner and name fold keys
+  (`duplicateRepository`).
+- **Each repository.** The schema 2 rules (host, owner, name, `githubRepoId`, environments,
+  policies, items, partial environments); at most 32 destinations
+  (`Limits.maxDestinationsPerRepository`, `tooManyDestinations`), unique by target key
+  (`duplicateDestination`).
+- **Each destination.** The target passes `DestinationRules.validate` and is already trimmed;
+  the stage follows the environment name rules (`invalidDestinationTarget`). At most 1,000 items
+  (`tooManyDestinationItems`). Item names follow GitHub's rules plus the provider's
+  (`invalidDestinationItem`): Key Vault and Supabase hold secrets only and Supabase reserves
+  `SUPABASE_`; values are at most the provider's limit (25 KiB for Key Vault); a name is unique
+  across kinds (`duplicateDestinationItem`); `publicNames` name items of the destination, once
+  each (`invalidPublicName`).
+- **Folders.** Strict folder names (`invalidFolderName`), unique by fold key
+  (`duplicateFolder`), at most 1,000 items, every one with a value (`valueStateMismatch`).
+- **Entry ids** (environments, destinations, folders, items) are unique across the bundle
+  (`duplicateEntryID`); **link tokens** are lowercase UUIDs carried by at least two items
+  (`invalidLinkToken`).
+
+**Freshness** (`ShareBundleModel.checkFreshness(now:)`, run when a bundle is opened and again by
+the planner):
+
+| Condition | Result |
+|---|---|
+| `createdAt > now + 10 min` | `invalidPackage(createdInFuture)` |
+| `now > expiresAt + 10 min` | `ShareError.expired` ("This share file has expired") |
+
+FX Vault enforces the expiry; the cryptography does not (SECURITY-MODEL.md §10.5).
 
 ### 1.2 Branch policy rule
 
@@ -173,6 +252,98 @@ and a variable may share a name within a scope, as on GitHub.
   `{"schema":"fxvault.share/1"}` → 108-byte file, header
   `46585641554c541a0001004001010000000300010000010080…8f 90…9b 00×12`.
 
+### 2.1 File: `.fxvault` format 2 (v0.9.0)
+
+Implemented in `SharingKit/File` (`FxVaultFileV2Codec`, `FxVaultHeaderV2Model`,
+`FxVaultRecipientModels.swift`). Every export from 0.9 writes format 2;
+`FxVaultFileV2Codec.inspect` and `openWithPassphrase` still read v1 files (§2) through
+`FxVaultFileCodec`. FX Vault 0.8 and earlier show format 2 as "Wrong passphrase or damaged file"
+(their reader requires formatVersion 1).
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 8 | magic `46 58 56 41 55 4C 54 1A` (as v1) |
+| 8 | 2 | formatVersion u16 BE = 2 |
+| 10 | 2 | headerLength u16 BE = 64 (must be exactly 64) |
+| 12 | 1 | kdfId: 1 = Argon2id v1.3 (passphrase mode), 0 = none (teammates mode) |
+| 13 | 1 | aeadId = 1 (AES-256-GCM) |
+| 14 | 4 | opsLimit u32 BE: passphrase 1…10 (writes 3); teammates 0 |
+| 18 | 4 | memLimitKiB u32 BE: passphrase 8192…1048576 (writes 65536); teammates 0 |
+| 22 | 1 | parallelism: passphrase 1; teammates 0 |
+| 23 | 1 | flags = 0 |
+| 24 | 16 | salt, fresh per export: the Argon2id salt (passphrase) or the slot-id salt (teammates) |
+| 40 | 12 | nonce, fresh per export |
+| 52 | 1 | mode: 1 = passphrase, 2 = teammates |
+| 53 | 1 | recipientCount: passphrase 0; teammates 1…10 (`Limits.maxShareRecipients`) |
+| 54 | 10 | reserved, zero |
+
+**Passphrase mode**: `header(64) ‖ ciphertext ‖ tag(16)`. Key = Argon2id(normalized passphrase,
+salt, t, m, p = 1) → 32 bytes, exactly as v1 (§2, §3); AES-256-GCM, nonce = header nonce, AAD =
+the 64 header bytes; plaintext = the payload JSON (≤ 16 MiB). The sender's name in the payload is
+unverified.
+
+**Teammates mode**: `header(64) ‖ slots(88 × recipientCount) ‖ ciphertext ‖ tag(16)`.
+
+- Content key `K`: 32 random bytes per export.
+- Slot (88 bytes, `Limits.shareRecipientSlotBytes`) per recipient:
+  `slotID(8) ‖ enc(32) ‖ wrappedKey(48)`.
+  - `slotID = HMAC-SHA256(key: salt, LP("fxvault/file/v2/slot") ‖ deviceID(16))[0..<8]`: an
+    opaque id, so the file names no recipient.
+  - `enc ‖ wrappedKey` = HPKE (RFC 9180) base mode with the spaces suite
+    (`SpaceProtocol.wrapSuite`: DHKEM(X25519, HKDF-SHA256), HKDF-SHA256, ChaCha20-Poly1305) to
+    the recipient's X25519 agreement key from pairing; `info = LP("fxvault/file/v2/wrap") ‖
+    header(64)`; plaintext `K`.
+  - Slots are written in strictly ascending `slotID` order, so their order says nothing about the
+    selection and duplicates are impossible.
+- Ciphertext: AES-256-GCM under `K`, nonce = header nonce, **AAD = header ‖ all slots**.
+- Plaintext: `senderDeviceID(16) ‖ senderAnnounceKey(32) ‖ signature(64) ‖ payload JSON`
+  (`Limits.shareSenderPrefixBytes` = 112), with
+  `signature = Ed25519_sender(LP("fxvault/file/v2/sign") ‖ LP(header) ‖ LP(slots) ‖
+  LP(senderDeviceID) ‖ LP(senderAnnounceKey) ‖ LP(SHA256(payload JSON)))`.
+  - The sender's identity is inside the ciphertext: the channel sees neither sender nor
+    recipients.
+  - The signature binds the recipient set: a recipient who knows `K` cannot re-seal the payload
+    for other people under the sender's signature.
+  - The announce key lets a teammate paired remotely, stored without one, learn it (§10.9). Every
+    recipient is already the sender's teammate, so it stays "known only to teammates" (§10.2).
+- Sealing refuses 0, more than 10 or duplicated recipients (`encryptionFailed`) and a payload
+  over 16 MiB (`payloadTooLarge`).
+- Largest file: `Limits.maxShareFileV2Bytes` = 16 MiB + 112 + 64 + 10 × 88 + 16.
+
+**Reader order:**
+
+1. Size ≤ `Limits.maxShareFileV2Bytes`, magic, formatVersion: 1 → the v1 reader (§2); 2 →
+   continue; any other → `invalidFile`.
+2. headerLength 64, aeadId 1, flags 0, reserved zero, mode 1 or 2, then per mode. Passphrase:
+   kdfId 1, the v1 cost bounds, parallelism 1, recipientCount 0, size ≤
+   `Limits.maxShareFileBytes`. Teammates: kdfId 0, opsLimit, memLimitKiB and parallelism 0,
+   recipientCount 1…10, size between `64 + 88n + 112 + 16` and that plus 16 MiB, slots strictly
+   ascending.
+3. **Only then** key material (`inspect` touches none). Passphrase: Argon2id → GCM open.
+   Teammates: find this device's `slotID` (none → `notARecipient`) → HPKE open → GCM open → read
+   the prefix → look the sender's device id up among the vault's teammates (absent →
+   `senderNotTeammate`) → verify the signature with that teammate's Ed25519 key.
+4. Payload ≤ 16 MiB → JSON decoding and validation (§1, §1.4).
+
+Every structural or cryptographic failure is `ShareError.invalidFile` ("Wrong passphrase or
+damaged file"). A changed salt, recipient count or own slot id moves or hides the reader's slot,
+so tampering there can also surface as `notARecipient`; nothing opens either way. Calling
+`openWithPassphrase` on a teammates file, or `openAsTeammate` on a passphrase or v1 file, is
+`invalidFile`.
+
+**Known answers**: `Tests/SharingKitTests/Fixtures/file_v2_kat.json`, generated by
+`Fixtures/kat/file_v2_kat.py --write file_v2_kat.json` (a venv with `cryptography`).
+
+- Passphrase mode: key `0x42 × 32`, t = 3, m = 65536, salt `80..8f`, nonce `90..9b`, payload
+  `{"schema":"io.fractalx.fxvault.share","schemaVersion":4}`. Swift reproduces the header and the
+  whole 136-byte file byte for byte (`FxVaultFileV2KATTests`).
+- Teammates mode: a sender seals for two teammates with salt `00..0f`, nonce `20..2b` and content
+  key `40..5f`. The generator implements HPKE from RFC 9180 with fixed ephemeral keys, so the
+  441-byte file is deterministic, and opens each wrap again with `cryptography`'s own HPKE;
+  Ed25519 is RFC 8032 deterministic. CryptoKit seals HPKE and signs with randomness, so Swift opens
+  the file as each recipient, checks the sender id and announce key, reproduces the header, slot
+  ids, slots, signed message and ciphertext, and verifies the signature.
+
 ## 3. Passphrase
 
 Six words from the EFF large wordlist minus the four hyphenated words (`drop-down felt-tip
@@ -180,6 +351,8 @@ t-shirt yo-yo`): 7,772 words, about 77.5 bits, drawn with `SystemRandomNumberGen
 with `-`. The bundled list is verified by SHA-256 (`addd3553…996b903e`) before use. Input is
 lowercased, split on non-letters, and must be exactly six listed words; errors report the word
 count or the position of an unknown word, never the typed text.
+The same list gives the 6-word code of remote pairing (§10.9), drawn from an HKDF stream with
+rejection sampling instead of the random number generator.
 
 ## 4. Nearby protocol v1
 
@@ -286,6 +459,60 @@ unverified sender name, and recording the package in `imported_share_packages`).
   different branch policy is its own row, defaulting to keep mine. Widening (anything → all,
   custom → protected, or a new pattern containing `*`, `?` or `[`) needs a second confirmation.
 
+### 5.1 Receiver merge for bundles (`ShareBundlePlanner`, v0.9.0)
+
+Pure, like the single-repository planner. The local state (`ShareBundleLocalStateModel`) has one
+entry per incoming repository, keyed by owner and name fold keys: the local `RepoModel` (or nil),
+its environments, items and GitHub listing, its destinations with items and keyed fingerprints,
+and, for a repository missing from the vault, its `access` (importable with an account, not
+visible, unreachable, unknown). It also lists the vault's folders with their item names, the
+imported package ids and `now`. Destination values are compared with a separate
+`ShareDestinationFingerprinter` bound to the local destination row.
+
+| Repository | Status | Planned |
+|---|---|---|
+| In the vault, same name and `githubRepoId` | ✓ `inVault` | GitHub scopes by `ShareImportPlanner`, exactly as the schema 2 package `githubPackage(for:)` (same package id, link tokens dropped); destinations merged or created |
+| Not in the vault, an account can import it | ⇣ `willImportFromGitHub(accountLogin)` | Destinations all created; VaultData imports the repository, then plans again |
+| Not in the vault: not visible, unreachable or not checked | ✕ `noAccess(reason)` | Nothing; opening the same file again later imports it |
+| In the vault but another repository (name or id) | ✕ `blocked(reason)` | Nothing (§5 block reasons) |
+
+**Destinations.** A local destination of that repository with the same target key (`kv|…`,
+`sb|…`, `vc|team|project|env`, lowercase) is merged (`useExisting`); its stage and connection stay
+as they are. Otherwise the destination is created without a connection, and Sync leaves it alone
+until the receiver connects their own account. Items are matched by name, whatever their kind
+(one name per destination):
+
+| Incoming vs local | Chip | Default | Allowed |
+|---|---|---|---|
+| No local item | new | add | add, skip |
+| No local item, no incoming value | valueNotIncluded | add without value (a variable is then skipped) | add without value, skip |
+| Local tombstone | deletedLocally | skip | skip |
+| Same name, other kind | otherKindExists | skip | skip |
+| Incoming value missing | valueNotIncluded | skip | skip |
+| Local value missing | fillsMissingValue | fill | fill, skip |
+| Same fingerprint | same | skip | skip |
+| Different | differs | keep mine | keep mine, overwrite |
+
+Every destination write is pending; VaultData holds the rows the remote does not have (§6.1). A
+local row updated after `createdAt` raises the bundle's `olderThanLocalChanges` warning.
+
+**Folders.** A local folder with the same name (folder fold key) is merged, keeping its items
+(`mergeInto(id, keepMine)`); otherwise a new folder with the sender's name is created. The
+receiver can choose another new name, a replacing merge or skip.
+
+**Links** (P9). `linkGroups` lists, for each token, the entries whose chosen action writes a row
+(a GitHub item, a destination item, or a folder item a merge does not keep). A group is kept only
+when at least two of its entries are written; VaultData gives each kept group one fresh `link_id`.
+Rows the receiver keeps keep their own links.
+
+**Replay.** The bundle has one package id. Already imported and older than 7 days are checked for
+the whole bundle, even when every repository is skipped; local changes newer than the package are
+checked per repository and destination. Any warning needs a confirmation.
+
+**Apply** re-plans inside the write transaction and refuses with `.planOutdated` unless
+`isSamePreview(as:)` holds (the comparison ignores the user's choices: item actions, policy
+decisions and folder actions).
+
 ## 6. VaultData integration (`SharingRepository`)
 
 SharingKit stays pure; VaultData's `SharingRepository` connects it to the vault.
@@ -293,7 +520,8 @@ SharingKit stays pure; VaultData's `SharingRepository` connects it to the vault.
 - **Authorization.** `.fxvault` export needs `ReauthGate.authorizeShare(.fileExport, …)` and a
   nearby MANIFEST needs `.nearbySend`. Each authorization is single-use and invalidated by any
   lock, unlock or key rotation (SECURITY-MODEL.md §6).
-- **Export.** The selection (`ShareSelectionModel` item, environment, repository, or
+- **Export** (through 0.8; since 0.9.0 every file export is a bundle, §6.1). The selection
+  (`ShareSelectionModel` item, environment, repository, or
   `subset(ShareSubsetModel)`: whole environments plus individual items, any combination) is built
   into a `SharePackageModel` with values decrypted inside `VaultSession.read`, sealed with a
   fresh 6-word passphrase by `FxVaultFileCodec(deriver: Argon2idSharingDeriver())` and written
@@ -316,6 +544,90 @@ SharingKit stays pure; VaultData's `SharingRepository` connects it to the vault.
   `NearbyTransport` (`NWNearbyTransport` in the app, `InMemoryTransportPair` in tests). The
   receiver previews the manifest, decides, previews the payload and applies through the same
   importer; events forwarded to the UI never carry values.
+
+### 6.1 Project shares in VaultData (v0.9.0)
+
+`SharingRepository+ProjectShare.swift` connects the bundle (§1.4) and format 2 (§2.1) to the vault:
+`ProjectShareExportBuilder` builds bundles, `ProjectSharePlanning` collects the planner's local
+state, `ProjectShareImporter` applies a plan.
+
+- **Selection.** `ShareBundleSelectionModel` holds, per repository, the repository level on or
+  off, whole environments and single items, whole destinations and single destination items; plus
+  folder ids, the chosen stages and a `ShareExpiryChoice` (1, 7 or 30 days, 7 by default).
+  `stageOptions(repositoryIDs:)` lists every live environment name and destination stage,
+  de-duplicated by fold key and flagged with `StageRisk.isProduction` (a word of the name, split on
+  non-letters, is `prod`, `production`, `prd` or `live`). `selection(repositoryIDs:stages:…)`
+  expands stages as the Overview matches them: the environment whose fold key equals the stage plus
+  the destinations with that stage.
+- **Production places** (Q13): an environment or a destination stage `StageRisk` flags, and a
+  Vercel production destination without a stage. `previewBundle(_:)` lists them; a passphrase
+  export refuses them (`.productionNeedsTeammates`) before the authorization is consumed and again
+  on the bundle actually sealed.
+- **Export** (`exportBundle(_:protection:to:…)`), in this order:
+  1. the production rule for a passphrase;
+  2. recipients: 1–10 distinct paired teammates, not this Mac (`.invalidRecipients`);
+  3. the single-use `ReauthGate` `.fileExport` authorization is consumed;
+  4. values are decrypted inside one `VaultSession.read`; linked rows get one fresh lowercase UUID
+     `link` per group with at least two selected members; `publicNames` come from
+     `isPublicAllowed`; connection tokens, connection ids and labels are never read;
+  5. sealing: `sealWithPassphrase` with a fresh 6-word passphrase (returned once, never stored),
+     or `sealForTeammates` with this device's keys and the chosen teammates' keys from
+     `TeamRepository`;
+  6. a `sent_shares` row (names only, DATABASE.md v14), then the file (0600, `SecureFileWriter`);
+     a failed file write deletes that row again.
+
+  The suggested name is `FX Vault share <yyyy-MM-dd>.fxvault` (`defaultFileName`): no repository
+  or stage, because chats and mail show it. `sentShares()`, `observeSentShares()` and
+  `deleteSentShare(_:)` serve Settings › Sharing.
+- **Opening.** `inspectFile(at:)` accepts format 1 and 2 and never touches a passphrase or key
+  (`needsPassphrase`, `isForTeammates`, `recipientCount`). `openShareFile(_:passphrase:checkGitHub:)`
+  opens a passphrase file with `openWithPassphrase`, and a teammates file with `openAsTeammate`
+  (this Mac's keys, every teammate's keys); the sender's announce key is then stored when this Mac
+  has none for that teammate (`fillAnnounceKeyIfMissing`, §10.9), and the verified sender is the
+  teammate's stored name and device id. `ShareDocumentCoder.open` dispatches: schemas 1–2 are
+  planned exactly as before (`ShareImportDraftModel`), schema 3 becomes a `ShareFolderDraftModel`,
+  schema 4 is checked for freshness and becomes a `ShareBundleDraftModel`.
+- **Bundle planning.** GitHub's listing is read for each repository in the vault (with
+  `checkGitHub`); every listing shares one map of variable row ids, so one keyed fingerprinter
+  serves the whole bundle. A repository missing from the vault is checked with
+  `ShareRepositoryAccessChecking.access(owner:name:)` (the app passes `CatalogShareRepositoryAccess`,
+  through every logged-in gh account). Destination values are compared with each row's `value_fp`,
+  after normalizing the incoming value. `importMissingRepositories(of:)` imports every ⇣
+  repository outside any transaction and plans again, listing the imports that failed.
+- **Apply** (`applyBundle(_:plan:confirmReplay:)`), one write transaction:
+  1. re-plan, `.planOutdated` if the preview changed;
+  2. per ✓ repository, the existing `ShareImporter` on `githubPackage(for:)`, without recording
+     the package each time;
+  3. destinations merged by target key or created with `connection_id = NULL`; items through
+     `DestinationItemWriter` (a secret without a value is inserted value-missing);
+     `isPublicAllowed` from `publicNames`;
+  4. folders created or merged (kind plus fold-key name, keep mine or replace) with
+     `FolderItemWriter` in the same transaction;
+  5. one fresh `link_id` per plan link group with at least two written rows, across the three
+     item tables;
+  6. `share_hold` = the package id, set after every value write, on the GitHub rows that would
+     push (a pending add, a pending fill, an overwrite) and on every destination row written,
+     except a Supabase fill whose keyed digest marker the last listing already shows;
+  7. one `imported_share_packages` row, with `sender_device_id` for a teammates file.
+
+  Folder rows never sync and are never held. ⇣, ✕ and blocked repositories are skipped. The result
+  names the first imported repository and the first stage, for the Overview.
+- **Holds** (P8, `VaultData/Sync`). A held row is never in a Sync plan (GitHub or destination).
+  Sync's review lists each held file (`SyncReviewModel.heldShares`, `HeldShareModel`): sender,
+  verified only for a teammates file, import date, places and names. Including a file
+  (`startRun(…, includeHeld:)`, `DestinationSyncRepository.run(…, includeHeld:)`) releases every
+  hold of that package in both tables in one transaction before planning; a file left out stays
+  held and is offered again at the next Sync. Push on Next Sync on a held row
+  (`ShareHoldRepository.releaseHold(itemIDs:)`) releases that row only. The user's own changes are
+  never held: a delete, a GitHub-scope Revert or a typed value clears the row's hold; a rename or
+  move keeps it, and so does a destination Revert, which cannot bring back the previous value. A
+  new environment waits while all its live items are held; a renamed environment waits while any of
+  its live items is held. Holds do not touch values, AADs or fingerprints.
+- **Not held (residual).** Two GitHub changes from a file reach the next Sync's normal review
+  without a hold, because `share_hold` exists only on items: an environment the file creates when
+  not every live item in it is held (a whole environment whose items the receiver all skipped, or
+  one the receiver added an item of their own to), and a branch policy the user chose to take from
+  the file in the preview.
 
 ## 7. Nearby chat: `fxvault-chat/v1` (v0.2.0, experimental; chat version 2 in v0.4.0, §7.1)
 
@@ -482,8 +794,10 @@ repository (its owner, name and GitHub id are taken from the receiver's vault ro
 GitHub id check holds for that repository) with the same planner, preview, replay rules and
 `SharingRepository.apply` as §5–§6. Environments the target lacks are created; every change is
 pending for the next Sync. **Save as File…** (`saveAttachment(_:to:authorization:)`, after
-`.fileExport` re-authentication) seals the received package unchanged (sender's name and package
-id kept) into a `.fxvault` file under a fresh passphrase (§2–§3). The package stays in the
+`.fileExport` re-authentication) seals the received package (sender's name and package
+id kept) into a `.fxvault` file under a fresh passphrase (§2–§3); since v0.9.0 as a schema 4
+bundle in format 2 (§1.4, §2.1) dated the day it is saved and expiring after 7 days, and a
+package with a production environment is refused (`productionNeedsTeammates`). The package stays in the
 conversation until an import preview takes it (applied, or wiped on Cancel, as for one item) or
 the chat ends; closing the repository choice before Continue leaves it there. A whole repository
 is a schema 1 package (§1.1), so the file opens in every FX Vault version.
@@ -525,6 +839,18 @@ Since v0.7.0 (§1.3, §10.8):
 |---|---|---|
 | A folder in Nearby Chat | Chat version 4: one card; Save as Folder, Import Into…, Save as File… | Not offered: the Folder tab says the other Mac needs FX Vault 0.7 or later; nothing is sent |
 | A `.fxvault` file of a folder (schema 3) | Saved as a folder or imported into a scope | Rejected: "Wrong passphrase or damaged file" |
+
+Since v0.9.0 (§1.4, §2.1, §10.9):
+
+| Feature | 0.9.0 with 0.9.0 | 0.9.0 with 0.8 or older |
+|---|---|---|
+| A `.fxvault` file written by 0.9 (format 2, schema 4, any protection) | Opens: passphrase or teammate key, preview, import | Rejected: "Wrong passphrase or damaged file"; the receiver needs FX Vault 0.9 |
+| A `.fxvault` file written by 0.8 or older (format 1, schemas 1–3) | Opens as before | n/a |
+| Nearby share and Nearby Chat | Unchanged (schemas 1–3) | Unchanged |
+| A `.fxvcard` teammate card | Remote pairing (§10.9) | Not a known file type |
+
+A teammate paired remotely is a teammate like any other for presence, chat and spaces once its
+announce key has arrived (§10.9).
 
 ## 10. Teammates: `fxvault-team/v1` (v0.5.0)
 
@@ -604,6 +930,98 @@ repository (`ATTACHMENT_OFFER` with the manifest, `ATTACHMENT_REQUEST`, chunked
 to a peer below 4 (`ChatError.peerNeedsUpdate`) before any authorization is used; a receiver below
 4 that gets one aborts with `invalidPackage(scopeMismatch(folder))`. The receiver's card shows the
 folder's name and counts; values travel only after Save…
+
+### 10.9 Pairing at a distance: `.fxvcard` files (v0.9.0, experimental)
+
+Implemented in `SharingKit/Team/RemotePairing.swift` and `RemotePairingProtocol.swift`; stored by
+`VaultData/Team/TeamRepository+Pairing.swift`. Known-answer vectors:
+`Tests/SharingKitTests/Fixtures/pairing_kat.json`, generated by `Fixtures/kat/pairing_kat.py`
+(RFC 8032, RFC 5869, RFC 7748, RFC 9180; its Ed25519 signatures are deterministic and its HPKE seal
+uses a random ephemeral, so Swift verifies and opens them and reproduces everything else byte for
+byte: `RemotePairingKATTests`).
+
+Add Teammate › Not Nearby… pairs two Macs that are not on the same network (P4). The two people
+send each other two files over any channel (WhatsApp, mail, Slack), then compare a 6-word code on a
+call. The files hold only public keys and names; the announce key (§10.2) never travels in the
+clear.
+
+**Files.** Type `io.fractalx.fxvault.teammate-card`, extension `.fxvcard`, MIME
+`application/vnd.fractalx.fxvault-card`, at most 4 KiB (`Limits.maxPairingCardFileBytes`).
+`createdAt` values are whole seconds since 1970, big-endian; labels are `fxvault/pair-remote/v1/…`.
+
+```
+file        = magic "FXVCARD" 0x1A (46 58 56 43 41 52 44 1A) ‖ version u8 = 1 ‖ kind u8 ‖ body
+              kind 1 = invitation, 2 = reply
+publicCard  = deviceID(16) ‖ signPK(32) ‖ agreePK(32) ‖ u16 ‖ login ‖ u16 ‖ displayName ‖ u16 ‖ macName
+              (the §10.2 card without its version byte and without the announce key; names
+              sanitized, at most 63 bytes each; deviceID must derive from the two keys)
+
+invitation  = publicCard_A ‖ u64 createdAt_A ‖ nonce_A(32) ‖ sig_A(64)
+  sig_A     = Ed25519_A(LP("fxvault/pair-remote/v1/invite") ‖ LP(publicCard_A ‖ createdAt_A ‖ nonce_A))
+
+reply       = u32 len ‖ invitation file (echoed whole) ‖ publicCard_B ‖ u64 createdAt_B ‖ nonce_B(32) ‖
+              enc(32) ‖ sealedAnnounce_B(48) ‖ sig_B(64)
+  sealedAnnounce_B = HPKE base mode (the §11 wrap suite) to agreePK_A,
+              info = LP("fxvault/pair-remote/v1/announce") ‖ SHA256(invitation file) ‖ deviceID_B,
+              plaintext = B's announce key (32)
+  sig_B     = Ed25519_B(LP("fxvault/pair-remote/v1/reply") ‖ LP(reply body before sig_B))
+```
+
+**Steps.**
+
+1. A exports an invitation (`makeInvitation`) and sends it to B.
+2. B opens it (`readInvitation`): format, card, signature, then this Mac's own card
+   (`pairingOwnCard`), then age: older than 7 days (`Timeouts.pairingInvitationMaxAge`) or dated
+   more than 10 minutes ahead (`Timeouts.shareClockSkew`) is `pairingExpired`. B writes the reply
+   (`makeReply`) with a fresh `nonce_B`, sends it to A and sees the code.
+3. A opens the reply (`readReply`): the echoed invitation must parse, carry a valid signature and be
+   this Mac's own; the reply must be signed by B; B is not A; the invitation is still within 7
+   days; the reply is not dated ahead; the sealed announce key must open with A's agreement key.
+   A sees the code.
+4. They compare the code on a call, and each side confirms on its own Mac. Reading and making
+   files writes nothing; only the confirmation stores a teammate (an existing one is updated, never
+   duplicated):
+   - A (`confirmReplier`) stores B with B's announce key, `paired_via = 'remote'`, and sets
+     `needs_card_update`, so A's card with A's announce key goes to B in their first nearby session
+     (the existing CARD_UPDATE, §10.5).
+   - B (`confirmInviter`) stores A without an announce key. It arrives in A's first teammates file to
+     B (§2.1, the sender prefix) or with that card update. Until then B cannot match A's pseudonyms
+     (`teammateCards()` gives such a teammate a random, never-stored announce key); every other
+     teammate feature works, because sessions authenticate with the signing keys.
+
+Every failure is `ShareError.invalidPairingCard`, except `pairingExpired` and `pairingOwnCard`.
+Creating a file that cannot be signed or sealed is `encryptionFailed`.
+
+**Code.** Six words from the share wordlist (§3, 7,772 words, about 77.5 bits):
+
+```
+transcript = LP("fxvault/pair-remote/v1/code") ‖ LP(publicCard_A ‖ nonce_A) ‖ LP(publicCard_B ‖ nonce_B)
+stream     = HKDF-SHA256(ikm: transcript, salt: empty, info: "fxvault/pair-remote/v1/code-words", 128 bytes)
+```
+
+Read `stream` as big-endian u16 values `v`; accept `v < 62176` (8 × 7,772, the largest multiple
+that fits in 16 bits) as word `v mod 7772`; stop at six words. Rejection sampling keeps every word
+equally likely; running out of stream (below 2^-200) is `invalidPairingCard`. The code is shown as
+six lowercase words joined with `-`. The transcript puts the inviter first: the roles are known, and
+the argument below depends on which side draws its nonce last.
+
+**Why six words are enough without commit-reveal.** Nearby pairing (§10.3) uses commit-reveal, so 6
+digits suffice. Here the two files cross the channel one after the other, and a relay may swap both
+cards:
+
+- B's code is `H(invitation B holds, B's card, nonce_B)`. `nonce_B` is drawn on B's Mac after the
+  invitation B holds is fixed and is revealed only in B's reply, so when the relay first sees it,
+  B's code is already fixed and uniformly distributed.
+- A's code is `H(A's own invitation, the reply A receives)`. The relay controls only that reply.
+- To make the codes match, the relay must find a reply whose code equals a fixed random target: a
+  second preimage on 77.5 bits, about 2^77 work. It cannot prepare both sides for a birthday
+  collision (about 2^39), because B's half depends on a nonce it learns too late.
+
+A relay that sends B several invitations gets one target per reply B makes, and each reply is a
+deliberate user action. Any swap shows up as different codes on the call
+(`aRelayThatSwapsTheReplyChangesTheInvitersCode`,
+`aRelayThatSwapsTheInvitationChangesTheRepliersCode`). Comparing the code is what authenticates; a
+file alone proves nothing about who sent it.
 
 ## 11. Shared spaces: `fxvault-space/v1` (v0.6.0, experimental)
 

@@ -9,6 +9,10 @@ enum ShareScopeNodeID: Hashable {
     /// The "Repository level" group: the repository's own secrets and variables.
     case repositoryLevel(RepoID)
     case environment(EnvironmentID)
+    /// A runtime destination of the repository (project shares, v0.9.0).
+    case destination(DestinationID)
+    /// A folder, shared whole (project shares, v0.9.0).
+    case folder(FolderID)
     case item(ConfigItemID)
 }
 
@@ -20,6 +24,10 @@ struct ShareScopeNodeModel: Identifiable, Hashable {
         /// The repository's own secrets and variables (not in an environment).
         case repositoryLevel
         case environment
+        /// A runtime destination (v0.9.0), with its provider's symbol.
+        case destination(symbolName: String)
+        /// A folder (v0.9.0), shared whole.
+        case folder
         /// `hasValue` false: the value is missing locally and travels by name only (§7.8).
         case secret(hasValue: Bool)
         case variable
@@ -31,6 +39,13 @@ struct ShareScopeNodeModel: Identifiable, Hashable {
     /// nil for leaves (items, and environments without items), so the tree shows no
     /// disclosure triangle.
     let children: [ShareScopeNodeModel]?
+}
+
+/// A tree of checkable rows, as ``ShareScopeTreeView`` shows it: one or more roots and the
+/// state of each row.
+protocol ShareCheckTree {
+    var roots: [ShareScopeNodeModel] { get }
+    func state(of node: ShareScopeNodeModel) -> ShareCheckState
 }
 
 /// A tri-state checkbox.
@@ -56,7 +71,7 @@ enum ShareCheckState: Equatable {
 /// ``selection`` encodes exactly that for `SharingRepository`. One exception: a tree opened for
 /// one item ("Share this secret…") shares that item alone until the checks change, even when it
 /// is its environment's only item (which would otherwise share the environment and its policy).
-struct ShareScopeTreeModel: Equatable {
+struct ShareScopeTreeModel: Equatable, ShareCheckTree {
     let root: ShareScopeNodeModel
     let repositoryID: RepoID
     private(set) var checkedLeaves: Set<ShareScopeNodeID>
@@ -96,14 +111,18 @@ struct ShareScopeTreeModel: Equatable {
 
     /// Items and environments can be leaves; an empty repository or repository-level group
     /// cannot (there is nothing to share).
-    private static func isLeafCandidate(_ node: ShareScopeNodeModel) -> Bool {
+    static func isLeafCandidate(_ node: ShareScopeNodeModel) -> Bool {
         switch node.kind {
-        case .environment, .secret, .variable: true
+        case .environment, .destination, .folder, .secret, .variable: true
         case .repository, .repositoryLevel: false
         }
     }
 
     // MARK: - State
+
+    var roots: [ShareScopeNodeModel] {
+        [root]
+    }
 
     /// The checkbox state of `node`.
     func state(of node: ShareScopeNodeModel) -> ShareCheckState {
@@ -196,18 +215,23 @@ struct ShareScopeTreeModel: Equatable {
         items: [ConfigScope: [ConfigItemModel]],
         selection: ShareSelectionModel?
     ) -> ShareScopeTreeModel {
+        let root = repositoryNode(repository: repository, scopes: scopes, items: items, destinations: [])
+        return ShareScopeTreeModel(root: root, repositoryID: repository.id, selection: selection)
+    }
+
+    /// The node of one repository: the "Repository level" group (left out when the repository
+    /// has no items of its own), each environment with its items, then each destination with its
+    /// items (project shares, v0.9.0). Deleted environments and items are left out.
+    static func repositoryNode(
+        repository: RepoModel,
+        scopes: [ConfigScopeSummaryModel],
+        items: [ConfigScope: [ConfigItemModel]],
+        destinations: [(destination: DestinationModel, items: [DestinationItemModel])]
+    ) -> ShareScopeNodeModel {
         func leaves(_ scope: ConfigScope) -> [ShareScopeNodeModel] {
-            let live = (items[scope] ?? []).filter { !$0.isDeleted }
-            let ordered = live.filter { $0.kind == .secret }.sorted(by: Self.byName)
-                + live.filter { $0.kind == .variable }.sorted(by: Self.byName)
-            return ordered.map { item in
-                ShareScopeNodeModel(
-                    id: .item(item.id),
-                    title: item.name,
-                    kind: item.kind == .secret ? .secret(hasValue: item.hasValue) : .variable,
-                    children: nil
-                )
-            }
+            itemNodes((items[scope] ?? []).filter { !$0.isDeleted }.map {
+                (id: $0.id, kind: $0.kind, name: $0.name, hasValue: $0.hasValue)
+            })
         }
         let environments = scopes.compactMap { summary -> ShareScopeNodeModel? in
             guard let environment = summary.environment, !environment.isDeleted else { return nil }
@@ -216,6 +240,17 @@ struct ShareScopeTreeModel: Equatable {
                 id: .environment(environment.id),
                 title: environment.name,
                 kind: .environment,
+                children: children.isEmpty ? nil : children
+            )
+        }
+        let runtime = destinations.map { entry -> ShareScopeNodeModel in
+            let children = itemNodes(entry.items.filter { !$0.isDeleted }.map {
+                (id: $0.id, kind: $0.kind, name: $0.name, hasValue: $0.hasValue)
+            })
+            return ShareScopeNodeModel(
+                id: .destination(entry.destination.id),
+                title: "\(entry.destination.provider.shortTitle) · \(entry.destination.title)",
+                kind: .destination(symbolName: entry.destination.provider.symbolName),
                 children: children.isEmpty ? nil : children
             )
         }
@@ -228,17 +263,31 @@ struct ShareScopeTreeModel: Equatable {
                 children: repositoryItems
             ),
         ]
-        let root = ShareScopeNodeModel(
+        return ShareScopeNodeModel(
             id: .repository(repository.id),
             title: repository.fullName,
             kind: .repository,
-            children: repositoryLevel + environments
+            children: repositoryLevel + environments + runtime
         )
-        return ShareScopeTreeModel(root: root, repositoryID: repository.id, selection: selection)
     }
 
-    private static func byName(_ lhs: ConfigItemModel, _ rhs: ConfigItemModel) -> Bool {
-        lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+    /// Secrets first, then variables, each by name.
+    private static func itemNodes(
+        _ items: [(id: ConfigItemID, kind: ConfigKind, name: String, hasValue: Bool)]
+    ) -> [ShareScopeNodeModel] {
+        func byName(_ lhs: (id: ConfigItemID, kind: ConfigKind, name: String, hasValue: Bool), _ rhs: (id: ConfigItemID, kind: ConfigKind, name: String, hasValue: Bool)) -> Bool {
+            lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+        }
+        let ordered = items.filter { $0.kind == .secret }.sorted(by: byName)
+            + items.filter { $0.kind == .variable }.sorted(by: byName)
+        return ordered.map { item in
+            ShareScopeNodeModel(
+                id: .item(item.id),
+                title: item.name,
+                kind: item.kind == .secret ? .secret(hasValue: item.hasValue) : .variable,
+                children: nil
+            )
+        }
     }
 }
 

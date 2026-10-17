@@ -45,7 +45,7 @@ nonisolated enum StageOverviewCopy {
     static var legend: String {
         String(
             localized: "overview.legend",
-            defaultValue: "Missing: fxvault.yml sends the name here. Extra: here, but fxvault.yml does not send it here. Differs: another place of this stage holds another value. Blocked: a public name with a secret-looking value. —: not used here."
+            defaultValue: "Missing: fxvault.yml sends the name here. Extra: here, but fxvault.yml does not send it here. Differs: another place of this stage holds another value. Held: imported from a share file, waiting until you include it in Sync. Blocked: a public name with a secret-looking value. —: not used here."
         )
     }
 
@@ -63,6 +63,7 @@ nonisolated enum StageOverviewCopy {
         case .notUsed: "—"
         case .synced: String(localized: "overview.cell.synced", defaultValue: "Synced")
         case .willPush: String(localized: "overview.cell.willPush", defaultValue: "Will push")
+        case .held: String(localized: "overview.cell.held", defaultValue: "Held")
         case .willDelete: String(localized: "overview.cell.willDelete", defaultValue: "Will delete")
         case .valueMissing: String(localized: "overview.cell.valueMissing", defaultValue: "Value missing")
         case .missing: String(localized: "overview.cell.missing", defaultValue: "Missing")

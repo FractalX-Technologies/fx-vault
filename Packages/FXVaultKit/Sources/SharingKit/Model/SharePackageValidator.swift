@@ -49,6 +49,45 @@ public enum SharePackageViolation: Sendable, Hashable {
     case invalidFolderName(ValidationError)
     /// A folder holds more than `limit` secrets and variables (v0.7.0).
     case tooManyFolderItems(limit: Int)
+
+    // MARK: Bundles (schema 4, v0.9.0)
+
+    /// An item of a schema 1–3 document carries a `link` token.
+    case linkNotAllowed
+    /// A `link` token is not a lowercase UUID, or fewer than two items of the bundle carry it.
+    case invalidLinkToken
+    /// The bundle holds neither a repository nor a folder.
+    case emptyBundle
+    /// The bundle holds more than `limit` repositories (``Limits/maxShareRepositories``).
+    case tooManyRepositories(limit: Int)
+    /// Two repositories of the bundle have the same owner and name (case-insensitive).
+    case duplicateRepository
+    /// `expiresAt` is not after `createdAt`, or later than ``Timeouts/shareMaxExpiry`` after it.
+    case invalidExpiry
+    /// `createdAt` is ahead of this Mac's clock by more than ``Timeouts/shareClockSkew``.
+    case createdInFuture
+    /// A name in `stages` failed ``EnvironmentNameValidator`` in strict NFC mode.
+    case invalidStage(ValidationError)
+    /// `stages` lists the same stage twice (case-insensitive).
+    case duplicateStage
+    /// A destination's target or stage failed ``DestinationRules`` (or the environment name rules
+    /// for the stage), or is not already in its trimmed form.
+    case invalidDestinationTarget(ValidationError)
+    /// Two destinations of one repository have the same target key.
+    case duplicateDestination
+    /// A repository carries more than `limit` destinations (``Limits/maxDestinationsPerRepository``).
+    case tooManyDestinations(limit: Int)
+    /// A destination item breaks a provider rule (``DestinationRules/violation(of:kind:provider:)``,
+    /// a value above the provider's size limit).
+    case invalidDestinationItem(ValidationError)
+    /// Two items of one destination have the same name, whatever their kind.
+    case duplicateDestinationItem
+    /// A destination holds more than `limit` items (``Limits/maxDestinationItems``).
+    case tooManyDestinationItems(limit: Int)
+    /// `publicNames` names no item of its destination, or names one twice.
+    case invalidPublicName
+    /// Two folders of the bundle have the same name (case-insensitive).
+    case duplicateFolder
 }
 
 /// Checks every §9.3 rule on a decoded or about-to-be-sent package (schema v1 and v2, and v3
@@ -94,7 +133,7 @@ public enum SharePackageValidator {
         }
         if let violation = repositoryViolation(package.repository) { return violation }
         if let violation = entryIDViolation(package) { return violation }
-        if let violation = itemsViolation(package.repository, mode: mode) { return violation }
+        if let violation = itemsViolation(package.repository, mode: mode, allowsLink: false) { return violation }
         if let violation = partialEnvironmentViolation(package) { return violation }
         return scopeViolation(package)
     }
@@ -123,7 +162,7 @@ public enum SharePackageValidator {
             var keys = Set<String>()
             for item in items {
                 guard item.valueState == .present else { return .valueStateMismatch }
-                if let violation = itemViolation(item, mode: mode) { return violation }
+                if let violation = itemViolation(item, mode: mode, allowsLink: false) { return violation }
                 guard keys.insert(GitHubNameValidator.foldKey(item.name)).inserted else {
                     return .duplicateItem(kind: kind, level: .repository)
                 }
@@ -134,7 +173,7 @@ public enum SharePackageValidator {
 
     // MARK: - Header fields
 
-    private static func producerViolation(_ producer: ShareProducerModel) -> SharePackageViolation? {
+    static func producerViolation(_ producer: ShareProducerModel) -> SharePackageViolation? {
         for field in [producer.app, producer.version] {
             let isValid = !field.isEmpty
                 && field.utf8.count <= maxProducerFieldBytes
@@ -144,11 +183,11 @@ public enum SharePackageValidator {
         return nil
     }
 
-    private static func isSanitized(_ text: String) -> Bool {
+    static func isSanitized(_ text: String) -> Bool {
         DisplayNameSanitizer.sanitize(text) == text
     }
 
-    private static func repositoryViolation(_ repository: ShareRepositoryModel) -> SharePackageViolation? {
+    static func repositoryViolation(_ repository: ShareRepositoryModel) -> SharePackageViolation? {
         if repository.host != GitHubHostValidator.host { return .invalidHost }
         if let rule = OwnerLoginValidator.violation(in: repository.owner) { return .invalidOwner(rule) }
         if let rule = PathSegmentValidator.violation(in: repository.owner) {
@@ -221,9 +260,10 @@ public enum SharePackageValidator {
         return Set(all).count == all.count ? nil : .duplicateEntryID
     }
 
-    private static func itemsViolation(
+    static func itemsViolation(
         _ repository: ShareRepositoryModel,
-        mode: Mode
+        mode: Mode,
+        allowsLink: Bool
     ) -> SharePackageViolation? {
         var scopes: [(items: [ShareItemModel], kind: ConfigKind, level: ConfigScopeLevel)] = [
             (repository.secrets, .secret, .repository),
@@ -234,7 +274,13 @@ public enum SharePackageValidator {
             scopes.append((environment.variables, .variable, .environment))
         }
         for scope in scopes {
-            if let violation = scopeItemsViolation(scope.items, kind: scope.kind, level: scope.level, mode: mode) {
+            if let violation = scopeItemsViolation(
+                scope.items,
+                kind: scope.kind,
+                level: scope.level,
+                mode: mode,
+                allowsLink: allowsLink
+            ) {
                 return violation
             }
         }
@@ -245,13 +291,14 @@ public enum SharePackageValidator {
         _ items: [ShareItemModel],
         kind: ConfigKind,
         level: ConfigScopeLevel,
-        mode: Mode
+        mode: Mode,
+        allowsLink: Bool
     ) -> SharePackageViolation? {
         let limit = Limits.maxItems(kind: kind, level: level)
         if items.count > limit { return .tooManyItems(kind: kind, level: level, limit: limit) }
         var keys = Set<String>()
         for item in items {
-            if let violation = itemViolation(item, mode: mode) { return violation }
+            if let violation = itemViolation(item, mode: mode, allowsLink: allowsLink) { return violation }
             guard keys.insert(GitHubNameValidator.foldKey(item.name)).inserted else {
                 return .duplicateItem(kind: kind, level: level)
             }
@@ -259,7 +306,9 @@ public enum SharePackageValidator {
         return nil
     }
 
-    private static func itemViolation(_ item: ShareItemModel, mode: Mode) -> SharePackageViolation? {
+    /// Name, link and value rules of one item. `allowsLink` is true only inside a bundle.
+    static func itemViolation(_ item: ShareItemModel, mode: Mode, allowsLink: Bool) -> SharePackageViolation? {
+        if item.linkToken != nil, !allowsLink { return .linkNotAllowed }
         if let rule = GitHubNameValidator.violation(in: item.name) { return .invalidItemName(rule) }
         if GitHubNameValidator.normalize(item.name) != item.name {
             return .invalidItemName(.notNormalized)
@@ -273,7 +322,9 @@ public enum SharePackageValidator {
         }
     }
 
-    private static func valueViolation(_ item: ShareItemModel) -> SharePackageViolation? {
+    /// `valueState` against `value`, UTF-8, emptiness and GitHub's size limit (`maxValueBytes`
+    /// for destination items, v0.9.0).
+    static func valueViolation(_ item: ShareItemModel, maxValueBytes: Int = Limits.maxValueBytes) -> SharePackageViolation? {
         switch (item.valueState, item.value) {
         case (.missing, nil):
             return nil
@@ -288,7 +339,7 @@ public enum SharePackageValidator {
             } catch {
                 return error == .emptyValue ? .emptyValue : .valueTooLarge(limit: Limits.maxValueBytes)
             }
-            return nil
+            return normalizedCount > maxValueBytes ? .valueTooLarge(limit: maxValueBytes) : nil
         default:
             return .valueStateMismatch
         }
@@ -298,9 +349,14 @@ public enum SharePackageValidator {
 
     /// A missing branch policy needs schema v2 and at least one item in the environment.
     private static func partialEnvironmentViolation(_ package: SharePackageModel) -> SharePackageViolation? {
-        let partial = package.repository.environments.filter { !$0.includesBranchPolicy }
-        guard !partial.isEmpty else { return nil }
         let allowsPartial = package.schemaVersion >= SharePackageModel.partialEnvironmentsSchemaVersion
+        return partialEnvironmentViolation(package.repository, allowsPartial: allowsPartial)
+    }
+
+    /// Every environment without a branch policy must be allowed and carry at least one item.
+    static func partialEnvironmentViolation(_ repository: ShareRepositoryModel, allowsPartial: Bool) -> SharePackageViolation? {
+        let partial = repository.environments.filter { !$0.includesBranchPolicy }
+        guard !partial.isEmpty else { return nil }
         let isValid = allowsPartial && partial.allSatisfy { $0.itemCount > 0 }
         return isValid ? nil : .branchPolicyRequired
     }

@@ -410,6 +410,53 @@ extension NearbyChatConversationTests {
         await parties.sender.close()
     }
 
+    @Test func aReceivedFolderIsSavedAsAnExpiringBundleFile() async throws {
+        let parties = try await parties()
+        defer { parties.world.folder.remove() }
+        try await verified(parties)
+        _ = try await offerFolder(in: parties)
+        guard case .attachmentOffered(let card) = await parties.receiverEvents.first(where: { $0.isOffer || $0.isChatTerminal }) else {
+            Issue.record("No folder offer")
+            return
+        }
+        try await parties.receiver.requestAttachment(card.id)
+        guard case .attachmentReceived(let id, _) = await parties.receiverEvents.first(where: { $0.isReceived || $0.isChatTerminal }) else {
+            Issue.record("No payload")
+            return
+        }
+
+        let destination = parties.world.folder.url.appendingPathComponent("received.fxvault")
+        let receiverAuthorization = ShareAuthorizationModel(purpose: .fileExport, session: parties.world.receiver.session)
+        let saved = try await parties.receiver.saveAttachment(id, to: destination, authorization: receiverAuthorization)
+        defer { saved.passphrase.wipe() }
+        #expect(saved.fileURL == destination)
+        await #expect(throws: NearbyChatError.sharing(.authorizationInvalid)) {
+            _ = try await parties.receiver.saveAttachment(id, to: destination, authorization: receiverAuthorization)
+        }
+
+        // v0.9.0: a schema 4 bundle in format 2 that expires, keeping the sender's name.
+        let passphrase = try #require(saved.passphrase.utf8String())
+        let inspected = try parties.world.receiverSharing.inspectFile(at: destination)
+        guard case .v2Passphrase = inspected.info else {
+            Issue.record("Expected a format 2 passphrase file")
+            return
+        }
+        let reopened = try await parties.world.receiverSharing.openShareFile(inspected, passphrase: passphrase, checkGitHub: false)
+        guard case .bundle(let draft) = reopened.document else {
+            Issue.record("Expected a bundle")
+            return
+        }
+        #expect(draft.manifest.repositories.isEmpty)
+        #expect(draft.manifest.folders.map(\.name) == ["Mobile App"])
+        #expect(draft.manifest.itemCount == 2)
+        #expect(draft.manifest.expiresAt == ShareExpiryChoice.default.expiry(from: draft.manifest.createdAt))
+        #expect(reopened.sender.displayName == ShareWorld.senderName)
+        #expect(!reopened.sender.isVerified)
+        draft.discard()
+        #expect(await parties.receiver.receivedCount == 1, "saving keeps the package for an import")
+        await parties.sender.close()
+    }
+
     @Test func aFolderOfferIsWithdrawnWhenAValueChangedSince() async throws {
         let parties = try await parties()
         defer { parties.world.folder.remove() }
@@ -490,7 +537,7 @@ extension NearbyChatConversationTests {
         await parties.sender.close()
     }
 
-    @Test func aReceivedRepositoryCanBeSavedAsAnEncryptedFileAndStillImported() async throws {
+    @Test func aReceivedRepositoryWithProductionIsNotSavedUnderAPassphraseButCanStillBeImported() async throws {
         let parties = try await parties()
         defer { parties.world.folder.remove() }
         try await verified(parties)
@@ -502,23 +549,15 @@ extension NearbyChatConversationTests {
             return
         }
 
+        // The repository has a production environment: Save as File writes a passphrase file,
+        // so it is refused before the authorization is used (P3, Q13).
         let destination = parties.world.folder.url.appendingPathComponent("received.fxvault")
         let receiverAuthorization = ShareAuthorizationModel(purpose: .fileExport, session: parties.world.receiver.session)
-        let saved = try await parties.receiver.saveAttachment(id, to: destination, authorization: receiverAuthorization)
-        defer { saved.passphrase.wipe() }
-        #expect(saved.fileURL == destination)
-        await #expect(throws: NearbyChatError.sharing(.authorizationInvalid)) {
+        await #expect(throws: NearbyChatError.sharing(.productionNeedsTeammates)) {
             _ = try await parties.receiver.saveAttachment(id, to: destination, authorization: receiverAuthorization)
         }
-
-        let passphrase = try #require(saved.passphrase.utf8String())
-        let reopened = try await parties.world.receiverSharing.openFile(
-            parties.world.receiverSharing.readFile(at: destination),
-            passphrase: passphrase,
-            checkGitHub: false
-        )
-        #expect(reopened.package.flattenedItems.count == 4)
-        reopened.discard()
+        #expect(receiverAuthorization.isUsable)
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
         #expect(await parties.receiver.receivedCount == 1, "saving keeps the package for an import")
         _ = try await parties.receiver.previewAttachment(id, checkGitHub: false)
         await parties.sender.close()

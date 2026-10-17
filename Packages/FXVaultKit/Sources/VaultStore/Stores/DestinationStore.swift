@@ -192,6 +192,44 @@ public struct DestinationStore: Sendable {
             .updateAll(tx.db, DestinationItemRecord.CodingKeys.linkID.set(to: linkID?.uuidString))
     }
 
+    // MARK: - Share holds (v0.9.0)
+
+    /// Sets or clears `share_hold` on destination items (values, AADs and sync state stay as
+    /// they are).
+    public func setShareHold(_ packageID: SharePackageID?, itemIDs: [ConfigItemID], in tx: StoreTransaction) throws {
+        guard !itemIDs.isEmpty else { return }
+        try DestinationItemRecord
+            .filter(keys: itemIDs.map(\.uuidString))
+            .updateAll(tx.db, DestinationItemRecord.CodingKeys.shareHold.set(to: packageID?.uuidString))
+    }
+
+    /// The destination items held under `packageID`, or under any share file when nil, without
+    /// ciphertext, ordered by destination and name.
+    public func fetchHeldItemStates(packageID: SharePackageID? = nil, in tx: StoreTransaction) throws -> [DestinationItemState] {
+        if let packageID {
+            return try DestinationItemState.fetchAll(tx.db, SQLRequest(literal: """
+                SELECT \(sql: DestinationItemState.selection) FROM destination_items
+                WHERE share_hold = \(packageID.uuidString) ORDER BY destination_id, name
+                """))
+        }
+        return try DestinationItemState.fetchAll(tx.db, SQLRequest(literal: """
+            SELECT \(sql: DestinationItemState.selection) FROM destination_items
+            WHERE share_hold IS NOT NULL ORDER BY destination_id, name
+            """))
+    }
+
+    public func fetchHeldItemStates(packageID: SharePackageID? = nil) throws -> [DestinationItemState] {
+        try database.read { try fetchHeldItemStates(packageID: packageID, in: $0) }
+    }
+
+    /// Releases every destination item held under `packageID`. Returns how many it released.
+    @discardableResult
+    public func clearShareHold(packageID: SharePackageID, in tx: StoreTransaction) throws -> Int {
+        try DestinationItemRecord
+            .filter(DestinationItemRecord.CodingKeys.shareHold == packageID.uuidString)
+            .updateAll(tx.db, DestinationItemRecord.CodingKeys.shareHold.set(to: nil))
+    }
+
     // MARK: - Connections
 
     public func fetchConnection(id: ConnectionID, in tx: StoreTransaction) throws -> ConnectionRecord? {

@@ -47,7 +47,8 @@ the secrets your code reads at runtime in Azure Key Vault, Supabase and Vercel.
   encrypted `.fxvault` file. The teammate saves it as a folder of their own or imports it into
   one of their repositories. Each person keeps their own copy.
 - **Teammates nearby.** Pair once with a teammate's Mac (Settings › Teammates › Add Teammate…,
-  compare a 6-digit code). Your teammates are always listed at the bottom of the sidebar, with a
+  compare a 6-digit code), or, experimentally, from anywhere with **Not Nearby…**: swap two small
+  card files by chat and compare six words on a call. Your teammates are always listed at the bottom of the sidebar, with a
   green dot while they are nearby and FX Vault is open: click one to **Ping** (their Mac plays a
   sound), **Chat** (no code needed between teammates) or **Send Folder**. Only your teammates recognize your Mac: it shows up under a name that
   changes every 15 minutes. Choose Nobody, Teammates or Everyone nearby, and mute pings per
@@ -72,10 +73,20 @@ the secrets your code reads at runtime in Azure Key Vault, Supabase and Vercel.
   reads the clipboard only when you paste.
 - **`.env` import and export.** Import with key fixes and credential detection; export after
   Touch ID or your master password, with iCloud and git-exposure warnings.
-- **Sharing.** Send any combination to a teammate as an encrypted `.fxvault` file protected
-  by a 6-word passphrase: the repository level, one or more environments, or individual
-  secrets and variables (tri-state checkboxes, with "Secrets: n · Variables: m" per scope). An
-  environment's deployment branch policy travels only when the whole environment is checked.
+- **Share a project as one file.** File › Share Project… (⌥⌘S) puts several repositories into
+  one encrypted `.fxvault` file you can send by WhatsApp, Mail or AirDrop: pick the stages
+  (production starts unchecked), and each repository brings its GitHub environments and its
+  runtime destinations with their values, then adjust the tree down to single secrets. Send it
+  to up to 10 **paired teammates** (only FX Vault on their Macs can open it, no passphrase, and
+  they see it came from you) or to **anyone, with a 6-word passphrase** you send another way;
+  production only goes to teammates. The file expires after 1, 7 or 30 days, and Settings ›
+  Sharing lists what you sent, names only, so you know what to rotate if a file leaks. Tokens
+  for Supabase, Vercel or Azure never travel: the receiver connects their own account.
+- **Open a project file.** Double-click it: FX Vault lists each repository as already in your
+  vault, to import from GitHub with your account, or skipped (no access), previews the merge
+  (nothing of yours is deleted) and opens the Overview afterwards. Nothing from the file reaches
+  GitHub or a provider until you include it in Sync's **From Files** review; until then its rows
+  show **Held**.
 - **Works offline.** A banner says when the Mac has no internet connection or GitHub isn't
   responding (with Retry). Your edits stay in the vault; Sync, Import, New Repository, Refresh
   and drift checks wait until you are back online, and drift is checked again when the
@@ -280,6 +291,12 @@ Neither contains a token, a secret, or the value of an environment variable.
   choose to share or send in Nearby Chat. Chat messages are never written to disk.
 - Nearby sharing and chat are end-to-end encrypted after a 6-digit code that both people
   compare; a mismatch means someone is in the middle, and nothing is sent.
+- A project file for teammates is sealed for their Macs' keys and signed by yours; a passphrase
+  file uses Argon2id and six words that should travel another way. FX Vault refuses a file after
+  its expiry date (the app enforces it, not the cryptography). Imported rows are held until you
+  include them in a Sync.
+- Pairing at a distance exchanges public keys only; comparing the six words on a call is what
+  proves no one swapped a card on the way.
 
 The full model, threat model and residual risks are in
 [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md).
@@ -304,8 +321,8 @@ the local CI script, and [docs/RELEASING.md](docs/RELEASING.md) for signed build
 - [docs/DATABASE.md](docs/DATABASE.md): the local encrypted vault schema
 - [docs/API.md](docs/API.md): every gh, git, ssh and az command the app runs, and the HTTPS
   endpoints of runtime destinations
-- [docs/SHARING-PROTOCOL.md](docs/SHARING-PROTOCOL.md): `.fxvault` files, nearby sharing and
-  Nearby Chat
+- [docs/SHARING-PROTOCOL.md](docs/SHARING-PROTOCOL.md): `.fxvault` files (formats 1 and 2),
+  project bundles, remote pairing, nearby sharing and Nearby Chat
 - [docs/RELEASING.md](docs/RELEASING.md): signing, notarization, the Homebrew cask and the
   manual release checklist
 

@@ -14,16 +14,16 @@ struct MigrationTests {
         "vaults", "key_wraps", "accounts", "repositories", "environments", "config_items",
         "sync_journal", "deployment_branch_patterns", "imported_share_packages", "device_identity", "teammates",
         "spaces", "space_keys", "space_versions", "teammate_addresses", "folders", "folder_items",
-        "provider_connections", "destinations", "destination_items", "destination_journal",
+        "provider_connections", "destinations", "destination_items", "destination_journal", "sent_shares",
     ]
 
     @Test func migrationIdentifiersAreFrozenAndOrdered() {
         #expect(Migration.allCases.map(\.rawValue) == [
             "v1_vault", "v2_accounts_repos", "v3_config", "v4_sync_journal", "v5_create_policies", "v6_sharing",
             "v7_journal_fingerprints", "v8_force_push_requested_at", "v9_item_links", "v10_teammates",
-            "v11_spaces", "v12_folders", "v13_destinations",
+            "v11_spaces", "v12_folders", "v13_destinations", "v14_project_shares",
         ])
-        #expect(Migration.latest == .v13Destinations)
+        #expect(Migration.latest == .v14ProjectShares)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -304,6 +304,12 @@ struct MigrationTests {
     static let seedConnectionID = "99999999-9999-4999-8999-999999999999"
     static let seedDestinationID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     static let seedDestinationItemID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    static let seedTeammateID = "0123456789abcdef0123456789abcdef"
+    static let seedRemoteTeammateID = "fedcba9876543210fedcba9876543210"
+    static let seedSentShareID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    static let seedSigningKey = Data(repeating: 0x21, count: 32)
+    static let seedAgreementKey = Data(repeating: 0x22, count: 32)
+    static let seedAnnounceCiphertext = Data((0..<60).map { UInt8($0) })
 
     static func seed(_ database: VaultDatabase, upTo version: Migration) throws {
         try database.write { tx in
@@ -368,6 +374,17 @@ struct MigrationTests {
             )
             guard version >= .v9ItemLinks else { return }
             try db.execute(sql: "UPDATE config_items SET link_id = ? WHERE id = ?", arguments: [seedLinkID, seedItemID])
+            guard version >= .v10Teammates else { return }
+            try db.execute(sql: """
+                INSERT INTO teammates (device_id, signing_pk, agreement_pk, announce_ct, login, display_name, mac_name,
+                  paired_at, last_seen_at, is_muted, needs_card_update)
+                VALUES (?, ?, ?, ?, 'user-a', 'User A', 'User A Mac', ?, ?, 1, 1)
+                """, arguments: [seedTeammateID, seedSigningKey, seedAgreementKey, seedAnnounceCiphertext, seedTime, seedTime])
+            guard version >= .v11Spaces else { return }
+            try db.execute(
+                sql: "INSERT INTO teammate_addresses (device_id, host, port, allows_remote) VALUES (?, 'mac-a.example.ts.net', 7443, 1)",
+                arguments: [seedTeammateID]
+            )
             guard version >= .v12Folders else { return }
             try db.execute(
                 sql: "INSERT INTO folders (id, name, name_key, sort_order, created_at, updated_at) VALUES (?, 'Mobile App', 'mobile app', 0, ?, ?)",
@@ -397,12 +414,31 @@ struct MigrationTests {
                     seedDestinationItemID, seedDestinationID, Data(repeating: 7, count: 40), Data(repeating: 8, count: 32),
                     seedLinkID, seedTime, seedTime,
                 ])
+            guard version >= .v14ProjectShares else { return }
+            try db.execute(sql: """
+                INSERT INTO sent_shares (id, package_id, created_at, expires_at, mode, recipients, summary)
+                VALUES (?, ?, ?, '2001-01-08T00:00:00.000Z', 'teammates', ?, ?)
+                """, arguments: [
+                    seedSentShareID, seedPackageID, seedTime, #"["\#(seedTeammateID)"]"#,
+                    #"{"places":[{"kind":"environment","name":"staging","repository":"user-a/seed-repo","secretNames":[],"variableNames":["API_URL"]}],"stages":["staging"]}"#,
+                ])
+            try db.execute(sql: "UPDATE config_items SET share_hold = ? WHERE id = ?", arguments: [seedPackageID, seedItemID])
+            try db.execute(
+                sql: "UPDATE destination_items SET share_hold = ? WHERE id = ?",
+                arguments: [seedPackageID, seedDestinationItemID]
+            )
+            try db.execute(sql: """
+                INSERT INTO teammates (device_id, signing_pk, agreement_pk, announce_ct, login, display_name, mac_name,
+                  paired_at, paired_via)
+                VALUES (?, ?, ?, NULL, 'user-b', 'User B', 'User B Mac', ?, 'remote')
+                """, arguments: [seedRemoteTeammateID, seedSigningKey, seedAgreementKey, seedTime])
         }
     }
 
     /// After the remaining migrations, the seed reads back through the stores with the new
     /// columns at their defaults.
     static func verifySeed(_ database: VaultDatabase, upTo version: Migration) throws {
+        try verifyProjectShareSeed(database, upTo: version)
         let vault = try VaultRecordStore(database: database).fetchVault()
         #expect(vault?.formatVersion == VaultRecord.initialVersion)
         #expect(try VaultRecordStore(database: database).fetchKeyWrap(.recovery)?.kdf == .hkdfSHA256)
@@ -476,5 +512,50 @@ struct MigrationTests {
         #expect(try DestinationStore(database: database).fetchConnections().map(\.label) == ["Sample Vercel"])
         #expect(try FolderStore(database: database).fetchItems(folderID: folderID).map(\.linkCount) == [3])
         #expect(linkCount == 3)
+    }
+
+    /// v14: teammates survive the rebuild byte for byte (as `nearby`, addresses kept), items read
+    /// back unheld, and the v14 seed (a sent file, held rows, a remote teammate without an
+    /// announce key) reads back through the stores.
+    static func verifyProjectShareSeed(_ database: VaultDatabase, upTo version: Migration) throws {
+        let teammates = try database.read { tx in try TeamStore(database: database).fetchTeammates(in: tx) }
+        guard version >= .v10Teammates else {
+            #expect(teammates.isEmpty)
+            return
+        }
+        let nearby = try #require(teammates.first { $0.deviceID == seedTeammateID })
+        #expect(nearby.signingPublicKey == seedSigningKey)
+        #expect(nearby.agreementPublicKey == seedAgreementKey)
+        #expect(nearby.announceCiphertext == seedAnnounceCiphertext)
+        #expect(nearby.login == "user-a" && nearby.displayName == "User A" && nearby.macName == "User A Mac")
+        #expect(nearby.pairedAt == DatabaseTimestamp.date(from: seedTime))
+        #expect(nearby.lastSeenAt == DatabaseTimestamp.date(from: seedTime))
+        #expect(nearby.isMuted && nearby.needsCardUpdate)
+        #expect(nearby.pairedVia == .nearby)
+        #expect(nearby.model.hasAnnounceKey)
+        let addresses = try SpaceStore(database: database).fetchAddresses()
+        #expect(addresses.map(\.deviceID) == (version >= .v11Spaces ? [seedTeammateID] : []))
+        let packageID = try #require(SharePackageID(uuidString: seedPackageID))
+        let configHeld = try ConfigStore(database: database).fetchHeldItemStates()
+        let destinationHeld = try DestinationStore(database: database).fetchHeldItemStates()
+        let sent = try SentShareStore(database: database).fetchAll()
+        guard version >= .v14ProjectShares else {
+            #expect(teammates.count == 1)
+            #expect(configHeld.isEmpty && destinationHeld.isEmpty && sent.isEmpty)
+            return
+        }
+        #expect(configHeld.map(\.id.uuidString) == [seedItemID])
+        #expect(configHeld.first?.shareHold == packageID)
+        #expect(destinationHeld.map(\.id.uuidString) == [seedDestinationItemID])
+        #expect(destinationHeld.first?.shareHold == packageID)
+        let share = try #require(sent.first)
+        #expect(sent.count == 1)
+        #expect(share.id.uuidString == seedSentShareID && share.packageID == packageID)
+        #expect(share.mode == .teammates && share.recipientIDs == [seedTeammateID])
+        #expect(share.summary.stages == ["staging"])
+        #expect(share.summary.places.first?.variableNames == ["API_URL"])
+        let remote = try #require(teammates.first { $0.deviceID == seedRemoteTeammateID })
+        #expect(remote.announceCiphertext == nil && remote.pairedVia == .remote)
+        #expect(!remote.model.hasAnnounceKey && remote.model.pairedVia == .remote)
     }
 }

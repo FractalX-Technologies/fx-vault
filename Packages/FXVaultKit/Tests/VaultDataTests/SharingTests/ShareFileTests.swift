@@ -3,7 +3,7 @@ import FXVaultTestSupport
 import SharingKit
 import Testing
 import VaultCore
-@testable import VaultData
+@_spi(Testing) @testable import VaultData
 import VaultStore
 
 /// `.fxvault` export and import between two vaults with different keys (§9.1–§9.5).
@@ -168,7 +168,7 @@ struct ShareFileTests {
         defer { world.folder.remove() }
         let selection = ShareSelectionModel.repository(try world.sender.repository().id)
         let authorization = world.authorization(.fileExport)
-        _ = try await world.senderSharing.exportFile(
+        _ = try await world.senderSharing.exportLegacyFile(
             selection,
             to: world.folder.url.appendingPathComponent("one.fxvault"),
             senderName: ShareWorld.senderName,
@@ -177,7 +177,7 @@ struct ShareFileTests {
         )
         #expect(!authorization.isUsable)
         await #expect(throws: SharingError.authorizationInvalid) {
-            _ = try await world.senderSharing.exportFile(
+            _ = try await world.senderSharing.exportLegacyFile(
                 selection,
                 to: world.folder.url.appendingPathComponent("two.fxvault"),
                 senderName: ShareWorld.senderName,
@@ -186,7 +186,7 @@ struct ShareFileTests {
             )
         }
         await #expect(throws: SharingError.authorizationInvalid) {
-            _ = try await world.senderSharing.exportFile(
+            _ = try await world.senderSharing.exportLegacyFile(
                 selection,
                 to: world.folder.url.appendingPathComponent("three.fxvault"),
                 senderName: ShareWorld.senderName,
@@ -200,7 +200,7 @@ struct ShareFileTests {
         world.sender.manager.lock()
         _ = try await world.sender.manager.unlock(password: SyncFixture.password)
         await #expect(throws: SharingError.authorizationInvalid) {
-            _ = try await world.senderSharing.exportFile(
+            _ = try await world.senderSharing.exportLegacyFile(
                 selection,
                 to: world.folder.url.appendingPathComponent("four.fxvault"),
                 senderName: ShareWorld.senderName,

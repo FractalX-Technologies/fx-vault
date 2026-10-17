@@ -5,13 +5,13 @@ import SharingKit
 import VaultCore
 import VaultData
 
-/// Share › File… (§9.1–§9.3, §10 `ShareExportScreen`, D30):
+/// "Save as File…" for a configuration received in Nearby Chat (v0.4.0, §10 `ShareExportScreen`):
 /// 1. **Authenticate** with Touch ID or the master password (`ReauthGate.authorizeShare(.fileExport)`).
-/// 2. **Choose what to share** in the tri-state tree: any combination of the repository level,
-///    environments and single items (``ShareScopeTreeModel``; a branch policy travels only with
-///    a fully checked environment).
-/// 3. **Create**: `SharingRepository.exportFile` seals the selection under a fresh 6-word
-///    passphrase into a private staging folder (0600 file, 0700 folder).
+/// 2. **Review** what was received (names and counts).
+/// 3. **Create**: `NearbyChatConversation.saveAttachment` seals the received package under a
+///    fresh 6-word passphrase into a private staging folder (0600 file, 0700 folder). Since
+///    v0.9.0 it is a schema 4 bundle in format 2 that expires after 7 days; a package with a
+///    production environment is refused (production never travels under a passphrase).
 /// 4. **Passphrase**: shown once with Copy (concealed, cleared after 30 s), the "send it through
 ///    a different app" hint and the "I've saved it" confirmation.
 /// 5. **Deliver**: Save (NSSavePanel, written again 0600 with `SecureFileWriter`) or Share
@@ -20,8 +20,7 @@ import VaultData
 /// The passphrase is held only while the sheet is open and dropped on close and on lock; it is
 /// never logged. The staged file is ciphertext and is removed when the sheet closes.
 ///
-/// v0.4.0: the same sheet is "Save as File…" for a configuration received in Nearby Chat
-/// (``ChatAttachmentSource``): no scope tree, the received package is written as it is.
+/// Sharing from the vault is ``ProjectShareViewModel`` (v0.9.0).
 @Observable
 final class ShareExportViewModel: LockObserving {
     /// A configuration received in Nearby Chat, kept by its conversation until it is imported or
@@ -29,11 +28,6 @@ final class ShareExportViewModel: LockObserving {
     struct ChatAttachmentSource {
         let conversation: NearbyChatConversation
         let attachmentID: ChatAttachmentID
-    }
-
-    private enum Source {
-        case vault(ShareExportContext)
-        case chat(ChatAttachmentSource)
     }
 
     enum Step: Equatable {
@@ -45,10 +39,8 @@ final class ShareExportViewModel: LockObserving {
 
     private(set) var step: Step = .authenticate
     let reauth: ShareReauthModel
-    private(set) var tree: ShareScopeTreeModel?
-    /// Names and counts of the checked scope (never values).
+    /// Names and counts of what was received (never values).
     private(set) var preview: ShareExportPreviewModel?
-    private(set) var isLoadingTree = false
     /// The passphrase, shown once (`w1-…-w6`).
     private(set) var passphrase: String?
     /// "I've saved it": unlocks Save and Share.
@@ -63,12 +55,10 @@ final class ShareExportViewModel: LockObserving {
     let fileName: String
 
     @ObservationIgnored let delivery: any ShareFileDelivering
-    @ObservationIgnored private let source: Source
+    @ObservationIgnored private let source: ChatAttachmentSource
     @ObservationIgnored private let dependencies: FeatureDependencies
     /// Called once when the sheet closes, with whether the file was saved or sent (chat source).
     @ObservationIgnored private var onFinish: ((_ wroteFile: Bool) -> Void)?
-    @ObservationIgnored private let identity: ShareLocalIdentityModel
-    @ObservationIgnored private let loader: ShareScopeTreeLoader
     @ObservationIgnored private let stagingRoot: URL?
     @ObservationIgnored private var staging: ShareStagingFolder?
     /// The encrypted file waiting to be saved or sent.
@@ -76,44 +66,21 @@ final class ShareExportViewModel: LockObserving {
     @ObservationIgnored private var isShareInFlight = false
     @ObservationIgnored private var isClosed = false
 
-    convenience init(
-        context: ShareExportContext,
-        dependencies: FeatureDependencies,
-        delivery: any ShareFileDelivering = SystemShareFileDelivery(),
-        identity: ShareLocalIdentityModel = .current,
-        stagingRoot: URL? = nil
-    ) {
-        self.init(source: .vault(context), dependencies: dependencies, delivery: delivery, identity: identity, stagingRoot: stagingRoot)
-    }
-
     /// "Save as File…" for a configuration received in Nearby Chat (v0.4.0).
     ///
     /// - Parameter onFinish: called once on close, with whether the file was saved or sent.
-    convenience init(
+    init(
         chatAttachment: ChatAttachmentSource,
         dependencies: FeatureDependencies,
         delivery: any ShareFileDelivering = SystemShareFileDelivery(),
-        identity: ShareLocalIdentityModel = .current,
         stagingRoot: URL? = nil,
         onFinish: @escaping (_ wroteFile: Bool) -> Void
     ) {
-        self.init(source: .chat(chatAttachment), dependencies: dependencies, delivery: delivery, identity: identity, stagingRoot: stagingRoot)
-        self.onFinish = onFinish
-    }
-
-    private init(
-        source: Source,
-        dependencies: FeatureDependencies,
-        delivery: any ShareFileDelivering,
-        identity: ShareLocalIdentityModel,
-        stagingRoot: URL?
-    ) {
-        self.source = source
+        source = chatAttachment
         self.dependencies = dependencies
         self.delivery = delivery
-        self.identity = identity
         self.stagingRoot = stagingRoot
-        loader = ShareScopeTreeLoader(config: dependencies.config, sharing: dependencies.sharing)
+        self.onFinish = onFinish
         reauth = ShareReauthModel(
             purpose: .fileExport,
             reauth: dependencies.reauth,
@@ -133,16 +100,12 @@ final class ShareExportViewModel: LockObserving {
 
     static let fileExtension = "fxvault"
 
-    /// True for "Save as File…" of a configuration received in Nearby Chat.
-    var isFromChat: Bool {
-        if case .chat = source { true } else { false }
-    }
-
     // MARK: - Step 1: authenticate
 
-    /// Loads the tree and tries Touch ID once (no error when Touch ID is off).
+    /// Loads the summary of what was received and tries Touch ID once (no error when Touch ID is
+    /// off).
     func start() async {
-        await loadTree()
+        await loadPreview()
         await authenticateWithTouchID(automatic: true)
     }
 
@@ -160,35 +123,15 @@ final class ShareExportViewModel: LockObserving {
         }
     }
 
-    // MARK: - Step 2: scope
-
-    func setChecked(_ checked: Bool, for node: ShareScopeNodeModel) {
-        let previous = selection
-        tree?.setChecked(checked, for: node)
-        guard selection != previous else { return }
-        // The summary must always describe the checked scope: Create waits for the new one.
-        preview = nil
-        Task { await refreshPreview() }
-    }
-
-    var selection: ShareSelectionModel? {
-        if let folderSelection { return folderSelection }
-        return tree?.selection
-    }
-
-    /// A folder (v0.7.0) is shared whole: no scope tree.
-    private var folderSelection: ShareSelectionModel? {
-        guard case .vault(let context) = source, case .folder = context.selection else { return nil }
-        return context.selection
-    }
+    // MARK: - Step 2: review
 
     var canCreate: Bool {
-        step == .chooseScope && preview != nil && (isFromChat || selection != nil)
+        step == .chooseScope && preview != nil
     }
 
     // MARK: - Step 3: create
 
-    /// Seals the checked scope into the staged file and shows the passphrase. Consumes the
+    /// Seals the received package into the staged file and shows the passphrase. Consumes the
     /// authorization: a failure after that needs a new authentication.
     func createShareFile() async {
         guard canCreate else { return }
@@ -201,21 +144,7 @@ final class ShareExportViewModel: LockObserving {
             let folder = try staging ?? ShareStagingFolder(root: stagingRoot ?? ShareStagingFolder.defaultRoot)
             staging = folder
             let destination = folder.fileURL(named: fileName)
-            let result: ShareFileExportResultModel
-            switch source {
-            case .vault:
-                guard let selection else { throw SharingError.nothingToShare }
-                result = try await dependencies.sharing.exportFile(
-                    selection,
-                    to: destination,
-                    senderName: identity.displayName,
-                    appVersion: identity.appVersion,
-                    authorization: authorization,
-                    existingFile: .replace
-                )
-            case .chat(let chat):
-                result = try await chat.conversation.saveAttachment(chat.attachmentID, to: destination, authorization: authorization)
-            }
+            let result = try await source.conversation.saveAttachment(source.attachmentID, to: destination, authorization: authorization)
             defer { result.passphrase.wipe() }
             guard let words = result.passphrase.utf8String() else { throw SharingError.unexpected }
             passphrase = words
@@ -337,44 +266,10 @@ final class ShareExportViewModel: LockObserving {
 
     // MARK: - Loading
 
-    private func loadTree() async {
-        if folderSelection != nil {
-            await refreshPreview()
-            return
-        }
-        switch source {
-        case .vault(let context):
-            isLoadingTree = true
-            defer { isLoadingTree = false }
-            do {
-                let repositoryID = try await loader.repositoryID(for: context.selection)
-                tree = try await loader.tree(repositoryID: repositoryID, selection: context.selection)
-                await refreshPreview()
-            } catch {
-                alert = error.presentation
-            }
-        case .chat(let chat):
-            preview = await chat.conversation.receivedPreview(chat.attachmentID)
-            if preview == nil {
-                alert = NearbyChatError.attachmentUnavailable.presentation
-            }
-        }
-    }
-
-    private func refreshPreview() async {
-        guard !isFromChat else { return }
-        guard let selection else {
-            preview = nil
-            return
-        }
-        do {
-            let fresh = try await dependencies.sharing.previewExport(selection)
-            if selection == self.selection {
-                preview = fresh
-            }
-        } catch {
-            preview = nil
-            alert = error.presentation
+    private func loadPreview() async {
+        preview = await source.conversation.receivedPreview(source.attachmentID)
+        if preview == nil {
+            alert = NearbyChatError.attachmentUnavailable.presentation
         }
     }
 }

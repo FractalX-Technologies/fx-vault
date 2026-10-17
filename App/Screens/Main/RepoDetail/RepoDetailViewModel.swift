@@ -30,6 +30,8 @@ struct ConfigRowModel: Identifiable, Hashable {
     let syncedName: String?
     /// How many places share this item's link, this one included (v0.4.1); 0 when not linked.
     let linkCount: Int
+    /// The share file whose import holds this row out of Sync (v0.9.0, P8); nil when not held.
+    var heldBy: SharePackageID?
 
     init(_ item: ConfigItemModel) {
         id = item.id
@@ -42,6 +44,12 @@ struct ConfigRowModel: Identifiable, Hashable {
         status = item.syncStatus
         syncedName = item.syncedName == item.name ? nil : item.syncedName
         linkCount = item.isLinked ? item.linkCount : 0
+        heldBy = item.heldBy
+    }
+
+    /// True when a share file holds this row (the Held chip, v0.9.0).
+    var isHeld: Bool {
+        heldBy != nil && !isDeleted
     }
 
     /// True when the Linked chip shows (another live place shares the link).
@@ -55,9 +63,10 @@ struct ConfigRowModel: Identifiable, Hashable {
     }
 
     /// "Push on Next Sync" is offered for a secret on GitHub with a value and nothing pending.
-    /// Variables are compared by value, so they never need it.
+    /// Variables are compared by value, so they never need it. On a held row (v0.9.0) it
+    /// releases the hold instead, so the next Sync sends it.
     var canPushOnNextSync: Bool {
-        kind == .secret && hasValue && isSynced && !isDeleted && (status == .synced || status == .unverifiedShare)
+        isHeld || (kind == .secret && hasValue && isSynced && !isDeleted && (status == .synced || status == .unverifiedShare))
     }
 }
 
@@ -176,6 +185,8 @@ final class RepoDetailViewModel: LockObserving {
     @ObservationIgnored private let repositoryProvider: () -> RepoModel?
     @ObservationIgnored private let scopeProvider: (ConfigScope) -> ConfigScopeSummaryModel?
     @ObservationIgnored private let tasks = TaskBag()
+    /// The senders of the share files that hold rows here, for the Held chip (v0.9.0).
+    @ObservationIgnored private lazy var heldSenders = HeldSenderNames { [dependencies] in dependencies.shareHolds }
 
     /// - Parameters:
     ///   - repository: the live vault row.
@@ -663,6 +674,10 @@ final class RepoDetailViewModel: LockObserving {
     /// change, so GitHub matches the vault. The row shows "Will push" until then; Revert undoes it.
     func pushOnNextSync(_ row: ConfigRowModel) {
         guard canEdit, row.canPushOnNextSync else { return }
+        if row.isHeld {
+            releaseHolds([row])
+            return
+        }
         do {
             try dependencies.config.requestPush(row.id)
             notice = String(
@@ -739,8 +754,14 @@ final class RepoDetailViewModel: LockObserving {
 
     /// Push on Next Sync for a multi-selection: the secrets it applies to, in one transaction.
     func pushOnNextSync(_ rows: [ConfigRowModel]) {
-        let ids = rows.filter(\.canPushOnNextSync).map(\.id)
-        guard canEdit, !ids.isEmpty else { return }
+        let pushable = rows.filter(\.canPushOnNextSync)
+        guard canEdit, !pushable.isEmpty else { return }
+        let held = pushable.filter(\.isHeld)
+        if !held.isEmpty {
+            releaseHolds(held)
+        }
+        let ids = pushable.filter { !$0.isHeld }.map(\.id)
+        guard !ids.isEmpty else { return }
         do {
             try dependencies.config.requestPush(ids, repositoryID: repositoryID)
             selection.removeAll()
@@ -753,6 +774,23 @@ final class RepoDetailViewModel: LockObserving {
         } catch {
             alert = error.presentation
         }
+    }
+
+    /// Push on Next Sync on held rows (v0.9.0): releases their holds and nothing else, so the
+    /// next Sync sends them as ordinary pending changes.
+    private func releaseHolds(_ rows: [ConfigRowModel]) {
+        do {
+            let released = try dependencies.shareHolds.releaseHold(itemIDs: rows.map(\.id))
+            selection.removeAll()
+            notice = HeldShareCopy.released(name: rows.count == 1 ? rows.first?.name : nil, count: released)
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    /// The Held chip's tooltip, naming the share file's sender when it is known.
+    func heldHelp(for row: ConfigRowModel) -> String {
+        HeldShareCopy.chipHelp(sender: row.heldBy.flatMap { heldSenders.name(of: $0) })
     }
 
     private func present(_ mode: ItemEditorContext.Mode) {

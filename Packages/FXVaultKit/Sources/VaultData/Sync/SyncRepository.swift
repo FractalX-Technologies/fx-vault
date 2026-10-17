@@ -19,8 +19,11 @@ import VaultStore
 /// - **Launch.** ``prepareAfterUnlock()`` prunes the journal (24 h, the latest run kept) and
 ///   reconciles leftover `in_flight`/`indeterminate` rows by re-listing. ``preflight(repositoryIDs:scopeStatus:)``
 ///   runs it automatically once per unlock, so a new Sync never starts before reconciliation.
-/// - **One run at a time.** ``startRun(_:includeDeletions:cloneFolder:spaceReason:)`` refuses
-///   while another run is in progress.
+/// - **One run at a time.** ``startRun(_:includeDeletions:includeHeld:cloneFolder:spaceReason:)``
+///   refuses while another run is in progress.
+/// - **Held share files (v0.9.0, P8).** Preflight checks every change, but the review and the
+///   plan leave out rows held by a share file until its From Files review includes it
+///   (``SyncReviewModel/heldShares``).
 /// - **Shared spaces (v0.6.0, S5).** With a ``SyncSpaceCoordinating`` (``SpaceRepository``),
 ///   preflight gates every shared scope on its GitHub marker, the run claims and publishes it,
 ///   and ``prepareAfterUnlock()`` finishes claims a crash or a failed marker write left open.
@@ -162,8 +165,9 @@ public actor SyncRepository {
         if reconciledGeneration != session.generation {
             try await prepareAfterUnlock()
         }
-        let snapshots = try loadSnapshots(repositoryIDs.map(Set.init))
-            .filter { !ChangeSetBuilder.build($0).allChanges.isEmpty }
+        let inputs = try loadInputs(repositoryIDs.map(Set.init))
+            .filter { !ChangeSetBuilder.build(RepoSnapshotMapper.snapshot($0)).allChanges.isEmpty }
+        let snapshots = inputs.map(RepoSnapshotMapper.snapshot)
         let registry = await registry(for: Set(snapshots.map(\.repository.accountLogin)))
         let preflight: SyncPreflightModel
         do {
@@ -178,7 +182,17 @@ public actor SyncRepository {
         } catch {
             throw .wrap(error)
         }
-        return SyncReviewModel(preflight: preflight, credentialWarnings: try credentialWarnings(preflight))
+        var holds: [RepoID: [ConfigItemID: SharePackageID]] = [:]
+        for repository in inputs {
+            let repositoryHolds = SyncHolds.holds(of: repository)
+            if !repositoryHolds.isEmpty { holds[repository.repository.id] = repositoryHolds }
+        }
+        return SyncReviewModel(
+            completePreflight: preflight,
+            credentialWarnings: try credentialWarnings(preflight),
+            holds: holds,
+            heldShares: try ShareHoldRepository(session: session).heldShares()
+        )
     }
 
     /// The §7.5 deletion data: every environment being deleted is fetched live (B4, B5, B7, B9)
@@ -191,14 +205,19 @@ public actor SyncRepository {
     // MARK: - Run (§7.3, §7.4)
 
     /// Plans and starts the run. Deletions are left out (and reported as not confirmed) unless
-    /// the user confirmed them (§7.5). Repositories created with "clone after" are cloned into
-    /// `cloneFolder` once the run finished. `spaceReason` ("What changed?") goes into every shared
-    /// space version the run publishes.
+    /// the user confirmed them (§7.5). Rows held by share files stay out unless their file is in
+    /// `includeHeld` (the From Files review, v0.9.0): those files' holds are released in one
+    /// transaction, in both item tables, before the run starts, so their rows run as ordinary
+    /// pending changes; pass the same set to ``DestinationSyncRepository/run(_:includeDeletions:includeHeld:progress:)``.
+    /// Repositories created with "clone after" are cloned into `cloneFolder` once the run
+    /// finished. `spaceReason` ("What changed?") goes into every shared space version the run
+    /// publishes.
     ///
-    /// - Throws: `.alreadyRunning`, `.vault(.locked)`.
+    /// - Throws: `.alreadyRunning`, `.vault(.locked)`, `.store(_)` when a hold cannot be released.
     public func startRun(
         _ review: SyncReviewModel,
         includeDeletions: Bool,
+        includeHeld: Set<SharePackageID> = [],
         cloneFolder: URL? = nil,
         spaceReason: String? = nil
     ) async throws(SyncRepositoryError) -> SyncRunHandle {
@@ -208,7 +227,19 @@ public actor SyncRepository {
         } catch {
             throw .wrap(error)
         }
-        let plan = SyncPlanner.plan(review.preflight, includeDeletions: includeDeletions, spaceReason: spaceReason)
+        if !includeHeld.isEmpty {
+            let released = try performSync {
+                try session.write { _, tx in
+                    try ShareHoldStore(database: session.database).clearShareHold(packageIDs: includeHeld, in: tx)
+                }
+            }
+            Self.log.info("Sync released \(released, privacy: .public) held rows from \(includeHeld.count, privacy: .public) share files")
+        }
+        let plan = SyncPlanner.plan(
+            review.preflight(including: includeHeld),
+            includeDeletions: includeDeletions,
+            spaceReason: spaceReason
+        )
         let registry = await registry(for: Set(plan.repositories.map(\.snapshot.repository.accountLogin)))
         let executor = SyncExecutor(schedulers: registry, persistence: persistence, values: values, clock: clock, spaces: spaces)
         let handle = SyncRunHandle(executor: executor, plan: plan, cloner: cloner, cloneFolder: cloneFolder)
@@ -251,10 +282,13 @@ public actor SyncRepository {
 
     /// Snapshots of `ids` (nil: every repository), in sidebar order.
     private func loadSnapshots(_ ids: Set<RepoID>?) throws(SyncRepositoryError) -> [RepoSnapshotModel] {
+        try loadInputs(ids).map(RepoSnapshotMapper.snapshot)
+    }
+
+    /// The pending-change inputs of `ids` (nil: every repository), in sidebar order.
+    private func loadInputs(_ ids: Set<RepoID>?) throws(SyncRepositoryError) -> [RepoPendingInputsModel] {
         let all = try performSync { try ConfigStore(database: session.database).fetchAllPendingInputs() }
-        return all
-            .filter { ids?.contains($0.repository.id) ?? true }
-            .map(RepoSnapshotMapper.snapshot)
+        return all.filter { ids?.contains($0.repository.id) ?? true }
     }
 
     /// One scheduler per account. An account without gh access is left out: preflight then

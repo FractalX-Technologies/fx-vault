@@ -45,6 +45,9 @@ public enum StageOverviewCellModel: Sendable, Hashable {
     case synced
     /// A pending add or change.
     case willPush
+    /// A pending add or change from a share file that waits for Sync's From Files review
+    /// (v0.9.0): the next Sync sends it only if the file is included.
+    case held
     /// Pending deletion.
     case willDelete
     /// A pending add whose value is missing (it cannot be sent).
@@ -62,7 +65,7 @@ public enum StageOverviewCellModel: Sendable, Hashable {
     public var needsAttention: Bool {
         switch self {
         case .missing, .extra, .differs, .blocked, .valueMissing: true
-        case .notUsed, .synced, .willPush, .willDelete: false
+        case .notUsed, .synced, .willPush, .held, .willDelete: false
         }
     }
 }

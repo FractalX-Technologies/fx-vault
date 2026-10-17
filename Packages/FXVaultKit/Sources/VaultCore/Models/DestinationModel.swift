@@ -183,6 +183,9 @@ public struct DestinationItemModel: Sendable, Hashable, Identifiable {
     /// Live members of ``linkID`` across repositories, folders and destinations; 0 when not
     /// linked.
     public var linkCount: Int
+    /// The share file this row is held under (v0.9.0, `share_hold`): Sync leaves it out until its
+    /// From Files review includes the file. Nil when the row is not held.
+    public var heldBy: SharePackageID?
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -200,6 +203,7 @@ public struct DestinationItemModel: Sendable, Hashable, Identifiable {
         syncStatus: ConfigSyncStatus,
         linkID: ItemLinkID? = nil,
         linkCount: Int = 0,
+        heldBy: SharePackageID? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -216,8 +220,14 @@ public struct DestinationItemModel: Sendable, Hashable, Identifiable {
         self.syncStatus = syncStatus
         self.linkID = linkID
         self.linkCount = linkCount
+        self.heldBy = heldBy
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+
+    /// True while the row waits for Sync's From Files review (v0.9.0).
+    public var isHeld: Bool {
+        heldBy != nil
     }
 
     public var isLinked: Bool {

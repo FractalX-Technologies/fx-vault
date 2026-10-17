@@ -11,7 +11,16 @@ import VaultCore
 /// Holds only the plan (names, chips, actions); values never reach the UI.
 @Observable
 final class ShareImportPlanEditor {
+    /// One choice the user made, for a project share's editor that keeps its own copy of the
+    /// plan (v0.9.0).
+    enum Change: Equatable {
+        case select(ShareItemAction, item: ShareEntryID)
+        case policy(SharePolicyDecision, environment: ShareEntryID, wideningConfirmed: Bool)
+    }
+
     private(set) var plan: ShareImportPlanModel
+    /// Called after each choice was applied to ``plan``.
+    @ObservationIgnored var onChange: ((Change) -> Void)?
     /// "Import anyway" for the replay warnings.
     var confirmsReplay = false
     /// The environment whose widening policy waits for the second confirmation.
@@ -29,7 +38,12 @@ final class ShareImportPlanEditor {
     // MARK: - Items
 
     func select(_ action: ShareItemAction, for item: ShareItemPlanModel) {
-        try? plan.select(action, forItem: item.id)
+        do {
+            try plan.select(action, forItem: item.id)
+            onChange?(.select(action, item: item.id))
+        } catch {
+            // The picker offers only allowed actions.
+        }
     }
 
     /// True when at least one item differs from the local value (payload previews only).
@@ -45,7 +59,11 @@ final class ShareImportPlanEditor {
 
     /// "Overwrite all": every item that differs is overwritten.
     func overwriteAll() {
+        let differing = plan.allItems.filter { $0.chip == .differs }.map(\.id)
         plan.overwriteAll()
+        for id in differing {
+            onChange?(.select(.overwrite, item: id))
+        }
     }
 
     // MARK: - Policies
@@ -58,14 +76,23 @@ final class ShareImportPlanEditor {
             pendingWideningEnvironment = environment.id
             return
         }
-        try? plan.setPolicyDecision(decision, forEnvironment: environment.id)
+        setPolicy(decision, environment: environment.id, wideningConfirmed: false)
     }
 
     /// The second confirmation of a widening policy.
     func confirmWidening() {
         guard let id = pendingWideningEnvironment else { return }
         pendingWideningEnvironment = nil
-        try? plan.setPolicyDecision(.useIncoming, forEnvironment: id, wideningConfirmed: true)
+        setPolicy(.useIncoming, environment: id, wideningConfirmed: true)
+    }
+
+    private func setPolicy(_ decision: SharePolicyDecision, environment id: ShareEntryID, wideningConfirmed: Bool) {
+        do {
+            try plan.setPolicyDecision(decision, forEnvironment: id, wideningConfirmed: wideningConfirmed)
+            onChange?(.policy(decision, environment: id, wideningConfirmed: wideningConfirmed))
+        } catch {
+            // Only differing environments offer a choice.
+        }
     }
 
     func cancelWidening() {

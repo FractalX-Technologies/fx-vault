@@ -231,7 +231,6 @@ struct NearbyChatViewModelTests {
             let macB = macB
             #expect(await TestFixtures.eventually { macB.fileSheet != nil })
             let sheet = try #require(macB.fileSheet)
-            #expect(sheet.isFromChat)
             #expect(macB.cards[id]?.status == .savingToFile)
             await sheet.start()
             #expect(sheet.preview?.itemCount == 4)
@@ -801,13 +800,19 @@ struct NearbyChatViewModelTests {
         #expect(!textDump(macB.cards, macB.entries).contains(file.passphrase))
         #expect(!textDump(macB.cards, macB.entries).contains(SharingWorld.secretValue))
 
-        // The file opens with its passphrase and keeps the sender's name.
+        // The file is a format 2 bundle (v0.9.0) that opens with its passphrase, expires and keeps
+        // the sender's name.
         let sharing = fixture.world.receiver.data.sharing
-        let opened = try await sharing.openFile(try sharing.readFile(at: file.url), passphrase: file.passphrase, checkGitHub: false)
-        #expect(opened.manifest.flattenedItems.count == 4)
-        #expect(opened.manifest.repository.fullName == Self.repository)
-        #expect(opened.manifest.sender.displayName == Self.nameA)
-        opened.discard()
+        let opened = try await sharing.openShareFile(try sharing.inspectFile(at: file.url), passphrase: file.passphrase, checkGitHub: false)
+        guard case .bundle(let draft) = opened.document else {
+            Issue.record("Expected a bundle")
+            return
+        }
+        #expect(draft.manifest.itemCount == 4)
+        #expect(draft.manifest.repositories.first?.repository.fullName == Self.repository)
+        #expect(draft.manifest.expiresAt == ShareExpiryChoice.default.expiry(from: draft.manifest.createdAt))
+        #expect(opened.sender.displayName == Self.nameA)
+        draft.discard()
 
         // Then Import Into… this vault's copy of the sender's repository.
         await macB.handleConfiguration(id, .importInto)

@@ -94,24 +94,65 @@ public struct DestinationReviewWarningModel: Sendable, Hashable, Identifiable {
     }
 }
 
+/// A change of a row held by a share file (v0.9.0, P8): it runs only when Sync's From Files
+/// review includes its file.
+public struct DestinationHeldChangeModel: Sendable, Hashable, Identifiable {
+    public let change: DestinationChangeModel
+    public let packageID: SharePackageID
+    /// Why it could not be sent even when included; nil when it is sendable.
+    public let reason: DestinationBlockReason?
+    /// A public name whose value looks like a token (R10), shown when the file is included.
+    public let warning: DestinationReviewWarningModel?
+
+    public init(
+        change: DestinationChangeModel,
+        packageID: SharePackageID,
+        reason: DestinationBlockReason? = nil,
+        warning: DestinationReviewWarningModel? = nil
+    ) {
+        self.change = change
+        self.packageID = packageID
+        self.reason = reason
+        self.warning = warning
+    }
+
+    public var id: String {
+        change.id
+    }
+}
+
 /// The review of one destination.
 public struct DestinationReviewSectionModel: Sendable, Hashable, Identifiable {
     public let destination: DestinationModel
-    /// Sendable changes, adds and updates first, then deletions.
+    /// Sendable changes, adds and updates first, then deletions. Held rows are left out.
     public let changes: [DestinationChangeModel]
     public let blocked: [DestinationBlockedChangeModel]
     public let warnings: [DestinationReviewWarningModel]
+    /// Changes of rows held by share files (v0.9.0), by name.
+    public let held: [DestinationHeldChangeModel]
 
     public init(
         destination: DestinationModel,
         changes: [DestinationChangeModel],
         blocked: [DestinationBlockedChangeModel],
-        warnings: [DestinationReviewWarningModel]
+        warnings: [DestinationReviewWarningModel],
+        held: [DestinationHeldChangeModel] = []
     ) {
         self.destination = destination
         self.changes = changes
         self.blocked = blocked
         self.warnings = warnings
+        self.held = held
+    }
+
+    /// The held changes of `included` files that can be sent.
+    public func heldWrites(including included: Set<SharePackageID>) -> [DestinationChangeModel] {
+        held.filter { $0.reason == nil && included.contains($0.packageID) }.map(\.change)
+    }
+
+    /// True when only held rows have pending changes here.
+    public var hasOnlyHeldChanges: Bool {
+        changes.isEmpty && blocked.isEmpty && !held.isEmpty
     }
 
     public var id: DestinationID {

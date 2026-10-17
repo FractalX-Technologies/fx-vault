@@ -2,7 +2,8 @@
 
 How FX Vault protects GitHub Actions secrets and variables on a Mac (and, since v0.8.0, the
 runtime secrets it sends to Azure Key Vault, Supabase and Vercel), what it defends against, and
-what it does not. The design is `tasks/todo.md` §5 (destinations: R1–R12); this document
+what it does not. The design is `tasks/todo.md` §5 (destinations: R1–R12; project share files:
+P1–P11); this document
 describes the implementation (VaultCrypto, VaultStore, VaultData, DestinationKit and the app
 shell). Related:
 [ARCHITECTURE.md](ARCHITECTURE.md), [DATABASE.md](DATABASE.md), [API.md](API.md),
@@ -48,7 +49,9 @@ Touch ID   the DEK in a data-protection keychain item (signed builds only, §5)
 - **Fingerprints** (`value_fp`, `synced_fp`) are `HMAC-SHA256(K_fp, row id ‖ value)`: change
   detection without decrypting, and no cross-row comparison.
 - **Teammates (v0.5.0):** `device_identity.secret_ct` and `teammates.announce_ct` are sealed
-  under `K_field` with a secret-field AAD (§10.2); public keys and names are plaintext.
+  under `K_field` with a secret-field AAD (§10.2); public keys and names are plaintext. Since
+  v0.9.0 `announce_ct` is NULL for a teammate paired remotely as the inviter until its key
+  arrives (§10.5), and `paired_via` records how a teammate was paired.
 - **Shared spaces (v0.6.0):** each epoch key is sealed in `space_keys.key_ct` with a secret-field
   AAD binding the space id and the epoch (§10.3). `space_versions.data` is the signed wire form
   of each version: headers and member lists in plaintext, item names and values only inside the
@@ -72,6 +75,12 @@ Touch ID   the DEK in a data-protection keychain item (signed builds only, §5)
   rotation re-seals every destination value and token and recomputes the fingerprints (a
   `synced_fp` that cannot be recomputed is cleared, so the item is pushed again). Key Vault
   access tokens are never stored (§10.4).
+- **Project share files (v0.9.0):** `sent_shares` holds one row per exported file: package id,
+  times, protection mode, recipient device ids and a names-only summary (stages, places, item
+  names), never a value, fingerprint or passphrase. `share_hold` on `config_items` and
+  `destination_items` is the package id an imported row is held under (§10.5);
+  `imported_share_packages.sender_device_id` names the verified sender of a teammates file. All
+  plaintext metadata.
 - **Plaintext on disk:** names (repositories, environments, items, folders, destinations),
   GitHub ids, timestamps, branch patterns, the sync journal (names and row-bound push
   fingerprints, never values), `link_id` (which items are linked copies of each other, v0.4.1;
@@ -193,7 +202,7 @@ Revealing an older value in a shared scope's history (v0.6.0) also asks for Touc
 master password (`ReauthPurpose.spaceHistory`); the value is masked again after 30 seconds.
 
 `.env` export (also of a folder, v0.7.0, or a destination, v0.8.0), `.fxvault` export (also of
-a folder), nearby send and
+a folder; since v0.9.0 a project bundle, with a passphrase or for teammates), nearby send and
 attaching a secret, a variable, (v0.4.0) a whole repository or (v0.7.0) a folder in Nearby Chat
 (`ShareAuthorizationPurpose.nearbySend`, asked before the picker opens; Send Folder opens the
 picker on the folder and still asks), and saving a repository or folder received in chat as a
@@ -336,10 +345,13 @@ trusted for that path (below). Details: [API.md](API.md).
 - A man in the middle on the local network or within peer-to-peer Wi-Fi range during nearby
   sharing and nearby chat (commit-reveal SAS; share and chat use domain-separated labels, so a
   session of one can never be completed as the other).
-- An intercepted `.fxvault` file (Argon2id plus a 6-word, 77.5-bit passphrase).
-- Malicious share packages (validator, merge defaults, replay warnings). A package that shares
-  only some items of an environment carries no branch policy and can never change the
-  receiver's policy (SHARING-PROTOCOL.md §1.2).
+- An intercepted `.fxvault` file (Argon2id plus a 6-word, 77.5-bit passphrase; since v0.9.0 also
+  a teammates file, HPKE-wrapped for paired devices only), including one sent through a chat or
+  mail on purpose (§10.5).
+- Malicious share packages (validator, merge defaults, replay warnings; since v0.9.0 held
+  imports, §10.5). A package that shares only some items of an environment carries no branch
+  policy and can never change the receiver's policy (SHARING-PROTOCOL.md §1.2).
+- A relay on the channel of a remote pairing (v0.9.0; the 6-word code compared on a call).
 - Partial or indeterminate sync results (journal, reconciliation, verification).
 - Leaked old credentials combined with new data (DEK rotation).
 
@@ -507,6 +519,70 @@ sees the Azure refresh token or the user's Azure credentials.
 
 **Residual risks:** §11 (destinations).
 
+### 10.5 Project share files (v0.9.0)
+
+Formats: [SHARING-PROTOCOL.md](SHARING-PROTOCOL.md) §1.4 (bundle), §2.1 (`.fxvault` format 2),
+§6.1 (VaultData) and §10.9 (remote pairing).
+
+**Assets.** The values of the repositories, environments, destinations and folders a file
+carries; who sent it and to whom; the receiver's GitHub scopes and runtime providers, which an
+import must not change by itself; the teammate keys that remote pairing introduces.
+
+**What a file reveals.** A `.fxvault` file is made to be sent through chats and mail, so it is
+assumed public. Without the key it shows only the header (format 2, the protection mode, the KDF
+cost or the number of recipients, the salt and nonce) and its size. Repository, stage, item and
+sender names, the expiry and every value are inside the ciphertext. The default file name is
+`FX Vault share <date>.fxvault`, without repository or stage names. Connection tokens and
+labels, `az` sessions, GitHub accounts, SSH aliases and value hashes never enter a bundle
+(`connectionTokensNeverEnterABundle`).
+
+**Protections.**
+- **Teammates mode.** A random content key is wrapped with HPKE for each chosen paired device
+  (X25519 agreement keys verified at pairing), at most 10. A recipient slot carries only an
+  8-byte `HMAC(salt, deviceID)`, so the file names nobody, and slots are sorted. The sender's
+  device id, announce key and an Ed25519 signature over the header, the slots and the payload
+  digest are inside the ciphertext: the receiver sees "From <name>, verified" only after the
+  signature checks against a stored teammate's key, and a recipient cannot re-seal the payload for
+  other people under the sender's name. Forwarding the file to anyone else is useless: it opens
+  only with a recipient Mac's vault.
+- **Passphrase mode.** Unchanged strength: Argon2id (t = 3, 64 MiB) over a fresh 6-word EFF
+  passphrase (about 77.5 bits), shown once and never stored, to be sent another way than the
+  file. The sender's name is unverified. **Production never travels under a passphrase** (Q13): a
+  selection with a production environment or destination stage (`StageRisk`), or a Vercel
+  production destination without a stage, can be sealed only for teammates; the rule is checked
+  before the re-authentication is used and again on the bundle sealed.
+- **Re-authentication.** Exporting uses the single-use `.fileExport` authorization (§6), consumed
+  after the recipients are checked and before any value is decrypted.
+- **Expiry.** The sender picks 1, 7 (default) or 30 days. `expiresAt` is inside the ciphertext
+  (signed in teammates mode) and FX Vault refuses an expired file (10-minute skew). This is
+  enforced by the app, not by the cryptography: anyone with the passphrase and their own software
+  could still decrypt a passphrase file after its expiry. The copy says so.
+- **Opening never changes a remote.** Every imported row the remote does not have is held
+  (`share_hold` = the package id): it is in no Sync plan, GitHub or destination, until the user
+  includes that file in Sync's From Files review (one file at a time, the sender and whether it is
+  verified shown) or releases the row with Push on Next Sync. A file left out is offered again at
+  every Sync. A new environment waits while all its live items are held; a renamed environment
+  waits while any is held, because a rename copies every item. Destinations the file creates have
+  no connection until the receiver connects their own account. The user's own delete, GitHub-scope
+  Revert or typed value releases a row (they are not the file's changes); a rename or move keeps it.
+- **Sent log.** Each export writes a `sent_shares` row: time, expiry, mode, recipient device ids
+  and the names it carried, never a value, fingerprint or passphrase. Settings › Sharing lists
+  them with what to rotate if a file leaks.
+
+| Threat | Defense |
+|---|---|
+| A file found in a chat, mailbox or backup | Teammates mode: only a recipient device's agreement key opens it. Passphrase mode: Argon2id plus 77.5 bits, with the words sent another way. Either way names, values and the sender are encrypted. |
+| A file kept and opened long after | `expiresAt`, enforced by FX Vault (above); rotation for anything that leaked; the sent log lists what each file carried. |
+| A forged or altered file | AES-GCM over everything after the header with the header and slots as AAD; in teammates mode, the sender's signature over the header, slots and payload digest, verified against a paired teammate's key (`senderNotTeammate` when the sender is not one). Every failure reads "Wrong passphrase or damaged file" (a tampered salt, count or slot id can also read "Not sent to this Mac"). |
+| A recipient passing it on as the sender's | The signature covers the recipient slots, so a re-sealed payload has no valid signature from the original sender. |
+| A malicious bundle | `ShareBundleValidator` (names, provider rules, limits, link tokens, expiry), the merge defaults (keep mine on differences, nothing deleted), replay warnings, and holds: nothing reaches GitHub or a provider without the receiver including the file. |
+| Production values handed to a third party | Passphrase mode refuses production places; production stages start unchecked and ask for a confirmation. |
+| A leaked file exposing provider accounts | Connection tokens and `az` sessions are never read by the exporter; a created destination waits for the receiver's own connection. |
+| A relay swapping teammate cards (remote pairing) | Each person sees a 6-word code from both cards and both nonces; the replier's nonce is drawn after the invitation it answers is fixed, so a relay needs a second preimage (about 2^77), not a birthday collision. The codes differ on the call, and nothing is stored until each side confirms. A card is signed, its device id derives from its keys, an invitation lasts 7 days, and a reply must answer this Mac's own invitation. |
+| Tracking through a teammate card | The announce key never travels in a card: the replier's is HPKE-sealed to the inviter, and the inviter's arrives later inside a teammates file or the authenticated nearby card update. |
+
+**Residual risks:** §11 (project share files).
+
 
 ## 11. Residual risks
 
@@ -584,6 +660,28 @@ sees the Azure refresh token or the user's Azure credentials.
   can be wiped. A token typed into the token field is a Swift `String` until it is saved.
 - No certificate pinning: a root certificate the user or a configuration profile trusts can
   intercept destination traffic, as for any app that uses the system trust store.
+- **Project share files (v0.9.0).**
+  - A file cannot be revoked once sent. Expiry is enforced by FX Vault, not the cryptography: a
+    passphrase file stays readable to anyone with the words and their own software. Rotate what a
+    leaked file carried (Settings › Sharing lists it).
+  - The header shows the protection mode and, in teammates mode, the number of recipients; the
+    file size hints at how much it carries.
+  - A teammate who received a file keeps its values; removing them as a teammate takes nothing
+    back.
+  - Two GitHub changes from a file are not held, because holds exist only on items: an environment
+    the file creates when not every live item in it is held, and a branch policy the receiver chose
+    to take from the file in the preview. Both appear in Sync's normal review.
+  - A destination Revert keeps a held row held: it cannot bring back the previous value, so the row
+    still carries the file's value until it is included or released.
+  - Pending counts in the toolbar and sidebar (`pendingSummary`, a destination's `pendingCount`)
+    include held rows: they show what there is to review, not what the next run sends.
+  - The sent log (names, recipients, dates) and the import records (sender name, sender device id)
+    are plaintext metadata at rest, like repository and item names.
+  - Remote pairing (experimental) authenticates only through the code comparison on a call; people
+    who skip it trust whatever the channel delivered. Until the inviter's announce key arrives, the
+    replier cannot recognize the inviter nearby.
+  - Sealing and opening decode the payload with Foundation coders, so values pass through Swift
+    `String`s that cannot be wiped (as for every share).
 - The Keychain status codes for the Touch ID fallback button, lockout and an enrollment-
   invalidated item follow Apple's documentation and still need confirmation on a signed build
   (RELEASING.md manual checklist). Since v0.1.1 an unexpected `errSecAuthFailed` can no longer

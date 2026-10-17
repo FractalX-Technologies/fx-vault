@@ -4,7 +4,7 @@ import FXVaultTestSupport
 import SharingKit
 import Testing
 import VaultCore
-@testable import VaultData
+@_spi(Testing) @testable import VaultData
 import VaultStore
 
 /// A fast stand-in for Argon2id (SHA-256 over passphrase and salt): the codec, header checks
@@ -80,7 +80,7 @@ struct ShareWorld {
     /// Exports `selection` from the sender to a new file and returns it with the passphrase text.
     func export(_ selection: ShareSelectionModel? = nil, name: String = "share.fxvault") async throws -> (URL, String) {
         let target = try selection ?? .repository(sender.repository().id)
-        let result = try await senderSharing.exportFile(
+        let result = try await senderSharing.exportLegacyFile(
             target,
             to: folder.url.appendingPathComponent(name),
             senderName: Self.senderName,

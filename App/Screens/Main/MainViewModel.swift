@@ -24,6 +24,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         didSet {
             if activeSheet == nil {
                 presentNextPendingImport()
+                presentNextPendingPairingCard()
             }
         }
     }
@@ -58,6 +59,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             open: { [weak self] id, scope in self?.open(repositoryID: id, scope: scope) },
             openFolder: { [weak self] id in self?.sidebar.select(folderID: id) },
             openDestination: { [weak self] id in self?.open(destinationID: id) },
+            openOverview: { [weak self] id, stage in self?.openOverview(repositoryID: id, stage: stage) },
             syncSpaces: { [app] in await app.spaceSync.syncAllAndWait() },
             spacesPublished: { [app] in app.spaceSync.syncAll() },
             spaceIdentity: { [app] in app.spaceIdentity },
@@ -88,6 +90,24 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
 
     /// A destination to select once the repository's column exists.
     @ObservationIgnored private var pendingDestination: DestinationID?
+
+    /// Shows a repository's Overview at `stage` (v0.9.0, after a project share import): selects
+    /// the repository, then the Overview once its column exists.
+    func openOverview(repositoryID id: RepoID, stage: String?) {
+        sidebar.select(repositoryID: id)
+        if let scopeList, scopeList.repositoryID == id {
+            pendingOverviewStage = stage
+            overview = nil
+            scopeList.selectOverview()
+            followScopeSelection(scopeList)
+        } else {
+            pendingOverview = (id, stage)
+        }
+    }
+
+    /// The Overview to select once the repository's column exists, and the stage to open it at.
+    @ObservationIgnored private var pendingOverview: (repositoryID: RepoID, stage: String?)?
+    @ObservationIgnored private var pendingOverviewStage: String?
 
     // MARK: - Selection
 
@@ -144,6 +164,11 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             self.pendingDestination = nil
             scopes.select(destination: pendingDestination)
         }
+        if let pendingOverview, pendingOverview.repositoryID == repoID {
+            self.pendingOverview = nil
+            pendingOverviewStage = pendingOverview.stage
+            scopes.selectOverview()
+        }
     }
 
     /// Column 3 follows column 2's selection: a destination's detail, the Overview, or the
@@ -163,11 +188,16 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             guard overview?.repositoryID != scopes.repositoryID else { return }
             let sidebar = sidebar
             let repositoryID = scopes.repositoryID
-            overview = StageOverviewViewModel(
+            let overview = StageOverviewViewModel(
                 repositoryID: repositoryID,
                 dependencies: featureDependencies,
                 repository: { sidebar.vaultRepository(repositoryID) }
             )
+            if let stage = pendingOverviewStage {
+                pendingOverviewStage = nil
+                overview.stage = stage
+            }
+            self.overview = overview
             return
         }
         overview = nil
@@ -186,6 +216,12 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     func presentNextPendingImport() {
         guard activeSheet == nil, let url = app.takeNextPendingImport() else { return }
         activeSheet = .shareImport(ShareImportContext(fileURL: url))
+    }
+
+    /// An opened `.fxvcard` (v0.9.0): the remote pairing sheet.
+    func presentNextPendingPairingCard() {
+        guard activeSheet == nil, let url = app.takeNextPendingPairingCard() else { return }
+        activeSheet = .remotePairing(RemotePairingContext(fileURL: url))
     }
 
     /// The share selection for the current column selection: the environment, the repository,
@@ -292,6 +328,20 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     func shareFile() {
         guard canShareFile, let selection = currentShareSelection else { return }
         present(.shareExport(ShareExportContext(selection: selection)))
+    }
+
+    /// File › Share Project… (v0.9.0): the selected scope or folder, or the selected repository.
+    var canShareProject: Bool {
+        isUnlocked && projectShareSelection != nil
+    }
+
+    func shareProject() {
+        guard canShareProject, let selection = projectShareSelection else { return }
+        present(.shareExport(ShareExportContext(selection: selection)))
+    }
+
+    private var projectShareSelection: ShareSelectionModel? {
+        currentShareSelection ?? selectedVaultRepo.map { .repository($0.id) }
     }
 
     /// Share › Nearby… (the sheet asks what to send when nothing is selected).

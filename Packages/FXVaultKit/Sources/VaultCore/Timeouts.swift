@@ -118,6 +118,12 @@ public enum Timeouts {
     public static let nearbySession: Duration = .seconds(10 * secondsPerMinute)
     /// A share package older than this raises the replay warning.
     public static let shareReplayMaxAge: Duration = .seconds(7 * secondsPerDay)
+    /// How far a share file's or pairing card's timestamps may be ahead of this Mac's clock (v0.9.0).
+    public static let shareClockSkew: Duration = .seconds(10 * secondsPerMinute)
+    /// The longest expiry a sender can choose for a share file (v0.9.0).
+    public static let shareMaxExpiry: Duration = .seconds(30 * secondsPerDay)
+    /// A remote pairing invitation older than this is refused (v0.9.0).
+    public static let pairingInvitationMaxAge: Duration = .seconds(7 * secondsPerDay)
 
     // MARK: - Shared spaces (v0.6.0, S6)
 

@@ -102,13 +102,15 @@ struct DestinationItemWriter {
         return record.id
     }
 
-    /// Replaces an item's value.
+    /// Replaces an item's value. A value the user types releases a share file's hold (v0.9.0):
+    /// it is no longer the file's value.
     func editValue(_ id: ConfigItemID, value: SecretBytes) throws {
         var record = try existing(id)
         guard !record.isDeleted else { throw ConfigRepositoryError.itemNotFound }
         let destination = try requireDestination(record.destinationID)
         try requireSize(value, provider: destination.provider)
         try DestinationFieldCipher.setValue(value, on: &record, keys: keys)
+        record.shareHold = nil
         record.updatedAt = now
         try store.updateItem(record, in: tx)
         try touch(destination)
@@ -158,9 +160,15 @@ struct DestinationItemWriter {
         var tombstone = record
         tombstone.isDeleted = true
         tombstone.linkID = nil
+        tombstone.shareHold = nil
         tombstone.updatedAt = now
         try store.updateItem(tombstone, in: tx)
-        return try add(destinationID: record.destinationID, kind: storedKind, name: validName, value: value, linkID: record.linkID)
+        let renamedID = try add(destinationID: record.destinationID, kind: storedKind, name: validName, value: value, linkID: record.linkID)
+        // A held row stays held under its new name: the value is still the share file's.
+        if let hold = record.shareHold {
+            try store.setShareHold(hold, itemIDs: [renamedID], in: tx)
+        }
+        return renamedID
     }
 
     /// Deletes an item: a never-pushed row goes away, a pushed one becomes a tombstone.
@@ -171,6 +179,7 @@ struct DestinationItemWriter {
             guard !record.isDeleted else { return }
             record.isDeleted = true
             record.forcePush = false
+            record.shareHold = nil
             record.updatedAt = now
             try store.updateItem(record, in: tx)
         } else {

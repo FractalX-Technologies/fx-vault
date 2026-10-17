@@ -207,6 +207,9 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
     public var preWriteVersion: String?
     public var isPublicAllowed: Bool
     public var linkID: ItemLinkID?
+    /// `share_hold` (v0.9.0): the share file this row came from while Sync's From Files review
+    /// has not released it; a held row is never written to the destination. Nil when not held.
+    public var shareHold: SharePackageID?
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -228,6 +231,7 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
         preWriteVersion: String? = nil,
         isPublicAllowed: Bool = false,
         linkID: ItemLinkID? = nil,
+        shareHold: SharePackageID? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -248,6 +252,7 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
         self.preWriteVersion = preWriteVersion
         self.isPublicAllowed = isPublicAllowed
         self.linkID = linkID
+        self.shareHold = shareHold
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -265,7 +270,8 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
             syncedName: syncedName,
             syncedKind: syncedKind,
             syncedFingerprint: syncedFingerprint,
-            forcePush: forcePush
+            forcePush: forcePush,
+            shareHold: shareHold
         )
     }
 
@@ -297,6 +303,7 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
             syncStatus: syncStatus,
             linkID: linkID,
             linkCount: linkCount,
+            heldBy: shareHold,
             createdAt: createdAt,
             updatedAt: updatedAt
         )
@@ -320,6 +327,7 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
         case preWriteVersion = "pre_write_version"
         case isPublicAllowed = "is_public_allowed"
         case linkID = "link_id"
+        case shareHold = "share_hold"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -347,6 +355,8 @@ public struct DestinationItemState: Sendable, Hashable, FetchableRecord {
     public var syncedKind: ConfigKind?
     public var syncedFingerprint: Data?
     public var forcePush: Bool
+    /// `share_hold` (v0.9.0).
+    public var shareHold: SharePackageID?
 
     public init(
         id: ConfigItemID,
@@ -359,7 +369,8 @@ public struct DestinationItemState: Sendable, Hashable, FetchableRecord {
         syncedName: String?,
         syncedKind: ConfigKind?,
         syncedFingerprint: Data?,
-        forcePush: Bool
+        forcePush: Bool,
+        shareHold: SharePackageID? = nil
     ) {
         self.id = id
         self.destinationID = destinationID
@@ -372,12 +383,13 @@ public struct DestinationItemState: Sendable, Hashable, FetchableRecord {
         self.syncedKind = syncedKind
         self.syncedFingerprint = syncedFingerprint
         self.forcePush = forcePush
+        self.shareHold = shareHold
     }
 
     /// The columns ``init(row:)`` reads, in order.
     static let selection = """
         id, destination_id, kind, name, value_ct IS NOT NULL AS has_value, value_fp, is_deleted,
-        synced_name, synced_kind, synced_fp, force_push
+        synced_name, synced_kind, synced_fp, force_push, share_hold
         """
 
     public init(row: Row) throws {
@@ -388,6 +400,11 @@ public struct DestinationItemState: Sendable, Hashable, FetchableRecord {
             throw StoreError.invalidStoredValue
         }
         let syncedKindText: String? = row["synced_kind"]
+        let shareHoldText: String? = row["share_hold"]
+        let shareHold = try shareHoldText.map { text in
+            guard let id = SharePackageID(uuidString: text) else { throw StoreError.invalidStoredValue }
+            return id
+        }
         self.init(
             id: id,
             destinationID: destinationID,
@@ -399,7 +416,8 @@ public struct DestinationItemState: Sendable, Hashable, FetchableRecord {
             syncedName: row["synced_name"],
             syncedKind: syncedKindText.flatMap(ConfigKind.init(rawValue:)),
             syncedFingerprint: row["synced_fp"],
-            forcePush: row["force_push"] ?? false
+            forcePush: row["force_push"] ?? false,
+            shareHold: shareHold
         )
     }
 

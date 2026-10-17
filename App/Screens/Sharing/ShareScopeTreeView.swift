@@ -5,21 +5,25 @@ import SwiftUI
 ///
 /// The repository row starts expanded, so its scopes fill the box; the box grows up to
 /// `shareListHeight` and gives way down to `shareListMinHeight` when the sheet is short.
-struct ShareScopeTreeView: View {
-    let tree: ShareScopeTreeModel
+struct ShareScopeTreeView<Tree: ShareCheckTree>: View {
+    let tree: Tree
     /// `true` checks everything under the row, `false` unchecks it.
     let onCheck: (Bool, ShareScopeNodeModel) -> Void
     @State private var expanded: Set<ShareScopeNodeID>
 
-    init(tree: ShareScopeTreeModel, onCheck: @escaping (Bool, ShareScopeNodeModel) -> Void) {
+    /// - Parameter expandsRoots: start with every root open (one repository) or closed (a
+    ///   project share's several repositories, v0.9.0).
+    init(tree: Tree, expandsRoots: Bool = true, onCheck: @escaping (Bool, ShareScopeNodeModel) -> Void) {
         self.tree = tree
         self.onCheck = onCheck
-        _expanded = State(initialValue: [tree.root.id])
+        _expanded = State(initialValue: expandsRoots ? Set(tree.roots.map(\.id)) : [])
     }
 
     var body: some View {
         List {
-            ShareScopeTreeNode(node: tree.root, tree: tree, expanded: $expanded, onCheck: onCheck)
+            ForEach(tree.roots) { root in
+                ShareScopeTreeNode(node: root, tree: tree, expanded: $expanded, onCheck: onCheck)
+            }
         }
         .shareListContainer()
         .frame(minHeight: Theme.Layout.shareListMinHeight, maxHeight: Theme.Layout.shareListHeight)
@@ -27,9 +31,9 @@ struct ShareScopeTreeView: View {
 }
 
 /// One node and, when expanded, its children (a disclosure group per node with children).
-private struct ShareScopeTreeNode: View {
+private struct ShareScopeTreeNode<Tree: ShareCheckTree>: View {
     let node: ShareScopeNodeModel
-    let tree: ShareScopeTreeModel
+    let tree: Tree
     @Binding var expanded: Set<ShareScopeNodeID>
     let onCheck: (Bool, ShareScopeNodeModel) -> Void
 
@@ -149,7 +153,7 @@ private struct ShareScopeTreeRow: View {
 
     private var isGroup: Bool {
         switch node.kind {
-        case .repository, .repositoryLevel, .environment: true
+        case .repository, .repositoryLevel, .environment, .destination, .folder: true
         case .secret, .variable: false
         }
     }
@@ -175,6 +179,8 @@ private struct ShareScopeTreeRow: View {
         case .repository: "shippingbox"
         case .repositoryLevel: "folder"
         case .environment: "square.stack.3d.up"
+        case .destination(let symbolName): symbolName
+        case .folder: "folder.fill"
         case .secret: "key"
         case .variable: "textformat"
         }

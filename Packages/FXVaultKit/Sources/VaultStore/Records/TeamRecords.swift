@@ -42,7 +42,7 @@ public struct DeviceIdentityRecord: Codable, Sendable, Hashable, FetchableRecord
     }
 }
 
-/// One `teammates` row (§6 `v10_teammates`).
+/// One `teammates` row (§6 `v10_teammates`, rebuilt by `v14_project_shares`).
 public struct TeammateRecord: Codable, Sendable, Hashable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "teammates"
 
@@ -50,8 +50,9 @@ public struct TeammateRecord: Codable, Sendable, Hashable, FetchableRecord, Pers
     public var deviceID: String
     public var signingPublicKey: Data
     public var agreementPublicKey: Data
-    /// The teammate's announce key, sealed as a secret field.
-    public var announceCiphertext: Data
+    /// The teammate's announce key, sealed as a secret field. Nil only for a teammate paired
+    /// remotely whose announce key has not arrived yet (v0.9.0): it is never matched by presence.
+    public var announceCiphertext: Data?
     public var login: String
     public var displayName: String
     public var macName: String
@@ -59,19 +60,22 @@ public struct TeammateRecord: Codable, Sendable, Hashable, FetchableRecord, Pers
     public var lastSeenAt: Date?
     public var isMuted: Bool
     public var needsCardUpdate: Bool
+    /// `paired_via` (v0.9.0).
+    public var pairedVia: TeammatePairing
 
     public init(
         deviceID: String,
         signingPublicKey: Data,
         agreementPublicKey: Data,
-        announceCiphertext: Data,
+        announceCiphertext: Data?,
         login: String,
         displayName: String,
         macName: String,
         pairedAt: Date,
         lastSeenAt: Date? = nil,
         isMuted: Bool = false,
-        needsCardUpdate: Bool = false
+        needsCardUpdate: Bool = false,
+        pairedVia: TeammatePairing = .nearby
     ) {
         self.deviceID = deviceID
         self.signingPublicKey = signingPublicKey
@@ -84,6 +88,7 @@ public struct TeammateRecord: Codable, Sendable, Hashable, FetchableRecord, Pers
         self.lastSeenAt = lastSeenAt
         self.isMuted = isMuted
         self.needsCardUpdate = needsCardUpdate
+        self.pairedVia = pairedVia
     }
 
     /// The row without keys.
@@ -96,7 +101,9 @@ public struct TeammateRecord: Codable, Sendable, Hashable, FetchableRecord, Pers
             pairedAt: pairedAt,
             lastSeenAt: lastSeenAt,
             isMuted: isMuted,
-            needsCardUpdate: needsCardUpdate
+            needsCardUpdate: needsCardUpdate,
+            pairedVia: pairedVia,
+            hasAnnounceKey: announceCiphertext != nil
         )
     }
 
@@ -112,6 +119,7 @@ public struct TeammateRecord: Codable, Sendable, Hashable, FetchableRecord, Pers
         case lastSeenAt = "last_seen_at"
         case isMuted = "is_muted"
         case needsCardUpdate = "needs_card_update"
+        case pairedVia = "paired_via"
     }
 
     public static func databaseDateEncodingStrategy(for column: String) -> DatabaseDateEncodingStrategy {

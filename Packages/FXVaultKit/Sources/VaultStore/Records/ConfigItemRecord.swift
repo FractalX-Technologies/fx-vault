@@ -3,7 +3,7 @@ import GRDB
 import VaultCore
 
 /// One `config_items` row (§6 `v3_config` + `v6_sharing` + `v8_force_push_requested_at` +
-/// `v9_item_links`), ciphertexts included.
+/// `v9_item_links` + `v14_project_shares`), ciphertexts included.
 ///
 /// The `*Ciphertext` and `*Fingerprint` blobs are opaque here: VaultCrypto produces them and
 /// VaultData decrypts them. Fetch this record only to read or write a value; lists, status and
@@ -46,6 +46,9 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
     public var shareOrigin: ShareOriginModel?
     /// `link_id`: the group of linked copies this row belongs to (v0.4.1), or nil.
     public var linkID: ItemLinkID?
+    /// `share_hold`: the share file this row came from while Sync's From Files review has not
+    /// released it (v0.9.0); a held row never enters a sync plan. Nil when not held.
+    public var shareHold: SharePackageID?
 
     public init(
         id: ConfigItemID = ConfigItemID(),
@@ -67,6 +70,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         provenance: ConfigProvenance = .local,
         shareOrigin: ShareOriginModel? = nil,
         linkID: ItemLinkID? = nil,
+        shareHold: SharePackageID? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -89,6 +93,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         self.provenance = provenance
         self.shareOrigin = shareOrigin
         self.linkID = linkID
+        self.shareHold = shareHold
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -121,6 +126,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
             provenance: provenance,
             shareOrigin: shareOrigin,
             linkID: linkID,
+            shareHold: shareHold,
             createdAt: createdAt,
             updatedAt: updatedAt
         )
@@ -153,6 +159,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         case provenance
         case shareOrigin = "provenance_detail"
         case linkID = "link_id"
+        case shareHold = "share_hold"
     }
 
     public static func databaseDateEncodingStrategy(for column: String) -> DatabaseDateEncodingStrategy {
@@ -190,6 +197,8 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
     public var shareOrigin: ShareOriginModel?
     /// `link_id` (v0.4.1).
     public var linkID: ItemLinkID?
+    /// `share_hold` (v0.9.0): held rows stay out of every sync plan.
+    public var shareHold: SharePackageID?
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -213,6 +222,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
         provenance: ConfigProvenance,
         shareOrigin: ShareOriginModel?,
         linkID: ItemLinkID? = nil,
+        shareHold: SharePackageID? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -235,6 +245,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
         self.provenance = provenance
         self.shareOrigin = shareOrigin
         self.linkID = linkID
+        self.shareHold = shareHold
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -283,6 +294,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
             shareOrigin: shareOrigin,
             syncStatus: ConfigSyncStatus.derive(syncFacts),
             linkID: linkID,
+            heldBy: shareHold,
             createdAt: createdAt,
             updatedAt: updatedAt
         )
@@ -308,6 +320,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
         case provenance
         case shareOrigin = "provenance_detail"
         case linkID = "link_id"
+        case shareHold = "share_hold"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -334,6 +347,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
             CodingKeys.provenance,
             CodingKeys.shareOrigin,
             CodingKeys.linkID,
+            CodingKeys.shareHold,
             CodingKeys.createdAt,
             CodingKeys.updatedAt,
         ]

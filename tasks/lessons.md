@@ -83,3 +83,7 @@ Patterns and rules learned from corrections during this project. Read at the sta
 ## 2026-10-16 - Every count string needs a singular variant
 **Pattern:** Snapshot review showed "1 things to fix" and "1 projects": the catalog has no plural variations, so `"\(count) things"` is wrong for one.
 **Rule:** Write `count == 1 ? "...one" : "..."` (two keys, as FolderCopy does) for every user-visible count, and review the snapshots with a count of one.
+
+## 2026-10-17 - Agents in isolated copies still have to pass the repo's lint
+**Pattern:** Two app test files written by a feature agent imported VaultStore to set up held rows. The agent's copy built and tested green, but `scripts/lint.sh` (App/ and AppTests/ never import VaultStore) failed only in the lead's ci-local run.
+**Rule:** Every agent runs `scripts/lint.sh` (and the tests) in its copy before copying files back. App tests that need database state the public API cannot create use a VaultData `@_spi(Testing)` helper (`ShareHoldRepository.hold`), never a store import.

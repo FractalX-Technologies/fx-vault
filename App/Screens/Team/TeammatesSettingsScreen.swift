@@ -37,8 +37,8 @@ struct TeammatesSettingsScreen: View {
             PreferencesSection(
                 String(localized: "settings.teammates.section", defaultValue: "Teammates"),
                 footnote: String(
-                    localized: "settings.teammates.footnote",
-                    defaultValue: "Teammates are Macs you paired with by comparing a code. They recognize each other nearby, can ping each other and chat without a code."
+                    localized: "settings.teammates.footnote.v2",
+                    defaultValue: "Teammates are Macs you paired with by comparing a code, nearby or on a call. They recognize each other nearby, can ping each other, chat without a code and open share files sealed for them."
                 )
             ) {
                 if viewModel.teammates.isEmpty {
@@ -60,10 +60,19 @@ struct TeammatesSettingsScreen: View {
                 }
                 HairlineDivider()
                 PreferencesBlock {
-                    Button(String(localized: "settings.teammates.add", defaultValue: "Add Teammate…")) {
-                        viewModel.startAddingTeammate()
+                    HStack(spacing: Theme.Spacing.small) {
+                        Button(String(localized: "settings.teammates.add", defaultValue: "Add Teammate…")) {
+                            viewModel.startAddingTeammate()
+                        }
+                        .fxButtonStyle(.outline)
+                        Button(RemotePairingCopy.notNearby) {
+                            viewModel.startRemotePairing()
+                        }
+                        .fxButtonStyle(.outline)
+                        .help(RemotePairingCopy.notNearbyHelp)
+                        StatusChip.tag(RemotePairingCopy.experimental)
+                            .help(RemotePairingCopy.experimentalHelp)
                     }
-                    .fxButtonStyle(.outline)
                     .disabled(!viewModel.isUnlocked)
                     if !viewModel.isUnlocked {
                         Text(String(localized: "settings.teammates.locked", defaultValue: "Unlock FX Vault to add or remove teammates."))
@@ -78,6 +87,9 @@ struct TeammatesSettingsScreen: View {
         }
         .sheet(item: $viewModel.addTeammate, onDismiss: viewModel.addTeammateDismissed) { model in
             AddTeammateSheet(viewModel: model)
+        }
+        .sheet(item: $viewModel.remotePairing, onDismiss: viewModel.remotePairingDismissed) { model in
+            RemotePairingSheet(viewModel: model)
         }
         .confirmationDialog(
             String(localized: "settings.teammates.remove.title", defaultValue: "Remove \(viewModel.pendingRemoval?.name ?? "")?"),
@@ -135,6 +147,11 @@ private struct TeammateRow: View {
                     .fxTextStyle(.monoMeta)
                     .foregroundStyle(Theme.Colors.mutedText)
                     .lineLimit(1)
+                if let pairing = viewModel.pairingText(teammate) {
+                    Text(pairing)
+                        .fxTextStyle(.caption)
+                        .foregroundStyle(Theme.Colors.mutedText)
+                }
                 Text(viewModel.lastSeenText(teammate))
                     .fxTextStyle(.caption)
                     .foregroundStyle(Theme.Colors.subtleText)

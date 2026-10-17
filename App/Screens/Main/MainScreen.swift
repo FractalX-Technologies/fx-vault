@@ -34,6 +34,7 @@ struct MainScreen: View {
             }
             .onAppear {
                 viewModel.presentNextPendingImport()
+                viewModel.presentNextPendingPairingCard()
                 viewModel.app.teamPresence.setBrowsing(NSApp?.isActive ?? true)
             }
             .onDisappear {
@@ -41,6 +42,9 @@ struct MainScreen: View {
             }
             .onChange(of: viewModel.app.pendingImports) {
                 viewModel.presentNextPendingImport()
+            }
+            .onChange(of: viewModel.app.pendingPairingCards) {
+                viewModel.presentNextPendingPairingCard()
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
                 viewModel.detail?.remaskAll()
@@ -337,9 +341,11 @@ private struct MainSheetContent: View {
         case .envExport(let context):
             EnvExportScreen(context: context, dependencies: dependencies)
         case .shareExport(let context):
-            ShareExportScreen(context: context, dependencies: dependencies)
+            ProjectShareScreen(context: context, dependencies: dependencies)
         case .shareImport(let context):
             ShareImportScreen(context: context, dependencies: dependencies)
+        case .remotePairing(let context):
+            RemotePairingScreen(context: context, dependencies: dependencies)
         case .nearbySend(let context):
             NearbySendScreen(context: context, dependencies: dependencies)
         case .nearbyReceive(let context):

@@ -87,11 +87,19 @@ public actor DestinationSyncRepository {
             case .config, .stale: .listingFailed(.decoding)
             }
             let rows = (try? pendingRows(destination.id)) ?? []
+            let held = rows.filter(Self.isHeld)
             return DestinationReviewSectionModel(
                 destination: destination,
                 changes: [],
-                blocked: rows.map { DestinationBlockedChangeModel(change: change(for: $0, in: destination, remote: nil), reason: reason) },
-                warnings: []
+                blocked: rows.filter { !Self.isHeld($0) }.map {
+                    DestinationBlockedChangeModel(change: change(for: $0, in: destination, remote: nil), reason: reason)
+                },
+                warnings: [],
+                held: held.compactMap { row in
+                    row.shareHold.map {
+                        DestinationHeldChangeModel(change: change(for: row, in: destination, remote: nil), packageID: $0, reason: reason)
+                    }
+                }
             )
         }
         try? reconcileJournal(destination, listed: listed)
@@ -100,29 +108,41 @@ public actor DestinationSyncRepository {
         var changes: [DestinationChangeModel] = []
         var blocked: [DestinationBlockedChangeModel] = []
         var warnings: [DestinationReviewWarningModel] = []
+        var held: [DestinationHeldChangeModel] = []
         for row in rows {
             guard let operation = row.pendingOperation else { continue }
             let remoteItem = byName[GitHubNameValidator.foldKey(row.name)]
             let change = change(for: row, in: destination, remote: remoteItem)
-            if let reason = blockReason(for: row, operation: operation, remote: remoteItem, destination: destination) {
-                blocked.append(DestinationBlockedChangeModel(change: change, reason: reason))
-                continue
-            }
-            if operation != .delete {
+            var reason = blockReason(for: row, operation: operation, remote: remoteItem, destination: destination)
+            var warning: DestinationReviewWarningModel?
+            if reason == nil, operation != .delete {
                 switch publicVerdict(row, destination: destination) {
                 case .block(let prefix):
-                    blocked.append(DestinationBlockedChangeModel(change: change, reason: .publicCredential(prefix: prefix)))
-                    continue
+                    reason = .publicCredential(prefix: prefix)
                 case .warn(let prefix):
-                    warnings.append(DestinationReviewWarningModel(itemID: row.id, name: row.name, prefix: prefix))
+                    warning = DestinationReviewWarningModel(itemID: row.id, name: row.name, prefix: prefix)
                 case .none:
                     break
                 }
             }
-            changes.append(change)
+            if Self.isHeld(row), let packageID = row.shareHold {
+                held.append(DestinationHeldChangeModel(change: change, packageID: packageID, reason: reason, warning: warning))
+            } else if let reason {
+                blocked.append(DestinationBlockedChangeModel(change: change, reason: reason))
+            } else {
+                if let warning { warnings.append(warning) }
+                changes.append(change)
+            }
         }
         changes.sort { ($0.operation == .delete ? 1 : 0, $0.name) < ($1.operation == .delete ? 1 : 0, $1.name) }
-        return DestinationReviewSectionModel(destination: destination, changes: changes, blocked: blocked, warnings: warnings)
+        held.sort { $0.change.name < $1.change.name }
+        return DestinationReviewSectionModel(destination: destination, changes: changes, blocked: blocked, warnings: warnings, held: held)
+    }
+
+    /// A row a share file holds (v0.9.0, P8). A deletion is the user's own change and is never
+    /// held.
+    private static func isHeld(_ row: DestinationItemRecord) -> Bool {
+        row.shareHold != nil && row.pendingOperation != .delete
     }
 
     private func blockReason(
@@ -149,16 +169,21 @@ public actor DestinationSyncRepository {
     // MARK: - Run
 
     /// Sends the review's sendable changes, destination by destination; deletions only with
-    /// `includeDeletions` (after the user confirmed them).
+    /// `includeDeletions` (after the user confirmed them). Rows held by share files run only when
+    /// their file is in `includeHeld` (Sync's From Files review, v0.9.0, the same set the GitHub
+    /// run got): those files' destination holds are released first, in one transaction.
     public func run(
         _ review: DestinationReviewModel,
         includeDeletions: Bool,
+        includeHeld: Set<SharePackageID> = [],
         progress: @Sendable (DestinationProgressEvent) -> Void = { _ in }
     ) async -> DestinationRunResultModel {
         var result = DestinationRunResultModel()
         let runID = SyncRunID()
+        let released = includeHeld.isEmpty ? [] : releaseHolds(includeHeld, in: review)
         for section in review.sections {
-            let changes = includeDeletions ? section.changes : section.writes
+            let heldWrites = section.heldWrites(including: includeHeld).filter { released.contains($0.itemID) }
+            let changes = (includeDeletions ? section.changes : section.writes) + heldWrites
             for skipped in section.changes where !changes.contains(skipped) {
                 result.outcomes[skipped.id] = .skipped
             }
@@ -232,7 +257,10 @@ public actor DestinationSyncRepository {
         runID: SyncRunID,
         pushed: inout [PushedWrite]
     ) async -> DestinationChangeOutcome {
-        guard let row = try? store.fetchItemRecord(id: change.itemID), row.pendingOperation == change.operation else {
+        guard let row = try? store.fetchItemRecord(id: change.itemID),
+              row.pendingOperation == change.operation,
+              !Self.isHeld(row)
+        else {
             return .skipped
         }
         let remoteItem = byName[GitHubNameValidator.foldKey(row.name)]
@@ -661,6 +689,23 @@ public actor DestinationSyncRepository {
     }
 
     // MARK: - Row bookkeeping
+
+    /// Releases every hold of `packageIDs`, in both item tables (one transaction; a no-op for the
+    /// rows the GitHub run already released). Returns the held row ids of `review` it released;
+    /// empty when the write failed, so nothing held runs.
+    private func releaseHolds(_ packageIDs: Set<SharePackageID>, in review: DestinationReviewModel) -> Set<ConfigItemID> {
+        let ids = review.sections.flatMap { $0.held.filter { packageIDs.contains($0.packageID) }.map(\.change.itemID) }
+        guard !ids.isEmpty else { return [] }
+        do {
+            try session.database.write { tx in
+                try ShareHoldStore(database: session.database).clearShareHold(packageIDs: packageIDs, in: tx)
+            }
+        } catch {
+            Self.log.error("Releasing \(ids.count, privacy: .public) held destination rows failed")
+            return []
+        }
+        return Set(ids)
+    }
 
     private func pendingRows(_ destinationID: DestinationID) throws -> [DestinationItemRecord] {
         try session.database.read { tx in

@@ -388,26 +388,6 @@ struct VisualSnapshotTests {
         }
     }
 
-    @Test func shareExportScopeStep() async throws {
-        let world = try await SharingWorld()
-        try await world.sender.enableTouchID()
-        let viewModel = ShareExportViewModel(
-            context: ShareExportContext(selection: .repository(world.senderRepositoryID)),
-            dependencies: world.senderDependencies(),
-            delivery: FakeShareFileDelivery(),
-            identity: SharingWorld.identity,
-            stagingRoot: world.sender.sandbox.appendingPathComponent("staging", isDirectory: true)
-        )
-        await viewModel.start()
-        #expect(viewModel.step == .chooseScope)
-        try await SnapshotOutput.write(
-            "share-export-scope",
-            size: CGSize(width: Theme.Layout.shareSheetWidth, height: SnapshotOutput.sheetHeight)
-        ) {
-            ShareExportScreen(viewModel: viewModel)
-        }
-    }
-
     @Test func nearbyChatConversation() async throws {
         let fixture = try await NearbyChatViewModelTests.Fixture()
         try await fixture.chat()

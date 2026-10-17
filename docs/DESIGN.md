@@ -416,6 +416,13 @@ foreground color, so `.primary` text still turns white on selected rows.
   Check opens the manifest panel (a `container` card: parse issues with their line as a chip,
   findings with Add Destination where a destination is missing, Copy .env.example (a menu per
   target) and Copy fxvault.yml for This Repository, both outline).
+- Held rows (v0.9.0, tasks/todo.md P8): a row imported from a share file and not yet included
+  in a Sync shows a `.warning` `StatusChip` "Held" in the Status column instead of Will push /
+  Added, in repository scopes and destinations alike; its help names the sender's file and says
+  how it gets out (Sync's From Files review, or Push on Next Sync, which releases only the hold).
+  The Overview has the same "Held" cell (`.warning`, legend included), and its header gains
+  "Share Stage…" (secondary) after Read Again: the Share Project sheet with this repository and
+  stage checked.
 
 ### Sheets (board SyncReview)
 
@@ -486,6 +493,59 @@ foreground color, so `.primary` text still turns white on selected rows.
   (Show Destination), public-value warnings and Vercel variables shared with other environments.
   Destination deletions join the deletion review; the result shows "Confirmed in the
   destination", "Sent, but the destination did not list it yet…" or "Not sent" per item.
+- Share Project (v0.9.0, `ProjectShareScreen`, `shareSheetWidth`, eyebrow SHARE) replaces the
+  Share as File sheet for every entry point: File › Share Project… (⌥⌘S; ⇧⌘S is Sync), Share ›
+  File… (toolbar and Vault menu), a repository's or scope's Share…, a folder's Share as File… and
+  the Overview's Share Stage…. Step 1, what to share: REPOSITORIES as removable chips in a
+  `FlowLayout` (`shippingbox`, `.monoName`, an `xmark.circle.fill`) with an Add Repository
+  borderless menu; STAGES as checkboxes across those repositories, a production stage with a
+  `.warning` "Production" chip, unchecked at first and checked only through a confirmation dialog
+  ("Include production?", Include Production); "Repository-level secrets and variables" as a
+  checkbox beside ADJUST WHAT'S INCLUDED; then the scope tree with one root per repository (and
+  folders), destinations as nodes with their provider symbol; the summary ("7 secrets and
+  variables in 3 repositories") in `.statusLine` `subtleText` and the value-missing names as a
+  warning note. Step 2, SEND TO: two radio cards (`fxCardBackground(.container)`, a `brand`
+  `largecircle.fill.circle` when chosen): Teammates (checkboxes, "Paired remotely" as a caption,
+  "2 of up to 10 teammates" in `.monoMeta`; scrolls past 6) and "Anyone, with a passphrase",
+  whose explanation turns `warning` and names the production places when it is not available;
+  EXPIRES AFTER as a `SegmentedPill` (1 day / 7 days / 30 days) with the honest note for the
+  chosen mode in `.caption` `subtleText`. Then Touch ID or the password (`ShareReauthView`) and
+  the result: the six words (`PassphraseView`, a `warning` `SheetCallout` "Send these words
+  another way…", "I've saved it") or a `success` `SheetCallout` "Sealed for Ana and Omar" with
+  the expiry; Share… (primary, the system picker) and Save… (secondary), the file name in
+  `.monoMeta`. The footer: Back (secondary), Cancel, Continue / Create Share File (primary).
+- Import Share for a project file (v0.9.0, `ProjectShareImportView`): a passphrase field only for
+  passphrase files; a teammates file opens directly, and "Not sent to this Mac", "Sender isn't
+  your teammate" and "This share file has expired" are failures with their own title. The
+  sender row: a person symbol, "From Ana" in `.bodyEmphasized`, `StatusChip` "Verified teammate"
+  (`.success`) or "Not verified" (`.warning`) with its explanation as help, then created and
+  expiry dates in `.monoMeta`. One `Card(.container)` lists the repositories: `checkmark.circle.fill`
+  `success` "In your vault", `arrow.down.circle` `brand` "Will be imported from GitHub with
+  user-a", `xmark.circle` `warning` "Skipped: none of your GitHub accounts can see it" (the name
+  muted), counts in `.monoMeta` and a chevron (`brand` when chosen). The chosen repository shows
+  today's merge preview, then DESTINATIONS (provider symbol, "Azure Key Vault · kv-example-staging",
+  the stage as a chip, `.warning` for production, and "New, without a connection…" or "Merges
+  into your destination…" as a caption) and FOLDERS (a picker: New folder, Merge keep mine /
+  replace mine, Don't import). A note closes it: "Nothing reaches GitHub or a provider until you
+  include it in Sync." The content scrolls past `projectShareContentMaxHeight`. After Import,
+  `SheetCallout`s list what changed ("1 change waits for you in Sync › From Files" in `brand`),
+  and the main window has already moved to the first repository's Overview at the first stage.
+- Sync's From Files (v0.9.0, `SyncHeldSharesView`): a `ConfigSheetField` after the summary, its
+  explanation as a caption, then one `ConfigSheetList` row per held file: `doc.badge.ellipsis` in
+  `warning`, "From Ana's file" in `.bodyEmphasized` with a "Verified" `.success` chip or an
+  "Unverified" tag, "Imported Jan 15, 2027 at 12:00 PM · 2 items" in `.monoMeta`, "Include in this Sync"
+  as a checkbox (off), and Show 2 Items / Hide Items expanding the names per repository, scope
+  and destination. A single file starts expanded. When only held rows wait, an `.info` `Banner`
+  says so and Sync stays disabled until a file is included.
+- Not Nearby… (v0.9.0, `RemotePairingSheet`, `addTeammateSheetWidth`, eyebrow TEAMMATES, an
+  Experimental tag): the four steps as a numbered list and Create Invitation (primary); "Send
+  Your Invitation" with Share… / Save…; an opened invitation ("Invitation from Ana", the person
+  card, Create Reply); "Send Your Reply" and "Reply from Omar" with the person card and
+  `PairingCodeView`: a `Card` with COMPARE THESE WORDS and the six words numbered in two columns
+  (`StepCounter.padded`, `.passphraseWord`, selectable), then the warning caption. The footer is
+  Cancel (the cancel action) and The Words Match, the same secondary pill as the nearby code's
+  answers (`SASDecision`) and never the default button; afterwards "Omar is now your teammate…"
+  and Done.
 
 - Content on `card` (`.fxSheetBackground()`), padding 32, gap 22–24.
 - Header: `SectionLabel` (REVIEW BEFORE SYNC) + `.title` + `mutedText` `.body` line.
@@ -524,6 +584,17 @@ Token… and Remove…; then Add Connection… (outline); the footnote says toke
 vault). Add Connection… and Replace Token… are a `ConfigEditorSheet` (provider pill and name when
 adding, the token in a mono `SecureField`, "Check and Save" as the primary; a failed check shows
 under the field in `danger`).
+
+Sharing (v0.9.0, tab symbol `paperplane`) has one section, FILES YOU SENT, with its footnote
+("Values are never kept here"): one row per export, newest first: the date in `.monoMeta`, an
+"Expired" neutral chip or "Expires …", a ••• menu with Remove from List (a confirmation that the
+sent file is not affected), the recipients ("Passphrase" or "Teammates: Ana, Omar"), the
+repositories and stages, and a disclosure "Names in this file · 4 secrets" with a `warning` note
+"Rotate these secrets if the file leaked." over the names per place.
+
+Teammates (v0.9.0): a remotely paired row adds "Paired remotely" as a caption and, until its
+announce key arrives, "Seen nearby once you meet on the same network" instead of the last-seen
+time; Not Nearby… (outline) and an Experimental tag sit beside Add Teammate….
 
 ### `.env`, sharing, nearby and chat (sheet pattern)
 
@@ -565,8 +636,9 @@ Failures use `Banner(.danger)`.
   the receiver's repositories in `.shareListContainer()`; a repository that cannot be chosen is
   `.selectionDisabled` with the capability chip text ("Read-only: admin required") as a caption
   and its explanation as help, and the sender's own `owner/name` says "Same as the sender's".
-  Save as File… is the Share as File sheet titled "Save as File" with "Received in Nearby Chat"
-  as its scope label.
+  Save as File… is the `ShareExportScreen` sheet titled "Save as File" with "Received in Nearby
+  Chat" as its label (v0.9.0: the only use of that sheet; a repository with a production
+  environment shows the "Production goes to teammates only" alert).
 
 ## Do and don't
 
@@ -631,6 +703,10 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
   so at the default window width (1,120 pt, sidebar shown) a stage with three or more places
   scrolls sideways and the last column starts clipped at the card's edge. Collapsing the sidebar
   or widening the window shows it whole.
+- Import Share for a project file (v0.9.0) previews one repository at a time: the list chooses
+  which; the others are not expanded together.
+- In Share Project (v0.9.0), changing the stages rebuilds the tree, so boxes adjusted by hand in
+  it are reset (checked folders are kept).
 
 ## Visual snapshots
 
@@ -651,6 +727,13 @@ adds `main-folder`, `main-folder-variables`, `main-sidebar-teammates`, `presence
 `folder-destination` and `folder-destination-new`; v0.8.0 adds `main-destination-keyvault`,
 `main-destination-vercel`, `main-overview`, `add-destination` and `settings-destinations`, over
 `MainSnapshotFixture.destinations` (`kv-example-prod` and `example-web · Production`)).
+v0.9.0 adds two suites gated the same way (pass `-only-testing:AppTests/ProjectShareSnapshotTests`
+and `-only-testing:AppTests/ProjectShareTeamSnapshotTests`): `project-share-contents`,
+`project-share-contents-three`, `project-share-send-to`, `project-share-send-to-passphrase`,
+`project-share-passphrase`, `project-share-teammates-done`, `project-share-open`,
+`project-share-expired` and `settings-sharing`; `sync-held-one`, `sync-held-two`,
+`sync-held-only`, `main-held`, `pairing-start`, `pairing-invitation-ready`, `pairing-invitation`,
+`pairing-reply-ready`, `pairing-reply`, `pairing-paired` and `settings-teammates-paired-remotely`.
 The offscreen window capture leaves the repository sidebar blank or black in some captures; the
 running app draws it normally. SwiftUI `ImageRenderer` is not used: it
 cannot draw AppKit-backed views (`ScrollView`, `List`, `Table`, text fields, toggles, the split

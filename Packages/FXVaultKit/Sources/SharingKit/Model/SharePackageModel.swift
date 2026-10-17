@@ -209,21 +209,7 @@ public struct SharePackageModel: Sendable, Equatable {
 
     /// Every config item with its location, repository level first, in document order.
     public var flattenedItems: [ShareLocatedItemModel] {
-        var result = repository.secrets.map {
-            ShareLocatedItemModel(environmentName: nil, kind: .secret, item: $0)
-        }
-        result += repository.variables.map {
-            ShareLocatedItemModel(environmentName: nil, kind: .variable, item: $0)
-        }
-        for environment in repository.environments {
-            result += environment.secrets.map {
-                ShareLocatedItemModel(environmentName: environment.name, kind: .secret, item: $0)
-            }
-            result += environment.variables.map {
-                ShareLocatedItemModel(environmentName: environment.name, kind: .variable, item: $0)
-            }
-        }
-        return result
+        repository.flattenedItems
     }
 
     /// Number of config items (not environments).
@@ -234,6 +220,11 @@ public struct SharePackageModel: Sendable, Equatable {
     /// Counts per scope (repository level, then each environment) for summaries. Names and
     /// counts only, never values.
     public var contentSummary: ShareContentSummaryModel {
+        Self.summary(of: repository)
+    }
+
+    /// Counts per scope of `repository` (also used by bundles, v0.9.0).
+    static func summary(of repository: ShareRepositoryModel) -> ShareContentSummaryModel {
         ShareContentSummaryModel(
             repositoryLevel: ShareItemCountModel(
                 secrets: repository.secrets.count,
@@ -368,6 +359,25 @@ public struct ShareRepositoryModel: Sendable, Equatable {
         return copy
     }
 
+    /// Every config item with its location, repository level first, in document order.
+    public var flattenedItems: [ShareLocatedItemModel] {
+        var result = secrets.map {
+            ShareLocatedItemModel(environmentName: nil, kind: .secret, item: $0)
+        }
+        result += variables.map {
+            ShareLocatedItemModel(environmentName: nil, kind: .variable, item: $0)
+        }
+        for environment in environments {
+            result += environment.secrets.map {
+                ShareLocatedItemModel(environmentName: environment.name, kind: .secret, item: $0)
+            }
+            result += environment.variables.map {
+                ShareLocatedItemModel(environmentName: environment.name, kind: .variable, item: $0)
+            }
+        }
+        return result
+    }
+
     func mapItems(_ transform: (ShareItemModel) -> ShareItemModel) -> ShareRepositoryModel {
         var copy = self
         copy.secrets = secrets.map(transform)
@@ -394,6 +404,10 @@ public struct ShareItemModel: Sendable, Equatable, Identifiable {
     /// GitHub's `updatedAt` for this item as last seen by the sender.
     public var githubUpdatedAt: Date?
     public var syncState: ShareSyncState
+    /// `link` (schema 4 only, v0.9.0): a per-file token shared by the items of one linked-copy
+    /// group inside a bundle (at least two of them). Never the sender's `link_id`; nil in
+    /// schemas 1–3, where the validator rejects it.
+    public var linkToken: String?
 
     public init(
         id: ShareEntryID = ShareEntryID(),
@@ -401,7 +415,8 @@ public struct ShareItemModel: Sendable, Equatable, Identifiable {
         value: SecretBytes?,
         valueState: ConfigValueState,
         githubUpdatedAt: Date?,
-        syncState: ShareSyncState
+        syncState: ShareSyncState,
+        linkToken: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -409,6 +424,7 @@ public struct ShareItemModel: Sendable, Equatable, Identifiable {
         self.valueState = valueState
         self.githubUpdatedAt = githubUpdatedAt
         self.syncState = syncState
+        self.linkToken = linkToken
     }
 }
 

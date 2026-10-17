@@ -184,6 +184,9 @@ enum Theme {
         static let shareListMinHeight: CGFloat = 140
         /// Width of the per-item action picker in the import preview.
         static let shareActionPickerWidth: CGFloat = 150
+        /// Tallest scrolling content of a project share sheet (v0.9.0): the tree, stages and
+        /// summary of Share Project, the repositories and previews of Import Share.
+        static let projectShareContentMaxHeight: CGFloat = 520
         /// Minimum width of each SAS decision button ("Codes match" / "Don't match").
         static let sasButtonMinWidth: CGFloat = 160
 

@@ -6,15 +6,76 @@ import VaultCore
 
 /// What the Sync sheet shows before the user confirms (§7.2, §7.3): the preflight plus the
 /// variables that look like credentials (§5.13), which the user confirms before the run.
+///
+/// **Held share files (v0.9.0, P8).** ``preflight`` and ``credentialWarnings`` leave out every
+/// change of a row held by a share file (and a new or renamed environment that waits for one).
+/// ``heldShares`` lists those files for the From Files review; the user includes some, the app
+/// shows ``preflight(including:)`` and passes the same set to
+/// ``SyncRepository/startRun(_:includeDeletions:includeHeld:cloneFolder:spaceReason:)``.
 public struct SyncReviewModel: Sendable, Hashable {
+    /// The run without any held change.
     public var preflight: SyncPreflightModel
-    /// Executable variable sets whose name or value looks like a credential. The app asks
-    /// "Push these as variables anyway?" before ``SyncRepository/startRun(_:includeDeletions:cloneFolder:)``.
+    /// Executable variable sets whose name or value looks like a credential, held ones left out.
+    /// The app asks "Push these as variables anyway?" before
+    /// ``SyncRepository/startRun(_:includeDeletions:includeHeld:cloneFolder:spaceReason:)``.
     public var credentialWarnings: [SyncCredentialWarningModel]
+    /// Share files whose rows wait for the From Files review, most recent import first. Every
+    /// file is offered again at each Sync until it is included or released.
+    public var heldShares: [HeldShareModel]
+    /// The preflight with every change, held ones included.
+    let completePreflight: SyncPreflightModel
+    /// Every credential warning, held changes included.
+    let allCredentialWarnings: [SyncCredentialWarningModel]
+    /// Each repository's held rows at preflight time.
+    let holds: [RepoID: [ConfigItemID: SharePackageID]]
 
     public init(preflight: SyncPreflightModel, credentialWarnings: [SyncCredentialWarningModel]) {
-        self.preflight = preflight
-        self.credentialWarnings = credentialWarnings
+        self.init(completePreflight: preflight, credentialWarnings: credentialWarnings, holds: [:], heldShares: [])
+    }
+
+    init(
+        completePreflight: SyncPreflightModel,
+        credentialWarnings: [SyncCredentialWarningModel],
+        holds: [RepoID: [ConfigItemID: SharePackageID]],
+        heldShares: [HeldShareModel]
+    ) {
+        self.completePreflight = completePreflight
+        allCredentialWarnings = credentialWarnings
+        self.holds = holds
+        self.heldShares = heldShares
+        let narrowed = Self.narrow(completePreflight, holds: holds, included: [])
+        preflight = narrowed
+        self.credentialWarnings = Self.warnings(credentialWarnings, in: narrowed)
+    }
+
+    /// The run with the held changes of `included` files back in (the From Files review's
+    /// choices). Empty: ``preflight``.
+    public func preflight(including included: Set<SharePackageID>) -> SyncPreflightModel {
+        included.isEmpty ? preflight : Self.narrow(completePreflight, holds: holds, included: included)
+    }
+
+    /// The credential warnings of ``preflight(including:)``.
+    public func credentialWarnings(including included: Set<SharePackageID>) -> [SyncCredentialWarningModel] {
+        included.isEmpty ? credentialWarnings : Self.warnings(allCredentialWarnings, in: preflight(including: included))
+    }
+
+    private static func narrow(
+        _ preflight: SyncPreflightModel,
+        holds: [RepoID: [ConfigItemID: SharePackageID]],
+        included: Set<SharePackageID>
+    ) -> SyncPreflightModel {
+        guard !holds.isEmpty else { return preflight }
+        var filters: [RepoID: HeldChangeFilter] = [:]
+        for repository in preflight.repositories {
+            guard let repositoryHolds = holds[repository.id], !repositoryHolds.isEmpty else { continue }
+            filters[repository.id] = HeldChangeFilter(snapshot: repository.snapshot, holds: repositoryHolds, included: included)
+        }
+        return preflight.excludingHeld(filters)
+    }
+
+    private static func warnings(_ warnings: [SyncCredentialWarningModel], in preflight: SyncPreflightModel) -> [SyncCredentialWarningModel] {
+        let executable = Set(preflight.repositories.flatMap { $0.executable.map(\.id) })
+        return warnings.filter { executable.contains($0.changeID) }
     }
 
     /// The §7.2 summary.

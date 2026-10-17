@@ -206,6 +206,28 @@ public enum Limits {
     /// Highest accepted `.fxvault` memory limit, in KiB (1 GiB).
     public static let shareKDFMemoryKiBMax = 1 * bytesPerMiB
 
+    // MARK: - Project share files (v0.9.0, `.fxvault` format 2)
+
+    /// Most teammates one file is sealed for.
+    public static let maxShareRecipients = 10
+    /// Most repositories in one share bundle.
+    public static let maxShareRepositories = 50
+    /// Bytes of a recipient slot id (`HMAC(salt, deviceID)` prefix).
+    public static let shareSlotIDBytes = 8
+    /// Bytes of one recipient slot: slot id, HPKE encapsulated key (32) and the wrapped content key
+    /// (32 plus a 16-byte tag).
+    public static let shareRecipientSlotBytes = shareSlotIDBytes + 32 + 32 + 16
+    /// Bytes in front of the payload inside a teammates file: sender device id (16), sender
+    /// announce key (32) and the Ed25519 signature (64).
+    public static let shareSenderPrefixBytes = 16 + 32 + 64
+    /// Largest accepted `.fxvault` format 2 file.
+    public static let maxShareFileV2Bytes = maxSharePayloadBytes + shareSenderPrefixBytes + shareHeaderBytes
+        + maxShareRecipients * shareRecipientSlotBytes + gcmTagBytes
+    /// Random bytes in a remote pairing invitation or reply.
+    public static let pairingNonceBytes = 32
+    /// Largest accepted `.fxvcard` file.
+    public static let maxPairingCardFileBytes = 4 * bytesPerKiB
+
     // MARK: - Nearby (§9.4)
 
     /// Largest plaintext handshake frame.

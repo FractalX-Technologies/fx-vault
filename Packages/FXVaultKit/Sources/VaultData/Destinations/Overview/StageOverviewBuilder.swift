@@ -31,6 +31,8 @@ enum StageOverviewBuilder {
         let status: ConfigSyncStatus
         let isDeleted: Bool
         let linkCount: Int
+        /// Held by a share file (v0.9.0).
+        let isHeld: Bool
     }
 
     static func build(_ input: StageOverviewInput) -> StageOverviewModel {
@@ -109,7 +111,7 @@ enum StageOverviewBuilder {
         case .blocked:
             return .valueMissing
         case .added, .modified, .willPush:
-            return .willPush
+            return entry.isHeld ? .held : .willPush
         case .synced, .unverifiedShare:
             return input.differing.contains(entry.id) ? .differs : .synced
         case .deleted:
@@ -239,10 +241,24 @@ enum StageOverviewBuilder {
 
 private extension StageOverviewBuilder.Entry {
     init(_ item: ConfigItemModel) {
-        self.init(id: item.id, kind: item.kind, status: item.syncStatus, isDeleted: item.isDeleted, linkCount: item.isLinked ? item.linkCount : 0)
+        self.init(
+            id: item.id,
+            kind: item.kind,
+            status: item.syncStatus,
+            isDeleted: item.isDeleted,
+            linkCount: item.isLinked ? item.linkCount : 0,
+            isHeld: item.isHeld
+        )
     }
 
     init(_ item: DestinationItemModel) {
-        self.init(id: item.id, kind: item.kind, status: item.syncStatus, isDeleted: item.isDeleted, linkCount: item.isLinked ? item.linkCount : 0)
+        self.init(
+            id: item.id,
+            kind: item.kind,
+            status: item.syncStatus,
+            isDeleted: item.isDeleted,
+            linkCount: item.isLinked ? item.linkCount : 0,
+            isHeld: item.isHeld
+        )
     }
 }

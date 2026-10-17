@@ -7,15 +7,20 @@ import VaultCore
 /// warning and its second confirmation, and the replay warning. Values are never shown.
 struct ShareImportPreviewView: View {
     let editor: ShareImportPlanEditor
+    /// False inside a project share's preview (v0.9.0), which shows the sender, the replay
+    /// warning and the totals once for the whole file.
+    var isStandalone = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            ShareNoteView(
-                systemImage: "person.crop.circle.badge.questionmark",
-                text: origin
-            )
-            if editor.plan.requiresReplayConfirmation {
-                replayWarning
+            if isStandalone {
+                ShareNoteView(
+                    systemImage: "person.crop.circle.badge.questionmark",
+                    text: origin
+                )
+                if editor.plan.requiresReplayConfirmation {
+                    replayWarning
+                }
             }
             List {
                 ForEach(editor.sections) { section in
@@ -44,14 +49,16 @@ struct ShareImportPreviewView: View {
                 }
             }
             .shareListContainer()
-            .frame(height: Theme.Layout.shareListHeight)
+            .frame(height: isStandalone ? Theme.Layout.shareListHeight : Theme.Layout.shareListMinHeight)
             HStack(spacing: Theme.Spacing.medium) {
-                Text(String(
-                    localized: "share.preview.summary",
-                    defaultValue: "\(editor.changedCount) changes, \(editor.pendingChangeCount) pending until you Sync"
-                ))
-                .fxTextStyle(.statusLine)
-                .foregroundStyle(Theme.Colors.subtleText)
+                if isStandalone {
+                    Text(String(
+                        localized: "share.preview.summary",
+                        defaultValue: "\(editor.changedCount) changes, \(editor.pendingChangeCount) pending until you Sync"
+                    ))
+                    .fxTextStyle(.statusLine)
+                    .foregroundStyle(Theme.Colors.subtleText)
+                }
                 Spacer()
                 if editor.hasDifferingItems {
                     Button(String(localized: "share.preview.overwriteAll", defaultValue: "Overwrite All")) {
@@ -187,42 +194,66 @@ struct ShareImportPreviewView: View {
     }
 }
 
-/// One incoming item: name, kind, chip, warnings and the action picker.
+/// One incoming item of the GitHub scopes.
 private struct ShareImportItemRow: View {
     let item: ShareItemPlanModel
     let onSelect: (ShareItemAction) -> Void
 
     var body: some View {
+        ShareImportActionRow(
+            kind: item.key.kind,
+            name: item.key.name,
+            warnings: item.warnings,
+            chip: item.chip,
+            allowedActions: item.allowedActions,
+            action: item.action,
+            onSelect: onSelect
+        )
+    }
+}
+
+/// One incoming item: name, kind, chip, warnings and the action picker (GitHub scopes, and a
+/// project share's destinations, v0.9.0).
+struct ShareImportActionRow: View {
+    let kind: ConfigKind
+    let name: String
+    let warnings: Set<ShareItemWarning>
+    let chip: ShareItemChip
+    let allowedActions: [ShareItemAction]
+    let action: ShareItemAction
+    let onSelect: (ShareItemAction) -> Void
+
+    var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
-            Image(systemName: item.key.kind == .secret ? "key" : "textformat")
+            Image(systemName: kind == .secret ? "key" : "textformat")
                 .font(Theme.Typography.callout)
                 .foregroundStyle(Theme.Colors.subtleText)
-                .accessibilityLabel(item.key.kind == .secret
+                .accessibilityLabel(kind == .secret
                     ? String(localized: "share.preview.kind.secret", defaultValue: "Secret")
                     : String(localized: "share.preview.kind.variable", defaultValue: "Variable"))
             VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                TableNameText(name: item.key.name)
-                ForEach(Array(item.warnings).sorted { $0.rawValue < $1.rawValue }, id: \.self) { warning in
+                TableNameText(name: name)
+                ForEach(Array(warnings).sorted { $0.rawValue < $1.rawValue }, id: \.self) { warning in
                     Text(warning.localizedMessage)
                         .fxTextStyle(.caption)
                         .foregroundStyle(Theme.Colors.warning)
                 }
             }
             Spacer(minLength: Theme.Spacing.small)
-            item.chip.chip
-            if item.allowedActions.count > 1 {
+            chip.chip
+            if allowedActions.count > 1 {
                 Picker(
                     String(localized: "share.preview.action", defaultValue: "Action"),
-                    selection: Binding(get: { item.action }, set: { onSelect($0) })
+                    selection: Binding(get: { action }, set: { onSelect($0) })
                 ) {
-                    ForEach(item.allowedActions, id: \.self) { action in
+                    ForEach(allowedActions, id: \.self) { action in
                         Text(action.localizedTitle).tag(action)
                     }
                 }
                 .labelsHidden()
                 .frame(width: Theme.Layout.shareActionPickerWidth)
             } else {
-                Text(item.action.localizedTitle)
+                Text(action.localizedTitle)
                     .fxTextStyle(.callout)
                     .foregroundStyle(Theme.Colors.mutedText)
                     .frame(width: Theme.Layout.shareActionPickerWidth, alignment: .leading)

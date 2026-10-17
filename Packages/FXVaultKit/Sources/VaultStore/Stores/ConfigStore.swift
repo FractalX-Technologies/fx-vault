@@ -327,6 +327,48 @@ public struct ConfigStore: Sendable {
         try LinkCountQuery.counts(of: Set(states.compactMap(\.linkID)), db: db)
     }
 
+    // MARK: - Share holds (v0.9.0)
+
+    /// Sets or clears `share_hold` on `itemIDs`. Hold metadata only: the rows' values, AADs and
+    /// sync state are untouched.
+    public func setShareHold(_ packageID: SharePackageID?, itemIDs: [ConfigItemID], in tx: StoreTransaction) throws {
+        guard !itemIDs.isEmpty else { return }
+        try ConfigItemRecord
+            .filter(keys: itemIDs.map(\.uuidString))
+            .updateAll(tx.db, ConfigItemRecord.CodingKeys.shareHold.set(to: packageID?.uuidString))
+    }
+
+    /// The rows held under `packageID`, or under any share file when nil, without ciphertext,
+    /// ordered by repository, scope and name.
+    public func fetchHeldItemStates(packageID: SharePackageID? = nil, in tx: StoreTransaction) throws -> [ConfigItemState] {
+        var request = ConfigItemRecord.filter(ConfigItemRecord.CodingKeys.shareHold != nil)
+        if let packageID {
+            request = request.filter(ConfigItemRecord.CodingKeys.shareHold == packageID.uuidString)
+        }
+        return try request
+            .select(ConfigItemState.selection)
+            .order(
+                ConfigItemRecord.CodingKeys.repositoryID,
+                ConfigItemRecord.CodingKeys.environmentID,
+                ConfigItemRecord.CodingKeys.name,
+                ConfigItemRecord.CodingKeys.kind
+            )
+            .asRequest(of: ConfigItemState.self)
+            .fetchAll(tx.db)
+    }
+
+    public func fetchHeldItemStates(packageID: SharePackageID? = nil) throws -> [ConfigItemState] {
+        try database.read { try fetchHeldItemStates(packageID: packageID, in: $0) }
+    }
+
+    /// Releases every row held under `packageID`. Returns how many rows it released.
+    @discardableResult
+    public func clearShareHold(packageID: SharePackageID, in tx: StoreTransaction) throws -> Int {
+        try ConfigItemRecord
+            .filter(ConfigItemRecord.CodingKeys.shareHold == packageID.uuidString)
+            .updateAll(tx.db, ConfigItemRecord.CodingKeys.shareHold.set(to: nil))
+    }
+
     // MARK: - Pending-change inputs (§7.1)
 
     /// Everything `ChangeSetBuilder` needs for one repository, without ciphertext; nil if the

@@ -49,8 +49,10 @@ struct TeamRepositoryTests {
         let record = try #require(try harness.database.read { tx in
             try TeamStore(database: harness.database).fetchTeammate(deviceID: ana.deviceID.hex, in: tx)
         })
-        #expect(record.announceCiphertext != ana.announceKey)
-        #expect(!record.announceCiphertext.contains(ana.announceKey.prefix(8)))
+        let sealed = try #require(record.announceCiphertext)
+        #expect(sealed != ana.announceKey)
+        #expect(!sealed.contains(ana.announceKey.prefix(8)))
+        #expect(record.pairedVia == .nearby)
 
         harness.manager.lock()
         #expect(try team.teammates().count == 2, "names stay readable while locked")
@@ -121,6 +123,110 @@ struct TeamRepositoryTests {
 
         #expect(try team.deviceKeys().deviceID == device.deviceID)
         #expect(try team.teammateCards() == [ana])
+    }
+
+    // MARK: - Remote pairing (v0.9.0)
+
+    @Test func aRemoteInviterWithoutAnAnnounceKeyIsNeverMatchedUntilAFileBringsIt() async throws {
+        let harness = try await ConfigHarness.make()
+        let team = Self.team(harness)
+        let ana = Self.card("Ana")
+        try team.addTeammateAwaitingAnnounceKey(
+            deviceID: ana.deviceID,
+            signingPublicKey: ana.signingPublicKey,
+            agreementPublicKey: ana.agreementPublicKey,
+            login: ana.login,
+            displayName: ana.displayName,
+            macName: ana.macName
+        )
+        let model = try #require(try team.teammates().first)
+        #expect(model.pairedVia == .remote && !model.hasAnnounceKey && !model.needsCardUpdate)
+
+        // Sessions still verify its keys; presence never matches its real pseudonyms.
+        let placeholder = try #require(try team.teammateCards().first)
+        #expect(placeholder.deviceID == ana.deviceID && placeholder.signingPublicKey == ana.signingPublicKey)
+        #expect(placeholder.announceKey != ana.announceKey)
+        #expect(try team.teammateCards().first?.announceKey != placeholder.announceKey, "never stored")
+        let now = harness.clock.now
+        let matcher = TeamPresenceMatcher(teammates: try team.teammateCards(), at: now)
+        let advertised = TeamPseudonym.name(announceKey: ana.announceKey, window: TeamPseudonym.window(at: now))
+        #expect(matcher.teammate(advertising: advertised) == nil)
+
+        // DEK rotation skips the missing key.
+        let recovery = try await harness.manager.rotateDEK(password: ConfigFixture.password)
+        recovery.wipe()
+        #expect(try team.teammates().first?.hasAnnounceKey == false)
+
+        #expect(try team.fillAnnounceKeyIfMissing(ana.announceKey, teammate: ana.deviceID.hex))
+        #expect(try team.teammateCards() == [ana])
+        #expect(try team.teammates().first?.hasAnnounceKey == true)
+        #expect(TeamPresenceMatcher(teammates: try team.teammateCards(), at: now).teammate(advertising: advertised) == ana.deviceID)
+
+        // A known key is never replaced from a file.
+        let other = TeamDeviceKeys.generate().withNewAnnounceKey().card(login: "", displayName: "", macName: "")
+        #expect(try !team.fillAnnounceKeyIfMissing(other.announceKey, teammate: ana.deviceID.hex))
+        #expect(try team.teammateCards() == [ana])
+        #expect(throws: TeamRepositoryError.keys(.teamCardInvalid)) {
+            try team.fillAnnounceKeyIfMissing(Data([1, 2, 3]), teammate: ana.deviceID.hex)
+        }
+        #expect(throws: TeamRepositoryError.teammateNotFound) {
+            try team.fillAnnounceKeyIfMissing(ana.announceKey, teammate: Self.card("Eve").deviceID.hex)
+        }
+    }
+
+    @Test func aRemoteInviterMustHaveMatchingKeys() async throws {
+        let harness = try await ConfigHarness.make()
+        let team = Self.team(harness)
+        let ana = Self.card("Ana")
+        let eve = Self.card("Eve")
+        #expect(throws: TeamRepositoryError.keys(.teamCardInvalid)) {
+            try team.addTeammateAwaitingAnnounceKey(
+                deviceID: eve.deviceID,
+                signingPublicKey: ana.signingPublicKey,
+                agreementPublicKey: ana.agreementPublicKey,
+                login: "",
+                displayName: "",
+                macName: ""
+            )
+        }
+        #expect(try team.teammates().isEmpty)
+    }
+
+    @Test func pairingRemotelyAgainKeepsAKnownAnnounceKeyAndNearbyPairingUpgradesTheRow() async throws {
+        let harness = try await ConfigHarness.make()
+        let team = Self.team(harness)
+        let ana = Self.card("Ana")
+        try team.addTeammate(ana)
+        try team.addTeammateAwaitingAnnounceKey(
+            deviceID: ana.deviceID,
+            signingPublicKey: ana.signingPublicKey,
+            agreementPublicKey: ana.agreementPublicKey,
+            login: ana.login,
+            displayName: ana.displayName,
+            macName: ana.macName
+        )
+        #expect(try team.teammateCards() == [ana])
+        #expect(try team.teammates().first?.pairedVia == .remote)
+
+        try team.addTeammate(ana)
+        #expect(try team.teammates().first?.pairedVia == .nearby)
+    }
+
+    @Test func aRemoteReplierKeepsItsAnnounceKeyAndStillNeedsThisCard() async throws {
+        let harness = try await ConfigHarness.make()
+        let team = Self.team(harness)
+        let keys = TeamDeviceKeys.generate()
+        let ben = keys.card(login: "ben", displayName: "Ben", macName: "")
+        try team.addTeammate(ben, pairedVia: .remote)
+        let model = try #require(try team.teammates().first)
+        #expect(model.pairedVia == .remote && model.hasAnnounceKey && model.needsCardUpdate)
+        #expect(try team.teammateCards() == [ben])
+
+        let renewed = keys.withNewAnnounceKey().card(login: "ben", displayName: "Ben", macName: "")
+        try team.applyCardUpdate(renewed)
+        #expect(try team.teammates().first?.pairedVia == .remote)
+        try team.cardUpdateDelivered(to: ben.deviceID.hex)
+        #expect(try team.teammates().first?.needsCardUpdate == false)
     }
 
     @Test func remoteAccessIsOffUntilTurnedOnPerTeammate() async throws {

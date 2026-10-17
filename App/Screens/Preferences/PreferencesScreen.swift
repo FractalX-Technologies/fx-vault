@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The Settings window (§10 Preferences): General, Security, Accounts, Teammates (v0.5.0),
-/// Destinations (v0.8.0), Advanced.
+/// Destinations (v0.8.0), Sharing (v0.9.0), Advanced.
 struct PreferencesScreen: View {
     @State private var viewModel: PreferencesViewModel
 
@@ -37,6 +37,11 @@ struct PreferencesScreen: View {
                     Label(String(localized: "settings.tab.destinations", defaultValue: "Destinations"), systemImage: "server.rack")
                 }
                 .tag(PreferencesViewModel.Tab.destinations)
+            SharingSettingsScreen(viewModel: viewModel.sharing)
+                .tabItem {
+                    Label(ProjectShareCopy.settingsTab, systemImage: "paperplane")
+                }
+                .tag(PreferencesViewModel.Tab.sharing)
             AdvancedSettingsView(viewModel: viewModel)
                 .tabItem {
                     Label(String(localized: "settings.tab.advanced", defaultValue: "Advanced"), systemImage: "slider.horizontal.3")

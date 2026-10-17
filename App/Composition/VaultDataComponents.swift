@@ -103,7 +103,17 @@ struct VaultDataComponents {
             clock: clock,
             writePolicy: writePolicy
         )
-        let sharing = SharingRepository(session: session, schedulers: github, deriver: deriver, clock: clock, writePolicy: writePolicy)
+        let catalog = RepoCatalogRepository(session: session, schedulers: github, clock: clock)
+        // A project share's ⇣ repositories are looked up and imported through this Mac's gh
+        // accounts; a gh that is not ready makes the lookup fail, which shows as unreachable.
+        let sharing = SharingRepository(
+            session: session,
+            schedulers: github,
+            deriver: deriver,
+            clock: clock,
+            writePolicy: writePolicy,
+            repositoryAccess: CatalogShareRepositoryAccess(github: github, catalog: catalog, isGitHubReady: { true })
+        )
         let spaces = SpaceRepository(session: session, schedulers: github, clock: clock)
         let azureTokens = ShellResolvingAzureTokens(
             github: github,
@@ -119,7 +129,7 @@ struct VaultDataComponents {
         return VaultDataComponents(
             session: session,
             github: github,
-            catalog: RepoCatalogRepository(session: session, schedulers: github, clock: clock),
+            catalog: catalog,
             config: ConfigRepository(session: session, clock: clock, writePolicy: writePolicy),
             envFiles: EnvFileRepository(
                 session: session,

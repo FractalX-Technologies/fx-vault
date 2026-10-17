@@ -162,7 +162,7 @@ struct ShareExportBuilder: Sendable {
 
     /// `synced` only when GitHub has exactly the local value: no pending change and a verified
     /// push (a value from an unverified share is not confirmed either).
-    private static func syncState(_ record: ConfigItemRecord) -> ShareSyncState {
+    static func syncState(_ record: ConfigItemRecord) -> ShareSyncState {
         let state = record.state
         let isConfirmed = state.model.syncStatus == .synced && state.verifyState == .verified
         return isConfirmed ? .synced : .pending

@@ -22,6 +22,7 @@ public enum VaultMigrator {
         case v11Spaces = "v11_spaces"
         case v12Folders = "v12_folders"
         case v13Destinations = "v13_destinations"
+        case v14ProjectShares = "v14_project_shares"
 
         /// The newest migration this build knows.
         public static var latest: Migration {
@@ -52,6 +53,7 @@ public enum VaultMigrator {
             case .v11Spaces: MigrationSQL.v11Spaces
             case .v12Folders: MigrationSQL.v12Folders
             case .v13Destinations: MigrationSQL.v13Destinations
+            case .v14ProjectShares: MigrationSQL.v14ProjectShares
             }
         }
     }

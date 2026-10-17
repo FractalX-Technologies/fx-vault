@@ -41,8 +41,13 @@ enum ShareImportPlanning {
     /// listed remote variable (comparable with the listing's fingerprint). Incoming values are
     /// compared after D32 normalization, which is how they would be stored.
     static func fingerprinter(keys: UnlockedKeys, remote: ShareRemoteContextModel?) -> ShareFingerprinter {
-        let rowIDs = remote?.rowIDs ?? [:]
-        return { subject, value in
+        fingerprinter(keys: keys, rowIDs: remote?.rowIDs ?? [:])
+    }
+
+    /// ``fingerprinter(keys:remote:)`` for several repositories whose listings share `rowIDs`
+    /// (``remoteContext(_:keys:sharing:)``), as a project share plans them in one call.
+    static func fingerprinter(keys: UnlockedKeys, rowIDs: [ShareRemoteKeyModel: ConfigItemID]) -> ShareFingerprinter {
+        { subject, value in
             let rowID: ConfigItemID
             switch subject {
             case .local(let item):
@@ -60,9 +65,16 @@ enum ShareImportPlanning {
     /// GitHub's listing of the repository for the planner: environment names, secrets with
     /// `updatedAt`, and variables fingerprinted (normalized, D32) under a random row id per
     /// listed name. Listed values are wiped by the caller (`RemoteRepoConfigModel.wipe()`).
-    static func remoteContext(_ listed: RemoteRepoConfigModel, keys: borrowing UnlockedKeys) -> ShareRemoteContextModel {
+    ///
+    /// - Parameter shared: row ids already given to listed names of other repositories (a project
+    ///   share): a name listed again reuses its id, so one fingerprinter serves every repository.
+    static func remoteContext(
+        _ listed: RemoteRepoConfigModel,
+        keys: borrowing UnlockedKeys,
+        sharing shared: [ShareRemoteKeyModel: ConfigItemID] = [:]
+    ) -> ShareRemoteContextModel {
         var items: [ShareRemoteItemModel] = []
-        var rowIDs: [ShareRemoteKeyModel: ConfigItemID] = [:]
+        var rowIDs = shared
         func add(
             secrets: [GHSecretDTO],
             variables: [GHVariableListingModel],
@@ -76,8 +88,9 @@ enum ShareImportPlanning {
                 ))
             }
             for variable in variables {
-                let rowID = ConfigItemID()
-                rowIDs[ShareRemoteKeyModel(environmentName: environmentName, kind: .variable, name: variable.name)] = rowID
+                let key = ShareRemoteKeyModel(environmentName: environmentName, kind: .variable, name: variable.name)
+                let rowID = rowIDs[key] ?? ConfigItemID()
+                rowIDs[key] = rowID
                 let normalized = normalizedCopy(variable.value)
                 defer { normalized.wipe() }
                 items.append(ShareRemoteItemModel(

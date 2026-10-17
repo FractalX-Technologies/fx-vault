@@ -17,6 +17,11 @@ struct ShareImportScreen: View {
         _viewModel = State(initialValue: ShareImportViewModel(context: context, dependencies: dependencies))
     }
 
+    /// Shows an existing view model (previews and the visual snapshot tests).
+    init(viewModel: ShareImportViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
+
     var body: some View {
         @Bindable var viewModel = viewModel
         VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
@@ -43,7 +48,11 @@ struct ShareImportScreen: View {
         case .reading:
             NearbyProgressRow(text: String(localized: "shareImport.reading", defaultValue: "Reading the file…"))
         case .passphrase, .opening:
-            passphraseStep
+            if viewModel.needsPassphrase {
+                passphraseStep
+            } else {
+                NearbyProgressRow(text: String(localized: "shareImport.openingTeammates", defaultValue: "Opening the file with this Mac's teammate keys…"))
+            }
         case .preview, .applying:
             previewStep
         case .done:
@@ -62,6 +71,23 @@ struct ShareImportScreen: View {
         case .folderSaved:
             if let notice = viewModel.folderNotice {
                 SheetCallout(systemImage: "checkmark.circle", tint: Theme.Colors.success, text: notice)
+            }
+        case .bundlePreview, .bundleApplying:
+            if let editor = viewModel.bundleEditor {
+                ScrollView {
+                    ProjectShareImportView(editor: editor, isOnline: viewModel.isOnline)
+                }
+                .frame(maxHeight: Theme.Layout.projectShareContentMaxHeight)
+                .disabled(viewModel.step == .bundleApplying)
+                if viewModel.step == .bundleApplying {
+                    NearbyProgressRow(text: editor.needsRepositoryImport && viewModel.isOnline
+                        ? ProjectShareCopy.importing
+                        : String(localized: "shareImport.applying", defaultValue: "Importing…"))
+                }
+            }
+        case .bundleDone:
+            if let result = viewModel.bundleResult {
+                ProjectShareImportResultView(result: result, failedRepositories: viewModel.failedRepositories)
             }
         case .failed:
             if let failure = viewModel.failure {
@@ -148,7 +174,7 @@ struct ShareImportScreen: View {
         HStack(spacing: Theme.Spacing.mediumMinus) {
             Spacer()
             switch viewModel.step {
-            case .done, .failed, .folderSaved:
+            case .done, .failed, .folderSaved, .bundleDone:
                 Button(String(localized: "common.done", defaultValue: "Done")) {
                     dismiss()
                 }
@@ -167,6 +193,14 @@ struct ShareImportScreen: View {
                 }
                 .fxButtonStyle(.primary, size: .large)
                 .disabled(!viewModel.canApply)
+            case .bundlePreview, .bundleApplying:
+                cancelButton
+                Button(String(localized: "shareImport.apply", defaultValue: "Import")) {
+                    Task { await viewModel.applyBundle() }
+                }
+                .fxButtonStyle(.primary, size: .large)
+                .keyboardShortcut(.defaultAction)
+                .disabled(!viewModel.canApplyBundle)
             case .folderDestination:
                 cancelButton
                 Button(viewModel.destination?.choice == .repository ? FolderDestinationCopy.continueTitle : FolderDestinationCopy.saveTitle) {

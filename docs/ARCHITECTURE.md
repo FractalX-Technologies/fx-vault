@@ -202,8 +202,11 @@ See [DATABASE.md](DATABASE.md). `DatabaseFactory.openLive()/openOnDisk(directory
 stores `VaultRecordStore`, `AccountStore`, `RepoStore`, `ConfigStore`, `SyncJournalStore`,
 `SharePackageStore`, `TeamStore`, `SpaceStore`, `FolderStore` (v0.7.0) and `DestinationStore`
 (v0.8.0: destinations, their items, provider connections, the destination journal, pending
-counts per repository), each with convenience and `in tx:` forms plus `AsyncThrowingStream`
-observation. `LinkCountQuery` counts link groups across `config_items`, `folder_items` and
+counts per repository), `SentShareStore` and `ShareHoldStore` (v0.9.0: the sent log; the held
+rows of both item tables with their import records, and bulk release by package or item), each
+with convenience and `in tx:` forms plus `AsyncThrowingStream` observation. Since v0.9.0
+`ConfigStore` and `DestinationStore` also have `setShareHold(_:itemIDs:in:)`,
+`fetchHeldItemStates(packageID:)` and `clearShareHold(packageID:in:)`. `LinkCountQuery` counts link groups across `config_items`, `folder_items` and
 `destination_items`. `ConfigItemState` is the ciphertext-free projection; `RepoPendingInputsModel`
 is the change-derivation input. All failures are `StoreError`.
 
@@ -366,7 +369,35 @@ See [SHARING-PROTOCOL.md](SHARING-PROTOCOL.md).
 - **Import:** `ShareImportPlanner.plan(_:mode:local:fingerprint:)` → `ShareImportPlanModel`
   (chips, default actions, policy differences, replay warnings, provenance). VaultData's
   `ShareImporter` applies it in one transaction.
-- `ShareError` (one `.invalidFile` for every file read failure).
+- `ShareError` (one `.invalidFile` for every file read failure; since v0.9.0 also
+  `notARecipient`, `senderNotTeammate`, `expired`, `invalidPairingCard`, `pairingExpired`,
+  `pairingOwnCard`).
+- **Bundles** (v0.9.0, `Bundle/`, SHARING-PROTOCOL.md §1.4, §5.1): `ShareBundleModel` (schema 4:
+  `expiresAt`, `stages`, `repositories: [ShareBundleRepositoryModel]` (a `ShareRepositoryModel`
+  plus `destinations: [ShareDestinationModel]`), `folders: [ShareBundleFolderModel]`;
+  `checkFreshness(now:)`, `manifest()`, `wipeValues()`, `linkGroups`, `contentSummary`,
+  `githubPackage(for:)` (schema 1–2 package for the existing planner and importer),
+  `folderPackage(for:)`), `ShareItemModel.linkToken`, `ShareBundleCoder`, `ShareDocumentCoder`
+  (`decode` / `open(_:mode:)` → `ShareDocumentModel` `.package` or `.bundle`, dispatching on
+  `schemaVersion`), `ShareBundleValidator`, and `ShareBundlePlanner.plan(_:mode:local:fingerprint:
+  destinationFingerprint:)` → `ShareBundlePlanModel` (per repository `status` `.inVault`,
+  `.willImportFromGitHub`, `.noAccess`, `.blocked`; a `githubPlan`; destination plans `.create` /
+  `.useExisting`; folder plans; `linkGroups`; `isSamePreview(as:)`; `firstStage`) over a
+  `ShareBundleLocalStateModel`. `ShareDestinationFingerprinter` compares destination values.
+- **File format 2** (v0.9.0, `File/`, §2.1): `FxVaultFileV2Codec(deriver:)`: `inspect(_:)` →
+  `FxVaultFileInfo` (`.v1`, `.v2Passphrase`, `.v2Teammates(_, recipientCount:)`; never touches
+  key material), `sealWithPassphrase` / `openWithPassphrase` (v1 and v2), `sealForTeammates(payload:
+  sender:recipients:)` / `openAsTeammate(_:device:teammates:)` → `FxVaultTeammateFileModel`
+  (payload, sender, sender's announce key). `FxVaultHeaderV2Model` (mode, recipient count),
+  `ShareTeammateKeyModel` (device id and both public keys; no announce key, so a teammate paired
+  remotely can be a recipient).
+- **Remote pairing** (v0.9.0, `Team/RemotePairing*.swift`, §10.9): `RemotePairing.bundled()`,
+  `kind(of:)`, `makeInvitation`, `readInvitation(_:now:ownDevice:)` → `RemoteInvitationModel`,
+  `makeReply(to:keys:login:displayName:macName:now:)` → `RemotePairingReplyFileModel` (file,
+  inviter, code), `readReply(_:keys:now:)` → `RemotePairingReplyModel` (teammate card with its
+  announce key, code); `TeamPublicCardModel` (a card without the announce key,
+  `withAnnounceKey(_:)`), `RemotePairingCodeModel` (`words`, `text`), `RemotePairingProtocol`
+  (extension, UTType, MIME, labels).
 
 - Teammates (v0.5.0, `Team/`): `TeamProtocol`, `TeamService` (preamble), `TeamMessageType`;
   `TeamDeviceKeys` (generate, `secretBytes()`, `withNewAnnounceKey()`, `card(login:displayName:macName:)`),
@@ -709,7 +740,14 @@ first use), `teammates()`, `observeTeammates()`, `teammateCards()` (announce key
 `needs_card_update`), `setMuted(_:teammate:)`, `markSeen(_:)`, `cardUpdateDelivered(to:)`.
 Errors: `TeamRepositoryError`. `ChatRepository.makeConversation(…team:)` passes the teammate
 identity to chat version 3. Since v0.6.0: `remoteAccess()`, `observeRemoteAccess()`,
-`setRemoteAccess(_:isAllowed:address:)`, `markRemoteConnection(_:at:)` (Q4).
+`setRemoteAccess(_:isAllowed:address:)`, `markRemoteConnection(_:at:)` (Q4). Since v0.9.0
+(`TeamRepository+Pairing.swift`, SHARING-PROTOCOL.md §10.9): `pairingFileKind(of:)`,
+`makeInvitation(as:)`, `readInvitation(_:)` → `RemoteInvitationReadModel` (with
+`existingTeammate`), `makeReply(to:as:)`, `confirmInviter(_:)`, `readReply(_:)` →
+`RemoteReplyReadModel`, `confirmReplier(_:)` → `RemotePairingOutcome` (`.added`, `.updated`);
+only the two confirmations write. `addTeammate(_:pairedVia:)`, `addTeammateAwaitingAnnounceKey`,
+`fillAnnounceKeyIfMissing(_:teammate:)`; `teammateCards()` gives a teammate without an announce
+key a random one that is never stored.
 
 **Spaces** (`Spaces/`, v0.6.0). `struct SpaceRepository(session:schedulers:clock:)`, also the
 app's `SyncSpaceCoordinating`: `spaces()`, `observeSpaces()`, `detail(_:)`,
@@ -734,6 +772,15 @@ authorization:existingFile:headerComments:)` (0600, needs an `EnvExportAuthoriza
 `preflight(repositoryIDs:scopeStatus:) -> SyncReviewModel{preflight, credentialWarnings}`,
 `deletionPreview(for:)`, `startRun(_:includeDeletions:cloneFolder:) -> SyncRunHandle{progress,
 cancel(), outcome(), isFinished}`, `currentRun`, `lastRunReport()` / `observeLastRunReport()`.
+Since v0.9.0 (held imports): `SyncReviewModel.heldShares: [HeldShareModel]` (one per held file:
+sender, `isSenderVerified`, dates, repositories → scopes and destinations → items),
+`preflight(including:)` and `credentialWarnings(including:)` for the From Files choices,
+`startRun(_:includeDeletions:includeHeld:cloneFolder:spaceReason:)` (releases the included
+files' holds in one transaction, then plans); `HeldChangeFilter` takes held changes out of the
+preflight; `struct ShareHoldRepository(session:)`: `heldShares()`, `observeHeldShares()`,
+`releaseHold(packageID:)`, `releaseHold(itemIDs:)`. `DestinationSyncRepository.run(_:
+includeDeletions:includeHeld:progress:)` and `DestinationReviewSectionModel.held`
+(`heldWrites(including:)`, `hasOnlyHeldChanges`).
 Internals: `VaultSyncPersistence` (only pushes need keys; other bookkeeping is recorded even
 while locked), `VaultSyncValues`, `SyncEffectApplier`, `SyncRowWriter` (shared by sync effects,
 drift resolutions and the repository import).
@@ -750,8 +797,10 @@ creates everything), `discardStaged(_:)`, `checkAvailability(owner:name:accountL
 again), `enterNewValue(_:value:pushOnNextSync:)`. Unreadable scopes are never reported as deleted.
 
 **Sharing** (`Sharing/`). `actor SharingRepository(session:schedulers:deriver:clock:writePolicy:
-fileWriter:)`: `previewExport(_:)`, `exportFile(_:to:senderName:appVersion:authorization:
-existingFile:)` (passphrase returned once, file 0600), `readFile(at:)` (header checked before
+fileWriter:)`: `previewExport(_:)`, `exportFile(package:to:authorization:existingFile:)` (a
+received chat package as a schema 4 bundle in format 2, 7-day expiry, production refused;
+passphrase returned once, file 0600; v0.8's `exportFile(_:…)` of a selection is now the
+`@_spi(Testing)` `exportLegacyFile`, which writes format 1 for tests of older files), `readFile(at:)` (header checked before
 any passphrase), `openFile(_:passphrase:checkGitHub:) -> ShareImportDraftModel`, `replan(_:
 checkGitHub:)`, `apply(_:plan:confirmReplay:)` (re-plans inside the transaction;
 `.planOutdated`), `makeNearbySender(transport:localName:clock:)`,
@@ -760,6 +809,18 @@ actors; the UI never receives values). What to share is a `ShareSelectionModel`:
 `.environment`, `.repository` or `.subset(ShareSubsetModel(repositoryID:environmentIDs:itemIDs:))`
 (any combination; a branch policy travels only for the environments in `environmentIDs`, see
 SHARING-PROTOCOL.md §1.2). `ShareExportPreviewModel.summary` holds the per-scope counts.
+Since v0.9.0 (`SharingRepository+ProjectShare.swift`, SHARING-PROTOCOL.md §6.1; the init takes
+`repositoryAccess: ShareRepositoryAccessChecking`, `CatalogShareRepositoryAccess` in the app):
+`stageOptions(repositoryIDs:)`, `selection(repositoryIDs:stages:includesRepositoryLevel:folderIDs:
+expiry:) -> ShareBundleSelectionModel`, `previewBundle(_:)`, `exportBundle(_:protection:to:
+senderName:appVersion:authorization:existingFile:)` (`.passphrase` or `.teammates([id])`;
+`.productionNeedsTeammates`, `.invalidRecipients`), `defaultFileName(…)`, `sentShares()`,
+`observeSentShares()`, `deleteSentShare(_:)`, `inspectFile(at:)`, `openShareFile(_:passphrase:
+checkGitHub:)` → `ShareOpenedShareFileModel` (`.repository`, `.folder` or
+`.bundle(ShareBundleDraftModel)`, plus the sender with `isVerified`),
+`importMissingRepositories(of:)`, `replanBundle(_:checkGitHub:)`, `applyBundle(_:plan:
+confirmReplay:)` → `ShareBundleImportResultModel` (first repository and stage for the
+Overview). Internals: `ProjectShareExportBuilder`, `ProjectSharePlanning`, `ProjectShareImporter`.
 
 **Chat** (`Chat/`, v0.2.0). `struct ChatRepository(session:sharing:clock:)`:
 `attachableItems() -> [ChatAttachableItemModel]` (live items with a value, names only, by
@@ -782,7 +843,7 @@ repositories, for Import Into…); on the conversation `acceptsConfigurationAtta
 consumes the `.nearbySend` authorization), `previewAttachment(_:into:checkGitHub:)` (`into`: plan
 for another repository of this vault), `saveAttachment(_:to:authorization:)` (`.fileExport`;
 `SharingRepository.exportFile(package:to:authorization:existingFile:)` seals the received
-package; the package stays for an import) and `receivedPreview(_:)` (names and counts).
+package as a project file; the package stays for an import) and `receivedPreview(_:)` (names and counts).
 
 **Composition (`AppContainer`, `App/Composition/VaultDataComponents.swift`).**
 
@@ -1067,6 +1128,36 @@ and `MainViewModel` builds `destinationDetail` or `overview` for column 3
 (`followScopeSelection`); `MainActions.openDestination` shows a destination (a linked copy's
 place, an Overview cell). `AppViewModel` adds the destinations' pending counts to the Sync count
 and the Dock badge and resets the Azure tokens on lock.
+
+### As built in v0.9.0 (project share files)
+
+Requested by Bryan (2026-10-17): share the secrets and environments of a project "online", as one
+file sent through WhatsApp or mail that the receiver opens and imports. Designed in a /grilling
+session (tasks/todo.md P1–P11, Q1–Q13; every answer the recommended option). Remote pairing and
+teammate files ship marked **Experimental** until they are checked between two Macs.
+
+| # | Area | Decision |
+|---|---|---|
+| 118 | Contents (P1) | A file is a **bundle** (share schema 4) of one or more repositories, each with its repository level, its GitHub environments (whole or partial) and its runtime destinations (target, stage, items with values, `publicNames`), plus optional folders. Connection tokens, `az` sessions, GitHub accounts and SSH aliases never travel |
+| 119 | Selection (P2) | Stages first, applied across the chosen repositories (the environment named like the stage by fold key plus the destinations of that stage), then a tree per repository. A stage is production when a word of its name (split on non-letters) is `prod`, `production`, `prd` or `live` (`StageRisk`, VaultCore); it starts unchecked and asks for a confirmation |
+| 120 | Protection (P3, Q13) | `.fxvault` format 2 with two modes: **teammates** (1–10 paired devices; HPKE-wrapped content key per device in an opaque, sorted slot; the sender's device id, announce key and Ed25519 signature inside the ciphertext; "verified" on the receiver) and **passphrase** (Argon2id and six words, as v1). A selection with a production place can only be sealed for teammates |
+| 121 | Remote pairing (P4) | Add Teammate › Not Nearby…: an invitation `.fxvcard` (public keys and names, signed, no announce key), a reply (the replier's card plus its announce key HPKE-sealed to the inviter, signed over both), and a 6-word code from both cards and both nonces compared on a call; each side stores the other only when it confirms. The inviter marks `needs_card_update`, so its own announce key reaches the replier through the existing card update or inside its first teammates file |
+| 122 | Transport (P5) | File only, no server: the system share picker or Save…. The file is written 0600 (`SecureFileWriter`) in a private 0700 folder per export under `$TMPDIR/io.fractalx.fxvault.shares` (`ShareStagingFolder`) and removed when the sheet closes, or, when a share hand-off (AirDrop) is still running then, as soon as it finishes. It is named `FX Vault share <date>.fxvault`, without repository or stage names |
+| 123 | Expiry and sent log (P6) | 1, 7 (default) or 30 days; `expiresAt` inside the ciphertext and enforced by FX Vault (the copy says the cryptography does not). Every export writes a names-only `sent_shares` row, listed in Settings › Sharing with what to rotate |
+| 124 | Receiver (P7) | One list per file: ✓ in the vault, ⇣ imported from GitHub with the receiver's account (outside the transaction, then planned again), ✕ no access (skipped, the file can be opened again later). Today's merge preview per scope plus destinations (merged by target key, or created without a connection) and folders. Import applies everything in one transaction; the main window then selects the first repository and opens its Overview at the first shared stage (`MainActions.openOverview`, kept pending until the scope column exists) while the sheet shows the result |
+| 125 | Held until included (P8) | A row the remote does not have is saved with `share_hold` (the package id) and is in no Sync plan until the user includes its file in Sync's **From Files** review; Push on Next Sync releases one row |
+| 126 | Links (P9) | Linked copies inside the file travel as per-file tokens; the receiver gives fresh `link_id`s to the rows it writes; rows it keeps keep their links |
+| 127 | Format (P10) | Every export writes format 2 and schema 4, a single repository included (Share as File… becomes this sheet). v1 files and schemas 1–3 stay readable; FX Vault 0.8 shows "Wrong passphrase or damaged file". Limits: 16 MiB payload, 10 recipients, 50 repositories |
+| 128 | Scope (P11) | Not in v0.9: sending a bundle nearby or in chat (they keep schemas 1–3), revoking a sent file (rotation is the remedy), a hosted link. Nearby Chat's Save as File… (`SharingRepository.exportFile(package:…)`) writes a schema 4 bundle in format 2 like every other export (`ShareBundleModel(package:createdAt:expiry:)`, 7 days, production refused) |
+| 129 | Held files, as built | There is no separate Keep Local action: a file left out of a Sync stays held and is offered again at every Sync (like confirmed deletions, §7.5). Including a file releases every hold of its package in both tables in one transaction before planning |
+| 130 | Environments of held rows | Environments have no hold column, so their changes are derived: a new environment waits while every live item in it is held; a renamed environment waits, with all its copies, while any live item in it is held (a rename copies every item, so it would publish or lose the held value) |
+| 131 | The user's changes are never held | A delete, a GitHub-scope Revert or a typed value clears a row's hold (`ItemMutationWriter`, `DestinationItemWriter`); a rename or move keeps it, because the value is still the file's. A destination Revert keeps it too: it cannot bring back the previous value |
+| 132 | Verified sender | `imported_share_packages.sender_device_id` (v14) records the teammate whose signature checked; Sync shows "verified" only when it is set. A passphrase file's sender stays unverified |
+| 133 | Teammate without an announce key | A replier stores the inviter with `announce_ct` NULL (`teammates` rebuilt in v14, with `CHECK (announce_ct IS NOT NULL OR paired_via = 'remote')`). `teammateCards()` gives such a teammate a random, never-stored announce key, so SharingKit and the presence code are unchanged: its pseudonyms never match, and its sessions still verify the signing key. `fillAnnounceKeyIfMissing` stores the real key from a teammates file and never replaces one |
+| 134 | Code transcript | The pairing code puts the inviter's card and nonce first (roles are known) instead of ordering the two cards: the argument is about which side draws its nonce last (SHARING-PROTOCOL.md §10.9) |
+| 135 | Folders in a bundle | Written with `FolderItemWriter` inside the bundle's transaction (kind plus fold-key name, keep mine or replace), not through `FolderRepository.save`, so the whole file applies or nothing does |
+| 136 | Sent log order | The `sent_shares` row is written before the file and deleted again if the file write fails, so a file on disk always has its log row |
+| 137 | Test-only SPI | The app and its tests never import VaultStore (`scripts/lint.sh`), so app tests that need held rows call `ShareHoldRepository.hold(_:under:senderName:senderDeviceID:importedAt:)`, and tests of files from older versions write them with `SharingRepository.exportLegacyFile(_:to:senderName:appVersion:authorization:existingFile:)` (format 1, schemas 1–3, the 0.8 writer, still behind `.fileExport` re-authentication). Both are `@_spi(Testing)`: not part of VaultData's public API; only a file that writes `@_spi(Testing) import VaultData` can call them, and `scripts/lint.sh` refuses that import in App/ |
 
 ## App shell
 
@@ -1362,11 +1453,12 @@ AppTests).
     plaintext, skipped and unverified-share warnings → save panel → iCloud confirmation before
     any write → 0600 write → git tracked / not ignored / ignored / unknown, with the `.gitignore`
     offer). One authorization per write; a failed write uses it up.
-  - `Sharing` (§9, M6): file export (`ReauthGate.authorizeShare(.fileExport)` → multi-select
-    tri-state scope tree (`ShareScopeTreeModel`, also used by the nearby "what to send" picker)
-    with per-scope counts (`ShareContentSummaryView`) → `exportFile` into `$TMPDIR/io.fractalx.fxvault.shares/<uuid>/` (0700 / 0600) →
-    passphrase shown once → Save… (0600) or AirDrop…; the staged file is removed on close or when
-    AirDrop ends), import (header before passphrase; one message for wrong passphrase / damaged
+  - `Sharing` (§9, M6): file export (v0.9.0: `ProjectShareScreen`; Nearby Chat's Save as File…
+    keeps `ShareExportScreen`: `ReauthGate.authorizeShare(.fileExport)` → what was received
+    (`ShareContentSummaryView`) → `saveAttachment` into `$TMPDIR/io.fractalx.fxvault.shares/<uuid>/`
+    (0700 / 0600) → passphrase shown once → Save… (0600) or AirDrop…; the staged file is removed
+    on close or when AirDrop ends; the tri-state `ShareScopeTreeModel` serves Share Project and
+    the nearby "what to send" picker), import (header before passphrase; one message for wrong passphrase / damaged
     file; chips, Keep mine default, widening-policy and replay confirmations; one-click import of
     a missing repository through `ShareRepositoryImporter`), and nearby send / receive
     (experimental; `NearbyNetworking` over `NWNearbyBrowser` / `NWNearbyTransport`;
@@ -1465,8 +1557,9 @@ another route replaces the sheet; closing it sets `activeSheet` to nil (and open
 | `.createRepository` | `CreateRepo/` | `CreateRepoScreen` | `CreateRepoContext(accountLogin: String?, ownerLogin: String?)` (preselection only) |
 | `.envImport` | `EnvFile/` | `EnvImportScreen` | `EnvImportContext(repositoryID, scope, fileURL: URL? = nil, defaultKind: ConfigKind? = nil, start: .chooser / .pasteEditor / .pasted(EnvPasteBuffer) = .chooser)` |
 | `.envExport` | `EnvFile/` | `EnvExportScreen` | `EnvExportContext(repositoryID, scope)` |
-| `.shareExport` | `Sharing/` | `ShareExportScreen` | `ShareExportContext(selection: ShareSelectionModel)` |
-| `.shareImport` | `Sharing/` | `ShareImportScreen` | `ShareImportContext(fileURL)` |
+| `.shareExport` | `Sharing/` | `ProjectShareScreen` (v0.9.0; `ShareExportScreen` before) | `ShareExportContext(selection: ShareSelectionModel, stage: String? = nil)` (`stage`: the Overview's Share Stage…) |
+| `.shareImport` | `Sharing/` | `ShareImportScreen` (a project file through `ProjectShareImportView`, v0.9.0) | `ShareImportContext(fileURL)` |
+| `.remotePairing` (v0.9.0) | `Team/` | `RemotePairingScreen` | `RemotePairingContext(fileURL)` (an opened `.fxvcard`; Not Nearby… in Settings › Teammates presents `RemotePairingSheet` itself) |
 | `.nearbySend` | `Sharing/` | `NearbySendScreen` | `NearbySendContext(selection: ShareSelectionModel?)` |
 | `.nearbyReceive` | `Sharing/` | `NearbyReceiveScreen` | `NearbyReceiveContext()` |
 | `.addRepositoryByName` | `Main/AddRepository/` | `AddRepositorySheet` (main window's own) | `AddRepositoryContext(accountLogin)` |

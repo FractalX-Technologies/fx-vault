@@ -1,6 +1,7 @@
 import AppKit
 import GitHubKit
 import Observation
+import SharingKit
 import SyncEngine
 import VaultCore
 import VaultData
@@ -78,6 +79,9 @@ final class AppViewModel {
     /// `.fxvault` files opened from Finder or AirDrop, oldest first (§10 Scenes). The main
     /// window imports them one by one after unlock.
     private(set) var pendingImports: [URL] = []
+    /// `.fxvcard` teammate cards opened from Finder, Mail or WhatsApp (v0.9.0), oldest first.
+    /// The main window shows the remote pairing sheet for each after unlock.
+    private(set) var pendingPairingCards: [URL] = []
     /// The user chose "Not Now" on ``GHSetupScreen`` for this launch.
     private(set) var isGHSetupDeferred = false
     /// The result of the launch reconciliation after the last unlock (§7.3), nil until it ran.
@@ -269,6 +273,7 @@ final class AppViewModel {
         container.preferences.isRecoveryKeyConfirmationPending = false
         setPendingChangeCount(0)
         pendingImports.removeAll()
+        pendingPairingCards.removeAll()
         lockCount += 1
         runLockPhaseB()
         phase = .onboarding
@@ -465,6 +470,30 @@ final class AppViewModel {
 
     static func isShareFile(_ url: URL) -> Bool {
         url.isFileURL && url.pathExtension.lowercased() == shareFileExtension
+    }
+
+    /// Queues `.fxvcard` teammate cards (v0.9.0) and brings the main window back. Other URLs are
+    /// ignored.
+    func openPairingCards(_ urls: [URL]) {
+        var added = false
+        for url in urls where Self.isPairingCard(url) {
+            let standardized = url.standardizedFileURL
+            guard !pendingPairingCards.contains(standardized) else { continue }
+            pendingPairingCards.append(standardized)
+            added = true
+        }
+        guard added else { return }
+        requestMainWindow()
+    }
+
+    /// Removes and returns the oldest pending teammate card, once the vault is unlocked.
+    func takeNextPendingPairingCard() -> URL? {
+        guard phase == .unlocked, !pendingPairingCards.isEmpty else { return nil }
+        return pendingPairingCards.removeFirst()
+    }
+
+    static func isPairingCard(_ url: URL) -> Bool {
+        url.isFileURL && url.pathExtension.lowercased() == RemotePairingProtocol.fileExtension
     }
 
     // MARK: - Main window

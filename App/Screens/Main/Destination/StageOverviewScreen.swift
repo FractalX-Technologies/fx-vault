@@ -106,6 +106,12 @@ private struct OverviewHeader: View {
             }
             .fxButtonStyle(.secondary)
             .disabled(viewModel.isReadingManifest)
+            Button(ProjectShareCopy.shareStage) {
+                viewModel.shareStage()
+            }
+            .fxButtonStyle(.secondary)
+            .disabled(viewModel.stage == nil)
+            .help(ProjectShareCopy.shareStageHelp)
         }
         .fixedSize()
     }
@@ -227,7 +233,7 @@ private struct OverviewCell: View {
         switch cell {
         case .synced, .notUsed: .neutral
         case .willPush: .brand
-        case .missing, .extra, .differs, .valueMissing: .warning
+        case .missing, .extra, .differs, .valueMissing, .held: .warning
         case .blocked, .willDelete: .danger
         }
     }

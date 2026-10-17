@@ -144,12 +144,23 @@ public struct ImportedSharePackageRecord: Codable, Sendable, Hashable, Fetchable
     public var importedAt: Date
     /// The sender's display name as the package stated it (unverified).
     public var senderName: String?
+    /// `sender_device_id` (v0.9.0): the teammate whose device key signed a teammates file
+    /// (lowercase hex); nil for a passphrase file or a package from before v0.9.0, whose sender is
+    /// unverified.
+    public var senderDeviceID: String?
 
-    public init(packageID: SharePackageID, createdAt: Date, importedAt: Date, senderName: String?) {
+    public init(
+        packageID: SharePackageID,
+        createdAt: Date,
+        importedAt: Date,
+        senderName: String?,
+        senderDeviceID: String? = nil
+    ) {
         self.packageID = packageID
         self.createdAt = createdAt
         self.importedAt = importedAt
         self.senderName = senderName
+        self.senderDeviceID = senderDeviceID
     }
 
     enum CodingKeys: String, CodingKey, ColumnExpression {
@@ -157,6 +168,7 @@ public struct ImportedSharePackageRecord: Codable, Sendable, Hashable, Fetchable
         case createdAt = "created_at"
         case importedAt = "imported_at"
         case senderName = "sender_name"
+        case senderDeviceID = "sender_device_id"
     }
 
     public static func databaseDateEncodingStrategy(for column: String) -> DatabaseDateEncodingStrategy {

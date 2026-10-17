@@ -40,6 +40,10 @@ enum MainSheet: Hashable, Identifiable {
     case shareExport(ShareExportContext)
     case shareImport(ShareImportContext)
     case nearbySend(NearbySendContext)
+
+    // Team/ (v0.9.0)
+    /// An opened `.fxvcard`: an invitation or a reply of Add Teammate › Not Nearby….
+    case remotePairing(RemotePairingContext)
     case nearbyReceive(NearbyReceiveContext)
 
     // Spaces/ (v0.6.0)
@@ -304,9 +308,11 @@ struct EnvExportContext: Hashable {
     }
 }
 
-/// Share › File… (`.fxvault` export).
+/// Share › File… (`.fxvault` export; the project share sheet since v0.9.0).
 struct ShareExportContext: Hashable {
     let selection: ShareSelectionModel
+    /// The Overview's "Share Stage…": that stage starts checked (v0.9.0).
+    var stage: String?
 }
 
 /// A `.fxvault` file to import (opened from Finder or AirDrop, or chosen in the sheet).

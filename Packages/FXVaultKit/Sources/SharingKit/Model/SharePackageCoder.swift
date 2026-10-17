@@ -194,6 +194,7 @@ extension ShareItemModel: Codable {
         case valueState
         case githubUpdatedAt
         case syncState
+        case linkToken = "link"
     }
 
     public init(from decoder: any Decoder) throws {
@@ -206,6 +207,7 @@ extension ShareItemModel: Codable {
         valueState = try container.decode(ConfigValueState.self, forKey: .valueState)
         githubUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .githubUpdatedAt)
         syncState = try container.decode(ShareSyncState.self, forKey: .syncState)
+        linkToken = try container.decodeIfPresent(String.self, forKey: .linkToken)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -223,6 +225,8 @@ extension ShareItemModel: Codable {
         try container.encode(valueState, forKey: .valueState)
         try container.encode(githubUpdatedAt, forKey: .githubUpdatedAt)
         try container.encode(syncState, forKey: .syncState)
+        // Only bundle items carry a link (schema 4); older documents stay byte-for-byte the same.
+        try container.encodeIfPresent(linkToken, forKey: .linkToken)
     }
 }
 

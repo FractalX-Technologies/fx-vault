@@ -21,6 +21,8 @@ final class TeammatesSettingsViewModel: LockObserving {
     var pendingRemoval: TeammateModel?
     /// The open Add Teammate sheet.
     var addTeammate: AddTeammateViewModel?
+    /// Add Teammate › Not Nearby… (v0.9.0) while its sheet is open.
+    var remotePairing: RemotePairingViewModel?
     var alert: ErrorPresentationModel?
 
     @ObservationIgnored private let app: AppViewModel
@@ -176,14 +178,36 @@ final class TeammatesSettingsViewModel: LockObserving {
         addTeammate = nil
     }
 
+    /// Not Nearby… (v0.9.0): pair by card files and six words compared on a call.
+    func startRemotePairing() {
+        guard isUnlocked else { return }
+        remotePairing = RemotePairingViewModel(service: team, identity: { [app] in app.spaceIdentity })
+    }
+
+    func remotePairingDismissed() {
+        remotePairing?.close()
+        remotePairing = nil
+    }
+
     func vaultDidLock() {
         pendingRemoval = nil
         addTeammate?.close()
         addTeammate = nil
+        remotePairing?.close()
+        remotePairing = nil
+    }
+
+    /// "Paired remotely" under a teammate paired by card files (v0.9.0).
+    func pairingText(_ teammate: TeammateModel) -> String? {
+        teammate.pairedVia == .remote ? RemotePairingCopy.pairedRemotely : nil
     }
 
     /// "Seen 5 min ago", "Never seen nearby".
     func lastSeenText(_ teammate: TeammateModel) -> String {
+        // A teammate paired remotely without its announce key cannot be recognized nearby yet.
+        if !teammate.hasAnnounceKey {
+            return RemotePairingCopy.waitingForNearby
+        }
         guard let lastSeen = teammate.lastSeenAt else {
             return String(localized: "teammates.lastSeen.never", defaultValue: "Not seen nearby yet")
         }

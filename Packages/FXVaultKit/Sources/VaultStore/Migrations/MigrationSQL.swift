@@ -331,4 +331,55 @@ enum MigrationSQL {
           finished_at TEXT);
         CREATE INDEX destination_journal_time ON destination_journal(started_at);
         """
+
+    // MARK: v14_project_shares (v0.9.0). FROZEN.
+
+    /// Project share files (tasks/todo.md P3–P8): the files this Mac wrote (names only, never
+    /// values), the package id an imported row is held under until Sync's From Files review
+    /// releases it, the teammate who sealed an imported file (`sender_device_id`, NULL for a
+    /// passphrase file: its sender is unverified), and remote pairing. `teammates` is rebuilt so `announce_ct` may be NULL: a
+    /// teammate paired remotely as the inviter is stored before its announce key arrives. The
+    /// rebuild runs with foreign keys off (GRDB's deferred checks), so `teammate_addresses` rows
+    /// survive the drop; every row of the old table is copied unchanged and is `nearby`.
+    static let v14ProjectShares = """
+        CREATE TABLE sent_shares (
+          id TEXT PRIMARY KEY CHECK (length(id) = 36),
+          package_id TEXT NOT NULL CHECK (length(package_id) = 36),
+          created_at TEXT NOT NULL,
+          expires_at TEXT NOT NULL,
+          mode TEXT NOT NULL CHECK (mode IN ('passphrase','teammates')),
+          recipients TEXT NOT NULL,
+          summary TEXT NOT NULL,
+          CHECK (expires_at > created_at));
+        CREATE INDEX sent_shares_time ON sent_shares(created_at);
+        ALTER TABLE config_items ADD COLUMN share_hold TEXT
+          CHECK (share_hold IS NULL OR (length(share_hold) = 36 AND share_hold = lower(share_hold)));
+        CREATE INDEX config_items_share_hold ON config_items(share_hold) WHERE share_hold IS NOT NULL;
+        ALTER TABLE destination_items ADD COLUMN share_hold TEXT
+          CHECK (share_hold IS NULL OR (length(share_hold) = 36 AND share_hold = lower(share_hold)));
+        CREATE INDEX destination_items_share_hold ON destination_items(share_hold) WHERE share_hold IS NOT NULL;
+        ALTER TABLE imported_share_packages ADD COLUMN sender_device_id TEXT
+          CHECK (sender_device_id IS NULL OR (length(sender_device_id) = 32 AND sender_device_id = lower(sender_device_id)));
+        CREATE TABLE teammates_v14 (
+          device_id TEXT PRIMARY KEY CHECK (length(device_id) = 32 AND device_id = lower(device_id)),
+          signing_pk BLOB NOT NULL CHECK (length(signing_pk) = 32),
+          agreement_pk BLOB NOT NULL CHECK (length(agreement_pk) = 32),
+          announce_ct BLOB,
+          login TEXT NOT NULL,
+          display_name TEXT NOT NULL,
+          mac_name TEXT NOT NULL,
+          paired_at TEXT NOT NULL,
+          last_seen_at TEXT,
+          is_muted INTEGER NOT NULL DEFAULT 0 CHECK (is_muted IN (0, 1)),
+          needs_card_update INTEGER NOT NULL DEFAULT 0 CHECK (needs_card_update IN (0, 1)),
+          paired_via TEXT NOT NULL DEFAULT 'nearby' CHECK (paired_via IN ('nearby','remote')),
+          CHECK (announce_ct IS NOT NULL OR paired_via = 'remote'));
+        INSERT INTO teammates_v14 (device_id, signing_pk, agreement_pk, announce_ct, login, display_name,
+            mac_name, paired_at, last_seen_at, is_muted, needs_card_update)
+          SELECT device_id, signing_pk, agreement_pk, announce_ct, login, display_name,
+            mac_name, paired_at, last_seen_at, is_muted, needs_card_update
+          FROM teammates;
+        DROP TABLE teammates;
+        ALTER TABLE teammates_v14 RENAME TO teammates;
+        """
 }

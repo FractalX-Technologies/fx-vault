@@ -42,7 +42,7 @@ struct DEKRotationReportModel: Sendable, Hashable {
 /// - a `synced_fp` without `synced_value_ct` is recomputed from the current value when the two
 ///   matched under the old key, otherwise cleared (see ``DEKRotationReportModel``).
 ///
-/// Then `device_identity.secret_ct`, every `teammates.announce_ct` (v0.5.0), every
+/// Then `device_identity.secret_ct`, every non-null `teammates.announce_ct` (v0.5.0), every
 /// `space_keys.key_ct` (v0.6.0) and every `folder_items.value_ct` (v0.7.0, with `value_fp`
 /// recomputed) are opened under the old keys and sealed under the new ones.
 ///
@@ -84,9 +84,11 @@ struct DEKRotator {
             report.secretFields += 1
         }
         for var teammate in try teamStore.fetchTeammates(in: tx) {
+            // A teammate paired remotely may not have sent its announce key yet (v0.9.0).
+            guard let ciphertext = teammate.announceCiphertext else { continue }
             guard let deviceID = TeamDeviceID(hex: teammate.deviceID) else { throw VaultError.corrupted(.invalidStoredValue) }
             let aad = TeamRepository.announceAAD(deviceID: deviceID)
-            teammate.announceCiphertext = try reseal(teammate.announceCiphertext, for: aad, from: oldKeys, to: newKeys)
+            teammate.announceCiphertext = try reseal(ciphertext, for: aad, from: oldKeys, to: newKeys)
             try teamStore.saveTeammate(teammate, in: tx)
             report.secretFields += 1
         }

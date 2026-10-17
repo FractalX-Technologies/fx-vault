@@ -2,20 +2,15 @@ import SharingKit
 import SwiftUI
 import VaultData
 
-/// Share › File… (§10 `ShareExportScreen`): ReauthGate → scope tree → passphrase → save or
-/// AirDrop. See ``ShareExportViewModel`` for the rules.
+/// Nearby Chat › Save as File… (§10 `ShareExportScreen`): ReauthGate → what was received →
+/// passphrase → save or AirDrop. See ``ShareExportViewModel`` for the rules.
 ///
-/// UI feature contract entry view (ARCHITECTURE.md): presented by `MainScreen` for
-/// `MainSheet.shareExport`.
+/// Presented by `NearbyChatScreen`; sharing from the vault is ``ProjectShareScreen`` (v0.9.0).
 struct ShareExportScreen: View {
     @State private var viewModel: ShareExportViewModel
     @Environment(\.dismiss) private var dismiss
 
-    init(context: ShareExportContext, dependencies: FeatureDependencies) {
-        _viewModel = State(initialValue: ShareExportViewModel(context: context, dependencies: dependencies))
-    }
-
-    /// Shows an existing view model (previews and the visual snapshot tests).
+    /// Shows the chat's view model (and the visual snapshot tests').
     init(viewModel: ShareExportViewModel) {
         _viewModel = State(initialValue: viewModel)
     }
@@ -24,10 +19,8 @@ struct ShareExportScreen: View {
         @Bindable var viewModel = viewModel
         VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
             SheetHeader(
-                label: viewModel.isFromChat ? ShareSheetLabel.nearbyChat : ShareSheetLabel.share,
-                title: viewModel.isFromChat
-                    ? String(localized: "shareExport.chat.title", defaultValue: "Save as File")
-                    : String(localized: "shareExport.title", defaultValue: "Share as File"),
+                label: ShareSheetLabel.nearbyChat,
+                title: String(localized: "shareExport.chat.title", defaultValue: "Save as File"),
                 subtitle: String(
                     localized: "shareExport.subtitle",
                     defaultValue: "An encrypted .fxvault file that only opens with its six-word passphrase."
@@ -69,17 +62,7 @@ struct ShareExportScreen: View {
 
     private var scopeStep: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            SectionLabel(viewModel.isFromChat
-                ? String(localized: "shareExport.chat.scope.title", defaultValue: "Received in Nearby Chat")
-                : String(localized: "shareExport.scope.title", defaultValue: "What to share"))
-            if let tree = viewModel.tree {
-                ShareScopeTreeView(tree: tree) { checked, node in
-                    viewModel.setChecked(checked, for: node)
-                }
-            } else if viewModel.isLoadingTree {
-                ProgressView()
-                    .frame(maxWidth: .infinity, minHeight: Theme.Layout.shareListMinHeight)
-            }
+            SectionLabel(String(localized: "shareExport.chat.scope.title", defaultValue: "Received in Nearby Chat"))
             if let preview = viewModel.preview {
                 ShareContentSummaryView(preview: preview)
             }

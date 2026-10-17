@@ -26,9 +26,12 @@ nonisolated protocol SyncServicing: Sendable {
     /// §7.5 live contents of every environment being deleted. Never throws.
     func deletionPreview(for review: SyncReviewModel) async -> [RepoDeletionPreviewModel]
     /// Plans and starts the run (§7.3, §7.4). `spaceReason` goes into the shared versions.
+    /// `includeHeld` (v0.9.0): the share files the From Files review included; their holds are
+    /// released and their rows run.
     func startRun(
         _ review: SyncReviewModel,
         includeDeletions: Bool,
+        includeHeld: Set<SharePackageID>,
         cloneFolder: URL?,
         spaceReason: String?
     ) async throws(SyncRepositoryError) -> any SyncRunControlling
@@ -55,10 +58,17 @@ nonisolated struct LiveSyncService: SyncServicing {
     func startRun(
         _ review: SyncReviewModel,
         includeDeletions: Bool,
+        includeHeld: Set<SharePackageID>,
         cloneFolder: URL?,
         spaceReason: String?
     ) async throws(SyncRepositoryError) -> any SyncRunControlling {
-        try await sync.startRun(review, includeDeletions: includeDeletions, cloneFolder: cloneFolder, spaceReason: spaceReason)
+        try await sync.startRun(
+            review,
+            includeDeletions: includeDeletions,
+            includeHeld: includeHeld,
+            cloneFolder: cloneFolder,
+            spaceReason: spaceReason
+        )
     }
 
     func clone(_ repositoryID: RepoID, into folder: URL) async throws(RepoCreationError) -> URL {

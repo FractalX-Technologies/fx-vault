@@ -23,7 +23,8 @@ import VaultStore
 /// - Then every changed row gets `provenance = share` with the package id and the unverified
 ///   sender name; an add the planner found already on GitHub is marked synced; an incoming
 ///   secret without a value is added value-missing.
-/// - Finally the package id is recorded for the replay check.
+/// - Finally the package id is recorded for the replay check (a project share records it once for
+///   the whole bundle, `recordsImport: false`).
 struct ShareImporter {
     let database: VaultDatabase
     let tx: StoreTransaction
@@ -41,6 +42,17 @@ struct ShareImporter {
         package: SharePackageModel,
         remote: ShareRemoteContextModel?
     ) throws -> ShareImportResultModel {
+        try applyRows(plan, package: package, remote: remote, recordsImport: true).result
+    }
+
+    /// ``apply(_:plan:remote:)``, also returning the row each written item went to and whether it
+    /// waits for a push (a project share holds those, P8, and links them, P9).
+    func applyRows(
+        _ plan: ShareImportPlanModel,
+        package: SharePackageModel,
+        remote: ShareRemoteContextModel?,
+        recordsImport: Bool
+    ) throws -> ShareImportAppliedModel {
         if let reason = plan.blockReason { throw SharingError.importBlocked(reason) }
         guard let repository = try RepoStore(database: database).fetch(
             ownerLogin: package.repository.owner,
@@ -62,7 +74,8 @@ struct ShareImporter {
             writePolicy: writePolicy
         )
         var adjustments: [(ConfigItemID, Adjustment)] = []
-        var valueMissing: [(ConfigScope, ShareItemModel)] = []
+        var valueMissing: [(ShareEntryID, ConfigScope, ShareItemModel)] = []
+        var rows: [ShareEntryID: ShareImportedRowModel] = [:]
         let located = plan.repositoryItems.map { (scope: ConfigScope?.some(.repository), plan: $0) }
             + plan.environments.flatMap { environment in environment.items.map { (scope: scopes[environment.id], plan: $0) } }
         for (scope, itemPlan) in located {
@@ -78,13 +91,14 @@ struct ShareImporter {
                     result.skippedVariablesWithoutValue.append(label)
                     continue
                 }
-                valueMissing.append((scope, item))
+                valueMissing.append((itemPlan.id, scope, item))
                 result.addedWithoutValue.append(label)
             case .added(let pending):
                 let value = try normalizedValue(of: item, label: label, result: &result)
                 defer { value.wipe() }
                 let id = try batch.add(scope: scope, kind: itemPlan.key.kind, name: item.name, value: value)
                 adjustments.append((id, pending ? .provenance : .syncedAdd(githubUpdatedAt: item.githubUpdatedAt)))
+                rows[itemPlan.id] = ShareImportedRowModel(id: id, isPending: pending)
                 result.added.append(label)
             case .filled(let pending):
                 guard let localID = itemPlan.localItemID else { throw SharingError.planOutdated }
@@ -93,6 +107,7 @@ struct ShareImporter {
                 // Provenance stays unverified; a pending fill keeps the strict D27 rule.
                 try batch.fill(localID, value: value, pushOnNextSync: pending, isUserRequest: false)
                 adjustments.append((localID, .provenance))
+                rows[itemPlan.id] = ShareImportedRowModel(id: localID, isPending: pending)
                 result.filled.append(label)
             case .overwritten:
                 guard let localID = itemPlan.localItemID else { throw SharingError.planOutdated }
@@ -100,6 +115,7 @@ struct ShareImporter {
                 defer { value.wipe() }
                 try batch.editValue(localID, value: value)
                 adjustments.append((localID, .provenance))
+                rows[itemPlan.id] = ShareImportedRowModel(id: localID, isPending: true)
                 result.overwritten.append(label)
             }
         }
@@ -108,7 +124,7 @@ struct ShareImporter {
         for (id, adjustment) in adjustments {
             try markShared(id, adjustment: adjustment, origin: origin, store: store)
         }
-        for (scope, item) in valueMissing {
+        for (entryID, scope, item) in valueMissing {
             let record = ConfigItemRecord(
                 repositoryID: repository.id,
                 scope: scope,
@@ -124,7 +140,10 @@ struct ShareImporter {
                 updatedAt: now
             )
             try store.insertItem(record, in: tx)
+            // Nothing to push without a value: never held.
+            rows[entryID] = ShareImportedRowModel(id: record.id, isPending: false)
         }
+        guard recordsImport else { return ShareImportAppliedModel(result: result, rows: rows) }
         try SharePackageStore(database: database).recordImport(
             ImportedSharePackageRecord(
                 packageID: package.packageID,
@@ -134,7 +153,7 @@ struct ShareImporter {
             ),
             in: tx
         )
-        return result
+        return ShareImportAppliedModel(result: result, rows: rows)
     }
 
     // MARK: - Environments
@@ -277,4 +296,18 @@ struct ShareImporter {
     static func label(_ key: ShareItemKeyModel) -> String {
         key.environmentName.map { "\($0)/\(key.name)" } ?? key.name
     }
+}
+
+/// What ``ShareImporter/applyRows(_:package:remote:recordsImport:)`` wrote.
+struct ShareImportAppliedModel {
+    let result: ShareImportResultModel
+    /// The local row of every written incoming item.
+    let rows: [ShareEntryID: ShareImportedRowModel]
+}
+
+/// The local row an incoming item was written to.
+struct ShareImportedRowModel {
+    let id: ConfigItemID
+    /// The row now waits for the next Sync to push it (a pending add, fill or overwrite).
+    let isPending: Bool
 }

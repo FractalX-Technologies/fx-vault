@@ -1636,7 +1636,7 @@ The three open questions were taken as recommended (Bryan said "hazlo" without c
 - [x] **App.** Scope column sections, destination detail, Add Destination, Settings › Destinations, Overview, Sync review groups, destination drift review, manifest panel. **Verify:** view-model tests; snapshots light and dark; a pass in the app's own window. *Done: 609 app tests; snapshots reviewed (fixed "1 things", a duplicated Show Check, `Settings….`, middle-truncated destination titles). The in-app pass is RELEASING #41–44.*
 - [ ] **Live checks.** Key Vault and Vercel against throwaway resources on this Mac's accounts (deleted afterwards); Supabase stays fake-tested unless a token is available. **Verify:** recorded in docs/API.md. *Partial: the Vercel round trip passed against a throwaway project (deleted afterwards) and the `az` token path passed. The Key Vault data plane was not run: the only Azure subscription on this Mac belongs to a client's tenant (see lessons.md). Supabase is fake-tested.*
 - [x] **Docs and checks.** DATABASE, SECURITY-MODEL (networking, tokens), API, ARCHITECTURE, DESIGN, STRUCTURE, README, CHANGELOG. **Verify:** `scripts/ci-local.sh` passes; gitleaks finds nothing. *Done: DATABASE `v13_destinations`, SECURITY-MODEL §2, §4, §6–§9, §10.4 and §11, API §B11, §G (HTTPS endpoints, `az`), ARCHITECTURE (DestinationKit, decisions 106–117, app shell), DESIGN (screens, snapshots, known limits), STRUCTURE, README, CHANGELOG 0.8.0, RELEASING #41–44; strings synced (second run: no change). `scripts/ci-local.sh` with XcodeGen 2.45.4 first on PATH: every package suite (VaultData 372, DestinationKit 134, EnvTools 145, GitHubKit 186 and the rest), 612 app tests, lint and check-secrets pass. gitleaks on the files to commit finds nothing (JWT-shaped test values are joined at runtime).*
-- [ ] **Release 0.8.0** (authorized: "publica después de testear"). **Verify:** CI green; brew shows 0.8.0; spctl Notarized Developer ID; `--diagnose` passes.
+- [x] **Release 0.8.0** (authorized: "publica después de testear"). **Verify:** CI green; brew shows 0.8.0; spctl Notarized Developer ID; `--diagnose` passes. *Done: full `ci-local.sh` before the commit (XcodeGen 2.45.4 first on PATH); commit 764c1e2, CI green (macos-26, xcode-27, gitleaks), tag v0.8.0, the release ran the full ci-local again, signed and notarized DMG published (sha256 f63f5efc…), cask b686c1c (pushed with gh's credential helper for that push only), `brew upgrade` here shows 0.8.0 (28), spctl Notarized Developer ID, `brew audit --cask --online` passes; signed `--diagnose`: version 0.8.0 (28), keychain probe passed, gh ready. Pending: RELEASING #41–44 (Key Vault only on a sandbox vault).*
 
 **Review (2026-10-16).**
 - **Shipped.** Runtime destinations (Azure Key Vault, Supabase, Vercel), the stage Overview and the `fxvault.yml` check, marked experimental.
@@ -1657,6 +1657,106 @@ The three open questions were taken as recommended (Bryan said "hazlo" without c
   - The Overview matrix scrolls sideways at the default width with three or more places.
   - The `az` path override and `AZURE_CONFIG_DIR` support in DestinationKit are not reachable from the app.
 - **Manual checks pending:** RELEASING #41–44, with #42 (Key Vault) only on a sandbox vault Bryan provides.
+
+### v0.9.0: share a project as a file (requested by Bryan, 2026-10-17)
+
+Request (Bryan, chat, 2026-10-17): share secrets and environments "online", as one file sent over WhatsApp or email that holds the variables of several repositories; the receiver opens it, FX Vault opens the project and imports it. Designed in a /grilling session (Q1–Q13 below); Bryan confirmed the shared understanding ("si"). **Implementation waits for his OK on this plan**; commits, tags, pushes and the release each need their own permission.
+
+What exists (mapped 2026-10-17): Share as File… writes a `.fxvault` v1 file (64-byte header as AAD, Argon2id 64 MiB, AES-256-GCM, 6-word passphrase). It holds one repository (an item, an environment, the whole repository or a subset) or one folder, in share schema 1 to 3. Opening it works like this:
+- the header is checked before the passphrase is asked for;
+- `ShareImportPlanner` previews the merge, which never deletes anything;
+- `ShareRepositoryImporter` offers to import a missing repository from GitHub in one click;
+- the package id is recorded in `imported_share_packages`.
+
+Delivery already uses `NSSavePanel` or `NSSharingServicePicker` (`ShareFileDelivery`). Teammates (v0.5.0) hold verified Ed25519 and X25519 keys, but only from pairing nearby. Spaces (v0.6.0) already wrap keys for teammates with HPKE (X25519, SHA-256, ChaCha20-Poly1305). Destinations (v0.8.0) never travel in share packages (R11).
+
+**Design (agreed 2026-10-17)**
+
+| # | Decision | Rationale |
+|---|---|---|
+| P1 | **Contents** (Q1, Q6): one or more repositories chosen by the sender. Each carries its repository-level items, its GitHub environments (whole or partial, as today) and its runtime destinations (target, stage, items with values). Folders can be added as an option. Never included: connection tokens, `az` sessions, GitHub accounts or SSH aliases. | A product spans app, web and backend repositories. A leaked file must not give access to anyone's accounts. |
+| P2 | **Selection** (Q7): the sender picks stages first, and they apply to every chosen repository. A stage selects the GitHub environment named like it (the Overview's fold key) and that stage's destinations. A tree per repository then adjusts the selection (repository level checked by default, then each environment, each destination and each item). A **production stage** starts unchecked and asks for confirmation when checked. A stage is production when any word of its name (split on non-letters) is `prod`, `production`, `prd` or `live`, ignoring case; the rule lives in one place in VaultCore. | Staging can go to a contractor without production travelling by accident. |
+| P3 | **Two protections** (Q2, Q5, Q13). **Teammates** (1–10 paired devices): a random 32-byte content key is wrapped for each recipient with HPKE, using the spaces suite. A recipient slot holds only `HMAC(fileSalt, deviceID)[0..<8]`. The sender's device id and an Ed25519 signature over the header, the slots and the payload digest travel inside the ciphertext. The receiver sees "From <name>, verified". **Passphrase**: Argon2id as in v1, with the sender's name unverified. A selection that includes a production stage can only be sent to teammates. | Safe to send in the same chat as anything else. Recipients stay hidden from the channel. Production never travels under a passphrase that can be forwarded with it. |
+| P4 | **Remote pairing** (Q4): Add Teammate › Not Nearby…, in four steps. (1) A exports an invitation card: public signing and agreement keys and names, signed, without the announce key. (2) B opens it and writes a reply: B's card plus B's announce key sealed to A with HPKE, signed over both cards. (3) Both apps show a **6-word code**, EFF words derived from both cards, the invitation's nonce and a fresh nonce that B draws for the reply (inviter first; about 77 bits). The exchange happens asynchronously, without commit-reveal, so a 6-digit code could be brute-forced; because B's nonce is drawn after the invitation B holds is fixed, a relay needs a second preimage (about 2^77), not a birthday collision. (4) They compare the code on a call, and each side confirms. A's announce key reaches B in A's first teammates file to B, or through the existing card update the first time they meet nearby. A teammate paired remotely is a normal teammate (`teammates.paired_via = 'remote'`). | The teammate mode works with remote teammates. The announce key stays "known only to teammates" (SHARING-PROTOCOL §10.2) even though the cards cross WhatsApp. |
+| P5 | **Transport** (Q3): file only, no server. The file is written 0600 to a temporary folder and handed to `NSSharingServicePicker` (Mail, WhatsApp, Messages, AirDrop), or saved with `NSSavePanel`. The temporary copy is deleted when the sheet closes. The default name includes no repository or stage: `FX Vault share 2026-10-17.fxvault`. | Nothing hosted to secure. Chats and mail show the file name to everyone. |
+| P6 | **Expiry and sent log** (Q10). The sender picks 1, 7 (default) or 30 days. `expiresAt` travels inside the ciphertext (signed in teammate mode), and FX Vault refuses to open a file after that date. The copy says plainly that FX Vault enforces the expiry, not the cryptography. Each export writes a `sent_shares` row: time, expiry, mode, recipients (teammate ids or "passphrase") and names only (repositories, stages, item names). Settings › Sharing lists these rows, each with what to rotate. | A file lives for years in a chat. The log tells you what to rotate if one leaks. |
+| P7 | **Receiver** (Q8). The open sheet lists each repository: ✓ already in your vault, ⇣ will be imported from GitHub with your account (the existing importer), ✕ no access (skipped, naming the access it needs). Below that is today's merge preview for each scope, plus the destinations. An existing destination with the same target key is merged; a new one is created without a connection. Import applies everything in one transaction, then opens the Overview of the first imported repository at the first shared stage. Opening the same file again later imports what was skipped, after the "already imported" replay warning. | Missing access to one repository never blocks the rest. |
+| P8 | **Held until confirmed** (Q9). An imported item that the remote does not have is saved with `share_hold` (the package id) and stays out of Sync's plan. "Does not have" means the name is missing on GitHub, or the value is missing or different on a readable destination. Sync shows a **From Files** review, like the deletions review, grouped by file and sender. Confirm puts the items into the run; Keep Local clears the hold, and those items wait for an explicit Push on Next Sync. Items the remote already has arrive synced. | Opening a file never changes GitHub or production silently. |
+| P9 | **Links** (Q11). Copies linked to each other inside the file travel as per-file link tokens. The receiver gives fresh `link_id`s to the rows it adds or replaces. Rows it keeps ("keep mine") keep their own links. Links to items outside the file are dropped. | Coordinated rotation works on the receiver's side too, without exposing the sender's link ids. |
+| P10 | **Format** (Q12): `.fxvault` format 2 (same magic, formatVersion 2, a mode byte for passphrase or teammates) and share schema 4 (`bundle`: repositories, their destinations, folders, link tokens, `expiresAt`). Every export writes this format, including a single repository: Share as File… becomes this sheet. v1 files stay readable forever. FX Vault 0.8 shows its damaged-file error, and the release notes say receivers need 0.9. Limits: 16 MiB payload, 10 recipients, 50 repositories. | One path, with one set of guarantees. |
+| P11 | **Not in v0.9**: sending a bundle nearby or in chat, revoking a sent file (rotating the value is the remedy) and a hosted link. Remote pairing and teammate files ship **experimental** until they are checked between two Macs. | Scope. |
+
+**Questions (answered by Bryan, 2026-10-17, /grilling; every answer was the recommended option)**
+
+- **Q1** What the file holds: **several repositories chosen by the sender**, each with its GitHub scopes and runtime destinations.
+- **Q2** Protection: **a paired teammate's key, or a passphrase** for everyone else.
+- **Q3** "Online": **a file only**, through the share sheet; no server.
+- **Q4** Remote teammates: **pair by card file plus a code compared on a call**.
+- **Q5** Recipients per file: **1 to 10 teammates**.
+- **Q6** Destinations: **target and values, never tokens**; the receiver connects their own account.
+- **Q7** Selection: **by stage, production unchecked** and confirmed, then a tree per repository.
+- **Q8** A repository the receiver cannot access: **import the rest and skip it**, with the reason.
+- **Q9** After import: **nothing reaches a remote without confirmation** in Sync's From Files review.
+- **Q10** Expiry: **chosen at export (1, 7 or 30 days), plus a sent log**.
+- **Q11** Links: **those inside the file travel**.
+- **Q12** Versions: **one sheet, always the new format**; old files stay readable.
+- **Q13** Production: **only to teammates**, never with a passphrase.
+
+**Checklist**
+
+- [x] **VaultCore.** Production stage rule, bundle selection model, expiry choices, `Limits` (recipients 10, repositories 50). **Verify:** tests for the stage rule (`Production`, `prod-eu`, `prd`, `live`, and `product`, `preview` and `reproduce` are not production) and for each limit. *Done: `StageRisk`, `ShareExpiryChoice`, `SentShareModel`, the format 2 and pairing limits and timeouts; `StageRiskTests` (VaultCore 95 tests). The selection model moved to VaultData (wave 2).*
+- [x] **Format 2 codec (SharingKit).** Header with the mode byte; passphrase mode; teammate mode (HPKE wraps, opaque slots, signature and sender id inside the ciphertext); `inspect` before any passphrase or key; v1 still opens. **Verify:** round trips in both modes; a wrong recipient, a tampered header, slot, ciphertext or signature, swapped slots and an unknown sender all fail as `invalidFile`; KAT vectors from an independent Python generator (passphrase mode with a fixed salt and nonce; teammate mode decrypt-only, with HPKE checked against RFC 9180 vectors); the v1 KAT is unchanged; gitleaks allowlist entries for the new fixture files. *Done: `FxVaultFileV2Codec`, `FxVaultHeaderV2Model`, `ShareTeammateKeyModel`; 35 tests; KAT `file_v2_kat.json` from `file_v2_kat.py` (passphrase file byte for byte; a deterministic teammates file with HPKE written from RFC 9180, cross-checked with `cryptography`). A tampered salt, recipient count or own slot id can surface as `notARecipient` (those bytes pick the slot and cannot be authenticated without a key).*
+- [x] **Schema 4 bundle (SharingKit).** Model, coder, validator, manifest, filtering and wiping; destinations with target and stage; link tokens; `expiresAt`; the planner per repository (a block reason per repository instead of for the whole package), destinations merged by target key, link assignment. **Verify:** validator table tests; planner tests with mixed ✓ ⇣ ✕ repositories, a destination merge, links kept and dropped, an expired file refused, and a replay per repository. *Done: `Bundle/ShareBundle{Model,Coder,Validator,PlanModel,Planner}`, `ShareDocumentCoder` (dispatch on `schemaVersion`), `ShareItemModel.linkToken`; 35 tests. Folders carry an `id`; schemas 1–3 refuse links.*
+- [x] **Remote pairing (SharingKit).** Invitation and reply cards, signatures, the 6-word code, the sealed announce key. **Verify:** a KAT for the code; a tampered card, a wrong signature, a reflected reply and this device's own card are refused; a test that the invitation bytes never contain the announce key. *Done: `RemotePairing`, `RemotePairingProtocol`, `TeamPublicCardModel`; 25 tests; KAT `pairing_kat.json` from `pairing_kat.py`. The code transcript is inviter first (see P4).*
+- [x] **Migration `v14_project_shares` (VaultStore).** `sent_shares`; `share_hold` on `config_items` and `destination_items`; `teammates.paired_via`. **Verify:** MigrationTests from v13 (seed ladder) and ConstraintTests (checks with `IS NOT NULL`, per lessons). *Done: `sent_shares`, `share_hold` with partial indexes, `teammates` rebuilt (nullable `announce_ct`, `paired_via`, and `announce_ct IS NOT NULL OR paired_via = 'remote'`); `SentShareStore`, hold methods on `ConfigStore`/`DestinationStore`; VaultStore 83 tests, VaultData 376.*
+- [x] **VaultData.**
+  - **Export:** selection to bundle, values read inside `session.read`, link tokens, `ReauthGate` `.fileExport`, sealing for teammates with `TeamRepository`'s keys, the sent log.
+  - **Import:** draft and apply in one transaction, re-encryption, destinations created without a connection, holds, links.
+  - **Pairing:** remote pairing persistence.
+  - **Sync:** the planner leaves out held rows.
+
+  **Verify:** tests for each path, including `heldItemsNeverReachTheSyncPlan` and `connectionTokensNeverEnterABundle` (encode a bundle and scan the JSON for every stored token). *Done: `SharingRepository+ProjectShare` (stage options, selection, preview, export in both modes with the sent log, inspect, open, import missing repositories, re-plan, apply in one transaction), `ProjectShareImporter` (holds after every value write, links, destinations without a connection, folders through `FolderItemWriter`), `CatalogShareRepositoryAccess`; `HeldChangeFilter`, `ShareHoldRepository`, `heldShares` in the Sync review, `startRun(…includeHeld:)` and `DestinationSyncRepository.run(…includeHeld:)`, the Overview's Held cell; `TeamRepository+Pairing`. VaultData 427 tests (24 project share, 18 held, 10 remote pairing), VaultStore 85. Deviations: no separate Keep Local action (a file left out stays held and is offered again); the verified sender is stored in `imported_share_packages.sender_device_id`; a value the user types releases the hold, a rename keeps it; environments and branch policies are not held (they show in Sync's normal review).*
+- [x] **App.** The share sheet (repositories, stages, tree, recipients, expiry, delivery); the open sheet (repository list, preview, verified sender, expired file); Sync's From Files review; Settings › Sharing (sent log); Add Teammate › Not Nearby…; entry points (File menu, repository menu, "Share Stage…" in the Overview header). **Verify:** view-model tests; snapshots light and dark, with counts of one; a pass in the app's own window at the minimum size. *Done: `ProjectShareScreen`/`ViewModel` (contents with repositories, stages, production confirmation and the tree; Send to; expiry; Touch ID; Share… and Save… from a 0600 temporary file deleted on close), the open sheet for bundles (`ProjectShareImportView`, verified sender, ✓/⇣/✕, preview per repository, destinations, folders; Import opens the Overview at the first stage), `SharingSettingsScreen` (sent log), `SyncHeldSharesView` (From Files, off by default), the Held chip and Overview cell, `RemotePairingSheet` (Not Nearby…, experimental), the `.fxvcard` type; File › Share Project… (⌥⌘S, since ⇧⌘S is Sync), the repository menu and the Overview's Share Stage…. App 664 tests in 61 suites; 15 new snapshot pairs reviewed. Deviations: the bundle preview shows one repository at a time; changing stages resets manual tree adjustments; the Held chip names the sender in its tooltip. Not done: the pass in the app's own window at the minimum size (RELEASING).*
+- [x] **Docs and checks.**
+  - SHARING-PROTOCOL: §1 schema 4, §2 format 2, §3 the code, §10 remote pairing.
+  - SECURITY-MODEL: files in chats, opaque recipients, expiry enforced by the app, held imports, the announce key, residual risks.
+  - DATABASE: `v14`.
+  - ARCHITECTURE: decisions 118 and later.
+  - DESIGN, STRUCTURE, README, CHANGELOG.
+  - RELEASING: new manual rows on two Macs (remote pairing, a teammate file sent through a chat, a passphrase file, an expired file, the From Files review).
+
+  **Verify:** `scripts/ci-local.sh` passes (XcodeGen 2.45.4 first on PATH); gitleaks on a scratch copy of the files to commit finds nothing. *Done: SHARING-PROTOCOL §1.4, §2.1, §5.1, §6.1, §8, §10.9; SECURITY-MODEL §10.5 and §11; DATABASE `v14_project_shares`; ARCHITECTURE decisions 118–137; DESIGN, STRUCTURE, README, CHANGELOG 0.9.0, RELEASING #45–48; strings synced (second run: no change); `.gitleaks.toml` lists the two new KAT fixtures. `scripts/ci-local.sh` passes: VaultCore 95, VaultCrypto 93, VaultStore 85, GitHubKit 186, EnvTools 145, SharingKit 367, SyncEngine 192, VaultData 428, DestinationKit 134, App 661 in 61 suites, lint and check-secrets. gitleaks on the 1,069 files to commit finds nothing (a UUID test constant named `linkToken` is joined at runtime).*
+- [ ] **Release 0.9.0**, only after Bryan's permission for the commit, tag, push and publish.
+
+**Review (2026-10-17).**
+- **Built:** project share files end to end:
+  - format 2 with the passphrase and teammates modes;
+  - share schema 4, the bundle;
+  - remote pairing by `.fxvcard` with a 6-word code;
+  - migration v14;
+  - export and import in VaultData;
+  - holds in Sync and the Overview;
+  - the Share Project sheet, the open sheet, Sync's From Files, Settings › Sharing and Add Teammate › Not Nearby….
+
+  Every `.fxvault` file FX Vault writes is now format 2, including Nearby Chat's Save as File…. Format 1 files still open.
+- **Deviations from the plan:**
+  - There is no separate Keep Local: a file left out stays held and is offered at every Sync.
+  - A value the user types releases a hold; a rename keeps it.
+  - Environments and branch policies are not held. A new environment waits while all its items are held.
+  - The verified sender is stored in `imported_share_packages.sender_device_id`.
+  - A teammate without an announce key gets a random, never-stored one in `teammateCards()`.
+  - The pairing code transcript is inviter first, with the reply's nonce.
+  - The bundle preview shows one repository at a time.
+  - Changing stages resets manual tree adjustments.
+  - The share shortcut is ⌥⌘S, because ⇧⌘S is Sync.
+- **Found and fixed during integration:**
+  - The app tests imported VaultStore, which `scripts/lint.sh` refuses. Fixed with a VaultData `@_spi(Testing)` helper (lessons.md).
+  - A test constant tripped gitleaks.
+  - Two snapshots shared a name.
+  - Chat's Save as File still wrote format 1.
+  - The pairing confirm button outweighed Cancel; both now have the same weight.
+  - An unreachable export path was left over and is now removed.
+- **Not verified live:** remote pairing and teammate files between two Macs, and anything at the minimum window size in the app's own window. Both ship experimental. Manual checks: RELEASING #45–48.
 
 ### Stretch (v1.1, not in v1 scope)
 

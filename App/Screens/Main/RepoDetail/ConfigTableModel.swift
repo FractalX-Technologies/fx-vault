@@ -46,11 +46,18 @@ protocol ConfigTableModel: AnyObject, Observable {
     func showLinkedCopies(of row: ConfigRowModel)
     func openLinkedCopy(_ copy: LinkedCopyModel)
     func unlink(_ row: ConfigRowModel)
+    /// The Held chip's tooltip (v0.9.0).
+    func heldHelp(for row: ConfigRowModel) -> String
 }
 
 extension ConfigTableModel {
     /// No destinations by default (a folder belongs to no repository).
     var destinationCopyTargets: [ItemCopyTargetModel] {
         []
+    }
+
+    /// Without the sender's name (a folder never holds rows).
+    func heldHelp(for row: ConfigRowModel) -> String {
+        HeldShareCopy.chipHelp(sender: nil)
     }
 }

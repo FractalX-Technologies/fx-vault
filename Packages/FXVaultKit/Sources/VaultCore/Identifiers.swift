@@ -103,6 +103,8 @@ public typealias FolderID = Identifier<FolderModel>
 public typealias DestinationID = Identifier<DestinationModel>
 /// Primary key of a `provider_connections` row: a Supabase or Vercel token (v0.8.0).
 public typealias ConnectionID = Identifier<ConnectionModel>
+/// Primary key of a `sent_shares` row: one share file this Mac wrote (v0.9.0).
+public typealias SentShareID = Identifier<SentShareModel>
 
 /// Phantom tag for ``SyncRunID``.
 public enum SyncRunTag {}

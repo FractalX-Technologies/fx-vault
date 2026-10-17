@@ -3,6 +3,69 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.9.0
+
+### Added
+
+- **Share a project as one file.** File › Share Project… (⌥⌘S), a repository's Share…, a
+  folder's Share as File… or the Overview's **Share Stage…** writes one encrypted `.fxvault` file
+  with one or more repositories: their repository level, the GitHub environment of each stage you
+  pick and the runtime destinations of that stage (target, stage and values), plus folders if you
+  add them. A tree per repository adjusts the selection down to single secrets, linked copies stay
+  linked, and Mark as Public travels with the value. Send it with the system share picker
+  (WhatsApp, Mail, Messages, AirDrop) or save it; the file name carries no repository or stage.
+- **Two ways to protect it.** **Teammates**: sealed for up to 10 paired teammates' Macs and
+  signed by yours, so it opens without a passphrase, only in FX Vault on their Macs, and shows
+  "Verified teammate". **Anyone, with a passphrase**: six words you send another way, as before.
+- **Expiry and a sent log.** A file expires after 1, 7 (default) or 30 days. Settings › Sharing
+  lists every file this Mac wrote (date, expiry, recipients, repositories, stages and the names
+  inside, never values) with "Rotate these secrets if the file leaked."
+- **Open a project file.** The import sheet lists each repository as in your vault, to be
+  imported from GitHub with your account, or skipped when none of your accounts can see it (open
+  the same file again later). It previews the merge per scope, destinations (new ones arrive
+  without a connection: connect your own account in Settings › Destinations) and folders, imports
+  everything at once and opens the first repository's Overview at the shared stage.
+- **From Files in Sync.** Rows a file brought that GitHub or the provider does not have yet are
+  **Held**: a chip in the table and a cell in the Overview. Sync lists each file (sender, verified
+  or not, date, names) with "Include in this Sync", off by default; Push on Next Sync on a held
+  row releases just that row. A value you type yourself releases its row.
+- **Pair at a distance (experimental).** Settings › Teammates › **Not Nearby…**: send an
+  invitation card by chat or mail, the other person sends back a reply card, and you both compare
+  six words on a call before confirming. Cards carry public keys and names only.
+
+### Changed
+
+- Share as File… is the new Share Project sheet everywhere; nearby sharing and Nearby Chat keep
+  their 0.8 packages.
+- Nearby Chat's Save as File… writes the new format too: a project file under a passphrase that
+  expires after 7 days. A repository with a production environment can't be saved that way
+  (import it, then share it with teammates).
+- A teammate paired at a distance shows "Paired remotely" and, until you meet on the same
+  network or they send you a file, "Seen nearby once you meet on the same network".
+
+### Security
+
+- A production stage (a name with `prod`, `production`, `prd` or `live` as a word) starts
+  unchecked, needs a confirmation, and can only be sent to teammates, never with a passphrase.
+- Connection tokens (Supabase, Vercel), `az` sessions, GitHub accounts and SSH aliases never go
+  into a file.
+- Nothing from a file reaches GitHub or a provider until you include it in a Sync.
+- The six pairing words come from both cards and a fresh random value drawn by the replier, so a
+  relay swapping cards cannot make the words match (about 2^77 work).
+
+### Compatibility
+
+- A `.fxvault` file from 0.9 needs FX Vault 0.9 or later (0.8 shows "Wrong passphrase or damaged
+  file"); 0.9 still opens files from every earlier version.
+- Remote pairing and teammate files are experimental.
+
+### Known limits
+
+- The import sheet previews one repository at a time; changing the stages in Share Project resets
+  boxes you adjusted by hand.
+- Environments and branch policies a file creates are not held: they appear in Sync's normal
+  review.
+
 ## 0.8.0
 
 ### Added

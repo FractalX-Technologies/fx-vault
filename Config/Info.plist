@@ -22,6 +22,18 @@
 				<string>io.fractalx.fxvault.share</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>FX Vault Teammate Card</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>$(FXVAULT_SHARE_HANDLER_RANK)</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>io.fractalx.fxvault.teammate-card</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
@@ -72,6 +84,27 @@
 				<key>public.mime-type</key>
 				<array>
 					<string>application/vnd.fractalx.fxvault</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>FX Vault Teammate Card</string>
+			<key>UTTypeIdentifier</key>
+			<string>io.fractalx.fxvault.teammate-card</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>fxvcard</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/vnd.fractalx.fxvault-card</string>
 				</array>
 			</dict>
 		</dict>

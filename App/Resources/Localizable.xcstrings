@@ -12563,6 +12563,72 @@
         }
       }
     },
+    "main.table.held" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Held"
+          }
+        }
+      }
+    },
+    "main.table.held.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Imported from %@'s share file. It reaches GitHub or the provider only when you include the file in Sync's From Files review, or choose Push on Next Sync."
+          }
+        }
+      }
+    },
+    "main.table.held.help.unnamed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Imported from a share file. It reaches GitHub or the provider only when you include the file in Sync's From Files review, or choose Push on Next Sync."
+          }
+        }
+      }
+    },
+    "main.table.held.released" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The next Sync pushes %lld items. They are no longer held."
+          }
+        }
+      }
+    },
+    "main.table.held.released.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The next Sync pushes %@. It is no longer held."
+          }
+        }
+      }
+    },
+    "main.table.held.released.oneUnnamed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The next Sync pushes 1 item. It is no longer held."
+          }
+        }
+      }
+    },
     "main.table.linked.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -13362,6 +13428,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "New Repository…"
+          }
+        }
+      }
+    },
+    "menu.file.shareProject" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share Project…"
           }
         }
       }
@@ -14532,6 +14609,17 @@
         }
       }
     },
+    "overview.cell.held" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Held"
+          }
+        }
+      }
+    },
     "overview.cell.missing" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -14857,7 +14945,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Missing: fxvault.yml sends the name here. Extra: here, but fxvault.yml does not send it here. Differs: another place of this stage holds another value. Blocked: a public name with a secret-looking value. —: not used here."
+            "value" : "Missing: fxvault.yml sends the name here. Extra: here, but fxvault.yml does not send it here. Differs: another place of this stage holds another value. Held: imported from a share file, waiting until you include it in Sync. Blocked: a public name with a secret-looking value. —: not used here."
           }
         }
       }
@@ -15452,6 +15540,1128 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Teammate"
+          }
+        }
+      }
+    },
+    "projectShare.addRepository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Repository"
+          }
+        }
+      }
+    },
+    "projectShare.adjust" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adjust what's included"
+          }
+        }
+      }
+    },
+    "projectShare.back" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Back"
+          }
+        }
+      }
+    },
+    "projectShare.continue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "projectShare.create" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create Share File"
+          }
+        }
+      }
+    },
+    "projectShare.creating" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Encrypting the share…"
+          }
+        }
+      }
+    },
+    "projectShare.done.destination.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 destination added without a connection"
+          }
+        }
+      }
+    },
+    "projectShare.done.destinationItem.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 destination value written"
+          }
+        }
+      }
+    },
+    "projectShare.done.destinationItems" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld destination values written"
+          }
+        }
+      }
+    },
+    "projectShare.done.destinations" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld destinations added without a connection"
+          }
+        }
+      }
+    },
+    "projectShare.done.folder.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 folder saved"
+          }
+        }
+      }
+    },
+    "projectShare.done.folders" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld folders saved"
+          }
+        }
+      }
+    },
+    "projectShare.done.held" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld changes wait for you in Sync › From Files"
+          }
+        }
+      }
+    },
+    "projectShare.done.held.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 change waits for you in Sync › From Files"
+          }
+        }
+      }
+    },
+    "projectShare.done.link.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 group of linked copies kept"
+          }
+        }
+      }
+    },
+    "projectShare.done.links" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld groups of linked copies kept"
+          }
+        }
+      }
+    },
+    "projectShare.done.nothing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nothing changed."
+          }
+        }
+      }
+    },
+    "projectShare.done.openOverview" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show Overview"
+          }
+        }
+      }
+    },
+    "projectShare.done.passphraseHint" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send these words another way (a call or another app), not with the file."
+          }
+        }
+      }
+    },
+    "projectShare.done.repositories" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld repositories updated"
+          }
+        }
+      }
+    },
+    "projectShare.done.repository.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 repository updated"
+          }
+        }
+      }
+    },
+    "projectShare.done.sealedFor" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sealed for %@."
+          }
+        }
+      }
+    },
+    "projectShare.done.teammates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send it in any chat or email. It opens only on their Macs, until %@."
+          }
+        }
+      }
+    },
+    "projectShare.expires" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Expires %@"
+          }
+        }
+      }
+    },
+    "projectShare.expiry" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Expires after"
+          }
+        }
+      }
+    },
+    "projectShare.expiry.day.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 day"
+          }
+        }
+      }
+    },
+    "projectShare.expiry.days" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld days"
+          }
+        }
+      }
+    },
+    "projectShare.expiry.passphrase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault refuses to open it after this date. Anyone with the passphrase could still read it with other software."
+          }
+        }
+      }
+    },
+    "projectShare.expiry.teammates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault refuses to open it after this date. Only FX Vault on your teammates' Macs can open it."
+          }
+        }
+      }
+    },
+    "projectShare.noRepositories" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No repository chosen. Add one, or share folders only."
+          }
+        }
+      }
+    },
+    "projectShare.noStages" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "These repositories have no environments or destinations with a stage."
+          }
+        }
+      }
+    },
+    "projectShare.open.change.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 change"
+          }
+        }
+      }
+    },
+    "projectShare.open.changes" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld changes"
+          }
+        }
+      }
+    },
+    "projectShare.open.dates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Created %1$@ · Expires %2$@"
+          }
+        }
+      }
+    },
+    "projectShare.open.destination.merge" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Merges into your destination with the same target."
+          }
+        }
+      }
+    },
+    "projectShare.open.destination.new" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New, without a connection. Connect your account in Settings › Destinations."
+          }
+        }
+      }
+    },
+    "projectShare.open.destinations" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Destinations"
+          }
+        }
+      }
+    },
+    "projectShare.open.folder.mergeKeep" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Merge, keep mine"
+          }
+        }
+      }
+    },
+    "projectShare.open.folder.mergeReplace" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Merge, replace mine"
+          }
+        }
+      }
+    },
+    "projectShare.open.folder.new" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New folder"
+          }
+        }
+      }
+    },
+    "projectShare.open.folder.skip" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Don't import"
+          }
+        }
+      }
+    },
+    "projectShare.open.folders" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folders"
+          }
+        }
+      }
+    },
+    "projectShare.open.from" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From %@"
+          }
+        }
+      }
+    },
+    "projectShare.open.fromUnknown" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From an unknown sender"
+          }
+        }
+      }
+    },
+    "projectShare.open.importFailed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Couldn't import %@ from GitHub. It was skipped."
+          }
+        }
+      }
+    },
+    "projectShare.open.importing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Importing repositories from GitHub…"
+          }
+        }
+      }
+    },
+    "projectShare.open.inVault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "In your vault"
+          }
+        }
+      }
+    },
+    "projectShare.open.nothingSyncs" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nothing reaches GitHub or a provider until you include it in Sync."
+          }
+        }
+      }
+    },
+    "projectShare.open.repositories" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld repositories"
+          }
+        }
+      }
+    },
+    "projectShare.open.repository.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 repository"
+          }
+        }
+      }
+    },
+    "projectShare.open.skipped.later" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open the same file again once you have access to import it."
+          }
+        }
+      }
+    },
+    "projectShare.open.skipped.notChecked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skipped: access couldn't be checked"
+          }
+        }
+      }
+    },
+    "projectShare.open.skipped.notVisible" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skipped: none of your GitHub accounts can see it"
+          }
+        }
+      }
+    },
+    "projectShare.open.skipped.unreachable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skipped: GitHub couldn't be reached to check access"
+          }
+        }
+      }
+    },
+    "projectShare.open.unverified" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not verified"
+          }
+        }
+      }
+    },
+    "projectShare.open.unverified.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A passphrase file says who sent it but can't prove it."
+          }
+        }
+      }
+    },
+    "projectShare.open.verified" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Verified teammate"
+          }
+        }
+      }
+    },
+    "projectShare.open.verified.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sealed for this Mac and signed by a teammate you paired with."
+          }
+        }
+      }
+    },
+    "projectShare.open.willImport" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Will be imported from GitHub"
+          }
+        }
+      }
+    },
+    "projectShare.open.willImportWith" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Will be imported from GitHub with %@"
+          }
+        }
+      }
+    },
+    "projectShare.production" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Production"
+          }
+        }
+      }
+    },
+    "projectShare.production.confirm.include" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Include Production"
+          }
+        }
+      }
+    },
+    "projectShare.production.confirm.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "“%@” is a production stage. Its values can only be sent to paired teammates, never with a passphrase."
+          }
+        }
+      }
+    },
+    "projectShare.production.confirm.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Include production?"
+          }
+        }
+      }
+    },
+    "projectShare.production.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Production starts unchecked and only goes to paired teammates, never with a passphrase."
+          }
+        }
+      }
+    },
+    "projectShare.protection.passphrase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Anyone, with a passphrase"
+          }
+        }
+      }
+    },
+    "projectShare.protection.passphrase.blocked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available: the file includes production (%@). Production only goes to teammates."
+          }
+        }
+      }
+    },
+    "projectShare.protection.passphrase.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Six words that you send another way. Whoever has the file and the words can open it."
+          }
+        }
+      }
+    },
+    "projectShare.protection.teammates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammates"
+          }
+        }
+      }
+    },
+    "projectShare.protection.teammates.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only FX Vault on these teammates' Macs can open it, and they see it came from you. Safe to send in any chat or email."
+          }
+        }
+      }
+    },
+    "projectShare.reauth.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sharing exports values. Use Touch ID or your master password to continue."
+          }
+        }
+      }
+    },
+    "projectShare.removeRepository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove from the file"
+          }
+        }
+      }
+    },
+    "projectShare.repositories" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repositories"
+          }
+        }
+      }
+    },
+    "projectShare.repositoryLevel" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository-level secrets and variables"
+          }
+        }
+      }
+    },
+    "projectShare.save" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save…"
+          }
+        }
+      }
+    },
+    "projectShare.saved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved “%@”."
+          }
+        }
+      }
+    },
+    "projectShare.saved.passphrase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved “%@”. Send the passphrase separately."
+          }
+        }
+      }
+    },
+    "projectShare.sent" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "File sent."
+          }
+        }
+      }
+    },
+    "projectShare.sent.passphrase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "File sent. Send the passphrase through a different app."
+          }
+        }
+      }
+    },
+    "projectShare.share" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share…"
+          }
+        }
+      }
+    },
+    "projectShare.shareStage" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share Stage…"
+          }
+        }
+      }
+    },
+    "projectShare.shareStage.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share this stage's GitHub environment and destinations in an encrypted file."
+          }
+        }
+      }
+    },
+    "projectShare.stages" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Stages"
+          }
+        }
+      }
+    },
+    "projectShare.stages.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A stage includes the GitHub environment with its name and the destinations of that stage, in every repository above."
+          }
+        }
+      }
+    },
+    "projectShare.step.contents" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "What to share"
+          }
+        }
+      }
+    },
+    "projectShare.step.sendTo" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send to"
+          }
+        }
+      }
+    },
+    "projectShare.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "One encrypted .fxvault file with the repositories, stages and destinations you choose."
+          }
+        }
+      }
+    },
+    "projectShare.summary.folder.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 folder"
+          }
+        }
+      }
+    },
+    "projectShare.summary.folders" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld folders"
+          }
+        }
+      }
+    },
+    "projectShare.summary.item.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 secret or variable"
+          }
+        }
+      }
+    },
+    "projectShare.summary.items" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld secrets and variables"
+          }
+        }
+      }
+    },
+    "projectShare.summary.line" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ in %2$@"
+          }
+        }
+      }
+    },
+    "projectShare.summary.lineBoth" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ in %2$@ and %3$@"
+          }
+        }
+      }
+    },
+    "projectShare.summary.lineFolders" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ in %2$@"
+          }
+        }
+      }
+    },
+    "projectShare.summary.repositories" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld repositories"
+          }
+        }
+      }
+    },
+    "projectShare.summary.repository.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 repository"
+          }
+        }
+      }
+    },
+    "projectShare.teammates.limit" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of up to %2$lld teammates"
+          }
+        }
+      }
+    },
+    "projectShare.teammates.none" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No paired teammates yet. Add one in Settings › Teammates, nearby or by file."
+          }
+        }
+      }
+    },
+    "projectShare.teammates.remote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paired remotely"
+          }
+        }
+      }
+    },
+    "projectShare.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share Project"
+          }
+        }
+      }
+    },
+    "projectShare.valueMissing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld secrets have no value here and travel by name only"
+          }
+        }
+      }
+    },
+    "projectShare.valueMissing.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 secret has no value here and travels by name only"
           }
         }
       }
@@ -16864,6 +18074,171 @@
         }
       }
     },
+    "settings.sharing.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No share files sent from this Mac yet."
+          }
+        }
+      }
+    },
+    "settings.sharing.expired" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Expired"
+          }
+        }
+      }
+    },
+    "settings.sharing.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Every share file this Mac wrote, with the names it carried. Values are never kept here."
+          }
+        }
+      }
+    },
+    "settings.sharing.mode.passphrase" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Passphrase"
+          }
+        }
+      }
+    },
+    "settings.sharing.mode.teammates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Teammates: %@"
+          }
+        }
+      }
+    },
+    "settings.sharing.names" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Names in this file"
+          }
+        }
+      }
+    },
+    "settings.sharing.place.repository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository level"
+          }
+        }
+      }
+    },
+    "settings.sharing.remove" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove from List"
+          }
+        }
+      }
+    },
+    "settings.sharing.remove.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Removes this entry only. The file you sent isn't affected."
+          }
+        }
+      }
+    },
+    "settings.sharing.rotate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rotate these secrets if the file leaked."
+          }
+        }
+      }
+    },
+    "settings.sharing.secrets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld secrets"
+          }
+        }
+      }
+    },
+    "settings.sharing.secrets.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 secret"
+          }
+        }
+      }
+    },
+    "settings.sharing.tab" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sharing"
+          }
+        }
+      }
+    },
+    "settings.sharing.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Files you sent"
+          }
+        }
+      }
+    },
+    "settings.sharing.unknownTeammate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Removed teammate %@"
+          }
+        }
+      }
+    },
     "settings.tab.accounts" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -16952,13 +18327,13 @@
         }
       }
     },
-    "settings.teammates.footnote" : {
+    "settings.teammates.footnote.v2" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Teammates are Macs you paired with by comparing a code. They recognize each other nearby, can ping each other and chat without a code."
+            "value" : "Teammates are Macs you paired with by comparing a code, nearby or on a call. They recognize each other nearby, can ping each other, chat without a code and open share files sealed for them."
           }
         }
       }
@@ -17524,6 +18899,28 @@
         }
       }
     },
+    "share.error.expired.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ask the sender for a new one."
+          }
+        }
+      }
+    },
+    "share.error.expired.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This share file has expired"
+          }
+        }
+      }
+    },
     "share.error.generic.message" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -17623,6 +19020,28 @@
         }
       }
     },
+    "share.error.notRecipient.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This file was sealed for other teammates. Ask the sender to send it to you."
+          }
+        }
+      }
+    },
+    "share.error.notRecipient.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not sent to this Mac"
+          }
+        }
+      }
+    },
     "share.error.nothing.message" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -17667,6 +19086,50 @@
         }
       }
     },
+    "share.error.pairingCard.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The card is damaged, is your own, or answers an invitation from another Mac. Start again with a new invitation."
+          }
+        }
+      }
+    },
+    "share.error.pairingCard.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Couldn't read the teammate card"
+          }
+        }
+      }
+    },
+    "share.error.pairingExpired.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Invitations last 7 days. Ask for a new one."
+          }
+        }
+      }
+    },
+    "share.error.pairingExpired.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This invitation has expired"
+          }
+        }
+      }
+    },
     "share.error.passphrase.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -17674,6 +19137,50 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Check the passphrase"
+          }
+        }
+      }
+    },
+    "share.error.production.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The selection includes a production stage. Send it to paired teammates, or uncheck production to use a passphrase."
+          }
+        }
+      }
+    },
+    "share.error.production.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Production goes to teammates only"
+          }
+        }
+      }
+    },
+    "share.error.recipients.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pick 1 to %lld of your paired teammates."
+          }
+        }
+      }
+    },
+    "share.error.recipients.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose who gets the file"
           }
         }
       }
@@ -17762,6 +19269,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Too large to share"
+          }
+        }
+      }
+    },
+    "share.error.unknownSender.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault can't check who sealed this file. Pair with the sender first, then open it again."
+          }
+        }
+      }
+    },
+    "share.error.unknownSender.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sender isn't your teammate"
           }
         }
       }
@@ -18800,17 +20329,6 @@
         }
       }
     },
-    "shareExport.scope.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "What to share"
-          }
-        }
-      }
-    },
     "shareExport.subtitle" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -18833,17 +20351,6 @@
         }
       }
     },
-    "shareExport.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Share as File"
-          }
-        }
-      }
-    },
     "shareImport.apply" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -18851,6 +20358,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Import"
+          }
+        }
+      }
+    },
+    "shareImport.applying" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Importing…"
           }
         }
       }
@@ -19005,6 +20523,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Decrypting…"
+          }
+        }
+      }
+    },
+    "shareImport.openingTeammates" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opening the file with this Mac's teammate keys…"
           }
         }
       }
@@ -21143,6 +22672,193 @@
         }
       }
     },
+    "sync.held.createsEnvironment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Also creates or renames environment %@"
+          }
+        }
+      }
+    },
+    "sync.held.explanation" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Imported from a share file. Nothing from it reaches GitHub or a provider until you include it."
+          }
+        }
+      }
+    },
+    "sync.held.file.named" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From %@'s file"
+          }
+        }
+      }
+    },
+    "sync.held.file.unnamed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From a share file"
+          }
+        }
+      }
+    },
+    "sync.held.hide" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Items"
+          }
+        }
+      }
+    },
+    "sync.held.include" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Include in this Sync"
+          }
+        }
+      }
+    },
+    "sync.held.items" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld items"
+          }
+        }
+      }
+    },
+    "sync.held.items.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 item"
+          }
+        }
+      }
+    },
+    "sync.held.meta" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Imported %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "sync.held.onlyHeld" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only rows from share files are waiting. Include a file below to sync it."
+          }
+        }
+      }
+    },
+    "sync.held.show" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show %lld Items"
+          }
+        }
+      }
+    },
+    "sync.held.show.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show 1 Item"
+          }
+        }
+      }
+    },
+    "sync.held.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From Files"
+          }
+        }
+      }
+    },
+    "sync.held.unverified" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unverified"
+          }
+        }
+      }
+    },
+    "sync.held.unverified.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opened with a passphrase: the sender's name is what the file says. FX Vault can't check it."
+          }
+        }
+      }
+    },
+    "sync.held.verified" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Verified"
+          }
+        }
+      }
+    },
+    "sync.held.verified.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sealed for your Mac by a teammate: FX Vault checked their signature when the file was opened."
+          }
+        }
+      }
+    },
     "sync.kind.secret" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -22470,6 +24186,402 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Not seen nearby yet"
+          }
+        }
+      }
+    },
+    "teammates.remote.alreadyTeammate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is already your teammate. Pairing again updates their card."
+          }
+        }
+      }
+    },
+    "teammates.remote.code.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Compare these words"
+          }
+        }
+      }
+    },
+    "teammates.remote.code.warning" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If any word differs, cancel: a card may have been changed on the way. Nobody is added until you confirm."
+          }
+        }
+      }
+    },
+    "teammates.remote.createInvitation" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create Invitation"
+          }
+        }
+      }
+    },
+    "teammates.remote.createReply" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create Reply"
+          }
+        }
+      }
+    },
+    "teammates.remote.experimental" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Experimental"
+          }
+        }
+      }
+    },
+    "teammates.remote.experimental.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pairing by file is new. If it fails, pair side by side with Add Teammate instead."
+          }
+        }
+      }
+    },
+    "teammates.remote.invitation.fileName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault teammate invitation"
+          }
+        }
+      }
+    },
+    "teammates.remote.invitation.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create a reply and send it back to %@. Then call them and compare the six words FX Vault shows."
+          }
+        }
+      }
+    },
+    "teammates.remote.invitation.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Invitation from %@"
+          }
+        }
+      }
+    },
+    "teammates.remote.invitationReady.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send this file to the person you want to pair with. It expires after 7 days. When their reply arrives, open it in FX Vault."
+          }
+        }
+      }
+    },
+    "teammates.remote.invitationReady.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send Your Invitation"
+          }
+        }
+      }
+    },
+    "teammates.remote.notNearby" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not Nearby…"
+          }
+        }
+      }
+    },
+    "teammates.remote.notNearby.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pair with someone on another network: exchange card files, then compare six words on a call."
+          }
+        }
+      }
+    },
+    "teammates.remote.paired" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is now your teammate. You can send them share files sealed for their Mac."
+          }
+        }
+      }
+    },
+    "teammates.remote.pairedRemotely" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paired remotely"
+          }
+        }
+      }
+    },
+    "teammates.remote.publicKeys" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The files carry only public keys and names, never a secret. Comparing the words on a call is what proves nobody swapped a card on the way."
+          }
+        }
+      }
+    },
+    "teammates.remote.reply.fileName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault teammate reply"
+          }
+        }
+      }
+    },
+    "teammates.remote.reply.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Call %@ and compare these words. Confirm only when every word matches."
+          }
+        }
+      }
+    },
+    "teammates.remote.reply.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reply from %@"
+          }
+        }
+      }
+    },
+    "teammates.remote.replyReady.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send this reply to %@, then call them and compare these words. Confirm only when every word matches."
+          }
+        }
+      }
+    },
+    "teammates.remote.replyReady.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send Your Reply"
+          }
+        }
+      }
+    },
+    "teammates.remote.save" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save…"
+          }
+        }
+      }
+    },
+    "teammates.remote.saved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved. Send the file to them."
+          }
+        }
+      }
+    },
+    "teammates.remote.share" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share…"
+          }
+        }
+      }
+    },
+    "teammates.remote.shared" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sent. Keep this window open, or open their reply later from Finder."
+          }
+        }
+      }
+    },
+    "teammates.remote.start.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send an invitation by WhatsApp, Mail or AirDrop. The other person answers with a reply file, then you compare six words on a call."
+          }
+        }
+      }
+    },
+    "teammates.remote.step1" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send your invitation."
+          }
+        }
+      }
+    },
+    "teammates.remote.step2" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "They open it in FX Vault and send back a reply."
+          }
+        }
+      }
+    },
+    "teammates.remote.step3" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open their reply here."
+          }
+        }
+      }
+    },
+    "teammates.remote.step4" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Call them, compare the six words, and both confirm."
+          }
+        }
+      }
+    },
+    "teammates.remote.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pair Without Being Nearby"
+          }
+        }
+      }
+    },
+    "teammates.remote.unreadable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault couldn't read this file. Ask for a new invitation or reply."
+          }
+        }
+      }
+    },
+    "teammates.remote.updated" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@'s teammate card was updated."
+          }
+        }
+      }
+    },
+    "teammates.remote.waitingForNearby" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Seen nearby once you meet on the same network"
+          }
+        }
+      }
+    },
+    "teammates.remote.wordsMatch" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The Words Match"
           }
         }
       }

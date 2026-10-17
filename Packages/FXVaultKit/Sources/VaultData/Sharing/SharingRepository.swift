@@ -10,11 +10,12 @@ import VaultStore
 /// Sharing between teammates (§9; D21–D23, D30; M6): `.fxvault` files and the nearby
 /// protocol, both ending in the same import.
 ///
-/// **Export** (``exportFile(_:to:senderName:appVersion:authorization:existingFile:)``): needs a
-/// single-use ``ShareAuthorizationModel`` (`ReauthGate.authorizeShare(.fileExport, …)`). The
-/// selection's values are decrypted inside `VaultSession.read`, sealed under a fresh 6-word
-/// passphrase with Argon2id (t=3, 64 MiB) and AES-256-GCM, and written 0600 with
-/// `SecureFileWriter`. The passphrase is returned once to show; every plaintext is wiped.
+/// **Export**: every `.fxvault` file is a schema 4 bundle in format 2 (v0.9.0). Project shares
+/// are written by ``exportBundle(_:protection:to:senderName:appVersion:authorization:existingFile:)``
+/// (`SharingRepository+ProjectShare.swift`); a package received in Nearby Chat by
+/// ``exportFile(package:to:authorization:existingFile:)``. Both need a single-use
+/// ``ShareAuthorizationModel`` (`ReauthGate.authorizeShare(.fileExport, …)`), write 0600 with
+/// `SecureFileWriter` and return the passphrase once to show; every plaintext is wiped.
 ///
 /// **Import** (``readFile(at:)`` → ``openFile(_:passphrase:checkGitHub:)`` →
 /// ``apply(_:plan:confirmReplay:)``): the header is checked before a passphrase is asked for,
@@ -24,41 +25,57 @@ import VaultStore
 /// write transaction and refuses (`.planOutdated`) if the preview changed, so the user's choices
 /// always apply to what they reviewed. Nothing syncs automatically.
 ///
+/// **Project shares** (v0.9.0, `SharingRepository+ProjectShare.swift`): several repositories with
+/// their destinations and folders in one `.fxvault` format 2 file, sealed with a passphrase or for
+/// teammates, opened through ``inspectFile(at:)`` and ``openShareFile(_:passphrase:checkGitHub:)``.
+///
 /// **Nearby** (``makeNearbySender(transport:localName:clock:)``,
 /// ``makeNearbyReceiver(transport:localName:clock:)``): orchestration around `NearbySession`
 /// that builds the manifest and payload on the sender and plans and applies them on the
 /// receiver through the same importer.
 public actor SharingRepository {
-    private let session: VaultSession
-    private let schedulers: (any GHSchedulerProviding)?
+    let session: VaultSession
+    let schedulers: (any GHSchedulerProviding)?
     private let codec: FxVaultFileCodec
-    private let clock: any VaultClock
-    private let writePolicy: WriteCollaboratorPolicy
-    private let fileWriter: SecureFileWriter
+    /// `.fxvault` format 2 (v0.9.0): project shares, passphrase or teammates.
+    let fileCodec: FxVaultFileV2Codec
+    let clock: any VaultClock
+    let writePolicy: WriteCollaboratorPolicy
+    let fileWriter: SecureFileWriter
     private let builder: ShareExportBuilder
+    let projectBuilder: ProjectShareExportBuilder
+    /// Whether a bundle's repository missing from the vault can be imported (nil: never checked).
+    let repositoryAccess: (any ShareRepositoryAccessChecking)?
     private var passphraseGenerator: PassphraseGenerator?
 
-    private static let log = Logger(subsystem: ConfigConstants.logSubsystem, category: "sharing")
+    static let log = Logger(subsystem: ConfigConstants.logSubsystem, category: "sharing")
 
     /// - Parameters:
     ///   - schedulers: used to read GitHub's current state of the target repository while
     ///     planning an import (nil: plan from local state only).
     ///   - deriver: the `.fxvault` key derivation; tests inject a fast fake.
+    ///   - repositoryAccess: checks and imports a project share's repositories that are not in
+    ///     the vault (``CatalogShareRepositoryAccess`` in the app; nil: they are shown as not
+    ///     checked).
     public init(
         session: VaultSession,
         schedulers: (any GHSchedulerProviding)? = nil,
         deriver: any KeyDeriving = Argon2idSharingDeriver(),
         clock: any VaultClock = SystemClock(),
         writePolicy: WriteCollaboratorPolicy = .default,
-        fileWriter: SecureFileWriter = SecureFileWriter()
+        fileWriter: SecureFileWriter = SecureFileWriter(),
+        repositoryAccess: (any ShareRepositoryAccessChecking)? = nil
     ) {
         self.session = session
         self.schedulers = schedulers
         codec = FxVaultFileCodec(deriver: deriver)
+        fileCodec = FxVaultFileV2Codec(deriver: deriver)
         self.clock = clock
         self.writePolicy = writePolicy
         self.fileWriter = fileWriter
         builder = ShareExportBuilder(session: session, clock: clock)
+        projectBuilder = ProjectShareExportBuilder(session: session, clock: clock)
+        self.repositoryAccess = repositoryAccess
     }
 
     // MARK: - Export (§9.1–§9.3)
@@ -69,67 +86,61 @@ public actor SharingRepository {
         return ShareExportBuilder.preview(package)
     }
 
-    /// Writes `selection` to a new `.fxvault` file at `destination` (mode 0600).
-    ///
-    /// - Parameters:
-    ///   - senderName: shown to the receiver as an unverified name (sanitized here).
-    ///   - appVersion: `producer.version`.
-    ///   - authorization: from `ReauthGate.authorizeShare(.fileExport, …)`; consumed here.
-    /// - Returns: the file URL, the passphrase (show once, then wipe) and the preview.
-    /// - Throws: `.authorizationInvalid`, `.nothingToShare`, `.share`, `.write`, `.vault(.locked)`.
-    public func exportFile(
-        _ selection: ShareSelectionModel,
-        to destination: URL,
-        senderName: String,
-        appVersion: String,
-        authorization: ShareAuthorizationModel,
-        existingFile: SecureFileWriter.ExistingFilePolicy = .fail
-    ) async throws(SharingError) -> ShareFileExportResultModel {
-        try authorization.consume(.fileExport, for: session)
-        let generator = try passphrases()
-        let package = try builder.build(selection, senderName: senderName, appVersion: appVersion, includeValues: true)
-        defer { package.wipeValues() }
-        return try await seal(package, passphrase: generator.generate(), to: destination, existingFile: existingFile)
-    }
-
-    /// Writes a package received in Nearby Chat to a `.fxvault` file (v0.4.0 "Save as File…"):
-    /// as ``exportFile(_:to:senderName:appVersion:authorization:existingFile:)``, under a fresh
-    /// passphrase, keeping the sender's package id, name and date. Does not wipe `package`.
+    /// Writes a package received in Nearby Chat to a `.fxvault` file (v0.4.0 "Save as File…";
+    /// v0.9.0: a schema 4 bundle in format 2 under a fresh passphrase, expiring after
+    /// ``ShareExpiryChoice/default``). It keeps the sender's package id (replay detection) and
+    /// name; its date is the day it is saved. A package with a production environment is refused
+    /// (`.productionNeedsTeammates`): production never travels under a passphrase (P3). Does not
+    /// wipe `package`.
     ///
     /// - Parameter authorization: from `ReauthGate.authorizeShare(.fileExport, …)`; consumed here.
+    /// - Throws: `.productionNeedsTeammates`, `.authorizationInvalid`, `.share`, `.write`.
     public func exportFile(
         package: SharePackageModel,
         to destination: URL,
         authorization: ShareAuthorizationModel,
         existingFile: SecureFileWriter.ExistingFilePolicy = .fail
     ) async throws(SharingError) -> ShareFileExportResultModel {
+        if package.repository.environments.contains(where: { StageRisk.isProduction($0.name) }) {
+            throw .productionNeedsTeammates
+        }
         try authorization.consume(.fileExport, for: session)
-        let generator = try passphrases()
-        return try await seal(package, passphrase: generator.generate(), to: destination, existingFile: existingFile)
-    }
-
-    /// Seals `package` under `passphrase` and writes it owner-only; wipes the passphrase on failure.
-    private func seal(
-        _ package: SharePackageModel,
-        passphrase: SecretBytes,
-        to destination: URL,
-        existingFile: SecureFileWriter.ExistingFilePolicy
-    ) async throws(SharingError) -> ShareFileExportResultModel {
+        let bundle = ShareBundleModel(package: package, createdAt: clock.now, expiry: .default)
+        let json: SecretBytes
+        do {
+            json = try ShareBundleCoder.encode(bundle)
+        } catch {
+            throw .share(error)
+        }
+        defer { json.wipe() }
+        let passphrase = try passphrases().generate()
         let file: Data
         do {
-            file = try await codec.seal(package, passphrase: passphrase)
+            file = try await fileCodec.sealWithPassphrase(payload: json, passphrase: passphrase)
         } catch {
             passphrase.wipe()
             throw .share(error)
         }
+        return try write(file, itemCount: package.itemCount, passphrase: passphrase, preview: ShareExportBuilder.preview(package), to: destination, existingFile: existingFile)
+    }
+
+    /// Writes `file` owner-only; wipes the passphrase on failure.
+    private func write(
+        _ file: Data,
+        itemCount: Int,
+        passphrase: SecretBytes,
+        preview: ShareExportPreviewModel,
+        to destination: URL,
+        existingFile: SecureFileWriter.ExistingFilePolicy
+    ) throws(SharingError) -> ShareFileExportResultModel {
         do {
             try fileWriter.write(file, to: destination, existingFile: existingFile)
         } catch {
             passphrase.wipe()
             throw .write(error)
         }
-        Self.log.info("Exported a share file with \(package.itemCount, privacy: .public) items")
-        return ShareFileExportResultModel(fileURL: destination, passphrase: passphrase, preview: ShareExportBuilder.preview(package))
+        Self.log.info("Exported a share file with \(itemCount, privacy: .public) items")
+        return ShareFileExportResultModel(fileURL: destination, passphrase: passphrase, preview: preview)
     }
 
     // MARK: - Import (§9.1 reader order, §9.5)
@@ -388,7 +399,10 @@ public actor SharingRepository {
 
     /// GitHub's current listing of the package's repository, when it is in the vault and on
     /// GitHub. Any failure leaves it out: the planner then treats GitHub's state as unknown.
-    private func remoteContext(for repository: ShareRepositoryModel) async -> ShareRemoteContextModel? {
+    func remoteContext(
+        for repository: ShareRepositoryModel,
+        sharing rowIDs: [ShareRemoteKeyModel: ConfigItemID] = [:]
+    ) async -> ShareRemoteContextModel? {
         guard let schedulers,
               let local = try? RepoStore(database: session.database).fetch(ownerLogin: repository.owner, name: repository.name),
               local.existsOnGitHub,
@@ -398,18 +412,18 @@ public actor SharingRepository {
             let scheduler = try await schedulers.scheduler(for: local.accountLogin)
             let listed = try await RemoteConfigReader(scheduler: scheduler, repo: ref).read()
             defer { listed.wipe() }
-            return try session.withKeys { ShareImportPlanning.remoteContext(listed, keys: $0) }
+            return try session.withKeys { ShareImportPlanning.remoteContext(listed, keys: $0, sharing: rowIDs) }
         } catch {
             Self.log.error("GitHub listing for a share import failed; planning from local state")
             return nil
         }
     }
 
-    private func importedPackageIDs() throws(SharingError) -> Set<SharePackageID> {
+    func importedPackageIDs() throws(SharingError) -> Set<SharePackageID> {
         Set(try performSharing { try SharePackageStore(database: session.database).fetchAll() }.map(\.packageID))
     }
 
-    private func passphrases() throws(SharingError) -> PassphraseGenerator {
+    func passphrases() throws(SharingError) -> PassphraseGenerator {
         if let passphraseGenerator { return passphraseGenerator }
         do {
             let generator = try PassphraseGenerator.bundled()
@@ -422,4 +436,36 @@ public actor SharingRepository {
 
     /// `producer.version` of a preview package, which is never sent.
     private static let previewVersion = "0"
+}
+
+// MARK: - Testing
+
+@_spi(Testing)
+extension SharingRepository {
+    /// Writes `selection` as FX Vault 0.8 did: `.fxvault` format 1, a schema 1–3 package, no
+    /// expiry. The app never writes one; tests use it to check that files from older versions
+    /// still open (scripts/lint.sh keeps `@_spi(Testing)` imports out of App/).
+    ///
+    /// - Throws: `.authorizationInvalid`, `.nothingToShare`, `.share`, `.write`, `.vault(.locked)`.
+    public func exportLegacyFile(
+        _ selection: ShareSelectionModel,
+        to destination: URL,
+        senderName: String,
+        appVersion: String,
+        authorization: ShareAuthorizationModel,
+        existingFile: SecureFileWriter.ExistingFilePolicy = .fail
+    ) async throws(SharingError) -> ShareFileExportResultModel {
+        try authorization.consume(.fileExport, for: session)
+        let package = try builder.build(selection, senderName: senderName, appVersion: appVersion, includeValues: true)
+        defer { package.wipeValues() }
+        let passphrase = try passphrases().generate()
+        let file: Data
+        do {
+            file = try await codec.seal(package, passphrase: passphrase)
+        } catch {
+            passphrase.wipe()
+            throw .share(error)
+        }
+        return try write(file, itemCount: package.itemCount, passphrase: passphrase, preview: ShareExportBuilder.preview(package), to: destination, existingFile: existingFile)
+    }
 }
