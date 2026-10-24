@@ -16,6 +16,10 @@
     {
       "id": "main",
       "name": "Main window"
+    },
+    {
+      "id": "place",
+      "name": "Place view"
     }
   ],
   "boards": {
@@ -307,6 +311,78 @@
       "h": 800,
       "title": "Share securely: preview before import",
       "page": "main"
+    },
+    "Place-Edit.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Place view: editing notes",
+      "page": "place"
+    },
+    "Place-SecretValue.dc.html": {
+      "x": 2720,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Place view: set a secret value",
+      "page": "place"
+    },
+    "Place-Review.dc.html": {
+      "x": 4080,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Place view: review changes",
+      "page": "place"
+    },
+    "Place-Reveal.dc.html": {
+      "x": 5440,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Place view: revealed value",
+      "page": "place"
+    },
+    "Place-Table.dc.html": {
+      "x": 0,
+      "y": 1180,
+      "w": 1280,
+      "h": 800,
+      "title": "Place view: table",
+      "page": "place"
+    },
+    "Place-FileDrop.dc.html": {
+      "x": 1360,
+      "y": 1180,
+      "w": 1280,
+      "h": 800,
+      "title": "Place view: dropping a file",
+      "page": "place"
+    },
+    "Place-FileSheet.dc.html": {
+      "x": 2720,
+      "y": 1180,
+      "w": 1280,
+      "h": 800,
+      "title": "Place view: add file secret",
+      "page": "place"
+    },
+    "Place-Errors.dc.html": {
+      "x": 4080,
+      "y": 1180,
+      "w": 1280,
+      "h": 800,
+      "title": "Place view: lines that can't be saved",
+      "page": "place"
+    },
+    "Place-Paste.dc.html": {
+      "x": 1360,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Place view: pasted lines",
+      "page": "place"
     }
   },
   "order": [
@@ -345,7 +421,16 @@
     "Share-Open.dc.html",
     "Share-Expired.dc.html",
     "Main2-DeleteKeyVault.dc.html",
-    "Share-OpenPreview.dc.html"
+    "Share-OpenPreview.dc.html",
+    "Place-Edit.dc.html",
+    "Place-Paste.dc.html",
+    "Place-SecretValue.dc.html",
+    "Place-Review.dc.html",
+    "Place-Reveal.dc.html",
+    "Place-Table.dc.html",
+    "Place-FileDrop.dc.html",
+    "Place-FileSheet.dc.html",
+    "Place-Errors.dc.html"
   ],
   "notes": {
     "row1": {
@@ -419,6 +504,22 @@
       "kind": "title1",
       "maxW": 6720,
       "page": "main"
+    },
+    "place1": {
+      "x": 0,
+      "y": -260,
+      "text": "Edit, set a value, review, reveal",
+      "kind": "title1",
+      "maxW": 6720,
+      "page": "place"
+    },
+    "place2": {
+      "x": 0,
+      "y": 920,
+      "text": "Table, file secrets and lines that can't be saved",
+      "kind": "title1",
+      "maxW": 5360,
+      "page": "place"
     }
   },
   "designSystems": []

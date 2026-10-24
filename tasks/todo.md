@@ -1917,7 +1917,7 @@ Reserved for Bryan: the migration that drops the removed features' tables, the t
 Design (designer, reviewed by anton):
 - [x] D1 Start and onboarding: welcome, recovery reset, master password, recovery key and confirm, Touch ID, GitHub setup, connect GitHub (organizations, `admin:org` approval), connect Azure, first import, fill values from notes, notch unlock. Writes: `docs/design/mockup/v1/`.
 - [x] D2 Main window: sidebar GitHub › org › repo › env, Azure › subscription › vault, Folders; empty states; offline banner; place actions, delete and export; quick vault (⌃⌥V); Share Securely.
-- [ ] D3 Place view: Notes (placeholders for masked values, Reveal, Copy All) and Table; edit review; file secrets (`.p8`, `.pem`, `.json`).
+- [x] D3 Place view: Notes (placeholders for masked values, Reveal, Copy All) and Table; edit review; file secrets (`.p8`, `.pem`, `.json`).
 - [ ] D4 Organization and Key Vault specifics: visibility (all, private, selected repos), inherited and shadowed names on a repository, vault name mapping; New Repository, New Environment and the Folder view.
 - [ ] D5 Sync review, drift review (keep mine / take GitHub's), Settings after the removals (quick-vault shortcut, Sharing log, Touch ID), the menu bar item, and connecting Azure or another GitHub account after onboarding.
 
@@ -1947,4 +1947,9 @@ Review D2 — main window, actions, quick vault, share (2026-10-25):
 - Boards: 21 on page "Main window" (home, expanded, dark, repository with inherited org names, sync failed, ⌘K, offline, actions menu, delete GitHub/Key Vault, export, quick vault ×4, share pick/passphrase/open/preview/expired).
 - Decisions (Bryan): variables plain in Notes, secrets masked; place actions and delete at next Sync; quick vault from the notch on ⌃⌥V with expand; Share Securely as passphrase files, production allowed behind Touch ID (relaxes 0.9).
 - Review: anton, two rounds — 3 blockers on the main window (missing account/scope lines, unclear Approve, no drift) and 6 security blockers on the new rows (secret copy in quick vault without Touch ID, production ticked, share without Touch ID, preview before passphrase, expiry before decrypt, org name in file name); all applied. His "export board missing" was a timing miss: the board existed.
+- Commit: `f03186f` `docs(design): add main window, actions, quick vault and share boards`.
+
+Review D3 — place view (2026-10-25):
+- Boards: 9 on page "Place view" (edit, paste, secret value, review, reveal, table, file drop, file sheet, errors).
+- Review: anton found 4 blockers (notes need an AppKit token text view, typing aids corrupt values, pasted values must become tokens, kind is fixed after Sync) and 6 improvements (48,000-byte limit after Base64, per-source name rules, all trailing CR/LF removed, reveal outside edit only, override removal, inherited rows read-only); verified in code (`Limits.maxValueBytes`, `Timeouts.revealRemask`, `DestinationRules`) and applied; build notes in the brief.
 - Commit: (pending).
