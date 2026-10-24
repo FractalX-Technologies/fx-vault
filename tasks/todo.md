@@ -1916,16 +1916,17 @@ Reserved for Bryan: the migration that drops the removed features' tables, the t
 
 Design (designer, reviewed by anton):
 - [x] D1 Start and onboarding: welcome, recovery reset, master password, recovery key and confirm, Touch ID, GitHub setup, connect GitHub (organizations, `admin:org` approval), connect Azure, first import, fill values from notes, notch unlock. Writes: `docs/design/mockup/v1/`.
-- [ ] D2 Main window: sidebar GitHub › org › repo › env, Azure › subscription › vault, Folders; empty states; offline banner.
+- [x] D2 Main window: sidebar GitHub › org › repo › env, Azure › subscription › vault, Folders; empty states; offline banner; place actions, delete and export; quick vault (⌃⌥V); Share Securely.
 - [ ] D3 Place view: Notes (placeholders for masked values, Reveal, Copy All) and Table; edit review; file secrets (`.p8`, `.pem`, `.json`).
-- [ ] D4 Organization and Key Vault specifics: visibility (all, private, selected repos), inherited and shadowed names on a repository, vault name mapping.
-- [ ] D5 Sync review and Settings after the removals.
+- [ ] D4 Organization and Key Vault specifics: visibility (all, private, selected repos), inherited and shadowed names on a repository, vault name mapping; New Repository, New Environment and the Folder view.
+- [ ] D5 Sync review, drift review (keep mine / take GitHub's), Settings after the removals (quick-vault shortcut, Sharing log, Touch ID), the menu bar item, and connecting Azure or another GitHub account after onboarding.
 
 Build (maykel, mark, yati, anton; split further once each design is approved):
 - [ ] B0 XCUITest target with a throwaway-vault launch mode and `gh`/`az` fakes; one smoke flow (onboarding → main). e2e: the smoke flow twice.
 - [ ] B1 Move `PassphraseGenerator` to VaultCrypto; cut the Spaces hooks from SyncEngine and `DEKRotator`. e2e: smoke flow.
 - [ ] B2 Remove the sharing, chat, teammates and spaces screens and managers, the Bonjour and `.fxvault`/`.fxvcard` entries in `project.yml`. e2e: smoke flow, nothing about teammates in the UI.
-- [ ] B3 Remove `VaultData` sharing folders and SharingKit; the tables stay, unread. Remove Supabase, Vercel, Overview and `fxvault.yml` (if Bryan confirms).
+- [ ] B3 Remove the teammate, nearby, chat and spaces parts of SharingKit and `VaultData` (keep passphrase files: File, Passphrase, Bundle, Import); the tables stay, unread. Remove Supabase, Vercel, Overview and `fxvault.yml`.
+- [ ] B3b Share Securely: passphrase `.fxvault` export of an org, repository or environment, and the open/preview/held import, from D2's Share boards.
 - [ ] B4 `admin:org` scope check per organization and the refresh flow.
 - [ ] B5 Organization list commands and store (v15, additive); read-only organization node.
 - [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list.
@@ -1940,4 +1941,10 @@ Review D1 — start and onboarding (2026-10-25):
 - Decisions (Bryan): minimal black and white with Liquid Glass; macOS 26 minimum; notch island is the only unlock after onboarding; fill values from notes; setup commands run in an embedded allowlisted terminal; first-import check animation and Glass sound.
 - Review: anton found 4 blockers (recovery confirmation with the key visible, missing gh setup states, incomplete `admin:org` command, one value matched to several places), 7 improvements and 5 nits; all applied. Six comments by Bryan on the canvas applied and resolved.
 - Docs: `docs/design/V1-BRIEF.md`; `docs/DESIGN.md` gains the 1.0 section (the v0.3.0 sections still describe the code until B11).
+- Commit: `f157237` `docs(design): add 1.0 brief, slice plan and start/onboarding boards`.
+
+Review D2 — main window, actions, quick vault, share (2026-10-25):
+- Boards: 21 on page "Main window" (home, expanded, dark, repository with inherited org names, sync failed, ⌘K, offline, actions menu, delete GitHub/Key Vault, export, quick vault ×4, share pick/passphrase/open/preview/expired).
+- Decisions (Bryan): variables plain in Notes, secrets masked; place actions and delete at next Sync; quick vault from the notch on ⌃⌥V with expand; Share Securely as passphrase files, production allowed behind Touch ID (relaxes 0.9).
+- Review: anton, two rounds — 3 blockers on the main window (missing account/scope lines, unclear Approve, no drift) and 6 security blockers on the new rows (secret copy in quick vault without Touch ID, production ticked, share without Touch ID, preview before passphrase, expiry before decrypt, org name in file name); all applied. His "export board missing" was a timing miss: the board existed.
 - Commit: (pending).

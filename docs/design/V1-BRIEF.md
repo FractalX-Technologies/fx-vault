@@ -21,7 +21,12 @@ Draft for approval (2026-10-25). The design boards and build slices in `tasks/to
 
 - Organization secrets and variables are the first priority.
 - The experimental features are removed, not hidden: nearby sharing, Nearby Chat, teammates (presence, Ping, local
-  and remote pairing), shared scopes, project share files (`.fxvault`) and sending a folder.
+  and remote pairing), shared scopes, teammate-sealed share files and sending a folder to a teammate.
+- Kept and simplified (Bryan, 2026-10-25): **Share Securely** exports an organization, repository or environment
+  (or a subset) as a passphrase `.fxvault` file (format 2: Argon2id + six words sent another way, expiry 1/7/30
+  days, production unchecked by default; ticking production asks for Touch ID; Bryan, 2026-10-25, relaxes 0.9's
+  refusal of production in passphrase files, since 1.0 has no paired teammates). The receiver previews the merge and imports as held until Sync. Settings ›
+  Sharing lists what was sent, names only.
 - Azure Key Vault becomes a source at the same level as GitHub in the sidebar, no longer a destination hung on a
   repository.
 - The notes view is editable: on save, FX Vault lists what is added, changed and removed before applying it.
@@ -45,6 +50,21 @@ Draft for approval (2026-10-25). The design boards and build slices in `tasks/to
 - After that the island is the only unlock UI: FX Vault starts locked, every window closes on lock, and the main
   window opens after unlock. No fallback unlock window.
 - "Recovery Key…" in the island opens the one window it needs: recovery key, new master password, new recovery key.
+
+## Quick vault from the notch (Bryan, 2026-10-25)
+
+- A global shortcut (default ⌃⌥V, configurable; a registered hot key needs no Accessibility permission) grows the
+  island into a quick vault: search places and names, recent places, a place's notes (secrets masked, variables
+  plain) with Copy per line. Reveal asks for Touch ID; copied values clear after 30 s.
+- Locked: the island asks for Touch ID first. Expand (⌘↩) morphs the island into the main window on that place.
+- The panel closes when it loses focus and is excluded from screen capture.
+
+## Place actions (Bryan, 2026-10-25)
+
+- Each place has a More menu: New Secret, New Variable, Paste Multiple…, Import .env…, Export .env… (Touch ID),
+  Copy All (Touch ID), Copy To…, Delete Selected…. Sidebar rows: Rename…, Duplicate Environment…, Refresh,
+  Delete Environment….
+- Deleting shows names only and removes them from GitHub or Key Vault at the next Sync, which asks again.
 
 ## Setup commands run inside FX Vault (Bryan, 2026-10-25)
 
@@ -84,6 +104,10 @@ Sidebar
   Added by dropping or choosing the file; stored as its exact bytes, or base64 when the workflow decodes it. In
   Notes a file secret is one collapsed line (`APNS_KEY = file AuthKey.p8 · 6 lines`), never inlined into the text.
   Limits: GitHub 48 KB per secret, Key Vault 25 KB per secret.
+- **Variables are shown in plain text** in Notes (GitHub returns them; they are configuration); only secrets are
+  masked. Both stay encrypted on disk, and Copy All still asks for Touch ID because the text includes secrets.
+- A repository's Notes lists the organization secrets that reach it, read-only (`# From <org>`), and marks a
+  repository secret that overrides one.
 - **Table**: today's table, for kinds, visibility and per-row actions.
 - **Sync**: one review for everything pending, GitHub and Azure, names and counts only.
 
