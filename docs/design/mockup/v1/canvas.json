@@ -1,0 +1,176 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-25T12:00:00Z"
+  },
+  "title": "FX Vault 1.0 — Start and Onboarding",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 960,
+      "h": 640,
+      "title": "Welcome"
+    },
+    "Password.dc.html": {
+      "x": 0,
+      "y": 1020,
+      "w": 960,
+      "h": 640,
+      "title": "Master password"
+    },
+    "RecoveryKey.dc.html": {
+      "x": 1040,
+      "y": 1020,
+      "w": 960,
+      "h": 640,
+      "title": "Recovery key"
+    },
+    "RecoveryConfirm.dc.html": {
+      "x": 2080,
+      "y": 1020,
+      "w": 960,
+      "h": 640,
+      "title": "Confirm recovery key"
+    },
+    "TouchID.dc.html": {
+      "x": 3120,
+      "y": 1020,
+      "w": 960,
+      "h": 640,
+      "title": "Touch ID"
+    },
+    "GitHubSetup.dc.html": {
+      "x": 0,
+      "y": 2040,
+      "w": 960,
+      "h": 640,
+      "title": "GitHub setup problem"
+    },
+    "ConnectGitHub.dc.html": {
+      "x": 1040,
+      "y": 2040,
+      "w": 960,
+      "h": 640,
+      "title": "Connect GitHub"
+    },
+    "ConnectAzure.dc.html": {
+      "x": 2080,
+      "y": 2040,
+      "w": 960,
+      "h": 640,
+      "title": "Connect Azure"
+    },
+    "FirstImport.dc.html": {
+      "x": 3120,
+      "y": 2040,
+      "w": 960,
+      "h": 640,
+      "title": "First import",
+      "is_interactive": true
+    },
+    "FillValues.dc.html": {
+      "x": 4160,
+      "y": 2040,
+      "w": 960,
+      "h": 640,
+      "title": "Fill values from your notes"
+    },
+    "NotchUnlock.dc.html": {
+      "x": 0,
+      "y": 3060,
+      "w": 1280,
+      "h": 360,
+      "title": "Notch: Touch ID"
+    },
+    "NotchPassword.dc.html": {
+      "x": 1360,
+      "y": 3060,
+      "w": 1280,
+      "h": 360,
+      "title": "Notch: password required"
+    },
+    "NotchUnlocked.dc.html": {
+      "x": 2720,
+      "y": 3060,
+      "w": 1280,
+      "h": 360,
+      "title": "Notch: unlocked"
+    },
+    "NotchNoNotch.dc.html": {
+      "x": 4080,
+      "y": 3060,
+      "w": 1280,
+      "h": 360,
+      "title": "No notch: floating pill"
+    },
+    "RecoveryReset.dc.html": {
+      "x": 1040,
+      "y": 0,
+      "w": 960,
+      "h": 640,
+      "title": "Reset with recovery key"
+    },
+    "MainDark.dc.html": {
+      "x": 2080,
+      "y": 0,
+      "w": 960,
+      "h": 640,
+      "title": "Welcome (dark)"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "RecoveryReset.dc.html",
+    "MainDark.dc.html",
+    "Password.dc.html",
+    "RecoveryKey.dc.html",
+    "RecoveryConfirm.dc.html",
+    "TouchID.dc.html",
+    "GitHubSetup.dc.html",
+    "ConnectGitHub.dc.html",
+    "ConnectAzure.dc.html",
+    "FirstImport.dc.html",
+    "FillValues.dc.html",
+    "NotchUnlock.dc.html",
+    "NotchPassword.dc.html",
+    "NotchUnlocked.dc.html",
+    "NotchNoNotch.dc.html"
+  ],
+  "notes": {
+    "row1": {
+      "x": 0,
+      "y": -260,
+      "text": "Welcome (first launch only) and recovery",
+      "kind": "title1",
+      "maxW": 3040
+    },
+    "row2": {
+      "x": 0,
+      "y": 760,
+      "text": "Secure",
+      "kind": "title1",
+      "maxW": 4080
+    },
+    "row3": {
+      "x": 0,
+      "y": 1780,
+      "text": "Connect and import",
+      "kind": "title1",
+      "maxW": 5120
+    },
+    "row4": {
+      "x": 0,
+      "y": 2800,
+      "text": "Unlock from the notch (every launch after setup)",
+      "kind": "title1",
+      "maxW": 5360
+    }
+  },
+  "designSystems": []
+}

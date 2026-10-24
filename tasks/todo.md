@@ -1899,3 +1899,45 @@ Delivery already uses `NSSavePanel` or `NSSharingServicePicker` (`ShareFileDeliv
 - Deviations: signing and notarization run only on Bryan's Mac, so the `release` environment has no secrets and releases carry no build attestation (the README says so); the tap is bumped by hand with `bump-cask.sh` instead of a bump job with a GitHub App; the ad-hoc CI job picks Xcode by glob on `macos-26`.
 - Gaps: no `dependabot.yml` or `CODEOWNERS`; release immutability and a `v*` tag ruleset are not enabled, so `gh release verify-asset` is not offered; the README has no screenshots.
 - Manual checks pending: the cask in the tap plus `brew audit` and `brew install`, the Sonoma VM smoke test (RELEASING #14), Gatekeeper on a downloaded DMG (#13), the full RELEASING.md checklist on the notarized build, and Bryan's README sign-off.
+
+---
+
+## FX Vault 1.0: simple and secure — slices
+
+Brief: [docs/design/V1-BRIEF.md](../docs/design/V1-BRIEF.md). Mode: careful (Bryan, 2026-10-25). Branch `feat/v1-simplify`, worktree `../FXVault-v1`.
+
+Gates (every slice, in order):
+- Design slices: boards in `docs/design/mockup/v1/` render in light and dark at 960×640; anton reviews them against the brief and `docs/DESIGN.md`; no code changes.
+- Build slices: `scripts/ci-local.sh` (XcodeGen drift, `swift build` + `swift test` of FXVaultKit, `xcodebuild` build + test ad-hoc, `scripts/lint.sh`, `scripts/check-secrets.sh`), XcodeGen 2.45.4 first on PATH.
+- e2e twice (from B0 on): the XCUITest suite against a throwaway vault in a temporary Application Support folder and `gh`/`az` fakes; never a real account.
+- review (myself, then `review-code`, `review-tests`, `review-security` when it touches crypto, store, gh/az or entitlements) → gate → commit (explicit paths) → push → CI green.
+
+Reserved for Bryan: the migration that drops the removed features' tables, the table rebuild that moves destinations to Key Vaults, any write to a real GitHub organization or Key Vault, merge to `main`, tag and release 1.0.
+
+Design (designer, reviewed by anton):
+- [x] D1 Start and onboarding: welcome, recovery reset, master password, recovery key and confirm, Touch ID, GitHub setup, connect GitHub (organizations, `admin:org` approval), connect Azure, first import, fill values from notes, notch unlock. Writes: `docs/design/mockup/v1/`.
+- [ ] D2 Main window: sidebar GitHub › org › repo › env, Azure › subscription › vault, Folders; empty states; offline banner.
+- [ ] D3 Place view: Notes (placeholders for masked values, Reveal, Copy All) and Table; edit review; file secrets (`.p8`, `.pem`, `.json`).
+- [ ] D4 Organization and Key Vault specifics: visibility (all, private, selected repos), inherited and shadowed names on a repository, vault name mapping.
+- [ ] D5 Sync review and Settings after the removals.
+
+Build (maykel, mark, yati, anton; split further once each design is approved):
+- [ ] B0 XCUITest target with a throwaway-vault launch mode and `gh`/`az` fakes; one smoke flow (onboarding → main). e2e: the smoke flow twice.
+- [ ] B1 Move `PassphraseGenerator` to VaultCrypto; cut the Spaces hooks from SyncEngine and `DEKRotator`. e2e: smoke flow.
+- [ ] B2 Remove the sharing, chat, teammates and spaces screens and managers, the Bonjour and `.fxvault`/`.fxvcard` entries in `project.yml`. e2e: smoke flow, nothing about teammates in the UI.
+- [ ] B3 Remove `VaultData` sharing folders and SharingKit; the tables stay, unread. Remove Supabase, Vercel, Overview and `fxvault.yml` (if Bryan confirms).
+- [ ] B4 `admin:org` scope check per organization and the refresh flow.
+- [ ] B5 Organization list commands and store (v15, additive); read-only organization node.
+- [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list.
+- [ ] B7 Organization drift and verify; inherited and shadowed names on a repository.
+- [ ] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source.
+- [ ] B9 Notes view read-only, then editable with the change review.
+- [ ] B10 File secrets: picker and drop, base64 option, limits (GitHub 48 KiB, Key Vault 25 KiB), trailing-newline notice.
+- [ ] B11 New start, onboarding, notch unlock island (`LAAuthenticationView`), allowlisted setup-command runner and main window from D1–D2; macOS 26 deployment target.
+
+Review D1 — start and onboarding (2026-10-25):
+- Boards: 16 in `docs/design/mockup/v1/` (Welcome light/dark, recovery reset, password, recovery key, confirm, Touch ID, GitHub setup, connect GitHub, connect Azure, first import, fill values, 4 notch states).
+- Decisions (Bryan): minimal black and white with Liquid Glass; macOS 26 minimum; notch island is the only unlock after onboarding; fill values from notes; setup commands run in an embedded allowlisted terminal; first-import check animation and Glass sound.
+- Review: anton found 4 blockers (recovery confirmation with the key visible, missing gh setup states, incomplete `admin:org` command, one value matched to several places), 7 improvements and 5 nits; all applied. Six comments by Bryan on the canvas applied and resolved.
+- Docs: `docs/design/V1-BRIEF.md`; `docs/DESIGN.md` gains the 1.0 section (the v0.3.0 sections still describe the code until B11).
+- Commit: (pending).
