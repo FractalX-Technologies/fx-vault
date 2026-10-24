@@ -108,6 +108,16 @@ Sidebar
   masked. Both stay encrypted on disk, and Copy All still asks for Touch ID because the text includes secrets.
 - A repository's Notes lists the organization secrets that reach it, read-only (`# From <org>`), and marks a
   repository secret that overrides one.
+- **Notes editor (build notes, anton D3):** an `NSTextView` (TextKit 2), not `TextEditor`; every masked value,
+  "Set value…" and file line is one token that copies as `••••` and deletes or pastes whole. Spell check, grammar,
+  autocorrect, smart quotes and dashes, text replacement and Writing Tools are off; undo lives only while editing;
+  no autosave or restorable state. Pasted `KEY=value` lines turn into tokens as they land and the clipboard is
+  cleared. Moving a synced line between Secrets and Variables is an error ("Kind is fixed after Sync · Convert…").
+  Starting an edit hides any revealed value; Reveal re-masks after `Timeouts.revealRemask` (30 s).
+- **Limits and names per source:** GitHub `Limits.maxValueBytes` 48,000 bytes, Key Vault 25,600, checked after Base64;
+  every trailing CR/LF is removed (`ValueNormalizer`); non-UTF-8 files go in as Base64. GitHub names: letters,
+  digits and `_`, saved in capitals, not `GITHUB_`. Key Vault: up to 127 characters, `_` becomes `-`
+  (`DestinationRules`), names that collide after that conversion are flagged.
 - **Table**: today's table, for kinds, visibility and per-row actions.
 - **Sync**: one review for everything pending, GitHub and Azure, names and counts only.
 
