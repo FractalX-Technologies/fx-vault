@@ -8,63 +8,80 @@
   "launch": {
     "view": "canvas"
   },
-  "pages": [],
+  "pages": [
+    {
+      "id": "start",
+      "name": "Start and onboarding"
+    },
+    {
+      "id": "main",
+      "name": "Main window"
+    }
+  ],
   "boards": {
     "Main.dc.html": {
       "x": 0,
       "y": 0,
       "w": 960,
       "h": 640,
-      "title": "Welcome"
+      "title": "Welcome",
+      "page": "start"
     },
     "Password.dc.html": {
       "x": 0,
       "y": 1020,
       "w": 960,
       "h": 640,
-      "title": "Master password"
+      "title": "Master password",
+      "page": "start"
     },
     "RecoveryKey.dc.html": {
       "x": 1040,
       "y": 1020,
       "w": 960,
       "h": 640,
-      "title": "Recovery key"
+      "title": "Recovery key",
+      "page": "start"
     },
     "RecoveryConfirm.dc.html": {
       "x": 2080,
       "y": 1020,
       "w": 960,
       "h": 640,
-      "title": "Confirm recovery key"
+      "title": "Confirm recovery key",
+      "page": "start"
     },
     "TouchID.dc.html": {
       "x": 3120,
       "y": 1020,
       "w": 960,
       "h": 640,
-      "title": "Touch ID"
+      "title": "Touch ID",
+      "page": "start"
     },
     "GitHubSetup.dc.html": {
       "x": 0,
       "y": 2040,
       "w": 960,
       "h": 640,
-      "title": "GitHub setup problem"
+      "title": "GitHub setup problem",
+      "page": "start"
     },
     "ConnectGitHub.dc.html": {
       "x": 1040,
       "y": 2040,
       "w": 960,
       "h": 640,
-      "title": "Connect GitHub"
+      "title": "Connect GitHub",
+      "page": "start"
     },
     "ConnectAzure.dc.html": {
       "x": 2080,
       "y": 2040,
       "w": 960,
       "h": 640,
-      "title": "Connect Azure"
+      "title": "Connect Azure",
+      "page": "start"
     },
     "FirstImport.dc.html": {
       "x": 3120,
@@ -72,56 +89,224 @@
       "w": 960,
       "h": 640,
       "title": "First import",
-      "is_interactive": true
+      "is_interactive": true,
+      "page": "start"
     },
     "FillValues.dc.html": {
       "x": 4160,
       "y": 2040,
       "w": 960,
       "h": 640,
-      "title": "Fill values from your notes"
+      "title": "Fill values from your notes",
+      "page": "start"
     },
     "NotchUnlock.dc.html": {
       "x": 0,
       "y": 3060,
       "w": 1280,
       "h": 360,
-      "title": "Notch: Touch ID"
+      "title": "Notch: Touch ID",
+      "page": "start"
     },
     "NotchPassword.dc.html": {
       "x": 1360,
       "y": 3060,
       "w": 1280,
       "h": 360,
-      "title": "Notch: password required"
+      "title": "Notch: password required",
+      "page": "start"
     },
     "NotchUnlocked.dc.html": {
       "x": 2720,
       "y": 3060,
       "w": 1280,
       "h": 360,
-      "title": "Notch: unlocked"
+      "title": "Notch: unlocked",
+      "page": "start"
     },
     "NotchNoNotch.dc.html": {
       "x": 4080,
       "y": 3060,
       "w": 1280,
       "h": 360,
-      "title": "No notch: floating pill"
+      "title": "No notch: floating pill",
+      "page": "start"
     },
     "RecoveryReset.dc.html": {
       "x": 1040,
       "y": 0,
       "w": 960,
       "h": 640,
-      "title": "Reset with recovery key"
+      "title": "Reset with recovery key",
+      "page": "start"
     },
     "MainDark.dc.html": {
       "x": 2080,
       "y": 0,
       "w": 960,
       "h": 640,
-      "title": "Welcome (dark)"
+      "title": "Welcome (dark)",
+      "page": "start"
+    },
+    "Main2-Home.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Home",
+      "page": "main"
+    },
+    "Main2-Expanded.dc.html": {
+      "x": 1360,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Organization selected",
+      "page": "main"
+    },
+    "Main2-Dark.dc.html": {
+      "x": 2720,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Organization selected, dark",
+      "page": "main"
+    },
+    "Main2-Search.dc.html": {
+      "x": 2720,
+      "y": 1180,
+      "w": 1280,
+      "h": 800,
+      "title": "Jump palette (⌘K)",
+      "page": "main"
+    },
+    "Main2-Offline.dc.html": {
+      "x": 4080,
+      "y": 1180,
+      "w": 1280,
+      "h": 800,
+      "title": "Offline",
+      "page": "main"
+    },
+    "Main2-Repository.dc.html": {
+      "w": 1280,
+      "h": 800,
+      "page": "main",
+      "title": "Environment selected",
+      "x": 0,
+      "y": 1180
+    },
+    "Main2-SyncFailed.dc.html": {
+      "w": 1280,
+      "h": 800,
+      "page": "main",
+      "title": "Sync failed",
+      "x": 1360,
+      "y": 1180
+    },
+    "Main2-Actions.dc.html": {
+      "x": 0,
+      "y": 2360,
+      "w": 1280,
+      "h": 800,
+      "title": "Actions: More menu and context menu",
+      "page": "main"
+    },
+    "Main2-Delete.dc.html": {
+      "x": 1360,
+      "y": 2360,
+      "w": 1280,
+      "h": 800,
+      "title": "Delete confirmation",
+      "page": "main"
+    },
+    "Main2-Export.dc.html": {
+      "x": 2720,
+      "y": 2360,
+      "w": 1280,
+      "h": 800,
+      "title": "Export .env",
+      "page": "main"
+    },
+    "QuickVault-Search.dc.html": {
+      "x": 0,
+      "y": 3540,
+      "w": 1280,
+      "h": 800,
+      "title": "Quick vault: search",
+      "page": "main"
+    },
+    "QuickVault-Place.dc.html": {
+      "x": 1360,
+      "y": 3540,
+      "w": 1280,
+      "h": 800,
+      "title": "Quick vault: place",
+      "page": "main"
+    },
+    "QuickVault-Locked.dc.html": {
+      "x": 2720,
+      "y": 3540,
+      "w": 1280,
+      "h": 800,
+      "title": "Quick vault: locked",
+      "page": "main"
+    },
+    "QuickVault-Expanding.dc.html": {
+      "x": 4080,
+      "y": 3540,
+      "w": 1280,
+      "h": 800,
+      "title": "Quick vault: expanding to the window",
+      "page": "main"
+    },
+    "Share-Pick.dc.html": {
+      "x": 0,
+      "y": 4720,
+      "w": 1280,
+      "h": 800,
+      "title": "Share securely: pick what to share",
+      "page": "main"
+    },
+    "Share-Passphrase.dc.html": {
+      "x": 1360,
+      "y": 4720,
+      "w": 1280,
+      "h": 800,
+      "title": "Share securely: passphrase",
+      "page": "main"
+    },
+    "Share-Open.dc.html": {
+      "x": 2720,
+      "y": 4720,
+      "w": 1280,
+      "h": 800,
+      "title": "Share securely: open a file",
+      "page": "main"
+    },
+    "Share-Expired.dc.html": {
+      "x": 5440,
+      "y": 4720,
+      "w": 1280,
+      "h": 800,
+      "title": "Share securely: expired file",
+      "page": "main"
+    },
+    "Main2-DeleteKeyVault.dc.html": {
+      "x": 4080,
+      "y": 2360,
+      "w": 1280,
+      "h": 800,
+      "title": "Main window: delete from Key Vault",
+      "page": "main"
+    },
+    "Share-OpenPreview.dc.html": {
+      "x": 4080,
+      "y": 4720,
+      "w": 1280,
+      "h": 800,
+      "title": "Share securely: preview before import",
+      "page": "main"
     }
   },
   "order": [
@@ -140,7 +325,27 @@
     "NotchUnlock.dc.html",
     "NotchPassword.dc.html",
     "NotchUnlocked.dc.html",
-    "NotchNoNotch.dc.html"
+    "NotchNoNotch.dc.html",
+    "Main2-Home.dc.html",
+    "Main2-Expanded.dc.html",
+    "Main2-Dark.dc.html",
+    "Main2-Repository.dc.html",
+    "Main2-SyncFailed.dc.html",
+    "Main2-Search.dc.html",
+    "Main2-Offline.dc.html",
+    "Main2-Actions.dc.html",
+    "Main2-Delete.dc.html",
+    "Main2-Export.dc.html",
+    "QuickVault-Search.dc.html",
+    "QuickVault-Place.dc.html",
+    "QuickVault-Locked.dc.html",
+    "QuickVault-Expanding.dc.html",
+    "Share-Pick.dc.html",
+    "Share-Passphrase.dc.html",
+    "Share-Open.dc.html",
+    "Share-Expired.dc.html",
+    "Main2-DeleteKeyVault.dc.html",
+    "Share-OpenPreview.dc.html"
   ],
   "notes": {
     "row1": {
@@ -148,28 +353,72 @@
       "y": -260,
       "text": "Welcome (first launch only) and recovery",
       "kind": "title1",
-      "maxW": 3040
+      "maxW": 3040,
+      "page": "start"
     },
     "row2": {
       "x": 0,
       "y": 760,
       "text": "Secure",
       "kind": "title1",
-      "maxW": 4080
+      "maxW": 4080,
+      "page": "start"
     },
     "row3": {
       "x": 0,
       "y": 1780,
       "text": "Connect and import",
       "kind": "title1",
-      "maxW": 5120
+      "maxW": 5120,
+      "page": "start"
     },
     "row4": {
       "x": 0,
       "y": 2800,
       "text": "Unlock from the notch (every launch after setup)",
       "kind": "title1",
-      "maxW": 5360
+      "maxW": 5360,
+      "page": "start"
+    },
+    "main1": {
+      "x": 0,
+      "y": -260,
+      "text": "Main window",
+      "kind": "title1",
+      "maxW": 4000,
+      "page": "main"
+    },
+    "main2": {
+      "x": 0,
+      "y": 920,
+      "text": "Places, sync, jump and offline",
+      "kind": "title1",
+      "maxW": 5360,
+      "page": "main"
+    },
+    "main3": {
+      "x": 0,
+      "y": 2100,
+      "text": "Actions",
+      "kind": "title1",
+      "maxW": 5360,
+      "page": "main"
+    },
+    "main4": {
+      "x": 0,
+      "y": 3280,
+      "text": "Quick vault (⌃⌥V)",
+      "kind": "title1",
+      "maxW": 5360,
+      "page": "main"
+    },
+    "main5": {
+      "x": 0,
+      "y": 4460,
+      "text": "Share securely",
+      "kind": "title1",
+      "maxW": 6720,
+      "page": "main"
     }
   },
   "designSystems": []
