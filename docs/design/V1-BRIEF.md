@@ -118,6 +118,12 @@ Sidebar
   every trailing CR/LF is removed (`ValueNormalizer`); non-UTF-8 files go in as Base64. GitHub names: letters,
   digits and `_`, saved in capitals, not `GITHUB_`. Key Vault: up to 127 characters, `_` becomes `-`
   (`DestinationRules`), names that collide after that conversion are flagged.
+- **Key Vault build notes (anton D4):** names collide case-insensitively, after `_`→`-` (case kept), against new
+  lines and existing secrets. A new value is a new version: fetch `contentType` and `exp` with the list and resend
+  them, or the edit drops them. Disabled secrets are listed greyed and read-only; FX Vault never purges deleted
+  secrets.
+- **Organization visibility:** a names-only secret's visibility can't change (`gh secret set` needs a value), so the
+  control says "Set a value first". "Private" means private and internal repositories.
 - **Table**: today's table, for kinds, visibility and per-row actions.
 - **Sync**: one review for everything pending, GitHub and Azure, names and counts only.
 
