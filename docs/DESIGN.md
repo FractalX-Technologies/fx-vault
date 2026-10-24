@@ -1,4 +1,27 @@
-# FX Vault design language (v0.3.0)
+# FX Vault design language
+
+## 1.0: minimal black and white, Liquid Glass (approved 2026-10-25, not built yet)
+
+Replaces the v0.3.0 language below when slice B11 builds it; until then the v0.3.0 sections describe the code, and
+`DesignTokenTests` checks them. Brief: [V1-BRIEF.md](design/V1-BRIEF.md). Boards: `docs/design/mockup/v1/`
+(`canvas.json` lays them out).
+
+- **Platform:** macOS 26 minimum; native Liquid Glass (`glassEffect`) for floating chrome, one code path.
+- **Color:** white ground and black ink (dark: black and white); greys only for secondary text and hairlines, every
+  text 4.5:1 or more on glass. No brand blue: the current or interactive state is ink. Muted red and green only for
+  small error and success marks.
+- **Glass:** windows are frosted glass over the desktop; cards, lists and inputs inside are a more opaque glass so
+  text stays crisp; the progress bar and the footer action bar float as glass.
+- **Type:** the system font (SF Pro) for prose, a monospace for names, values and commands. Body 13 pt, secondary
+  12, labels 11, titles 22–24 semibold.
+- **Size:** macOS regular controls (28–32 pt), rows 32, checkboxes 14, forms about 440 wide; few words.
+- **Unlock:** after onboarding only the notch island (Touch ID or password), flat black, no shadow; without a notch,
+  a dark glass pill under the menu bar.
+- **Motion and sound:** short and quiet; the first import draws a check and plays the system "Glass" sound, both off
+  with Reduce Motion and the system's interface-sound setting.
+- **Setup commands:** an embedded terminal runs only the suggested command (Run), with Copy as a fallback.
+
+## v0.3.0 (current code)
 
 FX Vault uses the FractalX design language (fractalx.io): a warm off-white ground, near-black
 ink, Geist Sans and Geist Mono, pill buttons, 24 pt cards, hairlines instead of shadows and the
