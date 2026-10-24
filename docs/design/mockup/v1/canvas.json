@@ -24,6 +24,10 @@
     {
       "id": "sources",
       "name": "Organizations, Key Vault, folders"
+    },
+    {
+      "id": "sync",
+      "name": "Sync, settings, menu bar"
     }
   ],
   "boards": {
@@ -451,6 +455,102 @@
       "h": 800,
       "title": "Folder: update linked copies",
       "page": "sources"
+    },
+    "Sync-Review.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Sync: review",
+      "page": "sync"
+    },
+    "Sync-Progress.dc.html": {
+      "x": 2720,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Sync: in progress",
+      "page": "sync"
+    },
+    "Sync-Done.dc.html": {
+      "x": 4080,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Sync: done",
+      "page": "sync"
+    },
+    "Drift-Review.dc.html": {
+      "x": 0,
+      "y": 1180,
+      "w": 1280,
+      "h": 800,
+      "title": "Changed on GitHub: review",
+      "page": "sync"
+    },
+    "Settings-General.dc.html": {
+      "x": 0,
+      "y": 2360,
+      "w": 1280,
+      "h": 800,
+      "title": "Settings: General",
+      "page": "sync"
+    },
+    "Settings-Security.dc.html": {
+      "x": 1360,
+      "y": 2360,
+      "w": 1280,
+      "h": 800,
+      "title": "Settings: Security",
+      "page": "sync"
+    },
+    "Settings-Accounts.dc.html": {
+      "x": 4080,
+      "y": 2360,
+      "w": 1280,
+      "h": 800,
+      "title": "Settings: Accounts",
+      "page": "sync"
+    },
+    "Settings-Sharing.dc.html": {
+      "x": 5440,
+      "y": 2360,
+      "w": 1280,
+      "h": 800,
+      "title": "Settings: Sharing",
+      "page": "sync"
+    },
+    "Settings-Advanced.dc.html": {
+      "x": 6800,
+      "y": 2360,
+      "w": 1280,
+      "h": 800,
+      "title": "Settings: Advanced",
+      "page": "sync"
+    },
+    "MenuBar.dc.html": {
+      "x": 0,
+      "y": 3540,
+      "w": 1280,
+      "h": 360,
+      "title": "FX Vault menu bar extra",
+      "page": "sync"
+    },
+    "Sync-Delete.dc.html": {
+      "w": 1280,
+      "h": 800,
+      "title": "Sync: confirm deletions",
+      "page": "sync",
+      "x": 1360,
+      "y": 0
+    },
+    "Reset-Confirm.dc.html": {
+      "w": 1280,
+      "h": 800,
+      "title": "Settings: reset vault",
+      "page": "sync",
+      "x": 2720,
+      "y": 2360
     }
   },
   "order": [
@@ -506,7 +606,19 @@
     "NewRepo.dc.html",
     "NewEnvironment.dc.html",
     "Folder-View.dc.html",
-    "Folder-LinkedUpdate.dc.html"
+    "Folder-LinkedUpdate.dc.html",
+    "Sync-Review.dc.html",
+    "Sync-Delete.dc.html",
+    "Sync-Progress.dc.html",
+    "Sync-Done.dc.html",
+    "Drift-Review.dc.html",
+    "Settings-General.dc.html",
+    "Settings-Security.dc.html",
+    "Reset-Confirm.dc.html",
+    "Settings-Accounts.dc.html",
+    "Settings-Sharing.dc.html",
+    "Settings-Advanced.dc.html",
+    "MenuBar.dc.html"
   ],
   "notes": {
     "row1": {
@@ -628,6 +740,38 @@
       "kind": "title1",
       "maxW": 2640,
       "page": "sources"
+    },
+    "sync1": {
+      "x": 0,
+      "y": -260,
+      "text": "Sync",
+      "kind": "title1",
+      "maxW": 5360,
+      "page": "sync"
+    },
+    "sync2": {
+      "x": 0,
+      "y": 920,
+      "text": "Changed on GitHub",
+      "kind": "title1",
+      "maxW": 1280,
+      "page": "sync"
+    },
+    "sync3": {
+      "x": 0,
+      "y": 2100,
+      "text": "Settings",
+      "kind": "title1",
+      "maxW": 8080,
+      "page": "sync"
+    },
+    "sync4": {
+      "x": 0,
+      "y": 3280,
+      "text": "Menu bar",
+      "kind": "title1",
+      "maxW": 1280,
+      "page": "sync"
     }
   },
   "designSystems": []

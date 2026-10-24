@@ -1919,7 +1919,7 @@ Design (designer, reviewed by anton):
 - [x] D2 Main window: sidebar GitHub › org › repo › env, Azure › subscription › vault, Folders; empty states; offline banner; place actions, delete and export; quick vault (⌃⌥V); Share Securely.
 - [x] D3 Place view: Notes (placeholders for masked values, Reveal, Copy All) and Table; edit review; file secrets (`.p8`, `.pem`, `.json`).
 - [x] D4 Organization and Key Vault specifics: visibility (all, private, selected repos), inherited and shadowed names on a repository, vault name mapping; New Repository, New Environment and the Folder view.
-- [ ] D5 Sync review, drift review (keep mine / take GitHub's), Settings after the removals (quick-vault shortcut, Sharing log, Touch ID), the menu bar item, and connecting Azure or another GitHub account after onboarding.
+- [x] D5 Sync review, drift review (keep mine / take GitHub's), Settings after the removals (quick-vault shortcut, Sharing log, Touch ID), the menu bar item, and connecting Azure or another GitHub account after onboarding.
 
 Build (maykel, mark, yati, anton; split further once each design is approved):
 - [ ] B0 XCUITest target with a throwaway-vault launch mode and `gh`/`az` fakes; one smoke flow (onboarding → main). e2e: the smoke flow twice.
@@ -1957,4 +1957,9 @@ Review D3 — place view (2026-10-25):
 Review D4 — organizations, Key Vault, create, folders (2026-10-25):
 - Boards: 8 on page "Organizations, Key Vault, folders" (org visibility, org secret detail, Key Vault place, Key Vault name rules, New Repository, New Environment, folder, linked-copy update); D1–D3 boards touched only for the traffic-light layer and "private and internal".
 - Review: anton found 3 blockers (case-insensitive Key Vault collisions, new Key Vault versions drop contentType and exp unless resent, names-only org secrets can't change visibility because setting a secret needs its value) and 5 improvements (private and internal, GitHub Free notes, README/description/license/account on New Repository, branch vs tag patterns, linked-copy checkboxes); all applied; he corrected my brief: disabled Key Vault secrets are listed, so greyed is right.
+- Commit: `5201ac5` `docs(design): add organization, Key Vault, create and folder boards`.
+
+Review D5 — sync, drift, settings, menu bar (2026-10-25):
+- Boards: 12 on page "sync" (sync review, delete confirmation, progress, done; drift review; settings General, Security, reset confirmation, Accounts, Sharing, Advanced; menu bar).
+- Review: anton found 2 blockers (gh shown below the 2.97.0 floor with a trust row that only exists for a gh owned by another user; a blocked org secret contradicting the org's Ready state) and 7 changes (deletions keep their own confirmation step, deletes run last, 60 writes a minute is FX Vault's limit, variable drift shows both values, Take GitHub's then Fill Value, concealed clipboard wording, per-account Test, SSH alias, GH_TOKEN and per-tenant Azure state); verified in code (`GHVersion.minimum`, `Limits.writesPerMinute`, `ClipboardManager`) and applied. Credential-looking variable note left out: no example variable fits.
 - Commit: (pending).
