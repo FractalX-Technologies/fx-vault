@@ -1918,7 +1918,7 @@ Design (designer, reviewed by anton):
 - [x] D1 Start and onboarding: welcome, recovery reset, master password, recovery key and confirm, Touch ID, GitHub setup, connect GitHub (organizations, `admin:org` approval), connect Azure, first import, fill values from notes, notch unlock. Writes: `docs/design/mockup/v1/`.
 - [x] D2 Main window: sidebar GitHub › org › repo › env, Azure › subscription › vault, Folders; empty states; offline banner; place actions, delete and export; quick vault (⌃⌥V); Share Securely.
 - [x] D3 Place view: Notes (placeholders for masked values, Reveal, Copy All) and Table; edit review; file secrets (`.p8`, `.pem`, `.json`).
-- [ ] D4 Organization and Key Vault specifics: visibility (all, private, selected repos), inherited and shadowed names on a repository, vault name mapping; New Repository, New Environment and the Folder view.
+- [x] D4 Organization and Key Vault specifics: visibility (all, private, selected repos), inherited and shadowed names on a repository, vault name mapping; New Repository, New Environment and the Folder view.
 - [ ] D5 Sync review, drift review (keep mine / take GitHub's), Settings after the removals (quick-vault shortcut, Sharing log, Touch ID), the menu bar item, and connecting Azure or another GitHub account after onboarding.
 
 Build (maykel, mark, yati, anton; split further once each design is approved):
@@ -1952,4 +1952,9 @@ Review D2 — main window, actions, quick vault, share (2026-10-25):
 Review D3 — place view (2026-10-25):
 - Boards: 9 on page "Place view" (edit, paste, secret value, review, reveal, table, file drop, file sheet, errors).
 - Review: anton found 4 blockers (notes need an AppKit token text view, typing aids corrupt values, pasted values must become tokens, kind is fixed after Sync) and 6 improvements (48,000-byte limit after Base64, per-source name rules, all trailing CR/LF removed, reveal outside edit only, override removal, inherited rows read-only); verified in code (`Limits.maxValueBytes`, `Timeouts.revealRemask`, `DestinationRules`) and applied; build notes in the brief.
+- Commit: `56cd273` `docs(design): add place view boards`.
+
+Review D4 — organizations, Key Vault, create, folders (2026-10-25):
+- Boards: 8 on page "Organizations, Key Vault, folders" (org visibility, org secret detail, Key Vault place, Key Vault name rules, New Repository, New Environment, folder, linked-copy update); D1–D3 boards touched only for the traffic-light layer and "private and internal".
+- Review: anton found 3 blockers (case-insensitive Key Vault collisions, new Key Vault versions drop contentType and exp unless resent, names-only org secrets can't change visibility because setting a secret needs its value) and 5 improvements (private and internal, GitHub Free notes, README/description/license/account on New Repository, branch vs tag patterns, linked-copy checkboxes); all applied; he corrected my brief: disabled Key Vault secrets are listed, so greyed is right.
 - Commit: (pending).

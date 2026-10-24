@@ -20,6 +20,10 @@
     {
       "id": "place",
       "name": "Place view"
+    },
+    {
+      "id": "sources",
+      "name": "Organizations, Key Vault, folders"
     }
   ],
   "boards": {
@@ -383,6 +387,70 @@
       "h": 800,
       "title": "Place view: pasted lines",
       "page": "place"
+    },
+    "Org-Visibility.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Organization: secret visibility",
+      "page": "sources"
+    },
+    "Org-UsedBy.dc.html": {
+      "x": 1360,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Organization: where a secret is used",
+      "page": "sources"
+    },
+    "KV-Place.dc.html": {
+      "x": 0,
+      "y": 1180,
+      "w": 1280,
+      "h": 800,
+      "title": "Key Vault: a vault",
+      "page": "sources"
+    },
+    "KV-NameRules.dc.html": {
+      "x": 1360,
+      "y": 1180,
+      "w": 1280,
+      "h": 800,
+      "title": "Key Vault: name rules",
+      "page": "sources"
+    },
+    "NewRepo.dc.html": {
+      "x": 0,
+      "y": 2360,
+      "w": 1280,
+      "h": 800,
+      "title": "New repository",
+      "page": "sources"
+    },
+    "NewEnvironment.dc.html": {
+      "x": 1360,
+      "y": 2360,
+      "w": 1280,
+      "h": 800,
+      "title": "New environment",
+      "page": "sources"
+    },
+    "Folder-View.dc.html": {
+      "x": 0,
+      "y": 3540,
+      "w": 1280,
+      "h": 800,
+      "title": "Folder",
+      "page": "sources"
+    },
+    "Folder-LinkedUpdate.dc.html": {
+      "x": 1360,
+      "y": 3540,
+      "w": 1280,
+      "h": 800,
+      "title": "Folder: update linked copies",
+      "page": "sources"
     }
   },
   "order": [
@@ -430,7 +498,15 @@
     "Place-Table.dc.html",
     "Place-FileDrop.dc.html",
     "Place-FileSheet.dc.html",
-    "Place-Errors.dc.html"
+    "Place-Errors.dc.html",
+    "Org-Visibility.dc.html",
+    "Org-UsedBy.dc.html",
+    "KV-Place.dc.html",
+    "KV-NameRules.dc.html",
+    "NewRepo.dc.html",
+    "NewEnvironment.dc.html",
+    "Folder-View.dc.html",
+    "Folder-LinkedUpdate.dc.html"
   ],
   "notes": {
     "row1": {
@@ -520,6 +596,38 @@
       "kind": "title1",
       "maxW": 5360,
       "page": "place"
+    },
+    "src1": {
+      "x": 0,
+      "y": -260,
+      "text": "Organization",
+      "kind": "title1",
+      "maxW": 2640,
+      "page": "sources"
+    },
+    "src2": {
+      "x": 0,
+      "y": 920,
+      "text": "Azure Key Vault",
+      "kind": "title1",
+      "maxW": 2640,
+      "page": "sources"
+    },
+    "src3": {
+      "x": 0,
+      "y": 2100,
+      "text": "Create",
+      "kind": "title1",
+      "maxW": 2640,
+      "page": "sources"
+    },
+    "src4": {
+      "x": 0,
+      "y": 3280,
+      "text": "Folders",
+      "kind": "title1",
+      "maxW": 2640,
+      "page": "sources"
     }
   },
   "designSystems": []
