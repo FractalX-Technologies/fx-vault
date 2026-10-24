@@ -27,6 +27,11 @@ Draft for approval (2026-10-25). The design boards and build slices in `tasks/to
   days, production unchecked by default; ticking production asks for Touch ID; Bryan, 2026-10-25, relaxes 0.9's
   refusal of production in passphrase files, since 1.0 has no paired teammates). The receiver previews the merge and imports as held until Sync. Settings ›
   Sharing lists what was sent, names only.
+- AirDrop to people nearby (Bryan, 2026-10-25): Share Securely offers **Send with AirDrop**, the system AirDrop
+  share of that same passphrase file; the receiver opens it as any `.fxvault` file. No Bonjour, no pairing, no
+  teammate list.
+- Unused code is deleted, not kept behind flags (Bryan, 2026-10-25): screens, managers, modules, strings and
+  `project.yml` entries of the removed features go.
 - Azure Key Vault becomes a source at the same level as GitHub in the sidebar, no longer a destination hung on a
   repository.
 - The notes view is editable: on save, FX Vault lists what is added, changed and removed before applying it.
@@ -163,4 +168,4 @@ Sidebar
 - Kept: drift detection (needed for organization visibility); `.env` import and export behind reauth; New
   Repository with clone, out of the main flow.
 - Data of removed features: dropped in a migration (its tables still hold encrypted teammate and space keys);
-  that migration is reserved for Bryan's OK.
+  Bryan approved it with "delete whatever is unused" (2026-10-25).
