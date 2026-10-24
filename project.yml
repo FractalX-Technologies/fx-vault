@@ -13,6 +13,12 @@ options:
   defaultSourceDirectoryType: syncedFolder   # adding a source file never touches project.pbxproj
   defaultConfig: Debug
   groupSortPosition: top
+# UITesting is Debug plus FXVAULT_UI_TESTING: the app XCUITest drives, with its own bundle id so
+# a test launch never quits a running FX Vault Dev, and a throwaway vault (App/UITesting).
+configs:
+  Debug: debug
+  Release: release
+  UITesting: debug
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -30,8 +36,10 @@ targets:
     configFiles:
       Debug: Config/Base.xcconfig
       Release: Config/Base.xcconfig
+      UITesting: Config/Base.xcconfig
     sources:
       - path: App
+      - path: Shared
     dependencies:
       - package: FXVaultKit
         product: FXVaultKit
@@ -108,12 +116,18 @@ targets:
           PRODUCT_BUNDLE_IDENTIFIER: io.fractalx.fxvault
           FXVAULT_APP_NAME: FX Vault
           FXVAULT_SHARE_HANDLER_RANK: Owner
+        UITesting:
+          PRODUCT_BUNDLE_IDENTIFIER: io.fractalx.fxvault.uitesthost
+          FXVAULT_APP_NAME: FX Vault UI Test
+          FXVAULT_SHARE_HANDLER_RANK: None
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG FXVAULT_UI_TESTING
   AppTests:
     type: bundle.unit-test
     platform: macOS
     configFiles:
       Debug: Config/Tests.xcconfig
       Release: Config/Tests.xcconfig
+      UITesting: Config/Tests.xcconfig
     sources:
       - path: AppTests
     dependencies:
@@ -122,6 +136,26 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.fractalx.fxvault.apptests
         GENERATE_INFOPLIST_FILE: YES         # required, or codesign fails for the test bundle
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+  FXVaultUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    configFiles:
+      Debug: Config/Tests.xcconfig
+      Release: Config/Tests.xcconfig
+      UITesting: Config/Tests.xcconfig
+    sources:
+      - path: FXVaultUITests
+      - path: Shared
+    dependencies:
+      - target: FXVault
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.fractalx.fxvault.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        # The runner loads this bundle; with hardened runtime, library validation rejects an
+        # ad-hoc bundle ("different Team IDs"). The app under test keeps its hardened runtime.
+        ENABLE_HARDENED_RUNTIME: NO
         SWIFT_APPROACHABLE_CONCURRENCY: YES
 schemes:
   FXVault:
@@ -149,5 +183,24 @@ schemes:
       config: Debug                          # a Release build opens and migrates the real vault (RELEASING.md)
     analyze:
       config: Debug
+    archive:
+      config: Release
+  # The XCUITest suite (scripts/ci-local.sh runs it twice). Only the UITesting app: it is the
+  # one build that runs on a throwaway vault and a scripted gh.
+  FXVaultUITests:
+    build:
+      targets:
+        FXVault: all
+        FXVaultUITests: [test]
+    run:
+      config: UITesting
+    test:
+      config: UITesting
+      targets:
+        - FXVaultUITests
+    profile:
+      config: UITesting
+    analyze:
+      config: UITesting
     archive:
       config: Release

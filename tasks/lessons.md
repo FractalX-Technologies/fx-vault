@@ -87,3 +87,8 @@ Patterns and rules learned from corrections during this project. Read at the sta
 ## 2026-10-17 - Agents in isolated copies still have to pass the repo's lint
 **Pattern:** Two app test files written by a feature agent imported VaultStore to set up held rows. The agent's copy built and tested green, but `scripts/lint.sh` (App/ and AppTests/ never import VaultStore) failed only in the lead's ci-local run.
 **Rule:** Every agent runs `scripts/lint.sh` (and the tests) in its copy before copying files back. App tests that need database state the public API cannot create use a VaultData `@_spi(Testing)` helper (`ShareHoldRepository.hold`), never a store import.
+
+## 2026-10-25 - A Release check over a folder that was never built passes silently
+**Pattern:** ci-local looked for UI-testing strings in `Build/Products/Release`, but only Debug was built, so the loop skipped Release and the "Release is clean" claim was untested; the Debug binary alone was also empty because Debug keeps code in `FXVault.debug.dylib`.
+**Rule:** A check over build products builds what it inspects, fails when it is missing, and scans every Mach-O in `Contents/MacOS`. Prove it with a positive control (the UITesting build does contain the marker).
+

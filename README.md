@@ -313,6 +313,22 @@ xcodebuild -project FXVault.xcodeproj -scheme FXVault -destination 'platform=mac
 Requires Xcode 26.6 or later. See [CONTRIBUTING.md](CONTRIBUTING.md) for XcodeGen, linting and
 the local CI script, and [docs/RELEASING.md](docs/RELEASING.md) for signed builds.
 
+### UI tests
+
+```sh
+xcodebuild -project FXVault.xcodeproj -scheme FXVaultUITests -destination 'platform=macOS' \
+  CODE_SIGN_IDENTITY=- test                           # XCUITest suite
+```
+
+- The scheme builds the **UITesting** configuration, a separate app ("FX Vault UI Test",
+  `io.fractalx.fxvault.uitesthost`), so a test launch never quits a running FX Vault or FX Vault Dev.
+- That app always starts on a new throwaway vault under the temporary directory (`fxvault-uitests`),
+  with a scripted gh (one account, `owner-a`, read commands only), fake Touch ID, in-memory settings
+  and a private pasteboard. It never opens your vault, the keychain, a real account or the network.
+- Debug and Release builds don't contain this code; `scripts/ci-local.sh` checks it.
+- macOS may ask once to allow UI automation (your password). To run `scripts/ci-local.sh` without
+  the UI tests, set `FXVAULT_SKIP_UI_TESTS=1`.
+
 ## Documentation
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): modules, layers, public APIs and the UI

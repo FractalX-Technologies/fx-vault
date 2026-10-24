@@ -339,27 +339,14 @@ enum TestFixtures {
     ]}}
     """
 
-    /// What the shell probe prints: `ghPath` from `command -v gh`, the variables the shell sets
-    /// (names), and `GH_CONFIG_DIR` with `configDir` as its value.
+    /// What the shell probe prints (``FakeGHOutput/shellProbe(ghPath:variables:configDir:path:)``).
     static func shellProbeOutput(ghPath: String?, variables: [String] = [], configDir: String? = nil) -> String {
-        var entries = ["__FXV_B__PATH=/opt/homebrew/bin:/usr/bin:/bin\n"]
-        if let configDir {
-            entries.append("GH_CONFIG_DIR=\(configDir)\n")
-        }
-        entries.append("FXV_GH=\(ghPath ?? "")\n")
-        entries += variables.map { "FXV_SET=\($0)" }
-        entries.append("__FXV_E__")
-        return entries.joined(separator: "\0")
+        FakeGHOutput.shellProbe(ghPath: ghPath, variables: variables, configDir: configDir)
     }
 
-    /// One `gh repo view` / `gh repo list` entry (`--json` fields FX Vault requests).
+    /// One `gh repo view` / `gh repo list` entry (``FakeGHOutput/repo(owner:name:permission:)``).
     static func repoJSON(owner: String, name: String, permission: String = "WRITE") -> String {
-        """
-        {"createdAt":"2026-01-02T03:04:05Z","defaultBranchRef":{"name":"main"},"id":"R_\(owner)_\(name)",\
-        "isArchived":false,"isFork":false,"isPrivate":true,"name":"\(name)","nameWithOwner":"\(owner)/\(name)",\
-        "owner":{"id":"O_\(owner)","login":"\(owner)"},"sshUrl":"git@github.com:\(owner)/\(name).git",\
-        "viewerCanAdminister":\(permission == "ADMIN"),"viewerPermission":"\(permission)","visibility":"PRIVATE"}
-        """
+        FakeGHOutput.repo(owner: owner, name: name, permission: permission)
     }
 
     static func item(_ kind: ConfigKind, _ name: String, _ value: String) -> RepoCreationItemDraftModel {

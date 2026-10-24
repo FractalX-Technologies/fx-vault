@@ -32,6 +32,7 @@ struct RecoveryKeyGridView: View {
                 .accessibilityLabel(
                     String(localized: "recoveryKey.group.accessibility", defaultValue: "Group \(index + 1): \(group)")
                 )
+                .accessibilityIdentifier(AccessibilityID.Onboarding.recoveryKeyGroup(index))
             }
         }
         .padding(Theme.Spacing.medium)

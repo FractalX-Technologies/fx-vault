@@ -4,9 +4,13 @@
 #   1. XcodeGen drift: regenerating from project.yml must not change the committed
 #      project (shasum based, so it works before the first commit too)
 #   2. swift build + swift test of Packages/FXVaultKit
-#   3. xcodebuild build + test of the FXVault scheme, ad-hoc signed
-#   4. scripts/lint.sh
-#   5. scripts/check-secrets.sh
+#   3. xcodebuild build + test of the FXVault scheme, ad-hoc signed, and a check that the
+#      built app has none of the UI-testing host's code (App/UITesting)
+#   4. the XCUITest suite (FXVaultUITests scheme, UITesting configuration), twice
+#   5. scripts/lint.sh
+#   6. scripts/check-secrets.sh
+#
+# FXVAULT_SKIP_UI_TESTS=1 skips step 4 (macOS may ask once to allow UI automation; README).
 #
 # Build output goes to gitignored .build-ci-local* directories. Always ad-hoc, even
 # when a Config/Local.xcconfig enables Developer ID signing, to match CI.
@@ -68,6 +72,39 @@ step "xcodebuild test (ad-hoc)"
 xcodebuild -project FXVault.xcodeproj -scheme FXVault -destination 'platform=macOS' \
   -derivedDataPath "$DERIVED_DATA" -disableAutomaticPackageResolution \
   "${AD_HOC_SIGNING[@]}" test
+
+step "xcodebuild build Release (ad-hoc)"
+# Opens nothing: built only so the next step can inspect the Release binary.
+xcodebuild -project FXVault.xcodeproj -scheme FXVault -configuration Release -destination 'platform=macOS' \
+  -derivedDataPath "$DERIVED_DATA" -disableAutomaticPackageResolution \
+  "${AD_HOC_SIGNING[@]}" build
+
+step "no UI-testing code outside the UITesting build"
+for config in Debug Release; do
+  # Every Mach-O in Contents/MacOS: Debug builds keep the code in FXVault.debug.dylib.
+  binaries="$DERIVED_DATA/Build/Products/$config/FXVault.app/Contents/MacOS"
+  if [[ ! -d "$binaries" ]]; then
+    echo "$config FXVault.app was not built" >&2
+    exit 1
+  fi
+  if strings "$binaries"/* | grep -q 'fxvault-uitests'; then
+    echo "$config FXVault.app contains UI-testing code (FXVAULT_UI_TESTING leaked)" >&2
+    exit 1
+  fi
+  echo "$config: clean"
+done
+
+if [[ "${FXVAULT_SKIP_UI_TESTS:-0}" == 1 ]]; then
+  step "UI tests skipped (FXVAULT_SKIP_UI_TESTS=1)"
+else
+  # Twice, as the e2e gate asks: a flake is a bug, never a retry.
+  for run in 1 2; do
+    step "UI tests (run $run of 2)"
+    xcodebuild -project FXVault.xcodeproj -scheme FXVaultUITests -destination 'platform=macOS' \
+      -derivedDataPath "$DERIVED_DATA" -disableAutomaticPackageResolution \
+      "${AD_HOC_SIGNING[@]}" test
+  done
+fi
 
 step "lint"
 scripts/lint.sh

@@ -50,6 +50,8 @@ struct SidebarView: View {
             SidebarFooter(sidebar: sidebar, autoLockMinutes: main.app.container.preferences.autoLockMinutes)
         }
         .background(Theme.Colors.surface)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(AccessibilityID.Main.sidebar)
         .errorAlert($sidebar.alert)
         .confirmationDialog(
             String(localized: "main.sidebar.remove.title", defaultValue: "Remove this repository from FX Vault?"),
