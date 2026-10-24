@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lint.sh - enforces the FX Vault code conventions (tasks/todo.md §4.6, §4.7).
 #
-# Scans Swift files in App/ and Packages/FXVaultKit/Sources/ and fails on:
+# Scans Swift files in App/, Shared/ and Packages/FXVaultKit/Sources/ and fails on:
 #   - try! and as!
 #   - force unwraps after a call or subscript: `)!` and `]!` (including `URL(string: ...)!`)
 #   - print( (use os.Logger; never log secret values)
@@ -24,7 +24,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-SCAN_DIRS=(App Packages/FXVaultKit/Sources)
+SCAN_DIRS=(App Shared Packages/FXVaultKit/Sources)
 failures=0
 
 # rule_name|extended-regex

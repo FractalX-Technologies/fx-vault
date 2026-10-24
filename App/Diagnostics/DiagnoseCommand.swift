@@ -21,7 +21,12 @@ nonisolated enum DiagnoseCommand {
 
     /// True when `--diagnose` follows the executable path.
     static func isRequested(arguments: [String]) -> Bool {
-        arguments.dropFirst().contains(argument)
+        #if FXVAULT_UI_TESTING
+        // The UI-testing host never runs the live probes (real shell, gh and keychain).
+        return false
+        #else
+        return arguments.dropFirst().contains(argument)
+        #endif
     }
 
     /// Called first thing by the entry point: when `--diagnose` was passed, writes the report and

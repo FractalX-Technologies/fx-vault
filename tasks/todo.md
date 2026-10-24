@@ -1924,7 +1924,7 @@ Design (designer, reviewed by anton):
 - [x] D5 Sync review, drift review (keep mine / take GitHub's), Settings after the removals (quick-vault shortcut, Sharing log, Touch ID), the menu bar item, and connecting Azure or another GitHub account after onboarding.
 
 Build (maykel, mark, yati, anton; split further once each design is approved):
-- [ ] B0 XCUITest target with a throwaway-vault launch mode and `gh`/`az` fakes; one smoke flow (onboarding → main). e2e: the smoke flow twice.
+- [x] B0 XCUITest target with a throwaway-vault launch mode and `gh`/`az` fakes; one smoke flow (onboarding → main). e2e: the smoke flow twice.
 - [ ] B1 Move `PassphraseGenerator` to VaultCrypto; cut the Spaces hooks from SyncEngine and `DEKRotator`. e2e: smoke flow.
 - [ ] B2 Remove the sharing, chat, teammates and spaces screens and managers, the Bonjour and `.fxvault`/`.fxvcard` entries in `project.yml`. e2e: smoke flow, nothing about teammates in the UI.
 - [ ] B3 Remove the teammate, nearby, chat and spaces parts of SharingKit and `VaultData` (keep passphrase files: File, Passphrase, Bundle, Import); the tables stay, unread. Remove Supabase, Vercel, Overview and `fxvault.yml`.
@@ -1964,4 +1964,11 @@ Review D4 — organizations, Key Vault, create, folders (2026-10-25):
 Review D5 — sync, drift, settings, menu bar (2026-10-25):
 - Boards: 12 on page "sync" (sync review, delete confirmation, progress, done; drift review; settings General, Security, reset confirmation, Accounts, Sharing, Advanced; menu bar).
 - Review: anton found 2 blockers (gh shown below the 2.97.0 floor with a trust row that only exists for a gh owned by another user; a blocked org secret contradicting the org's Ready state) and 7 changes (deletions keep their own confirmation step, deletes run last, 60 writes a minute is FX Vault's limit, variable drift shows both values, Take GitHub's then Fill Value, concealed clipboard wording, per-account Test, SSH alias, GH_TOKEN and per-tenant Azure state); verified in code (`GHVersion.minimum`, `Limits.writesPerMinute`, `ClipboardManager`) and applied. Credential-looking variable note left out: no example variable fits.
+- Commit: `9b043d5` `docs(design): add sync, drift, settings and menu bar boards`.
+
+Review B0 — XCUITest target and throwaway vault (2026-10-25, automatic):
+- Built: `UITesting` configuration (Debug + `FXVAULT_UI_TESTING`, app "FX Vault UI Test", `io.fractalx.fxvault.uitesthost`); `AppContainer.uiTest(root:)` over a vault in `$TMPDIR/fxvault-uitests/<uuid>`, the in-process scripted gh (owner-a, example-org, api-service; read commands only), fake Touch ID, in-memory settings, private pasteboard, inert lock sources; `--diagnose` off there. `Shared/AccessibilityID.swift` in app and tests. `FakeGHOutput` in GitHubKit/Testing replaces two AppTests helpers. `AppContainer.sandboxed(...)` shared by preview and UI test.
+- e2e: `OnboardingSmokeTests` (create vault → recovery key → confirm 2 groups → open → sidebar shows owner-a, example-org, api-service, no "Could not be listed"); seen failing with the org's repo stub removed; green twice in `scripts/ci-local.sh`.
+- Gates: `scripts/ci-local.sh` green (package tests, 661 app tests, Release build, no `fxvault-uitests` string in Debug or Release binaries, UI tests ×2, lint, check-secrets). Not in GitHub CI: hosted runners may refuse UI automation.
+- Review: anton — 3 blockers (Release check never ran, plan edits mixed in, test stopped at the account row) and 6 changes (activate like live, duplicated container code, swallowed missing group, positional fields, deleting a running suite's folder, fake PATH to Homebrew, README tip disabling a macOS protection); all applied. Plan edits committed apart (`0ab5f7b`, quoting Bryan).
 - Commit: (pending).

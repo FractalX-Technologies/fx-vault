@@ -12,6 +12,14 @@ extension VaultSession {
         try VaultSession(database: DatabaseFactory.openLive())
     }
 
+    /// A locked session over `vault.sqlite` in `directory`, created and migrated if needed (the
+    /// UI-testing host's throwaway vault).
+    ///
+    /// - Throws: `StoreError` when the folder or the database cannot be opened or migrated.
+    public static func openOnDisk(directory: URL) throws -> VaultSession {
+        try VaultSession(database: DatabaseFactory.openOnDisk(directory: directory))
+    }
+
     /// A locked session over a new, empty, migrated in-memory database (previews and tests).
     ///
     /// - Throws: `StoreError` when the database cannot be created.

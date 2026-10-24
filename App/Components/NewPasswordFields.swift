@@ -19,6 +19,7 @@ struct NewPasswordFields: View {
                     isSecure: true
                 )
                 .textContentType(.newPassword)
+                .accessibilityIdentifier(AccessibilityID.NewPassword.password)
                 PasswordStrengthMeter(strength: strength)
             }
             VStack(alignment: .leading, spacing: Theme.Spacing.small) {
@@ -29,6 +30,7 @@ struct NewPasswordFields: View {
                     isInvalid: showsMismatch
                 )
                 .textContentType(.newPassword)
+                .accessibilityIdentifier(AccessibilityID.NewPassword.confirmation)
                 .onSubmit(onSubmit)
                 if showsMismatch {
                     Text(String(localized: "password.mismatch", defaultValue: "The passwords do not match."))

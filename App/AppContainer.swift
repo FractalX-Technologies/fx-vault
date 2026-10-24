@@ -23,6 +23,11 @@ final class AppContainer {
         case live
         case preview
         case test
+        #if FXVAULT_UI_TESTING
+        /// The UITesting build's only mode: a throwaway vault under `root` and a scripted gh
+        /// (``AppContainer/uiTest(root:)``).
+        case uiTest(root: URL)
+        #endif
 
         /// Set by XCTest in the host app's environment while it runs the test bundle.
         static let xcTestConfigurationKey = "XCTestConfigurationFilePath"
@@ -31,7 +36,16 @@ final class AppContainer {
         static func forCurrentProcess(
             environment: [String: String] = ProcessInfo.processInfo.environment
         ) -> Mode {
-            environment[xcTestConfigurationKey] == nil ? .live : .preview
+            if environment[xcTestConfigurationKey] != nil {
+                return .preview
+            }
+            #if FXVAULT_UI_TESTING
+            // Never `live`: the UITesting build shares the Debug vault folder's flavor, so falling
+            // back would open the developer's FX Vault Dev vault.
+            return .uiTest(root: UITestLaunch.prepareRoot())
+            #else
+            return .live
+            #endif
         }
     }
 
@@ -104,9 +118,16 @@ final class AppContainer {
         self.spaceNetworking = spaceNetworking
     }
 
-    /// Whether this container may touch the disk, the keychain or spawn processes.
+    /// Whether this container behaves as the running app: the real vault, keychain and gh, or
+    /// the UI-testing host, whose gh is scripted but whose window must activate like the app's.
     var hasSideEffects: Bool {
-        mode == .live
+        switch mode {
+        case .live: true
+        case .preview, .test: false
+        #if FXVAULT_UI_TESTING
+        case .uiTest: true
+        #endif
+        }
     }
 
     // MARK: - Factories
@@ -116,6 +137,9 @@ final class AppContainer {
         switch mode {
         case .live: try live()
         case .preview, .test: try preview()
+        #if FXVAULT_UI_TESTING
+        case .uiTest(let root): try uiTest(root: root)
+        #endif
         }
     }
 
@@ -176,7 +200,28 @@ final class AppContainer {
     ) throws -> AppContainer {
         let clock = SystemClock()
         let session = try VaultSession.inMemory()
-        let data = VaultDataComponents.makeOffline(session: session, clock: clock)
+        return try sandboxed(
+            mode: .preview,
+            session: session,
+            data: VaultDataComponents.makeOffline(session: session, clock: clock),
+            capabilities: capabilities,
+            preferences: PreferencesManager(store: InMemoryPreferencesStore()),
+            ghStatusProbe: { _ in FixedGHStatusProbe(ghStatus) },
+            clock: clock
+        )
+    }
+
+    /// The fakes every container but `live` shares: fake Touch ID, the testing KDF policy, a
+    /// private pasteboard, inert lock sources and a recorded Dock badge.
+    static func sandboxed(
+        mode: Mode,
+        session: VaultSession,
+        data: VaultDataComponents,
+        capabilities: FakeBuildCapabilities,
+        preferences: PreferencesManager,
+        ghStatusProbe: (VaultDataComponents) -> any GHStatusProbing,
+        clock: any VaultClock
+    ) throws -> AppContainer {
         let github = data.github
         let vaultManager = try VaultManager(
             session: session,
@@ -186,10 +231,9 @@ final class AppContainer {
             clock: clock,
             onLock: { github.purgeTokens() }
         )
-        let preferences = PreferencesManager(store: InMemoryPreferencesStore())
         let inert = InertLockSources()
         return AppContainer(
-            mode: .preview,
+            mode: mode,
             vaultManager: vaultManager,
             data: data,
             preferences: preferences,
@@ -201,10 +245,10 @@ final class AppContainer {
                 ticker: inert,
                 timeout: { preferences.autoLockTimeout }
             ),
-            ghStatusProbe: FixedGHStatusProbe(ghStatus),
+            ghStatusProbe: ghStatusProbe(data),
             dockBadge: RecordedDockBadge(),
             passphraseGenerator: try? PassphraseGenerator.bundled(),
-            vaultDirectory: nil,
+            vaultDirectory: session.databaseDirectory,
             clock: clock
         )
     }

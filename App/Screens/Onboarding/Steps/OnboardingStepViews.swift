@@ -78,6 +78,7 @@ struct WelcomeStepView: View {
                 ShellForwardLabel(title: String(localized: "onboarding.welcome.start", defaultValue: "Create Vault"))
             }
             .fxButtonStyle(.primary, size: .large)
+            .accessibilityIdentifier(AccessibilityID.Onboarding.createVault)
             .keyboardShortcut(.defaultAction)
         }
     }
@@ -127,6 +128,7 @@ struct CreatePasswordStepView: View {
                 ShellForwardLabel(title: String(localized: "onboarding.password.create", defaultValue: "Continue"))
             }
             .fxButtonStyle(.primary, size: .large)
+            .accessibilityIdentifier(AccessibilityID.Onboarding.passwordContinue)
             .keyboardShortcut(.defaultAction)
             .disabled(!viewModel.canCreateVault)
         }
@@ -175,6 +177,7 @@ struct RecoveryKeyStepView: View {
                 ShellForwardLabel(title: String(localized: "onboarding.recovery.saved", defaultValue: "I Saved It"))
             }
             .fxButtonStyle(.primary, size: .large)
+            .accessibilityIdentifier(AccessibilityID.Onboarding.recoveryKeySaved)
             .keyboardShortcut(.defaultAction)
         }
     }
@@ -213,6 +216,7 @@ struct ConfirmRecoveryKeyStepView: View {
                                 )
                                 .frame(width: Theme.Layout.recoveryGroupFieldWidth + Theme.Spacing.xxLarge)
                                 .accessibilityLabel(label)
+                                .accessibilityIdentifier(AccessibilityID.Onboarding.confirmGroup(groupIndex))
                         }
                     }
                 }
@@ -237,6 +241,7 @@ struct ConfirmRecoveryKeyStepView: View {
                 ShellForwardLabel(title: String(localized: "onboarding.confirm.continue", defaultValue: "Confirm"))
             }
             .fxButtonStyle(.primary, size: .large)
+            .accessibilityIdentifier(AccessibilityID.Onboarding.confirm)
             .keyboardShortcut(.defaultAction)
             .disabled(!viewModel.canConfirmRecoveryKey)
         }
@@ -304,6 +309,7 @@ struct DoneStepView: View {
                 ShellForwardLabel(title: String(localized: "onboarding.done.open", defaultValue: "Open FX Vault"))
             }
             .fxButtonStyle(.primary, size: .large)
+            .accessibilityIdentifier(AccessibilityID.Onboarding.openVault)
             .keyboardShortcut(.defaultAction)
         }
     }
