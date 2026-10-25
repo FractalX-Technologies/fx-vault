@@ -1070,7 +1070,8 @@ AppTests).
   `trustGHBinary(_:)`, `revokeTrustedGHBinary()`.
 
 **Screens** (`App/Screens`, each `[Name]Screen` + `@Observable [Name]ViewModel`).
-- `Onboarding`, `Lock` / `RecoveryReset` (both with `GHStatusRow`). The lock screen shows
+- `Onboarding`, then `Connect` (`AppViewModel.isFirstConnectPending`, in memory only: a lock
+  or relaunch goes to the main window), `Lock` / `RecoveryReset` (both with `GHStatusRow`). The lock screen shows
   "Unlock with Touch ID" (SF Symbol `touchid`) when Touch ID can run, and otherwise names why the
   password is required under the password field (`LockNoticeModel`: "Password required: After a
   restart" / "Every 14 days" / "Fingerprints changed"). After a password unlock the vault is

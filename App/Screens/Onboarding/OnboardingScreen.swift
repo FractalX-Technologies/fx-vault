@@ -52,8 +52,6 @@ struct OnboardingScreen: View {
                             ConfirmRecoveryKeyStepView(viewModel: viewModel)
                         case .touchID:
                             TouchIDStepView(viewModel: viewModel)
-                        case .done:
-                            DoneStepView(viewModel: viewModel)
                         }
                     }
                     .transition(.opacity)

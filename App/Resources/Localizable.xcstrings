@@ -892,6 +892,248 @@
         }
       }
     },
+    "connect.continue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "connect.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No GitHub account FX Vault can use. Add one in Settings › Accounts."
+          }
+        }
+      }
+    },
+    "connect.importing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Importing %@…"
+          }
+        }
+      }
+    },
+    "connect.notNow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not Now"
+          }
+        }
+      }
+    },
+    "connect.selected" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld selected · Secret names only"
+          }
+        }
+      }
+    },
+    "connect.source.organization" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Organization"
+          }
+        }
+      }
+    },
+    "connect.source.personal" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld personal repository](inflect: true)"
+          }
+        }
+      }
+    },
+    "connect.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose what FX Vault reads."
+          }
+        }
+      }
+    },
+    "connect.summary.continue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "connect.summary.failed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not imported: %@. Import them later from the sidebar."
+          }
+        }
+      }
+    },
+    "connect.summary.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub never returns secret values. Fill them next, or later in each place."
+          }
+        }
+      }
+    },
+    "connect.summary.organizationCount" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld organization](inflect: true)"
+          }
+        }
+      }
+    },
+    "connect.summary.organizations" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Organizations"
+          }
+        }
+      }
+    },
+    "connect.summary.repositories" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repositories"
+          }
+        }
+      }
+    },
+    "connect.summary.repositoryCount" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%1$lld repository](inflect: true) · ^[%2$lld environment](inflect: true)"
+          }
+        }
+      }
+    },
+    "connect.summary.secrets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets (names)"
+          }
+        }
+      }
+    },
+    "connect.summary.source" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Source"
+          }
+        }
+      }
+    },
+    "connect.summary.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Everything FX Vault found, by source."
+          }
+        }
+      }
+    },
+    "connect.summary.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Imported."
+          }
+        }
+      }
+    },
+    "connect.summary.total" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Total · ^[%1$lld secret](inflect: true) · ^[%2$lld variable](inflect: true)"
+          }
+        }
+      }
+    },
+    "connect.summary.variables" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Variables"
+          }
+        }
+      }
+    },
+    "connect.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connect GitHub."
+          }
+        }
+      }
+    },
     "connectivity.banner.github" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10788,50 +11030,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Confirm your recovery key."
-          }
-        }
-      }
-    },
-    "onboarding.done.open" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Open FX Vault"
-          }
-        }
-      }
-    },
-    "onboarding.done.subtitle" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "FX Vault locks when your Mac sleeps, the screen locks, the window closes, or after a few idle minutes."
-          }
-        }
-      }
-    },
-    "onboarding.done.subtitleTouchID" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Touch ID is on. FX Vault locks when your Mac sleeps, the screen locks, the window closes, or after a few idle minutes."
-          }
-        }
-      }
-    },
-    "onboarding.done.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Your vault is ready"
           }
         }
       }

@@ -110,13 +110,11 @@ struct OnboardingViewModelTests {
         await viewModel.enableTouchID()
         #expect(viewModel.error == nil)
         #expect(viewModel.isTouchIDEnabled)
-        #expect(viewModel.step == .done)
         #expect(viewModel.password.isEmpty)
         #expect(try harness.vaultManager.isBiometricsEnabled())
         #expect(!harness.biometrics.accounts.isEmpty)
-
-        viewModel.finish()
         #expect(harness.app.phase == .unlocked)
+        #expect(harness.app.isFirstConnectPending, "Touch ID opens the Connect phase")
     }
 
     @Test func unsignedBuildSkipsTouchIDStep() async throws {
@@ -132,7 +130,8 @@ struct OnboardingViewModelTests {
         viewModel.continueToConfirmation()
         viewModel.confirmationInputs = [groups[3], groups[12]]
         viewModel.confirmRecoveryKey()
-        #expect(viewModel.step == .done)
+        #expect(harness.app.phase == .unlocked)
+        #expect(harness.app.isFirstConnectPending)
         #expect(viewModel.password.isEmpty)
         #expect(harness.biometrics.accounts.isEmpty)
     }
@@ -149,7 +148,7 @@ struct OnboardingViewModelTests {
         viewModel.confirmationInputs = [groups[3], groups[12]]
         viewModel.confirmRecoveryKey()
         viewModel.skipTouchID()
-        #expect(viewModel.step == .done)
+        #expect(harness.app.isFirstConnectPending)
         #expect(try !harness.vaultManager.isBiometricsEnabled())
     }
 

@@ -79,6 +79,9 @@ final class AppViewModel {
     /// `.fxvault` files opened from Finder or AirDrop, oldest first (§10 Scenes). The main
     /// window imports them one by one after unlock.
     private(set) var pendingImports: [URL] = []
+    /// Onboarding just finished: ``ConnectScreen`` (choose what to import) comes before the main
+    /// window.
+    private(set) var isFirstConnectPending = false
     /// The user chose "Not Now" on ``GHSetupScreen`` for this launch.
     private(set) var isGHSetupDeferred = false
     /// The result of the launch reconciliation after the last unlock (§7.3), nil until it ran.
@@ -144,6 +147,8 @@ final class AppViewModel {
     }
 
     private func runLockPhaseB() {
+        // In memory only: after a lock the main window follows the unlock, like a relaunch.
+        isFirstConnectPending = false
         lockObservers.removeAll { $0.observer == nil }
         for entry in lockObservers {
             entry.observer?.vaultDidLock()
@@ -193,7 +198,7 @@ final class AppViewModel {
         startReconciliation()
     }
 
-    /// Called when onboarding's Done step closes.
+    /// Called when onboarding's last step closes; an unlocked vault goes on to the Connect phase.
     func completeOnboarding() {
         switch container.vaultManager.state {
         case .noVault:
@@ -202,9 +207,15 @@ final class AppViewModel {
             phase = .locked
         case .unlocked:
             container.autoLock.recordInteraction()
+            isFirstConnectPending = true
             phase = .unlocked
             startReconciliation()
         }
+    }
+
+    /// The Connect phase closed (imported, or Not Now): the main window follows.
+    func finishFirstConnect() {
+        isFirstConnectPending = false
     }
 
     /// Called after Preferences › Advanced › Reset vault erased everything.
@@ -478,6 +489,10 @@ final class AppViewModel {
 
     func makeGHSetupViewModel() -> GHSetupViewModel {
         GHSetupViewModel(app: self)
+    }
+
+    func makeConnectViewModel() -> ConnectViewModel {
+        ConnectViewModel(app: self)
     }
 
     func makeMainViewModel() -> MainViewModel {

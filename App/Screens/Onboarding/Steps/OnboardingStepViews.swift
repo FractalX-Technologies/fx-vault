@@ -4,7 +4,7 @@ import VaultCore
 /// The layout of one onboarding step (board Onboarding): large title and muted paragraph, the
 /// step's content in the 460 pt text column, the error, and the footer pills pinned to the
 /// bottom of the column.
-private struct OnboardingStepLayout<Content: View, Footer: View>: View {
+struct OnboardingStepLayout<Content: View, Footer: View>: View {
     let title: String
     let subtitle: String
     let error: ErrorPresentationModel?
@@ -339,38 +339,8 @@ struct TouchIDStepView: View {
     }
 }
 
-/// Done.
-struct DoneStepView: View {
-    let viewModel: OnboardingViewModel
-
-    var body: some View {
-        OnboardingStepLayout(
-            title: String(localized: "onboarding.done.title", defaultValue: "Your vault is ready"),
-            subtitle: viewModel.isTouchIDEnabled
-                ? String(
-                    localized: "onboarding.done.subtitleTouchID",
-                    defaultValue: "Touch ID is on. FX Vault locks when your Mac sleeps, the screen locks, the window closes, or after a few idle minutes."
-                )
-                : String(
-                    localized: "onboarding.done.subtitle",
-                    defaultValue: "FX Vault locks when your Mac sleeps, the screen locks, the window closes, or after a few idle minutes."
-                ),
-            error: viewModel.error
-        ) {
-            Button {
-                viewModel.finish()
-            } label: {
-                ShellForwardLabel(title: String(localized: "onboarding.done.open", defaultValue: "Open FX Vault"))
-            }
-            .fxButtonStyle(.primary, size: .large)
-            .accessibilityIdentifier(AccessibilityID.Onboarding.openVault)
-            .keyboardShortcut(.defaultAction)
-        }
-    }
-}
-
 /// A short caption under a step's content (board copy such as "Shown once. Not stored on this Mac.").
-private struct OnboardingNote: View {
+struct OnboardingNote: View {
     let text: String
 
     init(_ text: String) {

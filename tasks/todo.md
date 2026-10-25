@@ -2130,3 +2130,13 @@ Review B11d — onboarding Secure phase (2026-10-25, automatic):
 - Tests: `OnboardingViewModelTests` (gate seen failing with the old guard; `theSecurePhaseCountsItsStepsAndPasswordGoesBack`); UI `onboard()` asserts Continue is disabled before the checkbox; snapshots `onboarding-welcome`, `onboarding-recovery` added and checked in light and dark.
 - Docs: CHANGELOG, DESIGN (lock and onboarding).
 - Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 567 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (5 tests); lint OK; check-secrets OK in the worktree; strings synced (second run: no change).
+
+Review B11d2 — Connect GitHub and first import (2026-10-25, automatic):
+- Flow: the last Secure step (Touch ID, or Confirm without it) opens `ConnectScreen` (`AppViewModel.isFirstConnectPending`, in memory; a lock clears it). `GHSetupScreen` still comes first when gh needs attention. The onboarding Done step is removed.
+- Connect GitHub: per ok account, its organizations with `OrgAccessStatus` and one personal row (repositories neither archived nor imported); ready rows checked. An organization two accounts reach is listed once, under the first account that can read it.
+- Continue imports in order: organizations through `OrganizationRepository.importOrganization`, personal repositories one by one through `RepoCatalogRepository.importRepository`; a failure is named in the summary and the rest goes on. Not Now imports nothing.
+- Summary (board FirstImport): organizations and repositories (with environments) with secret and variable counts, total, failures, the "never returns secret values" note. Key Vaults join with B8b; the per-environment split of the board is folded into the repository row (the import result has totals only).
+- Deferred: Approve on GitHub (B4b, reserved), Open SSO Page and Show Commands in the rows (Settings › Accounts has them); the Connect step counter waits for Connect Azure; the board's Back on Connect is Not Now (nothing to go back to once the vault exists).
+- Tests: `ConnectViewModelTests` (sources and default checks, dedupe, import with a failure, counts agree, lock); dedupe and default checks seen failing under a mutation; onboarding tests now end in the Connect phase; UI `ConnectUITests` imports example-org through the summary; `onboard()` takes Not Now; snapshots `connect`, `connect-summary` checked in light and dark.
+- Docs: README (first launch), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
+- Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 574 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (6 tests); lint OK; check-secrets OK in the worktree; strings synced (second run: no change).

@@ -8,7 +8,6 @@ enum AccessibilityID {
         static let recoveryKeySavedCheck = "onboarding.recoveryKey.savedCheck"
         static let back = "onboarding.back"
         static let confirm = "onboarding.confirm.continue"
-        static let openVault = "onboarding.done.open"
 
         /// A recovery key group on screen; `index` is 0-based. Its label ends with the group.
         static func recoveryKeyGroup(_ index: Int) -> String {
@@ -21,6 +20,19 @@ enum AccessibilityID {
         }
 
         static let confirmGroupPrefix = "onboarding.confirm.group."
+    }
+
+    /// The Connect phase after onboarding (1.0).
+    enum Connect {
+        static let importSelected = "connect.continue"
+        static let notNow = "connect.notNow"
+        static let summary = "connect.summary"
+        static let openVault = "connect.summary.continue"
+
+        /// The checkbox of a source row (`ConnectViewModel.Source.id`).
+        static func source(_ id: String) -> String {
+            "connect.source.\(id)"
+        }
     }
 
     /// The new master password fields (onboarding, recovery reset, change password).
