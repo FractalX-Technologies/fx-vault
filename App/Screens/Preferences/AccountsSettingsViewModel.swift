@@ -9,7 +9,8 @@ import VaultData
 /// from `~/.ssh/config`, **Test** ("Authenticates as <login>") and **Re-check**. Since v0.3.1
 /// also the accounts gh lists that FX Vault cannot use (with why), and a note when the user's
 /// shell exports `GH_TOKEN` or `GITHUB_TOKEN`. Since v0.3.2 the GitHub aliases no account uses,
-/// with how to log their account in to gh.
+/// with how to log their account in to gh. Since 1.0 (B4) each account's organizations with
+/// their access, and the commands that add `admin:org`.
 ///
 /// Needs the vault unlocked (the tab shows "Unlock FX Vault…" otherwise); a lock clears it.
 @Observable
@@ -19,6 +20,11 @@ final class AccountsSettingsViewModel: LockObserving {
     private(set) var sshHosts: [SSHHostEntryModel] = []
     /// Scope fix commands by account id (only for accounts with missing scopes).
     private(set) var fixCommands: [String: [String]] = [:]
+    /// Each logged-in account's organizations with their access, by account id. Absent when the
+    /// account's organizations could not be read.
+    private(set) var organizations: [String: [OrgAccessModel]] = [:]
+    /// The commands that add `admin:org`, by account id (only when an organization needs it).
+    private(set) var adminOrgCommands: [String: [String]] = [:]
     /// The last **Test** result by account id.
     private(set) var testResults: [String: SSHAliasTestResultModel] = [:]
     /// Accounts with a Test, Re-check or alias change in flight.
@@ -85,6 +91,7 @@ final class AccountsSettingsViewModel: LockObserving {
         }
         unusableAccounts = await github.unusableAccounts
         await loadFixCommands()
+        await loadOrganizations()
     }
 
     /// **Check Again**: reads gh's accounts again (an account just logged in from Terminal) and
@@ -104,6 +111,21 @@ final class AccountsSettingsViewModel: LockObserving {
         fixCommands = commands
     }
 
+    private func loadOrganizations() async {
+        var loaded: [String: [OrgAccessModel]] = [:]
+        var commands: [String: [String]] = [:]
+        for account in accounts where account.status?.state == .ok {
+            // A failing account keeps its token chip as the explanation; its organizations stay hidden.
+            guard let access = try? await github.organizationAccess(accountLogin: account.account.login) else { continue }
+            loaded[account.id] = access
+            if access.contains(where: { $0.status == .needsAdminOrgScope }) {
+                commands[account.id] = await github.adminOrgFixCommands(for: account.account.login)
+            }
+        }
+        organizations = loaded
+        adminOrgCommands = commands
+    }
+
     // MARK: - Actions
 
     /// **Re-check**: forgets the account's cached token and reads gh's accounts again.
@@ -111,6 +133,7 @@ final class AccountsSettingsViewModel: LockObserving {
         await perform(account) {
             accounts = try await github.recheck(login: account.account.login)
             await loadFixCommands()
+            await loadOrganizations()
         }
     }
 
@@ -177,6 +200,8 @@ final class AccountsSettingsViewModel: LockObserving {
         accounts = []
         unusableAccounts = []
         fixCommands = [:]
+        organizations = [:]
+        adminOrgCommands = [:]
         testResults = [:]
         copiedCommand = nil
         error = nil

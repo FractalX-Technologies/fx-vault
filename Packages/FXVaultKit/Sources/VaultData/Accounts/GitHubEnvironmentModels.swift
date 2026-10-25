@@ -34,6 +34,22 @@ public struct GHAccountSummaryModel: Sendable, Hashable, Identifiable {
     }
 }
 
+/// One organization an account belongs to, with whether that account can manage its secrets and
+/// variables (1.0, tasks/todo.md B4).
+public struct OrgAccessModel: Sendable, Hashable, Identifiable {
+    public let login: String
+    public let status: OrgAccessStatus
+
+    public init(login: String, status: OrgAccessStatus) {
+        self.login = login
+        self.status = status
+    }
+
+    public var id: String {
+        OwnerLoginValidator.foldKey(login)
+    }
+}
+
 /// The result of the **Test** button for an SSH alias (D19, §8 D1–D2, §10 Preferences).
 public enum SSHAliasTestResultModel: Sendable, Hashable {
     /// "Authenticates as <login>": the alias reaches github.com with the account's key.

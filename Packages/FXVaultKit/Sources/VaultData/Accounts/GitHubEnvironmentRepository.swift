@@ -196,8 +196,47 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
     /// The copyable commands that add the missing scopes to `login` (§2): switch to it,
     /// refresh, and switch back to the account that was active at the last ``accounts()``.
     public func scopeFixCommands(for login: String) -> [String] {
-        let active = lastStatuses.first(where: \.isActive)?.login
-        return ScopeChecker.fixCommands(login: login, previousActiveLogin: active)
+        ScopeChecker.fixCommands(login: login, previousActiveLogin: activeLogin)
+    }
+
+    /// The copyable commands that add `admin:org` to `login` (B4), as ``scopeFixCommands(for:)``.
+    public func adminOrgFixCommands(for login: String) -> [String] {
+        ScopeChecker.fixCommands(login: login, previousActiveLogin: activeLogin, scopes: [ScopeChecker.adminOrgScope])
+    }
+
+    private var activeLogin: String? {
+        lastStatuses.first(where: \.isActive)?.login
+    }
+
+    /// The organizations `accountLogin` belongs to (A5), each with its access (A6, and the scopes
+    /// gh reported at the last ``accounts()``). An account-wide failure (token, network) throws;
+    /// one organization's failure only makes its status SSO or unknown.
+    public func organizationAccess(accountLogin: String) async throws(GitHubEnvironmentError) -> [OrgAccessModel] {
+        let scheduler: GHCommandScheduler
+        let organizations: [String]
+        do {
+            scheduler = try await self.scheduler(for: accountLogin)
+            organizations = try await scheduler.listOrganizations()
+        } catch {
+            throw .github(error)
+        }
+        let accountKey = OwnerLoginValidator.foldKey(accountLogin)
+        let scopes = lastStatuses.first { OwnerLoginValidator.foldKey($0.login) == accountKey }?.scopeList
+        var access: [OrgAccessModel] = []
+        for organization in organizations {
+            let membership: Result<GHOrgMembershipDTO, GHError>
+            do {
+                membership = .success(try await scheduler.organizationMembership(organization))
+            } catch {
+                if error.stopsAccountReads { throw .github(error) }
+                membership = .failure(error)
+            }
+            access.append(OrgAccessModel(
+                login: organization,
+                status: OrgAccessChecker.status(scopes: scopes, membership: membership)
+            ))
+        }
+        return access
     }
 
     /// The account name of a file owner (`GHBinaryOwnerModel`, a trusted gh's owner) from the

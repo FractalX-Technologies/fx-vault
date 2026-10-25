@@ -32,6 +32,14 @@ enum AccessibilityID {
         static let importRepository = "main.import"
     }
 
+    /// Preferences › Accounts.
+    enum Accounts {
+        /// An organization row of an account (its login, then its access chip).
+        static func organization(_ login: String) -> String {
+            "accounts.organization.\(login)"
+        }
+    }
+
     /// Share Project and its "Confirm it's you" step.
     enum Share {
         static let continueToSendTo = "share.continue"

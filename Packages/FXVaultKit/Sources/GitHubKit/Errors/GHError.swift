@@ -105,4 +105,17 @@ public enum GHError: Error, Sendable, Hashable {
         default: false
         }
     }
+
+    /// True when the failure is the account's or gh's (token, network, the binary), so every
+    /// other read of the account would fail too; false when it concerns one owner or resource
+    /// (SAML, not found, permission), which a listing reports and moves past.
+    public var stopsAccountReads: Bool {
+        switch self {
+        case .tokenRevoked, .notAuthenticated, .network, .timeout, .rateLimited, .cancelled, .notInstalled,
+             .launchFailed, .untrustedBinary, .versionTooOld:
+            true
+        default:
+            false
+        }
+    }
 }

@@ -92,3 +92,6 @@ Patterns and rules learned from corrections during this project. Read at the sta
 **Pattern:** ci-local looked for UI-testing strings in `Build/Products/Release`, but only Debug was built, so the loop skipped Release and the "Release is clean" claim was untested; the Debug binary alone was also empty because Debug keeps code in `FXVault.debug.dylib`.
 **Rule:** A check over build products builds what it inspects, fails when it is missing, and scans every Mach-O in `Contents/MacOS`. Prove it with a positive control (the UITesting build does contain the marker).
 
+
+**Pattern:** a VaultData test scripted a network failure on a gh read and hung for 10 minutes: reads retry transient failures, and the retry sleeps on the test's `ManualClock`, which never advances.
+**Rule:** to test an account-wide failure, script a non-transient one (`gh: Bad credentials (HTTP 401)`), or advance the clock; run new package tests under a time cap.

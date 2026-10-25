@@ -14,6 +14,11 @@ extension GHCommandScheduler {
         GHOrgsCommands.decodeList(try await run(try GHOrgsCommands.list()))
     }
 
+    /// A6: the account's membership of `organization` (`.notFound` when it is not a member).
+    public func organizationMembership(_ organization: String) async throws(GHError) -> GHOrgMembershipDTO {
+        try GHOrgsCommands.decodeMembership(try await run(try GHOrgsCommands.membership(organization: organization)))
+    }
+
     /// B1: repositories owned by `owner`.
     public func listRepositories(owner: String) async throws(GHError) -> [GHRepoDTO] {
         try GHReposCommands.decodeList(try await run(try GHReposCommands.list(owner: owner)))

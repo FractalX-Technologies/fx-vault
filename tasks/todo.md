@@ -1931,7 +1931,8 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B3c Remove the stage Overview and `fxvault.yml`: EnvTools `Manifest/`, `GHManifestAPI`, VaultData `Destinations/Overview/`, the Overview screens and row. Add Destination keeps its stage suggestions (moved to `DestinationRepository`); after an import FX Vault opens the repository at the first stage's environment instead of the Overview. e2e: smoke flow.
 - [x] B3d Remove Supabase and Vercel (DestinationKit remotes and account clients, connections, settings, Add Destination). Migration `v16_drop_runtime_providers` deletes their destinations, items, journal and tokens (Bryan, 2026-10-25: delete them) and keeps their names in `retired_destinations` for a one-time notice after unlock; nothing is deleted remotely. A 0.9 file that carries them imports without them, and the preview says so. Key Vault stays. e2e: smoke flow.
 - [x] B3b Share Securely: passphrase `.fxvault` export of an org, repository or environment, and the open/preview/held import, from D2's Share boards; **Send with AirDrop** of that file (system share, Bryan 2026-10-25).
-- [ ] B4 `admin:org` scope check per organization and the refresh flow.
+- [x] B4 `admin:org` scope check per organization and the refresh flow (copyable commands and Re-check).
+- [ ] B4b In-app Approve (D1's device code) through `gh auth refresh`: needs a check against a real gh login first (non-TTY behaviour, the browser step); reserved for Bryan's real account.
 - [ ] B5 Organization list commands and store (v15, additive); read-only organization node.
 - [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list.
 - [ ] B7 Organization drift and verify; inherited and shadowed names on a repository.
@@ -2028,3 +2029,16 @@ Review B3b — Share Securely: production behind Touch ID, Send with AirDrop (20
 - Gates: XcodeGen drift OK; `swift test` 1,291 green; `xcodebuild test` 559 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (onboarding, share); lint OK; check-secrets OK in the worktree (944 files); strings synced (second run: no change).
 - Review: by me (subagent cap).
 - Docs: README, CHANGELOG, ARCHITECTURE, DESIGN, SECURITY-MODEL §10.5, SHARING-PROTOCOL, RELEASING #47.
+- Commit: `e0cb1a8` `feat(sharing): share production behind its own confirmation, send with AirDrop`.
+
+Review B4 — organization access (2026-10-25, automatic):
+- GitHubKit: A6 `GHOrgsCommands.membership(organization:)` (`gh api -X GET user/memberships/orgs/{org}`), `GHOrgMembershipDTO`, `OrgAccessChecker` (role first, then `admin:org`; SAML → SSO with its URL; no scopes → unknown), `ScopeChecker.fixCommands(…, scopes:)`, `GHError.stopsAccountReads` (shared with the catalog, replacing its private `isFatal`).
+- VaultData: `GitHubEnvironmentRepository.organizationAccess(accountLogin:)`, `adminOrgFixCommands(for:)`, `OrgAccessModel`.
+- App: Preferences › Accounts lists each logged-in account's organizations with a chip (Ready, Needs admin:org, Org secrets need an org admin, Needs SSO authorization with Open SSO Page, Access unknown) and the admin:org commands when one needs them; Re-check reloads; a lock clears them.
+- Assumption: FX Vault never runs `gh auth refresh` (needs a browser and the active account, §2); the in-app device-code Approve is B4b, after a real-gh check.
+- Tests: GitHubKit `OrgAccessTests` (argv, decode, the rule table, fine-grained, admin:org commands), the A6 builder in `CommandBuilderTests`; VaultData `organizationAccessReadsEachRoleWithTheAccountsScopes`, `withoutAdminOrgTheOrganizationAsksForItOnThatAccount`, `aRevokedTokenStopsTheOrganizationAccessRead`; app `organizationsShowTheirAccessAndTheAdminOrgCommands`, `anAccountWithAdminOrgIsReadyWithNoCommands`, `organizationsThatCantBeReadStayHiddenWithoutAnError`. Seen failing under mutations: no role rule (UI, VaultData, GitHubKit), commands always shown, the lock keeping organizations.
+- e2e: `AccountsUITests` (example-org Ready, example-labs Org secrets need an org admin); the scripted gh gained the A6 roles and the member organization.
+- Gates: XcodeGen drift OK; `swift test` 1,299 green; `xcodebuild test` 562 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (onboarding, share, accounts); lint OK; check-secrets OK in the worktree (949 files); strings synced (second run: no change).
+- Review: by me (subagent cap). Found and fixed: a comment claimed organizations are absent while loading.
+- Lesson: a read test on a network failure hangs (reads retry on the manual clock); use a non-transient account error.
+- Docs: README, CHANGELOG, API (A6), ARCHITECTURE, DESIGN (Accounts), RELEASING #50.

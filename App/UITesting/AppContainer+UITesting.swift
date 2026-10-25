@@ -39,13 +39,16 @@ enum UITestLaunch {
     }
 }
 
-/// The scripted gh of the UI-testing host: one account in one organization with one repository
-/// that can be imported (environments `production` and `staging`, one variable in each scope and
-/// no secrets), read commands only. Every other call gets the fake runner's "no stub" failure, so
+/// The scripted gh of the UI-testing host: one account (with `admin:org`) that owns one
+/// organization with one repository that can be imported (environments `production` and
+/// `staging`, one variable in each scope and no secrets) and is a plain member of a second,
+/// empty organization; read commands only. Every other call gets the fake runner's "no stub" failure, so
 /// nothing can be written anywhere.
 enum UITestGitHub {
     static let account = "owner-a"
     static let organization = "example-org"
+    /// An organization where the account is a member, not an admin.
+    static let memberOrganization = "example-labs"
     static let repository = "api-service"
     static let token = "fake-token-ui-tests"
 
@@ -76,8 +79,9 @@ enum UITestGitHub {
         runner.stub(argumentsPrefix: ["--version"], with: .success("gh version \(Limits.minimumGHVersion) (2026-09-01)\n"))
         runner.stub(argumentsPrefix: ["auth", "status"], with: .success(authStatus))
         runner.stub(argumentsPrefix: ["auth", "token"], with: .success(token + "\n"))
-        runner.stub(argumentsPrefix: ["org", "list"], with: .success(organization + "\n"))
+        runner.stub(argumentsPrefix: ["org", "list"], with: .success("\(organization)\n\(memberOrganization)\n"))
         runner.stub(argumentsPrefix: ["repo", "list", account], with: .success("[]"))
+        runner.stub(argumentsPrefix: ["repo", "list", memberOrganization], with: .success("[]"))
         runner.stub(
             argumentsPrefix: ["repo", "list", organization],
             with: .success("[\(FakeGHOutput.repo(owner: organization, name: repository, permission: "ADMIN"))]")
@@ -88,11 +92,14 @@ enum UITestGitHub {
 
     private static var fullName: String { "\(organization)/\(repository)" }
 
-    /// What Import reads: `repo view`, the environments (open branch policies, so no policy
-    /// call) and the secret and variable lists of each scope.
+    /// The `gh api` reads: each organization's role (B4), and what Import reads (`repo view`, the
+    /// environments with open branch policies, so no policy call, and the secret and variable
+    /// lists of each scope).
     private static func stubImport(on runner: FakeCommandRunner) {
-        // A local: the Sendable handlers below cannot read the main-actor statics.
+        // Locals: the Sendable handlers below cannot read the main-actor statics.
         let fullName = fullName
+        let organization = organization
+        let memberOrganization = memberOrganization
         runner.stub(
             argumentsPrefix: ["repo", "view", fullName],
             with: .success(FakeGHOutput.repo(owner: organization, name: repository, permission: "ADMIN"))
@@ -102,10 +109,16 @@ enum UITestGitHub {
          {"id":101,"name":"production","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z","protection_rules":[],"deployment_branch_policy":null},
          {"id":102,"name":"staging","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z","protection_rules":[],"deployment_branch_policy":null}]}]
         """
+        let apiReads = [
+            "user/memberships/orgs/\(organization)": #"{"state":"active","role":"admin"}"#,
+            "user/memberships/orgs/\(memberOrganization)": #"{"state":"active","role":"member"}"#,
+            "repos/\(fullName)/environments?per_page=100": environments,
+        ]
         runner.respond(argumentsPrefix: ["api"]) { invocation in
-            invocation.arguments.contains("repos/\(fullName)/environments?per_page=100")
-                ? .success(environments)
-                : .failure(exitCode: FakeCommandRunner.unmatchedExitCode, stderr: FakeCommandRunner.unmatchedStderr)
+            guard let path = invocation.arguments.last, let body = apiReads[path] else {
+                return .failure(exitCode: FakeCommandRunner.unmatchedExitCode, stderr: FakeCommandRunner.unmatchedStderr)
+            }
+            return .success(body)
         }
         let variables: [String?: String] = [nil: "BASE_URL", "production": "REGION", "staging": "MODE"]
         runner.respond(argumentsPrefix: ["variable", "list", "--repo=\(fullName)"]) { invocation in

@@ -57,7 +57,7 @@ public actor RepoCatalogRepository {
         do {
             organizations = try await scheduler.listOrganizations()
         } catch {
-            if Self.isFatal(error) { throw .github(error) }
+            if error.stopsAccountReads { throw .github(error) }
             organizationsFailure = error
         }
 
@@ -74,7 +74,7 @@ public actor RepoCatalogRepository {
                 let listed = try await scheduler.listRepositories(owner: owner.login)
                 listings[OwnerLoginValidator.foldKey(owner.login)] = .success(listed)
             } catch {
-                if Self.isFatal(error) { throw .github(error) }
+                if error.stopsAccountReads { throw .github(error) }
                 listings[OwnerLoginValidator.foldKey(owner.login)] = .failure(error)
             }
         }
@@ -233,16 +233,6 @@ public actor RepoCatalogRepository {
     }
 
     /// Failures that mean nothing else can be listed either.
-    private static func isFatal(_ error: GHError) -> Bool {
-        switch error {
-        case .tokenRevoked, .notAuthenticated, .network, .timeout, .rateLimited, .cancelled, .notInstalled,
-             .launchFailed, .untrustedBinary, .versionTooOld:
-            true
-        default:
-            false
-        }
-    }
-
     /// B1/B2 failures that make a repository unavailable rather than failing the call.
     private static func marksUnavailable(_ error: GHError) -> Bool {
         switch error {

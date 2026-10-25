@@ -171,6 +171,76 @@ struct GitHubEnvironmentTests {
         #expect(try AccountStore(database: fixture.database).fetch(login: "USER-B")?.isPresent == false)
     }
 
+    // MARK: - Organization access (1.0, B4)
+
+    static let adminOrgStatus = """
+    {"hosts":{"github.com":[
+     {"state":"success","active":false,"host":"github.com","login":"user-a","tokenSource":"keyring","scopes":"admin:org, repo","gitProtocol":"ssh"},
+     {"state":"success","active":true,"host":"github.com","login":"user-b","tokenSource":"keyring","scopes":"read:org, repo","gitProtocol":"ssh"}
+    ]}}
+    """
+
+    private static func membership(_ organization: String) -> FakeCommandRunner.Matcher {
+        { $0.first == "api" && $0.last == "user/memberships/orgs/\(organization)" }
+    }
+
+    @Test func organizationAccessReadsEachRoleWithTheAccountsScopes() async throws {
+        let fixture = try Fixture()
+        defer { fixture.directory.remove() }
+        try await fixture.repository.detectGH(overridePath: fixture.ghPath)
+        fixture.runner.enqueue(.success(Self.adminOrgStatus), matching: { $0.starts(with: ["auth", "status"]) })
+        _ = try await fixture.repository.accounts()
+        fixture.runner.enqueue(.success("example-org\nexample-labs\nexample-sso\n"), matching: { $0.starts(with: ["org", "list"]) })
+        fixture.runner.enqueue(.success(#"{"state":"active","role":"admin"}"#), matching: Self.membership("example-org"))
+        fixture.runner.enqueue(.success(#"{"state":"active","role":"member"}"#), matching: Self.membership("example-labs"))
+        fixture.runner.enqueue(
+            .failure(stderr: "gh: Resource protected by organization SAML enforcement. You must grant your OAuth token access to this organization. (HTTP 403)\nAuthorize in your web browser: https://github.com/orgs/example-sso/sso?authorization_request=BBBB2222\n"),
+            matching: Self.membership("example-sso")
+        )
+
+        let access = try await fixture.repository.organizationAccess(accountLogin: "USER-A")
+        #expect(access.map(\.login) == ["example-org", "example-labs", "example-sso"])
+        #expect(access[0].status == .ready)
+        #expect(access[1].status == .needsOrgAdmin)
+        guard case .ssoRequired = access[2].status else {
+            Issue.record("SSO expected, got \(access[2].status)")
+            return
+        }
+    }
+
+    @Test func withoutAdminOrgTheOrganizationAsksForItOnThatAccount() async throws {
+        let fixture = try Fixture()
+        defer { fixture.directory.remove() }
+        try await fixture.repository.detectGH(overridePath: fixture.ghPath)
+        fixture.runner.enqueue(.success(Self.adminOrgStatus), matching: { $0.starts(with: ["auth", "status"]) })
+        _ = try await fixture.repository.accounts()
+        fixture.runner.enqueue(.success("example-org\n"), matching: { $0.starts(with: ["org", "list"]) })
+        fixture.runner.enqueue(.success(#"{"state":"active","role":"admin"}"#), matching: Self.membership("example-org"))
+
+        let access = try await fixture.repository.organizationAccess(accountLogin: "user-b")
+        #expect(access.map(\.status) == [.needsAdminOrgScope])
+        #expect(await fixture.repository.adminOrgFixCommands(for: "user-a") == [
+            "gh auth switch -h github.com -u user-a",
+            "gh auth refresh -h github.com -s admin:org",
+            "gh auth switch -h github.com -u user-b",
+        ])
+    }
+
+    @Test func aRevokedTokenStopsTheOrganizationAccessRead() async throws {
+        let fixture = try Fixture()
+        defer { fixture.directory.remove() }
+        try await fixture.repository.detectGH(overridePath: fixture.ghPath)
+        fixture.runner.enqueue(.success(Self.adminOrgStatus), matching: { $0.starts(with: ["auth", "status"]) })
+        _ = try await fixture.repository.accounts()
+        fixture.runner.enqueue(.success("example-org\nexample-labs\n"), matching: { $0.starts(with: ["org", "list"]) })
+        fixture.runner.stub(
+            argumentsPrefix: ["api"],
+            with: .failure(stderr: "gh: Bad credentials (HTTP 401)\n")
+        )
+
+        #expect(await environmentError { _ = try await fixture.repository.organizationAccess(accountLogin: "user-a") } == .github(.tokenRevoked))
+    }
+
     /// v0.3.1 root cause: Enterprise Managed User accounts (`handle_shortcode`, synthetic) were
     /// dropped, so FX Vault reported no account. They are persisted and get a queue and a token.
     @Test func managedUserAccountsArePersistedAndUsable() async throws {

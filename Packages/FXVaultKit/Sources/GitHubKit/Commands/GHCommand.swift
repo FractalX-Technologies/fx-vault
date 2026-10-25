@@ -7,6 +7,7 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
     case authStatus = "A3"
     case authToken = "A4"
     case orgList = "A5"
+    case orgMembership = "A6"
     case repoList = "B1"
     case repoView = "B2"
     case environmentList = "B3"
@@ -52,10 +53,10 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
         }
     }
 
-    /// True for `gh api` operations (environments and branch policies, D4).
+    /// True for `gh api` operations (the organization role, environments and branch policies, D4).
     public var usesAPI: Bool {
         switch self {
-        case .environmentList, .environmentGet, .branchPolicyList, .environmentUpsert,
+        case .orgMembership, .environmentList, .environmentGet, .branchPolicyList, .environmentUpsert,
              .branchPolicyAdd, .branchPolicyDelete, .environmentDelete:
             true
         default:

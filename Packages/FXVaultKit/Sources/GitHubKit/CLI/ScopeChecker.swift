@@ -19,6 +19,8 @@ public enum ScopeChecker {
     public static let orgScopes: Set<String> = ["read:org", "write:org", "admin:org"]
     /// The organization scope requested when none is present.
     public static let suggestedOrgScope = "read:org"
+    /// Needed per organization for its secrets and variables (1.0, ``OrgAccessChecker``).
+    public static let adminOrgScope = "admin:org"
 
     /// Splits the raw `X-OAuth-Scopes` value (`gist, read:org, repo`) on `,` and trims each
     /// entry. Nil (unknown) when the value is absent or empty.
@@ -48,12 +50,17 @@ public enum ScopeChecker {
         return missing.isEmpty ? .ok : .missing(missing)
     }
 
-    /// The copyable commands that fix the scopes of `login` without a `--user` flag
+    /// The copyable commands that add `scopes` to `login` without a `--user` flag
     /// (`gh auth refresh` works only on the active account, §2): switch to it, refresh, and
-    /// switch back to `previousActiveLogin` when that is another account.
-    public static func fixCommands(login: String, previousActiveLogin: String?) -> [String] {
+    /// switch back to `previousActiveLogin` when that is another account. `refresh -s` adds to
+    /// the token's scopes; it never drops one.
+    public static func fixCommands(
+        login: String,
+        previousActiveLogin: String?,
+        scopes: [String] = [repoScope, suggestedOrgScope]
+    ) -> [String] {
         let host = GHConstants.host
-        let requested = ([repoScope, suggestedOrgScope]).joined(separator: ",")
+        let requested = scopes.joined(separator: ",")
         var commands = [
             "gh auth switch -h \(host) -u \(login)",
             "gh auth refresh -h \(host) -s \(requested)",
