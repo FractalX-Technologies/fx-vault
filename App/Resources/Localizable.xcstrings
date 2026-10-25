@@ -6447,6 +6447,39 @@
         }
       }
     },
+    "error.organization.alreadyImported" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This organization is already imported."
+          }
+        }
+      }
+    },
+    "error.organization.notFound" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This organization is no longer in the vault."
+          }
+        }
+      }
+    },
+    "error.organization.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Organization not available"
+          }
+        }
+      }
+    },
     "error.password.tooWeak.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

@@ -66,6 +66,13 @@ Touch ID   the DEK in a data-protection keychain item (signed builds only, §5)
   the Supabase and Vercel destinations and every sealed personal access token
   (`provider_connections`), then checkpointed the WAL; `retired_destinations` keeps their names
   only, until the user dismisses the notice.
+- **Organizations (1.0):** `org_items.value_ct` is AES-256-GCM under K_field with
+  `OrgFieldAAD`: the field layout above with table `org_items`, the organization id in the
+  repository's place and no environment, so an organization blob never opens as a repository,
+  folder or destination item. Secrets have no value (GitHub never returns one); variables are
+  stored as read, with row-bound `value_fp` and `synced_fp`. DEK rotation re-seals every
+  organization value and recomputes the fingerprints, clearing a `synced_fp` that no longer
+  matches.
 - **Project share files (v0.9.0):** `sent_shares` holds one row per exported file: package id,
   times, protection mode and a names-only summary (stages, places, item
   names), never a value, fingerprint or passphrase. `share_hold` on `config_items` and

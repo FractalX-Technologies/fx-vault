@@ -173,6 +173,55 @@ struct KATTests {
         }
     }
 
+    @Test func organizationFieldAADAndBlobs() throws {
+        #expect(!vectors.organizationField.isEmpty)
+        let keys = UnlockedKeys(
+            dek: SymmetricKey(data: try hexData(vectors.hierarchy.dekHex)),
+            vaultID: try hexData(vectors.hierarchy.vaultIdHex),
+            dekVersion: 1
+        )
+        for vector in vectors.organizationField {
+            let field = OrgFieldAAD(
+                rowID: try #require(ConfigItemID(uuidString: vector.row)),
+                organizationID: try #require(OrganizationID(uuidString: vector.organization)),
+                kind: try #require(ConfigKind(rawValue: vector.kind)),
+                name: vector.name
+            )
+            let aad = field.encoded(dekVersion: vector.dekVersion)
+            #expect(aad.hex == vector.aadHex, "AAD \(vector.label)")
+
+            let key = SymmetricKey(data: try hexData(vector.aesKHex))
+            let nonce = try AES.GCM.Nonce(data: try hexData(vector.nonceHex))
+            let blob = try FieldCipher.seal(SecretBytes(try hexData(vector.plainHex)), key: key, aad: aad, nonce: nonce)
+            #expect(blob.hex == vector.blobHex, "blob \(vector.label)")
+            if vector.dekVersion == 1 {
+                let opened = try keys.open(try hexData(vector.blobHex), for: field)
+                #expect(opened.withUnsafeBytes { Data($0) }.hex == vector.plainHex, "open \(vector.label)")
+                // An organization blob never opens as a repository, folder or destination item
+                // with the same ids and name.
+                let container = field.organizationID.uuid
+                let asItem = FieldAAD(
+                    location: .configItemValue,
+                    rowID: field.rowID,
+                    repositoryID: RepoID(container),
+                    environmentID: nil,
+                    kind: field.kind,
+                    name: field.name
+                )
+                let asFolderItem = FolderFieldAAD(rowID: field.rowID, folderID: FolderID(container), kind: field.kind, name: field.name)
+                let asDestinationItem = DestinationFieldAAD(
+                    rowID: field.rowID,
+                    destinationID: DestinationID(container),
+                    kind: field.kind,
+                    name: field.name
+                )
+                #expect(throws: VaultError.self) { try keys.open(try hexData(vector.blobHex), for: asItem) }
+                #expect(throws: VaultError.self) { try keys.open(try hexData(vector.blobHex), for: asFolderItem) }
+                #expect(throws: VaultError.self) { try keys.open(try hexData(vector.blobHex), for: asDestinationItem) }
+            }
+        }
+    }
+
     // MARK: DEK wraps (§5.2)
 
     @Test func passwordWrapLayoutAndAAD() throws {

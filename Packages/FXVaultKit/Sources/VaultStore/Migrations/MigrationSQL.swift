@@ -421,4 +421,36 @@ enum MigrationSQL {
         UPDATE destinations SET connection_id = NULL WHERE connection_id IS NOT NULL;
         DELETE FROM provider_connections;
         """
+
+    // MARK: v17_organizations (1.0, tasks/todo.md B5). Additive: nothing existing changes.
+
+    /// Organizations and their secrets and variables. `org_items` mirrors `config_items` for one
+    /// organization: secrets may have no value (GitHub never returns it), variables always do;
+    /// `synced_fp` is the fingerprint of the value last read from GitHub.
+    static let v17Organizations = """
+        CREATE TABLE organizations (
+          id TEXT PRIMARY KEY CHECK (length(id) = 36),
+          login TEXT NOT NULL CHECK (length(login) BETWEEN 1 AND 39),
+          login_key TEXT NOT NULL UNIQUE CHECK (login_key = lower(login_key)),
+          account_login TEXT NOT NULL CHECK (length(account_login) BETWEEN 1 AND 255),
+          last_refreshed_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL);
+        CREATE TABLE org_items (
+          id TEXT PRIMARY KEY CHECK (length(id) = 36),
+          organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+          kind TEXT NOT NULL CHECK (kind IN ('secret','variable')),
+          name TEXT NOT NULL CHECK (name = upper(name) AND length(name) BETWEEN 1 AND 255),
+          value_ct BLOB,
+          value_fp BLOB,
+          visibility TEXT NOT NULL CHECK (visibility IN ('all','private','selected')),
+          selected_count INTEGER CHECK (selected_count IS NULL OR selected_count >= 0),
+          synced_fp BLOB,
+          remote_updated_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          CHECK (kind = 'secret' OR value_ct IS NOT NULL),
+          CHECK ((value_ct IS NULL) = (value_fp IS NULL)));
+        CREATE UNIQUE INDEX org_items_name ON org_items(organization_id, kind, name);
+        """
 }

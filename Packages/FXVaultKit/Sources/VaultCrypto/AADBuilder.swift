@@ -209,6 +209,44 @@ public struct FolderFieldAAD: FieldContext, Hashable {
     }
 }
 
+/// The identity an organization item's value is bound to (1.0, `org_items.value_ct`): row,
+/// organization, kind and name. The layout is ``FieldAAD``'s with the organization in the
+/// repository's place and no environment; the table name `org_items` keeps an organization blob
+/// from opening as any other item. Renaming the item or changing its kind re-seals the value.
+public struct OrgFieldAAD: FieldContext, Hashable {
+    /// Table name as written into the AAD.
+    public static let table = "org_items"
+    /// Column name as written into the AAD.
+    public static let column = "value_ct"
+
+    public let rowID: ConfigItemID
+    public let organizationID: OrganizationID
+    public let kind: ConfigKind
+    public let name: String
+
+    public init(rowID: ConfigItemID, organizationID: OrganizationID, kind: ConfigKind, name: String) {
+        self.rowID = rowID
+        self.organizationID = organizationID
+        self.kind = kind
+        self.name = name
+    }
+
+    /// `LP("fxvault/v1/field") ‖ LP("org_items") ‖ LP("value_ct") ‖ LP(row 16B) ‖
+    /// LP(organization 16B) ‖ LP(empty) ‖ LP(kind) ‖ LP(name) ‖ u32be(dek_version)`.
+    public func encoded(dekVersion: UInt32) -> Data {
+        FieldAAD.encode(
+            table: Self.table,
+            column: Self.column,
+            row: rowID.bytes,
+            container: organizationID.bytes,
+            environment: [],
+            kind: kind,
+            name: name,
+            dekVersion: dekVersion
+        )
+    }
+}
+
 /// The identity a destination item's value is bound to (v0.8.0, `destination_items.value_ct`):
 /// row, destination, kind and name. The layout is ``FieldAAD``'s with the destination in the
 /// repository's place and no environment; the table name `destination_items` keeps a destination

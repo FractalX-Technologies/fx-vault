@@ -2051,3 +2051,12 @@ Review B5a — organization listings in GitHubKit (2026-10-25, automatic):
 - Tests: `OrgListingTests` (argv, invalid org, decoding of each visibility, an unknown visibility is malformed, repository listings carry none); `CommandBuilderTests` registers B12/B13 (seen failing before).
 - Gates: `swift test` 1,304 green; app and test targets build; lint OK; check-secrets OK (951 files). Full CI and UI tests run with B5c.
 - Docs: API (B12/B13).
+
+Review B5b — organization store and import (2026-10-25, automatic):
+- VaultCore `OrganizationModel`, `OrgItemModel`, `OrganizationID`; VaultCrypto `OrgFieldAAD` (table `org_items`, the organization as container), and one `FieldContext` protocol for every field AAD (commit `ba6b649`).
+- VaultStore: migration `v17_organizations` (additive: `organizations`, `org_items`), `OrganizationRecord`, `OrgItemRecord`, `OrganizationStore`.
+- VaultData: `OrganizationRepository` (import, list, observe, remove), `OrgFieldCipher`, `OrgImportResultModel`; `RepoCatalogError` gains `.organizationAlreadyImported` and `.organizationNotFound` and a shared `perform`; `DEKRotator` re-seals org values, the destination loop now shares the same `rotate` step.
+- Assumption: a listed row without visibility fails the import (`.malformedOutput`) instead of guessing who can read the item.
+- Not wired into the app yet: B5c adds it to `VaultDataComponents` with the sidebar node.
+- Tests: `OrganizationStoreTests` (constraints, case-insensitive login, counts, cascade), `MigrationTests` (v17 in the frozen list and step-by-step), KAT `organizationFieldAADAndBlobs` (new Python vectors; the old ones byte-identical; refused as repository, folder and destination item), `OrganizationRepositoryTests` (import with visibility and selected count, skipped names, already imported, missing visibility, failed list, locked vault, removal, DEK rotation). Seen failing under 6 mutations: no `synced_fp`, rotation skipping orgs, stale `synced_fp` kept, wrong AAD table, a default visibility, `selected_count` kept for non-selected.
+- Docs: DATABASE (v17, tables), SECURITY-MODEL (organizations), ARCHITECTURE (OrgFieldAAD, Organizations).

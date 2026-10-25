@@ -179,7 +179,9 @@ Key hierarchy (plan §5.1): a random 32-byte DEK per vault; HKDF-SHA256 derives 
   `DestinationFieldAAD` (v0.8.0) reuses the layout with table `destination_items` and the
   destination in the repository's place (`seal(_:for:)` / `open(_:for:)` overloads;
   `destination_field` KAT vectors from `generate_kat.py`), so a destination blob never opens as
-  a repository or folder item.
+  a repository or folder item. `OrgFieldAAD` (1.0) does the same with table `org_items` and the
+  organization (`organization_field` vectors). All of them conform to `FieldContext`, which
+  `UnlockedKeys.seal(_:for:)` / `open(_:for:)` take.
 - **`RecoveryKey`**: 56 Crockford base32 characters (14 groups of 4) encoding 32 key bytes plus
   a 3-byte checksum; forgiving input (I/L/O, case, separators), canonical output.
 - **`PasswordStrength.evaluate`**: local zxcvbn-style estimate; acceptable at ≥ 12 characters
@@ -618,6 +620,16 @@ destination item never reaches GitHub except as a copy in a repository scope.
   items; `ItemCopyResultModel.madeSecret` names variables that became secrets in a destination.
   `DEKRotator` re-seals destination values and re-derives their
   synced fingerprints (clearing one that no longer matches).
+
+**Organizations** (`Organizations/`, 1.0). `actor OrganizationRepository(session:schedulers:clock:)`:
+`importOrganization(login:accountLogin:)` (B12 and B13 through the account's scheduler, one
+`VaultSession.write`; secrets without value, variables sealed by `OrgFieldCipher` with
+`synced_fp` = `value_fp`; names the vault cannot hold are skipped and reported in
+`OrgImportResultModel`; a row without visibility fails as `.malformedOutput`),
+`organizations()`, `observeOrganizations()`, `items(of:)`, `observeItems(of:)`,
+`removeOrganization(_:)` (the vault only). Errors are `RepoCatalogError`
+(`.organizationAlreadyImported`, `.organizationNotFound`). `DEKRotator` re-seals organization
+values with the same `synced_fp` rule as destinations.
 
 **.env files** (`EnvFiles/`). `struct EnvFileRepository(session:gitignoreChecker:
 cloudSyncDetector:fileWriter:clock:writePolicy:)`: `readFile(at:)`, `parse(_:)`,
