@@ -47,7 +47,7 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
                                 StatusChip(title: HeldShareCopy.chip, tone: .warning)
                                     .help(viewModel.heldHelp(for: row))
                             } else {
-                                StatusChip(status: row.status)
+                                StatusDotLabel(status: row.status)
                             }
                         }
                         .fxTableCell()
@@ -159,15 +159,12 @@ extension ConfigTableView where Model == RepoDetailViewModel, RowMenu == ConfigR
 
 /// The table's text formats, shared by every ``ConfigTableView``.
 enum ConfigTableFormat {
-    /// A column title in the section-label style (mono 11, uppercase, +0.08em, subtle). `Table`
-    /// takes a `Text`, so the case is applied to the string (in the current locale) rather than
-    /// with `textCase`.
+    /// A column title as the boards draw it (Main2, Org-Visibility): 12 pt medium, sentence case,
+    /// muted.
     static func header(_ title: String) -> Text {
-        let style = Theme.TextStyle.sectionLabel
-        return Text(verbatim: title.uppercased(with: .current))
-            .font(style.font)
-            .tracking(style.tracking)
-            .foregroundStyle(Theme.Colors.subtleText)
+        Text(verbatim: title)
+            .font(Theme.Typography.caption.weight(.medium))
+            .foregroundStyle(Theme.Colors.mutedText)
     }
 
     /// "Oct 15 · 10:42" (mockup Main) for this year; only the date ("Jan 1, 2001") for dates

@@ -161,6 +161,25 @@ extension StatusChip {
     }
 }
 
+/// A table's sync status as the boards draw it (Main2, Org-Visibility): the tone's dot and the
+/// title in caption type, no chip.
+struct StatusDotLabel: View {
+    let status: ConfigSyncStatus
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.smallMinus) {
+            Circle()
+                .fill(status.tint)
+                .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
+            Text(status.localizedTitle)
+                .fxTextStyle(.caption)
+                .foregroundStyle(status == .synced ? Theme.Colors.mutedText : Theme.Colors.ink)
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
 extension ConfigSyncStatus {
     var localizedTitle: String {
         switch self {

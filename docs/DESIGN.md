@@ -288,9 +288,12 @@ ScopeRow(scope).fxRowBackground(isSelected: isSelected, style: .scope)    // 36 
 RepoRow(repo).fxRowBackground(isSelected: isSelected, style: .sidebar)    // 32 pt, surface2
 ```
 
-`.fxTableCell()` gives 52 pt rows (cell content 44 + the inset table's padding; measured on a real
+`.fxTableCell()` gives 34 pt rows (boards Main2, Org-Visibility; cell content 26 + the inset table's padding; measured on a real
 `NSTableView` by `DesignComponentTests`). Native `Table` keeps its system column header;
 hand-built tables use `FXTableHeaderRow` (mono uppercase labels) inside `Card(.container)`.
+Column headers are 12 pt medium, sentence case, muted (`ConfigTableFormat.header`);
+`TableMetaText` is 12 pt sans muted; a table's Status column is `StatusDotLabel` (the tone's dot
+and the title, no chip; D6a).
 
 ### Sheet chrome: `SheetHeader`, `SheetCallout`, `FXCheckboxRow`, `InlineErrorView`, `FXLinkButtonStyle`, `.fxSheetContent`
 
@@ -386,7 +389,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   the organization header (ORGANIZATION, the login in `.largeTitle`, counts in `.monoMeta` with
   "· N without value"; `.primary` Add Secret, `.secondary` Add Variable, Remove from Vault…
   outline) above a `.fxTable()`: Name (struck through when deleted), Kind, Value
-  (`MaskedValueCell`, no eye), Visibility, Status (`StatusChip(status:)`), Updated; the row menu
+  (`MaskedValueCell`, no eye), Visibility, Status (`StatusDotLabel`), Updated; the row menu
   Copy Value, Edit…, Revert / Revert Access, Delete… (B6b3a). The item editor is a
   `ConfigEditorSheet` (ORGANIZATION, the name or New Secret/Variable): Kind `SegmentedPill` on
   add, `ItemNameField` (or the read-only name), `SecretValueEditor`, `ItemFillChoiceField` for a
@@ -629,8 +632,8 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 
 - System sheets keep the system corner radius and shadow; the 24 pt sheet look applies to
   `Card(.sheet)` dialogs drawn in the window.
-- Native `Table` column headers take a styled `Text` (`ConfigTableView.header(_:)`: mono 11
-  uppercase); the header row's own chrome stays native: it draws vertical column separators, and
+- Native `Table` column headers take a styled `Text` (`ConfigTableView.header(_:)`: 12 pt
+  medium, sentence case); the header row's own chrome stays native: it draws vertical column separators, and
   its divider spans the card while row separators are inset (the Main board has neither). Hiding
   the native header for an `FXTableHeaderRow` would need fixed column widths (SwiftUI does not
   expose the live, user-resizable widths), which would leave the table short of the column on

@@ -105,7 +105,7 @@ private struct OrganizationItemsTable: View {
                     .fxTableCell()
             }
             TableColumn(ConfigTableFormat.header(String(localized: "main.table.status", defaultValue: "Status"))) { row in
-                StatusChip(status: row.syncStatus)
+                StatusDotLabel(status: row.syncStatus)
                     .fxTableCell()
             }
             .width(Theme.Layout.tableStatusMinWidth)

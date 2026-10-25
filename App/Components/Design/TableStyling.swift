@@ -4,7 +4,7 @@ import SwiftUI
 //
 // The detail table stays a native SwiftUI `Table` (keyboard, selection, context menus); these
 // helpers give it the FractalX look: a card container with 16 pt corners and a hairline, no
-// alternating rows, 52 pt rows, SF Mono names and timestamps.
+// alternating rows, 34 pt rows (boards Main2, Org-Visibility), SF Mono names and timestamps.
 
 extension View {
     /// Styles a native `Table`: no alternating rows, transparent scroll background, a `card`
@@ -25,7 +25,7 @@ extension View {
             )
     }
 
-    /// Gives a table cell the design row height (52 pt rows; the cell content is
+    /// Gives a table cell the design row height (34 pt rows; the cell content is
     /// `tableCellMinHeight` and the table adds its own row insets) and leading alignment. Apply it
     /// to the content of every column of a row, or at least the tallest.
     func fxTableCell() -> some View {
@@ -120,7 +120,8 @@ struct TableNameText: View {
     }
 }
 
-/// Secondary mono text in a table cell: timestamps, counts, branch patterns (12 pt, subtle).
+/// Secondary text in a table cell: kind, visibility, timestamps (12 pt sans, muted; boards Main2,
+/// Org-Visibility).
 struct TableMetaText: View {
     let text: String
 
@@ -130,8 +131,8 @@ struct TableMetaText: View {
 
     var body: some View {
         Text(text)
-            .fxTextStyle(.monoMeta)
-            .foregroundStyle(Theme.Colors.subtleText)
+            .fxTextStyle(.caption)
+            .foregroundStyle(Theme.Colors.mutedText)
             .lineLimit(1)
     }
 }
