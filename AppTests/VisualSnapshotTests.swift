@@ -364,6 +364,28 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
+    /// A Key Vault of its own (B8b3) selected under AZURE KEY VAULT.
+    @Test func mainStandaloneKeyVault() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let destinations = harness.data.destinations
+        let id = try destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-example-shared", tenantID: nil),
+            stage: nil
+        )
+        for name in ["DATABASE_URL", "STRIPE_SECRET_KEY"] {
+            try destinations.addItem(destinationID: id, kind: .secret, name: name, value: SecretBytes(utf8: "FXV_SNAPSHOT_\(name)"))
+        }
+        #expect(await TestFixtures.eventually { main.sidebar.keyVault(id)?.itemCount == 2 })
+        main.sidebar.selectedKeyVaultID = id
+        let vault = try #require(main.destinationDetail)
+        #expect(await TestFixtures.eventually { vault.items.count == 2 })
+        try await SnapshotOutput.write("main-keyvault-standalone", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
     @Test func addDestinationSheet() async throws {
         let (harness, main) = try await MainSnapshotFixture.make()
         let scopes = try #require(main.scopeList)

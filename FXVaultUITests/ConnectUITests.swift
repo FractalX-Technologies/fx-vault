@@ -1,11 +1,11 @@
 import XCTest
 
-/// The Connect phase after onboarding (tasks/todo.md B11d2, B8b2): the scripted account can read
-/// example-org's secrets, so it is checked; Continue leads to Azure, where the scripted vault is
-/// checked; Continue imports both and the summary opens the vault.
+/// The Connect phase after onboarding (tasks/todo.md B11d2, B8b2, B8b3): the scripted account can
+/// read example-org's secrets, so it is checked; Continue leads to Azure, where the scripted vault
+/// is checked; Continue imports both, and the Key Vault opens from the sidebar's Azure section.
 final class ConnectUITests: VaultUITestCase {
     @MainActor
-    func testConnectImportsTheOrganizationAndTheVaultThenOpensTheVault() throws {
+    func testConnectImportsTheOrganizationAndTheKeyVaultThenOpensItFromTheSidebar() throws {
         let app = launch()
         try createVault(app)
 
@@ -26,6 +26,12 @@ final class ConnectUITests: VaultUITestCase {
         XCTAssertTrue(app.staticTexts["1 vault"].exists, "The vault is not in the summary")
 
         click(app.buttons[AccessibilityID.Connect.openVault])
-        _ = mainSidebar(app)
+        let sidebar = mainSidebar(app)
+        let vaultRow = sidebar.buttons[AccessibilityID.Main.keyVault("kv-example-prod")]
+        XCTAssertTrue(vaultRow.waitForExistence(timeout: timeout), "The vault is not under Azure Key Vault")
+        click(vaultRow)
+        let path = app.staticTexts[AccessibilityID.Main.breadcrumb]
+        XCTAssertTrue(path.waitForExistence(timeout: timeout))
+        expect(path, toEndWith: "Azure Key Vault › kv-example-prod")
     }
 }

@@ -74,6 +74,16 @@ class VaultUITestCase: XCTestCase {
         sidebar.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", name)).firstMatch
     }
 
+    /// Waits until the toolbar path (`AccessibilityID.Main.breadcrumb`) ends with `suffix`.
+    @MainActor
+    func expect(_ path: XCUIElement, toEndWith suffix: String) {
+        let shown = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label ENDSWITH %@ OR value ENDSWITH %@", suffix, suffix),
+            object: path
+        )
+        XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: timeout), .completed, "The path never ended with \(suffix)")
+    }
+
     /// The groups on the recovery key step, by 0-based index. Each label reads "Group N: XXXX".
     @MainActor
     private func recoveryKeyGroups(in app: XCUIApplication) -> [Int: String] {

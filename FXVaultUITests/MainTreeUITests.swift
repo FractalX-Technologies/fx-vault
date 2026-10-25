@@ -24,13 +24,4 @@ final class MainTreeUITests: VaultUITestCase {
         click(repository)
         expect(path, toEndWith: "api-service")
     }
-
-    @MainActor
-    private func expect(_ path: XCUIElement, toEndWith suffix: String) {
-        let shown = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label ENDSWITH %@ OR value ENDSWITH %@", suffix, suffix),
-            object: path
-        )
-        XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: timeout), .completed, "The path never ended with \(suffix)")
-    }
 }

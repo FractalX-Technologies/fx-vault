@@ -1167,17 +1167,6 @@
         }
       }
     },
-    "connect.summary.keyVaults" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Azure Key Vault"
-          }
-        }
-      }
-    },
     "connect.summary.note" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

@@ -11,7 +11,8 @@ import VaultData
 /// - Vault repositories and organizations are observed (`ConfigRepository.observeRepositories()`,
 ///   `OrganizationRepository.observeOrganizations()`), so imports, removals and created
 ///   repositories appear at once and work without gh.
-/// - One place is selected at a time: a repository row, a folder or an organization row.
+/// - One place is selected at a time: a repository row, a folder, an organization row or a Key
+///   Vault of its own (observed with `observeDestinations(repositoryID: nil)`).
 /// - Accounts and catalogs come from gh (`GitHubEnvironmentRepository.accounts()`,
 ///   `RepoCatalogRepository.catalog(accountLogin:)`) and load when gh is ready.
 @Observable
@@ -48,6 +49,18 @@ final class SidebarViewModel {
             onChange?()
         }
     }
+    /// The Azure Key Vaults of their own (1.0), listed under AZURE KEY VAULT.
+    private(set) var keyVaults: [DestinationModel] = []
+    /// The selected Key Vault of its own.
+    var selectedKeyVaultID: DestinationID? {
+        didSet {
+            guard selectedKeyVaultID != oldValue else { return }
+            if selectedKeyVaultID != nil {
+                clearSelection(except: .keyVault)
+            }
+            onChange?()
+        }
+    }
     /// The organization waiting for the "Remove from vault?" confirmation.
     var pendingOrganizationRemoval: OrganizationModel?
     /// The folder waiting for the "Delete the folder?" confirmation.
@@ -79,6 +92,7 @@ final class SidebarViewModel {
         observeVault()
         observeFolders()
         observeOrganizations()
+        observeKeyVaults()
     }
 
     private var data: VaultDataComponents {
@@ -121,14 +135,15 @@ final class SidebarViewModel {
     }
 
     private enum SelectionKind {
-        case repository, folder, organization
+        case repository, folder, organization, keyVault
     }
 
-    /// Clears the other two selections (each `didSet` reports the change once).
+    /// Clears the other selections (each `didSet` reports the change once).
     private func clearSelection(except kept: SelectionKind) {
         if kept != .repository, selectedRowID != nil { selectedRowID = nil }
         if kept != .folder, selectedFolderID != nil { selectedFolderID = nil }
         if kept != .organization, selectedOrganizationOwnerID != nil { selectedOrganizationOwnerID = nil }
+        if kept != .keyVault, selectedKeyVaultID != nil { selectedKeyVaultID = nil }
     }
 
     var isUnlocked: Bool {
@@ -181,9 +196,13 @@ final class SidebarViewModel {
 
     /// The folders whose name matches the search.
     var visibleFolders: [FolderModel] {
+        folders.filter { matchesSearch($0.name) }
+    }
+
+    /// Folders and Key Vaults match the search by name; an empty search matches everything.
+    private func matchesSearch(_ name: String) -> Bool {
         let query = searchText.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return folders }
-        return folders.filter { $0.name.localizedCaseInsensitiveContains(query) }
+        return query.isEmpty || name.localizedCaseInsensitiveContains(query)
     }
 
     func folder(_ id: FolderID) -> FolderModel? {
@@ -238,6 +257,46 @@ final class SidebarViewModel {
                 }
             } catch {
                 AppLog.ui.error("Folder observation ended")
+            }
+        })
+    }
+
+    // MARK: - Azure Key Vault (1.0)
+
+    /// The Key Vaults of their own whose name matches the search.
+    var visibleKeyVaults: [DestinationModel] {
+        keyVaults.filter { matchesSearch($0.title) }
+    }
+
+    func keyVault(_ id: DestinationID) -> DestinationModel? {
+        keyVaults.first { $0.id == id }
+    }
+
+    var selectedKeyVault: DestinationModel? {
+        selectedKeyVaultID.flatMap(keyVault)
+    }
+
+    /// Selects a Key Vault of its own (a linked copy's place). Clears the search.
+    func select(keyVaultID id: DestinationID) {
+        searchText = ""
+        selectedKeyVaultID = id
+    }
+
+    private func observeKeyVaults() {
+        let stream = data.destinations.observeDestinations(repositoryID: nil)
+        tasks.set("keyVaults", Task { [weak self] in
+            do {
+                for try await vaults in stream {
+                    guard let self else { return }
+                    keyVaults = vaults
+                    if let id = selectedKeyVaultID, !vaults.contains(where: { $0.id == id }) {
+                        selectedKeyVaultID = nil
+                    }
+                    // A vault selected before it was listed (just imported) gets its detail now.
+                    onChange?()
+                }
+            } catch {
+                AppLog.ui.error("Key Vault observation ended")
             }
         })
     }

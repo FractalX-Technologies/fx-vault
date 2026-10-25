@@ -1936,7 +1936,7 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B5 Organization list commands and store (additive migration); read-only organization node. Split: B5a GitHubKit listings [x]; B5b store and import [x]; B5c the read-only node and its e2e [x].
 - [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list.
 - [ ] B7 Organization drift and verify; inherited and shadowed names on a repository.
-- [ ] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source. Split: B8a discovery, package layer [x]; B8b1 Key Vaults of their own in the store (`v18`) [x]; B8b2 Connect Azure (requirements, subscriptions and vaults, import), the vaults in the first-import summary [x]; B8b3 the sidebar Azure node opening the vault (and Show in Sidebar for a linked copy there); B8c Sync of the vaults of their own (review, run, badge) and moving 0.9's repository Key Vaults beside GitHub.
+- [ ] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source. Split: B8a discovery, package layer [x]; B8b1 Key Vaults of their own in the store (`v18`) [x]; B8b2 Connect Azure (requirements, subscriptions and vaults, import), the vaults in the first-import summary [x]; B8b3 the sidebar Azure node opening the vault (and Show in Sidebar for a linked copy there) [x]; B8c Sync of the vaults of their own (review, run, badge, Remove from Vault) and moving 0.9's repository Key Vaults beside GitHub.
 - [ ] B9 Notes view read-only, then editable with the change review.
 - [ ] B10 File secrets: picker and drop, base64 option, limits (GitHub 48 KiB, Key Vault 25 KiB), trailing-newline notice.
 - [ ] B11 New start, onboarding, notch unlock island (`LAAuthenticationView`), allowlisted setup-command runner and main window from D1–D2; macOS 26 deployment target.
@@ -2150,6 +2150,17 @@ Review B11e — notch unlock island (2026-10-25, automatic):
 - Tests: `NotchIslandTests` (geometry with and without a notch, states, shared model, no island without side effects); `DesignTokenTests` (Island color sets); UI `NotchIslandUITests` (⌃⌘L closes the window, the island's password unlocks); snapshots `island-touchid`, `island-password` checked. Waiver for the notch hardware and Touch ID checks (tasks/waivers.md).
 - Docs: README (Unlocking), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
 - Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 580 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (7 tests); lint OK (first run flagged a literal symbol size, now `Theme.Typography.title`); check-secrets OK in the worktree; strings synced.
+
+Review B8b3 — Azure Key Vault in the sidebar (2026-10-25, automatic):
+- `SidebarViewModel` observes the Key Vaults of their own (`observeDestinations(repositoryID: nil)`) into `keyVaults`; `selectedKeyVaultID` joins the exclusive selections (`SelectionKind.keyVault`); `visibleKeyVaults` follows the search (shared `matchesSearch` with folders); a removed vault clears its selection; each update calls `onChange`, so a vault selected before it was listed (just imported) gets its detail (found in self-review, test seen failing).
+- `SidebarKeyVaultsSection` (AZURE KEY VAULT, after GitHub, hidden when empty) reuses `DestinationRow` (now internal); id `AccessibilityID.Main.keyVault(name)`.
+- `MainViewModel`: a selected vault gets a `DestinationDetailViewModel` (live from the sidebar), no scope column, path `Azure Key Vault › name`; a vault's detail closes when anything else or nothing is selected; `open(destinationID:)` selects a vault of its own (Show in Sidebar from a linked copy).
+- Toolbar path: `MainToolbarTitle.fallbacks` drops first steps down to the last one; the two-step vault path fell straight back to the app name beside the DEV chip (seen in the snapshot).
+- `MainCopy.azureSection` reuses `DestinationProvider.azureKeyVault.title`; the Connect summary row uses it (key `connect.summary.keyVaults` dropped).
+- Assumptions: no Actions menu (Remove from Vault, stage) on a vault of its own yet, and its edits wait for B8c's Sync (no badge, not in the Sync review).
+- Tests: `aKeyVaultOfItsOwnOpensFromTheSidebar`, `toolbarPathFallsBackStepByStep`, `ConnectUITests` now opens the vault from the sidebar; snapshot `main-keyvault-standalone`. Mutations caught: no observation, selection not exclusive, stale vault detail, open not selecting, no `onChange` on update.
+- Docs: README, DESIGN, ARCHITECTURE, STRUCTURE, CHANGELOG.
+- Gates: the full CI run passed (package suites, app tests, Debug and Release builds, 7 UI tests twice, lint); check-secrets OK in the worktree (991 files); strings up to date.
 
 Review B8b2 — Connect Azure (2026-10-25, automatic):
 - Connect gains a second step (`ConnectViewModel.Step`, `StepCounter` 01 / 02): GitHub's Continue goes to Azure (allowed with nothing checked); Azure has Back, Skip (GitHub only, or straight to the vault when nothing is checked) and Continue (imports both; GitHub first).

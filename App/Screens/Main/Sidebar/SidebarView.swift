@@ -5,7 +5,7 @@ import VaultCore
 /// its scope warning, owner groups (Personal, then organizations, with a SAML notice where needed
 /// and the organization's own row first), repositories with badges, the selected repository's
 /// environments and destinations nested under it, and "Add repository by name…" per account;
-/// then FOLDERS, and a mono status line at the bottom. It sits on the window's native sidebar
+/// then AZURE KEY VAULT (when there is one), FOLDERS, and a mono status line at the bottom. It sits on the window's native sidebar
 /// glass (1.0).
 ///
 /// The rows are drawn with `.fxRowBackground(style: .sidebar)` instead of a native `List`
@@ -36,6 +36,8 @@ struct SidebarView: View {
                             accountSection(account)
                         }
                     }
+                    SidebarKeyVaultsSection(sidebar: sidebar)
+                        .padding(.top, Theme.Spacing.large)
                     SidebarFoldersSection(main: main)
                         .padding(.top, Theme.Spacing.large)
                 }

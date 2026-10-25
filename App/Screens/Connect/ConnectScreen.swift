@@ -193,7 +193,7 @@ private struct FirstImportSummaryView: View {
                 )
                 // Key Vault holds secrets only.
                 row(
-                    title: String(localized: "connect.summary.keyVaults", defaultValue: "Azure Key Vault"),
+                    title: MainCopy.azureSection,
                     detail: ConnectCopy.keyVaults(summary.keyVaultCount),
                     secrets: summary.keyVaultSecretCount,
                     variables: 0

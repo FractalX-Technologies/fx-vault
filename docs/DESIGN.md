@@ -323,13 +323,16 @@ foreground color, so `.primary` text still turns white on selected rows.
 ### Main window (boards Main2-Home, Main2-Repository; two columns since 1.0, B11b)
 
 - Toolbar: `BrandMark()` + the selected place's path (`MainViewModel.breadcrumb`, `.monoMeta`,
-  `subtleText`, `GitHub › owner › repo › environment` or `Folders › name`), or the window title
+  `subtleText`, `GitHub › owner › repo › environment`, `Azure Key Vault › name` or `Folders ›
+  name`), or the window title
   (`.headline`) with nothing selected, in a fixed `Theme.Layout.toolbarTitleWidth` item at the
-  detail column's leading edge; a long path keeps its last two steps, then only the mark. Icon
+  detail column's leading edge; a long path drops its first steps down to the last one, then
+  shows only the mark. Icon
   actions as `.fxIconButtonStyle()`; `SyncToolbarButton` last.
 - Sidebar tree (the window's native sidebar glass, no fill of its own): GITHUB, then each account
   and its owner groups (PERSONAL, org names), 32 pt rows with `.fxRowBackground(style: .sidebar)`,
-  counts in `.monoMeta`, "Import" in `brand`; FOLDERS after GitHub; footer status in
+  counts in `.monoMeta`, "Import" in `brand`; AZURE KEY VAULT after GitHub when a Key Vault of
+  its own exists (`DestinationRow`s, as under a repository), then FOLDERS; footer status in
   `.statusLine`.
 - The selected imported repository's row stands for its repository scope; its environments
   (`ScopeListView`) nest under it, `Theme.Layout.sidebarTreeIndent` in, as 32 pt sidebar rows with

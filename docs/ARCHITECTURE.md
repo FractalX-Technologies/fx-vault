@@ -1120,7 +1120,11 @@ AppTests).
     `OrganizationModel` and its own row (`selectedOrganizationOwnerID`; a repository, a folder
     and an organization are selected one at a time), with Import and Remove from Vault;
     `MainViewModel` builds `OrganizationDetailViewModel` (`Main/Organization`, read-only items
-    observed from `OrganizationRepository`) for an imported one. v0.3.0 draws the sidebar
+    observed from `OrganizationRepository`) for an imported one. B8b3: the Key Vaults of their
+    own are observed (`observeDestinations(repositoryID: nil)`, `SidebarViewModel.keyVaults`) and
+    listed by `SidebarKeyVaultsSection`; `selectedKeyVaultID` is a fourth exclusive selection, and
+    `MainViewModel` builds a `DestinationDetailViewModel` for it (no scope column, path `Azure Key
+    Vault › name`); `open(destinationID:)` selects one there. v0.3.0 draws the sidebar
     and scope rows itself (`.fxRowBackground`, docs/DESIGN.md) instead of a native `List`
     selection; `MainColumnSelection` (pure) keeps Up/Down keyboard selection and owner groups
     collapse from their mono label.

@@ -85,6 +85,11 @@ enum AccessibilityID {
             "main.environment.\(name)"
         }
 
+        /// A Key Vault of its own under AZURE KEY VAULT in the sidebar (1.0).
+        static func keyVault(_ name: String) -> String {
+            "main.keyVault.\(name)"
+        }
+
         /// The organization row of a sidebar owner group (its secrets and variables, 1.0).
         static func organization(_ login: String) -> String {
             "main.organization.\(login)"
