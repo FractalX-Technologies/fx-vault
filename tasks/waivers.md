@@ -1,3 +1,4 @@
 # Waivers
 
 - **B3d, retired-destinations notice in the app (2026-10-25).** `RetiredDestinationsNotice` is tested with injected closures, not against a real vault: the AppTests vault is in memory at the latest schema, and only migration v16 writes `retired_destinations`. Covered instead by VaultStore `retiredDestinationsShowOnceThenClear` (the SQL) and the app's notice tests. Manual check: RELEASING.md #49.
+- **B11e, notch island placement and focus (2026-10-25).** `NotchIslandUITests` drives the island on the test Mac's main screen, and `NotchGeometry` is unit-tested for both cases; the hardware notch merge, the island over a full-screen app, its return when FX Vault is activated from another app (`hidesOnDeactivate`), and the system Touch ID prompt from the island need a signed build on a notched MacBook. Manual check before release.

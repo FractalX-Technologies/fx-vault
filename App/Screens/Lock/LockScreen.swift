@@ -8,7 +8,7 @@ struct LockScreen: View {
     @Environment(\.scenePhase) private var scenePhase
 
     init(app: AppViewModel) {
-        _viewModel = State(initialValue: app.makeLockViewModel())
+        _viewModel = State(initialValue: app.lockScreen)
         _recoveryViewModel = State(initialValue: app.makeRecoveryResetViewModel())
     }
 

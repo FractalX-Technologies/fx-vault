@@ -2140,3 +2140,13 @@ Review B11d2 — Connect GitHub and first import (2026-10-25, automatic):
 - Tests: `ConnectViewModelTests` (sources and default checks, dedupe, import with a failure, counts agree, lock); dedupe and default checks seen failing under a mutation; onboarding tests now end in the Connect phase; UI `ConnectUITests` imports example-org through the summary; `onboard()` takes Not Now; snapshots `connect`, `connect-summary` checked in light and dark.
 - Docs: README (first launch), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
 - Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 574 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (6 tests); lint OK; check-secrets OK in the worktree; strings synced (second run: no change).
+
+Review B11e — notch unlock island (2026-10-25, automatic):
+- `NotchIslandController` owns a borderless `NotchIslandPanel` (status-bar level, no shadow, `sharingType = .none`, hidden while another app is active) showing `NotchIslandView` over the shared `AppViewModel.lockScreen`; `NotchGeometry` hangs it from the notch or floats it 6 pt under the menu bar.
+- States: Touch ID (system prompt for now) with Use Password; password with the reason or error and Recovery Key…; "Unlocked" for 0.9 s. The island never shows names or values.
+- Window: `lock(trigger:)` presents the island and closes the main window; at launch and on Dock reopen the window closes again while locked; `didUnlock()` opens it. Recovery and the Touch ID offer use the window (`showLockWindow()`); cancelling recovery returns to the island. The window lock card stays for tests and previews (no side effects, no island).
+- Split: B11e2 embeds Touch ID with `LAAuthenticationView` (needs the island's `LAContext` passed to the keychain read; testable only on a signed build with a sensor).
+- Removed: `AppViewModel.makeLockViewModel()` (one shared lock model).
+- Tests: `NotchIslandTests` (geometry with and without a notch, states, shared model, no island without side effects); `DesignTokenTests` (Island color sets); UI `NotchIslandUITests` (⌃⌘L closes the window, the island's password unlocks); snapshots `island-touchid`, `island-password` checked. Waiver for the notch hardware and Touch ID checks (tasks/waivers.md).
+- Docs: README (Unlocking), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
+- Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 580 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (7 tests); lint OK (first run flagged a literal symbol size, now `Theme.Typography.title`); check-secrets OK in the worktree; strings synced.

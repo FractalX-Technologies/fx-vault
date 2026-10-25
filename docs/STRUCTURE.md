@@ -36,6 +36,8 @@ FXVault/
 │   │   ├── Connect/                 # ConnectScreen/ViewModel (after onboarding: choose what to
 │   │   │                            # import, first-import summary), ConnectCopy
 │   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel,
+│   │   │                            # Notch/ (NotchIslandController + panel, NotchIslandView
+│   │   │                            # + model, NotchGeometry),
 │   │   │                            # TouchIDOfferScreen/ViewModel (one-time offer after a
 │   │   │                            # password unlock), PasswordRequiredReason+Extension
 │   │   ├── GHSetup/                 # GHSetupScreen/ViewModel (install, upgrade, untrusted, Trust

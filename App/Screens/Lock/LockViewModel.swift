@@ -112,6 +112,7 @@ final class LockViewModel: LockObserving {
                 ) { [weak self] in
                     self?.touchIDOfferDidFinish()
                 }
+                app.showLockWindow()
             } else {
                 app.didUnlock()
             }
@@ -171,10 +172,12 @@ final class LockViewModel: LockObserving {
         password = ""
         error = nil
         isShowingRecoveryReset = true
+        app.showLockWindow()
     }
 
     func recoveryResetDidCancel() {
         isShowingRecoveryReset = false
+        app.presentIsland()
     }
 
     // MARK: - LockObserving

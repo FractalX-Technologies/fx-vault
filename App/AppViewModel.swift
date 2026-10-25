@@ -97,6 +97,13 @@ final class AppViewModel {
     /// Opens (or brings back) the main window; set by the main window's root view, which has the
     /// SwiftUI `openWindow` action.
     @ObservationIgnored private var mainWindowOpener: (() -> Void)?
+    @ObservationIgnored private weak var mainWindow: NSWindow?
+    /// The one lock model, shared by the notch island and the window's recovery and Touch ID offer.
+    @ObservationIgnored private(set) lazy var lockScreen = LockViewModel(app: self)
+    /// The unlock UI while locked (1.0). Nil without side effects (tests, previews), where the
+    /// window's lock screen stays.
+    @ObservationIgnored private(set) lazy var island: NotchIslandController? =
+        container.hasSideEffects ? NotchIslandController(lock: lockScreen) : nil
 
     /// The file extension of share files (§9.1; UTType `io.fractalx.fxvault.share`).
     static let shareFileExtension = "fxvault"
@@ -144,6 +151,23 @@ final class AppViewModel {
         lastLockTrigger = trigger
         // Phase B
         runLockPhaseB()
+        presentIsland()
+    }
+
+    // MARK: - Notch island
+
+    /// While locked, the island is the unlock UI and the main window closes (1.0 brief).
+    func presentIsland() {
+        guard phase == .locked, let island else { return }
+        island.present()
+        // Closing the window fires the window-close lock trigger, a no-op while locked.
+        mainWindow?.close()
+    }
+
+    /// Recovery and the Touch ID offer need the window: the island steps aside.
+    func showLockWindow() {
+        island?.dismiss()
+        requestMainWindow()
     }
 
     private func runLockPhaseB() {
@@ -195,6 +219,8 @@ final class AppViewModel {
         }
         container.autoLock.recordInteraction()
         phase = .unlocked
+        island?.dismissUnlocked()
+        requestMainWindow()
         startReconciliation()
     }
 
@@ -456,7 +482,12 @@ final class AppViewModel {
     /// state (§5.11).
     func attachMainWindow(_ window: NSWindow) {
         window.isRestorable = false
+        mainWindow = window
         container.autoLock.observeClose(of: window)
+        // FX Vault starts locked, and the Dock reopens the window: the island unlocks instead.
+        if phase == .locked, !lockScreen.isShowingRecoveryReset, lockScreen.touchIDOffer == nil {
+            Task { self.presentIsland() }
+        }
     }
 
     // MARK: - View models
@@ -473,10 +504,6 @@ final class AppViewModel {
         onFinish: @escaping () -> Void
     ) -> TouchIDOfferViewModel {
         TouchIDOfferViewModel(app: self, password: password, afterInvalidation: afterInvalidation, onFinish: onFinish)
-    }
-
-    func makeLockViewModel() -> LockViewModel {
-        LockViewModel(app: self)
     }
 
     func makeRecoveryResetViewModel() -> RecoveryResetViewModel {

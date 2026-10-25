@@ -87,6 +87,24 @@ struct VisualSnapshotTests {
         }
     }
 
+    /// The notch island over a white strip, as on a screen with a notch (boards NotchUnlock,
+    /// NotchPassword).
+    @Test func notchIsland() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        try await harness.enableTouchID()
+        harness.app.lock(trigger: .manual)
+        let model = NotchIslandModel(lock: harness.app.lockScreen)
+        model.notchHeight = 32
+        let size = CGSize(width: Theme.Layout.islandWidth + 2 * Theme.Spacing.xHuge, height: 180)
+        try await SnapshotOutput.write("island-touchid", size: size) {
+            NotchIslandView(model: model).frame(maxHeight: .infinity, alignment: .top)
+        }
+        model.prefersPassword = true
+        try await SnapshotOutput.write("island-password", size: size) {
+            NotchIslandView(model: model).frame(maxHeight: .infinity, alignment: .top)
+        }
+    }
+
     // MARK: - Main window
 
     @Test func mainWindow() async throws {

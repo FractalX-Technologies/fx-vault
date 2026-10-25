@@ -122,6 +122,14 @@ After installing, run `gh auth login` once if you have not used the GitHub CLI b
    can read their secrets) and its personal repositories. **Continue** imports the checked ones
    (secret names, variable values) and shows what was found; **Not Now** imports nothing.
 
+### Unlocking
+
+A locked FX Vault has no window. When you switch to it, a small black island grows out of the
+notch (on a screen without one, it floats under the menu bar): **Touch ID to unlock**, or **Use
+Password** for the master password. The island never shows names or values. After the unlock it
+says **Unlocked** and the main window opens; locking (⌃⌘L, sleep, idle) closes the window again.
+**Recovery Key…** in the island opens the recovery window.
+
 ### Touch ID
 
 The signed release can unlock the vault with Touch ID. After a password unlock, FX Vault offers
@@ -136,7 +144,7 @@ the password:
 - after fingerprints are added or removed (Touch ID turns itself off; FX Vault offers to turn
   it on again after the password unlock).
 
-The lock screen says which of these applies. Ad-hoc builds cannot use Touch ID (it needs the
+The island says which of these applies. Ad-hoc builds cannot use Touch ID (it needs the
 signed release's keychain entitlement).
 
 To check Touch ID support on an installed copy, run:

@@ -14,6 +14,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   organizations (with their access) and personal repositories, the ready ones checked;
   Continue imports them and shows the totals by source, naming anything that failed. The
   "Your vault is ready" step is gone.
+- **Unlock from the notch.** A locked FX Vault has no window: a black island grows out of the
+  notch (or floats under the menu bar) with Touch ID and the master password, says Unlocked,
+  and the main window opens. Locking closes the window; Recovery Key… opens the recovery window.
 - **Black and white.** A white window with black type (black and white in dark mode), system
   greys for secondary text, translucent cards and no brand blue: pending dots and links are ink.
   The interface uses SF Pro and SF Mono; FX Vault no longer ships its own fonts.

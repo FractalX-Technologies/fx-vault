@@ -21,5 +21,8 @@ extension Theme {
         /// How long a change of the network path must hold before the connectivity banner and
         /// the offline gating follow it (a flapping path never reaches the UI).
         static let connectivityDebounce: Duration = .seconds(2)
+
+        /// How long the notch island says "Unlocked" before it goes away.
+        static let islandUnlocked: Duration = .milliseconds(900)
     }
 }

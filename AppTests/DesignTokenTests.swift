@@ -52,6 +52,10 @@ struct DesignTokenTests {
         Token(name: "InkBadge", light: RGBA(0xFFFFFF, alpha: 0.20), dark: RGBA(0x000000, alpha: 0.12)),
         Token(name: "DotGrid", light: RGBA(0x000000, alpha: 0.12), dark: RGBA(0xFFFFFF, alpha: 0.10)),
         Token(name: "Shadow", light: RGBA(0x000000, alpha: 0.12), dark: RGBA(0x000000, alpha: 0.40)),
+        // The notch island continues the hardware notch: black in both appearances (board NotchUnlock).
+        Token(name: "Island", light: RGBA(0x000000), dark: RGBA(0x000000)),
+        Token(name: "IslandInk", light: RGBA(0xFFFFFF), dark: RGBA(0xFFFFFF)),
+        Token(name: "IslandMuted", light: RGBA(0xFFFFFF, alpha: 0.60), dark: RGBA(0xFFFFFF, alpha: 0.60)),
     ]
 
     private static let tolerance = 0.5 / 255
