@@ -374,6 +374,13 @@ foreground color, so `.primary` text still turns white on selected rows.
   header (FOLDER, the name in `.largeTitle`, a "Never on GitHub" tag, Share as File… outline and a
   ••• menu) above the same Secrets / Variables pill, add actions and table as a repository, without
   the Status column.
+- Organizations (1.0, B5c; mockup Org-Visibility): each organization group starts with a 32 pt
+  "Secrets and variables" row (`building.2`, `.callout`, ink once imported and subtle before;
+  the item count in `monoLabel` subtle, or "Import" in brand). Selected, column 2 shows an
+  ORGANIZATION empty state and column 3 the Import prompt (`EmptyStateView`, primary Import) or
+  the organization header (ORGANIZATION, the login in `.largeTitle`, counts in `.monoMeta` with
+  "· N without value", a Read only tag, Remove from Vault… outline) above a read-only `.fxTable()`:
+  Name, Kind, Value (`MaskedValueCell`, no eye), Visibility, Updated.
 - Runtime destinations in the scope column (v0.8.0, canvas "FX Vault Destinations"):
   `SectionLabel` BUILD · GITHUB ACTIONS over the GitHub scopes; after "New
   Environment", `SectionLabel` RUNTIME with an Experimental `StatusChip.tag`, then one 2-line

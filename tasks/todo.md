@@ -1933,7 +1933,7 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B3b Share Securely: passphrase `.fxvault` export of an org, repository or environment, and the open/preview/held import, from D2's Share boards; **Send with AirDrop** of that file (system share, Bryan 2026-10-25).
 - [x] B4 `admin:org` scope check per organization and the refresh flow (copyable commands and Re-check).
 - [ ] B4b In-app Approve (D1's device code) through `gh auth refresh`: needs a check against a real gh login first (non-TTY behaviour, the browser step); reserved for Bryan's real account.
-- [ ] B5 Organization list commands and store (additive migration); read-only organization node. Split: B5a GitHubKit listings [x]; B5b store and import; B5c the read-only node and its e2e.
+- [x] B5 Organization list commands and store (additive migration); read-only organization node. Split: B5a GitHubKit listings [x]; B5b store and import [x]; B5c the read-only node and its e2e [x].
 - [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list.
 - [ ] B7 Organization drift and verify; inherited and shadowed names on a repository.
 - [ ] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source.
@@ -2060,3 +2060,14 @@ Review B5b — organization store and import (2026-10-25, automatic):
 - Not wired into the app yet: B5c adds it to `VaultDataComponents` with the sidebar node.
 - Tests: `OrganizationStoreTests` (constraints, case-insensitive login, counts, cascade), `MigrationTests` (v17 in the frozen list and step-by-step), KAT `organizationFieldAADAndBlobs` (new Python vectors; the old ones byte-identical; refused as repository, folder and destination item), `OrganizationRepositoryTests` (import with visibility and selected count, skipped names, already imported, missing visibility, failed list, locked vault, removal, DEK rotation). Seen failing under 6 mutations: no `synced_fp`, rotation skipping orgs, stale `synced_fp` kept, wrong AAD table, a default visibility, `selected_count` kept for non-selected.
 - Docs: DATABASE (v17, tables), SECURITY-MODEL (organizations), ARCHITECTURE (OrgFieldAAD, Organizations).
+- Gates: `swift test` 1,316 green; `xcodebuild test` app tests green; lint OK; check-secrets OK (958 files); strings up to date. UI tests run with B5c (no UI here).
+- Commit: `1e96536` `feat(organizations): store organization secrets and variables in the vault`.
+
+Review B5c — the read-only organization node (2026-10-25, automatic):
+- App: `VaultDataComponents.organizations` and `FeatureDependencies.organizations`; each organization group in the sidebar starts with a Secrets and variables row (count once imported, "Import" before; context menu Import or Remove from Vault…); `SidebarViewModel` observes vault organizations, selects a repository, a folder or an organization one at a time, imports through the group's account, removes with confirmation; `SidebarOwnerModel` carries `accountLogin` and its `OrganizationModel`; search keeps an imported organization by its login.
+- Column 2 shows an ORGANIZATION note; column 3 the Import prompt or `OrganizationDetailScreen` (counts with "without value", Read only tag, Remove from Vault…, table Name | Kind | Value | Visibility | Updated; `OrgVisibility.title(selectedCount:)`).
+- Assumptions: Import is offered whatever the access chip says (a missing `admin:org` fails with gh's error; Settings › Accounts explains it); an organization belongs to the account that imported it, so another account listing the same organization still shows Import and gets "Already in the vault" (revisit with B6 writes); the arrow keys do not step onto the organization row yet.
+- Tests: app `OrganizationViewModelTests` (grouping and search, vault-only organization, visibility and count texts, one selection at a time, import needs gh and an unlocked vault, import → detail → rows and counts → removal clears it). Seen failing under 4 mutations: selection not cleared, detail not followed, search dropping the organization, a vault-only organization dropped.
+- e2e: `OrganizationUITests` (example-org row → Import → NPM_TOKEN, STRIPE_KEY, REGION with All repositories, Selected · 3 repositories, Private and internal repositories); the scripted gh gained B12/B13 for example-org.
+- Docs: README, CHANGELOG, DESIGN (Organizations), ARCHITECTURE (sidebar), RELEASING #51.
+- Gates: XcodeGen drift OK; `swift test` 1,316 green; `xcodebuild test` 567 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (onboarding, share, accounts, organization); lint OK; check-secrets OK in the worktree (964 files); strings synced (second run: no change).

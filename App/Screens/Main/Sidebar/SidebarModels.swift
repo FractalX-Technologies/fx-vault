@@ -65,6 +65,8 @@ struct SidebarOwnerModel: Identifiable, Hashable {
     /// `<account fold key>/<owner fold key>`.
     let id: String
     let login: String
+    /// The gh account the group is listed under (organization reads go through it).
+    let accountLogin: String
     let ownerType: OwnerType
     /// True for the account's own repositories (shown as "Personal").
     let isAccount: Bool
@@ -73,6 +75,13 @@ struct SidebarOwnerModel: Identifiable, Hashable {
     /// gh returned the listing maximum; the list may be cut.
     let isTruncated: Bool
     let repos: [SidebarRepoModel]
+    /// The organization's own secrets and variables in the vault (1.0); nil until imported.
+    let organization: OrganizationModel?
+
+    /// An organization group (not the account's own repositories): it has the organization row.
+    var isOrganization: Bool {
+        !isAccount && ownerType == .organization
+    }
 
     /// The SAML authorization link gh printed, when the owner needs SAML SSO.
     var samlAuthorizationURL: URL? {
@@ -113,6 +122,8 @@ struct SidebarInputModel {
     var addedByName: [String: [CatalogRepoModel]] = [:]
     /// Every repository in the vault.
     var vaultRepos: [RepoModel] = []
+    /// Every organization in the vault (1.0).
+    var vaultOrganizations: [OrganizationModel] = []
 }
 
 /// Groups accounts, owners and repositories for the sidebar and applies the search (§10
@@ -133,6 +144,7 @@ enum SidebarGrouping {
         // Accounts gh does not list (any more) but the vault, a catalog or an added repository
         // still refers to.
         let otherAccounts = input.vaultRepos.map { (OwnerLoginValidator.foldKey($0.accountLogin), $0.accountLogin) }
+            + input.vaultOrganizations.map { (OwnerLoginValidator.foldKey($0.accountLogin), $0.accountLogin) }
             + input.catalogs.values.map { (OwnerLoginValidator.foldKey($0.accountLogin), $0.accountLogin) }
             + input.addedByName.keys.map { ($0, $0) }
         let vaultOnlyAccounts = Dictionary(otherAccounts, uniquingKeysWith: { first, _ in first })
@@ -149,6 +161,7 @@ enum SidebarGrouping {
                 catalog: input.catalogs[account.key],
                 addedByName: input.addedByName[account.key] ?? [],
                 vaultRepos: input.vaultRepos.filter { OwnerLoginValidator.foldKey($0.accountLogin) == account.key },
+                vaultOrganizations: input.vaultOrganizations.filter { OwnerLoginValidator.foldKey($0.accountLogin) == account.key },
                 vaultByKey: vaultByKey
             )
             let filtered = filter(owners, query: trimmed)
@@ -183,6 +196,7 @@ enum SidebarGrouping {
         catalog: AccountCatalogModel?,
         addedByName: [CatalogRepoModel],
         vaultRepos: [RepoModel],
+        vaultOrganizations: [OrganizationModel],
         vaultByKey: [String: RepoModel]
     ) -> [SidebarOwnerModel] {
         var order: [String] = []
@@ -217,6 +231,10 @@ enum SidebarGrouping {
                 insert(row(repo, accountKey: accountKey), into: &groups[key])
             }
         }
+        var organizations: [String: OrganizationModel] = [:]
+        for organization in vaultOrganizations {
+            organizations[group(organization.login, .organization)] = organization
+        }
 
         // The account first, then gh's organization order, then other owners by name.
         let listedKeys = order.filter { key in
@@ -228,18 +246,20 @@ enum SidebarGrouping {
         return (listedKeys + otherKeys).compactMap { key in
             guard let group = groups[key] else { return nil }
             // Without a listing, an empty "Personal" group says nothing: leave it out.
-            if catalog == nil, group.repos.isEmpty, group.failure == nil { return nil }
+            if catalog == nil, group.repos.isEmpty, group.failure == nil, organizations[key] == nil { return nil }
             let repos = group.repos.values.sorted {
                 $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
             }
             return SidebarOwnerModel(
                 id: "\(accountKey)/\(key)",
                 login: group.login,
+                accountLogin: accountLogin,
                 ownerType: group.ownerType,
                 isAccount: key == accountOwnerKey,
                 failure: group.failure,
                 isTruncated: group.isTruncated,
-                repos: repos
+                repos: repos,
+                organization: organizations[key]
             )
         }
     }
@@ -298,15 +318,19 @@ enum SidebarGrouping {
         guard !query.isEmpty else { return owners }
         return owners.compactMap { owner in
             let repos = owner.repos.filter { $0.fullName.localizedCaseInsensitiveContains(query) }
-            guard !repos.isEmpty else { return nil }
+            // An imported organization stays findable by its login, for its own row.
+            let keepsOrganization = owner.organization != nil && owner.login.localizedCaseInsensitiveContains(query)
+            guard !repos.isEmpty || keepsOrganization else { return nil }
             return SidebarOwnerModel(
                 id: owner.id,
                 login: owner.login,
+                accountLogin: owner.accountLogin,
                 ownerType: owner.ownerType,
                 isAccount: owner.isAccount,
                 failure: owner.failure,
                 isTruncated: owner.isTruncated,
-                repos: repos
+                repos: repos,
+                organization: owner.organization
             )
         }
     }

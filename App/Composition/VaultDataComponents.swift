@@ -37,6 +37,8 @@ struct VaultDataComponents {
     let sharing: SharingRepository
     /// Folders of secrets and variables (v0.7.0).
     let folders: FolderRepository
+    /// Organizations' own secrets and variables (1.0).
+    let organizations: OrganizationRepository
     /// Runtime destinations of repositories (v0.8.0).
     let destinations: DestinationRepository
     /// Destination Sync, Refresh and import over HTTPS (v0.8.0).
@@ -137,6 +139,7 @@ struct VaultDataComponents {
             drift: DriftRepository(session: session, schedulers: github, clock: clock, writePolicy: writePolicy),
             sharing: sharing,
             folders: FolderRepository(session: session, clock: clock),
+            organizations: OrganizationRepository(session: session, schedulers: github, clock: clock),
             destinations: DestinationRepository(session: session, clock: clock),
             destinationSync: DestinationSyncRepository(session: session, remotes: remotes, clock: clock),
             azureTokens: azureTokens

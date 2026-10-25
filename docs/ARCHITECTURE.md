@@ -1088,7 +1088,12 @@ AppTests).
     groups account → owner (Personal, organizations in gh's order, others by name) → repositories,
     with badges (private, archived, fork, unavailable, not on GitHub), scope warnings, SAML and
     truncation notes and search (the toolbar search field); Import, Clone, Share…, Remove from
-    vault (confirmed); Add repository by name (`Main/AddRepository`). v0.3.0 draws the sidebar
+    vault (confirmed); Add repository by name (`Main/AddRepository`). 1.0: vault organizations
+    are observed too (`SidebarInputModel.vaultOrganizations`); an organization group carries its
+    `OrganizationModel` and its own row (`selectedOrganizationOwnerID`; a repository, a folder
+    and an organization are selected one at a time), with Import and Remove from Vault;
+    `MainViewModel` builds `OrganizationDetailViewModel` (`Main/Organization`, read-only items
+    observed from `OrganizationRepository`) for an imported one. v0.3.0 draws the sidebar
     and scope rows itself (`.fxRowBackground`, docs/DESIGN.md) instead of a native `List`
     selection; `MainColumnSelection` (pure) keeps Up/Down keyboard selection and owner groups
     collapse from their mono label.

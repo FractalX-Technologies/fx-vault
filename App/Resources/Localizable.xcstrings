@@ -10143,6 +10143,17 @@
         }
       }
     },
+    "main.sidebar.organizationImported" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Imported %1$@: %2$lld secrets, %3$lld variables."
+          }
+        }
+      }
+    },
     "main.sidebar.owner.collapsed" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11228,6 +11239,226 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Welcome to FX Vault"
+          }
+        }
+      }
+    },
+    "organization.counts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld secrets · %2$lld variables"
+          }
+        }
+      }
+    },
+    "organization.counts.withoutValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld without value"
+          }
+        }
+      }
+    },
+    "organization.eyebrow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Organization"
+          }
+        }
+      }
+    },
+    "organization.import.button" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import"
+          }
+        }
+      }
+    },
+    "organization.import.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import this organization's own secrets and variables. Secrets arrive without values: GitHub never returns them. Reading them needs admin:org and the organization's admin role."
+          }
+        }
+      }
+    },
+    "organization.readOnly" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Read only"
+          }
+        }
+      }
+    },
+    "organization.readOnly.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Organization secrets and variables can't be changed from FX Vault yet."
+          }
+        }
+      }
+    },
+    "organization.remove" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove from Vault…"
+          }
+        }
+      }
+    },
+    "organization.remove.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove from Vault"
+          }
+        }
+      }
+    },
+    "organization.remove.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@'s secrets and variables are deleted from this Mac. Nothing changes on GitHub."
+          }
+        }
+      }
+    },
+    "organization.remove.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove this organization from FX Vault?"
+          }
+        }
+      }
+    },
+    "organization.row" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets and variables"
+          }
+        }
+      }
+    },
+    "organization.scopes.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Organization secrets and variables reach its repositories by their visibility."
+          }
+        }
+      }
+    },
+    "organization.table.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This organization has no secrets or variables."
+          }
+        }
+      }
+    },
+    "organization.table.kind" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kind"
+          }
+        }
+      }
+    },
+    "organization.table.visibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Visibility"
+          }
+        }
+      }
+    },
+    "organization.visibility.all" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "All repositories"
+          }
+        }
+      }
+    },
+    "organization.visibility.private" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Private and internal repositories"
+          }
+        }
+      }
+    },
+    "organization.visibility.selected" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Selected repositories"
+          }
+        }
+      }
+    },
+    "organization.visibility.selectedCount" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Selected · %lld repositories"
           }
         }
       }

@@ -13,6 +13,11 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Organization access.** Settings › Accounts lists each account's organizations with whether
   it can manage their secrets: Ready, Needs admin:org (copy the commands, approve in the browser,
   Re-check), Org secrets need an org admin, or Needs SSO authorization.
+- **Organization secrets and variables (read only).** Each organization in the sidebar starts
+  with a Secrets and variables row: Import reads its own secrets (names only) and variables, and
+  the organization view lists them with who can use each one (all repositories, private and
+  internal, or the selected ones) and when GitHub last changed it. Remove from Vault deletes
+  them from this Mac only. Editing comes later.
 - **Send with AirDrop.** After the passphrase is saved, Send with AirDrop opens the AirDrop
   window for the file; Share… and Save… stay.
 
