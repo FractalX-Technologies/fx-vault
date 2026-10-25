@@ -1,10 +1,12 @@
+import DestinationKit
 import Foundation
 import GitHubKit
 import Observation
 import VaultCore
 import VaultData
 
-/// What the first import stored, by source (board FirstImport). Secrets are names only.
+/// What the first import stored, by source (board FirstImport). GitHub secrets are names only;
+/// Key Vault secrets come with their values.
 struct FirstImportSummaryModel: Equatable {
     var organizationCount = 0
     var organizationSecretCount = 0
@@ -13,11 +15,14 @@ struct FirstImportSummaryModel: Equatable {
     var environmentCount = 0
     var repositorySecretCount = 0
     var repositoryVariableCount = 0
-    /// Organizations and `owner/name` repositories whose import failed; the rest was kept.
+    var keyVaultCount = 0
+    var keyVaultSecretCount = 0
+    /// Organizations, `owner/name` repositories and Key Vaults whose import failed; the rest
+    /// was kept.
     var failedNames: [String] = []
 
     var totalSecretCount: Int {
-        organizationSecretCount + repositorySecretCount
+        organizationSecretCount + repositorySecretCount + keyVaultSecretCount
     }
 
     var totalVariableCount: Int {
@@ -25,9 +30,10 @@ struct FirstImportSummaryModel: Equatable {
     }
 }
 
-/// The Connect phase after onboarding (1.0, boards ConnectGitHub and FirstImport). An
-/// organization imports its own secrets and variables; a personal row imports each of the
-/// account's repositories that is neither archived nor already in the vault.
+/// The Connect phase after onboarding (1.0, boards ConnectGitHub, ConnectAzure and
+/// FirstImport). An organization imports its own secrets and variables; a personal row imports
+/// each of the account's repositories that is neither archived nor already in the vault; a Key
+/// Vault (``ConnectAzureModel``) becomes a Key Vault of its own. Continue on Azure imports both.
 @Observable
 final class ConnectViewModel: LockObserving {
     struct Source: Identifiable, Hashable {
@@ -55,6 +61,11 @@ final class ConnectViewModel: LockObserving {
         }
     }
 
+    enum Step: Int, CaseIterable {
+        case github = 1
+        case azure = 2
+    }
+
     struct AccountSection: Identifiable, Hashable {
         let accountLogin: String
         let sources: [Source]
@@ -64,6 +75,8 @@ final class ConnectViewModel: LockObserving {
         }
     }
 
+    private(set) var step: Step = .github
+    let azure: ConnectAzureModel
     private(set) var sections: [AccountSection] = []
     var selection: Set<Source.ID> = []
     private(set) var isLoading = false
@@ -78,6 +91,7 @@ final class ConnectViewModel: LockObserving {
 
     init(app: AppViewModel) {
         self.app = app
+        azure = ConnectAzureModel(app: app)
         app.addLockObserver(self)
     }
 
@@ -89,8 +103,35 @@ final class ConnectViewModel: LockObserving {
         sections.flatMap(\.sources).filter { selection.contains($0.id) }
     }
 
+    /// Something is checked on either step, so Continue on Azure imports it.
     var canContinue: Bool {
-        !isLoading && !isImporting && !selectedSources.isEmpty
+        !isLoading && !isImporting && !azure.isLoading && !(selectedSources.isEmpty && azure.selectedVaults.isEmpty)
+    }
+
+    /// **Continue** on GitHub: the Azure step, even with nothing checked (only vaults may be wanted).
+    var canGoToAzure: Bool {
+        !isLoading && !isImporting
+    }
+
+    func goToAzure() {
+        guard canGoToAzure else { return }
+        step = .azure
+    }
+
+    /// **Back** on Azure.
+    func backToGitHub() {
+        guard !isImporting else { return }
+        step = .github
+    }
+
+    /// **Skip** on Azure: imports what GitHub has checked, or opens the vault when nothing is.
+    func skipAzure() async {
+        azure.selection = []
+        if canContinue {
+            await importSelected()
+        } else {
+            finish()
+        }
     }
 
     // MARK: - Loading
@@ -186,6 +227,7 @@ final class ConnectViewModel: LockObserving {
             importingName = nil
         }
         var result = FirstImportSummaryModel()
+        // GitHub first, then the vaults: the order of the boards.
         for source in selectedSources {
             guard app.phase == .unlocked else { return }
             switch source.kind {
@@ -216,6 +258,12 @@ final class ConnectViewModel: LockObserving {
                 }
             }
         }
+        guard app.phase == .unlocked else { return }
+        let vaults = await azure.importSelected { importingName = $0 }
+        result.keyVaultCount = vaults.vaultCount
+        result.keyVaultSecretCount = vaults.secretCount
+        result.failedNames += vaults.failedNames
+        guard app.phase == .unlocked else { return }
         summary = result
     }
 
@@ -231,5 +279,7 @@ final class ConnectViewModel: LockObserving {
         selection = []
         summary = nil
         error = nil
+        step = .github
+        azure.reset()
     }
 }

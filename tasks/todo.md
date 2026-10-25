@@ -1936,7 +1936,7 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B5 Organization list commands and store (additive migration); read-only organization node. Split: B5a GitHubKit listings [x]; B5b store and import [x]; B5c the read-only node and its e2e [x].
 - [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list.
 - [ ] B7 Organization drift and verify; inherited and shadowed names on a repository.
-- [ ] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source. Split: B8a discovery, package layer [x]; B8b1 Key Vaults of their own in the store (`v18`) [x]; B8b2 Connect Azure (requirements, subscriptions and vaults, import), the vaults in the first-import summary, the sidebar Azure node opening the vault; B8c Sync of the vaults of their own (review, run, badge) and moving 0.9's repository Key Vaults beside GitHub.
+- [ ] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source. Split: B8a discovery, package layer [x]; B8b1 Key Vaults of their own in the store (`v18`) [x]; B8b2 Connect Azure (requirements, subscriptions and vaults, import), the vaults in the first-import summary [x]; B8b3 the sidebar Azure node opening the vault (and Show in Sidebar for a linked copy there); B8c Sync of the vaults of their own (review, run, badge) and moving 0.9's repository Key Vaults beside GitHub.
 - [ ] B9 Notes view read-only, then editable with the change review.
 - [ ] B10 File secrets: picker and drop, base64 option, limits (GitHub 48 KiB, Key Vault 25 KiB), trailing-newline notice.
 - [ ] B11 New start, onboarding, notch unlock island (`LAAuthenticationView`), allowlisted setup-command runner and main window from D1–D2; macOS 26 deployment target.
@@ -2151,6 +2151,17 @@ Review B11e — notch unlock island (2026-10-25, automatic):
 - Docs: README (Unlocking), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
 - Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 580 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (7 tests); lint OK (first run flagged a literal symbol size, now `Theme.Typography.title`); check-secrets OK in the worktree; strings synced.
 
+Review B8b2 — Connect Azure (2026-10-25, automatic):
+- Connect gains a second step (`ConnectViewModel.Step`, `StepCounter` 01 / 02): GitHub's Continue goes to Azure (allowed with nothing checked); Azure has Back, Skip (GitHub only, or straight to the vault when nothing is checked) and Continue (imports both; GitHub first).
+- `ConnectAzureModel`: `AzureDiscoveryRepository.discover()` (now in `VaultDataComponents.azureDiscovery`); Disabled and Deleted subscriptions are left out (B8a's open question); every vault checked; a subscription whose vault list fails shows its message. Requirements: `azNotInstalled`/`azUntrusted` offer `brew install azure-cli` (Run) and `az login` (Copy), `azNotSignedIn` only `az login`; other errors show as the step's error.
+- Import: each checked vault is created with `createDestination(repositoryID: nil)` (or the vault already there is reused) and read with `importRemote`; failures are named in the summary, which gains the Azure Key Vault row (secrets with values, no variables) and "Secrets" instead of "Secrets (names)".
+- Run state extracted from gh setup into `SetupCommandRunState` + `SetupCommandList` (shared, no behaviour change on gh setup); `DestinationSyncCopy.azInstallCommand` reuses `SetupCommand.installAzureCLI`.
+- Test doubles: DestinationKit `FakeAzureOutput` (`az account list`, `az keyvault list`, the token, Key Vault list and read) and `FakeHTTPTransport.stubKeyVault`, checked against the real parsers (`FakeAzureOutputTests`); `TestHarness.installFakeAZ()` puts a placeholder `az` first on the probed PATH and exposes `transport`; the UI-testing host gets a placeholder `az`, one subscription with `kv-example-prod` (one secret), and a scripted transport.
+- Assumptions: no per-vault secret count or access check before import (the board's "32 secrets · Ready" would need a listing per vault); the tenant-sign-in row ("Sign In to This Tenant") waits for a real multi-tenant `az` check; the `az` version line is not shown.
+- Tests: `ConnectAzureTests` (6), `FakeAzureOutputTests` (2), `ConnectUITests` now goes through Azure; snapshots `connect-azure`, `connect-azure-signin`, `connect-summary`. Mutations caught: no vault import, Disabled subscriptions kept, no reuse.
+- Docs: README (first launch step 6), DESIGN, ARCHITECTURE, STRUCTURE, CHANGELOG.
+- Gates: the full CI run passed every step (package suites, app tests, Debug and Release builds, 7 UI tests twice) except lint, which caught two force unwraps in the UI-testing host; fixed with `FakeAzureOutput.syntheticID`, then lint OK, check-secrets OK (990 files), strings up to date, Connect UI test passed again.
+
 Review B8b1 — Key Vaults of their own, store layer (2026-10-25, automatic):
 - Migration `v18_standalone_key_vaults` rebuilds `destinations` with an optional `repository_id` (Key Vault rows only), plus `destinations_standalone_target` (unique `target_key` where the repository is NULL). Items and journal keep their ids (foreign keys are off during migrations).
 - `DestinationRecord`/`DestinationModel.repositoryID` are optional; `DestinationStore` and `DestinationRepository` take `repositoryID: nil` for the vaults of their own (`createDestination`, `destinations`, `observeDestinations`, limit `Limits.maxStandaloneKeyVaults` 256). Refresh, import, items, links and DEK rotation needed no change (`DestinationFieldAAD` never bound the repository).
@@ -2158,7 +2169,7 @@ Review B8b1 — Key Vaults of their own, store layer (2026-10-25, automatic):
 - Assumption: 0.9's repository Key Vaults stay under their repository until B8c moves them (several repositories may share one vault, so the move needs a merge rule).
 - Tests: `standaloneKeyVaultsAreUniqueAndKeyVaultOnly` (store), `keyVaultsOfTheirOwnStandBesideRepositoryDestinations`, `aKeyVaultOfItsOwnImportsLikeARepositoryDestination`; the step-by-step migration tests carry every earlier seed (destination, items, held rows) through the rebuild. Mutation: dropping the partial index fails the store test.
 - Docs: DATABASE (v18, tables), ARCHITECTURE decision 138, CHANGELOG.
-- Gates: `swift test` 1,351 green; app tests 584; build Debug and Release; 7 UI tests passed twice; lint OK; check-secrets OK (984 files); strings up to date.
+- Gates: every package suite green in the CI run; app tests 584; build Debug and Release; 7 UI tests passed twice; lint OK; check-secrets OK (984 files); strings up to date.
 
 Review B11f — allowlisted setup commands (2026-10-25, automatic):
 - GitHubKit `SetupCommand` (`brew install gh`, `brew upgrade gh`, `brew install azure-cli`) and `SetupCommandRunner`: fixed argv, `brew` from `/opt/homebrew/bin` then `/usr/local/bin` only when it passes `GHLocator.evaluate`, `ProcessEnvironmentBuilder.homebrew` (identity, Homebrew PATH, NONINTERACTIVE), 600 s, redacted last 40 lines.

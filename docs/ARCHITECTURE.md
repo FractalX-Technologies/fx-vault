@@ -1081,7 +1081,10 @@ AppTests).
   the window. Recovery and the Touch ID offer call `showLockWindow()`; cancelling recovery
   presents the island again. Without side effects (tests, previews) there is no island.
 - `Onboarding`, then `Connect` (`AppViewModel.isFirstConnectPending`, in memory only: a lock
-  or relaunch goes to the main window), `Lock` / `RecoveryReset` (both with `GHStatusRow`). The lock screen shows
+  or relaunch goes to the main window; steps GitHub then Azure, `ConnectAzureModel` lists
+  through `AzureDiscoveryRepository` and imports each checked vault as a Key Vault of its own
+  with `createDestination(repositoryID: nil)` and `DestinationSyncRepository.importRemote`,
+  reusing a vault already there; Run state shared with gh setup in `SetupCommandRunState`), `Lock` / `RecoveryReset` (both with `GHStatusRow`). The lock screen shows
   "Unlock with Touch ID" (SF Symbol `touchid`) when Touch ID can run, and otherwise names why the
   password is required under the password field (`LockNoticeModel`: "Password required: After a
   restart" / "Every 14 days" / "Fingerprints changed"). After a password unlock the vault is

@@ -23,6 +23,20 @@ enum ConnectCopy {
         ))
     }
 
+    static func keyVaults(_ count: Int) -> String {
+        inflected(AttributedString(
+            localized: "connect.summary.keyVaultCount",
+            defaultValue: "^[\(count) vault](inflect: true)"
+        ))
+    }
+
+    static func vaultsSelected(_ count: Int) -> String {
+        inflected(AttributedString(
+            localized: "connect.azure.selected",
+            defaultValue: "^[\(count) vault](inflect: true) selected · Secrets with values"
+        ))
+    }
+
     static func total(secrets: Int, variables: Int) -> String {
         inflected(AttributedString(
             localized: "connect.summary.total",
