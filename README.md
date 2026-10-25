@@ -28,8 +28,8 @@ the secrets your code reads at runtime in Azure Key Vault.
 - **Environments.** Create, rename (guided recreate on GitHub), duplicate and delete
   environments, and edit their deployment branch and tag rules.
 - **Review, then sync.** Edits stay local until you press Sync. The summary shows names and
-  counts only, explains blocked changes with a fix, and asks before anything is deleted on
-  GitHub.
+  counts only (your Azure Key Vaults as one more group), explains blocked changes with a fix,
+  and asks before anything is deleted on GitHub or in a vault.
 - **Drift detection.** Changes a teammate made on GitHub since your last sync are listed per
   repository; keep yours or accept GitHub's.
 - **New repositories.** Stage a repository with its environments, secrets and variables, create

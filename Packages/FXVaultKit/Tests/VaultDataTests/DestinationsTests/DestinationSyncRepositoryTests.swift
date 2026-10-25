@@ -381,6 +381,32 @@ struct DestinationSyncRepositoryTests {
         #expect(try fixture.destinations.destinations(repositoryID: nil).first?.lastRefreshedAt != nil)
     }
 
+    /// B8c: a Key Vault of its own counts under the nil key and syncs through `review(nil)`,
+    /// apart from the repository's destinations.
+    @Test func aKeyVaultOfItsOwnIsCountedAndSyncedApartFromRepositories() async throws {
+        let fixture = try await Fixture.make()
+        let (repoVault, _) = try fixture.keyVault()
+        try fixture.add(repoVault, "REPO_KEY", value: "r")
+        let vault = try fixture.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-sample-shared", tenantID: nil),
+            stage: nil
+        )
+        let remote = fixture.remotes.fake(for: vault, provider: .azureKeyVault)
+        try fixture.add(vault, "DATABASE_URL", value: "postgres://a")
+        try fixture.add(vault, "API_KEY", value: "k")
+        #expect(try fixture.destinations.pendingCounts() == [fixture.repo.id: 1, nil: 2])
+
+        let review = await fixture.sync.review(repositoryID: nil)
+        #expect(review.repositoryID == nil)
+        #expect(review.sections.map(\.destination.id) == [vault])
+        #expect(review.executableCount == 2)
+        let result = await fixture.sync.run(review, includeDeletions: true)
+        #expect(result.doneCount == 2)
+        #expect(remote.names == ["API-KEY", "DATABASE-URL"])
+        #expect(try fixture.destinations.pendingCounts() == [fixture.repo.id: 1])
+    }
+
     @Test func aRemovedTombstoneTargetIsClearedByRefresh() async throws {
         let fixture = try await Fixture.make()
         let (vault, remote) = try fixture.keyVault()

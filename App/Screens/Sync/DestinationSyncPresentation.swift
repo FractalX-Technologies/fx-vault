@@ -10,11 +10,11 @@ enum DestinationSyncPresentation {
     // MARK: Summary
 
     /// `repositories` with each repository's destination sections appended (a repository with
-    /// destination changes only gets a row of its own).
+    /// destination changes only gets a row of its own, and so do the Key Vaults of their own).
     static func merge(
         _ repositories: [SyncSummaryRepoModel],
         with reviews: [DestinationReviewModel],
-        fullName: (RepoID) -> String
+        fullName: (RepoID?) -> String
     ) -> [SyncSummaryRepoModel] {
         var merged = repositories
         for review in reviews where !review.isEmpty {
@@ -106,7 +106,7 @@ enum DestinationSyncPresentation {
     static func mergeDeletions(
         _ rows: [SyncDeletionRepoModel],
         with reviews: [DestinationReviewModel],
-        fullName: (RepoID) -> String
+        fullName: (RepoID?) -> String
     ) -> [SyncDeletionRepoModel] {
         var merged = rows
         for review in reviews {

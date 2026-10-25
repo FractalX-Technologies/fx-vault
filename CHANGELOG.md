@@ -11,8 +11,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   Vaults through `az`, every vault checked; Continue imports each vault with its secret values
   as a Key Vault of its own (no repository), and the summary counts them. Without `az`, Run
   installs it with Homebrew; `az login` stays Copy. The vaults are listed under **Azure Key
-  Vault** in the sidebar, after GitHub, and open with their secrets. Existing Key Vault
-  destinations stay where they are.
+  Vault** in the sidebar, after GitHub, and open with their secrets; their edits count on the
+  Sync button and Sync sends them, shown as an "Azure Key Vault" group after the repositories.
+  Existing Key Vault destinations stay where they are.
 
 - **First launch in three phases.** Welcome names them (Secure · Connect · Import); the Secure
   phase counts its steps (01 / 04), the password step has Back, and the recovery key's Continue

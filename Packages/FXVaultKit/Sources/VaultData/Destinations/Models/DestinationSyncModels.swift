@@ -135,16 +135,17 @@ public struct DestinationReviewSectionModel: Sendable, Hashable, Identifiable {
 
 /// The destination part of the Sync review of one repository.
 public struct DestinationReviewModel: Sendable, Hashable {
-    public let repositoryID: RepoID
+    /// nil: the Key Vaults of their own (1.0).
+    public let repositoryID: RepoID?
     /// Destinations with pending changes, in the sidebar order.
     public let sections: [DestinationReviewSectionModel]
 
-    public init(repositoryID: RepoID, sections: [DestinationReviewSectionModel]) {
+    public init(repositoryID: RepoID?, sections: [DestinationReviewSectionModel]) {
         self.repositoryID = repositoryID
         self.sections = sections
     }
 
-    public static func empty(_ repositoryID: RepoID) -> DestinationReviewModel {
+    public static func empty(_ repositoryID: RepoID?) -> DestinationReviewModel {
         DestinationReviewModel(repositoryID: repositoryID, sections: [])
     }
 

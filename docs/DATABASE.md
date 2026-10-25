@@ -610,9 +610,9 @@ CREATE UNIQUE INDEX destinations_standalone_target ON destinations(target_key) W
   off, so `destination_items` and `destination_journal` keep their rows and ids.
 - A vault of its own is unique by `target_key`; the same vault may also stay under a repository
   (a separate row with its own items).
-- Removing a repository never touches the vaults of their own. Their pending changes are not in
-  the repository Sync badge yet (`DestinationStore.pendingCounts`), and share imports only place
-  destinations under repositories, so they hold no share rows.
+- Removing a repository never touches the vaults of their own. Their pending changes count
+  under the nil key of `DestinationStore.pendingCounts` (the Sync badge, B8c), and share imports
+  only place destinations under repositories, so they hold no share rows.
 
 ## Tables at a glance
 

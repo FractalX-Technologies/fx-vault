@@ -138,8 +138,8 @@ struct DestinationRepositoryTests {
         }
         #expect(id == standalone && repositoryID == nil && fullName == nil)
         #expect(displayName == "kv-sample-prod")
-        // Its pending add waits for the Key Vault Sync (B8c), not the repository's badge.
-        #expect(try fixture.destinations.pendingCounts().isEmpty)
+        // Its pending add counts for the vaults of their own (B8c), not the repository.
+        #expect(try fixture.destinations.pendingCounts() == [nil: 1])
 
         // Removing the repository removes its destination only.
         #expect(try RepoStore(database: fixture.harness.database).delete(id: fixture.repo.id))
