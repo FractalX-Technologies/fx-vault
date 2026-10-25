@@ -34,7 +34,10 @@ class VaultUITestCase: XCTestCase {
 
         let groups = recoveryKeyGroups(in: app)
         XCTAssertEqual(groups.count, recoveryKeyGroupCount)
-        click(app.buttons[AccessibilityID.Onboarding.recoveryKeySaved])
+        let saved = app.buttons[AccessibilityID.Onboarding.recoveryKeySaved]
+        XCTAssertFalse(saved.isEnabled, "Continue waits for \"I saved it offline\"")
+        click(app.checkBoxes[AccessibilityID.Onboarding.recoveryKeySavedCheck])
+        click(saved)
 
         let prefix = AccessibilityID.Onboarding.confirmGroupPrefix
         let confirmFields = app.textFields.matching(NSPredicate(format: "identifier BEGINSWITH %@", prefix))

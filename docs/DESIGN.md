@@ -183,7 +183,6 @@ brand-colored buttons, `.borderedProminent` in new screens.
 
 ```swift
 SectionLabel(String(localized: "main.detail.environment", defaultValue: "Environment"))
-SectionLabel(step.title, color: Theme.Colors.brand)    // the current onboarding step
 ```
 
 Mono 11 uppercase, +0.08em, `subtleText`. Above sections, fields, table columns and sidebar
@@ -507,10 +506,14 @@ foreground color, so `.primary` text still turns white on selected rows.
   `.display` headline, `.lead` `mutedText` paragraph, a 360 pt form: `SectionLabel` + pill
   `FXTextField` and `.primary` Unlock on one line, `.secondary` full-width Touch ID, then a
   `.statusLine` and a `brand` link.
-- Onboarding: left column (insets 56 / 64) with `StepCounter`, `.largeTitle`, `.lead` paragraph,
-  rounded `FXTextField`s (460 pt), footer `.outline` Back + `.primary` Continue (`.large`); a 300 pt
-  side panel (`surface`, hairline left) listing steps as `SectionLabel` (current in `brand`, done and
-  upcoming in `subtleText`) over a value line (done and current in `ink`, upcoming in `subtleText`).
+- Onboarding (1.0 boards Main, Password, RecoveryKey, RecoveryConfirm, TouchID): Welcome is centered
+  (`BrandMark(.brandMarkLarge)`, `.display` "FX Vault", `.lead` paragraph, `.primary` Create Vault,
+  then the phases "Secure · Connect · Import" and "Encrypted on this Mac"). The Secure phase is one
+  column (insets 56 / 64): `OnboardingPhaseHeader` (`.statusLine`, current phase in `ink`, the
+  others `subtleText`) with `StepCounter` (`01 / 04`, 3 steps without Touch ID) at the end,
+  `.largeTitle`, `.lead` paragraph, rounded `FXTextField`s (460 pt), a `.caption` note, and footer
+  `.outline` Back + `.primary` Continue (`.large`). The recovery key's Continue waits for the
+  `FXCheckboxRow` "I saved it offline"; that step has no Back (the vault already exists).
 
 ### Settings
 
