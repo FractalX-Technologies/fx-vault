@@ -21,6 +21,7 @@ struct CommandBuilderTests {
             try GHAuthService.statusCommand(),
             try GHAuthService.tokenCommand(login: "user-a"),
             try GHOrgsCommands.list(),
+            try GHOrgsCommands.membership(organization: "example-org"),
             try GHReposCommands.list(owner: "owner-a"),
             try GHReposCommands.view(repo),
             try GHReposCommands.create(GHRepoCreateRequest(
@@ -63,7 +64,7 @@ struct CommandBuilderTests {
         }
     }
 
-    @Test func apiIsUsedOnlyForEnvironmentsAndBranchPolicies() throws {
+    @Test func apiIsUsedOnlyForTheOrgRoleEnvironmentsAndBranchPolicies() throws {
         for command in try Self.allCommands() {
             #expect((command.arguments.first == "api") == command.operation.usesAPI)
             if command.operation.usesAPI {

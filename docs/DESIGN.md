@@ -510,6 +510,12 @@ Native `Settings` + `TabView` + `Form`; the window gets `.fxWindowBackground()`.
 `SectionLabel` for group titles inside custom sections, `StatusChip` for states, and
 `.fxButtonStyle(.secondary)` for row actions. Do not restyle native toggles and pickers.
 
+Accounts (1.0, B4): under each account's Scopes row, ORGANIZATIONS lists each organization in
+`.mono` with its `StatusChip`: Ready (`success`), Needs admin:org and Needs SSO authorization
+(`warning`, the latter with an Open SSO Page link), Org secrets need an org admin and Access
+unknown (`mutedText`); then, when one needs admin:org, the `CommandRow`s to run before
+Re-check.
+
 Sharing (v0.9.0, tab symbol `paperplane`) has one section, FILES YOU SENT, with its footnote
 ("Values are never kept here"): one row per export, newest first: the date in `.monoMeta`, an
 "Expired" neutral chip or "Expires …", a ••• menu with Remove from List (a confirmation that the

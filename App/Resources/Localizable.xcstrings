@@ -1,6 +1,61 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "accounts.org.needsAdminOrg" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Needs admin:org"
+          }
+        }
+      }
+    },
+    "accounts.org.needsOrgAdmin" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Org secrets need an org admin"
+          }
+        }
+      }
+    },
+    "accounts.org.ready" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ready"
+          }
+        }
+      }
+    },
+    "accounts.org.sso" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Needs SSO authorization"
+          }
+        }
+      }
+    },
+    "accounts.org.unknown" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Access unknown"
+          }
+        }
+      }
+    },
     "accounts.scopes.missing" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12581,6 +12636,39 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Version"
+          }
+        }
+      }
+    },
+    "settings.accounts.org.adminOrgFix" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Organization secrets need admin:org. Run these in Terminal, approve in the browser, then Re-check:"
+          }
+        }
+      }
+    },
+    "settings.accounts.org.openSSO" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open SSO Page"
+          }
+        }
+      }
+    },
+    "settings.accounts.organizations" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Organizations"
           }
         }
       }

@@ -94,6 +94,63 @@ struct AccountsSettingsViewModelTests {
         #expect(accounts.fixCommands.isEmpty)
     }
 
+    /// 1.0 (B4): each account's organizations with their access, and the `admin:org` commands.
+    @Test func organizationsShowTheirAccessAndTheAdminOrgCommands() async throws {
+        let harness = try await Self.ready()
+        harness.stubToken()
+        harness.runner.stub(argumentsPrefix: ["org", "list"], with: .success("example-org\nexample-labs\n"))
+        harness.runner.respond(argumentsPrefix: ["api"]) { invocation in
+            invocation.arguments.last == "user/memberships/orgs/example-org"
+                ? .success(#"{"state":"active","role":"admin"}"#)
+                : .success(#"{"state":"active","role":"member"}"#)
+        }
+        let accounts = AccountsSettingsViewModel(app: harness.app)
+        await accounts.load()
+
+        #expect(accounts.organizations["user-a"] == [
+            OrgAccessModel(login: "example-org", status: .needsAdminOrgScope),
+            OrgAccessModel(login: "example-labs", status: .needsOrgAdmin),
+        ])
+        #expect(accounts.organizations["user-a"]?.first?.status.title == "Needs admin:org")
+        #expect(accounts.adminOrgCommands["user-a"] == [
+            "gh auth switch -h github.com -u user-a",
+            "gh auth refresh -h github.com -s admin:org",
+        ])
+
+        harness.app.lock(trigger: .manual)
+        #expect(accounts.organizations.isEmpty)
+        #expect(accounts.adminOrgCommands.isEmpty)
+    }
+
+    @Test func anAccountWithAdminOrgIsReadyWithNoCommands() async throws {
+        let harness = try await Self.ready()
+        harness.stubToken()
+        harness.stubAuthStatus("""
+        {"hosts":{"github.com":[
+         {"state":"success","active":true,"host":"github.com","login":"user-a","tokenSource":"keyring","scopes":"admin:org, repo","gitProtocol":"ssh"}
+        ]}}
+        """)
+        harness.runner.stub(argumentsPrefix: ["org", "list"], with: .success("example-org\n"))
+        harness.runner.respond(argumentsPrefix: ["api"]) { _ in .success(#"{"state":"active","role":"admin"}"#) }
+        let accounts = AccountsSettingsViewModel(app: harness.app)
+        await accounts.load()
+        #expect(accounts.organizations["user-a"]?.map(\.status) == [.ready])
+        #expect(accounts.adminOrgCommands["user-a"] == nil)
+    }
+
+    @Test func organizationsThatCantBeReadStayHiddenWithoutAnError() async throws {
+        let harness = try await Self.ready()
+        harness.stubToken()
+        harness.runner.stub(argumentsPrefix: ["org", "list"], with: .success("example-org\n"))
+        harness.runner.respond(argumentsPrefix: ["api"]) { _ in .success(#"{"state":"active","role":"admin"}"#) }
+        harness.runner.replaceStub(argumentsPrefix: ["org", "list"], with: .failure(stderr: "gh: Bad credentials (HTTP 401)\n"))
+        let accounts = AccountsSettingsViewModel(app: harness.app)
+        await accounts.load()
+        #expect(accounts.error == nil)
+        #expect(accounts.organizations["user-a"] == nil)
+        #expect(accounts.adminOrgCommands.isEmpty)
+    }
+
     /// v0.3.1: Enterprise Managed User accounts are listed with their scopes and fix commands.
     @Test func managedUserAccountsAreListed() async throws {
         let harness = try await Self.ready()

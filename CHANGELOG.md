@@ -10,6 +10,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Sharing production.** Share Project lists production stages unchecked; checking one asks
   for Touch ID (or, without Touch ID, your master password at Create), and the send step names
   the production places. The file is refused unless that confirmation was given.
+- **Organization access.** Settings › Accounts lists each account's organizations with whether
+  it can manage their secrets: Ready, Needs admin:org (copy the commands, approve in the browser,
+  Re-check), Org secrets need an org admin, or Needs SSO authorization.
 - **Send with AirDrop.** After the passphrase is saved, Send with AirDrop opens the AirDrop
   window for the file; Share… and Save… stay.
 

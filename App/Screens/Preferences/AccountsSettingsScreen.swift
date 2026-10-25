@@ -3,7 +3,8 @@ import SwiftUI
 import VaultData
 
 /// Preferences › Accounts (§10): gh path and version, then each account with its token state,
-/// scopes (with copyable fix commands), SSH alias picker, **Test** and **Re-check**.
+/// scopes (with copyable fix commands), organizations with their access (1.0), SSH alias picker,
+/// **Test** and **Re-check**.
 struct AccountsSettingsScreen: View {
     let preferences: PreferencesViewModel
 
@@ -193,6 +194,50 @@ private struct UnusableAccountsSection: View {
     }
 }
 
+/// An account's organizations (1.0, B4): each with its access chip, an SSO page link where
+/// GitHub gave one, and the commands that add `admin:org` when one needs it.
+private struct AccountOrganizationsBlock: View {
+    let organizations: [OrgAccessModel]
+    let adminOrgCommands: [String]
+    let onCopy: (String) -> Void
+
+    var body: some View {
+        PreferencesBlock {
+            SectionLabel(String(localized: "settings.accounts.organizations", defaultValue: "Organizations"))
+            ForEach(organizations) { organization in
+                HStack(spacing: Theme.Spacing.small) {
+                    Text(verbatim: organization.login)
+                        .fxTextStyle(.mono)
+                        .foregroundStyle(Theme.Colors.ink)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if let url = organization.status.ssoURL {
+                        Link(String(localized: "settings.accounts.org.openSSO", defaultValue: "Open SSO Page"), destination: url)
+                            .fxTextStyle(.caption)
+                    }
+                    StatusChip(title: organization.status.title, tint: organization.status.tint)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier(AccessibilityID.Accounts.organization(organization.login))
+            }
+            if !adminOrgCommands.isEmpty {
+                Text(String(
+                    localized: "settings.accounts.org.adminOrgFix",
+                    defaultValue: "Organization secrets need admin:org. Run these in Terminal, approve in the browser, then Re-check:"
+                ))
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+                ForEach(adminOrgCommands, id: \.self) { command in
+                    CommandRow(command: command, onCopy: onCopy)
+                }
+            }
+        }
+    }
+}
+
 /// One account: login with Test and Re-check, token state, scopes, fix commands, SSH alias.
 private struct AccountSection: View {
     let account: GHAccountSummaryModel
@@ -247,6 +292,14 @@ private struct AccountSection: View {
                         CommandRow(command: command) { viewModel.copy($0) }
                     }
                 }
+            }
+            if let organizations = viewModel.organizations[account.id], !organizations.isEmpty {
+                HairlineDivider()
+                AccountOrganizationsBlock(
+                    organizations: organizations,
+                    adminOrgCommands: viewModel.adminOrgCommands[account.id] ?? [],
+                    onCopy: { viewModel.copy($0) }
+                )
             }
             HairlineDivider()
             PreferencesRow(String(localized: "settings.accounts.ssh.alias", defaultValue: "SSH alias")) {

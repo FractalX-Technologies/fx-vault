@@ -952,6 +952,12 @@ D1–D5). This slice removed every peer-to-peer feature:
   deletes their rows and tokens and keeps their names in `retired_destinations` for one notice
   after unlock (`RetiredDestinationsNotice`); a 0.9 file imports without them and the preview
   names them. Decision 115 went with them; 106–109, 111, 116–118 and 124 are updated.
+- Slice B4 checks organization access: `GitHubEnvironmentRepository.organizationAccess(accountLogin:)`
+  (A5, then A6 per organization, with the scopes of the last `accounts()`) and
+  `adminOrgFixCommands(for:)` (switch, `gh auth refresh -s admin:org`, switch back). Preferences
+  › Accounts shows them; FX Vault never runs `gh auth refresh` itself (it needs a browser and the
+  active account, §2). `GHError.stopsAccountReads` is the one rule for errors that end an
+  account's reads (the catalog uses it too).
 
 ## App shell
 

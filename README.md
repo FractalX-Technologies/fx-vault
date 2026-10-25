@@ -9,7 +9,10 @@ the secrets your code reads at runtime in Azure Key Vault.
 ## Features
 
 - **One vault for every account.** Every `gh` account you are logged in to, its organizations
-  and their repositories in one sidebar, with search, badges and scope warnings.
+  and their repositories in one sidebar, with search, badges and scope warnings. Settings ›
+  Accounts shows, per organization, whether you can manage its secrets: **Ready**, **Needs
+  admin:org** (with the `gh auth refresh -s admin:org` commands to copy, then Re-check), **Org
+  secrets need an org admin**, or **Needs SSO authorization** (with GitHub's SSO page).
 - **Secrets and variables, repository and environment level.** Add, edit, rename, convert
   between secret and variable, move between scopes, fill values GitHub does not return, revert
   and delete. Secrets stay masked until you reveal them and re-mask after 30 seconds.
