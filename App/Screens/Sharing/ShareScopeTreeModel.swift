@@ -16,7 +16,7 @@ enum ShareScopeNodeID: Hashable {
     case item(ConfigItemID)
 }
 
-/// One row of the share scope tree (§10 `ShareExportScreen`): the repository, the repository
+/// One row of the share scope tree (`ProjectShareScreen`): the repository, the repository
 /// level group, an environment, or one secret or variable. Names only, never values.
 struct ShareScopeNodeModel: Identifiable, Hashable {
     enum Kind: Hashable {
@@ -296,7 +296,7 @@ struct ShareScopeTreeLoader {
     let config: ConfigRepository
     let sharing: SharingRepository
 
-    /// Every repository in the vault (the "what to send" picker of a nearby share).
+    /// Every repository in the vault.
     func repositories() async throws -> [RepoModel] {
         try await Self.first(of: config.observeRepositories()) ?? []
     }
@@ -319,21 +319,6 @@ struct ShareScopeTreeLoader {
             // A folder is shared whole, without a repository tree (v0.7.0).
             throw SharingError.repositoryNotFound
         }
-    }
-
-    /// The tree of `repositoryID` with `selection` checked (as far as it is still in the vault).
-    func tree(repositoryID: RepoID, selection: ShareSelectionModel?) async throws -> ShareScopeTreeModel {
-        guard let repository = try await repositories().first(where: { $0.id == repositoryID }) else {
-            throw SharingError.repositoryNotFound
-        }
-        let scopes = try config.scopes(repositoryID: repositoryID)
-        var items: [ConfigScope: [ConfigItemModel]] = [:]
-        for summary in scopes where summary.environment?.isDeleted != true {
-            items[summary.scope] = try await Self.first(
-                of: config.observeItems(repositoryID: repositoryID, scope: summary.scope)
-            ) ?? []
-        }
-        return ShareScopeTreeModel.build(repository: repository, scopes: scopes, items: items, selection: selection)
     }
 
     /// The current value of an observation stream (database observations deliver it at once).

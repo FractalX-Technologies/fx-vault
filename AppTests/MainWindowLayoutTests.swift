@@ -41,7 +41,7 @@ struct MainWindowLayoutTests {
     }
 
     /// A folder's detail (v0.7.0) fits the narrowest detail column too, and its main window keeps
-    /// the window height with FOLDERS and TEAMMATES in the sidebar.
+    /// the window height with FOLDERS in the sidebar.
     @Test func folderDetailFitsItsNarrowestColumn() async throws {
         let (harness, main) = try await MainSnapshotFixture.make()
         main.sidebar.selectedFolderID = try MainSnapshotFixture.mobileFolder(harness, main)

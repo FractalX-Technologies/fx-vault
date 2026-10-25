@@ -19,21 +19,17 @@ import VaultStore
 /// - **Launch.** ``prepareAfterUnlock()`` prunes the journal (24 h, the latest run kept) and
 ///   reconciles leftover `in_flight`/`indeterminate` rows by re-listing. ``preflight(repositoryIDs:scopeStatus:)``
 ///   runs it automatically once per unlock, so a new Sync never starts before reconciliation.
-/// - **One run at a time.** ``startRun(_:includeDeletions:includeHeld:cloneFolder:spaceReason:)``
+/// - **One run at a time.** ``startRun(_:includeDeletions:includeHeld:cloneFolder:)``
 ///   refuses while another run is in progress.
 /// - **Held share files (v0.9.0, P8).** Preflight checks every change, but the review and the
 ///   plan leave out rows held by a share file until its From Files review includes it
 ///   (``SyncReviewModel/heldShares``).
-/// - **Shared spaces (v0.6.0, S5).** With a ``SyncSpaceCoordinating`` (``SpaceRepository``),
-///   preflight gates every shared scope on its GitHub marker, the run claims and publishes it,
-///   and ``prepareAfterUnlock()`` finishes claims a crash or a failed marker write left open.
 public actor SyncRepository {
     private let session: VaultSession
     private let schedulers: any GHSchedulerProviding
     private let cloner: (any RepoCloning)?
     private let clock: any VaultClock
     private let writePolicy: WriteCollaboratorPolicy
-    private let spaces: (any SyncSpaceCoordinating)?
     private let persistence: VaultSyncPersistence
     private let values: VaultSyncValues
     /// The keyring generation launch reconciliation last ran under (nil: not since launch).
@@ -46,21 +42,18 @@ public actor SyncRepository {
     ///   - schedulers: `GitHubEnvironmentRepository` in the app.
     ///   - cloner: clones repositories created with "clone after" (``RepoCreationRepository``).
     ///   - writePolicy: what a WRITE collaborator may change (§2 Permissions, Q6).
-    ///   - spaces: shared spaces (``SpaceRepository``); nil syncs every scope as unshared.
     public init(
         session: VaultSession,
         schedulers: any GHSchedulerProviding,
         cloner: (any RepoCloning)? = nil,
         clock: any VaultClock = SystemClock(),
-        writePolicy: WriteCollaboratorPolicy = .default,
-        spaces: (any SyncSpaceCoordinating)? = nil
+        writePolicy: WriteCollaboratorPolicy = .default
     ) {
         self.session = session
         self.schedulers = schedulers
         self.cloner = cloner
         self.clock = clock
         self.writePolicy = writePolicy
-        self.spaces = spaces
         persistence = VaultSyncPersistence(session: session, clock: clock)
         values = VaultSyncValues(session: session)
     }
@@ -121,7 +114,6 @@ public actor SyncRepository {
                 throw .wrap(error)
             }
         }
-        try await reconcileSpaceClaims()
         reconciledGeneration = generation
         Self.log.info(
             """
@@ -133,18 +125,6 @@ public actor SyncRepository {
         return result
     }
 
-    /// Finishes shared space claims a crash or a failed marker write left open (after the journal
-    /// reconciliation, so the rows match GitHub).
-    private func reconcileSpaceClaims() async throws(SyncRepositoryError) {
-        guard let spaces else { return }
-        let all = try performSync { try SpaceStore(database: session.database).fetchSpaces() }
-        let claimed = Set(all.filter { $0.claimedVersion != nil }.map(\.repositoryID))
-        guard !claimed.isEmpty else { return }
-        let snapshots = try loadSnapshots(claimed)
-        let registry = await registry(for: Set(snapshots.map(\.repository.accountLogin)))
-        await SpaceClaimReconciler(schedulers: registry, spaces: spaces).reconcile(snapshots)
-    }
-
     // MARK: - Preflight (§7.3)
 
     /// Runs the preflight for `repositoryIDs` (nil: every repository with a pending or blocked
@@ -153,13 +133,11 @@ public actor SyncRepository {
     ///
     /// - Parameters:
     ///   - scopeStatus: each account's token scope status (A3), keyed by login.
-    ///   - spaceTakeovers: shared spaces whose stale claim the user confirmed taking over (Q3).
     /// - Throws: `.alreadyRunning`, `.vault(.locked)`, `.sync(.persistenceFailed)`. gh failures
     ///   never throw: they block the affected changes.
     public func preflight(
         repositoryIDs: [RepoID]? = nil,
-        scopeStatus: [String: ScopeStatus] = [:],
-        spaceTakeovers: Set<SpaceID> = []
+        scopeStatus: [String: ScopeStatus] = [:]
     ) async throws(SyncRepositoryError) -> SyncReviewModel {
         try requireNoActiveRun()
         if reconciledGeneration != session.generation {
@@ -176,9 +154,8 @@ public actor SyncRepository {
                 persistence: persistence,
                 values: values,
                 clock: clock,
-                writePolicy: writePolicy,
-                spaces: spaces
-            ).run(snapshots, scopeStatus: scopeStatus, spaceTakeovers: spaceTakeovers)
+                writePolicy: writePolicy
+            ).run(snapshots, scopeStatus: scopeStatus)
         } catch {
             throw .wrap(error)
         }
@@ -210,16 +187,14 @@ public actor SyncRepository {
     /// transaction, in both item tables, before the run starts, so their rows run as ordinary
     /// pending changes; pass the same set to ``DestinationSyncRepository/run(_:includeDeletions:includeHeld:progress:)``.
     /// Repositories created with "clone after" are cloned into `cloneFolder` once the run
-    /// finished. `spaceReason` ("What changed?") goes into every shared space version the run
-    /// publishes.
+    /// finished.
     ///
     /// - Throws: `.alreadyRunning`, `.vault(.locked)`, `.store(_)` when a hold cannot be released.
     public func startRun(
         _ review: SyncReviewModel,
         includeDeletions: Bool,
         includeHeld: Set<SharePackageID> = [],
-        cloneFolder: URL? = nil,
-        spaceReason: String? = nil
+        cloneFolder: URL? = nil
     ) async throws(SyncRepositoryError) -> SyncRunHandle {
         try requireNoActiveRun()
         do {
@@ -235,13 +210,9 @@ public actor SyncRepository {
             }
             Self.log.info("Sync released \(released, privacy: .public) held rows from \(includeHeld.count, privacy: .public) share files")
         }
-        let plan = SyncPlanner.plan(
-            review.preflight(including: includeHeld),
-            includeDeletions: includeDeletions,
-            spaceReason: spaceReason
-        )
+        let plan = SyncPlanner.plan(review.preflight(including: includeHeld), includeDeletions: includeDeletions)
         let registry = await registry(for: Set(plan.repositories.map(\.snapshot.repository.accountLogin)))
-        let executor = SyncExecutor(schedulers: registry, persistence: persistence, values: values, clock: clock, spaces: spaces)
+        let executor = SyncExecutor(schedulers: registry, persistence: persistence, values: values, clock: clock)
         let handle = SyncRunHandle(executor: executor, plan: plan, cloner: cloner, cloneFolder: cloneFolder)
         activeRun = handle
         Self.log.info("Sync run started with \(plan.changeCount, privacy: .public) changes")

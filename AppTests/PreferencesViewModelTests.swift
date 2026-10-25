@@ -69,6 +69,24 @@ struct PreferencesViewModelTests {
         #expect(PreferencesManager(store: store).ghPathOverride == nil)
     }
 
+    /// 0.9's nearby name (personal data), visibility, mute and remote port go at the first launch.
+    @Test func settingsOfTheRemovedFeaturesAreDeleted() {
+        let store = InMemoryPreferencesStore()
+        store.set("Ana's MacBook", forKey: "preferences.nearbyDisplayName")
+        store.set("everyone", forKey: "preferences.nearbyVisibility")
+        store.set(true, forKey: "preferences.mutesAllPings")
+        store.set(7443, forKey: "preferences.remoteSpacePort")
+        store.set(10, forKey: PreferencesManager.Key.autoLockMinutes)
+
+        _ = PreferencesManager(store: store)
+
+        #expect(store.string(forKey: "preferences.nearbyDisplayName") == nil)
+        #expect(store.string(forKey: "preferences.nearbyVisibility") == nil)
+        #expect(!store.bool(forKey: "preferences.mutesAllPings"))
+        #expect(store.integer(forKey: "preferences.remoteSpacePort") == nil)
+        #expect(store.integer(forKey: PreferencesManager.Key.autoLockMinutes) == 10)
+    }
+
     @Test func resetVaultNeedsPasswordAndTypedWord() async throws {
         let harness = try await TestHarness(vault: .locked)
         let viewModel = PreferencesViewModel(app: harness.app)

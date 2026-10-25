@@ -150,25 +150,13 @@ extension GHCommandScheduler {
 
     // MARK: - Variables
 
-    /// B8/B9 without the shared space marker. Each listing's value is `SecretBytes`; encrypt,
+    /// B8/B9 without 0.9's shared space marker. Each listing's value is `SecretBytes`; encrypt,
     /// then wipe it.
     public func listVariables(_ repo: GHRepoRef, environment: String? = nil) async throws(GHError)
         -> [GHVariableListingModel]
     {
-        try await listVariableScope(repo, environment: environment).variables
-    }
-
-    /// B8/B9 with the shared space marker split off (v0.6.0, S4): the same single gh call.
-    public func listVariableScope(_ repo: GHRepoRef, environment: String? = nil) async throws(GHError)
-        -> GHVariableScopeListingModel
-    {
         let command = try GHVariablesCommands.list(repo: repo, environment: environment)
-        return GHVariablesCommands.splitSpaceMarker(try GHVariablesCommands.decodeList(try await run(command)))
-    }
-
-    /// C7 for the shared space marker (S4).
-    public func setSpaceMarker(_ marker: String, repo: GHRepoRef, environment: String? = nil, isUpdate: Bool) async throws(GHError) {
-        _ = try await run(try GHVariablesCommands.setSpaceMarker(marker, repo: repo, environment: environment, isUpdate: isUpdate))
+        return GHVariablesCommands.droppingSpaceMarker(try GHVariablesCommands.decodeList(try await run(command)))
     }
 
     /// C7: `value` on stdin. The caller still wipes its own `value`.

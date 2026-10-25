@@ -112,38 +112,6 @@ struct ShareSubsetPackageTests {
         #expect(SharePackageModel.currentSchemaVersion == SharePackageModel.folderSchemaVersion)
     }
 
-    // MARK: - Filtering (nearby DECISION)
-
-    @Test func filteringKeepsPoliciesAndDropsEmptyPartialEnvironments() throws {
-        let package = PackageFactory.package(
-            secrets: [PackageFactory.item("API_KEY")],
-            environments: [
-                PackageFactory.environment("staging", secrets: [PackageFactory.item("S")]),
-                PackageFactory.partialEnvironment("production", secrets: [PackageFactory.item("P")]),
-            ]
-        )
-        let staging = try #require(package.repository.environments.first)
-        let production = try #require(package.repository.environments.last)
-        let productionItem = try #require(production.secrets.first)
-
-        // A partial environment accepted only by its id says nothing: dropped.
-        let onlyPartialID = package.filtered(to: [production.id])
-        #expect(onlyPartialID.repository.environments.isEmpty)
-        #expect(SharePackageValidator.violation(in: onlyPartialID, mode: .payload) == nil)
-
-        // A whole environment accepted by its id keeps its policy.
-        let onlyWholeID = package.filtered(to: [staging.id])
-        #expect(onlyWholeID.repository.environments.map(\.name) == ["staging"])
-        #expect(onlyWholeID.repository.environments.first?.deploymentBranchPolicy == staging.deploymentBranchPolicy)
-
-        // Accepting an item never adds a policy; the schema version stays.
-        let item = package.filtered(to: [production.id, productionItem.id])
-        #expect(item.repository.environments.first?.includesBranchPolicy == false)
-        #expect(item.schemaVersion == package.schemaVersion)
-        #expect(SharePackageValidator.violation(in: item, mode: .payload) == nil)
-        #expect(item.manifest() == package.manifest().filtered(to: [production.id, productionItem.id]))
-    }
-
     // MARK: - Counts
 
     @Test func contentSummaryCountsPerScopeWithoutValues() {

@@ -30,14 +30,6 @@ struct MainActions {
     /// Selects a repository's Overview at a stage (nil: the Overview's default), after a project
     /// share import (v0.9.0).
     var openOverview: (RepoID, String?) -> Void = { _, _ in }
-    /// Get Updates from Teammates (v0.6.0): pulls every shared space, returns when done.
-    var syncSpaces: () async -> Void = {}
-    /// A Sync run published shared versions: members are told right away.
-    var spacesPublished: () -> Void = {}
-    /// Who this Mac is in the shared spaces it creates or changes (login, name, Mac name).
-    var spaceIdentity: () -> SpaceLocalIdentityModel = { SpaceLocalIdentityModel(login: "", displayName: "", macName: "") }
-    /// Versions teammates brought in (the space screens reload on change).
-    var spaceSyncCount: () -> Int = { 0 }
 
     /// Shows a scope of a repository, a folder or a destination.
     func openPlace(_ place: ItemPlaceModel) {
@@ -68,8 +60,8 @@ struct MainActions {
 /// - Values are decrypted only through ``config`` (`reveal`) or the feature's repository, and
 ///   copied only through ``copyValue(of:)`` / ``clipboard`` (§5.9).
 /// - Value entry uses `SecretValueEditor` (§5.11).
-/// - `.env` export needs `reauth.authorizeEnvExport(with:session:)`; `.fxvault` export and nearby
-///   send need `reauth.authorizeShare(_:with:session:)`, with ``reauthPrompt(for:)`` for Touch ID.
+/// - `.env` export needs `reauth.authorizeEnvExport(with:session:)`; `.fxvault` export
+///   needs `reauth.authorizeShare(_:with:session:)`, with ``reauthPrompt(for:)`` for Touch ID.
 struct FeatureDependencies {
     let session: VaultSession
     let config: ConfigRepository
@@ -79,12 +71,6 @@ struct FeatureDependencies {
     let drift: DriftRepository
     let envFiles: EnvFileRepository
     let sharing: SharingRepository
-    /// Nearby chat (v0.2.0): conversations and the items that can be attached.
-    let chat: ChatRepository
-    /// Teammates (v0.5.0) and their remote access (v0.6.0).
-    let team: TeamRepository
-    /// Shared spaces (v0.6.0): share a scope, members, history.
-    let spaces: SpaceRepository
     /// Folders of secrets and variables (v0.7.0).
     let folders: FolderRepository
     /// Runtime destinations and provider connections (v0.8.0).
@@ -104,7 +90,7 @@ struct FeatureDependencies {
     let passphraseGenerator: PassphraseGenerator?
     let clock: any VaultClock
     /// Internet reachability. While offline, gh-backed actions are disabled with
-    /// `ConnectivityCopy.offlineHelp`; nearby sharing (peer-to-peer) does not depend on it.
+    /// `ConnectivityCopy.offlineHelp`; sharing a file does not depend on it.
     let connectivity: ConnectivityMonitor
     /// Report the outcome of gh-backed calls here (`record(error)` / `recordSuccess()`), which
     /// drives the "GitHub isn't responding" banner.
@@ -115,8 +101,8 @@ struct FeatureDependencies {
     let touchIDStatus: () -> BiometricUnlockStatus?
 
     /// Whether a share import preview reads GitHub's listing: only when gh is ready and the Mac
-    /// is online. Otherwise it plans without it at once (an AWDL-only nearby receive has no
-    /// route to GitHub, and each attempt would retry and time out first).
+    /// is online. Otherwise it plans without it at once (each attempt would retry and time out
+    /// first).
     var checksGitHub: Bool {
         actions.isGitHubReady() && connectivity.isOnline
     }
@@ -131,9 +117,6 @@ struct FeatureDependencies {
         drift = data.drift
         envFiles = data.envFiles
         sharing = data.sharing
-        chat = data.chat
-        team = data.team
-        spaces = data.spaces
         folders = data.folders
         destinations = data.destinations
         overview = data.overview
@@ -214,10 +197,6 @@ struct FeatureDependencies {
             String(localized: "touchID.prompt.export", defaultValue: "export a .env file")
         case .share:
             String(localized: "touchID.prompt.share", defaultValue: "share configuration")
-        case .nearbySend:
-            String(localized: "touchID.prompt.nearbySend", defaultValue: "send configuration to a nearby Mac")
-        case .spaceHistory:
-            String(localized: "touchID.prompt.spaceHistory", defaultValue: "reveal an older value")
         }
         return BiometricPrompt(reason: reason, fallbackTitle: fallback)
     }

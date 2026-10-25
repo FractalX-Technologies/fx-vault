@@ -11,13 +11,13 @@ import VaultCore
 /// change of a row held by a share file (and a new or renamed environment that waits for one).
 /// ``heldShares`` lists those files for the From Files review; the user includes some, the app
 /// shows ``preflight(including:)`` and passes the same set to
-/// ``SyncRepository/startRun(_:includeDeletions:includeHeld:cloneFolder:spaceReason:)``.
+/// ``SyncRepository/startRun(_:includeDeletions:includeHeld:cloneFolder:)``.
 public struct SyncReviewModel: Sendable, Hashable {
     /// The run without any held change.
     public var preflight: SyncPreflightModel
     /// Executable variable sets whose name or value looks like a credential, held ones left out.
     /// The app asks "Push these as variables anyway?" before
-    /// ``SyncRepository/startRun(_:includeDeletions:includeHeld:cloneFolder:spaceReason:)``.
+    /// ``SyncRepository/startRun(_:includeDeletions:includeHeld:cloneFolder:)``.
     public var credentialWarnings: [SyncCredentialWarningModel]
     /// Share files whose rows wait for the From Files review, most recent import first. Every
     /// file is offered again at each Sync until it is included or released.

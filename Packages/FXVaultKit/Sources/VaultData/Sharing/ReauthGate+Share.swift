@@ -2,8 +2,8 @@ import Foundation
 import VaultCore
 
 extension ReauthGate {
-    /// Re-authenticates for a share (``ReauthPurpose/share`` or ``ReauthPurpose/nearbySend``)
-    /// and returns the single-use authorization ``SharingRepository`` requires.
+    /// Re-authenticates for a share (``ReauthPurpose/share``) and returns the single-use
+    /// authorization ``SharingRepository`` requires.
     ///
     /// - Parameter session: the session the share reads from (the app's only session).
     /// - Throws: whatever ``authorize(_:with:)`` throws (`VaultError.locked`, `.wrongPassword`,

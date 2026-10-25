@@ -299,12 +299,8 @@ CREATE TABLE teammates (device_id TEXT PRIMARY KEY CHECK (...same...),
   needs_card_update INTEGER NOT NULL DEFAULT 0 CHECK (needs_card_update IN (0, 1)));
 ```
 
-- `secret_ct` = this device's `signingSeed ‖ agreementKey ‖ announceKey` (96 bytes) sealed as a
-  secret field (`SecretFieldAAD`: table, column, device id bytes); `announce_ct` = a teammate's
-  announce key, sealed the same way. Both are re-sealed by DEK rotation (`DEKRotator`).
-- `TeamRepository` (VaultData) owns both tables: keys are created on first use; removing a
-  teammate renews this device's announce key and sets `needs_card_update` on every remaining
-  teammate; `last_seen_at` is written at most once a minute.
+- `secret_ct` and `announce_ct` were sealed as secret fields (`SecretFieldAAD`). Both tables are
+  dropped by `v15_drop_teammates`.
 
 ### v11_spaces (v0.6.0)
 
@@ -332,19 +328,7 @@ CREATE TABLE teammate_addresses (device_id TEXT PRIMARY KEY REFERENCES teammates
   last_connected_at TEXT, CHECK ((host IS NULL) = (port IS NULL)));
 ```
 
-- One space per scope. `head_version`/`head_hash` are the verified head; every read re-verifies
-  the whole `space_versions` log from genesis and refuses a stored head that does not match it.
-  `claimed_version` is set by a claim and cleared only when the `published` marker is confirmed
-  on GitHub (or the claim is lost); launch reconciliation finishes it.
-- `space_versions` is append-only: `data` is the version's signed wire form (SHARING-PROTOCOL.md
-  §11.1), whose payload (names and values) is encrypted under the epoch key. Removing a
-  repository or environment removes its space, versions and keys.
-- `key_ct` = one epoch key sealed as a secret field (`SecretFieldAAD`: table, column,
-  `spaceID ‖ u32be(epoch)`); re-sealed by DEK rotation.
-- `teammate_addresses`: remote space sync per teammate (Q4). A row with `allows_remote = 1` and no
-  address only accepts that teammate's connections. Removing the teammate removes the row.
-- `SpaceRepository` (VaultData) owns `spaces`, `space_keys` and `space_versions`;
-  `TeamRepository` owns `teammate_addresses`.
+- Every table here is dropped by `v15_drop_teammates`.
 
 ### v12_folders (v0.7.0)
 
@@ -365,7 +349,7 @@ CREATE INDEX folder_items_link ON folder_items(link_id) WHERE link_id IS NOT NUL
 ```
 
 - Folders hold secrets and variables that belong to no repository. They are separate tables on
-  purpose: no sync path (`ChangeSetBuilder`, preflight, executor, drift, scope spaces) reads
+  purpose: no sync path (`ChangeSetBuilder`, preflight, executor, drift) reads
   them, so a folder item can never reach GitHub by itself. Repositories get folder items only as
   copies written into `config_items`.
 - `name_key` = `FolderNameValidator.foldKey(name)` (case-insensitive, NFC). `sort_order` is the
@@ -439,7 +423,7 @@ CREATE INDEX destination_journal_time ON destination_journal(started_at);
 
 - Runtime destinations of a repository: an Azure Key Vault, a Supabase project's Edge Function
   secrets or one Vercel environment of a project. No GitHub sync path (`ChangeSetBuilder`,
-  preflight, executor, drift, scope spaces) reads these tables; destination items reach their
+  preflight, executor, drift) reads these tables; destination items reach their
   provider only through `DestinationSyncRepository`.
 - `target_key` = `DestinationTargetModel.targetKey`, lowercase: `kv|<vault>`, `sb|<ref>` or
   `vc|<team or ->|<project id>|<environment>`. A repository cannot add the same place twice.
@@ -541,19 +525,32 @@ ALTER TABLE imported_share_packages ADD COLUMN sender_device_id TEXT
   column (values, AADs, fingerprints and sync state are untouched). `ConfigItemState` and
   `DestinationItemState` carry it as `shareHold`, so filters need no ciphertext; the models
   expose it as `heldBy`. DEK rotation keeps holds.
-- `imported_share_packages.sender_device_id` is the verified sender of a teammates file (its
-  signature checked against that teammate's key); NULL for a passphrase file, whose sender name
-  is unverified. Sync's From Files review shows "verified" only when it is set.
-- `teammates` is rebuilt so `announce_ct` can be NULL: the inviter of a remote pairing is stored
-  before its announce key arrives (in a teammates file or a nearby card update). The CHECK keeps
-  a nearby-paired row with a key. Every existing row is copied unchanged as `nearby`. The rebuild
-  runs with GRDB's deferred foreign-key checks, so `teammate_addresses` rows survive the drop and
-  still cascade afterwards (`MigrationTests` seeds a teammate at v10 and its address at v11).
-- `TeamRepository.teammateCards()` gives a teammate without a key a fresh random announce key
-  that is never stored, so presence matches none of its pseudonyms while sessions it starts still
-  verify its signing key; `fillAnnounceKeyIfMissing` stores the key from a verified file and never
-  replaces a known one. A remote pairing confirmed by the inviter sets `needs_card_update` on the
-  new teammate. DEK rotation re-seals every non-null `announce_ct` and skips NULL.
+- `imported_share_packages.sender_device_id` is the verified sender of a 0.9 teammates file;
+  NULL for a passphrase file, whose sender name is unverified, and for every file 1.0 imports.
+  Sync's From Files review shows "verified" only when it is set.
+- `teammates` was rebuilt so `announce_ct` could be NULL (remote pairing); v15 drops it.
+- `sent_shares.mode = 'teammates'` and its `recipients` exist only in 0.9 rows; 1.0 writes
+  `passphrase` and `[]`, and still lists the old rows.
+
+### v15_drop_teammates (1.0)
+
+```sql
+DROP TABLE teammate_addresses;
+DROP TABLE space_versions;
+DROP TABLE space_keys;
+DROP TABLE spaces;
+DROP TABLE teammates;
+DROP TABLE device_identity;
+```
+
+- 1.0 removes nearby sharing, Nearby Chat, teammates and shared spaces. Their rows (this Mac's
+  device keys, paired teammates' keys and addresses, space keys and versions) are never read
+  again; dropping them leaves no key material behind. Children are dropped before their parents.
+- `secure_delete` zeroes the freed pages in `vault.sqlite`, but the WAL keeps copies until a
+  checkpoint, so `VaultMigrator.migrate` runs `checkpointTruncate()` after any pending migration
+  (`droppingTheTeammateTablesLeavesNoKeyBytesInTheWAL`).
+- `MigrationTests` seeds every dropped table from v10 on and checks they are gone after
+  migrating; `sent_shares` and the share holds read back unchanged.
 
 ## Tables at a glance
 
@@ -562,18 +559,12 @@ ALTER TABLE imported_share_packages ADD COLUMN sender_device_id TEXT
 | `vaults` | `VaultRecord` | `VaultRecordStore` | Single row (`id = 1`) |
 | `key_wraps` | `KeyWrapRecord` | `VaultRecordStore` | One row per unlock method; map to VaultCrypto with `KeyWrapModel(storedMethod:…)` |
 | `accounts` | `AccountRecord` | `AccountStore` | |
-| `repositories` | `RepositoryRecord` | `RepoStore` | Deleting a repository cascades to environments, items, patterns, spaces and destinations and nulls journal rows |
+| `repositories` | `RepositoryRecord` | `RepoStore` | Deleting a repository cascades to environments, items, patterns and destinations and nulls journal rows |
 | `environments` | `EnvironmentRecord` | `ConfigStore` | Patterns are attached when the policy is custom |
 | `deployment_branch_patterns` | `BranchPatternRecord` | `ConfigStore` | |
 | `config_items` | `ConfigItemRecord` (with ciphertext), `ConfigItemState` (read-only projection without ciphertext) | `ConfigStore` | Status is derived with `ConfigSyncStatus.derive(state.syncFacts)`; `link_id` groups linked copies (v0.4.1); `share_hold` (v0.9.0) |
 | `sync_journal` | `SyncJournalRecord` | `SyncJournalStore` | Names and push fingerprints only, never values |
-| `imported_share_packages` | `ImportedSharePackageRecord` | `SharePackageStore` | `sender_device_id` for a teammates file, v0.9.0 |
-| `device_identity` | `DeviceIdentityRecord` | `TeamStore` | Single row (`id = 1`), v0.5.0 |
-| `teammates` | `TeammateRecord` (`TeammateModel` without keys) | `TeamStore` | v0.5.0; `announce_ct` nullable and `paired_via` since v0.9.0 |
-| `spaces` | `SpaceRecord` | `SpaceStore` | One per shared scope, v0.6.0 |
-| `space_keys` | `SpaceKeyRecord` | `SpaceStore` | Epoch keys, sealed, v0.6.0 |
-| `space_versions` | `SpaceVersionRecord` | `SpaceStore` | Append-only signed versions, v0.6.0 |
-| `teammate_addresses` | `TeammateAddressRecord` | `SpaceStore` | Remote space sync per teammate (Q4), v0.6.0 |
+| `imported_share_packages` | `ImportedSharePackageRecord` | `SharePackageStore` | `sender_device_id` for a 0.9 teammates file, v0.9.0 |
 | `folders` | `FolderRecord` | `FolderStore` | Unique by `name_key`, sidebar order, v0.7.0 |
 | `folder_items` | `FolderItemRecord` (with ciphertext; `FolderItemModel` without) | `FolderStore` | Always with a value; `link_id` groups span `config_items`, v0.7.0 |
 | `provider_connections` | `ConnectionRecord` (with the sealed token; `ConnectionModel` without) | `DestinationStore` | Supabase and Vercel tokens, v0.8.0 |
@@ -641,9 +632,9 @@ fetch ends the stream with a `StoreError`; observation stops when the consumer s
 
 ## Not in the database
 
-Non-secret preferences live in `UserDefaults` (`PreferencesManager`): `defaultCloneFolder`,
-`autoLockMinutes`, `ghPathOverride`, `lastResolvedGHPath`, `nearbyDisplayName`,
-`lastSelectedRepoId`. The Touch ID copy of the DEK lives in the keychain (plan §5.5).
+Non-secret preferences live in `UserDefaults` (`PreferencesManager`): `autoLockMinutes`,
+`cloneFolderPath`, `ghPathOverride`, `trustedGHPath`, `trustedGHOwnerUID`,
+`recoveryKeyConfirmationPending`, `touchIDOfferAnswered`. The Touch ID copy of the DEK lives in the keychain (plan §5.5).
 
 Destinations (v0.8.0) keep these out of the database too:
 - Azure Key Vault access tokens from `az account get-access-token` live in memory only

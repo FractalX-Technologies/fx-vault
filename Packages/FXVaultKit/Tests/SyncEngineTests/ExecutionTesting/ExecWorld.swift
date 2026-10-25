@@ -182,16 +182,16 @@ struct ExecWorld {
         vault.snapshots[0]
     }
 
-    func preflightService(writePolicy: WriteCollaboratorPolicy = .default, spaces: (any SyncSpaceCoordinating)? = nil) -> SyncPreflight {
-        SyncPreflight(schedulers: registry, persistence: vault, values: vault, clock: clock, writePolicy: writePolicy, spaces: spaces)
+    func preflightService(writePolicy: WriteCollaboratorPolicy = .default) -> SyncPreflight {
+        SyncPreflight(schedulers: registry, persistence: vault, values: vault, clock: clock, writePolicy: writePolicy)
     }
 
     func preflight(scopeStatus: [String: ScopeStatus] = [:]) async throws -> SyncPreflightModel {
         try await preflightService().run(vault.snapshots, scopeStatus: scopeStatus)
     }
 
-    func executor(spaces: (any SyncSpaceCoordinating)? = nil) -> SyncExecutor {
-        SyncExecutor(schedulers: registry, persistence: vault, values: vault, clock: clock, spaces: spaces)
+    func executor() -> SyncExecutor {
+        SyncExecutor(schedulers: registry, persistence: vault, values: vault, clock: clock)
     }
 
     func reconciler() -> SyncReconciler {
@@ -203,17 +203,6 @@ struct ExecWorld {
     func sync(includeDeletions: Bool = true) async throws -> SyncResultModel {
         let preflight = try await preflight()
         return try await executor().run(SyncPlanner.plan(preflight, includeDeletions: includeDeletions))
-    }
-
-    /// Preflight, plan and run with shared spaces (v0.6.0).
-    @discardableResult
-    func sync(
-        spaces: any SyncSpaceCoordinating,
-        takeovers: Set<SpaceID> = [],
-        spaceReason: String? = nil
-    ) async throws -> SyncResultModel {
-        let preflight = try await preflightService(spaces: spaces).run(vault.snapshots, spaceTakeovers: takeovers)
-        return try await executor(spaces: spaces).run(SyncPlanner.plan(preflight, spaceReason: spaceReason))
     }
 
     /// The journal rows of `command`.

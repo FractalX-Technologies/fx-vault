@@ -39,29 +39,6 @@ public enum GHVariablesCommands {
         )
     }
 
-    /// C7 for the shared space marker (v0.6.0, S4): `gh variable set FXVAULT_SPACE --repo=<O>/<R>
-    /// [--env=<E>]`, the marker on stdin. The only command that writes the reserved name
-    /// (``GitHubNameValidator/spaceMarkerName``), which ``set(name:repo:environment:value:isUpdate:)``
-    /// refuses.
-    public static func setSpaceMarker(
-        _ marker: String,
-        repo: GHRepoRef,
-        environment: String? = nil,
-        isUpdate: Bool
-    ) throws(GHError) -> GHCommand {
-        let value = SecretBytes(utf8: marker)
-        defer { value.wipe() }
-        try GHSecretsCommands.validateValue(value)
-        return try GHCommand(
-            operation: .variableSet,
-            arguments: ["variable", "set", GitHubNameValidator.spaceMarkerName, repo.repoFlag]
-                + (try GHNameArguments.environmentFlag(environment)),
-            logTemplate: "variable set {n} --repo={o}/{r}\(GHNameArguments.environmentTemplate(environment))",
-            stdinValue: value.copy(),
-            writeCost: isUpdate ? Limits.variableUpdateWriteCost : Limits.defaultWriteCost
-        )
-    }
-
     /// C8: `gh variable delete <N> --repo=<O>/<R> [--env=<E>]`.
     public static func delete(name: String, repo: GHRepoRef, environment: String? = nil) throws(GHError) -> GHCommand {
         let name = try GHNameArguments.itemName(name)
@@ -72,20 +49,14 @@ public enum GHVariablesCommands {
         )
     }
 
-    /// B8/B9 with the shared space marker split off (S4): the marker's value, and every other
-    /// variable. The marker's listing is wiped.
-    public static func splitSpaceMarker(_ listings: [GHVariableListingModel]) -> GHVariableScopeListingModel {
-        var variables: [GHVariableListingModel] = []
-        var marker: String?
-        for listing in listings {
-            guard GitHubNameValidator.foldKey(listing.name) == GitHubNameValidator.spaceMarkerName else {
-                variables.append(listing)
-                continue
-            }
-            marker = listing.value.withUnsafeBytes { String(decoding: $0, as: UTF8.self) }
+    /// Every listing but `FXVAULT_SPACE`, the marker 0.9's shared spaces wrote (S4), which is
+    /// wiped: repositories shared with 0.9 still carry it, and it is FX Vault's, not the user's.
+    public static func droppingSpaceMarker(_ listings: [GHVariableListingModel]) -> [GHVariableListingModel] {
+        listings.filter { listing in
+            guard GitHubNameValidator.foldKey(listing.name) == GitHubNameValidator.spaceMarkerName else { return true }
             listing.wipe()
+            return false
         }
-        return GHVariableScopeListingModel(variables: variables, spaceMarker: marker)
     }
 
     /// Decodes B8/B9 into listings whose values are `SecretBytes`, then wipes stdout.

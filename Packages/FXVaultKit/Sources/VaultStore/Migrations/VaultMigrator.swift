@@ -23,6 +23,7 @@ public enum VaultMigrator {
         case v12Folders = "v12_folders"
         case v13Destinations = "v13_destinations"
         case v14ProjectShares = "v14_project_shares"
+        case v15DropTeammates = "v15_drop_teammates"
 
         /// The newest migration this build knows.
         public static var latest: Migration {
@@ -54,6 +55,7 @@ public enum VaultMigrator {
             case .v12Folders: MigrationSQL.v12Folders
             case .v13Destinations: MigrationSQL.v13Destinations
             case .v14ProjectShares: MigrationSQL.v14ProjectShares
+            case .v15DropTeammates: MigrationSQL.v15DropTeammates
             }
         }
     }
@@ -71,7 +73,15 @@ public enum VaultMigrator {
             guard !isSuperseded else {
                 throw StoreError.schemaNewerThanBuild
             }
+            let pending = try database.writer.read { db in
+                try !migrator.hasCompletedMigrations(db)
+            }
             try migrator.migrate(database.writer, upTo: target.rawValue)
+            // A migration can drop key material (v15 drops the teammate and space keys):
+            // secure_delete zeroes vault.sqlite, but copies stay in the WAL until a checkpoint.
+            if pending {
+                try database.checkpointTruncate()
+            }
         }
     }
 

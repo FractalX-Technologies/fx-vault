@@ -79,26 +79,10 @@ final class AppViewModel {
     /// `.fxvault` files opened from Finder or AirDrop, oldest first (§10 Scenes). The main
     /// window imports them one by one after unlock.
     private(set) var pendingImports: [URL] = []
-    /// `.fxvcard` teammate cards opened from Finder, Mail or WhatsApp (v0.9.0), oldest first.
-    /// The main window shows the remote pairing sheet for each after unlock.
-    private(set) var pendingPairingCards: [URL] = []
     /// The user chose "Not Now" on ``GHSetupScreen`` for this launch.
     private(set) var isGHSetupDeferred = false
     /// The result of the launch reconciliation after the last unlock (§7.3), nil until it ran.
     private(set) var lastReconciliation: SyncReconciliationModel?
-    /// Bumped when a chat waits for the Nearby Chat window (``takePendingChatStart()``).
-    private(set) var chatStartRequests = 0
-    /// True while the Nearby Chat window advertises this Mac (Everyone nearby yields to it).
-    private(set) var isChatWindowAdvertising = false
-    /// A Settings tab another window asked for (the sidebar's Add Teammate…, v0.7.0); the
-    /// Settings window shows it and clears it.
-    var requestedPreferencesTab: PreferencesViewModel.Tab?
-    /// The gh login this Mac's teammate card names (the first account gh lists), or empty.
-    @ObservationIgnored private(set) var primaryLogin = ""
-    /// Teammates nearby: presence, bubbles and pings (v0.5.0).
-    @ObservationIgnored let teamPresence: TeamPresenceManager
-    /// Shared spaces between teammates (v0.6.0): pulls and answers versions.
-    @ObservationIgnored let spaceSync: SpaceSyncManager
 
     @ObservationIgnored let container: AppContainer
     @ObservationIgnored private var lockObservers: [WeakLockObserver] = []
@@ -110,37 +94,12 @@ final class AppViewModel {
     /// Opens (or brings back) the main window; set by the main window's root view, which has the
     /// SwiftUI `openWindow` action.
     @ObservationIgnored private var mainWindowOpener: (() -> Void)?
-    /// Opens (or brings back) the Nearby Chat window; set by the main window's root view.
-    @ObservationIgnored private var chatWindowOpener: (() -> Void)?
-    /// A chat started from a bubble or a connection, for the Nearby Chat window.
-    @ObservationIgnored private var pendingChatStart: NearbyChatStartModel?
 
     /// The file extension of share files (§9.1; UTType `io.fractalx.fxvault.share`).
     static let shareFileExtension = "fxvault"
 
     init(container: AppContainer) {
         self.container = container
-        let owner = WeakAppViewModel()
-        teamPresence = TeamPresenceManager(
-            team: container.data.team,
-            preferences: container.preferences,
-            networking: container.teamNetworking,
-            alerts: container.pingAlerts,
-            clock: container.presenceClock,
-            localLogin: { owner.app?.primaryLogin ?? "" },
-            isAppActive: { NSApp?.isActive ?? false },
-            isChatWindowAdvertising: { owner.app?.isChatWindowAdvertising ?? false },
-            startChat: { owner.app?.startChat($0) }
-        )
-        spaceSync = SpaceSyncManager(
-            spaces: container.data.spaces,
-            team: container.data.team,
-            preferences: container.preferences,
-            networking: container.spaceNetworking,
-            clock: container.presenceClock,
-            presence: teamPresence,
-            isAppActive: { NSApp?.isActive ?? false }
-        )
         phase = switch container.vaultManager.state {
         case .noVault: .onboarding
         case .locked: .locked
@@ -154,27 +113,9 @@ final class AppViewModel {
             await self?.refreshGHStatus()
         }
         observePendingCounts()
-        owner.app = self
-        addLockObserver(teamPresence)
-        addLockObserver(spaceSync)
-        let spaceSync = spaceSync
-        teamPresence.spacesConnectionHandler = { spaceSync.answerNearby($0) }
-        teamPresence.teammateSeenHandler = { spaceSync.teammateSeen($0) }
         if phase == .unlocked {
             startReconciliation()
-            startTeammates()
         }
-    }
-
-    /// Who this Mac is in the shared spaces it creates or changes (v0.6.0).
-    var spaceIdentity: SpaceLocalIdentityModel {
-        SpaceLocalIdentityModel.local(login: primaryLogin, preferences: container.preferences)
-    }
-
-    /// Presence and space sync, after an unlock.
-    private func startTeammates() {
-        teamPresence.start()
-        spaceSync.start()
     }
 
     // MARK: - Lock procedure (§5.8)
@@ -250,7 +191,6 @@ final class AppViewModel {
         container.autoLock.recordInteraction()
         phase = .unlocked
         startReconciliation()
-        startTeammates()
     }
 
     /// Called when onboarding's Done step closes.
@@ -264,7 +204,6 @@ final class AppViewModel {
             container.autoLock.recordInteraction()
             phase = .unlocked
             startReconciliation()
-            startTeammates()
         }
     }
 
@@ -273,7 +212,6 @@ final class AppViewModel {
         container.preferences.isRecoveryKeyConfirmationPending = false
         setPendingChangeCount(0)
         pendingImports.removeAll()
-        pendingPairingCards.removeAll()
         lockCount += 1
         runLockPhaseB()
         phase = .onboarding
@@ -410,9 +348,6 @@ final class AppViewModel {
         ghStatus = await container.ghStatusProbe.probe(refreshingShell: refreshingShell)
         if ghStatus.isReady {
             isGHSetupDeferred = false
-            if container.hasSideEffects, let login = try? await container.data.github.accounts().first?.account.login {
-                primaryLogin = login
-            }
         }
     }
 
@@ -472,30 +407,6 @@ final class AppViewModel {
         url.isFileURL && url.pathExtension.lowercased() == shareFileExtension
     }
 
-    /// Queues `.fxvcard` teammate cards (v0.9.0) and brings the main window back. Other URLs are
-    /// ignored.
-    func openPairingCards(_ urls: [URL]) {
-        var added = false
-        for url in urls where Self.isPairingCard(url) {
-            let standardized = url.standardizedFileURL
-            guard !pendingPairingCards.contains(standardized) else { continue }
-            pendingPairingCards.append(standardized)
-            added = true
-        }
-        guard added else { return }
-        requestMainWindow()
-    }
-
-    /// Removes and returns the oldest pending teammate card, once the vault is unlocked.
-    func takeNextPendingPairingCard() -> URL? {
-        guard phase == .unlocked, !pendingPairingCards.isEmpty else { return nil }
-        return pendingPairingCards.removeFirst()
-    }
-
-    static func isPairingCard(_ url: URL) -> Bool {
-        url.isFileURL && url.pathExtension.lowercased() == RemotePairingProtocol.fileExtension
-    }
-
     // MARK: - Main window
 
     /// Called by the main window's root view with its `openWindow` action.
@@ -510,42 +421,6 @@ final class AppViewModel {
         }
         mainWindowOpener?()
     }
-
-    // MARK: - Nearby Chat window (v0.5.0)
-
-    /// Called by the main window's root view with its `openWindow` action.
-    func setChatWindowOpener(_ opener: @escaping () -> Void) {
-        chatWindowOpener = opener
-    }
-
-    /// Hands `start` to the Nearby Chat window and opens it.
-    func startChat(_ start: NearbyChatStartModel) {
-        guard phase == .unlocked else {
-            start.transport.close()
-            return
-        }
-        pendingChatStart?.transport.close()
-        pendingChatStart = start
-        chatStartRequests += 1
-        if container.hasSideEffects {
-            NSApp.activate()
-        }
-        chatWindowOpener?()
-    }
-
-    /// The chat waiting for the Nearby Chat window, once.
-    func takePendingChatStart() -> NearbyChatStartModel? {
-        defer { pendingChatStart = nil }
-        return pendingChatStart
-    }
-
-    /// The Nearby Chat window started or stopped advertising this Mac.
-    func setChatWindowAdvertising(_ isAdvertising: Bool) {
-        guard isChatWindowAdvertising != isAdvertising else { return }
-        isChatWindowAdvertising = isAdvertising
-        teamPresence.chatWindowAdvertisingChanged()
-    }
-
 
     // MARK: - App lifecycle
 
@@ -597,16 +472,6 @@ final class AppViewModel {
         RecoveryResetViewModel(app: self)
     }
 
-    /// Who can see this Mac nearby (Preferences › Teammates and the sidebar's TEAMMATES menu):
-    /// saved, and presence restarts with it while unlocked.
-    func setNearbyVisibility(_ visibility: NearbyVisibility) {
-        guard visibility != container.preferences.nearbyVisibility else { return }
-        container.preferences.nearbyVisibility = visibility
-        if phase == .unlocked {
-            teamPresence.start()
-        }
-    }
-
     func makePreferencesViewModel() -> PreferencesViewModel {
         PreferencesViewModel(app: self)
     }
@@ -618,11 +483,6 @@ final class AppViewModel {
     func makeMainViewModel() -> MainViewModel {
         MainViewModel(app: self)
     }
-}
-
-/// Lets the presence manager's closures reach the view model that owns it.
-private final class WeakAppViewModel {
-    weak var app: AppViewModel?
 }
 
 private struct WeakLockObserver {

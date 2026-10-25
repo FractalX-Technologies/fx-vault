@@ -38,13 +38,6 @@ struct SyncSummaryView: View {
                 if !viewModel.credentialRows.isEmpty {
                     credentialSection
                 }
-                if viewModel.publishesSharedVersions {
-                    FXTextField(
-                        label: SyncCopy.spaceReasonTitle,
-                        text: $viewModel.spaceReason,
-                        prompt: SyncCopy.spaceReasonPlaceholder
-                    )
-                }
                 limitSection
             }
             .frame(maxWidth: .infinity, alignment: .leading)

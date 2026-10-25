@@ -117,29 +117,21 @@ struct CommandBuilderTests {
             == ["variable", "delete", "API_URL", "--repo=owner-a/repo-a", "--env=qa"])
     }
 
-    /// v0.6.0 (S4): the marker is the only write of the reserved name; user items cannot use it.
-    @Test func spaceMarkerCommands() throws {
+    /// 0.9's shared spaces wrote `FXVAULT_SPACE` (S4): 1.0 never writes it, keeps the name
+    /// reserved, and drops it from listings so a 0.9 repository never shows it as a variable.
+    @Test func theOldSpaceMarkerIsReservedAndNeverListed() throws {
         let repo = try TestValues.repo()
-        let marker = try GHVariablesCommands.setSpaceMarker("{\"v\":1}", repo: repo, environment: "qa", isUpdate: false)
-        #expect(marker.arguments == ["variable", "set", "FXVAULT_SPACE", "--repo=owner-a/repo-a", "--env=qa"])
-        #expect(marker.writeCost == Limits.defaultWriteCost)
-        #expect(marker.stdinValue.map { $0.withUnsafeBytes { String(decoding: $0, as: UTF8.self) } } == "{\"v\":1}")
         #expect(throws: GHError.invalidInput(.invalidName(.reservedName))) {
             try GHVariablesCommands.set(name: "fxvault_space", repo: repo, value: TestValues.secret("v"), isUpdate: false)
         }
         #expect(throws: GHError.invalidInput(.invalidName(.reservedName))) {
             try GHVariablesCommands.delete(name: "FXVAULT_SPACE", repo: repo)
         }
-    }
-
-    @Test func listingsSplitTheSpaceMarkerOff() {
-        let split = GHVariablesCommands.splitSpaceMarker([
+        let listed = GHVariablesCommands.droppingSpaceMarker([
             GHVariableListingModel(name: "API_URL", value: TestValues.secret("https://example.com"), updatedAt: nil, createdAt: nil),
             GHVariableListingModel(name: "FXVAULT_SPACE", value: TestValues.secret("{\"v\":2}"), updatedAt: nil, createdAt: nil),
         ])
-        #expect(split.variables.map(\.name) == ["API_URL"])
-        #expect(split.spaceMarker == "{\"v\":2}")
-        #expect(GHVariablesCommands.splitSpaceMarker([]).spaceMarker == nil)
+        #expect(listed.map(\.name) == ["API_URL"])
     }
 
     @Test func repoCommands() throws {

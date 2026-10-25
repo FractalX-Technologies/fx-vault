@@ -4,8 +4,8 @@ import SharingKit
 import VaultCore
 import VaultData
 
-/// Where a received copy of a folder goes (v0.7.0, tasks/todo.md F7), for a `.fxvault` file and
-/// a Nearby Chat card alike: **Save as Folder** (a new folder, by default named as the sender's,
+/// Where a received copy of a folder goes (v0.7.0, tasks/todo.md F7), from a `.fxvault` file:
+/// **Save as Folder** (a new folder, by default named as the sender's,
 /// or merged into one of this vault's folders where names it already has are kept or replaced),
 /// or **Import Into a Repository** (a scope of a vault repository, through the usual import
 /// preview). A folder of the same name is preselected for merging. Names and counts only.
@@ -54,7 +54,7 @@ final class FolderDestinationModel {
         if let same = folders.first(where: { $0.nameKey == FolderNameValidator.foldKey(senderFolderName) }) {
             folderChoice = .existing(same.id)
         }
-        repositories = (try? dependencies.chat.importTargets()) ?? []
+        repositories = (try? dependencies.sharing.importTargets()) ?? []
     }
 
     // MARK: - Save as Folder

@@ -16,7 +16,6 @@ final class PreferencesViewModel: LockObserving {
         case general
         case security
         case accounts
-        case teammates
         case destinations
         case sharing
         case advanced
@@ -37,7 +36,6 @@ final class PreferencesViewModel: LockObserving {
 
     let security: SecuritySettingsViewModel
     let accounts: AccountsSettingsViewModel
-    let teammates: TeammatesSettingsViewModel
     let destinations: DestinationsSettingsViewModel
     /// The share files this Mac sent (v0.9.0).
     let sharing: SharingSettingsViewModel
@@ -48,7 +46,6 @@ final class PreferencesViewModel: LockObserving {
         self.app = app
         security = SecuritySettingsViewModel(app: app)
         accounts = AccountsSettingsViewModel(app: app)
-        teammates = TeammatesSettingsViewModel(app: app)
         destinations = DestinationsSettingsViewModel(app: app)
         sharing = SharingSettingsViewModel(app: app)
         app.addLockObserver(self)
@@ -56,18 +53,6 @@ final class PreferencesViewModel: LockObserving {
 
     var phase: VaultPhase {
         app.phase
-    }
-
-    /// The tab another window asked for (v0.7.0), or nil.
-    var requestedTab: Tab? {
-        app.requestedPreferencesTab
-    }
-
-    /// Shows the requested tab once.
-    func showRequestedTab() {
-        guard let tab = app.requestedPreferencesTab else { return }
-        selectedTab = tab
-        app.requestedPreferencesTab = nil
     }
 
     /// True when the Security and Accounts tabs can be used.
@@ -92,17 +77,6 @@ final class PreferencesViewModel: LockObserving {
 
     func setCloneFolder(_ url: URL?) {
         app.container.preferences.setCloneFolder(url)
-    }
-
-    /// Preferences › General › "Name for nearby Macs" (empty: the macOS user's name).
-    var nearbyDisplayName: String {
-        get { app.container.preferences.nearbyDisplayName ?? "" }
-        set { app.container.preferences.nearbyDisplayName = newValue }
-    }
-
-    /// The name shown when ``nearbyDisplayName`` is empty.
-    var defaultNearbyDisplayName: String {
-        ShareLocalIdentityModel.current.displayName
     }
 
     // MARK: - Advanced

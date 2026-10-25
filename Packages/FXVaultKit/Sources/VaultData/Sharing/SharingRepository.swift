@@ -7,14 +7,11 @@ import VaultCore
 import VaultCrypto
 import VaultStore
 
-/// Sharing between teammates (§9; D21–D23, D30; M6): `.fxvault` files and the nearby
-/// protocol, both ending in the same import.
+/// Sharing between teammates (§9; D21–D23, D30; M6): `.fxvault` files under a passphrase.
 ///
 /// **Export**: every `.fxvault` file is a schema 4 bundle in format 2 (v0.9.0). Project shares
-/// are written by ``exportBundle(_:protection:to:senderName:appVersion:authorization:existingFile:)``
-/// (`SharingRepository+ProjectShare.swift`); a package received in Nearby Chat by
-/// ``exportFile(package:to:authorization:existingFile:)``. Both need a single-use
-/// ``ShareAuthorizationModel`` (`ReauthGate.authorizeShare(.fileExport, …)`), write 0600 with
+/// are written by ``exportBundle(_:to:senderName:appVersion:authorization:existingFile:)``
+/// (`SharingRepository+ProjectShare.swift`) and need a single-use ``ShareAuthorizationModel`` (`ReauthGate.authorizeShare(.fileExport, …)`), write 0600 with
 /// `SecureFileWriter` and return the passphrase once to show; every plaintext is wiped.
 ///
 /// **Import** (``readFile(at:)`` → ``openFile(_:passphrase:checkGitHub:)`` →
@@ -26,18 +23,13 @@ import VaultStore
 /// always apply to what they reviewed. Nothing syncs automatically.
 ///
 /// **Project shares** (v0.9.0, `SharingRepository+ProjectShare.swift`): several repositories with
-/// their destinations and folders in one `.fxvault` format 2 file, sealed with a passphrase or for
-/// teammates, opened through ``inspectFile(at:)`` and ``openShareFile(_:passphrase:checkGitHub:)``.
-///
-/// **Nearby** (``makeNearbySender(transport:localName:clock:)``,
-/// ``makeNearbyReceiver(transport:localName:clock:)``): orchestration around `NearbySession`
-/// that builds the manifest and payload on the sender and plans and applies them on the
-/// receiver through the same importer.
+/// their destinations and folders in one `.fxvault` format 2 file, sealed with a passphrase,
+/// opened through ``inspectFile(at:)`` and ``openShareFile(_:passphrase:checkGitHub:)``.
 public actor SharingRepository {
     let session: VaultSession
     let schedulers: (any GHSchedulerProviding)?
     private let codec: FxVaultFileCodec
-    /// `.fxvault` format 2 (v0.9.0): project shares, passphrase or teammates.
+    /// `.fxvault` format 2 (v0.9.0): project shares under a passphrase.
     let fileCodec: FxVaultFileV2Codec
     let clock: any VaultClock
     let writePolicy: WriteCollaboratorPolicy
@@ -86,44 +78,6 @@ public actor SharingRepository {
         return ShareExportBuilder.preview(package)
     }
 
-    /// Writes a package received in Nearby Chat to a `.fxvault` file (v0.4.0 "Save as File…";
-    /// v0.9.0: a schema 4 bundle in format 2 under a fresh passphrase, expiring after
-    /// ``ShareExpiryChoice/default``). It keeps the sender's package id (replay detection) and
-    /// name; its date is the day it is saved. A package with a production environment is refused
-    /// (`.productionNeedsTeammates`): production never travels under a passphrase (P3). Does not
-    /// wipe `package`.
-    ///
-    /// - Parameter authorization: from `ReauthGate.authorizeShare(.fileExport, …)`; consumed here.
-    /// - Throws: `.productionNeedsTeammates`, `.authorizationInvalid`, `.share`, `.write`.
-    public func exportFile(
-        package: SharePackageModel,
-        to destination: URL,
-        authorization: ShareAuthorizationModel,
-        existingFile: SecureFileWriter.ExistingFilePolicy = .fail
-    ) async throws(SharingError) -> ShareFileExportResultModel {
-        if package.repository.environments.contains(where: { StageRisk.isProduction($0.name) }) {
-            throw .productionNeedsTeammates
-        }
-        try authorization.consume(.fileExport, for: session)
-        let bundle = ShareBundleModel(package: package, createdAt: clock.now, expiry: .default)
-        let json: SecretBytes
-        do {
-            json = try ShareBundleCoder.encode(bundle)
-        } catch {
-            throw .share(error)
-        }
-        defer { json.wipe() }
-        let passphrase = try passphrases().generate()
-        let file: Data
-        do {
-            file = try await fileCodec.sealWithPassphrase(payload: json, passphrase: passphrase)
-        } catch {
-            passphrase.wipe()
-            throw .share(error)
-        }
-        return try write(file, itemCount: package.itemCount, passphrase: passphrase, preview: ShareExportBuilder.preview(package), to: destination, existingFile: existingFile)
-    }
-
     /// Writes `file` owner-only; wipes the passphrase on failure.
     private func write(
         _ file: Data,
@@ -144,6 +98,19 @@ public actor SharingRepository {
     }
 
     // MARK: - Import (§9.1 reader order, §9.5)
+
+    /// The repositories of this vault, by `owner/name`: where a received folder can be imported.
+    ///
+    /// - Throws: `.vault(.locked)` while locked, `.store`.
+    public nonisolated func importTargets() throws(SharingError) -> [RepoModel] {
+        let database = session.database
+        return try performSharing {
+            try session.read { _, tx in
+                try RepoStore(database: database).fetchAll(in: tx)
+                    .sorted { $0.fullName.lowercased() < $1.fullName.lowercased() }
+            }
+        }
+    }
 
     /// Reads a `.fxvault` file and checks its header (§9.1 steps 1–6) before any passphrase is
     /// asked for. Every failure is `.share(.invalidFile)` or `.fileUnreadable`.
@@ -318,47 +285,9 @@ public actor SharingRepository {
         return result
     }
 
-    // MARK: - Nearby (§9.4)
-
-    /// The sender side of a nearby share over `transport` (an `NWNearbyTransport` the app
-    /// connected, or an in-memory one in tests).
-    public func makeNearbySender(
-        transport: any NearbyTransport,
-        localName: String,
-        clock: (any VaultClock)? = nil
-    ) -> NearbyShareSender {
-        NearbyShareSender(
-            session: NearbySession(
-                role: .initiator,
-                localName: DisplayNameSanitizer.sanitize(localName),
-                transport: transport,
-                clock: clock ?? self.clock
-            ),
-            vault: session,
-            builder: builder
-        )
-    }
-
-    /// The receiver side of a nearby share over `transport`.
-    public func makeNearbyReceiver(
-        transport: any NearbyTransport,
-        localName: String,
-        clock: (any VaultClock)? = nil
-    ) -> NearbyShareReceiver {
-        NearbyShareReceiver(
-            session: NearbySession(
-                role: .responder,
-                localName: DisplayNameSanitizer.sanitize(localName),
-                transport: transport,
-                clock: clock ?? self.clock
-            ),
-            repository: self
-        )
-    }
-
     // MARK: - Planning
 
-    /// Plans `package` (a decrypted file, or a nearby manifest or payload) against this vault.
+    /// Plans `package` (a decrypted file) against this vault.
     /// The draft owns a copy of the package's values; the caller still wipes its own.
     func draft(
         for package: SharePackageModel,

@@ -163,8 +163,7 @@ final class DriftReviewViewModel {
             explanation: option == .keepLocal
                 ? DriftCopy.keepLocalExplanation(drift.kind)
                 : DriftCopy.acceptGitHubExplanation(drift.kind),
-            unavailableReason: report?.space(of: drift).map { DriftCopy.teammateChange($0.decision) }
-                ?? resolution.unavailableReason.map(DriftCopy.unavailable)
+            unavailableReason: resolution.unavailableReason.map(DriftCopy.unavailable)
                 ?? (isOnline ? nil : ConnectivityCopy.offlineHelp),
             needsConfirmation: Self.needsConfirmation(drift, option)
         )
@@ -183,19 +182,6 @@ final class DriftReviewViewModel {
         return sameYear
             ? date.formatted(.dateTime.month(.abbreviated).day())
             : date.formatted(.dateTime.month(.abbreviated).day().year())
-    }
-
-    // MARK: - Shared spaces (v0.6.0, S9)
-
-    /// Shared scopes a teammate is ahead in: their findings wait for the teammates' versions.
-    var teammateChangesBanner: String? {
-        report?.spaces.isEmpty == false ? DriftCopy.teammateChangesBanner : nil
-    }
-
-    /// Get Updates from Teammates, then check GitHub again.
-    func getTeammateUpdates() async {
-        await dependencies.actions.syncSpaces()
-        await refresh()
     }
 
     /// Scopes and names that were not compared, and pushes that were never confirmed.

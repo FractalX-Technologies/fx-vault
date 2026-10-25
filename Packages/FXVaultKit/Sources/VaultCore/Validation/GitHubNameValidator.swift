@@ -9,8 +9,8 @@ import Foundation
 public enum GitHubNameValidator {
     /// GitHub reserves this prefix.
     public static let reservedPrefix = "GITHUB_"
-    /// The variable FX Vault writes in a shared scope (v0.6.0, S4): its version marker. Reserved
-    /// for user items.
+    /// The variable 0.6–0.9 wrote in a shared scope (S4): its version marker. Still reserved for
+    /// user items and dropped from listings, so a marker left on GitHub never shows as a variable.
     public static let spaceMarkerName = "FXVAULT_SPACE"
     /// Replacement prefix offered by ``suggestedFix(for:)`` for reserved names.
     public static let suggestedPrefix = "GH_"

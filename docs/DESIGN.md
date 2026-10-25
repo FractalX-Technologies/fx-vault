@@ -122,7 +122,6 @@ is required.
 | `.monoCounter` | Mono 400 | 12 | +0.06em | `02 / 05` |
 | `.sectionLabel` | Mono 400 | 11, UPPERCASE | +0.08em | `ENVIRONMENT`, `MASTER PASSWORD`, column headers |
 | `.statusLine` | Mono 400 | 11, UPPERCASE | +0.06em | `PASSWORD REQUIRED AFTER RESTART`, `WRITE LIMIT …` |
-| `.sasCode` (`Typography.sasCode`) | Mono 600 | 44 | +0.08em | The nearby `ddd ddd` code |
 | `.passphraseWord` | Mono 500 | 20 | 0 | Words of a generated passphrase (`PassphraseView`) |
 | `Typography.emptyStateIcon` | SF Symbols light | 32 | | The symbol above an empty state |
 | `Typography.nsMonospaced` (`NSFont`) | Mono 400 | 14 | | AppKit text views (secret value and `.env` paste editors) |
@@ -316,7 +315,7 @@ Share as File; `EmptyStateView` uses the light symbol, a `.headline` ink title a
 
 ### `.fxWindowBackground()`
 
-Applied once per scene in `FXVaultApp` (main window, Nearby Chat, Settings): `ground` behind the
+Applied once per scene in `FXVaultApp` (main window, Settings): `ground` behind the
 content and as the `NSWindow` background, Geist 14 as the default font, `brand` tint. It sets no
 foreground color, so `.primary` text still turns white on selected rows.
 
@@ -375,29 +374,6 @@ foreground color, so `.primary` text still turns white on selected rows.
   header (FOLDER, the name in `.largeTitle`, a "Never on GitHub" tag, Share as File… outline and a
   ••• menu) above the same Secrets / Variables pill, add actions and table as a repository, without
   the Status column.
-- Teammates in the sidebar (v0.7.0): TEAMMATES is pinned above the footer behind a hairline:
-  the label with a visibility menu (an `eye`, `eye.slash` or waves symbol in `mutedText`), then one
-  row per paired teammate (`NearbyAvatar` with the `success` dot only while nearby, the name in
-  `.callout`, "Nearby" in `success` or "Seen 2 hr. ago" in `monoLabel` subtle, a `bell.slash` when
-  muted); nearby first. "Others nearby · N" lists people who are not teammates. With no teammate:
-  one caption and "Add Teammate…". The section scrolls past `sidebarTeammatesMaxHeight`.
-- The toolbar's people button (v0.7.0) replaced the avatar stack: `person.2` and the count in
-  `monoLabel` inside a hairline capsule (`avatarSize` high), ink when someone is nearby; its
-  popover lists the people nearby with Ping and Chat. A ping bounces it.
-- Teammates nearby (v0.5.0, the bubbles until v0.7.0): `NearbyPresenceView` sat before the Sync
-  pill: `avatarSize` circles with initials (`monoLabel`, `surface2` fill, a 2 pt `ground` ring so overlapping
-  bubbles stay apart, `presenceOverlap`), a `success` dot for teammates, "+N" after
-  `presenceMaxBubbles` (an outlined `surface` circle with its own list). A person scales in with
-  the spring; a ping bounces the bubble (`phaseAnimator`). The ping outcome shows as a caption
-  before the bubbles for 4 s. The popover (`presencePopoverWidth`): avatar, name in `.headline`,
-  Mac name in `.monoMeta`, a Teammate (`.success`) or Nearby (`.neutral`) chip, a caption for
-  strangers, Ping (outline, "Ping (8 s)" while cooling down) and Chat (primary); since v0.7.0
-  a "Send Folder ▾" outline menu lists the folders that hold something.
-- Shared spaces (v0.6.0): a shared scope's row in the scopes column shows a `brand`
-  `person.2` symbol (help: what it means); the detail header adds a `brand` `StatusChip`
-  "Shared · v7" ("· publishing" while a claim is open) that opens the space sheet. When a
-  teammate's version arrives, "Got v7 from Ana" shows as a caption before the bubbles for 8 s
-  (the ping outcome wins while it shows).
 - Runtime destinations in the scope column (v0.8.0, canvas "FX Vault Destinations"): an
   **Overview** row first (`square.grid.2x2` in `mutedText`, `.callout`, the scope row
   background); `SectionLabel` BUILD · GITHUB ACTIONS over the GitHub scopes; after "New
@@ -449,37 +425,9 @@ foreground color, so `.primary` text still turns white on selected rows.
 
 ### Sheets (board SyncReview)
 
-- Add Teammate (v0.5.0): `SheetHeader`, "Visible to people nearby as …" caption, the people list
-  in a `container` card (`addTeammateListHeight`), then `SASCodeView`, then an info `Banner`
-  ("… is now your teammate") or a warning `Banner` with Try Again. Preferences › Teammates uses
-  the Settings sections: Nearby (visibility picker with its explanation as the footnote, Mute all
-  pings) and Teammates (avatar, name, login · Mac, last seen, Mute checkbox, Remove…, Add
-  Teammate…).
-- Share with Teammates (v0.6.0) is a `ConfigEditorSheet`: what sharing does in `mutedText`
-  `.body`, then either warning `Banner`s naming what to sync or fill first, or the paired
-  teammates as checkbox rows in a `ConfigSheetList` (name in `.body`, login · Mac in `.monoMeta`)
-  and an optional Note `FXTextField`; after sharing, an info `Banner` with "Show Shared Scope".
-- The space sheet (v0.6.0): `SheetHeader` (SHARED WITH TEAMMATES, the scope's name, "v7 ·
-  3 members"), a native segmented picker (History / Members). History is a `ConfigSheetList` of
-  versions (title `.bodyEmphasized`, Mac and time in `.monoMeta`, the note in `.body`, the items
-  it changed as ghost buttons in a `FlowLayout`); choosing an item shows its versions above
-  (fingerprint in `.monoMeta`, Reveal / Hide ghost, Restore This Value secondary, the revealed
-  value in `.monoMeta` with text selection, the password row inline when Touch ID is not used).
-  Members: name, login · Mac, "This Mac" (`brand`) or "Not paired on this Mac" (`warning`),
-  Remove… (ghost, with a destructive confirmation), Add Teammates as a menu. The footer has only
-  Done.
-- The Sync sheet (v0.6.0) shows a blocked shared scope as one issue ("Shared with teammates ·
-  production", the reason, how many changes wait) with Get Updates from Teammates or Take Over…
-  (destructive confirmation); a run that publishes asks "What changed?" in an `FXTextField`
-  under the summary. Drift review shows an info `Banner` with Get Updates from Teammates, and a
-  teammate's finding has both choices unavailable with the reason.
-- Preferences › Teammates › Outside this network (v0.6.0): the port as a narrow text field
-  (`portFieldWidth`), then one row per teammate (name, "Sync shared scopes outside this network"
-  or the last sync time, a switch) and, when on, a mono "Their address" `FXTextField`; the rules
-  are the section footnote.
 - New Folder… and Rename… (v0.7.0) are a `ConfigEditorSheet` with one rounded name field and its
   live note (invalid, or "Another folder already has this name").
-- A received folder (v0.7.0), in Import Share and in chat's Save a Folder: a `container` card with
+- A received folder (v0.7.0), in Import Share: a `container` card with
   the folder symbol, its name and counts, a `SegmentedPill` (Save as Folder / Import Into a
   Repository), then the folder picker (New folder or one of the vault's) with the name field, or
   "Names the folder already has" as a radio group (Keep mine / Replace with the received values);
@@ -522,26 +470,20 @@ foreground color, so `.primary` text still turns white on selected rows.
   the Overview's Share Stage…. Step 1, what to share: REPOSITORIES as removable chips in a
   `FlowLayout` (`shippingbox`, `.monoName`, an `xmark.circle.fill`) with an Add Repository
   borderless menu; STAGES as checkboxes across those repositories, a production stage with a
-  `.warning` "Production" chip, unchecked at first and checked only through a confirmation dialog
-  ("Include production?", Include Production); "Repository-level secrets and variables" as a
+  `.warning` "Production" chip and its checkbox disabled (help: "Production is never shared…"); "Repository-level secrets and variables" as a
   checkbox beside ADJUST WHAT'S INCLUDED; then the scope tree with one root per repository (and
   folders), destinations as nodes with their provider symbol; the summary ("7 secrets and
   variables in 3 repositories") in `.statusLine` `subtleText` and the value-missing names as a
-  warning note. Step 2, SEND TO: two radio cards (`fxCardBackground(.container)`, a `brand`
-  `largecircle.fill.circle` when chosen): Teammates (checkboxes, "Paired remotely" as a caption,
-  "2 of up to 10 teammates" in `.monoMeta`; scrolls past 6) and "Anyone, with a passphrase",
-  whose explanation turns `warning` and names the production places when it is not available;
-  EXPIRES AFTER as a `SegmentedPill` (1 day / 7 days / 30 days) with the honest note for the
-  chosen mode in `.caption` `subtleText`. Then Touch ID or the password (`ShareReauthView`) and
+  warning note. Step 2, SEND TO: one `fxCardBackground(.container)` card, "Anyone, with a passphrase" in
+  `.bodyEmphasized` with its explanation in `.caption` (`warning`, naming the production places,
+  when the tree still holds one); EXPIRES AFTER as a `SegmentedPill` (1 day / 7 days / 30 days)
+  with the honest note in `.caption` `subtleText`. Then Touch ID or the password (`ShareReauthView`) and
   the result: the six words (`PassphraseView`, a `warning` `SheetCallout` "Send these words
-  another way…", "I've saved it") or a `success` `SheetCallout` "Sealed for Ana and Omar" with
-  the expiry; Share… (primary, the system picker) and Save… (secondary), the file name in
+  another way…", "I've saved it") with the expiry; Share… (primary, the system picker, AirDrop included) and Save… (secondary), the file name in
   `.monoMeta`. The footer: Back (secondary), Cancel, Continue / Create Share File (primary).
-- Import Share for a project file (v0.9.0, `ProjectShareImportView`): a passphrase field only for
-  passphrase files; a teammates file opens directly, and "Not sent to this Mac", "Sender isn't
-  your teammate" and "This share file has expired" are failures with their own title. The
-  sender row: a person symbol, "From Ana" in `.bodyEmphasized`, `StatusChip` "Verified teammate"
-  (`.success`) or "Not verified" (`.warning`) with its explanation as help, then created and
+- Import Share for a project file (v0.9.0, `ProjectShareImportView`): a passphrase field; "This share file has
+  expired" is a failure with its own title. The sender row: a person symbol, "From Ana" in
+  `.bodyEmphasized`, `StatusChip` "Not verified" (`.warning`) with its explanation as help, then created and
   expiry dates in `.monoMeta`. One `Card(.container)` lists the repositories: `checkmark.circle.fill`
   `success` "In your vault", `arrow.down.circle` `brand` "Will be imported from GitHub with
   user-a", `xmark.circle` `warning` "Skipped: none of your GitHub accounts can see it" (the name
@@ -555,21 +497,11 @@ foreground color, so `.primary` text still turns white on selected rows.
   and the main window has already moved to the first repository's Overview at the first stage.
 - Sync's From Files (v0.9.0, `SyncHeldSharesView`): a `ConfigSheetField` after the summary, its
   explanation as a caption, then one `ConfigSheetList` row per held file: `doc.badge.ellipsis` in
-  `warning`, "From Ana's file" in `.bodyEmphasized` with a "Verified" `.success` chip or an
-  "Unverified" tag, "Imported Jan 15, 2027 at 12:00 PM · 2 items" in `.monoMeta`, "Include in this Sync"
+  `warning`, "From Ana's file" in `.bodyEmphasized` with an "Unverified" tag (a file imported under 0.9
+  from a verified teammate keeps its "Verified" `.success` chip), "Imported Jan 15, 2027 at 12:00 PM · 2 items" in `.monoMeta`, "Include in this Sync"
   as a checkbox (off), and Show 2 Items / Hide Items expanding the names per repository, scope
   and destination. A single file starts expanded. When only held rows wait, an `.info` `Banner`
   says so and Sync stays disabled until a file is included.
-- Not Nearby… (v0.9.0, `RemotePairingSheet`, `addTeammateSheetWidth`, eyebrow TEAMMATES, an
-  Experimental tag): the four steps as a numbered list and Create Invitation (primary); "Send
-  Your Invitation" with Share… / Save…; an opened invitation ("Invitation from Ana", the person
-  card, Create Reply); "Send Your Reply" and "Reply from Omar" with the person card and
-  `PairingCodeView`: a `Card` with COMPARE THESE WORDS and the six words numbered in two columns
-  (`StepCounter.padded`, `.passphraseWord`, selectable), then the warning caption. The footer is
-  Cancel (the cancel action) and The Words Match, the same secondary pill as the nearby code's
-  answers (`SASDecision`) and never the default button; afterwards "Omar is now your teammate…"
-  and Done.
-
 - Content on `card` (`.fxSheetBackground()`), padding 32, gap 22–24.
 - Header: `SectionLabel` (REVIEW BEFORE SYNC) + `.title` + `mutedText` `.body` line.
 - Lists in `Card(.container)` with hairline rows; scope labels mono.
@@ -611,20 +543,16 @@ under the field in `danger`).
 Sharing (v0.9.0, tab symbol `paperplane`) has one section, FILES YOU SENT, with its footnote
 ("Values are never kept here"): one row per export, newest first: the date in `.monoMeta`, an
 "Expired" neutral chip or "Expires …", a ••• menu with Remove from List (a confirmation that the
-sent file is not affected), the recipients ("Passphrase" or "Teammates: Ana, Omar"), the
+sent file is not affected), the protection ("Passphrase"; a 0.9 row may say "Teammates: …"), the
 repositories and stages, and a disclosure "Names in this file · 4 secrets" with a `warning` note
 "Rotate these secrets if the file leaked." over the names per place.
 
-Teammates (v0.9.0): a remotely paired row adds "Paired remotely" as a caption and, until its
-announce key arrives, "Seen nearby once you meet on the same network" instead of the last-seen
-time; Not Nearby… (outline) and an Experimental tag sit beside Add Teammate….
+### `.env` and sharing (sheet pattern)
 
-### `.env`, sharing, nearby and chat (sheet pattern)
-
-These sheets use the sheet chrome components (`SheetHeader` with `isExperimental` for nearby,
-`.fxSheetContent()`, `SheetCallout`, `FXCheckboxRow`). `App/Screens/Sharing/ShareSheetComponents.swift`
-adds only the `ShareSheetLabel` eyebrows, `ShareNoteView` (inline icon and callout text) and
-`NearbyProgressRow`; `.shareListContainer()` draws a native `List` as a hairline `card` container.
+These sheets use the sheet chrome components (`SheetHeader`, `.fxSheetContent()`, `SheetCallout`,
+`FXCheckboxRow`). `App/Screens/Sharing/ShareSheetComponents.swift` adds only the
+`ShareSheetLabel` eyebrows, `ShareNoteView` (inline icon and callout text) and
+`SheetProgressRow`; `.shareListContainer()` draws a native `List` as a hairline `card` container.
 Failures use `Banner(.danger)`.
 
 - `.env` import: File / Paste as a `SegmentedPill`; the preview `Table` uses `.fxTable()` and
@@ -640,29 +568,6 @@ Failures use `Banner(.danger)`.
 - Passphrase: a `Card` with the six words numbered (`StepCounter.padded`) in Geist Mono 500 at
   the `title2` size (`Theme.TextStyle.passphraseWord`; the shared `PassphraseView`), Copy as an
   outline pill; screen capture protected.
-- Code comparison (`SASCodeView`): the code in a `Card(.container)` under a `CODE` label, Geist
-  Mono 44/600 with +0.08em tracking (`Theme.TextStyle.sasCode`).
-  "Codes match" and "Don't match" are **both `.secondary` large pills** (`SASDecision.buttonVariant`)
-  with no default button: equal weight is a security rule, never make one primary.
-- Nearby Chat window: `ground`, a `surface` people column with a hairline; header `.title2` +
-  Experimental tag and a visibility pill with a `brand` dot (hollow when not visible). Own
-  bubbles are `ink` with `onInk` text, the peer's `surface2`, 16 pt corners, times in `.monoMeta`.
-  The composer is an `.fxInputField(.rounded)` editor with a ghost Attach and a primary Send.
-  Attachment cards are `Card`s with the kind as a `SectionLabel`, the name in `.mono`, and Save
-  (primary) / Dismiss (ghost).
-- Repositories in chat (v0.4.0): the attachment picker switches Secret or Variable / Whole
-  Repository with a `SegmentedPill`; repository rows show the `book.closed` symbol, the
-  `owner/name` in `.monoName` and "1 environment · 4 items" as a caption (automatic grammar
-  agreement, `inflect: true`). With an older peer the tab shows a `SheetCallout` instead. A
-  repository card uses the `REPOSITORY` label, `book.closed`, the counts line in `.monoMeta`, and
-  Import Into… (primary), Save as File… (secondary) and Dismiss (ghost). Import Into… first lists
-  the receiver's repositories in `.shareListContainer()`; a repository that cannot be chosen is
-  `.selectionDisabled` with the capability chip text ("Read-only: admin required") as a caption
-  and its explanation as help, and the sender's own `owner/name` says "Same as the sender's".
-  Save as File… is the `ShareExportScreen` sheet titled "Save as File" with "Received in Nearby
-  Chat" as its label (v0.9.0: the only use of that sheet; a repository with a production
-  environment shows the "Production goes to teammates only" alert).
-
 ## Do and don't
 
 | Do | Don't |
@@ -744,19 +649,18 @@ FXV_SNAPSHOTS_DIR=$PWD/.build-snapshots TEST_RUNNER_FXV_SNAPSHOTS_DIR=$PWD/.buil
 ```
 
 Each screen gives `<name>-<light|dark>.window.png` (an offscreen window): the review set is these
-window captures (9 screens × 2 appearances = 18 files; v0.6.0 adds `space-share`,
-`space-history`, `space-members`, `sync-summary-space` and `settings-teammates-remote`; v0.7.0
-adds `main-folder`, `main-folder-variables`, `main-sidebar-teammates`, `presence-popover-folder`,
-`folder-destination` and `folder-destination-new`; v0.8.0 adds `main-destination-keyvault`,
-`main-destination-vercel`, `main-overview`, `add-destination` and `settings-destinations`, over
+window captures (9 screens × 2 appearances = 18 files; v0.7.0 adds `main-folder`,
+`main-folder-variables`, `main-sidebar-folders`, `folder-destination` and
+`folder-destination-new`; v0.8.0 adds `main-destination-keyvault`, `main-destination-vercel`,
+`main-overview`, `add-destination` and `settings-destinations`, over
 `MainSnapshotFixture.destinations` (`kv-example-prod` and `example-web · Production`)).
 v0.9.0 adds two suites gated the same way (pass `-only-testing:AppTests/ProjectShareSnapshotTests`
-and `-only-testing:AppTests/ProjectShareTeamSnapshotTests`): `project-share-contents`,
-`project-share-contents-three`, `project-share-send-to`, `project-share-send-to-passphrase`,
-`project-share-passphrase`, `project-share-teammates-done`, `project-share-open`,
+and `-only-testing:AppTests/HeldShareSnapshotTests`): `project-share-contents`,
+`project-share-contents-three`, `project-share-production-blocked`,
+`project-share-send-to-passphrase`, `project-share-passphrase`, `project-share-open`,
 `project-share-expired` and `settings-sharing`; `sync-held-one`, `sync-held-two`,
-`sync-held-only`, `main-held`, `pairing-start`, `pairing-invitation-ready`, `pairing-invitation`,
-`pairing-reply-ready`, `pairing-reply`, `pairing-paired` and `settings-teammates-paired-remotely`.
+`sync-held-only` and `main-held`. 1.0 removed the presence, teammates, pairing, shared-space
+and Nearby Chat renders with those screens.
 The offscreen window capture leaves the repository sidebar blank or black in some captures; the
 running app draws it normally. SwiftUI `ImageRenderer` is not used: it
 cannot draw AppKit-backed views (`ScrollView`, `List`, `Table`, text fields, toggles, the split

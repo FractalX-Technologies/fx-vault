@@ -22,18 +22,6 @@
 				<string>io.fractalx.fxvault.share</string>
 			</array>
 		</dict>
-		<dict>
-			<key>CFBundleTypeName</key>
-			<string>FX Vault Teammate Card</string>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>LSHandlerRank</key>
-			<string>$(FXVAULT_SHARE_HANDLER_RANK)</string>
-			<key>LSItemContentTypes</key>
-			<array>
-				<string>io.fractalx.fxvault.teammate-card</string>
-			</array>
-		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
@@ -53,17 +41,8 @@
 	<string>public.app-category.developer-tools</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_fxvault-share._tcp</string>
-		<string>_fxvault-chat._tcp</string>
-		<string>_fxvault-pair._tcp</string>
-		<string>_fxvault-team._tcp</string>
-	</array>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright (c) 2026 FractalX. MIT License.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>FX Vault uses the local network to share configuration, chat, see your teammates nearby and keep shared scopes in sync with them.</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
@@ -84,27 +63,6 @@
 				<key>public.mime-type</key>
 				<array>
 					<string>application/vnd.fractalx.fxvault</string>
-				</array>
-			</dict>
-		</dict>
-		<dict>
-			<key>UTTypeConformsTo</key>
-			<array>
-				<string>public.data</string>
-			</array>
-			<key>UTTypeDescription</key>
-			<string>FX Vault Teammate Card</string>
-			<key>UTTypeIdentifier</key>
-			<string>io.fractalx.fxvault.teammate-card</string>
-			<key>UTTypeTagSpecification</key>
-			<dict>
-				<key>public.filename-extension</key>
-				<array>
-					<string>fxvcard</string>
-				</array>
-				<key>public.mime-type</key>
-				<array>
-					<string>application/vnd.fractalx.fxvault-card</string>
 				</array>
 			</dict>
 		</dict>

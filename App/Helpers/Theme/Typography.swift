@@ -45,9 +45,6 @@ extension Theme {
         static let monoMeta = FontRegistry.font(.monoRegular, size: Size.caption, relativeTo: .caption)
         /// 11 pt mono. Uppercase section labels (with tracking: ``Theme/TextStyle/sectionLabel``).
         static let monoLabel = FontRegistry.font(.monoRegular, size: Size.label, relativeTo: .caption2)
-        /// The `ddd ddd` nearby code (§9.4 step 5): large and monospaced so both people can read
-        /// it across a desk.
-        static let sasCode = FontRegistry.font(.monoSemibold, size: Size.sasCode, relativeTo: .largeTitle)
         /// 20 pt mono, 500. Passphrase words (``Theme/TextStyle/passphraseWord``).
         static let passphraseWord = FontRegistry.font(.monoMedium, size: Size.title2, relativeTo: .title2)
 
@@ -76,7 +73,6 @@ extension Theme {
             static let callout: CGFloat = 13
             static let caption: CGFloat = 12
             static let label: CGFloat = 11
-            static let sasCode: CGFloat = 44
         }
 
         /// Letter spacing in em (multiplied by the point size).
@@ -172,8 +168,6 @@ extension Theme.TextStyle {
     static let sectionLabel = Self(font: Typography.monoLabel, size: Typography.Size.label, trackingEm: Typography.Tracking.label, isUppercase: true)
     /// 11 pt mono, uppercase, +0.06em. Status lines (`PASSWORD REQUIRED AFTER RESTART`).
     static let statusLine = Self(font: Typography.monoLabel, size: Typography.Size.label, trackingEm: Typography.Tracking.counter, isUppercase: true)
-    /// 44 pt mono 600, +0.08em. The nearby `ddd ddd` code, so the digits read apart across a desk.
-    static let sasCode = Self(font: Typography.sasCode, size: Typography.Size.sasCode, trackingEm: Typography.Tracking.label)
     /// 20 pt mono 500. A word of a generated passphrase (share export, onboarding).
     static let passphraseWord = Self(font: Typography.passphraseWord, size: Typography.Size.title2)
 }

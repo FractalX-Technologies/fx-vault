@@ -12,9 +12,13 @@ struct MigrationTests {
 
     static let expectedTables: Set<String> = [
         "vaults", "key_wraps", "accounts", "repositories", "environments", "config_items",
-        "sync_journal", "deployment_branch_patterns", "imported_share_packages", "device_identity", "teammates",
-        "spaces", "space_keys", "space_versions", "teammate_addresses", "folders", "folder_items",
+        "sync_journal", "deployment_branch_patterns", "imported_share_packages", "folders", "folder_items",
         "provider_connections", "destinations", "destination_items", "destination_journal", "sent_shares",
+    ]
+
+    // v15 drops these, with the teammate and space key material in them.
+    static let droppedTables: Set<String> = [
+        "device_identity", "teammates", "spaces", "space_keys", "space_versions", "teammate_addresses",
     ]
 
     @Test func migrationIdentifiersAreFrozenAndOrdered() {
@@ -22,8 +26,9 @@ struct MigrationTests {
             "v1_vault", "v2_accounts_repos", "v3_config", "v4_sync_journal", "v5_create_policies", "v6_sharing",
             "v7_journal_fingerprints", "v8_force_push_requested_at", "v9_item_links", "v10_teammates",
             "v11_spaces", "v12_folders", "v13_destinations", "v14_project_shares",
+            "v15_drop_teammates",
         ])
-        #expect(Migration.latest == .v14ProjectShares)
+        #expect(Migration.latest == .v15DropTeammates)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -41,6 +46,7 @@ struct MigrationTests {
         #expect(try VaultMigrator.appliedMigrations(database) == Migration.allCases)
         #expect(try VaultMigrator.isUpToDate(database))
         #expect(try Self.tableNames(database).isSuperset(of: Self.expectedTables))
+        #expect(try Self.tableNames(database).isDisjoint(with: Self.droppedTables))
         #expect(database.fileURL?.lastPathComponent == DatabaseFactory.databaseFileName)
         #expect(database.isInMemory == false)
         let journalMode = try database.read { tx in try String.fetchOne(tx.db, sql: "PRAGMA journal_mode") }
@@ -64,6 +70,24 @@ struct MigrationTests {
         let fresh = try DatabaseFactory.inMemory()
         #expect(try Self.schema(stepped) == Self.schema(fresh))
         try Self.verifySeed(stepped, upTo: start)
+    }
+
+    /// v15 drops tables that held this Mac's teammate and space keys: the migration checkpoints,
+    /// so no copy of their pages stays in `vault.sqlite-wal` (secure_delete zeroes only the main file).
+    @Test func droppingTheTeammateTablesLeavesNoKeyBytesInTheWAL() throws {
+        let temp = try TemporaryDirectory()
+        defer { temp.remove() }
+        let database = try DatabaseFactory.unmigratedOnDisk(directory: temp.vaultDirectory)
+        defer { try? database.close() }
+        try VaultMigrator.migrate(database, upTo: .v14ProjectShares)
+        try Self.seed(database, upTo: .v14ProjectShares)
+        try database.checkpointTruncate()
+        let walPath = try #require(database.fileURL).path + "-wal"
+
+        try VaultMigrator.migrate(database)
+
+        #expect(try Self.size(of: walPath) == 0)
+        #expect(try Self.bytesOnDisk(database).range(of: Self.seedAnnounceCiphertext) == nil)
     }
 
     @Test func migratingTwiceIsANoOp() throws {
@@ -375,16 +399,20 @@ struct MigrationTests {
             guard version >= .v9ItemLinks else { return }
             try db.execute(sql: "UPDATE config_items SET link_id = ? WHERE id = ?", arguments: [seedLinkID, seedItemID])
             guard version >= .v10Teammates else { return }
-            try db.execute(sql: """
+            // The teammate tables exist from v10 to v14 only (v15 drops them).
+            let hasTeammates = version < .v15DropTeammates
+            if hasTeammates { try db.execute(sql: """
                 INSERT INTO teammates (device_id, signing_pk, agreement_pk, announce_ct, login, display_name, mac_name,
                   paired_at, last_seen_at, is_muted, needs_card_update)
                 VALUES (?, ?, ?, ?, 'user-a', 'User A', 'User A Mac', ?, ?, 1, 1)
-                """, arguments: [seedTeammateID, seedSigningKey, seedAgreementKey, seedAnnounceCiphertext, seedTime, seedTime])
+                """, arguments: [seedTeammateID, seedSigningKey, seedAgreementKey, seedAnnounceCiphertext, seedTime, seedTime]) }
             guard version >= .v11Spaces else { return }
-            try db.execute(
-                sql: "INSERT INTO teammate_addresses (device_id, host, port, allows_remote) VALUES (?, 'mac-a.example.ts.net', 7443, 1)",
-                arguments: [seedTeammateID]
-            )
+            if hasTeammates {
+                try db.execute(
+                    sql: "INSERT INTO teammate_addresses (device_id, host, port, allows_remote) VALUES (?, 'mac-a.example.ts.net', 7443, 1)",
+                    arguments: [seedTeammateID]
+                )
+            }
             guard version >= .v12Folders else { return }
             try db.execute(
                 sql: "INSERT INTO folders (id, name, name_key, sort_order, created_at, updated_at) VALUES (?, 'Mobile App', 'mobile app', 0, ?, ?)",
@@ -415,6 +443,11 @@ struct MigrationTests {
                     seedLinkID, seedTime, seedTime,
                 ])
             guard version >= .v14ProjectShares else { return }
+            // A file held under 0.9 from a verified teammate: Sync keeps showing it as verified.
+            try db.execute(
+                sql: "UPDATE imported_share_packages SET sender_device_id = ? WHERE package_id = ?",
+                arguments: [seedTeammateID, seedPackageID]
+            )
             try db.execute(sql: """
                 INSERT INTO sent_shares (id, package_id, created_at, expires_at, mode, recipients, summary)
                 VALUES (?, ?, ?, '2001-01-08T00:00:00.000Z', 'teammates', ?, ?)
@@ -427,6 +460,7 @@ struct MigrationTests {
                 sql: "UPDATE destination_items SET share_hold = ? WHERE id = ?",
                 arguments: [seedPackageID, seedDestinationItemID]
             )
+            guard hasTeammates else { return }
             try db.execute(sql: """
                 INSERT INTO teammates (device_id, signing_pk, agreement_pk, announce_ct, login, display_name, mac_name,
                   paired_at, paired_via)
@@ -514,33 +548,15 @@ struct MigrationTests {
         #expect(linkCount == 3)
     }
 
-    /// v14: teammates survive the rebuild byte for byte (as `nearby`, addresses kept), items read
-    /// back unheld, and the v14 seed (a sent file, held rows, a remote teammate without an
-    /// announce key) reads back through the stores.
+    /// v15: the teammate and space tables are gone whatever they held (the seed puts teammates,
+    /// addresses and a remote teammate in them); the v14 seed (a sent file, held rows) reads back.
     static func verifyProjectShareSeed(_ database: VaultDatabase, upTo version: Migration) throws {
-        let teammates = try database.read { tx in try TeamStore(database: database).fetchTeammates(in: tx) }
-        guard version >= .v10Teammates else {
-            #expect(teammates.isEmpty)
-            return
-        }
-        let nearby = try #require(teammates.first { $0.deviceID == seedTeammateID })
-        #expect(nearby.signingPublicKey == seedSigningKey)
-        #expect(nearby.agreementPublicKey == seedAgreementKey)
-        #expect(nearby.announceCiphertext == seedAnnounceCiphertext)
-        #expect(nearby.login == "user-a" && nearby.displayName == "User A" && nearby.macName == "User A Mac")
-        #expect(nearby.pairedAt == DatabaseTimestamp.date(from: seedTime))
-        #expect(nearby.lastSeenAt == DatabaseTimestamp.date(from: seedTime))
-        #expect(nearby.isMuted && nearby.needsCardUpdate)
-        #expect(nearby.pairedVia == .nearby)
-        #expect(nearby.model.hasAnnounceKey)
-        let addresses = try SpaceStore(database: database).fetchAddresses()
-        #expect(addresses.map(\.deviceID) == (version >= .v11Spaces ? [seedTeammateID] : []))
+        #expect(try tableNames(database).isDisjoint(with: droppedTables))
         let packageID = try #require(SharePackageID(uuidString: seedPackageID))
         let configHeld = try ConfigStore(database: database).fetchHeldItemStates()
         let destinationHeld = try DestinationStore(database: database).fetchHeldItemStates()
         let sent = try SentShareStore(database: database).fetchAll()
         guard version >= .v14ProjectShares else {
-            #expect(teammates.count == 1)
             #expect(configHeld.isEmpty && destinationHeld.isEmpty && sent.isEmpty)
             return
         }
@@ -551,11 +567,11 @@ struct MigrationTests {
         let share = try #require(sent.first)
         #expect(sent.count == 1)
         #expect(share.id.uuidString == seedSentShareID && share.packageID == packageID)
+        // A 0.9 teammates row still reads back (the Sent list shows it), recipients unresolved.
         #expect(share.mode == .teammates && share.recipientIDs == [seedTeammateID])
         #expect(share.summary.stages == ["staging"])
         #expect(share.summary.places.first?.variableNames == ["API_URL"])
-        let remote = try #require(teammates.first { $0.deviceID == seedRemoteTeammateID })
-        #expect(remote.announceCiphertext == nil && remote.pairedVia == .remote)
-        #expect(!remote.model.hasAnnounceKey && remote.model.pairedVia == .remote)
+        let imported = try #require(try SharePackageStore(database: database).fetch(packageID))
+        #expect(imported.senderDeviceID == seedTeammateID)
     }
 }

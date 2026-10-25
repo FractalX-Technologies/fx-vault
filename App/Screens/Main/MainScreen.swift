@@ -34,26 +34,13 @@ struct MainScreen: View {
             }
             .onAppear {
                 viewModel.presentNextPendingImport()
-                viewModel.presentNextPendingPairingCard()
-                viewModel.app.teamPresence.setBrowsing(NSApp?.isActive ?? true)
-            }
-            .onDisappear {
-                viewModel.app.teamPresence.setBrowsing(false)
             }
             .onChange(of: viewModel.app.pendingImports) {
                 viewModel.presentNextPendingImport()
             }
-            .onChange(of: viewModel.app.pendingPairingCards) {
-                viewModel.presentNextPendingPairingCard()
-            }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
                 viewModel.detail?.remaskAll()
                 viewModel.folderDetail?.remaskAll()
-                // Teammates nearby browses only while FX Vault is active (T8).
-                viewModel.app.teamPresence.setBrowsing(false)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-                viewModel.app.teamPresence.setBrowsing(true)
             }
     }
 
@@ -132,9 +119,6 @@ private struct MainToolbar: ToolbarContent {
             MainToolbarActions(viewModel: viewModel)
         }
         ToolbarItem(placement: .primaryAction) {
-            NearbyPresenceView(presence: viewModel.app.teamPresence, spaceSync: viewModel.app.spaceSync)
-        }
-        ToolbarItem(placement: .primaryAction) {
             MainSyncButton(viewModel: viewModel)
         }
     }
@@ -152,10 +136,6 @@ private struct GlasslessMainToolbar: ToolbarContent {
         .sharedBackgroundVisibility(.hidden)
         ToolbarItemGroup(placement: .primaryAction) {
             MainToolbarActions(viewModel: viewModel)
-        }
-        .sharedBackgroundVisibility(.hidden)
-        ToolbarItem(placement: .primaryAction) {
-            NearbyPresenceView(presence: viewModel.app.teamPresence, spaceSync: viewModel.app.spaceSync)
         }
         .sharedBackgroundVisibility(.hidden)
         ToolbarItem(placement: .primaryAction) {
@@ -277,34 +257,17 @@ private struct DevBuildBadge: View {
     }
 }
 
-/// Share › File… / Nearby… / Receive Nearby… / Nearby Chat… (its own window), as an outline
-/// circle.
+/// Share Project… as an outline circle.
 private struct ShareMenu: View {
     let viewModel: MainViewModel
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Menu {
-            Button(String(localized: "toolbar.share.file", defaultValue: "File…")) {
-                viewModel.shareFile()
-            }
-            .disabled(!viewModel.canShareFile)
-            Button(String(localized: "toolbar.share.nearby", defaultValue: "Nearby…")) {
-                viewModel.shareNearby()
-            }
-            Divider()
-            Button(String(localized: "toolbar.share.receive", defaultValue: "Receive Nearby…")) {
-                viewModel.receiveNearby()
-            }
-            Divider()
-            Button(String(localized: "toolbar.share.chat", defaultValue: "Nearby Chat…")) {
-                openWindow(id: SceneID.nearbyChat)
-            }
+        Button {
+            viewModel.shareProject()
         } label: {
             Label(String(localized: "toolbar.share", defaultValue: "Share"), systemImage: "square.and.arrow.up")
         }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
+        .disabled(!viewModel.canShareProject)
         .fxIconButtonStyle()
         .help(String(localized: "toolbar.share.help", defaultValue: "Share configuration with a teammate"))
     }
@@ -344,16 +307,6 @@ private struct MainSheetContent: View {
             ProjectShareScreen(context: context, dependencies: dependencies)
         case .shareImport(let context):
             ShareImportScreen(context: context, dependencies: dependencies)
-        case .remotePairing(let context):
-            RemotePairingScreen(context: context, dependencies: dependencies)
-        case .nearbySend(let context):
-            NearbySendScreen(context: context, dependencies: dependencies)
-        case .nearbyReceive(let context):
-            NearbyReceiveScreen(context: context, dependencies: dependencies)
-        case .shareSpace(let context):
-            ShareSpaceScreen(context: context, dependencies: dependencies)
-        case .space(let context):
-            SpaceScreen(context: context, dependencies: dependencies)
         case .folderName(let context):
             FolderNameScreen(context: context, dependencies: dependencies)
         case .addDestination(let context):

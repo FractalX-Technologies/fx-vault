@@ -55,7 +55,6 @@ final class FakeSyncService: SyncServicing {
     struct StartedRun: Equatable {
         let includeDeletions: Bool
         let cloneFolder: URL?
-        var spaceReason: String?
         /// The share files the From Files review included (v0.9.0).
         var includeHeld: Set<SharePackageID> = []
     }
@@ -64,7 +63,6 @@ final class FakeSyncService: SyncServicing {
         var review: Result<SyncReviewModel, SyncRepositoryError>
         var previews: [RepoDeletionPreviewModel] = []
         var preflightCalls: [[RepoID]?] = []
-        var takeovers: [Set<SpaceID>] = []
         var startedRuns: [StartedRun] = []
         var clones: [RepoID] = []
         var cloneResult: Result<URL, RepoCreationError> = .failure(.gitUnavailable)
@@ -79,11 +77,6 @@ final class FakeSyncService: SyncServicing {
 
     var preflightCalls: [[RepoID]?] {
         state.withLock { $0.preflightCalls }
-    }
-
-    /// The takeovers each preflight carried (v0.6.0).
-    var takeoverCalls: [Set<SpaceID>] {
-        state.withLock { $0.takeovers }
     }
 
     func setReview(_ review: Result<SyncReviewModel, SyncRepositoryError>) {
@@ -106,10 +99,9 @@ final class FakeSyncService: SyncServicing {
         state.withLock { $0.cloneResult = result }
     }
 
-    func preflight(repositoryIDs: [RepoID]?, spaceTakeovers: Set<SpaceID>) async throws(SyncRepositoryError) -> SyncReviewModel {
+    func preflight(repositoryIDs: [RepoID]?) async throws(SyncRepositoryError) -> SyncReviewModel {
         let review = state.withLock { state in
             state.preflightCalls.append(repositoryIDs)
-            state.takeovers.append(spaceTakeovers)
             return state.review
         }
         return try review.get()
@@ -123,14 +115,12 @@ final class FakeSyncService: SyncServicing {
         _ review: SyncReviewModel,
         includeDeletions: Bool,
         includeHeld: Set<SharePackageID>,
-        cloneFolder: URL?,
-        spaceReason: String?
+        cloneFolder: URL?
     ) async throws(SyncRepositoryError) -> any SyncRunControlling {
         state.withLock {
             $0.startedRuns.append(StartedRun(
                 includeDeletions: includeDeletions,
                 cloneFolder: cloneFolder,
-                spaceReason: spaceReason,
                 includeHeld: includeHeld
             ))
         }
@@ -218,15 +208,13 @@ enum SyncFixtures {
     static func preflight(
         executable: [ConfigChangeModel],
         blocked: [SyncBlockedChangeModel] = [],
-        repository: RepoModel = repository,
-        spaces: [SyncSpaceGateModel] = []
+        repository: RepoModel = repository
     ) -> RepoPreflightModel {
         RepoPreflightModel(
             snapshot: RepoSnapshotModel(repository: repository, environments: [], items: []),
             changeSet: ChangeSetModel(repository: repository, changes: executable),
             executable: executable,
-            blocked: blocked,
-            spaces: spaces
+            blocked: blocked
         )
     }
 

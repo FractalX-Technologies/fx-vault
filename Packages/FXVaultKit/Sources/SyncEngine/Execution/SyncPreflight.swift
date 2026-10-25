@@ -20,14 +20,8 @@ import VaultCore
 ///    `.remoteChanged` through ``ChangeSetModel/blocking(_:reason:)``. A policy change on an
 ///    existing environment that B3 lists with other protection rules is blocked as
 ///    ``SyncBlockReason/protectionRulesPresent`` (C2 omits them; Q6 unverified).
-/// 5. Shared scopes (v0.6.0, S5): GitHub's `FXVAULT_SPACE` marker, split off the same B8/B9
-///    listing, against this Mac's verified head (``SyncSpaceCoordinating``). A scope that is
-///    behind, being published by another member, forked or invalid is blocked as
-///    ``SyncBlockReason/space(_:)``; renaming or deleting a shared environment is blocked as
-///    ``SyncBlockReason/sharedEnvironment``.
-/// 6. Scope capacity (`ScopeCapacityValidator`) against the listed counts (the marker takes one
-///    variable slot in a shared scope).
-/// 7. The hourly write budget of each account (seed the scheduler once at launch with
+/// 5. Scope capacity (`ScopeCapacityValidator`) against the listed counts.
+/// 6. The hourly write budget of each account (seed the scheduler once at launch with
 ///    ``SyncThrottleSeeder``).
 ///
 /// `pre_write_updated_at` is captured by the executor's per-scope re-list right before each
@@ -38,22 +32,19 @@ public struct SyncPreflight: Sendable {
     private let values: any SyncValueProviding
     private let clock: any VaultClock
     private let writePolicy: WriteCollaboratorPolicy
-    private let spaces: (any SyncSpaceCoordinating)?
 
     public init(
         schedulers: SyncSchedulerRegistry,
         persistence: any SyncPersisting,
         values: any SyncValueProviding,
         clock: any VaultClock,
-        writePolicy: WriteCollaboratorPolicy = .default,
-        spaces: (any SyncSpaceCoordinating)? = nil
+        writePolicy: WriteCollaboratorPolicy = .default
     ) {
         self.schedulers = schedulers
         self.persistence = persistence
         self.values = values
         self.clock = clock
         self.writePolicy = writePolicy
-        self.spaces = spaces
     }
 
     /// Runs the preflight for `snapshots`.
@@ -61,14 +52,12 @@ public struct SyncPreflight: Sendable {
     /// - Parameters:
     ///   - runID: the run the lookups are journaled under (reused by the executor).
     ///   - scopeStatus: each account's token scope status (A3), keyed by login; absent = `.ok`.
-    ///   - spaceTakeovers: shared spaces whose stale claim the user confirmed taking over (Q3).
     /// - Throws: ``SyncError/locked`` or ``SyncError/persistenceFailed``. gh failures never
     ///   throw: they block the affected changes with ``SyncBlockReason/listingFailed(_:)``.
     public func run(
         _ snapshots: [RepoSnapshotModel],
         runID: SyncRunID = SyncRunID(),
-        scopeStatus: [String: ScopeStatus] = [:],
-        spaceTakeovers: Set<SpaceID> = []
+        scopeStatus: [String: ScopeStatus] = [:]
     ) async throws(SyncError) -> SyncPreflightModel {
         try values.ensureUnlocked()
         var repositories: [RepoPreflightModel] = []
@@ -77,7 +66,7 @@ public struct SyncPreflight: Sendable {
         for snapshot in snapshots {
             let login = snapshot.repository.accountLogin
             let status = scopeStatus.first { OwnerLoginValidator.foldKey($0.key) == OwnerLoginValidator.foldKey(login) }?.value
-            let repository = try await preflight(snapshot, runID: runID, scopeStatus: status ?? .ok, spaceTakeovers: spaceTakeovers)
+            let repository = try await preflight(snapshot, runID: runID, scopeStatus: status ?? .ok)
             cost += repository.executable.map { WriteCostEstimator.cost(of: $0, snapshot: repository.snapshot) }.reduce(0, +)
             repositories.append(repository)
             if let scheduler = schedulers.scheduler(for: login), budgets[login] == nil {
@@ -92,8 +81,7 @@ public struct SyncPreflight: Sendable {
     private func preflight(
         _ input: RepoSnapshotModel,
         runID: SyncRunID,
-        scopeStatus: ScopeStatus,
-        spaceTakeovers: Set<SpaceID>
+        scopeStatus: ScopeStatus
     ) async throws(SyncError) -> RepoPreflightModel {
         var snapshot = input
         guard let scheduler = schedulers.scheduler(for: snapshot.repository.accountLogin) else {
@@ -127,9 +115,6 @@ public struct SyncPreflight: Sendable {
         checkCapability(changeSet.changes, repository: snapshot.repository, into: &reasons)
         checkNames(changeSet.changes, into: &reasons)
         try checkValues(changeSet.changes, into: &reasons)
-        let shared = try spaces?.sharedScopes(repositoryID: snapshot.repository.id) ?? []
-        checkSharedEnvironments(changeSet.changes, shared: shared, into: &reasons)
-        var gates: [SyncSpaceGateModel] = []
 
         if snapshot.repository.existsOnGitHub {
             let remote = await listTouchedScopes(changeSet.changes, snapshot: snapshot, scheduler: scheduler)
@@ -153,11 +138,7 @@ public struct SyncPreflight: Sendable {
                 remoteChanged: &remoteChanged,
                 reasons: &reasons
             )
-            gates = try gateSharedScopes(changeSet.changes, shared: shared, remote: remote, takeovers: spaceTakeovers, into: &reasons)
-            let markerScopes = Set(remote.markers.keys).union(gates.compactMap { gate in
-                changeSet.changes.first { Self.localScope(of: $0) == gate.scope }?.scope
-            })
-            checkCapacity(changeSet.changes, snapshot: snapshot, listings: state.listings, markerScopes: markerScopes, into: &reasons)
+            checkCapacity(changeSet.changes, snapshot: snapshot, listings: state.listings, into: &reasons)
         }
 
         changeSet = changeSet.blocking(remoteChanged.intersection(Set(changeSet.changes.map(\.id))), reason: .remoteChanged)
@@ -169,8 +150,7 @@ public struct SyncPreflight: Sendable {
             changeSet: changeSet,
             executable: cascade.executable,
             blocked: blocked.sorted { $0.change < $1.change },
-            repositoryVariableBytes: try repositoryVariableBytes(snapshot),
-            spaces: gates
+            repositoryVariableBytes: try repositoryVariableBytes(snapshot)
         )
     }
 
@@ -333,8 +313,6 @@ public struct SyncPreflight: Sendable {
         /// B6 + B8 (repository) and B7 + B9 (environments) by remote scope.
         var scopes: [RemoteScopeKeyModel: (secrets: [GHSecretDTO], variables: [GHVariableListingModel])] = [:]
         var scopeErrors: [RemoteScopeKeyModel: GHError] = [:]
-        /// `FXVAULT_SPACE` of each listed scope that has one (v0.6.0, S4).
-        var markers: [RemoteScopeKeyModel: String] = [:]
     }
 
     private func listTouchedScopes(
@@ -389,9 +367,8 @@ public struct SyncPreflight: Sendable {
             }
             do {
                 let secrets = try await scheduler.listSecrets(ref, environment: environmentName)
-                let variables = try await scheduler.listVariableScope(ref, environment: environmentName)
-                listings.scopes[scope] = (secrets, variables.variables)
-                listings.markers[scope] = variables.spaceMarker
+                let variables = try await scheduler.listVariables(ref, environment: environmentName)
+                listings.scopes[scope] = (secrets, variables)
             } catch {
                 listings.scopeErrors[scope] = error
             }
@@ -528,13 +505,11 @@ public struct SyncPreflight: Sendable {
         return id.flatMap(snapshot.environment)
     }
 
-    /// GitHub's per-scope limits against the listed counts plus this run's adds and deletes. The
-    /// space marker of `markerScopes` takes one variable slot.
+    /// GitHub's per-scope limits against the listed counts plus this run's adds and deletes.
     private func checkCapacity(
         _ changes: [ConfigChangeModel],
         snapshot: RepoSnapshotModel,
         listings: [RemoteScopeKeyModel: RemoteScopeListingModel],
-        markerScopes: Set<RemoteScopeKeyModel>,
         into reasons: inout [String: SyncBlockReason]
     ) {
         struct Bucket: Hashable {
@@ -545,9 +520,6 @@ public struct SyncPreflight: Sendable {
         for (scope, listing) in listings {
             names[Bucket(scope: scope, kind: .secret)] = Set(listing.secrets.map(\.nameKey))
             names[Bucket(scope: scope, kind: .variable)] = Set(listing.variables.map(\.nameKey))
-        }
-        for scope in markerScopes {
-            names[Bucket(scope: scope, kind: .variable), default: []].insert(GitHubNameValidator.spaceMarkerName)
         }
         for change in changes where reasons[change.id] == nil {
             if case .deleteItem(let delete) = change.operation {
@@ -567,76 +539,6 @@ public struct SyncPreflight: Sendable {
                 reasons[change.id] = .scopeFull(error)
             }
         }
-    }
-}
-
-// MARK: - Shared spaces (v0.6.0, S5)
-
-extension SyncPreflight {
-    /// The local scope an item change writes, nil for other changes.
-    static func localScope(of change: ConfigChangeModel) -> ConfigScope? {
-        switch change.operation {
-        case .setItem(let set): ConfigScope(environmentID: set.environmentID)
-        case .deleteItem(let delete): ConfigScope(environmentID: delete.environmentID)
-        default: nil
-        }
-    }
-
-    /// Renaming or deleting a shared environment is not supported (the space is bound to it).
-    private func checkSharedEnvironments(
-        _ changes: [ConfigChangeModel],
-        shared: [SyncSharedScopeModel],
-        into reasons: inout [String: SyncBlockReason]
-    ) {
-        let environments = Set(shared.compactMap(\.scope.environmentID))
-        guard !environments.isEmpty else { return }
-        for change in changes where reasons[change.id] == nil {
-            switch change.operation {
-            case .renameEnvironment(let rename) where environments.contains(rename.environmentID):
-                reasons[change.id] = .sharedEnvironment
-            case .deleteEnvironment(let delete) where environments.contains(delete.environmentID):
-                reasons[change.id] = .sharedEnvironment
-            default:
-                break
-            }
-        }
-    }
-
-    /// S5 steps 1–2 for every shared scope the run writes: the marker against the local head.
-    /// Every item change of a scope the gate does not clear is blocked. A scope whose listing
-    /// failed is already blocked by D27.
-    private func gateSharedScopes(
-        _ changes: [ConfigChangeModel],
-        shared: [SyncSharedScopeModel],
-        remote: RemoteListings,
-        takeovers: Set<SpaceID>,
-        into reasons: inout [String: SyncBlockReason]
-    ) throws(SyncError) -> [SyncSpaceGateModel] {
-        guard let spaces else { return [] }
-        var gates: [SyncSpaceGateModel] = []
-        for space in shared {
-            let scoped = changes.filter { Self.localScope(of: $0) == space.scope }
-            guard let remoteScope = scoped.first?.scope, remote.scopes[remoteScope] != nil else { continue }
-            let marker = remote.markers[remoteScope]
-            let decision = try spaces.gate(spaceID: space.spaceID, markerText: marker)
-            var takenOverFrom: String?
-            if case .publishing(let login, _, true) = decision, takeovers.contains(space.spaceID) {
-                takenOverFrom = login
-            }
-            let gate = SyncSpaceGateModel(
-                spaceID: space.spaceID,
-                scope: space.scope,
-                decision: decision,
-                hasMarker: marker != nil,
-                takenOverFrom: takenOverFrom
-            )
-            gates.append(gate)
-            guard !gate.allowsPush else { continue }
-            for change in scoped where reasons[change.id] == nil {
-                reasons[change.id] = .space(SyncSpaceBlockModel(spaceID: space.spaceID, decision: decision))
-            }
-        }
-        return gates
     }
 }
 

@@ -52,17 +52,15 @@ struct MainViewModelTests {
         #expect(!main.canCreateRepository)
     }
 
-    @Test func newRepositoryAndShareMenu() async throws {
+    @Test func newRepositoryAndNothingToShareYet() async throws {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
         let main = harness.app.makeMainViewModel()
         main.newRepository()
         #expect(main.activeSheet == .createRepository(CreateRepoContext(accountLogin: nil, ownerLogin: nil)))
         main.activeSheet = nil
-        #expect(!main.canShareFile)
-        main.shareNearby()
-        #expect(main.activeSheet == .nearbySend(NearbySendContext(selection: nil)))
-        main.receiveNearby()
-        #expect(main.activeSheet == .nearbyReceive(NearbyReceiveContext()))
+        #expect(!main.canShareProject)
+        main.shareProject()
+        #expect(main.activeSheet == nil)
     }
 
     @Test func selectingAnImportedRepositoryBuildsTheColumns() async throws {
@@ -84,8 +82,8 @@ struct MainViewModelTests {
         main.importEnv()
         #expect(main.activeSheet == .envImport(EnvImportContext(repositoryID: id, scope: .repository, fileURL: nil)))
         main.activeSheet = nil
-        #expect(main.canShareFile)
-        main.shareFile()
+        #expect(main.canShareProject)
+        main.shareProject()
         #expect(main.activeSheet == .shareExport(ShareExportContext(selection: .repository(id))))
         main.activeSheet = nil
 

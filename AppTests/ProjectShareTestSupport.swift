@@ -5,7 +5,7 @@ import VaultCore
 import VaultData
 @testable import FXVault
 
-/// Two Macs that are teammates of each other, for project share round trips (v0.9.0). The
+/// Two Macs, for project share round trips (v0.9.0, passphrase files since 1.0). The
 /// sender's repository has the stages `staging` and `production` (a GitHub environment each) and a
 /// Key Vault destination at `staging`; the receiver has the same repository with a different
 /// value for one secret.
@@ -23,15 +23,12 @@ final class ProjectShareWorld {
     let senderRepositoryID: RepoID
     let receiverRepositoryID: RepoID?
     let destinationID: DestinationID
-    /// The receiver's teammate id on the sender's Mac, and the sender's on the receiver's.
-    let receiverTeammateID: String
-    let senderTeammateID: String
     /// Overviews the receiver's UI asked to open (repository and stage).
     private(set) var openedOverviews: [(RepoID, String?)] = []
 
     /// - Parameter receiverUsesGitHub: the receiver starts without a gh status, so a test can
     ///   install a scripted gh and look repositories up.
-    init(receiverHasRepository: Bool = true, pairs: Bool = true, receiverUsesGitHub: Bool = false) async throws {
+    init(receiverHasRepository: Bool = true, receiverUsesGitHub: Bool = false) async throws {
         sender = try await TestHarness(vault: .unlocked)
         receiver = try await TestHarness(vault: .unlocked, ghStatus: receiverUsesGitHub ? nil : .unknown)
         senderRepositoryID = try await sender.stageRepository(
@@ -72,14 +69,6 @@ final class ProjectShareWorld {
         } else {
             receiverRepositoryID = nil
         }
-        let senderKeys = try sender.data.team.deviceKeys()
-        let receiverKeys = try receiver.data.team.deviceKeys()
-        receiverTeammateID = receiverKeys.deviceID.hex
-        senderTeammateID = senderKeys.deviceID.hex
-        if pairs {
-            try sender.data.team.addTeammate(receiverKeys.card(login: TestFixtures.otherAccount, displayName: "Ben", macName: "Ben's Mac"))
-            try receiver.data.team.addTeammate(senderKeys.card(login: TestFixtures.account, displayName: "Ana", macName: "Ana's Mac"))
-        }
     }
 
     func senderDependencies() -> FeatureDependencies {
@@ -104,9 +93,8 @@ final class ProjectShareWorld {
     /// A project share export straight through the sender's repository.
     func exportBundle(
         stages: [String] = ["staging"],
-        protection: ShareBundleProtectionModel = .passphrase,
         expiry: ShareExpiryChoice = .default
-    ) async throws -> (url: URL, passphrase: String?) {
+    ) async throws -> (url: URL, passphrase: String) {
         let authorization = try await sender.container.reauth.authorizeShare(
             .fileExport,
             with: .password(testPassword),
@@ -120,14 +108,13 @@ final class ProjectShareWorld {
         let url = sender.sandbox.appendingPathComponent("Project-\(UUID().uuidString).fxvault")
         let result = try await sender.data.sharing.exportBundle(
             selection,
-            protection: protection,
             to: url,
             senderName: Self.identity.displayName,
             appVersion: Self.identity.appVersion,
             authorization: authorization
         )
-        defer { result.passphrase?.wipe() }
-        return (url, result.passphrase?.utf8String())
+        defer { result.passphrase.wipe() }
+        return (url, try #require(result.passphrase.utf8String()))
     }
 
     /// Copies a file into the receiver's sandbox (as if downloaded from a chat).

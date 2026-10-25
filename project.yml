@@ -56,12 +56,6 @@ targets:
         # Geist Sans and Geist Mono (OFL 1.1, App/Resources/Fonts). The synced App folder copies
         # them flat into Contents/Resources, so the path is "." (relative to Resources).
         ATSApplicationFontsPath: .
-        NSLocalNetworkUsageDescription: FX Vault uses the local network to share configuration, chat, see your teammates nearby and keep shared scopes in sync with them.
-        NSBonjourServices:
-          - _fxvault-share._tcp
-          - _fxvault-chat._tcp
-          - _fxvault-pair._tcp
-          - _fxvault-team._tcp
         UTExportedTypeDeclarations:
           - UTTypeIdentifier: io.fractalx.fxvault.share
             UTTypeDescription: FX Vault Share
@@ -72,26 +66,12 @@ targets:
                 - fxvault
               public.mime-type:
                 - application/vnd.fractalx.fxvault
-          - UTTypeIdentifier: io.fractalx.fxvault.teammate-card
-            UTTypeDescription: FX Vault Teammate Card
-            UTTypeConformsTo:
-              - public.data
-            UTTypeTagSpecification:
-              public.filename-extension:
-                - fxvcard
-              public.mime-type:
-                - application/vnd.fractalx.fxvault-card
         CFBundleDocumentTypes:
           - CFBundleTypeName: FX Vault Share
             CFBundleTypeRole: Viewer
             LSHandlerRank: $(FXVAULT_SHARE_HANDLER_RANK)   # Owner; Alternate in Debug
             LSItemContentTypes:
               - io.fractalx.fxvault.share
-          - CFBundleTypeName: FX Vault Teammate Card
-            CFBundleTypeRole: Viewer
-            LSHandlerRank: $(FXVAULT_SHARE_HANDLER_RANK)   # Owner; Alternate in Debug
-            LSItemContentTypes:
-              - io.fractalx.fxvault.teammate-card
     settings:
       base:
         PRODUCT_NAME: FXVault

@@ -89,7 +89,7 @@ nonisolated extension NameRule {
         case .reservedPrefix:
             String(localized: "error.name.reservedPrefix", defaultValue: "Names starting with GITHUB_ are reserved by GitHub.")
         case .reservedName:
-            String(localized: "error.name.reservedName", defaultValue: "FX Vault uses this name for shared spaces.")
+            String(localized: "error.name.reservedName", defaultValue: "FX Vault reserves this name.")
         case .reservedByProvider:
             String(localized: "error.name.reservedByProvider", defaultValue: "Names starting with SUPABASE_ are reserved by Supabase.")
         case .notUppercase:

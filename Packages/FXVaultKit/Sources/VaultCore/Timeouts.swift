@@ -106,29 +106,12 @@ public enum Timeouts {
     /// A revealed value is masked again after this long.
     public static let revealRemask: Duration = .seconds(30)
 
-    // MARK: - Sharing (§9.4, §9.5)
+    // MARK: - Sharing (§9.5)
 
-    /// Nearby handshake (HELLO through REVEAL).
-    public static let nearbyHandshake: Duration = .seconds(30)
-    /// Time the users have to compare the SAS.
-    public static let nearbySAS: Duration = .seconds(120)
-    /// Longest silence on an established nearby session.
-    public static let nearbyIdle: Duration = .seconds(30)
-    /// Longest nearby session.
-    public static let nearbySession: Duration = .seconds(10 * secondsPerMinute)
     /// A share package older than this raises the replay warning.
     public static let shareReplayMaxAge: Duration = .seconds(7 * secondsPerDay)
-    /// How far a share file's or pairing card's timestamps may be ahead of this Mac's clock (v0.9.0).
+    /// How far a share file's timestamps may be ahead of this Mac's clock (v0.9.0).
     public static let shareClockSkew: Duration = .seconds(10 * secondsPerMinute)
     /// The longest expiry a sender can choose for a share file (v0.9.0).
     public static let shareMaxExpiry: Duration = .seconds(30 * secondsPerDay)
-    /// A remote pairing invitation older than this is refused (v0.9.0).
-    public static let pairingInvitationMaxAge: Duration = .seconds(7 * secondsPerDay)
-
-    // MARK: - Shared spaces (v0.6.0, S6)
-
-    /// Longest space sync session between two teammates (handshake, heads, every version).
-    public static let spaceSyncSession: Duration = .seconds(2 * secondsPerMinute)
-    /// How often an unlocked Mac syncs its spaces with the teammates it can reach.
-    public static let spaceSyncInterval: Duration = .seconds(2 * secondsPerMinute)
 }

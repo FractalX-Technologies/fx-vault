@@ -25,7 +25,7 @@ public struct ShareBundleModel: Sendable, Equatable {
     /// cryptography.
     public var expiresAt: Date
     public var producer: ShareProducerModel
-    /// The sender's display name. Unverified unless the file was sealed for teammates.
+    /// The sender's display name (unverified).
     public var sender: ShareSenderModel
     /// The stages the sender chose, in their order. The receiver opens the Overview at the first
     /// one (P7).

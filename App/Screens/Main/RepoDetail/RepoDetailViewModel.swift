@@ -175,8 +175,6 @@ final class RepoDetailViewModel: LockObserving {
     }
     /// The other places of ``linkedPopoverRowID``, loaded when the popover opens.
     private(set) var linkedCopies: [LinkedCopyModel] = []
-    /// The shared spaces of this repository (v0.6.0), by scope.
-    private(set) var spaces: [ConfigScope: SpaceSummaryModel] = [:]
 
     @ObservationIgnored private(set) var driftTask: Task<Void, Never>?
     /// A drift check was asked for while offline and skipped: the reconnect check re-lists.
@@ -206,38 +204,9 @@ final class RepoDetailViewModel: LockObserving {
         scopeProvider = scopeSummary
         dependencies.actions.addLockObserver(self)
         observeItems()
-        observeSpaces()
     }
 
     // MARK: - Header
-
-    /// The selected scope's shared space (v0.6.0), or nil when it is not shared.
-    var space: SpaceSummaryModel? {
-        spaces[scope]
-    }
-
-    /// The shared scope's history and members.
-    func showSpace() {
-        guard let space else { return }
-        dependencies.actions.present(.space(SpaceContext(spaceID: space.id)))
-    }
-
-    private func observeSpaces() {
-        let stream = dependencies.spaces.observeSpaces()
-        let repositoryID = repositoryID
-        tasks.set("spaces", Task { [weak self] in
-            do {
-                for try await all in stream {
-                    self?.spaces = Dictionary(
-                        all.filter { $0.repositoryID == repositoryID }.map { ($0.scope, $0) },
-                        uniquingKeysWith: { first, _ in first }
-                    )
-                }
-            } catch {
-                AppLog.ui.error("Space observation ended")
-            }
-        })
-    }
 
     var repository: RepoModel? {
         repositoryProvider()

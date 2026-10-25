@@ -8,8 +8,8 @@ catalog, config, `.env`, sync, creation, drift, sharing and destination reposito
 The app builds every repository in `AppContainer`, detects gh, shows `GHSetupScreen`, and runs the
 three-column main window on live data (sidebar, scopes, detail table, toolbar and menu commands,
 Preferences › Accounts, `.fxvault` open handling), and every feature sheet (item editor,
-environments, sync, drift review, create repository, `.env` import/export, file and nearby
-sharing) plugs in through one contract ("UI feature contract" below). Everything is verified by
+environments, sync, drift review, create repository, `.env` import/export, file sharing) plugs
+in through one contract ("UI feature contract" below). Everything is verified by
 view-model tests; the runtime checks a human must do are in [RELEASING.md](RELEASING.md). The
 full design is in `tasks/todo.md` §4–§10; related documents:
 [DATABASE.md](DATABASE.md), [API.md](API.md), [SECURITY-MODEL.md](SECURITY-MODEL.md),
@@ -36,7 +36,7 @@ SwiftUI [Name]Screen ──► @Observable [Name]ViewModel (MainActor)
         ┌──────────┬──────────┼──────────────┬─────────────┐
         ▼          ▼          ▼              ▼             ▼
     Managers    Services    Stores        SyncEngine    SharingKit
-    (local)     (gh, git)   (GRDB)        (pure domain) (protocol + transport)
+    (local)     (gh, git)   (GRDB)        (pure domain) (formats + planner)
 ```
 
 View models depend only on repositories. A Store is a local manager over GRDB; SyncEngine and
@@ -48,11 +48,11 @@ SharingKit are pure domain services called by repositories.
 |---|---|---|---|
 | `VaultCore` | none | done | Models, typed ids, validation, `SecretBytes`, `VaultClock`, `Limits`, `Timeouts`, errors |
 | `VaultCrypto` | VaultCore, Clibsodium | done | Argon2id, field encryption, key wrap, recovery key, keyring, password strength |
-| `VaultStore` | VaultCore, GRDB | done | Database factory, migrations v1–v13, records, stores, observation. Stores blobs only |
+| `VaultStore` | VaultCore, GRDB | done | Database factory, migrations v1–v15, records, stores, observation. Stores blobs only |
 | `GitHubKit` | VaultCore | done | Process runner, shell probe, gh locator/auth, command builders, scheduler, gh api for environments and `fxvault.yml`, ssh and git |
 | `EnvTools` | VaultCore | done | .env parsing/serialization, key normalization, credential heuristics, secure file writes, iCloud and gitignore checks, the `fxvault.yml` parser and serializer (v0.8.0) |
 | `DestinationKit` | VaultCore, GitHubKit | done (v0.8.0, experimental) | HTTPS clients for runtime destinations (Azure Key Vault, Supabase Edge Function secrets, Vercel environment variables), the host allowlist, the `az` token provider, the Supabase and Vercel account lists, `DestinationError`. No database, no keys |
-| `SharingKit` | VaultCore (+ CryptoKit, Network) | done | Share payload, `.fxvault` codec, passphrases, nearby protocol and transport, import planner. Key derivation is injected (`KeyDeriving`), so no VaultCrypto dependency |
+| `SharingKit` | VaultCore (+ CryptoKit) | done | Share payload and bundles, `.fxvault` codecs, passphrases, import planners. Key derivation is injected (`KeyDeriving`), so no VaultCrypto dependency |
 | `SyncEngine` | VaultCore, VaultCrypto, GitHubKit | done | Change derivation, edit planning, summary, drift detection, preflight, planning, execution, verification, launch reconciliation. No database and no keys: VaultData plugs in through `SyncPersisting` and `SyncValueProviding` |
 | `VaultData` | all of the above | done | `VaultSession`, `VaultManager`, `ReauthGate`, Touch ID, and the repositories view models use |
 
@@ -82,17 +82,16 @@ argv matchers) and `SteppingClock`, shared by SyncEngineTests and VaultDataTests
 - **Time is injected.** Anything that waits or reads the clock takes `any VaultClock`
   (`SystemClock` in the app, `ManualClock` in tests).
 - **No magic numbers.** Sizes, counts and durations live in `Limits`, `Timeouts` (VaultCore),
-  `EnvToolsLimits`, `GHConstants`, `NearbyProtocol`, `CryptoDomain` and `StoreConstants`.
+  `EnvToolsLimits`, `GHConstants`, `CryptoDomain` and `StoreConstants`.
 
 ## Concurrency
 
 - App target: `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` and approachable concurrency.
 - Package: Swift 6 language mode, nonisolated by default, `MemberImportVisibility` enabled.
   Everything public is `Sendable`. Actors: `GHCommandScheduler` (one per account),
-  `NearbySession`, `SyncExecutor` (one per run) and the VaultData repositories that do I/O
+  `SyncExecutor` (one per run) and the VaultData repositories that do I/O
   (`GitHubEnvironmentRepository`, `RepoCatalogRepository`, `SyncRepository`,
-  `RepoCreationRepository`, `DriftRepository`, `SharingRepository`, the nearby sender and
-  receiver; v0.8.0: `DestinationSyncRepository`, `AzureCLITokenProvider`,
+  `RepoCreationRepository`, `DriftRepository`, `SharingRepository`; v0.8.0: `DestinationSyncRepository`, `AzureCLITokenProvider`,
   `ShellResolvingAzureTokens`). Lock-protected classes: `SecretBytes`, `VaultKeyring`,
   `GHTokenCache`, `ManualClock`, `FakeCommandRunner`.
 - Database writes are synchronous only (DATABASE.md, "Transactions").
@@ -160,7 +159,7 @@ This is the contract for the next stage (the feature screens). Everything listed
   biometryUnavailable(reason), passwordRequired(reason), cancelled, passwordFallbackRequested,
   notInitialized, alreadyInitialized).
 - **Constants:** `Limits` (value, name, throttle, gh, process-output, password, recovery, crypto,
-  KDF, sharing and nearby limits), `Timeouts` (process, sync, drift, lock, clipboard, sharing
+  KDF and sharing limits), `Timeouts` (process, sync, drift, lock, clipboard, sharing
   durations), `Duration.timeInterval`.
 
 ### VaultCrypto
@@ -200,7 +199,7 @@ Key hierarchy (plan §5.1): a random 32-byte DEK per vault; HKDF-SHA256 derives 
 See [DATABASE.md](DATABASE.md). `DatabaseFactory.openLive()/openOnDisk(directory:)/inMemory()`,
 `VaultMigrator`, `VaultDatabase.read/write/checkpointTruncate`, records for every table, and the
 stores `VaultRecordStore`, `AccountStore`, `RepoStore`, `ConfigStore`, `SyncJournalStore`,
-`SharePackageStore`, `TeamStore`, `SpaceStore`, `FolderStore` (v0.7.0) and `DestinationStore`
+`SharePackageStore`, `FolderStore` (v0.7.0) and `DestinationStore`
 (v0.8.0: destinations, their items, provider connections, the destination journal, pending
 counts per repository), `SentShareStore` and `ShareHoldStore` (v0.9.0: the sent log; the held
 rows of both item tables with their import records, and bulk release by package or item), each
@@ -338,40 +337,11 @@ See [SHARING-PROTOCOL.md](SHARING-PROTOCOL.md).
 - **File:** `FxVaultHeaderModel`, `FxVaultFileCodec(deriver:)` (`inspect`, `open`, `seal`,
   `encrypt`, `decrypt`), `protocol KeyDeriving` (VaultData adapts Argon2id).
 - **Passphrase:** `PassphraseGenerator.bundled()`, `generate()`, `normalize(_:)`.
-- **Nearby:** `NearbyHandshake` (pure state machine), `NearbySession` (actor over a
-  `NearbyTransport` and a `VaultClock`), `NWNearbyTransport` / `NWNearbyBrowser` (Network
-  framework, peer-to-peer Wi-Fi enabled, `local.` domain only; `advertising(purpose:)`,
-  `advertisingChat(displayName:)`, `registeredServiceNames` (the name Bonjour registered),
-  `NWNearbyBrowser(purpose:)`), `InMemoryTransportPair` (tests, previews),
-  `NearbyFailureTracker`, events and abort reasons. `NearbyPurpose` (`.share` / `.chat`) selects
-  the Bonjour service type and the label prefix; the commit-reveal handshake, SAS, CONFIRM and
-  encrypted channel live once in the internal `NearbyKeyExchange`, used by both protocols.
-- **Chat** (`Chat/`, `fxvault-chat/v1`, SHARING-PROTOCOL.md §7):
-  `NearbyChatSession(role:localName:transport:clock:)` actor with `events`
-  (`AsyncStream<NearbyChatEvent>`: `incomingConnection` (responder), `peerConnected`, `sasReady`,
-  `peerConfirmedSAS`, `verified`,
-  `message(ChatMessageModel)`, `attachmentOffered(ChatAttachmentOfferModel)`,
-  `attachmentDeclined`, `attachmentSent`, `attachmentReceived(id, SharePackageModel)`,
-  `peerClosed`, `aborted(NearbyAbortModel)`) and `start`, `confirmSAS`, `rejectSAS`, `sendText`,
-  `offerAttachment(manifest:payloadProvider:)`, `requestAttachment`, `declineAttachment`,
-  `close`; `phase` (`NearbyChatPhase`), `ChatError`, `ChatTextSanitizer`. Since v0.4.0 (chat
-  version 2, `NearbyChatProtocol.maxVersion`): `acceptsConfigurationAttachments` and
-  `offerConfiguration(manifest:payloadProvider:)` (a whole repository or environment;
-  `ChatConfigurationPayloadProvider` returns the offered manifest with its values), and an
-  offer's `content` is `ChatAttachmentContentModel.item(kind:name:environmentName:)` or
-  `.configuration(ChatConfigurationSummaryModel)`. Ephemeral: no message
-  history, everything wiped on close, abort or disconnect. Chat limits and timers are
-  `Limits.chatMessageBytes`, `chatAttachmentBytes`, `chatConfigurationAttachmentBytes`, `chatMaxOpenAttachments`,
-  `chatMaxOffersPerChat`, `chatMaxPeerFramesPerFloodWindow`, `chatMaxUnansweredPings`,
-  `chatMaxBlankLines`, `chatMaxMarksPerCharacter` and `Timeouts.chatKeepaliveInterval`,
-  `chatIdle`, `chatFloodWindow`, declared in
-  SharingKit (`Chat/NearbyChatProtocol.swift`) as extensions of the VaultCore enums.
 - **Import:** `ShareImportPlanner.plan(_:mode:local:fingerprint:)` → `ShareImportPlanModel`
   (chips, default actions, policy differences, replay warnings, provenance). VaultData's
   `ShareImporter` applies it in one transaction.
-- `ShareError` (one `.invalidFile` for every file read failure; since v0.9.0 also
-  `notARecipient`, `senderNotTeammate`, `expired`, `invalidPairingCard`, `pairingExpired`,
-  `pairingOwnCard`).
+- `ShareError` (one `.invalidFile` for every file read failure, a 0.9 teammates file included;
+  since v0.9.0 also `expired`).
 - **Bundles** (v0.9.0, `Bundle/`, SHARING-PROTOCOL.md §1.4, §5.1): `ShareBundleModel` (schema 4:
   `expiresAt`, `stages`, `repositories: [ShareBundleRepositoryModel]` (a `ShareRepositoryModel`
   plus `destinations: [ShareDestinationModel]`), `folders: [ShareBundleFolderModel]`;
@@ -385,38 +355,9 @@ See [SHARING-PROTOCOL.md](SHARING-PROTOCOL.md).
   `.useExisting`; folder plans; `linkGroups`; `isSamePreview(as:)`; `firstStage`) over a
   `ShareBundleLocalStateModel`. `ShareDestinationFingerprinter` compares destination values.
 - **File format 2** (v0.9.0, `File/`, §2.1): `FxVaultFileV2Codec(deriver:)`: `inspect(_:)` →
-  `FxVaultFileInfo` (`.v1`, `.v2Passphrase`, `.v2Teammates(_, recipientCount:)`; never touches
-  key material), `sealWithPassphrase` / `openWithPassphrase` (v1 and v2), `sealForTeammates(payload:
-  sender:recipients:)` / `openAsTeammate(_:device:teammates:)` → `FxVaultTeammateFileModel`
-  (payload, sender, sender's announce key). `FxVaultHeaderV2Model` (mode, recipient count),
-  `ShareTeammateKeyModel` (device id and both public keys; no announce key, so a teammate paired
-  remotely can be a recipient).
-- **Remote pairing** (v0.9.0, `Team/RemotePairing*.swift`, §10.9): `RemotePairing.bundled()`,
-  `kind(of:)`, `makeInvitation`, `readInvitation(_:now:ownDevice:)` → `RemoteInvitationModel`,
-  `makeReply(to:keys:login:displayName:macName:now:)` → `RemotePairingReplyFileModel` (file,
-  inviter, code), `readReply(_:keys:now:)` → `RemotePairingReplyModel` (teammate card with its
-  announce key, code); `TeamPublicCardModel` (a card without the announce key,
-  `withAnnounceKey(_:)`), `RemotePairingCodeModel` (`words`, `text`), `RemotePairingProtocol`
-  (extension, UTType, MIME, labels).
-
-- Teammates (v0.5.0, `Team/`): `TeamProtocol`, `TeamService` (preamble), `TeamMessageType`;
-  `TeamDeviceKeys` (generate, `secretBytes()`, `withNewAnnounceKey()`, `card(login:displayName:macName:)`),
-  `TeamCardModel` (wire form, id check), `TeamDeviceID`; `TeamPseudonym` and `TeamPresenceMatcher`;
-  `TeamPairingMachine` / `TeamPairingSession` (Add Teammate); `TeamSessionMachine` / `TeamSession`
-  (`connect(to:keys:requests:transport:)`, `ping`, `answer`) with `TeamRequest` (`.ping`,
-  `.updateCard`); `TeamRouter.route(_:)` (preamble), `PreambleTransport`, `WatchedTransport`;
-  `NWTeamListener` (persistent, re-registering presence advertisement); `TeamChatIdentityModel`
-  for chat version 3. `NearbyChannel` is the encrypted channel shared by every nearby protocol.
-- Shared spaces (v0.6.0, `Space/`, SHARING-PROTOCOL.md §11): `SpaceProtocol`; models
-  (`SpaceBindingModel`, `SpaceMemberModel`, `SpaceItemModel`, `SpaceSnapshotModel`,
-  `SpaceVersionModel` with `hash`, `encoded()`, `decode`, `SpaceHeadModel`); `SpaceLog`
-  (`verify`, `verifyGenesis`, `apply` → `SpaceStateModel`), `SpaceKeychain` (epoch keys from
-  wraps, `exportKey`/`importKey`), `SpaceVersionBuilder` (`genesis`, `publish`, `members`,
-  `snapshot(of:keychain:)`, `fingerprint`), `SpaceMarkerModel` (`make`, `encoded`, `decode`,
-  `isSigned(by:)`) and `SpaceGate.decide`. In `Team/`: `TeamService.spaces`, the spaces messages
-  of `TeamSessionMachine`, `TeamSession.syncSpaces(with:keys:exchanger:transport:)` and
-  `answer(…service:exchanger:)` over `TeamSpaceExchanging`; `NWSpaceListener`,
-  `RemoteSpaceBackoff` and `TeamRemoteAddressModel` (Q4).
+  `FxVaultFileInfo` (`.v1`, `.v2Passphrase`; never touches key material),
+  `sealWithPassphrase` / `openWithPassphrase` (v1 and v2), `FxVaultHeaderV2Model`. 1.0 writes
+  and opens the passphrase mode only.
 
 ### SyncEngine
 
@@ -528,13 +469,6 @@ text) because packages ship no user-facing text.
 - `SyncPlanner.plan(_:includeDeletions:spaceReason:) -> SyncPlanModel` with ordered `SyncStepModel`s:
   create, environment upserts, patterns, guided renames, scope writes (repository first,
   variables before secrets), item deletes, environment deletes.
-- Shared spaces (v0.6.0): `protocol SyncSpaceCoordinating` (`sharedScopes`, `gate`, `claim`,
-  `publish`, `confirmPublished`, `abandonClaim`), injected as `spaces:` into `SyncPreflight`
-  (`run(…spaceTakeovers:)`; gates every shared scope it touches, `SyncBlockReason.space` /
-  `.sharedEnvironment`, `RepoPreflightModel.spaces`) and `SyncExecutor` (claim and re-read before
-  a shared scope's first write, publish and re-read after the repository's steps; warnings
-  `.spaceNotPublished`, `.spaceForked`), and `SpaceClaimReconciler` (unfinished claims at
-  unlock).
 - `actor SyncExecutor(schedulers:persistence:values:clock:)`: `run(_ plan) -> SyncResultModel`
   (throws only `.alreadyRunning`), `nonisolated progress: AsyncStream<SyncProgressEventModel>`,
   `nonisolated cancel()` (stops after the command in flight). One gh command per item, values on
@@ -581,7 +515,7 @@ them with `await`). Packages ship no user-facing text: the app maps every error.
   failed replacement; set wherever that is detected, including ReauthGate checks while unlocked;
   cleared by enable, disable, reset and an answered offer). Argon2id work is `@concurrent`. A weak
   new password throws `PasswordPolicyError.tooWeak`.
-- `ReauthGate` (D30): `authorize(.export | .share | .nearbySend, with: .biometrics(prompt) |
+- `ReauthGate` (D30): `authorize(.export | .share, with: .biometrics(prompt) |
   .password(String))`, `authorizeWithPassword(.newRecoveryKey | .changePassword |
   .disableTouchID | .rotateKey | .resetVault, password:)`; plus `authorizeEnvExport(with:
   session:) -> EnvExportAuthorizationModel` and `authorizeShare(_:with:session:) ->
@@ -665,12 +599,11 @@ one `VaultSession.write` and throws `ConfigRepositoryError` (`.folderNotFound`, 
 - Sharing: `ShareSelectionModel.folder(_)` builds a folder package (schema 3);
   `SharingRepository.openFileContents` returns `ShareOpenedFileModel` `.repository(draft) |
   .folder(ShareFolderDraftModel)`, with `saveFolder(_:as:conflicts:)` and
-  `importDraft(_:into:scope:)`; `NearbyChatConversation.offerFolder`, `saveFolderAttachment`,
-  `previewFolderAttachment(_:into:scope:)`; `FolderPackageTargeting` converts a folder package for
+  `importDraft(_:into:scope:)`; `FolderPackageTargeting` converts a folder package for
   a repository scope.
 
 **Destinations** (`Destinations/`, v0.8.0, experimental; tasks/todo.md R1–R12). No GitHub path
-(planner, preflight, executor, drift, spaces, sharing) reads the destination tables, so a
+(planner, preflight, executor, drift, sharing) reads the destination tables, so a
 destination item never reaches GitHub except as a copy in a repository scope.
 - `struct DestinationRepository(session:clock:)`; every mutation is one `VaultSession.write` and
   throws `ConfigRepositoryError` (`.destinationNotFound`, `.destinationFull`,
@@ -734,31 +667,6 @@ destination item never reaches GitHub except as a copy in a repository scope.
   provider. `DEKRotator` re-seals destination values and connection tokens and re-derives their
   synced fingerprints (clearing one that no longer matches).
 
-**Team** (`Team/`, v0.5.0). `struct TeamRepository(session:clock:)`: `deviceKeys()` (created on
-first use), `teammates()`, `observeTeammates()`, `teammateCards()` (announce keys opened),
-`addTeammate(_:)`, `applyCardUpdate(_:)`, `removeTeammate(id:)` (renews the announce key, marks
-`needs_card_update`), `setMuted(_:teammate:)`, `markSeen(_:)`, `cardUpdateDelivered(to:)`.
-Errors: `TeamRepositoryError`. `ChatRepository.makeConversation(…team:)` passes the teammate
-identity to chat version 3. Since v0.6.0: `remoteAccess()`, `observeRemoteAccess()`,
-`setRemoteAccess(_:isAllowed:address:)`, `markRemoteConnection(_:at:)` (Q4). Since v0.9.0
-(`TeamRepository+Pairing.swift`, SHARING-PROTOCOL.md §10.9): `pairingFileKind(of:)`,
-`makeInvitation(as:)`, `readInvitation(_:)` → `RemoteInvitationReadModel` (with
-`existingTeammate`), `makeReply(to:as:)`, `confirmInviter(_:)`, `readReply(_:)` →
-`RemoteReplyReadModel`, `confirmReplier(_:)` → `RemotePairingOutcome` (`.added`, `.updated`);
-only the two confirmations write. `addTeammate(_:pairedVia:)`, `addTeammateAwaitingAnnounceKey`,
-`fillAnnounceKeyIfMissing(_:teammate:)`; `teammateCards()` gives a teammate without an announce
-key a random one that is never stored.
-
-**Spaces** (`Spaces/`, v0.6.0). `struct SpaceRepository(session:schedulers:clock:)`, also the
-app's `SyncSpaceCoordinating`: `spaces()`, `observeSpaces()`, `detail(_:)`,
-`readiness(repositoryID:scope:)`, `share(repositoryID:scope:with:me:reason:)` (genesis and the
-marker), `addMembers` / `removeMembers` (→ `SpaceRotationChecklistModel`), `history(_:)`,
-`itemHistory(_:kind:name:)`, `value(_:version:kind:name:)`, `restore(…)`; peers:
-`heads(sharedWith:)`, `version(_:of:for:)`, `receive(_:spaceID:from:)` (→
-`SpaceReceiveOutcomeModel`). `SpaceSnapshotBuilder` (rows → snapshot) and
-`SpaceSnapshotApplier` (snapshot → rows, drafts kept). Errors: `SpaceRepositoryError`.
-`SyncRepository` and `DriftRepository` take it as `spaces:`.
-
 **.env files** (`EnvFiles/`). `struct EnvFileRepository(session:gitignoreChecker:
 cloudSyncDetector:fileWriter:clock:writePolicy:)`: `readFile(at:)`, `parse(_:)`,
 `conflicts(for:in:repositoryID:scope:)`, `applyImport(_:selections:repositoryID:scope:)`,
@@ -775,7 +683,7 @@ cancel(), outcome(), isFinished}`, `currentRun`, `lastRunReport()` / `observeLas
 Since v0.9.0 (held imports): `SyncReviewModel.heldShares: [HeldShareModel]` (one per held file:
 sender, `isSenderVerified`, dates, repositories → scopes and destinations → items),
 `preflight(including:)` and `credentialWarnings(including:)` for the From Files choices,
-`startRun(_:includeDeletions:includeHeld:cloneFolder:spaceReason:)` (releases the included
+`startRun(_:includeDeletions:includeHeld:cloneFolder:)` (releases the included
 files' holds in one transaction, then plans); `HeldChangeFilter` takes held changes out of the
 preflight; `struct ShareHoldRepository(session:)`: `heldShares()`, `observeHeldShares()`,
 `releaseHold(packageID:)`, `releaseHold(itemIDs:)`. `DestinationSyncRepository.run(_:
@@ -797,53 +705,27 @@ creates everything), `discardStaged(_:)`, `checkAvailability(owner:name:accountL
 again), `enterNewValue(_:value:pushOnNextSync:)`. Unreadable scopes are never reported as deleted.
 
 **Sharing** (`Sharing/`). `actor SharingRepository(session:schedulers:deriver:clock:writePolicy:
-fileWriter:)`: `previewExport(_:)`, `exportFile(package:to:authorization:existingFile:)` (a
-received chat package as a schema 4 bundle in format 2, 7-day expiry, production refused;
-passphrase returned once, file 0600; v0.8's `exportFile(_:…)` of a selection is now the
-`@_spi(Testing)` `exportLegacyFile`, which writes format 1 for tests of older files), `readFile(at:)` (header checked before
+fileWriter:)`: `previewExport(_:)`, the `@_spi(Testing)` `exportLegacyFile` (v0.8's export of a
+selection; writes format 1 for tests of older files), `readFile(at:)` (header checked before
 any passphrase), `openFile(_:passphrase:checkGitHub:) -> ShareImportDraftModel`, `replan(_:
 checkGitHub:)`, `apply(_:plan:confirmReplay:)` (re-plans inside the transaction;
-`.planOutdated`), `makeNearbySender(transport:localName:clock:)`,
-`makeNearbyReceiver(transport:localName:clock:)` (`NearbyShareSender` / `NearbyShareReceiver`
-actors; the UI never receives values). What to share is a `ShareSelectionModel`: `.item`,
+`.planOutdated`). What to share is a `ShareSelectionModel`: `.item`,
 `.environment`, `.repository` or `.subset(ShareSubsetModel(repositoryID:environmentIDs:itemIDs:))`
 (any combination; a branch policy travels only for the environments in `environmentIDs`, see
 SHARING-PROTOCOL.md §1.2). `ShareExportPreviewModel.summary` holds the per-scope counts.
 Since v0.9.0 (`SharingRepository+ProjectShare.swift`, SHARING-PROTOCOL.md §6.1; the init takes
 `repositoryAccess: ShareRepositoryAccessChecking`, `CatalogShareRepositoryAccess` in the app):
 `stageOptions(repositoryIDs:)`, `selection(repositoryIDs:stages:includesRepositoryLevel:folderIDs:
-expiry:) -> ShareBundleSelectionModel`, `previewBundle(_:)`, `exportBundle(_:protection:to:
-senderName:appVersion:authorization:existingFile:)` (`.passphrase` or `.teammates([id])`;
-`.productionNeedsTeammates`, `.invalidRecipients`), `defaultFileName(…)`, `sentShares()`,
+expiry:) -> ShareBundleSelectionModel`, `previewBundle(_:)`, `exportBundle(_:to:
+senderName:appVersion:authorization:existingFile:)` (passphrase only, returned once, file 0600;
+a production stage throws `.productionNotShared` before the authorization is consumed),
+`defaultFileName(…)`, `sentShares()`,
 `observeSentShares()`, `deleteSentShare(_:)`, `inspectFile(at:)`, `openShareFile(_:passphrase:
 checkGitHub:)` → `ShareOpenedShareFileModel` (`.repository`, `.folder` or
-`.bundle(ShareBundleDraftModel)`, plus the sender with `isVerified`),
+`.bundle(ShareBundleDraftModel)`, plus the sender),
 `importMissingRepositories(of:)`, `replanBundle(_:checkGitHub:)`, `applyBundle(_:plan:
 confirmReplay:)` → `ShareBundleImportResultModel` (first repository and stage for the
 Overview). Internals: `ProjectShareExportBuilder`, `ProjectSharePlanning`, `ProjectShareImporter`.
-
-**Chat** (`Chat/`, v0.2.0). `struct ChatRepository(session:sharing:clock:)`:
-`attachableItems() -> [ChatAttachableItemModel]` (live items with a value, names only, by
-repository, then repository level before environments, kind and name) and
-`makeConversation(role:transport:localName:clock:) -> NearbyChatConversation`. The
-`NearbyChatConversation` actor wraps one `NearbyChatSession`: `events` (the session's events; a
-received attachment is forwarded **without** its value), `start`, `confirmCode`, `rejectCode`,
-`sendText`, `offerItem(_:senderName:appVersion:authorization:)` (consumes a
-`ShareAuthorizationModel(.nearbySend)`; manifest from the share builder's `.item(id)`; the value
-is decrypted only when the peer asks, and only if the item still has the offered name, kind and
-scope), `requestAttachment`, `declineAttachment`, `previewAttachment(_:checkGitHub:) ->
-ShareImportDraftModel` (moves the received value into a share import draft; apply it with
-`SharingRepository.apply`), `discardAttachment`, `close()` (wipes every received value; aborts
-and disconnects do too). Errors: `NearbyChatError` (`.chat(ChatError)`, `.sharing(SharingError)`,
-`.valueMissing`, `.attachmentUnavailable`).
-v0.4.0 (repositories in chat, SHARING-PROTOCOL.md §7.1): `ChatRepository.attachableRepositories()`
-(repositories with environments or items, names and counts) and `importTargets()` (the vault's
-repositories, for Import Into…); on the conversation `acceptsConfigurationAttachments`,
-`offerRepository(_:senderName:appVersion:authorization:)` (checks the peer's version before it
-consumes the `.nearbySend` authorization), `previewAttachment(_:into:checkGitHub:)` (`into`: plan
-for another repository of this vault), `saveAttachment(_:to:authorization:)` (`.fileExport`;
-`SharingRepository.exportFile(package:to:authorization:existingFile:)` seals the received
-package as a project file; the package stays for an import) and `receivedPreview(_:)` (names and counts).
 
 **Composition (`AppContainer`, `App/Composition/VaultDataComponents.swift`).**
 
@@ -862,7 +744,7 @@ let reauth = ReauthGate(manager: vault)
 ```
 
 - One instance of each repository for the process (`VaultDataComponents`): `github`, `catalog`,
-  `config`, `envFiles`, `sync`, `creation`, `cloner`, `drift`, `sharing`, `chat`, and since
+  `config`, `envFiles`, `sync`, `creation`, `cloner`, `drift`, `sharing`, and since
   v0.8.0 `destinations`, `overview`, `destinationSync`, `destinationAccess` and `azureTokens`
   (`ShellResolvingAzureTokens`). `make(…transport:)` takes the HTTP transport
   (`URLSessionTransport()` by default; one transport for every destination call);
@@ -892,7 +774,7 @@ let reauth = ReauthGate(manager: vault)
 - The sync view model holds a `SyncActivityAssertion` for the whole run (it suspends only the
   inactivity rule).
 - Sheets that show values conform to `LockObserving` or live under a phase-switched screen.
-- `.env` export needs `ReauthGate.authorizeEnvExport`; `.fxvault` export and nearby send need
+- `.env` export needs `ReauthGate.authorizeEnvExport`; `.fxvault` export needs
   `ReauthGate.authorizeShare`.
 - Destination items are written only through `DestinationRepository` (its internal
   `DestinationItemWriter`) and destination remotes are reached only through
@@ -963,22 +845,14 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 46 | §7.1 | **Push on Next Sync** (table context menu, and a checkbox in the item editor applied on Save) sets `force_push` on a live synced secret with a value and nothing pending; the row shows "Will push" (`ConfigSyncStatus.willPush`), the pending count and the Sync button follow the observation stream, Revert clears it. Not offered for variables: their values are compared with GitHub's, so a difference is already a pending change or drift. A rename or kind change in the same save pushes anyway, so the request is skipped then |
 | 47 | D27 | A push the user requested records when (`config_items.force_push_requested_at`, migration v8). D27 (preflight and the executor's per-scope re-check) and drift detection treat a GitHub change made clearly before that instant as covered: the push goes through and no drift is shown. A change after it, or within `SyncEngineConstants.requestedPushClockMargin` (5 s) of the request's whole second (GitHub lists whole seconds; clocks drift), still blocks (`.remoteChanged`, resolved in Drift review). An expired verification rebases the secret on its `pre_write_updated_at`, so the re-push keeps the request's effect. Revert keeps a value that already equals the synced one (it can lack a synced copy), so cancelling a push never erases a secret. Pushes FX Vault schedules itself (Keep Local, an expired verification) and share-import fills record no time and keep the strict rule. |
 
-### As built in v0.2.0 (flexible sharing, connectivity banner, nearby chat)
+### As built in v0.2.0 (flexible sharing, connectivity banner)
 
 | # | Area | Decision |
 |---|---|---|
 | 48 | Sharing | The scope values stay `secret` / `environment` / `repository`; any mix is `repository`. Schema v2 exists only for partial environments (`deploymentBranchPolicy: null`) and is written only when one is present (lowest-version rule), so whole environments, the whole repository and repository-level selections stay readable by 0.1.x (SHARING-PROTOCOL.md §1.1) |
 | 49 | Sharing | A branch policy travels only with a fully checked environment. A partial environment never changes the receiver's policy; when it is missing on the receiver it is created with GitHub's policy and patterns if GitHub lists it (synced), else with all branches (pending create). `.item` on an environment item is now a partial environment (supersedes decision 34) |
 | 50 | Connectivity | `ConnectivityMonitor` applies the first path at once and later changes after 2 s on the injected clock; Low Data Mode is online, requires-connection is offline. `GitHubReachability` makes no calls of its own: the sidebar, repository detail, Add by name, the Sync sheet (preflight, start, and the last change of a run that says anything about GitHub), Create Repository (owners and templates) and the drift review report their gh outcomes |
-| 51 | Connectivity | Nearby share and Nearby Chat are never gated by `isOnline` (peer-to-peer Wi-Fi works with no internet route, and a Mac with Wi-Fi on but joined to no network reports no connection). Nearby Chat is disabled only by `hasNetworkInterface == false`. Clone is disabled offline too; the toolbar Import .env stays enabled (local only). A Sync sheet left open when the Mac goes offline cannot start a run or review deletions and says why in its footer |
-| 52 | Nearby | Listener, browser and connection set `includePeerToPeer` (AWDL); the protocol bytes and KATs are unchanged. 0.1.x does not use AWDL, so 0.1.x and 0.2.0 Macs meet only on a shared network |
-| 53 | Chat | Chat is domain-separated from share by its Bonjour type (`_fxvault-chat._tcp`) and label prefix (`fxvault/chat/v1`); the handshake moved, unchanged, into the internal `NearbyKeyExchange` used by both. Chat KATs are cross-checked with Python like the share KATs |
-| 54 | Chat | Ephemeral by construction: the session keeps no history, the window's transcript lives in the view model only, and close, lock, sleep, screen lock, disconnect, timeout and End Chat wipe it. Idle 10 min, keepalive PING every 30 s (abort after 2 unanswered), no overall limit; the responder waits for a connection without a timer |
-| 55 | Chat | Attaching asks ReauthGate before the picker opens and reuses `ShareAuthorizationPurpose.nearbySend` (its Touch ID prompt). The offer carries a manifest only; the value is decrypted when the peer asks and only if the item still has the offered name, kind and scope. "Save to my vault" goes through the share import preview and `SharingRepository.apply` |
-| 56 | Chat | The chat window needs an unlocked vault; closing the main window locks the vault (D16) and so ends the chat. A responder whose unverified peer drops before HELLO, or leaves before the code is shown, re-advertises and returns to the people list without an "ended" screen or a failed-handshake count; only listener failures (no connection accepted) count, 3 in a row at most. `incomingConnection` clears the "visible" chip. There is no accept/decline step before the code comparison (open product question) |
-| 57 | Nearby | Chat advertises the user's sanitized display name (Preferences › General › "Name for nearby Macs", else the macOS full name) as its Bonjour instance name. Nearby share and receive use the same name in HELLO (`ShareLocalIdentityModel.nearby(preferences:)`) but keep random Bonjour instance names |
-| 58 | Chat | Flood limits: more than 100 TEXT/offer/request/decline/PING frames in 10 s, or more than 32 offers per chat, abort with `unexpectedMessage`; the window keeps 1,000 messages. Text and names drop every invisible character (`UnicodeScalarPolicy.isInvisible`); chat text keeps one blank line in a row and four combining marks per character. Messages are not selectable: Copy goes through `ClipboardManager`. Late async results (send, offer, request, a save preview) of a chat that ended are dropped. An offer's value provider refuses a value whose `value_fp` changed since the offer. Discovery uses the `local.` domain and filters this Mac by its registered name |
-| 59 | Sharing | A missing partial environment whose items are all skipped is not created (`ShareEnvironmentPlanModel.createsEnvironment`); a nearby DECISION carries such an environment's id only with an accepted item. A tree opened for one item keeps sharing that item even if it is its environment's only item, until the checks change. Share import previews read GitHub only when online (`FeatureDependencies.checksGitHub`), and their "Import repository" button, the drift review's Refresh and resolutions, and Create Repository's Sync Now… are disabled offline with `ConnectivityCopy.offlineHelp`. The connectivity debounce is not restarted by more updates of the same transition; a reconnect cancels the previous one and re-lists drift only when the last check failed, never ran or was skipped offline |
+| 59 | Sharing | A missing partial environment whose items are all skipped is not created (`ShareEnvironmentPlanModel.createsEnvironment`). A tree opened for one item keeps sharing that item even if it is its environment's only item, until the checks change. Share import previews read GitHub only when online (`FeatureDependencies.checksGitHub`), and their "Import repository" button, the drift review's Refresh and resolutions, and Create Repository's Sync Now… are disabled offline with `ConnectivityCopy.offlineHelp`. The connectivity debounce is not restarted by more updates of the same transition; a reconnect cancels the previous one and re-lists drift only when the last check failed, never ran or was skipped offline |
 
 ### As built in v0.3.1 (gh login detection)
 
@@ -995,70 +869,25 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 68 | Status | `GHStatusModel` gains `.foreignOwner(path:owner:isHomebrew:)`, `.environmentToken(version:path:variables:)`, `.unusableAccounts(version:path:accounts:)`; `.outdated` carries the checked path and `.untrusted` the rejection, so the texts say what is wrong |
 | 69 | Layout | Every column of the main split view takes the window's height (`mainColumnHeight()`: `frame(minHeight: 0, maxHeight: .infinity)`). AppKit sizes the split view from each column's minimum height, which SwiftUI measures at zero width; a wrapped empty-state message measured about 1,000 pt, so the split view outgrew the window and was centered (sidebar under the title bar, footer below the window). The detail fits its narrowest column with `ViewThatFits` rows (header actions, tags, kind pill and add actions); the table scrolls sideways. `MainWindowLayoutTests` |
 | 70 | Accounts | FX Vault lists only gh's accounts, so an SSH alias whose key belongs to an account not logged in to gh had no place in Settings › Accounts. GitHub aliases that no account uses are listed with the `gh auth login` command and Check Again; mapping stays manual (no automatic `ssh -T` suggestions, v1.1 stretch) |
-### As built in v0.4.0 (several rows at once, copy between scopes, repositories in chat)
+### As built in v0.4.0 (several rows at once, copy between scopes)
 
 | # | Area | Decision |
 |---|---|---|
 | 71 | Selection | Actions on several secrets or variables (v0.4.0) reuse the one-item rules: Delete stages GitHub deletions that Sync's §7.5 review confirms (Bryan, Q1: no immediate GitHub delete), Revert and Push on Next Sync apply only to the rows they fit, and a read-only scope offers nothing. One `ItemEditBatch` transaction per action, so a failure writes nothing |
-| 72 | Copy | Copy and paste between scopes stays inside one repository (Bryan, Q2; other repositories get configuration through Share or chat) and inside the vault: the pasteboard gets names only (Transient, not concealed) and FX Vault recognizes its own copy by `changeCount`, never by reading it. Secrets without a value are not copied (a value-missing copy would only add a blocked row to fill by hand), unlike Duplicate environment, which keeps them by name |
-| 73 | Chat | Chat version 2: chat offers `maxVer` 2 in HELLO (`NearbyChatProtocol.maxVersion`; nearby share keeps 1) and both sides use `min(maxVerI, maxVerR)`, which the transcript binds. Labels, TXT `v=1`, frame layout and frame types are unchanged, so a chat with 0.2.x or 0.3.x negotiates 1 and behaves as before. Configuration attachments (scope `repository` or `environment`) exist only at version 2: the sender refuses with `ChatError.peerNeedsUpdate` before an authorization is used, and the picker's Whole Repository tab says the other Mac needs 0.4 |
-| 74 | Chat | A repository offer is a manifest (names and counts, `ChatConfigurationSummaryModel`). On request the provider rebuilds the package, gives it the offer's random entry ids (`ShareRepositoryModel.withEntryIDs(of:)`) and sends it only when every item's stored `value_fp`, the shape (names, kinds, scopes, policies) and the value states equal what the user authorized; otherwise the offer is withdrawn. Values read for a refused payload are wiped at once. A configuration payload may be as large as a nearby share (16 MiB); one item keeps 512 KiB |
-| 75 | Chat | **Import Into…** (Bryan, Q3) plans the package as if it were for the repository the receiver picks: owner, name and GitHub id come from that vault row, then the same `ShareImportPlanner`, preview and `SharingRepository.apply` as any import, so environments it lacks are created and everything is pending for the next Sync. Repositories the account cannot change are listed with the reason (archived; admin required when the package has environments, which need admin) and cannot be chosen; the sender's `owner/name` is preselected when the vault has it. Cancel at the repository choice keeps the received values (nothing was planned); Cancel after the preview wipes them, as for one item |
-| 76 | Chat | **Save as File…** (Bryan, Q3) reuses `ShareExportViewModel` with a chat source: `.fileExport` re-authentication, a fresh passphrase shown once, Save… or AirDrop. The file keeps the sender's name and package id; the package stays in the conversation, so it can still be imported. No plaintext `.env` from chat. The chat window shows one sheet at a time: a value that arrives while another sheet is open waits on its card |
+| 72 | Copy | Copy and paste between scopes stays inside one repository (Bryan, Q2; other repositories get configuration through Share) and inside the vault: the pasteboard gets names only (Transient, not concealed) and FX Vault recognizes its own copy by `changeCount`, never by reading it. Secrets without a value are not copied (a value-missing copy would only add a blocked row to fill by hand), unlike Duplicate environment, which keeps them by name |
 
 ### As built in v0.4.1 (copy across repositories, linked copies)
 
-v0.4.1 and v0.5.0 are plan steps (tasks/todo.md); neither was released on its own. Both shipped
-with v0.6.0 in release 0.6.0.
+v0.4.1 is a plan step (tasks/todo.md), released with 0.6.0.
 
 | # | Area | Decision |
 |---|---|---|
 | 77 | Copy | Copy and paste reaches every repository of the vault, whatever account it belongs to (Bryan, 2026-10-15, reversing decision 72's same-repository rule). The target must be editable by its own repository's account; the copy is one transaction on the target repository (`ItemEditBatch` over the target, sources read by id). The copied items moved from the detail view model, which is rebuilt for each repository, into `ClipboardManager` |
-| 78 | Links | Every copy is linked to its source (`config_items.link_id`); a kept conflict is not. The link is local metadata: it never travels in shares, chat or `.env` files and does not change how a row syncs. Duplicate environment does not link (its copies are a starting point that is expected to diverge) |
+| 78 | Links | Every copy is linked to its source (`config_items.link_id`); a kept conflict is not. The link is local metadata: it never travels in shares or `.env` files and does not change how a row syncs. Duplicate environment does not link (its copies are a starting point that is expected to diverge) |
 | 79 | Links | Same value / Differs is computed when the popover or the editor needs it (values decrypted in memory, compared in constant time, wiped), not stored: a stored group fingerprint would have to be kept current by every value write path, and the sync diff (D11) never needs it. The table shows only the count, which needs no keys |
 | 80 | Links | Update everywhere lives in the item editor: when a linked item gets a new value, its other places are listed, the ones that still have the current value checked and the ones the account cannot change disabled with the reason; Save updates the checked ones in one more transaction after the item's own edit (`updateLinkedCopies`). Each copy is an ordinary pending change for the next Sync |
 
-### As built in v0.5.0 (teammates nearby, ping)
-
-| # | Area | Decision |
-|---|---|---|
-| 81 | Teammates | A device identity per vault (Ed25519, X25519, announce key), created on first use and sealed in the vault as a secret field (`SecretFieldAAD`, `K_field`), not in the keychain: ad-hoc builds work and nothing is usable while locked. DEK rotation re-seals it |
-| 82 | Pairing | Add Teammate reuses the nearby commit-reveal handshake (`NearbyKeyExchange`) with its own purpose and labels (`.pair`, `fxvault/pair/v1`), then exchanges cards signed over the transcript hash and the role. The encrypted channel was extracted from `NearbyKeyExchange` into `NearbyChannel`, which the paired handshake reuses |
-| 83 | Presence | One service, `_fxvault-team._tcp`, advertised under a pseudonym from the announce key and the 15-minute window; one announce key per device, shared with every teammate at pairing, so one advertisement serves all of them. Removing a teammate renews it; the others get it through an authenticated CARD_UPDATE the next time they are seen (`needs_card_update`) |
-| 84 | Sessions | Every connection to the presence service starts with a plaintext routing preamble (team or chat); the purpose-bound handshakes make a false preamble fail. The paired handshake is SIGMA-style with signatures over the transcript hash naming both devices; the responder proves itself only to a verified teammate |
-| 85 | Chat | Chat version 3 adds TEAMMATE_IDENT: a teammate opened from a bubble skips the code by signing the chat transcript; strangers and older peers compare the code as before. A chat from a bubble reaches the teammate through its presence (preamble `chat`), so it works without their chat window open; the window shows "Teammate" and waits up to 3 s for the proof before showing the code |
-| 86 | Visibility | Who can see me: Nobody / Teammates (default) / Everyone nearby. Everyone nearby also advertises the display name on the chat service while the chat window does not (it yields to the window); an incoming chat opens Nearby Chat as the responder. Only teammates can be pinged |
-| 87 | Pings | A sound when FX Vault is frontmost, otherwise a notification with the sound (Focus applies); the Dock icon bounces once. Limits: 1 per teammate every 10 s (sender), 5 per teammate per minute (receiver). Mute per teammate and Mute all still bounce the bubble |
-| 88 | Energy | Advertising and listening while unlocked; browsing only while the main window is visible and FX Vault is active; a person stays 30 s after the last sighting; `last_seen_at` written at most once a minute |
-
-App side (v0.5.0): `TeamPresenceManager` (`App/Managers`, owned by `AppViewModel`, a lock
-observer) runs presence: the listener, the browsers (`TeamPresenceNetworking`: live
-`NWTeamListener`/`NWNearbyBrowser`/`NWNearbyTransport`, inert in previews, a fake network in
-tests), incoming routing, pings (`PingAlerting`: `SystemPingAlerts`), card updates and the
-`people` the toolbar's `NearbyPresenceView` draws. A chat it starts goes to
-`AppViewModel.startChat(_:)`, a one-slot mailbox (`takePendingChatStart()`, `chatStartRequests`)
-that the Nearby Chat window reads (`NearbyChatViewModel.startPendingChat()`); the main window
-registers the window opener (`setChatWindowOpener`). Preferences › Teammates is
-`TeammatesSettingsScreen`/`ViewModel`; Add Teammate is `AddTeammateSheet`/`ViewModel` (the
-presenter starts and closes the view model). Visibility and Mute all live in
-`PreferencesManager` (`nearbyVisibility`, `mutesAllPings`).
-
-### As built in v0.6.0 (shared spaces between teammates, experimental)
-
-| # | Area | Decision |
-|---|---|---|
-| 89 | Placement | The space core (log rules, versions, keys, marker, gate) lives in SharingKit `Space/`, not in a new SpaceKit target as S10 proposed: it needs the teammate device keys, cards and sessions SharingKit already owns. SyncEngine sees only `SyncSpaceCoordinating` (marker texts and `SpaceGateDecision`, which moved to VaultCore), so it stays independent of SharingKit |
-| 90 | Versions | Every version is a full snapshot of the scope as GitHub holds it (S3): last pushed values and GitHub's `updatedAt` of every row with a synced name; an unverified push keeps the previous version's entry. A version is recorded only after a verified push, a share (genesis) or a member change, and only when the items changed. Receivers apply only the newest content version |
-| 91 | Marker | `FXVAULT_SPACE` is a reserved name (`NameRule.reservedName`), split off every variable listing, written only by `setSpaceMarker`. Its writes are not journaled: `spaces.claimed_version` stays set from the claim until the `published` marker is confirmed by a re-read, and `SpaceClaimReconciler` finishes or drops it at unlock |
-| 92 | Gate | Strict (Q1): behind, another member's live claim, forked, an invalid marker or not being a member block every item change of the scope; other scopes still sync. A claim older than 15 minutes is offered as Take Over… with a confirmation and recorded in the next version's note (Q3). Renaming or deleting a shared environment is blocked |
-| 93 | Receive | A space this Mac lacks arrives as its whole log (verified from genesis, this device a member at the head), so a member added later bootstraps; a known space accepts versions that follow its head, in order; nothing advances while this Mac holds a claim in it. Local drafts stay on top (Keep Mine) and are reported; History › Restore takes a teammate's value |
-| 94 | Sessions | A spaces service (preamble `0x03`) over the paired handshake, pull-only: heads, then one version per fetch in chunks. A responder that sees the peer ahead pulls back in its own session. Sync runs when a sharing teammate is seen, every 2 minutes while FX Vault is active, after a publish (members are told), and on Get Updates from Teammates |
-| 95 | Remote (Q4) | Off by default; per teammate on both Macs; spaces service only; an un-advertised TCP listener on a chosen port answering only allowed teammates; 5 failed sessions in 10 minutes close it for 10 minutes; outgoing only to the typed address with the teammate's key proven. In the background only remote teammates are synced |
-| 96 | Members | Adding wraps every epoch key so far for the new member (Q2); removing starts a new epoch and returns the secrets to rotate. Both write the marker like a push (claim, version, publish) |
-| 97 | Drift | A finding in a shared scope whose marker is ahead is a teammate's change (S9): Keep Local and Accept GitHub are not offered; Get Updates from Teammates is. Once the version arrives, its snapshot explains GitHub's change and the finding disappears |
-| 98 | History | Item versions show a 4-byte fingerprint every member computes the same way (epoch-1 key); revealing an older value asks for Touch ID or the master password (`ReauthPurpose.spaceHistory`) and re-masks after 30 s |
-
-### As built in v0.7.0 (folders, sending a copy, teammates in the sidebar)
+### As built in v0.7.0 (folders, sending a copy)
 
 | # | Area | Decision |
 |---|---|---|
@@ -1066,9 +895,8 @@ presenter starts and closes the view model). Visibility and Mute all live in
 | 100 | Ids and links | Folder item ids are `ConfigItemID`s (never colliding with `config_items`), so copy and paste, Reveal and linked copies take either kind through `ItemCopySource`. One `link_id` group spans both tables; editing a folder item offers to update its repository copies (pending for Sync) and the reverse |
 | 101 | Encryption | `FolderFieldAAD` reuses the §5.4 field layout (table `folder_items`, the folder in the repository's place, no environment) instead of a new label, so the VaultCrypto KAT generator covers it (`folder_field` vectors) and a folder blob never opens as a repository item |
 | 102 | App reuse | The detail table, Copy To, the linked chip and popover are generic over `ConfigTableModel`, implemented by `RepoDetailViewModel` and `FolderDetailViewModel`; reveal and re-mask (`ConfigValueRevealer`) and "Replace or keep?" (`ItemCopyFlow`) are shared. A folder's table has no Status column and its row menu no sync actions. The item editor, `.env` import and export and Copy to Another Repository take an `ItemPlaceModel` |
-| 103 | Sending (Q1) | Bryan chose to send a copy now and sync folders later. A folder travels as share schema 3 (scope `folder`, a `folder` object on the wire, items at repository level in memory) in Nearby Chat version 4 or a `.fxvault` file; the receiver chooses Save as Folder (new or merged, Keep mine by default) or Import Into a repository scope (the folder converted with `intoRepository` and planned as usual). The planner and nearby share refuse a folder package |
-| 104 | Send Folder | From a teammate's popover or the folder's menu: the verified teammate chat opens and the attachment picker opens on the folder once the chat is verified, so Touch ID or the master password still comes before anything is offered |
-| 105 | Sidebar (Q2) | FOLDERS (with New Folder, ⇧⌘N) sits above ACCOUNTS; TEAMMATES is pinned above the footer with every paired teammate (nearby first, green dot, last seen, muted), others nearby, and the visibility menu; Add Teammate… opens Settings › Teammates (`AppViewModel.requestedPreferencesTab`). The toolbar's avatar stack became one people button with the count and a popover |
+| 103 | Sending (Q1) | Bryan chose to send a copy now and sync folders later. A folder travels as share schema 3 (scope `folder`, a `folder` object on the wire, items at repository level in memory) in a `.fxvault` file; the receiver chooses Save as Folder (new or merged, Keep mine by default) or Import Into a repository scope (the folder converted with `intoRepository` and planned as usual). The repository planner refuses a folder package |
+| 105 | Sidebar (Q2) | FOLDERS (with New Folder, ⇧⌘N) sits above ACCOUNTS |
 
 Later (not in v0.7): synced folders (`fxvault-folder/v1`: per-author signed chains, version
 vectors, deterministic replay, last writer wins per item with the conflict shown; design notes in
@@ -1078,21 +906,9 @@ by drag (the order is stored and `reorderFolders` exists).
 App side (v0.7.0): `Screens/Main/Folder/` (`FolderDetailViewModel`, `FolderDetailScreen`),
 `Screens/Folders/` (`FolderOverviewView` for column 2, `FolderContextMenu`, `FolderNameScreen`,
 `FolderDestinationModel`/`View` for received copies, `FolderCopy`),
-`Screens/Main/Sidebar/SidebarFoldersSection`, `SidebarTeammatesSection`; `MainViewModel`
+`Screens/Main/Sidebar/SidebarFoldersSection`; `MainViewModel`
 builds a `FolderDetailViewModel` for `SidebarViewModel.selectedFolderID` (a repository and a
-folder are never selected together); `MainActions.openFolder`; `NearbyChatStartModel.folderToSend`.
-
-App side (v0.6.0): `SpaceSyncManager` (`App/Managers`, owned by `AppViewModel`, a lock observer,
-started with presence) pulls and answers spaces sessions through `TeamPresenceManager`
-(`spacesTransport(to:)`, `spacesConnectionHandler`, `teammateSeenHandler`) and, for remote
-teammates, `SpaceRemoteNetworking` (live `NWSpaceListener`/`NWNearbyTransport`, inert in
-previews, recorded in tests); `SpaceExchangeAdapter` implements `TeamSpaceExchanging` over
-`SpaceRepository`. Screens: `Spaces/ShareSpaceScreen` (scope menu › Share with Teammates…),
-`Spaces/SpaceScreen` (History, Members; opened from the scope menu or the detail header's
-"Shared · vN" chip); the Sync sheet groups a blocked shared scope into one issue with Get Updates
-from Teammates or Take Over…, and asks "What changed?"; drift review shows teammates' changes;
-Preferences › Teammates › Outside this network holds the port and each teammate's switch and
-address (`remoteSpacePort`).
+folder are never selected together); `MainActions.openFolder`.
 
 ### As built in v0.8.0 (runtime destinations, stage overview, fxvault.yml)
 
@@ -1114,7 +930,7 @@ repository. Destinations, the Overview and the manifest check ship marked **Expe
 | 113 | Overview (R8) | Per stage: GitHub (repository level plus the environment named like the stage) and every destination of that stage as columns; every name in them plus the manifest's vars as rows; cells Synced, Will push, Will delete, Value missing, Missing, Extra, Differs, Blocked, — |
 | 114 | Manifest (R9) | `fxvault.yml` is read from the default branch (B11, names only) and parsed as a strict YAML subset with line-numbered issues. FX Vault never writes to the repository: it generates an `fxvault.yml` and a `.env.example` per target to copy. The check adds Missing (including a destination not added yet, fixed with Add Destination), Extra, Blocked and kind mismatches; without a manifest the Overview still works, without Missing and Extra |
 | 115 | Public values (R10) | A Vercel item under a public prefix whose value looks like a credential blocks Sync with two fixes: change the value, or Mark as Public (per item, for keys meant to be public) |
-| 116 | Scope (R11) | Not in v0.8: a Local destination (Export .env covers it), Vercel git-branch and custom environments (listed as not usable), Key Vault certificates, keys and purge, destinations in `.fxvault` packages, chat and shared scopes |
+| 116 | Scope (R11) | Not in v0.8: a Local destination (Export .env covers it), Vercel git-branch and custom environments (listed as not usable), Key Vault certificates, keys and purge, destinations in `.fxvault` packages |
 | 117 | Experimental (R12) | Destinations, the Overview and the manifest check carry the Experimental tag: they talk to three new services, and live checks were limited to the accounts on the release Mac (Vercel live; Key Vault and Supabase through fakes) |
 
 App side (v0.8.0): `Screens/Main/Destination/` (`DestinationDetailViewModel`/`Screen`,
@@ -1134,30 +950,44 @@ and the Dock badge and resets the Azure tokens on lock.
 Requested by Bryan (2026-10-17): share the secrets and environments of a project "online", as one
 file sent through WhatsApp or mail that the receiver opens and imports. Designed in a /grilling
 session (tasks/todo.md P1–P11, Q1–Q13; every answer the recommended option). Remote pairing and
-teammate files ship marked **Experimental** until they are checked between two Macs.
+teammate files shipped marked **Experimental**; 1.0 removed both.
 
 | # | Area | Decision |
 |---|---|---|
 | 118 | Contents (P1) | A file is a **bundle** (share schema 4) of one or more repositories, each with its repository level, its GitHub environments (whole or partial) and its runtime destinations (target, stage, items with values, `publicNames`), plus optional folders. Connection tokens, `az` sessions, GitHub accounts and SSH aliases never travel |
 | 119 | Selection (P2) | Stages first, applied across the chosen repositories (the environment named like the stage by fold key plus the destinations of that stage), then a tree per repository. A stage is production when a word of its name (split on non-letters) is `prod`, `production`, `prd` or `live` (`StageRisk`, VaultCore); it starts unchecked and asks for a confirmation |
-| 120 | Protection (P3, Q13) | `.fxvault` format 2 with two modes: **teammates** (1–10 paired devices; HPKE-wrapped content key per device in an opaque, sorted slot; the sender's device id, announce key and Ed25519 signature inside the ciphertext; "verified" on the receiver) and **passphrase** (Argon2id and six words, as v1). A selection with a production place can only be sealed for teammates |
-| 121 | Remote pairing (P4) | Add Teammate › Not Nearby…: an invitation `.fxvcard` (public keys and names, signed, no announce key), a reply (the replier's card plus its announce key HPKE-sealed to the inviter, signed over both), and a 6-word code from both cards and both nonces compared on a call; each side stores the other only when it confirms. The inviter marks `needs_card_update`, so its own announce key reaches the replier through the existing card update or inside its first teammates file |
+| 120 | Protection (P3, Q13) | `.fxvault` format 2, **passphrase** mode (Argon2id and six words, as v1). 0.9 also had a teammates mode (HPKE per paired device); 1.0 removed it, does not share production and reads a 0.9 teammates file as `invalidFile` |
 | 122 | Transport (P5) | File only, no server: the system share picker or Save…. The file is written 0600 (`SecureFileWriter`) in a private 0700 folder per export under `$TMPDIR/io.fractalx.fxvault.shares` (`ShareStagingFolder`) and removed when the sheet closes, or, when a share hand-off (AirDrop) is still running then, as soon as it finishes. It is named `FX Vault share <date>.fxvault`, without repository or stage names |
 | 123 | Expiry and sent log (P6) | 1, 7 (default) or 30 days; `expiresAt` inside the ciphertext and enforced by FX Vault (the copy says the cryptography does not). Every export writes a names-only `sent_shares` row, listed in Settings › Sharing with what to rotate |
 | 124 | Receiver (P7) | One list per file: ✓ in the vault, ⇣ imported from GitHub with the receiver's account (outside the transaction, then planned again), ✕ no access (skipped, the file can be opened again later). Today's merge preview per scope plus destinations (merged by target key, or created without a connection) and folders. Import applies everything in one transaction; the main window then selects the first repository and opens its Overview at the first shared stage (`MainActions.openOverview`, kept pending until the scope column exists) while the sheet shows the result |
 | 125 | Held until included (P8) | A row the remote does not have is saved with `share_hold` (the package id) and is in no Sync plan until the user includes its file in Sync's **From Files** review; Push on Next Sync releases one row |
 | 126 | Links (P9) | Linked copies inside the file travel as per-file tokens; the receiver gives fresh `link_id`s to the rows it writes; rows it keeps keep their links |
-| 127 | Format (P10) | Every export writes format 2 and schema 4, a single repository included (Share as File… becomes this sheet). v1 files and schemas 1–3 stay readable; FX Vault 0.8 shows "Wrong passphrase or damaged file". Limits: 16 MiB payload, 10 recipients, 50 repositories |
-| 128 | Scope (P11) | Not in v0.9: sending a bundle nearby or in chat (they keep schemas 1–3), revoking a sent file (rotation is the remedy), a hosted link. Nearby Chat's Save as File… (`SharingRepository.exportFile(package:…)`) writes a schema 4 bundle in format 2 like every other export (`ShareBundleModel(package:createdAt:expiry:)`, 7 days, production refused) |
+| 127 | Format (P10) | Every export writes format 2 and schema 4, a single repository included (Share as File… becomes this sheet). v1 files and schemas 1–3 stay readable; FX Vault 0.8 shows "Wrong passphrase or damaged file". Limits: 16 MiB payload, 50 repositories |
+| 128 | Scope (P11) | Not in v0.9: revoking a sent file (rotation is the remedy), a hosted link |
 | 129 | Held files, as built | There is no separate Keep Local action: a file left out of a Sync stays held and is offered again at every Sync (like confirmed deletions, §7.5). Including a file releases every hold of its package in both tables in one transaction before planning |
 | 130 | Environments of held rows | Environments have no hold column, so their changes are derived: a new environment waits while every live item in it is held; a renamed environment waits, with all its copies, while any live item in it is held (a rename copies every item, so it would publish or lose the held value) |
 | 131 | The user's changes are never held | A delete, a GitHub-scope Revert or a typed value clears a row's hold (`ItemMutationWriter`, `DestinationItemWriter`); a rename or move keeps it, because the value is still the file's. A destination Revert keeps it too: it cannot bring back the previous value |
-| 132 | Verified sender | `imported_share_packages.sender_device_id` (v14) records the teammate whose signature checked; Sync shows "verified" only when it is set. A passphrase file's sender stays unverified |
-| 133 | Teammate without an announce key | A replier stores the inviter with `announce_ct` NULL (`teammates` rebuilt in v14, with `CHECK (announce_ct IS NOT NULL OR paired_via = 'remote')`). `teammateCards()` gives such a teammate a random, never-stored announce key, so SharingKit and the presence code are unchanged: its pseudonyms never match, and its sessions still verify the signing key. `fillAnnounceKeyIfMissing` stores the real key from a teammates file and never replaces one |
-| 134 | Code transcript | The pairing code puts the inviter's card and nonce first (roles are known) instead of ordering the two cards: the argument is about which side draws its nonce last (SHARING-PROTOCOL.md §10.9) |
+| 132 | Verified sender | `imported_share_packages.sender_device_id` (v14) recorded the 0.9 teammate whose signature checked; Sync shows "verified" only when it is set. 1.0 writes it only as NULL (passphrase files), so only rows held under 0.9 show it |
 | 135 | Folders in a bundle | Written with `FolderItemWriter` inside the bundle's transaction (kind plus fold-key name, keep mine or replace), not through `FolderRepository.save`, so the whole file applies or nothing does |
 | 136 | Sent log order | The `sent_shares` row is written before the file and deleted again if the file write fails, so a file on disk always has its log row |
 | 137 | Test-only SPI | The app and its tests never import VaultStore (`scripts/lint.sh`), so app tests that need held rows call `ShareHoldRepository.hold(_:under:senderName:senderDeviceID:importedAt:)`, and tests of files from older versions write them with `SharingRepository.exportLegacyFile(_:to:senderName:appVersion:authorization:existingFile:)` (format 1, schemas 1–3, the 0.8 writer, still behind `.fileExport` re-authentication). Both are `@_spi(Testing)`: not part of VaultData's public API; only a file that writes `@_spi(Testing) import VaultData` can call them, and `scripts/lint.sh` refuses that import in App/ |
+
+### As built in 1.0 (simplification, slice B3)
+
+FX Vault 1.0 is the GitHub secrets and variables manager plus Azure Key Vault (tasks/todo.md
+D1–D5). This slice removed every peer-to-peer feature:
+
+- Nearby share and receive, Nearby Chat, teammates (pairing, remote pairing, presence, pings) and
+  shared spaces, with their SharingKit `Nearby/`, `Chat/`, `Team/` and `Space/` code, the
+  VaultData `Team/`, `Spaces/` and `Chat/` repositories and the app screens and managers.
+- Migration `v15_drop_teammates` drops their tables ([DATABASE.md](DATABASE.md)).
+- Sharing is a passphrase `.fxvault` file only (format 2; v1 still opens), sent with the system
+  share picker (AirDrop included) or Save…; a production stage is refused
+  (`SharingError.productionNotShared`) until B3b allows it behind Touch ID, as the brief says. A 0.9 teammates file reads as `invalidFile`.
+- `FXVAULT_SPACE` stays a reserved name and is still dropped from variable listings, so a 0.9
+  marker on GitHub never shows up as a variable.
+- Decisions 51–58, 73–76, 81–98, 104, 121 and 133–134 went with the features; 120, 128 and 132
+  above are updated.
 
 ## App shell
 
@@ -1186,10 +1016,7 @@ AppTests).
   `lock(trigger:)`, `didUnlock()`, `completeOnboarding()`, `didResetVault()`,
   `applicationWillTerminate()`, `shouldOfferTouchID(afterInvalidation:)` /
   `recordTouchIDOfferAnswer()` (the one-time Touch ID offer) and `make…ViewModel()` factories.
-- Scenes: the main `Window` (`SceneID.main`), Settings, and since v0.2.0 the **Nearby Chat**
-  `Window` (`SceneID.nearbyChat` = `"nearby-chat"`, `NearbyChatScreen(app:)`), opened from
-  Share › Nearby Chat… (toolbar and Vault menu) and listed by SwiftUI in the Window menu; never
-  restored at launch (`isRestorable = false`).
+- Scenes: the main `Window` (`SceneID.main`) and Settings.
 - `FXVaultMain` (`FXVaultApp.swift`) is the `@main` entry: `DiagnoseCommand.runIfRequested()`
   answers `--diagnose` (JSON on stdout, then `exit(0)`) before `FXVaultApp.main()` creates the app
   delegate, so no window, vault or database opens. `App/Diagnostics`: `DiagnosticReporter`
@@ -1220,9 +1047,7 @@ AppTests).
 - `@Observable PreferencesManager(store:)`: `autoLockMinutes` / `autoLockTimeout`, clone folder,
   `ghPathOverride`, `trustedGHBinary` / `trustGHBinary(_:)` / `revokeTrustedGHBinary()` (v0.3.1,
   `preferences.trustedGHPath` and `preferences.trustedGHOwnerUID`, validated on read),
-  `isRecoveryKeyConfirmationPending`, `hasAnsweredTouchIDOffer`,
-  `nearbyDisplayName` / `nearbyName` (v0.2.0: the name nearby Macs see, Preferences › General;
-  nil uses the macOS full name); `UserDefaultsPreferencesStore` (live) or
+  `isRecoveryKeyConfirmationPending`, `hasAnsweredTouchIDOffer`; `UserDefaultsPreferencesStore` (live) or
   `InMemoryPreferencesStore`.
 - `DockBadgeDisplaying` (`DockBadgeManager`, `RecordedDockBadge`).
 - `ConnectivityMonitor(source:clock:debounce:)` (v0.2.0, `@Observable`): `isOnline`,
@@ -1232,11 +1057,7 @@ AppTests).
   clock, so a flapping path never reaches the UI. Satisfied (also constrained, Low Data Mode) is
   online; unsatisfied and requires-connection are offline. Sources: `protocol NetworkPathSource`
   with `NWPathMonitorSource` (live; reads path metadata only, sends nothing) and
-  `FixedNetworkPathSource`; `NetworkPathModel` is the reduced `NWPath`. Separately,
-  `hasNetworkInterface` (v0.2.0 Nearby Chat; applied at once, no debounce) is true while any
-  interface can reach a nearby Mac: the path lists one other than loopback, or the Wi-Fi radio is
-  on even when it joined no network (`WiFiRadio`, CoreWLAN power state only; a power change
-  re-reports the path). Nearby Chat is disabled only when it is false; `isOnline` never gates it.
+  `FixedNetworkPathSource`; `NetworkPathModel` is the reduced `NWPath`.
 - `GitHubReachability` (v0.2.0, `@Observable`): `isResponding`, `isRetrying`,
   `record(error)`, `recordSuccess()`, `reset()`, `retry(_:)`. It makes no calls of its own: view
   models report the outcome of the gh calls they already make. `GHError.network` / `.timeout`
@@ -1373,8 +1194,7 @@ AppTests).
     drift check are disabled, with `ConnectivityCopy.offlineHelp` as their `.help`
     (`networkHelp(_:)`), and the router refuses `MainSheet.needsInternet` routes (`.sync`,
     `.createRepository`, `.addRepositoryByName`, also when chained by a feature). Local editing,
-    `.env` import/export, file sharing and nearby send/receive stay available: nearby is
-    peer-to-peer (AWDL) and needs no internet route. `MainViewModel` is a `ConnectivityObserving`:
+    `.env` import/export and file sharing stay available. `MainViewModel` is a `ConnectivityObserving`:
     when the connection returns it resets `GitHubReachability`, reloads the repository lists if
     they never loaded or failed (`SidebarViewModel.needsReload`) and re-runs the open
     repository's drift check (`reconnectTask`). Sidebar, repository detail, Add by name, the
@@ -1382,11 +1202,11 @@ AppTests).
     `GitHubReachability` (decision 50).
   - Toolbar: the FractalX mark, the window title and the selected `owner / repo` in mono (the
     system title is removed on macOS 15+; macOS 14 keeps it and omits the duplicate name), a DEV
-    chip in Debug builds (decision 43), New Repository, Import .env, Share menu
-    (File… / Nearby… / Receive Nearby… / Nearby Chat…, which opens the chat window), Lock,
+    chip in Debug builds (decision 43), New Repository, Import .env, Share
+    (Share Project…), Lock,
     Sync (`SyncToolbarButton`, count in the label, disabled at 0, while locked, while syncing and
     without gh). Menu commands (`VaultCommands`): File › New Repository… (⌘N), Import .env… (⇧⌘I);
-    Vault › Lock (⌃⌘L), Sync (⇧⌘S), Share. Commands reach the window through
+    File › Share Project… (⌥⌘S); Vault › Lock (⌃⌘L), Sync (⇧⌘S). Commands reach the window through
     `FocusedValues.mainViewModel`.
 - Feature sheets (all presented by the router below; each `XScreen` + `@Observable XViewModel`):
   - `ItemEditor` (§7.1, M3): `ItemEditorViewModel` (`LockObserving`) adds, edits, fills and
@@ -1453,47 +1273,14 @@ AppTests).
     plaintext, skipped and unverified-share warnings → save panel → iCloud confirmation before
     any write → 0600 write → git tracked / not ignored / ignored / unknown, with the `.gitignore`
     offer). One authorization per write; a failed write uses it up.
-  - `Sharing` (§9, M6): file export (v0.9.0: `ProjectShareScreen`; Nearby Chat's Save as File…
-    keeps `ShareExportScreen`: `ReauthGate.authorizeShare(.fileExport)` → what was received
-    (`ShareContentSummaryView`) → `saveAttachment` into `$TMPDIR/io.fractalx.fxvault.shares/<uuid>/`
-    (0700 / 0600) → passphrase shown once → Save… (0600) or AirDrop…; the staged file is removed
-    on close or when AirDrop ends; the tri-state `ShareScopeTreeModel` serves Share Project and
-    the nearby "what to send" picker), import (header before passphrase; one message for wrong passphrase / damaged
-    file; chips, Keep mine default, widening-policy and replay confirmations; one-click import of
-    a missing repository through `ShareRepositoryImporter`), and nearby send / receive
-    (experimental; `NearbyNetworking` over `NWNearbyBrowser` / `NWNearbyTransport`;
-    `SASCodeView` with no default button; re-authentication before the manifest; advertising
-    only while the receive sheet is open; no automatic retry). Re-authentication sheets use
-    `ShareReauthModel` / `ShareReauthView`.
-
-- `NearbyChat` (v0.2.0, experimental; its own window, not a sheet): `NearbyChatViewModel`
-  (`LockObserving`, built by `AppViewModel.makeNearbyChatViewModel()` over
-  `nearbyChatDependencies()`, whose `present` brings the main window forward) with steps
-  `locked` / `unavailable` / `browsing` / `connecting` / `comparing` / `chatting` / `ended`.
-  While browsing, the window advertises under `ShareLocalIdentityModel.nearby(preferences:)` and
-  lists peers (`NearbyChatNetworking`: `LiveNearbyDiscovery(purpose: .chat)` and
-  `advertisingChat`, this Mac left out) with "You're visible to nearby Macs as …"; connecting or
-  being connected stops both. `SASCodeView` (no default button), then bubbles with times, an
-  attachment card per offer, and the composer (⌘↩, `Limits.chatMessageBytes` after
-  sanitizing). "Attach secret or variable…" opens `ChatAttachmentPickerViewModel`
-  (`ShareReauthModel(.nearbySend)` first, then one item from `chat.attachableItems()`); a
-  received card offers "Save to my vault" (requests the value, then `ChatSaveViewModel`: the
-  share import preview with `ShareImportPlanEditor`, repository import, `SharingRepository.apply`)
-  or "Dismiss". Window close, lock (sleep and screen lock lock), "End Chat", the peer leaving, a
-  disconnect or timeout end the chat: the transcript, cards, draft and any received value are
-  wiped and the window shows "Conversation ended. Nothing was saved." Disabled only without any
-  network interface (`ConnectivityMonitor.hasNetworkInterface`); closing the main window locks the
-  vault (D16) and therefore ends the chat.
-  v0.4.0: `peerAcceptsRepositories` (known once the codes match) enables the picker's Whole
-  Repository tab (`ChatAttachmentPickerViewModel.Mode`, `ChatAttachmentChoiceModel`); with an
-  older peer the tab explains the update instead. A received repository card offers Import
-  Into…, Save as File… and Dismiss (`handleConfiguration(_:_:)` asks for the values first and
-  runs the action when they arrive). Import Into… opens `ChatSaveViewModel` at `.choosingTarget`
-  (`ChatImportTargetModel`: read-only reason per repository), then the same preview
-  (`ChatSaveViewModel.Outcome`: `imported`, `wiped`, or `kept` when closed before Continue); Save as
-  File… opens `ShareExportViewModel(chatAttachment:…)` (`fileSheet`; `makeFileDelivery` is
-  injected for tests). A file saved and then a cancelled import leaves the card at "Saved as an
-  encrypted file, not imported" (`hasSavedFile`).
+  - `Sharing` (§9, M6): file export (v0.9.0: `ProjectShareScreen`: stages and the tri-state
+    `ShareScopeTreeModel`, production listed but never checked, `ReauthGate.authorizeShare(.fileExport)`
+    → `exportBundle` into `$TMPDIR/io.fractalx.fxvault.shares/<uuid>/` (0700 / 0600) → passphrase
+    shown once → the system share picker (AirDrop included) or Save… (0600); the staged file is
+    removed when the sheet closes), and import (header before passphrase; one message for wrong
+    passphrase / damaged file; chips, Keep mine default, widening-policy and replay confirmations;
+    one-click import of a missing repository through `ShareRepositoryImporter`).
+    Re-authentication sheets use `ShareReauthModel` / `ShareReauthView`.
 
 **Components** (`App/Components`): `SecretValueEditor`, `MaskedValueCell` (display-only: masked /
 revealed / plain / missing, the view model owns reveal state), `CommandRow`,
@@ -1559,9 +1346,6 @@ another route replaces the sheet; closing it sets `activeSheet` to nil (and open
 | `.envExport` | `EnvFile/` | `EnvExportScreen` | `EnvExportContext(repositoryID, scope)` |
 | `.shareExport` | `Sharing/` | `ProjectShareScreen` (v0.9.0; `ShareExportScreen` before) | `ShareExportContext(selection: ShareSelectionModel, stage: String? = nil)` (`stage`: the Overview's Share Stage…) |
 | `.shareImport` | `Sharing/` | `ShareImportScreen` (a project file through `ProjectShareImportView`, v0.9.0) | `ShareImportContext(fileURL)` |
-| `.remotePairing` (v0.9.0) | `Team/` | `RemotePairingScreen` | `RemotePairingContext(fileURL)` (an opened `.fxvcard`; Not Nearby… in Settings › Teammates presents `RemotePairingSheet` itself) |
-| `.nearbySend` | `Sharing/` | `NearbySendScreen` | `NearbySendContext(selection: ShareSelectionModel?)` |
-| `.nearbyReceive` | `Sharing/` | `NearbyReceiveScreen` | `NearbyReceiveContext()` |
 | `.addRepositoryByName` | `Main/AddRepository/` | `AddRepositorySheet` (main window's own) | `AddRepositoryContext(accountLogin)` |
 | `.addDestination` (v0.8.0) | `Main/Destination/` | `AddDestinationScreen` | `AddDestinationContext(repositoryID, suggestion: AddDestinationSuggestion? = nil)` (a manifest target to start from) |
 | `.destinationSettings` (v0.8.0) | `Main/Destination/` | `DestinationSettingsScreen` | `DestinationSettingsContext(destinationID)` |
@@ -1575,10 +1359,7 @@ Every entry view is `struct XScreen: View { init(context: XContext, dependencies
 FeatureDependencies) }` (all `App/Screens/<Folder>/<XScreen>.swift`). The one non-sheet entry is
 `Drift/DriftBannerView: init(report: DriftReportModel, onReview: @escaping () -> Void)`, shown by
 `RepoDetailScreen` when the last drift check found something; `onReview` presents
-`.driftReview`. The Nearby Chat window (v0.2.0) is not routed at all: it is its own scene,
-`NearbyChatScreen(app:)`, whose view model gets `FeatureDependencies` from
-`AppViewModel.nearbyChatDependencies()` (lock observers and gh readiness as for sheets; `present`
-brings the main window forward, `refresh` and `select` do nothing). Contexts carry ids only (never values or names that could go stale): re-read
+`.driftReview`. Contexts carry ids only (never values or names that could go stale): re-read
 through the repositories. The one exception is `EnvImportContext.Start.pasted`, which carries
 the text the user pasted on the detail table in an `EnvPasteBuffer` (a class compared and
 hashed by identity, `SecretBytes` inside, redacted description); the import view model takes the
@@ -1593,7 +1374,7 @@ so view-model tests construct it with a `TestHarness`.
 | Member | Use |
 |---|---|
 | `session` | The vault session (`authorizeEnvExport` / `authorizeShare` need it). |
-| `config`, `catalog`, `github`, `sync`, `drift`, `envFiles`, `sharing`, `creation`, `chat` | The VaultData repositories (one instance each; `chat` is Nearby Chat's `ChatRepository`). |
+| `config`, `catalog`, `github`, `sync`, `drift`, `envFiles`, `sharing`, `creation` | The VaultData repositories (one instance each). |
 | `destinations`, `overview`, `destinationSync`, `destinationAccess` | v0.8.0: destinations and connections, the stage Overview and `fxvault.yml`, destination Sync / Refresh / import, token checks and the Add Destination pickers. `destinationCopyTargets(repositoryID:excluding:)` gives Copy To › Destinations; `copyConflicts` / `copyItems` take a `.destination` place. |
 | `cloner` | Clone (`RepoCloning`); never `creation.clone`. |
 | `reauth` | `ReauthGate`. |
@@ -1601,11 +1382,11 @@ so view-model tests construct it with a `TestHarness`.
 | `preferences` | Clone folder, gh override. |
 | `passphraseGenerator` | 6-word passphrases (nil if the wordlist failed its check). |
 | `clock` | `any VaultClock` for every timer (tests use `ManualClock`). |
-| `connectivity` | `ConnectivityMonitor`: disable gh-backed actions while `!isOnline` (with `ConnectivityCopy.offlineHelp`). Nearby sharing does not depend on it. |
+| `connectivity` | `ConnectivityMonitor`: disable gh-backed actions while `!isOnline` (with `ConnectivityCopy.offlineHelp`). |
 | `gitHubReachability` | Report gh outcomes (`record(error)` / `recordSuccess()`) for the "GitHub isn't responding" banner. |
 | `actions` | `MainActions` (below). |
 | `copyValue(of:)` | Decrypt, copy with the privacy markers, wipe. |
-| `FeatureDependencies.reauthPrompt(for:)` | The Touch ID prompt for `.export`, `.share`, `.nearbySend`. |
+| `FeatureDependencies.reauthPrompt(for:)` | The Touch ID prompt for `.export`, `.share`. |
 | `touchIDStatus()` | The vault's `BiometricUnlockStatus` without a prompt (nil if unreadable). Re-authentication sheets offer Touch ID only when `.available`. |
 | `syncService`, `driftService` | The live `SyncServicing` / `DriftServicing` seams (feature extensions in `Sync/`, `Drift/`). |
 | `FeatureDependencies.preview()` | Dependencies over `AppContainer.preview()` with inert actions (SwiftUI previews only). |
@@ -1632,7 +1413,7 @@ so view-model tests construct it with a `TestHarness`.
   column lists it.
 - **Re-authentication:** `try await dependencies.reauth.authorizeEnvExport(with:
   .biometrics(FeatureDependencies.reauthPrompt(for: .export)), session: dependencies.session)` or
-  `.password(text)`; for shares `authorizeShare(.fileExport / .nearbySend, with:session:)`. Treat
+  `.password(text)`; for shares `authorizeShare(.fileExport, with:session:)`. Treat
   `VaultError.cancelled` silently and offer the password field on `.passwordFallbackRequested`
   (`error.isCancellation`).
 - **Copy:** `try dependencies.copyValue(of: itemID)`, or `dependencies.clipboard.copy(text)` for

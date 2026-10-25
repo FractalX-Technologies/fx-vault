@@ -89,14 +89,12 @@ struct HeldChangeFilter {
     func filter(_ repository: RepoPreflightModel) -> RepoPreflightModel {
         guard !isEmpty else { return repository }
         let executable = repository.executable.filter { !isHeld($0) }
-        let touched = Set(executable.compactMap(Self.scope(of:)))
         return RepoPreflightModel(
             snapshot: repository.snapshot,
             changeSet: filter(repository.changeSet),
             executable: executable,
             blocked: repository.blocked.filter { !isHeld($0.change) },
-            repositoryVariableBytes: repository.repositoryVariableBytes,
-            spaces: repository.spaces.filter { touched.contains($0.scope) }
+            repositoryVariableBytes: repository.repositoryVariableBytes
         )
     }
 

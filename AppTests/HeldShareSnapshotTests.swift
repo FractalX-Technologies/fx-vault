@@ -7,15 +7,14 @@ import VaultCore
 @_spi(Testing) import VaultData
 @testable import FXVault
 
-/// Rendered PNGs of the v0.9.0 screens owned by the team and sync parts of the app: Sync's From
-/// Files review, the Held chip, Add Teammate › Not Nearby… and a teammate paired remotely.
+/// Rendered PNGs of the held-import screens (v0.9.0): Sync's From Files review and the Held chip.
+/// Moved from the 0.9 team snapshot suite when 1.0 removed teammates.
 /// Opt-in like ``VisualSnapshotTests`` (`FXV_SNAPSHOTS_DIR`, or `TEST_RUNNER_FXV_SNAPSHOTS_DIR`
 /// through xcodebuild). Nothing is asserted about pixels.
 @MainActor
-@Suite("Project share snapshots (team and sync)", .serialized, .enabled(if: SnapshotOutput.directory != nil, "set FXV_SNAPSHOTS_DIR to render"))
-struct ProjectShareTeamSnapshotTests {
+@Suite("Held share snapshots", .serialized, .enabled(if: SnapshotOutput.directory != nil, "set FXV_SNAPSHOTS_DIR to render"))
+struct HeldShareSnapshotTests {
     private static let sheetSize = CGSize(width: Theme.Layout.syncSheetWidth, height: SnapshotOutput.sheetHeight)
-    private static let pairingWidth = Theme.Layout.addTeammateSheetWidth
 
     // MARK: - Sync › From Files
 
@@ -83,60 +82,5 @@ struct ProjectShareTeamSnapshotTests {
             MainScreen(viewModel: main)
         }
         withExtendedLifetime(harness) {}
-    }
-
-    // MARK: - Not Nearby…
-
-    @Test func remotePairingSteps() async throws {
-        let macA = try await RemotePairingTests.Mac(RemotePairingTests.identityA)
-        let macB = try await RemotePairingTests.Mac(RemotePairingTests.identityB)
-
-        let invite = macA.pairing()
-        try await write("pairing-start", invite, height: 440)
-        invite.createInvitation()
-        try await write("pairing-invitation-ready", invite, height: 300)
-
-        let invitationData = try Data(contentsOf: try #require(invite.stagedFile))
-        let invited = macB.pairing(file: invitationData)
-        try await write("pairing-invitation", invited, height: 320)
-        invited.createReply()
-        try await write("pairing-reply-ready", invited, height: 620)
-
-        let replyData = try Data(contentsOf: try #require(invited.stagedFile))
-        let reply = macA.pairing(file: replyData)
-        try await write("pairing-reply", reply, height: 560)
-        reply.confirm()
-        try await write("pairing-paired", reply, height: 260)
-
-        invite.close()
-        invited.close()
-        reply.close()
-    }
-
-    @Test func teammatesSettingsWithARemoteTeammate() async throws {
-        let macA = try await RemotePairingTests.Mac(RemotePairingTests.identityA)
-        let macB = try await RemotePairingTests.Mac(RemotePairingTests.identityB)
-        let invite = macA.pairing()
-        invite.createInvitation()
-        let invited = macB.pairing(file: try Data(contentsOf: try #require(invite.stagedFile)))
-        invited.createReply()
-        invited.confirm()
-        let settings = TeammatesSettingsViewModel(app: macB.harness.app)
-        #expect(await TestFixtures.eventually { settings.teammates.count == 1 })
-        try await SnapshotOutput.write(
-            "settings-teammates-paired-remotely",
-            size: CGSize(width: Theme.Layout.settingsWidth, height: SnapshotOutput.settingsHeight)
-        ) {
-            TeammatesSettingsScreen(viewModel: settings)
-        }
-        invite.close()
-        invited.close()
-    }
-
-    private func write(_ name: String, _ viewModel: RemotePairingViewModel, height: CGFloat) async throws {
-        try await SnapshotOutput.write(name, size: CGSize(width: Self.pairingWidth, height: height)) {
-            RemotePairingSheet(viewModel: viewModel)
-                .background(Theme.Colors.card)
-        }
     }
 }

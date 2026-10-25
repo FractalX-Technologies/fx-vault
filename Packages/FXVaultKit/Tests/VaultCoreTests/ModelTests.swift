@@ -299,7 +299,6 @@ struct LimitsTests {
         #expect(Timeouts.autoLockDefault == Timeouts.autoLock(minutes: Timeouts.autoLockDefaultMinutes))
         #expect(Timeouts.autoLockOptionMinutes.contains(Timeouts.autoLockDefaultMinutes))
         #expect(Timeouts.passwordMaxAge == .seconds(14 * 24 * 3600))
-        #expect(Timeouts.nearbySession == .seconds(600))
     }
 
     @Test func durationTimeInterval() {

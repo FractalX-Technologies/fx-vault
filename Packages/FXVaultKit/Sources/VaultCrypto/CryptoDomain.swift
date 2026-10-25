@@ -19,7 +19,7 @@ public enum CryptoDomain {
     public static let dekWrapLabel = "fxvault/v1/dek-wrap"
     /// First field of every field-encryption AAD (§5.4).
     public static let fieldLabel = "fxvault/v1/field"
-    /// First field of every secret-field AAD (v0.5.0: teammate keys; v0.6.0: space keys).
+    /// First field of every secret-field AAD (v0.5.0; provider connection tokens since 1.0).
     public static let secretFieldLabel = "fxvault/v1/secret-field"
 
     /// Format byte of field blobs and DEK wraps, version 1.

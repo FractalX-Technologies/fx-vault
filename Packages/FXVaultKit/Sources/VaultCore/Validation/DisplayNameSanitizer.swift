@@ -1,6 +1,6 @@
 import Foundation
 
-/// Cleans a display name shown to another person (nearby HELLO, share sender, §9.3–§9.4).
+/// Cleans a display name shown to another person (a share's sender, §9.3).
 ///
 /// Never throws: it removes control, bidi, zero-width and other invisible characters
 /// (``UnicodeScalarPolicy/isInvisible(_:)``), normalizes to NFC, trims

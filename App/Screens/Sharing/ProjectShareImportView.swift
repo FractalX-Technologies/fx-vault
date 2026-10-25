@@ -3,8 +3,7 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// A project share's preview in Import Share (v0.9.0, P7): the sender (verified for a teammates
-/// file), the dates, the replay warning, the repository list (✓ ⇣ ✕) and, for the selected
+/// A project share's preview in Import Share (v0.9.0, P7): the sender (unverified), the dates, the replay warning, the repository list (✓ ⇣ ✕) and, for the selected
 /// repository, today's preview of its GitHub scopes plus its destinations; then the folders.
 struct ProjectShareImportView: View {
     let editor: ProjectShareImportEditor
@@ -117,19 +116,14 @@ struct ProjectShareSenderView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
             HStack(spacing: Theme.Spacing.small) {
-                Image(systemName: sender.isVerified ? "person.crop.circle.badge.checkmark" : "person.crop.circle.badge.questionmark")
-                    .foregroundStyle(sender.isVerified ? Theme.Colors.success : Theme.Colors.subtleText)
+                Image(systemName: "person.crop.circle.badge.questionmark")
+                    .foregroundStyle(Theme.Colors.subtleText)
                     .accessibilityHidden(true)
                 Text(ProjectShareCopy.from(sender.displayName))
                     .fxTextStyle(.bodyEmphasized)
                     .foregroundStyle(Theme.Colors.ink)
-                if sender.isVerified {
-                    StatusChip(title: ProjectShareCopy.verified, tone: .success)
-                        .help(ProjectShareCopy.verifiedHelp)
-                } else {
-                    StatusChip(title: ProjectShareCopy.unverified, tone: .warning)
-                        .help(ProjectShareCopy.unverifiedHelp)
-                }
+                StatusChip(title: ProjectShareCopy.unverified, tone: .warning)
+                    .help(ProjectShareCopy.unverifiedHelp)
             }
             Text(ProjectShareCopy.dates(created: createdAt, expires: expiresAt))
                 .fxTextStyle(.monoMeta)

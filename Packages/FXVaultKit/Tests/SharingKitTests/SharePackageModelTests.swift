@@ -84,24 +84,6 @@ struct SharePackageModelTests {
         #expect(throws: ShareError.invalidPackage(.valueNotUTF8)) { _ = try SharePackageCoder.encode(package) }
     }
 
-    @Test func filteredKeepsSelectedItemsAndTheirEnvironments() throws {
-        let package = PackageFactory.sample()
-        let environment = try #require(package.repository.environments.first)
-        let region = try #require(package.repository.variables.first)
-        let dbPassword = try #require(environment.secrets.first)
-
-        let onlyRegion = package.filtered(to: [region.id])
-        #expect(onlyRegion.allEntryIDs == [region.id])
-
-        let environmentItem = package.filtered(to: [dbPassword.id])
-        #expect(environmentItem.allEntryIDs == [environment.id, dbPassword.id])
-        #expect(environmentItem.repository.environments.first?.deploymentBranchPolicy == environment.deploymentBranchPolicy)
-
-        let environmentOnly = package.filtered(to: [environment.id])
-        #expect(environmentOnly.allEntryIDs == [environment.id])
-        #expect(package.filtered(to: []).itemCount == 0)
-    }
-
     @Test func wipeValuesZeroesEveryBuffer() {
         let package = PackageFactory.sample()
         let copy = package
@@ -121,67 +103,5 @@ struct SharePackageModelTests {
         #expect(shared.type == .custom)
         #expect(shared.patterns == [ShareBranchPatternModel(name: "main", type: .branch)])
         #expect(ShareBranchPolicyModel(.protectedBranches) == ShareBranchPolicyModel(type: .protected))
-    }
-}
-
-@Suite("Nearby length framing")
-struct NearbyLengthFramerTests {
-    @Test func encodesWithABigEndianPrefix() throws {
-        let framer = NearbyLengthFramer()
-        #expect(try framer.encode(Data([0xAA, 0xBB])) == Data([0, 0, 0, 2, 0xAA, 0xBB]))
-        #expect(throws: ShareError.transport(.malformedFrame)) { _ = try framer.encode(Data()) }
-        #expect(throws: ShareError.transport(.oversizeFrame)) {
-            _ = try framer.encode(Data(count: NearbyProtocol.maxTransportFrameBytes + 1))
-        }
-    }
-
-    @Test func reassemblesFramesSplitAcrossReads() throws {
-        var framer = NearbyLengthFramer()
-        let first = try framer.encode(Data("hello".utf8))
-        let second = try framer.encode(Data(repeating: 7, count: 1_000))
-        let stream = first + second
-        var frames: [Data] = []
-        for byte in stream {
-            frames += try framer.append(Data([byte]))
-        }
-        #expect(frames == [Data("hello".utf8), Data(repeating: 7, count: 1_000)])
-        #expect(framer.pendingByteCount == 0)
-    }
-
-    @Test func returnsSeveralFramesFromOneRead() throws {
-        var framer = NearbyLengthFramer()
-        let stream = try framer.encode(Data([1])) + framer.encode(Data([2, 2])) + framer.encode(Data([3, 3, 3])).prefix(5)
-        #expect(try framer.append(stream) == [Data([1]), Data([2, 2])])
-        #expect(framer.pendingByteCount == 5)
-    }
-
-    @Test func rejectsHostilePrefixesBeforeBuffering() {
-        var framer = NearbyLengthFramer(maxFrameBytes: 16)
-        #expect(throws: ShareError.transport(.oversizeFrame)) { _ = try framer.append(Data([0, 0, 0, 17])) }
-        var huge = NearbyLengthFramer()
-        #expect(throws: ShareError.transport(.oversizeFrame)) { _ = try huge.append(Data([0xFF, 0xFF, 0xFF, 0xFF])) }
-        var empty = NearbyLengthFramer()
-        #expect(throws: ShareError.transport(.malformedFrame)) { _ = try empty.append(Data([0, 0, 0, 0])) }
-    }
-
-    @Test func accommodatesTheLargestProtocolFrame() throws {
-        var framer = NearbyLengthFramer()
-        let frame = Data(count: Limits.maxNearbyEncryptedFrameBytes)
-        #expect(try framer.append(try framer.encode(frame)) == [frame])
-    }
-
-    @Test func networkConfigurationMatchesThePlan() {
-        let parameters = NWNearbyConfiguration.parameters()
-        #expect(parameters.acceptLocalOnly)
-        #expect(parameters.prohibitedInterfaceTypes == [.cellular])
-        // Peer-to-peer Wi-Fi (AWDL): two Macs need no shared network (v0.2.0).
-        #expect(parameters.includePeerToPeer)
-        let first = NWNearbyConfiguration.randomInstanceName()
-        let second = NWNearbyConfiguration.randomInstanceName()
-        #expect(first != second)
-        #expect(first.hasPrefix(NWNearbyConfiguration.instanceNamePrefix))
-        #expect(NearbyProtocol.bonjourServiceType == "_fxvault-share._tcp")
-        let record = NWNearbyConfiguration.txtRecord()
-        #expect(record.dictionary == ["v": "1"])
     }
 }

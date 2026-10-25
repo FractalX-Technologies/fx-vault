@@ -12,18 +12,6 @@
           }
         }
       }
-    },
-    "NSLocalNetworkUsageDescription" : {
-      "comment" : "Privacy - Local Network Usage Description",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "FX Vault uses the local network to share configuration, chat, see your teammates nearby and keep shared scopes in sync with them."
-          }
-        }
-      }
     }
   },
   "version" : "1.0"

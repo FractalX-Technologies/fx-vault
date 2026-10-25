@@ -3,8 +3,7 @@ import Observation
 import SharingKit
 import VaultCore
 
-/// The user's choices on a share import preview (§9.5), shared by the file import and the
-/// nearby receiver: per-item actions (defaults from `ShareImportPlanner`: "Keep mine" for items
+/// The user's choices on a share import preview (§9.5): per-item actions (defaults from `ShareImportPlanner`: "Keep mine" for items
 /// that differ), "Overwrite all", the "Deployment branches differ" rows (a widening policy needs
 /// a second confirmation) and the replay confirmation.
 ///
@@ -102,17 +101,6 @@ final class ShareImportPlanEditor {
     /// The environment waiting for the widening confirmation.
     var pendingWidening: ShareEnvironmentPlanModel? {
         plan.environments.first { $0.id == pendingWideningEnvironment }
-    }
-
-    /// Carries the policy choices of an earlier (manifest) preview into this one: the nearby
-    /// receiver confirms them before accepting, and the payload plan starts from the defaults.
-    func adoptPolicyDecisions(from earlier: ShareImportPlanModel) {
-        for environment in earlier.environments {
-            guard let decision = environment.policyDifference?.decision, decision == .useIncoming,
-                  let match = plan.environments.first(where: { $0.name == environment.name })
-            else { continue }
-            try? plan.setPolicyDecision(decision, forEnvironment: match.id, wideningConfirmed: true)
-        }
     }
 
     // MARK: - Apply

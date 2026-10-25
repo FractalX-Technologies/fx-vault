@@ -20,10 +20,4 @@ struct StageRiskTests {
         #expect(ShareExpiryChoice.oneDay.expiry(from: createdAt).timeIntervalSince(createdAt) == 86_400)
         #expect(ShareExpiryChoice.thirtyDays.duration == Timeouts.shareMaxExpiry)
     }
-
-    @Test func formatTwoFileBoundCoversTenRecipients() {
-        #expect(Limits.shareRecipientSlotBytes == 88)
-        #expect(Limits.maxShareFileV2Bytes - Limits.maxShareFileBytes
-            == Limits.maxShareRecipients * Limits.shareRecipientSlotBytes + Limits.shareSenderPrefixBytes)
-    }
 }

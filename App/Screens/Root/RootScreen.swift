@@ -24,10 +24,6 @@ struct RootScreen: View {
                 viewModel.setMainWindowOpener { [openWindow] in
                     openWindow(id: SceneID.main)
                 }
-                // Lets teammate presence open Nearby Chat for a bubble or a connection (v0.5.0).
-                viewModel.setChatWindowOpener { [openWindow] in
-                    openWindow(id: SceneID.nearbyChat)
-                }
             }
             .onOpenURL { url in
                 viewModel.openShareFiles([url])

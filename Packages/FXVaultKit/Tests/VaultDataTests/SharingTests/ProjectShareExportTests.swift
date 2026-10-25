@@ -6,8 +6,8 @@ import VaultCore
 @testable import VaultData
 import VaultStore
 
-/// Two vaults with **different keys** that both imported `owner-a/api`, paired as teammates
-/// (v0.9.0 project shares):
+/// Two vaults with **different keys** that both imported `owner-a/api` (v0.9.0 project shares,
+/// passphrase only since 1.0):
 ///
 /// | | sender | receiver |
 /// |---|---|---|
@@ -37,7 +37,7 @@ struct ProjectShareWorld {
     let access: FakeShareRepositoryAccess
     let folder: VaultTemporaryDirectory
 
-    static func make(paired: Bool = true) async throws -> ProjectShareWorld {
+    static func make() async throws -> ProjectShareWorld {
         let senderGitHub = GitHubSimulator(owner: SyncFixture.owner, name: SyncFixture.repoName)
         senderGitHub.addSecret("FXV_S1", updatedAt: ShareWorld.secretUpdatedAt)
         senderGitHub.addSecret("FXV_GH", updatedAt: ShareWorld.secretUpdatedAt)
@@ -79,9 +79,6 @@ struct ProjectShareWorld {
         let receiver = try await SyncHarness.make(github: receiverGitHub)
         try await receiver.importRepository()
 
-        if paired {
-            try pair(sender, with: receiver)
-        }
         let access = FakeShareRepositoryAccess(receiver: receiver)
         return ProjectShareWorld(
             sender: sender,
@@ -99,27 +96,6 @@ struct ProjectShareWorld {
         )
     }
 
-    /// Stores each vault's card in the other one (what Add Teammate does).
-    static func pair(_ left: SyncHarness, with right: SyncHarness) throws {
-        let leftTeam = TeamRepository(session: left.session, clock: left.clock)
-        let rightTeam = TeamRepository(session: right.session, clock: right.clock)
-        try leftTeam.addTeammate(try rightTeam.deviceKeys().card(login: "user-b", displayName: "Receiver", macName: "Receiver Mac"))
-        try rightTeam.addTeammate(try leftTeam.deviceKeys().card(login: "user-a", displayName: "Sender", macName: "Sender Mac"))
-    }
-
-    var senderTeam: TeamRepository {
-        TeamRepository(session: sender.session, clock: sender.clock)
-    }
-
-    var receiverTeam: TeamRepository {
-        TeamRepository(session: receiver.session, clock: receiver.clock)
-    }
-
-    /// The receiver's teammate id as the sender stores it.
-    func receiverID() throws -> String {
-        try receiverTeam.deviceKeys().deviceID.hex
-    }
-
     /// A single-use authorization for the sender.
     func authorization() -> ShareAuthorizationModel {
         ShareAuthorizationModel(purpose: .fileExport, session: sender.session)
@@ -130,22 +106,20 @@ struct ProjectShareWorld {
         try await senderSharing.selection(repositoryIDs: [sender.repository().id], stages: ["staging"])
     }
 
-    /// Exports `selection` and returns the file and, for a passphrase file, the passphrase text.
+    /// Exports `selection` and returns the file and its passphrase text.
     func export(
         _ selection: ShareBundleSelectionModel,
-        protection: ShareBundleProtectionModel,
         name: String = "project.fxvault"
-    ) async throws -> (url: URL, passphrase: String?, result: ShareBundleExportResultModel) {
+    ) async throws -> (url: URL, passphrase: String, result: ShareBundleExportResultModel) {
         let result = try await senderSharing.exportBundle(
             selection,
-            protection: protection,
             to: folder.url.appendingPathComponent(name),
             senderName: Self.senderName,
             appVersion: Self.appVersion,
             authorization: authorization()
         )
-        let passphrase = try result.passphrase.map { try #require($0.utf8String()) }
-        result.passphrase?.wipe()
+        let passphrase = try #require(result.passphrase.utf8String())
+        result.passphrase.wipe()
         return (result.fileURL, passphrase, result)
     }
 
@@ -250,17 +224,15 @@ struct ProjectShareExportTests {
     @Test func aPassphraseFileReopensWithEveryPartAndAnUnverifiedSender() async throws {
         let world = try await ProjectShareWorld.make()
         defer { world.folder.remove() }
-        let exported = try await world.export(try await world.stagingSelection(), protection: .passphrase)
-        let passphrase = try #require(exported.passphrase)
+        let exported = try await world.export(try await world.stagingSelection())
+        let passphrase = exported.passphrase
         #expect(!exported.result.preview.includesProduction)
         #expect(exported.result.sentShare.mode == .passphrase)
         #expect(exported.result.sentShare.recipientIDs.isEmpty)
 
-        let inspected = try world.receiverSharing.inspectFile(at: exported.url)
-        #expect(inspected.needsPassphrase)
         let (draft, sender) = try await world.openBundle(exported.url, passphrase: passphrase)
         defer { draft.discard() }
-        #expect(sender == ShareFileSenderModel(displayName: ProjectShareWorld.senderName, isVerified: false))
+        #expect(sender == ShareFileSenderModel(displayName: ProjectShareWorld.senderName))
         let bundle = draft.manifest
         #expect(bundle.stages == ["staging"])
         let entry = try #require(bundle.repositories.first)
@@ -274,26 +246,9 @@ struct ProjectShareExportTests {
         #expect(draft.plan.repositories.first?.status == .inVault)
     }
 
-    @Test func aTeammatesFileOpensOnlyForTheTeammateAndShowsAVerifiedSender() async throws {
-        let world = try await ProjectShareWorld.make()
-        defer { world.folder.remove() }
-        let exported = try await world.export(try await world.stagingSelection(), protection: .teammates([try world.receiverID()]))
-        #expect(exported.passphrase == nil)
-        #expect(exported.result.sentShare.mode == .teammates)
-        #expect(exported.result.sentShare.recipientIDs == [try world.receiverID()])
-
-        let inspected = try world.receiverSharing.inspectFile(at: exported.url)
-        #expect(inspected.isForTeammates)
-        #expect(inspected.recipientCount == 1)
-        let (draft, sender) = try await world.openBundle(exported.url)
-        defer { draft.discard() }
-        let senderID = try world.senderTeam.deviceKeys().deviceID.hex
-        #expect(sender == ShareFileSenderModel(displayName: "Sender", isVerified: true, teammateID: senderID))
-        #expect(draft.sender.isVerified)
-        #expect(draft.manifest.repositories.first?.destinations.count == 1)
-    }
-
-    @Test func aProductionStageRefusesAPassphraseBeforeTheAuthorizationIsUsed() async throws {
+    /// 1.0 never shares a production stage: the refusal comes before the authorization is used,
+    /// so the same one still exports a selection without production.
+    @Test func aProductionStageIsRefusedBeforeTheAuthorizationIsUsed() async throws {
         let world = try await ProjectShareWorld.make()
         defer { world.folder.remove() }
         let repository = try world.sender.repository()
@@ -301,26 +256,27 @@ struct ProjectShareExportTests {
         let preview = try await world.senderSharing.previewBundle(selection)
         #expect(preview.productionPlaces == ["owner-a/api · production"])
         let authorization = world.authorization()
-        await #expect(throws: SharingError.productionNeedsTeammates) {
+        let url = world.folder.url.appendingPathComponent("production.fxvault")
+        await #expect(throws: SharingError.productionNotShared) {
             _ = try await world.senderSharing.exportBundle(
                 selection,
-                protection: .passphrase,
-                to: world.folder.url.appendingPathComponent("production.fxvault"),
+                to: url,
                 senderName: ProjectShareWorld.senderName,
                 appVersion: ProjectShareWorld.appVersion,
                 authorization: authorization
             )
         }
-        // The refusal left the authorization unused: the same one seals it for the teammate.
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+        #expect(try await world.senderSharing.sentShares().isEmpty)
         let result = try await world.senderSharing.exportBundle(
-            selection,
-            protection: .teammates([try world.receiverID()]),
-            to: world.folder.url.appendingPathComponent("production.fxvault"),
+            try await world.stagingSelection(),
+            to: url,
             senderName: ProjectShareWorld.senderName,
             appVersion: ProjectShareWorld.appVersion,
             authorization: authorization
         )
-        #expect(result.preview.includesProduction)
+        defer { result.passphrase.wipe() }
+        #expect(!result.preview.includesProduction)
         #expect(FileManager.default.fileExists(atPath: result.fileURL.path))
     }
 
@@ -393,11 +349,11 @@ struct ProjectShareExportTests {
     @Test func theSentLogKeepsNamesOnly() async throws {
         let world = try await ProjectShareWorld.make()
         defer { world.folder.remove() }
-        let exported = try await world.export(try await world.stagingSelection(), protection: .teammates([try world.receiverID()]))
+        let exported = try await world.export(try await world.stagingSelection())
         let log = try await world.senderSharing.sentShares()
         #expect(log.map(\.id) == [exported.result.sentShare.id])
         #expect(log.first?.packageID == exported.result.sentShare.packageID)
-        #expect(log.first?.recipientIDs == [try world.receiverID()])
+        #expect(log.first?.mode == .passphrase && log.first?.recipientIDs == [])
         let summary = try #require(log.first).summary
         #expect(summary.stages == ["staging"])
         #expect(summary.places.map(\.kind) == [.repository, .environment, .destination])
@@ -408,24 +364,6 @@ struct ProjectShareExportTests {
             #expect(!summaryText.contains("\"\(value)\""))
         }
         try await world.senderSharing.deleteSentShare(exported.result.sentShare.id)
-        #expect(try await world.senderSharing.sentShares().isEmpty)
-    }
-
-    @Test func recipientsMustBeOneToTenPairedTeammates() async throws {
-        let world = try await ProjectShareWorld.make()
-        defer { world.folder.remove() }
-        let selection = try await world.stagingSelection()
-        let receiverID = try world.receiverID()
-        for protection in [
-            ShareBundleProtectionModel.teammates([]),
-            .teammates([receiverID, receiverID]),
-            .teammates([String(repeating: "a", count: 32)]),
-            .teammates(Array(repeating: receiverID, count: Limits.maxShareRecipients + 1)),
-        ] {
-            await #expect(throws: SharingError.invalidRecipients) {
-                _ = try await world.export(selection, protection: protection)
-            }
-        }
         #expect(try await world.senderSharing.sentShares().isEmpty)
     }
 

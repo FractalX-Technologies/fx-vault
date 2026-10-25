@@ -185,15 +185,6 @@ struct ShareFileTests {
                 authorization: authorization
             )
         }
-        await #expect(throws: SharingError.authorizationInvalid) {
-            _ = try await world.senderSharing.exportLegacyFile(
-                selection,
-                to: world.folder.url.appendingPathComponent("three.fxvault"),
-                senderName: ShareWorld.senderName,
-                appVersion: ShareWorld.appVersion,
-                authorization: world.authorization(.nearbySend)
-            )
-        }
         // Granted through ReauthGate with the master password, then invalidated by a lock.
         let granted = try await ReauthGate(manager: world.sender.manager)
             .authorizeShare(.fileExport, with: .password(SyncFixture.password), session: world.sender.session)

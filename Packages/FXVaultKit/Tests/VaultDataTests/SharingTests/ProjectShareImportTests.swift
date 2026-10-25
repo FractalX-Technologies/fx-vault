@@ -136,8 +136,8 @@ struct ProjectShareImportTests {
     @Test func holdsLandExactlyOnRowsTheRemoteDoesNotHaveAndLinksAreRecreated() async throws {
         let world = try await ProjectShareWorld.make()
         defer { world.folder.remove() }
-        let exported = try await world.export(try await world.stagingSelection(), protection: .teammates([try world.receiverID()]))
-        let (draft, _) = try await world.openBundle(exported.url, checkGitHub: true)
+        let exported = try await world.export(try await world.stagingSelection())
+        let (draft, _) = try await world.openBundle(exported.url, passphrase: exported.passphrase, checkGitHub: true)
         var plan = draft.plan
         let github = try #require(plan.repositories.first?.githubPlan)
         let v1 = try #require(github.item("FXV_V1"))
@@ -157,10 +157,10 @@ struct ProjectShareImportTests {
         #expect(try world.receiver.value(repositoryCopy.id) == "a1")
         #expect(repositoryCopy.provenance == .share)
         #expect(repositoryCopy.shareHold == packageID)
-        // A teammates file records who verifiably sent it.
+        // A passphrase file records the name it claims, and no sender device.
         let record = try #require(try SharePackageStore(database: world.receiver.database).fetchAll().first { $0.packageID == packageID })
-        #expect(record.senderDeviceID == (try world.senderTeam.deviceKeys().deviceID.hex))
-        #expect(record.senderName == "Sender")
+        #expect(record.senderDeviceID == nil)
+        #expect(record.senderName == ProjectShareWorld.senderName)
         // The overwritten variable is held too; a fill GitHub already has (same date) is not.
         #expect(try world.receiver.record(try #require(v1.localItemID)).shareHold == packageID)
         let filled = try #require(try world.receiver.item("FXV_GH", kind: .secret)).id
@@ -309,77 +309,13 @@ struct ProjectShareImportTests {
         }
     }
 
-    @Test func aTeammatesFileForAnotherMacIsNotOpened() async throws {
-        let world = try await ProjectShareWorld.make()
-        defer { world.folder.remove() }
-        let third = TeamDeviceKeys.generate()
-        let bundle = Self.bundle(world, repositories: [try Self.api(world, secrets: [Self.item("FXV_X", "x")])])
-        let json = try ShareBundleCoder.encode(bundle)
-        defer { json.wipe() }
-        let file = try FxVaultFileV2Codec(deriver: FastKeyDeriver()).sealForTeammates(
-            payload: json,
-            sender: try world.senderTeam.deviceKeys(),
-            recipients: [ShareTeammateKeyModel(device: third)]
-        )
-        let url = world.folder.url.appendingPathComponent("other.fxvault")
-        try file.write(to: url)
-        await #expect(throws: SharingError.share(.notARecipient)) {
-            _ = try await world.openBundle(url)
-        }
-    }
-
-    @Test func aTeammatesFileFromAStrangerIsNotOpened() async throws {
-        let world = try await ProjectShareWorld.make()
-        defer { world.folder.remove() }
-        let bundle = Self.bundle(world, repositories: [try Self.api(world, secrets: [Self.item("FXV_X", "x")])])
-        let json = try ShareBundleCoder.encode(bundle)
-        defer { json.wipe() }
-        let file = try FxVaultFileV2Codec(deriver: FastKeyDeriver()).sealForTeammates(
-            payload: json,
-            sender: TeamDeviceKeys.generate(),
-            recipients: [ShareTeammateKeyModel(device: try world.receiverTeam.deviceKeys())]
-        )
-        let url = world.folder.url.appendingPathComponent("stranger.fxvault")
-        try file.write(to: url)
-        await #expect(throws: SharingError.share(.senderNotTeammate)) {
-            _ = try await world.openBundle(url)
-        }
-    }
-
     @Test func aWrongPassphraseIsAWrongPassphrase() async throws {
         let world = try await ProjectShareWorld.make()
         defer { world.folder.remove() }
-        let exported = try await world.export(try await world.stagingSelection(), protection: .passphrase)
+        let exported = try await world.export(try await world.stagingSelection())
         await #expect(throws: SharingError.share(.invalidFile)) {
             _ = try await world.openBundle(exported.url, passphrase: try ProjectShareWorld.passphrase())
         }
-    }
-
-    // MARK: - Remote pairing
-
-    @Test func aTeammatesFileDeliversTheSenderAnnounceKeyWhenMissing() async throws {
-        let world = try await ProjectShareWorld.make(paired: false)
-        defer { world.folder.remove() }
-        let senderKeys = try world.senderTeam.deviceKeys()
-        let senderCard = senderKeys.card(login: "user-a", displayName: "Sender", macName: "Sender Mac")
-        try world.senderTeam.addTeammate(try world.receiverTeam.deviceKeys().card(login: "user-b", displayName: "Receiver", macName: "Receiver Mac"))
-        // The receiver replied to the sender's remote invitation: it has no announce key yet.
-        try world.receiverTeam.addTeammateAwaitingAnnounceKey(
-            deviceID: senderCard.deviceID,
-            signingPublicKey: senderCard.signingPublicKey,
-            agreementPublicKey: senderCard.agreementPublicKey,
-            login: senderCard.login,
-            displayName: senderCard.displayName,
-            macName: senderCard.macName
-        )
-        #expect(try world.receiverTeam.teammates().first?.hasAnnounceKey == false)
-
-        let exported = try await world.export(try await world.stagingSelection(), protection: .teammates([try world.receiverID()]))
-        let (draft, sender) = try await world.openBundle(exported.url)
-        draft.discard()
-        #expect(sender.isVerified)
-        #expect(try world.receiverTeam.teammates().first?.hasAnnounceKey == true)
-        #expect(try world.receiverTeam.teammateCards().first?.announceKey == senderCard.announceKey)
     }
 
     // MARK: - Older files, replay, outdated previews
@@ -406,7 +342,6 @@ struct ProjectShareImportTests {
             Issue.record("Expected a repository package")
             return
         }
-        #expect(!opened.sender.isVerified)
         let result = try await world.receiverSharing.apply(draft, plan: draft.plan, confirmReplay: false)
         #expect(result.added.contains("FXV_S1"))
         #expect(try world.receiver.record(try #require(try world.receiver.item("FXV_S1", kind: .secret)).id).shareHold == nil)
@@ -415,10 +350,10 @@ struct ProjectShareImportTests {
     @Test func aReplayedBundleNeedsConfirmation() async throws {
         let world = try await ProjectShareWorld.make()
         defer { world.folder.remove() }
-        let exported = try await world.export(try await world.stagingSelection(), protection: .teammates([try world.receiverID()]))
-        let (first, _) = try await world.openBundle(exported.url)
+        let exported = try await world.export(try await world.stagingSelection())
+        let (first, _) = try await world.openBundle(exported.url, passphrase: exported.passphrase)
         try await world.receiverSharing.applyBundle(first, plan: first.plan, confirmReplay: false)
-        let (replay, _) = try await world.openBundle(exported.url)
+        let (replay, _) = try await world.openBundle(exported.url, passphrase: exported.passphrase)
         #expect(replay.plan.replayWarnings.contains(.alreadyImported))
         await #expect(throws: SharingError.replayNotConfirmed) {
             _ = try await world.receiverSharing.applyBundle(replay, plan: replay.plan, confirmReplay: false)
@@ -433,8 +368,8 @@ struct ProjectShareImportTests {
     @Test func aVaultChangedSinceThePreviewRefusesAsOutdated() async throws {
         let world = try await ProjectShareWorld.make()
         defer { world.folder.remove() }
-        let exported = try await world.export(try await world.stagingSelection(), protection: .teammates([try world.receiverID()]))
-        let (draft, _) = try await world.openBundle(exported.url)
+        let exported = try await world.export(try await world.stagingSelection())
+        let (draft, _) = try await world.openBundle(exported.url, passphrase: exported.passphrase)
         try world.receiver.add("FXV_S1", kind: .secret, value: "local")
         await #expect(throws: SharingError.planOutdated) {
             _ = try await world.receiverSharing.applyBundle(draft, plan: draft.plan, confirmReplay: false)

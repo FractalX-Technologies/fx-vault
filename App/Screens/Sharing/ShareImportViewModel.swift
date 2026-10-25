@@ -10,9 +10,8 @@ import VaultData
 ///    used.
 /// 2. **Passphrase**: six words (any case or separator, §9.2), only for a passphrase file. A
 ///    wrong passphrase, a damaged file and an invalid package all show the one message "Wrong
-///    passphrase or damaged file". A file sealed for teammates (v0.9.0) opens at once with this
-///    Mac's keys; one sealed for others, from an unpaired sender or past its expiry cannot be
-///    opened here (``Step/failed``).
+///    passphrase or damaged file", which is also what a 0.9 teammates file shows. A file past
+///    its expiry cannot be opened here (``Step/failed``).
 /// 3. **Preview** with chips and choices (`ShareImportPlanEditor`); a repository that is not
 ///    in the vault gets a one-click import, then the package is planned again. A project share
 ///    (v0.9.0) shows its repositories (✓ in the vault, ⇣ imported from GitHub first, ✕ skipped),
@@ -62,7 +61,7 @@ final class ShareImportViewModel: LockObserving {
     private(set) var bundleResult: ShareBundleImportResultModel?
     /// `owner/name` of the ⇣ repositories whose import from GitHub failed.
     private(set) var failedRepositories: [String] = []
-    /// Who sent the file (verified for a teammates file).
+    /// The name the file says sent it (never verified).
     private(set) var sender: ShareFileSenderModel?
     /// Where a copy of a folder goes (v0.7.0).
     private(set) var destination: FolderDestinationModel?
@@ -98,8 +97,7 @@ final class ShareImportViewModel: LockObserving {
 
     // MARK: - Step 1: read
 
-    /// Reads the file and checks its header (§9.1 steps 1–6) off the main actor. A teammates
-    /// file opens right away.
+    /// Reads the file and checks its header (§9.1 steps 1–6) off the main actor.
     func start() async {
         guard step == .reading else { return }
         let sharing = dependencies.sharing
@@ -107,11 +105,7 @@ final class ShareImportViewModel: LockObserving {
         do {
             let inspected = try await Task.detached { try sharing.inspectFile(at: url) }.value
             file = inspected
-            if inspected.needsPassphrase {
-                step = .passphrase
-            } else {
-                await openFile(passphrase: nil)
-            }
+            step = .passphrase
         } catch {
             failure = Self.presentation(of: error)
             step = .failed
@@ -119,11 +113,6 @@ final class ShareImportViewModel: LockObserving {
     }
 
     // MARK: - Step 2: passphrase
-
-    /// False for a file sealed for teammates (v0.9.0): it opens without a passphrase.
-    var needsPassphrase: Bool {
-        file?.needsPassphrase ?? true
-    }
 
     /// Words typed so far (letters only; any case or separator).
     var typedWordCount: Int {
@@ -160,7 +149,7 @@ final class ShareImportViewModel: LockObserving {
                 showBundle(draft)
             }
         } catch {
-            if file.needsPassphrase, !Self.cannotOpenHere(error) {
+            if !Self.cannotOpenHere(error) {
                 passphraseError = Self.presentation(of: error)
                 step = .passphrase
             } else {
@@ -171,11 +160,10 @@ final class ShareImportViewModel: LockObserving {
         }
     }
 
-    /// Failures a passphrase cannot fix: the file is for other teammates, from an unpaired
-    /// sender, or expired.
+    /// Failures a passphrase cannot fix: the file expired.
     private static func cannotOpenHere(_ error: SharingError) -> Bool {
         switch error {
-        case .share(.notARecipient), .share(.senderNotTeammate), .share(.expired): true
+        case .share(.expired): true
         default: false
         }
     }
@@ -345,7 +333,7 @@ final class ShareImportViewModel: LockObserving {
         case .done, .failed, .folderSaved, .bundleDone:
             break
         default:
-            step = file?.needsPassphrase == false || file == nil ? .reading : .passphrase
+            step = file == nil ? .reading : .passphrase
         }
     }
 

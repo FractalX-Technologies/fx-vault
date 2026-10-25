@@ -17,16 +17,10 @@ nonisolated struct NetworkPathModel: Equatable, Sendable {
     let status: Status
     /// Low Data Mode or a constrained interface. Still online: GitHub stays reachable.
     let isConstrained: Bool
-    /// At least one network interface can carry traffic to a nearby Mac: an interface the path
-    /// lists (other than loopback), or Wi-Fi powered on even when it joined no network.
-    /// Peer-to-peer Wi-Fi (nearby share and chat, AWDL) needs only this, not an internet route.
-    let hasInterface: Bool
 
-    /// - Parameter hasInterface: nil means "an interface exists exactly when a route does".
-    init(status: Status, isConstrained: Bool = false, hasInterface: Bool? = nil) {
+    init(status: Status, isConstrained: Bool = false) {
         self.status = status
         self.isConstrained = isConstrained
-        self.hasInterface = hasInterface ?? (status == .satisfied)
     }
 
     var isOnline: Bool {
@@ -38,17 +32,14 @@ nonisolated struct NetworkPathModel: Equatable, Sendable {
 }
 
 nonisolated extension NetworkPathModel {
-    /// - Parameter isWiFiPoweredOn: the Wi-Fi radio is on (``WiFiRadio``); with no network
-    ///   joined the path lists no interface, yet peer-to-peer Wi-Fi still works.
-    init(_ path: NWPath, isWiFiPoweredOn: Bool) {
+    init(_ path: NWPath) {
         let status: Status = switch path.status {
         case .satisfied: .satisfied
         case .requiresConnection: .requiresConnection
         case .unsatisfied: .unsatisfied
         @unknown default: .unsatisfied
         }
-        let listsInterface = path.availableInterfaces.contains { $0.type != .loopback }
-        self.init(status: status, isConstrained: path.isConstrained, hasInterface: listsInterface || isWiFiPoweredOn)
+        self.init(status: status, isConstrained: path.isConstrained)
     }
 }
 
@@ -58,41 +49,29 @@ protocol NetworkPathSource: AnyObject {
     func stop()
 }
 
-/// `NWPathMonitor` on a private utility queue, plus the Wi-Fi power state (``WiFiRadio``). Only
-/// path metadata is read: it sends nothing on the network (no probes, no requests to GitHub).
-/// A Wi-Fi power change reports the current path again, because a radio turned on or off
-/// without joining a network does not change the default path.
+/// `NWPathMonitor` on a private utility queue. Only path metadata is read: it sends nothing on
+/// the network (no probes, no requests to GitHub).
 final class NWPathMonitorSource: NetworkPathSource {
     private static let queueLabel = "io.fractalx.fxvault.connectivity"
     private var monitor: NWPathMonitor?
-    private var radio: WiFiRadio?
 
     func start(onUpdate: @escaping @MainActor (NetworkPathModel) -> Void) {
         stop()
         let monitor = NWPathMonitor()
-        // The handlers run on the monitor's queue and on CoreWLAN's thread, so they must not
-        // inherit the class's default MainActor isolation (lessons.md: an inferred-MainActor
-        // closure traps off the main thread).
-        let report: @Sendable (NWPath) -> Void = { path in
-            let model = NetworkPathModel(path, isWiFiPoweredOn: WiFiRadio.isPoweredOn)
+        // The handler runs on the monitor's queue, so it must not inherit the class's default
+        // MainActor isolation (lessons.md: an inferred-MainActor closure traps off the main
+        // thread).
+        monitor.pathUpdateHandler = { @Sendable path in
+            let model = NetworkPathModel(path)
             Task { @MainActor in
                 onUpdate(model)
             }
         }
-        monitor.pathUpdateHandler = { @Sendable path in
-            report(path)
-        }
         monitor.start(queue: DispatchQueue(label: Self.queueLabel, qos: .utility))
         self.monitor = monitor
-        radio = WiFiRadio { @Sendable [weak monitor] in
-            guard let path = monitor?.currentPath else { return }
-            report(path)
-        }
     }
 
     func stop() {
-        radio?.stop()
-        radio = nil
         monitor?.cancel()
         monitor = nil
     }
@@ -128,20 +107,12 @@ protocol ConnectivityObserving: AnyObject {
 ///   the UI or the observers. More updates in the same direction while waiting (one transition
 ///   reports several paths) do not restart the wait.
 /// - A constrained path (Low Data Mode) is online.
-///
-/// Peer-to-peer nearby sharing and chat (AWDL) work without an internet route, so ``isOnline``
-/// never applies to them; nearby chat reads only ``hasNetworkInterface``.
 @Observable
 final class ConnectivityMonitor {
     /// False while the system reports no usable route. True until the first report.
     private(set) var isOnline = true
     /// The last reported path is constrained (Low Data Mode).
     private(set) var isConstrained = false
-    /// At least one network interface is available (``NetworkPathModel/hasInterface``), even
-    /// without an internet route. Nearby chat is disabled only when this is false. Applied at
-    /// once (no debounce): it only changes when Wi-Fi is turned off or the last cable is
-    /// unplugged. True until the first report.
-    private(set) var hasNetworkInterface = true
 
     @ObservationIgnored private let source: any NetworkPathSource
     @ObservationIgnored private let clock: any VaultClock
@@ -188,9 +159,6 @@ final class ConnectivityMonitor {
 
     private func receive(_ path: NetworkPathModel) {
         isConstrained = path.isConstrained
-        if hasNetworkInterface != path.hasInterface {
-            hasNetworkInterface = path.hasInterface
-        }
         guard hasReceivedPath else {
             hasReceivedPath = true
             apply(isOnline: path.isOnline)

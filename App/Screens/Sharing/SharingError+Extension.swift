@@ -80,24 +80,14 @@ nonisolated extension SharingError: PresentableError {
                     defaultValue: "FX Vault could not write the share file there. Choose another folder."
                 )
             )
-        case .productionNeedsTeammates:
+        case .productionNotShared:
             ErrorPresentationModel(
-                title: String(localized: "share.error.production.title", defaultValue: "Production goes to teammates only"),
+                title: String(localized: "share.error.production.title", defaultValue: "Production is never shared"),
                 message: String(
                     localized: "share.error.production.message",
-                    defaultValue: "The selection includes a production stage. Send it to paired teammates, or uncheck production to use a passphrase."
+                    defaultValue: "The selection includes a production stage. Uncheck production to share the rest."
                 )
             )
-        case .invalidRecipients:
-            ErrorPresentationModel(
-                title: String(localized: "share.error.recipients.title", defaultValue: "Choose who gets the file"),
-                message: String(
-                    localized: "share.error.recipients.message",
-                    defaultValue: "Pick 1 to \(Limits.maxShareRecipients) of your paired teammates."
-                )
-            )
-        case .team(let error):
-            (error as any Error).presentation
         case .config(let error):
             (error as any Error).presentation
         case .validation(let error):
@@ -172,21 +162,6 @@ nonisolated extension SharingError: PresentableError {
                 title: String(localized: "share.error.cancelled.title", defaultValue: "Cancelled"),
                 message: String(localized: "share.error.cancelled.message", defaultValue: "Nothing was shared.")
             )
-        case .nearbyAborted(let reason):
-            ErrorPresentationModel(
-                title: String(localized: "share.error.nearbyAborted.title", defaultValue: "Nearby share stopped"),
-                message: NearbyAbortModel(reason: reason, happenedAfterReveal: false).localizedMessage
-            )
-        case .nearbyActionNotAllowed, .nearbySessionFinished:
-            ErrorPresentationModel(
-                title: String(localized: "share.error.nearbyEnded.title", defaultValue: "Nearby share ended"),
-                message: String(
-                    localized: "share.error.nearbyEnded.message",
-                    defaultValue: "This nearby session has ended. Start a new one to try again."
-                )
-            )
-        case .transport(let failure):
-            failure.presentation
         case .importActionNotAllowed:
             ErrorPresentationModel(
                 title: String(localized: "share.error.action.title", defaultValue: "Not available"),
@@ -195,60 +170,12 @@ nonisolated extension SharingError: PresentableError {
                     defaultValue: "That choice isn't available for this item."
                 )
             )
-        case .spaceVersionInvalid, .spaceLogInvalid:
-            ErrorPresentationModel(
-                title: String(localized: "share.error.space.title", defaultValue: "A shared space update was refused"),
-                message: String(
-                    localized: "share.error.space.message",
-                    defaultValue: "It didn't come from a member of the space, or it was changed on the way. Nothing was stored."
-                )
-            )
-        case .teamCardInvalid, .teamKeysInvalid:
-            ErrorPresentationModel(
-                title: String(localized: "share.error.teamKeys.title", defaultValue: "Teammate keys unreadable"),
-                message: String(
-                    localized: "share.error.teamKeys.message",
-                    defaultValue: "FX Vault couldn't read the stored teammate keys. Remove the teammate and pair again."
-                )
-            )
-        case .notARecipient:
-            ErrorPresentationModel(
-                title: String(localized: "share.error.notRecipient.title", defaultValue: "Not sent to this Mac"),
-                message: String(
-                    localized: "share.error.notRecipient.message",
-                    defaultValue: "This file was sealed for other teammates. Ask the sender to send it to you."
-                )
-            )
-        case .senderNotTeammate:
-            ErrorPresentationModel(
-                title: String(localized: "share.error.unknownSender.title", defaultValue: "Sender isn't your teammate"),
-                message: String(
-                    localized: "share.error.unknownSender.message",
-                    defaultValue: "FX Vault can't check who sealed this file. Pair with the sender first, then open it again."
-                )
-            )
         case .expired:
             ErrorPresentationModel(
                 title: String(localized: "share.error.expired.title", defaultValue: "This share file has expired"),
                 message: String(
                     localized: "share.error.expired.message",
                     defaultValue: "Ask the sender for a new one."
-                )
-            )
-        case .invalidPairingCard, .pairingOwnCard:
-            ErrorPresentationModel(
-                title: String(localized: "share.error.pairingCard.title", defaultValue: "Couldn't read the teammate card"),
-                message: String(
-                    localized: "share.error.pairingCard.message",
-                    defaultValue: "The card is damaged, is your own, or answers an invitation from another Mac. Start again with a new invitation."
-                )
-            )
-        case .pairingExpired:
-            ErrorPresentationModel(
-                title: String(localized: "share.error.pairingExpired.title", defaultValue: "This invitation has expired"),
-                message: String(
-                    localized: "share.error.pairingExpired.message",
-                    defaultValue: "Invitations last 7 days. Ask for a new one."
                 )
             )
         }

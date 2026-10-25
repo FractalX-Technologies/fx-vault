@@ -21,8 +21,7 @@ import VaultStore
 ///   Folder rows never sync, so they are never held.
 /// - **Links** (P9): each link group of the plan whose written rows number at least two gets one
 ///   fresh `link_id`; rows kept as they were keep their links.
-/// - Finally the package id is recorded once for the replay check, with the verified sender's
-///   device id for a teammates file (Sync's From Files review shows the sender as verified).
+/// - Finally the package id is recorded once for the replay check.
 struct ProjectShareImporter {
     let database: VaultDatabase
     let tx: StoreTransaction
@@ -96,8 +95,7 @@ struct ProjectShareImporter {
                 packageID: packageID,
                 createdAt: bundle.createdAt,
                 importedAt: now,
-                senderName: sender.isVerified ? sender.displayName : plan.origin.senderName,
-                senderDeviceID: sender.isVerified ? sender.teammateID : nil
+                senderName: plan.origin.senderName
             ),
             in: tx
         )

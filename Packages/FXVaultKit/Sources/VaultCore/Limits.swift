@@ -2,8 +2,8 @@
 ///
 /// Counts, sizes and retry caps live here; durations live in ``Timeouts``.
 /// Sources: GitHub's documented limits (secrets, variables, names), the plan's throttle and
-/// retry policy (D12, §7.3), the key hierarchy (§5.1–§5.3), the `.fxvault` layout (§9.1) and
-/// the nearby protocol (§9.4). Values marked "local choice" are not GitHub limits.
+/// retry policy (D12, §7.3), the key hierarchy (§5.1–§5.3) and the `.fxvault` layout (§9.1).
+/// Values marked "local choice" are not GitHub limits.
 public enum Limits {
     // MARK: - Units
 
@@ -62,7 +62,7 @@ public enum Limits {
     public static let maxBranchPatternLength = 255
     /// Most deployment branch patterns accepted per environment (share validator, §9.3).
     public static let maxBranchPatternsPerEnvironment = 50
-    /// Largest sanitized display name, in UTF-8 bytes (nearby HELLO, §9.4).
+    /// Largest sanitized display name, in UTF-8 bytes.
     public static let maxDisplayNameBytes = 63
     /// Percent-decoding passes ``PathSegmentValidator`` applies when looking for hidden dot
     /// segments (`%2E`, `%252E`, ...). Local choice.
@@ -71,7 +71,7 @@ public enum Limits {
     // MARK: - Folders (v0.7.0)
 
     /// Most secrets and variables one folder holds. Local choice: keeps a folder within one
-    /// share package and one chat card.
+    /// share package.
     public static let maxFolderItems = 1000
 
     // MARK: - Destinations (v0.8.0)
@@ -208,38 +208,6 @@ public enum Limits {
 
     // MARK: - Project share files (v0.9.0, `.fxvault` format 2)
 
-    /// Most teammates one file is sealed for.
-    public static let maxShareRecipients = 10
     /// Most repositories in one share bundle.
     public static let maxShareRepositories = 50
-    /// Bytes of a recipient slot id (`HMAC(salt, deviceID)` prefix).
-    public static let shareSlotIDBytes = 8
-    /// Bytes of one recipient slot: slot id, HPKE encapsulated key (32) and the wrapped content key
-    /// (32 plus a 16-byte tag).
-    public static let shareRecipientSlotBytes = shareSlotIDBytes + 32 + 32 + 16
-    /// Bytes in front of the payload inside a teammates file: sender device id (16), sender
-    /// announce key (32) and the Ed25519 signature (64).
-    public static let shareSenderPrefixBytes = 16 + 32 + 64
-    /// Largest accepted `.fxvault` format 2 file.
-    public static let maxShareFileV2Bytes = maxSharePayloadBytes + shareSenderPrefixBytes + shareHeaderBytes
-        + maxShareRecipients * shareRecipientSlotBytes + gcmTagBytes
-    /// Random bytes in a remote pairing invitation or reply.
-    public static let pairingNonceBytes = 32
-    /// Largest accepted `.fxvcard` file.
-    public static let maxPairingCardFileBytes = 4 * bytesPerKiB
-
-    // MARK: - Nearby (§9.4)
-
-    /// Largest plaintext handshake frame.
-    public static let maxNearbyHandshakeFrameBytes = 512
-    /// Largest encrypted frame.
-    public static let maxNearbyEncryptedFrameBytes = 64 * bytesPerKiB
-    /// Largest nearby payload.
-    public static let maxNearbyPayloadBytes = 16 * bytesPerMiB
-    /// Exclusive upper bound for frame sequence numbers.
-    public static let maxNearbySequence: UInt64 = 1 << 32
-    /// Digits in the short authentication string.
-    public static let nearbySASDigits = 6
-    /// Failed handshakes in a row after which the interception warning is shown.
-    public static let nearbyFailedHandshakeWarningThreshold = 2
 }
