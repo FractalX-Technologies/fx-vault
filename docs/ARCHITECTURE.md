@@ -1421,8 +1421,7 @@ v0.3.0 adopts the FractalX design language; tokens, components and usage rules a
 dark variants: Ground, Surface, Surface2, Card, Ink, MutedText, SubtleText, FaintText, Hairline,
 HairlineStrong, Brand (also the global accent), Warning, Success, Danger, InkBadge, DotGrid,
 Shadow; the v0.2 names `accent`, `background`, `textPrimary`, `textSecondary` and `pending` are
-aliases), `Theme.Typography` (Geist Sans and Geist Mono through `FontRegistry`, which falls back
-to the system font for a missing face) and `Theme.TextStyle` (font, tracking, case; applied with
+aliases), `Theme.Typography` (SF Pro and SF Mono, the system faces, since 1.0) and `Theme.TextStyle` (font, tracking, case; applied with
 `.fxTextStyle`), `Theme.Spacing`, `Theme.Radius`, `Theme.Durations` (140 ms, spring),
 `Theme.Opacity`, `Theme.Stroke`, `Theme.Shadow` and `Theme.Layout` (windows, columns, every sheet
 size and the design component metrics). Shared components live in `App/Components/Design`.

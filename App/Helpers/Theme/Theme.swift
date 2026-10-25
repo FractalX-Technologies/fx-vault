@@ -7,7 +7,7 @@ import VaultCore
 /// The FractalX design language is documented in docs/DESIGN.md.
 ///
 /// - `Theme.Colors`: semantic colors from Assets.xcassets (light and dark variants)
-/// - `Theme.Typography`: Geist fonts; `Theme.TextStyle`: font + tracking + case (`.fxTextStyle`)
+/// - `Theme.Typography`: SF Pro and SF Mono; `Theme.TextStyle`: font + tracking + case (`.fxTextStyle`)
 /// - `Theme.Spacing`, `Theme.Radius`: layout metrics
 /// - `Theme.Durations`: motion (140 ms, spring)
 /// - `Theme.Layout`: window and component sizes

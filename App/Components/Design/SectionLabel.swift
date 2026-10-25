@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The small uppercase Geist Mono label above a section, a field or a table column
+/// The small uppercase SF Mono label above a section, a field or a table column
 /// (`ENVIRONMENT`, `MASTER PASSWORD`, `ACCOUNTS`): 11 pt, +0.08em, subtle color.
 ///
 /// ```swift

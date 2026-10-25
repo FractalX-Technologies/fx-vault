@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The toolbar Sync button (§10 Toolbar; mockup Main): an ink pill reading "Sync" with the
-/// pending count in a Geist Mono badge. Disabled at 0, while locked, offline (40%) and while a
+/// pending count in an SF Mono badge. Disabled at 0, while locked, offline (40%) and while a
 /// sync runs (then it shows progress). The menu command uses ``title(count:)`` ("Sync 5").
 ///
 /// ```swift

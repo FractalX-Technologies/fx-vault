@@ -7,6 +7,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Changed
 
+- **Black and white.** A white window with black type (black and white in dark mode), system
+  greys for secondary text, translucent cards and no brand blue: pending dots and links are ink.
+  The interface uses SF Pro and SF Mono; FX Vault no longer ships its own fonts.
 - **Two-column main window.** The sidebar is one tree: GitHub, each account and owner, the
   repositories, and the selected repository's environments and destinations under it; Folders
   follow GitHub. The middle scopes column is gone: the repository row stands for the repository

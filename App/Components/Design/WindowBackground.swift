@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The global chrome of every FX Vault window (docs/DESIGN.md, "Windows"): the `ground`
 /// background behind SwiftUI content and in the `NSWindow` itself (title bar, resize edges,
-/// sheet backdrops), Geist 14 as the default font and the brand tint. It does not set a
+/// sheet backdrops), SF Pro 13 as the default font and the brand tint. It does not set a
 /// foreground color: `.primary` must keep flipping to white on selected rows.
 private struct FXWindowBackground: ViewModifier {
     func body(content: Content) -> some View {

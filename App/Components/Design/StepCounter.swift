@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The onboarding step counter in Geist Mono (mockup Onboarding): `02 / 05`, the slash faint.
+/// The onboarding step counter in SF Mono (mockup Onboarding): `02 / 05`, the slash faint.
 ///
 /// ```swift
 /// StepCounter(current: viewModel.stepNumber, total: OnboardingViewModel.stepCount)

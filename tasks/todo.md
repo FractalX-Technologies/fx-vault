@@ -2110,3 +2110,13 @@ Review B11b — two-column main window, sidebar tree (2026-10-25, automatic):
 - Visual check: `main-sidebar` shows the tree; full-window captures still leave the glass sidebar blank (known capture limit, DESIGN.md).
 - Docs: README, CHANGELOG, DESIGN (main window), ARCHITECTURE, STRUCTURE.
 - Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 568 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (5 tests); lint OK; check-secrets OK in the worktree; strings synced (second run: no change).
+
+Review B11c — black-and-white tokens and system type (2026-10-25, automatic):
+- Color sets (1.0, boards Main2-Home and Main2-Dark): ground white / black, ink black / white, system greys for muted (`#3F3F42` / `#AEAEB2`) and subtle (`#5C5C61` / `#8E8E93`) text, hairlines black 8–16% / white 10–20%, `card` a translucent glass fill (white 80% / `#1C1C1E` 72%), Brand is ink (no brand blue; still the global accent). Warning, success and danger unchanged (small marks only).
+- Type: SF Pro and SF Mono (`Font.system`, `NSFont.monospacedSystemFont`); body 13, secondary 12, labels 11, titles 22–24 semibold; no heading tracking.
+- Removed: `FontRegistry`, the six Geist faces and `Geist-OFL.txt`, `ATSApplicationFontsPath`, the Geist notice and OFL text in Credits.rtf, the face and license tests.
+- Tests: `DesignTokenTests` (1.0 values, seen failing with the old Ink color set; type scale; no bundled fonts), `DesignComponentTests.appKitMonospacedFontIsTheSystemMono`.
+- Visual check: snapshots in light and dark are black and white with SF type; links and pending dots are ink.
+- Left for later slices: `glassEffect` on floating chrome (progress, footer action bar) lands with the screens that have it (B11d–f, B9).
+- Docs: CHANGELOG, DESIGN (1.0 status, principles, Color, Type), ARCHITECTURE, STRUCTURE.
+- Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 564 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (5 tests); lint OK; check-secrets OK in the worktree.

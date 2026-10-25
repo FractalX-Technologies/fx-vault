@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The pill tab selector of the mockup (Secrets 5 | Variables 8): a `surface2` track with the
-/// selected segment as a `card` pill. Counts are Geist Mono. Use it for 2 to 4 peer views of
+/// selected segment as a `card` pill. Counts are SF Mono. Use it for 2 to 4 peer views of
 /// the same content and for the kind / visibility choices of the editor sheets; use a native
 /// `Picker` for settings. `.disabled` dims the whole control; `Segment.isEnabled` one segment.
 ///

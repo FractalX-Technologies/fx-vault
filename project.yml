@@ -53,9 +53,6 @@ targets:
         LSApplicationCategoryType: public.app-category.developer-tools
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         NSHumanReadableCopyright: Copyright (c) 2026 FractalX. MIT License.
-        # Geist Sans and Geist Mono (OFL 1.1, App/Resources/Fonts). The synced App folder copies
-        # them flat into Contents/Resources, so the path is "." (relative to Resources).
-        ATSApplicationFontsPath: .
         UTExportedTypeDeclarations:
           - UTTypeIdentifier: io.fractalx.fxvault.share
             UTTypeDescription: FX Vault Share

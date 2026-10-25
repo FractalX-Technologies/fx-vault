@@ -31,26 +31,27 @@ struct DesignTokenTests {
         var testDescription: String { name }
     }
 
-    /// Every color set in Assets.xcassets with the approved light and dark values (mockup Main,
-    /// MainDark, Brand; tasks/todo.md "v0.3.0: FractalX design language").
+    /// Every color set in Assets.xcassets with the approved light and dark values (1.0, boards
+    /// Main2-Home and Main2-Dark; docs/DESIGN.md "1.0"): black and white, system greys, no brand
+    /// blue (Brand is ink), cards as a translucent glass fill.
     nonisolated static let tokens: [Token] = [
-        Token(name: "Ground", light: RGBA(0xF6F5F3), dark: RGBA(0x0B0C0E)),
-        Token(name: "Surface", light: RGBA(0xEDEBE7), dark: RGBA(0x111820)),
-        Token(name: "Surface2", light: RGBA(0xE4E1DB), dark: RGBA(0x18212A)),
-        Token(name: "Card", light: RGBA(0xFFFFFF), dark: RGBA(0x111820)),
-        Token(name: "Ink", light: RGBA(0x0B0C0E), dark: RGBA(0xF6F5F3)),
-        Token(name: "MutedText", light: RGBA(0x454D56), dark: RGBA(0xA6B0BC)),
-        Token(name: "SubtleText", light: RGBA(0x5F6874), dark: RGBA(0x808B97)),
-        Token(name: "FaintText", light: RGBA(0xA1A7AF), dark: RGBA(0x4A5460)),
-        Token(name: "Hairline", light: RGBA(0x0B0C0E, alpha: 0.10), dark: RGBA(0xFFFFFF, alpha: 0.08)),
-        Token(name: "HairlineStrong", light: RGBA(0x0B0C0E, alpha: 0.18), dark: RGBA(0xFFFFFF, alpha: 0.16)),
-        Token(name: "Brand", light: RGBA(0x0B6FA4), dark: RGBA(0x3BA3DD)),
+        Token(name: "Ground", light: RGBA(0xFFFFFF), dark: RGBA(0x000000)),
+        Token(name: "Surface", light: RGBA(0xF5F5F7), dark: RGBA(0x1C1C1E)),
+        Token(name: "Surface2", light: RGBA(0xE8E8ED), dark: RGBA(0x2C2C2E)),
+        Token(name: "Card", light: RGBA(0xFFFFFF, alpha: 0.80), dark: RGBA(0x1C1C1E, alpha: 0.72)),
+        Token(name: "Ink", light: RGBA(0x000000), dark: RGBA(0xFFFFFF)),
+        Token(name: "MutedText", light: RGBA(0x3F3F42), dark: RGBA(0xAEAEB2)),
+        Token(name: "SubtleText", light: RGBA(0x5C5C61), dark: RGBA(0x8E8E93)),
+        Token(name: "FaintText", light: RGBA(0xA1A1A6), dark: RGBA(0x48484A)),
+        Token(name: "Hairline", light: RGBA(0x000000, alpha: 0.08), dark: RGBA(0xFFFFFF, alpha: 0.10)),
+        Token(name: "HairlineStrong", light: RGBA(0x000000, alpha: 0.16), dark: RGBA(0xFFFFFF, alpha: 0.20)),
+        Token(name: "Brand", light: RGBA(0x000000), dark: RGBA(0xFFFFFF)),
         Token(name: "Warning", light: RGBA(0x8A6316), dark: RGBA(0xD9A441)),
         Token(name: "Success", light: RGBA(0x1F7A55), dark: RGBA(0x3FB283)),
         Token(name: "Danger", light: RGBA(0xCA2121), dark: RGBA(0xEC6A6A)),
-        Token(name: "InkBadge", light: RGBA(0xF6F5F3, alpha: 0.16), dark: RGBA(0x0B0C0E, alpha: 0.12)),
-        Token(name: "DotGrid", light: RGBA(0x0B0C0E, alpha: 0.14), dark: RGBA(0xFFFFFF, alpha: 0.10)),
-        Token(name: "Shadow", light: RGBA(0x0B0C0E, alpha: 0.16), dark: RGBA(0x000000, alpha: 0.48)),
+        Token(name: "InkBadge", light: RGBA(0xFFFFFF, alpha: 0.20), dark: RGBA(0x000000, alpha: 0.12)),
+        Token(name: "DotGrid", light: RGBA(0x000000, alpha: 0.12), dark: RGBA(0xFFFFFF, alpha: 0.10)),
+        Token(name: "Shadow", light: RGBA(0x000000, alpha: 0.12), dark: RGBA(0x000000, alpha: 0.40)),
     ]
 
     private static let tolerance = 0.5 / 255
@@ -113,7 +114,7 @@ struct DesignTokenTests {
         #expect(Theme.Colors.background == Theme.Colors.ground)
     }
 
-    /// The global accent color (focus rings, selection, toggles) is the brand blue.
+    /// The global accent color (focus rings, selection, toggles) is Brand, which 1.0 makes ink.
     @Test func globalAccentIsBrand() throws {
         let spec = try String(contentsOf: Self.repositoryRoot.appendingPathComponent("project.yml"), encoding: .utf8)
         #expect(spec.contains("ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: Brand"))
@@ -140,63 +141,33 @@ struct DesignTokenTests {
     }
 
     @Test func textStylesCarryTrackingAndCase() {
-        #expect(abs(Theme.TextStyle.display.tracking - -1.76) < 0.0001)
         #expect(Theme.TextStyle.sectionLabel.isUppercase)
         #expect(abs(Theme.TextStyle.sectionLabel.tracking - 0.88) < 0.0001)
         #expect(!Theme.TextStyle.body.isUppercase)
         #expect(Theme.TextStyle.body.tracking == 0)
+        // SF Pro tracks itself by size; 1.0 adds none to headings.
         for style in [Theme.TextStyle.display, .largeTitle, .title, .title2, .headline] {
-            #expect(style.tracking < 0, "headings track tighter")
+            #expect(style.tracking == 0)
         }
     }
 
     // MARK: Fonts
 
-    @Test(arguments: FontRegistry.Face.allCases)
-    func bundledFaceIsRegistered(_ face: FontRegistry.Face) throws {
-        #expect(FontRegistry.isAvailable(face))
-        let font = try #require(NSFont(name: face.postScriptName, size: Theme.Typography.Size.body))
-        #expect(font.familyName == (face.isMonospaced ? "Geist Mono" : "Geist"))
-        #expect(FontRegistry.bundledFileURL(for: face) != nil, "\(face.rawValue).ttf is not in the app bundle")
+    /// 1.0 type scale (docs/DESIGN.md "1.0"): body 13, secondary 12, labels 11, titles 22–24.
+    @Test func typeScaleFollowsTheOnePointZeroDesign() {
+        #expect(Theme.Typography.Size.body == 13)
+        #expect(Theme.Typography.Size.caption == 12)
+        #expect(Theme.Typography.Size.label == 11)
+        #expect(Theme.Typography.Size.title == 22)
+        #expect(Theme.Typography.Size.largeTitle == 24)
     }
 
-    @Test func noFaceFellBackToTheSystemFont() {
-        #expect(FontRegistry.missingFaces.isEmpty)
-    }
-
-    /// The fonts are registered by Info.plist, not only by the FontRegistry safety net.
-    @Test func infoPlistRegistersTheFontFolder() throws {
-        let path = try #require(Bundle.main.object(forInfoDictionaryKey: "ATSApplicationFontsPath") as? String)
+    /// The UI uses the system faces: no font files ship, and Info.plist registers none.
+    @Test func noBundledFontsShip() throws {
+        #expect(Bundle.main.object(forInfoDictionaryKey: "ATSApplicationFontsPath") == nil)
         let resources = try #require(Bundle.main.resourceURL)
-        let folder = resources.appendingPathComponent(path).standardizedFileURL
-        for face in FontRegistry.Face.allCases {
-            let file = folder.appendingPathComponent("\(face.postScriptName).\(FontRegistry.fileExtension)")
-            #expect(FileManager.default.fileExists(atPath: file.path), "\(file.lastPathComponent) not in \(path)")
-        }
-    }
-
-    @Test func missingFaceFallsBackToTheMatchingSystemFont() {
-        #expect(FontRegistry.font(.sansMedium, size: 15, relativeTo: .headline, isAvailable: false) == .system(size: 15, weight: .medium, design: .default))
-        #expect(FontRegistry.font(.monoRegular, size: 13, relativeTo: .body, isAvailable: false) == .system(size: 13, weight: .regular, design: .monospaced))
-        #expect(FontRegistry.font(.sansRegular, size: 14, relativeTo: .body, isAvailable: true) == .custom("Geist-Regular", size: 14, relativeTo: .body))
-    }
-
-    @Test func weightsMapToTheShippedFaces() {
-        #expect(FontRegistry.Face.sans(.regular) == .sansRegular)
-        #expect(FontRegistry.Face.sans(.medium) == .sansMedium)
-        #expect(FontRegistry.Face.sans(.bold) == .sansSemibold)
-        #expect(FontRegistry.Face.sans(.light) == .sansRegular)
-        #expect(FontRegistry.Face.mono(.semibold) == .monoSemibold)
-    }
-
-    /// OFL 1.1 condition 2: every copy carries the copyright notice and the license.
-    @Test func creditsAndBundleCarryTheFontLicense() throws {
-        let creditsURL = try #require(Bundle.main.url(forResource: "Credits", withExtension: "rtf"))
-        let credits = try NSAttributedString(url: creditsURL, options: [:], documentAttributes: nil).string
-        #expect(credits.contains("The Geist Project Authors"))
-        #expect(credits.contains("SIL OPEN FONT LICENSE Version 1.1"))
-        let license = try #require(Bundle.main.url(forResource: "Geist-OFL", withExtension: "txt"))
-        #expect(try String(contentsOf: license, encoding: .utf8).contains("SIL Open Font License, Version 1.1"))
+        let files = try FileManager.default.contentsOfDirectory(atPath: resources.path)
+        #expect(!files.contains { $0.hasSuffix(".ttf") || $0.hasSuffix(".otf") })
     }
 
     // MARK: App icon

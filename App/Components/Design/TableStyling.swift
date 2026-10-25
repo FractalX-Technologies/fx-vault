@@ -4,7 +4,7 @@ import SwiftUI
 //
 // The detail table stays a native SwiftUI `Table` (keyboard, selection, context menus); these
 // helpers give it the FractalX look: a card container with 16 pt corners and a hairline, no
-// alternating rows, 52 pt rows, Geist Mono names and timestamps.
+// alternating rows, 52 pt rows, SF Mono names and timestamps.
 
 extension View {
     /// Styles a native `Table`: no alternating rows, transparent scroll background, a `card`
@@ -104,7 +104,7 @@ private struct FXRowBackground: ViewModifier {
     }
 }
 
-/// A secret or variable name in a table or list: Geist Mono 13, one line, truncated in the
+/// A secret or variable name in a table or list: SF Mono 13, one line, truncated in the
 /// middle so prefixes and suffixes (`STRIPE_…_KEY`) stay readable.
 struct TableNameText: View {
     let name: String
