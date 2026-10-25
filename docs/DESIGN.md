@@ -1,9 +1,10 @@
 # FX Vault design language
 
-## 1.0: minimal black and white, Liquid Glass (approved 2026-10-25, not built yet)
+## 1.0: minimal black and white, Liquid Glass (approved 2026-10-25, building in B11)
 
-Replaces the v0.3.0 language below when slice B11 builds it; until then the v0.3.0 sections describe the code, and
-`DesignTokenTests` checks them. Brief: [V1-BRIEF.md](design/V1-BRIEF.md). Boards: `docs/design/mockup/v1/`
+Replaces the v0.3.0 language below slice by slice: B11b the two-column window, B11c the colors and
+type (the Color and Type sections below are 1.0's, and `DesignTokenTests` checks them). Sections
+not yet rebuilt still describe v0.3.0. Brief: [V1-BRIEF.md](design/V1-BRIEF.md). Boards: `docs/design/mockup/v1/`
 (`canvas.json` lays them out).
 
 - **Platform:** macOS 26 minimum; native Liquid Glass (`glassEffect`) for floating chrome, one code path.
@@ -21,11 +22,11 @@ Replaces the v0.3.0 language below when slice B11 builds it; until then the v0.3
   with Reduce Motion and the system's interface-sound setting.
 - **Setup commands:** an embedded terminal runs only the suggested command (Run), with Copy as a fallback.
 
-## v0.3.0 (current code)
+## v0.3.0 (being replaced)
 
-FX Vault uses the FractalX design language (fractalx.io): a warm off-white ground, near-black
-ink, Geist Sans and Geist Mono, pill buttons, 24 pt cards, hairlines instead of shadows and the
-3×3 mark. Brand blue is an accent, never a surface.
+FX Vault used the FractalX design language (fractalx.io): pill buttons, 24 pt cards, hairlines
+instead of shadows and the 3×3 mark. Since 1.0 (B11c) the ground is white and the ink black, the
+fonts are SF Pro and SF Mono, and there is no brand blue.
 
 - **Approved mockup:** `docs/design/mockup/*.dc.html` (boards: Main, MainDark, Lock, Onboarding,
   SyncReview, Brand) and tasks/todo.md, "v0.3.0: FractalX design language".
@@ -41,10 +42,10 @@ ink, Geist Sans and Geist Mono, pill buttons, 24 pt cards, hairlines instead of 
 
 1. **Quiet ground, ink type.** Most of the window is `ground`, `surface` and `card`. Contrast
    comes from ink text and hairlines.
-2. **One accent.** `brand` marks only what is pending or interactive: pending dots, links, focus
-   rings, and the Modified / Will push chips. It is never a fill behind text.
+2. **Ink is the accent.** `brand` (ink since 1.0) marks only what is pending or interactive:
+   pending dots, links, focus rings, and the Modified / Will push chips.
 3. **Names are code.** Secret and variable names, values, counts, timestamps, paths and small
-   labels are Geist Mono. Prose is Geist Sans.
+   labels are SF Mono. Prose is SF Pro.
 4. **Hairlines, not shadows.** Every border is a 1 pt `hairline` or `hairlineStrong`. The only
    shadow is under a sheet drawn inside the window.
 5. **Short, quiet motion.** 140 ms ease-out for state changes, one critically damped spring for
@@ -60,23 +61,23 @@ value below and fails if a color set has no dark variant or no test.
 
 | Token (`Theme.Colors.`) | Color set | Light | Dark | Use |
 |---|---|---|---|---|
-| `ground` (`onInk`) | Ground | `#F6F5F3` | `#0B0C0E` | Window background; text on an ink fill |
-| `surface` | Surface | `#EDEBE7` | `#111820` | Sidebar, quiet panels, search field |
-| `surface2` | Surface2 | `#E4E1DB` | `#18212A` | Secondary buttons, segmented track, selected sidebar row, offline banner, neutral chip |
-| `card` | Card | `#FFFFFF` | `#111820` | Cards, tables, sheets, inputs, selected segment and scope |
-| `ink` | Ink | `#0B0C0E` | `#F6F5F3` | Primary text, primary button fill |
-| `mutedText` | MutedText | `#454D56` | `#A6B0BC` | Secondary text, paragraphs under headings, masked values |
-| `subtleText` | SubtleText | `#5F6874` | `#808B97` | Section labels, timestamps, counts, placeholders |
-| `faintText` | FaintText | `#A1A7AF` | `#4A5460` | Decorative only: the `/` in `02 / 05` |
-| `hairline` | Hairline | ink 10% | white 8% | Default borders and dividers |
-| `hairlineStrong` | HairlineStrong | ink 18% | white 16% | Outline buttons, tags, inputs, banners that need weight |
-| `brand` | Brand | `#0B6FA4` | `#3BA3DD` | Accent (see principle 2); the app's global accent color |
-| `warning` | Warning | `#8A6316` | `#D9A441` | Drift, value missing, offline |
-| `success` | Success | `#1F7A55` | `#3FB283` | Verified, strong password |
+| `ground` (`onInk`) | Ground | `#FFFFFF` | `#000000` | Window background; text on an ink fill |
+| `surface` | Surface | `#F5F5F7` | `#1C1C1E` | Quiet panels, search field |
+| `surface2` | Surface2 | `#E8E8ED` | `#2C2C2E` | Secondary buttons, segmented track, selected sidebar row, offline banner, neutral chip |
+| `card` | Card | white 80% | `#1C1C1E` 72% | Cards, tables, sheets, inputs, selected segment: the more opaque glass inside a window |
+| `ink` | Ink | `#000000` | `#FFFFFF` | Primary text, primary button fill |
+| `mutedText` | MutedText | `#3F3F42` | `#AEAEB2` | Secondary text, paragraphs under headings, masked values |
+| `subtleText` | SubtleText | `#5C5C61` | `#8E8E93` | Section labels, timestamps, counts, placeholders |
+| `faintText` | FaintText | `#A1A1A6` | `#48484A` | Decorative only: the `/` in `02 / 05` |
+| `hairline` | Hairline | black 8% | white 10% | Default borders and dividers |
+| `hairlineStrong` | HairlineStrong | black 16% | white 20% | Outline buttons, tags, inputs, banners that need weight |
+| `brand` | Brand | `#000000` | `#FFFFFF` | Ink: the current or interactive state (principle 2); the app's global accent color |
+| `warning` | Warning | `#8A6316` | `#D9A441` | Drift, value missing, offline (small marks) |
+| `success` | Success | `#1F7A55` | `#3FB283` | Verified, strong password (small marks) |
 | `danger` | Danger | `#CA2121` | `#EC6A6A` | Destructive actions, failures |
-| `inkBadge` | InkBadge | ground 16% | ink 12% | The count badge inside an ink pill |
-| `dotGrid` | DotGrid | ink 14% | white 10% | Dots of `DotGridBackground` |
-| `shadow` | Shadow | ink 16% | black 48% | The one sheet shadow |
+| `inkBadge` | InkBadge | white 20% | black 12% | The count badge inside an ink pill |
+| `dotGrid` | DotGrid | black 12% | white 10% | Dots of `DotGridBackground` |
+| `shadow` | Shadow | black 12% | black 40% | The one sheet shadow |
 
 `Theme.Colors.windowBackground` is the `NSColor` of Ground for AppKit.
 `Theme.Colors.onSelectionSecondary` is the hierarchical `.secondary` style, for secondary text in
@@ -86,17 +87,16 @@ native `List` rows that can be selected (it stays legible on the system selectio
 `background` → `ground`, `textPrimary` → `ink`, `textSecondary` → `mutedText`, `pending` → `brand`.
 
 Contrast: `ink`, `mutedText` and `subtleText` meet WCAG AA for text on `ground`, `surface` and
-`card` in both appearances (subtle on surface: 4.7:1 light, 5.2:1 dark). On `surface2`, light
-`subtleText` (4.3:1) and `warning` (4.2:1) fall just under AA for small text: use `mutedText` for
-text there and `warning` only for symbols. `faintText` does not meet AA anywhere; never use it for
+`card` in both appearances (subtle on white about 6.7:1, on black about 6.4:1). On dark `surface2`,
+`subtleText` (about 4.3:1) falls just under AA for small text: use `mutedText` for text there and
+`warning` only for symbols. `faintText` does not meet AA anywhere; never use it for
 information.
 
 ## Type
 
-Fonts are Geist Sans and Geist Mono 1.7.2 (SIL OFL 1.1), static faces 400 / 500 / 600 in
-`App/Resources/Fonts`, registered by `ATSApplicationFontsPath = .` in Info.plist (project.yml).
-`FontRegistry` checks every face once; a missing face is registered from the bundle, and if that
-fails too the matching system font (SF Pro / SF Mono, same weight) is used and logged.
+Fonts are the system faces since 1.0: SF Pro (`Font.system`) and SF Mono (`design: .monospaced`,
+`NSFont.monospacedSystemFont`). Nothing is bundled or registered; SF Pro tracks itself by size, so
+headings add no tracking.
 
 A SwiftUI `Font` cannot carry tracking or case, so the scale has two layers:
 `Theme.Typography.*` (a `Font`) and `Theme.TextStyle.*` (font + tracking + line spacing + case),
@@ -105,26 +105,26 @@ is required.
 
 | `TextStyle` / `Typography` | Face | Size | Tracking | Use (mockup) |
 |---|---|---|---|---|
-| `.display` | Sans 500 | 44 | −0.04em | Lock headline "FX Vault is locked." |
-| `.largeTitle` | Sans 500 | 34 | −0.03em | Environment heading, onboarding step title |
-| `.title` | Sans 500 | 28 | −0.03em | Sheet title (SyncReview) |
-| `.title2` | Sans 500 | 20 | −0.02em | Card and settings section titles |
-| `.headline` | Sans 500 | 15 | −0.013em | Window title next to the mark, emphasized rows |
-| `.lead` | Sans 400 | 16 (25 lines) | 0 | Paragraph under a display or large title |
-| `.body` | Sans 400 | 14 (20 lines) | 0 | Default; the window default font |
-| `.bodyEmphasized` | Sans 500 | 14 | 0 | Large primary button labels, links in banners |
-| `.callout` / `.calloutEmphasized` | Sans 400 / 500 | 13 | 0 | Sidebar and scope rows, regular buttons, links |
-| `.caption` | Sans 400 | 12 | 0 | Chips, captions under fields |
-| `.mono` (`Typography.monospaced`) | Mono 400 | 14 | 0 | Names inside prose, recovery keys, commands |
-| `.monoName` | Mono 400 | 13 | 0 | Names in tables and lists |
-| `.monoValue` | Mono 400 | 13 | +0.08em | Masked values `••••••••` |
-| `.monoMeta` | Mono 400 | 12 | 0 | Timestamps, counts, repository paths |
-| `.monoCounter` | Mono 400 | 12 | +0.06em | `02 / 05` |
-| `.sectionLabel` | Mono 400 | 11, UPPERCASE | +0.08em | `ENVIRONMENT`, `MASTER PASSWORD`, column headers |
-| `.statusLine` | Mono 400 | 11, UPPERCASE | +0.06em | `PASSWORD REQUIRED AFTER RESTART`, `WRITE LIMIT …` |
-| `.passphraseWord` | Mono 500 | 20 | 0 | Words of a generated passphrase (`PassphraseView`) |
+| `.display` | SF Pro semibold | 32 | 0 | Lock headline |
+| `.largeTitle` | SF Pro semibold | 24 | 0 | Environment heading, onboarding step title |
+| `.title` | SF Pro semibold | 22 | 0 | Sheet title |
+| `.title2` | SF Pro semibold | 17 | 0 | Card and settings section titles |
+| `.headline` | SF Pro semibold | 13 | 0 | The app name with nothing selected, emphasized rows |
+| `.lead` | SF Pro | 15 (22 lines) | 0 | Paragraph under a display or large title |
+| `.body` | SF Pro | 13 (18 lines) | 0 | Default; the window default font |
+| `.bodyEmphasized` | SF Pro medium | 13 | 0 | Large primary button labels, links in banners |
+| `.callout` / `.calloutEmphasized` | SF Pro / semibold | 13 | 0 | Sidebar rows, regular buttons, links |
+| `.caption` | SF Pro | 12 | 0 | Chips, captions under fields, secondary text |
+| `.mono` (`Typography.monospaced`) | SF Mono | 13 | 0 | Names inside prose, recovery keys, commands |
+| `.monoName` | SF Mono | 13 | 0 | Names in tables and lists |
+| `.monoValue` | SF Mono | 13 | +0.08em | Masked values `••••••••` |
+| `.monoMeta` | SF Mono | 12 | 0 | Timestamps, counts, repository paths |
+| `.monoCounter` | SF Mono | 12 | +0.06em | `02 / 05` |
+| `.sectionLabel` | SF Mono | 11, UPPERCASE | +0.08em | `ENVIRONMENT`, `MASTER PASSWORD`, column headers |
+| `.statusLine` | SF Mono | 11, UPPERCASE | +0.06em | `PASSWORD REQUIRED AFTER RESTART`, `WRITE LIMIT …` |
+| `.passphraseWord` | SF Mono medium | 17 | 0 | Words of a generated passphrase (`PassphraseView`) |
 | `Typography.emptyStateIcon` | SF Symbols light | 32 | | The symbol above an empty state |
-| `Typography.nsMonospaced` (`NSFont`) | Mono 400 | 14 | | AppKit text views (secret value and `.env` paste editors) |
+| `Typography.nsMonospaced` (`NSFont`) | SF Mono | 13 | | AppKit text views (secret value and `.env` paste editors) |
 
 Write strings in sentence case; `.sectionLabel` uppercases them (`textCase`), so translations
 keep their own case rules.
@@ -316,7 +316,7 @@ Share as File; `EmptyStateView` uses the light symbol, a `.headline` ink title a
 ### `.fxWindowBackground()`
 
 Applied once per scene in `FXVaultApp` (main window, Settings): `ground` behind the
-content and as the `NSWindow` background, Geist 14 as the default font, `brand` tint. It sets no
+content and as the `NSWindow` background, SF Pro 13 as the default font, `brand` tint. It sets no
 foreground color, so `.primary` text still turns white on selected rows.
 
 ## Screen patterns
@@ -549,7 +549,7 @@ Failures use `Banner(.danger)`.
   only" (neutral) and "With branch policy" (brand). The content summary starts with a
   `.sectionLabel` ("From owner/repo") over a `Card(.container)` grid: scope as `.statusLine`,
   counts `.calloutEmphasized`.
-- Passphrase: a `Card` with the six words numbered (`StepCounter.padded`) in Geist Mono 500 at
+- Passphrase: a `Card` with the six words numbered (`StepCounter.padded`) in SF Mono medium at
   the `title2` size (`Theme.TextStyle.passphraseWord`; the shared `PassphraseView`), Copy as an
   outline pill; screen capture protected.
 ## Do and don't

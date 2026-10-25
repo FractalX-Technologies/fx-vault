@@ -111,7 +111,7 @@ struct FXTextField: View {
             }
             field
                 .focused($isFocused)
-                // Secure fields draw Geist Mono bullets at a fixed advance (evenly spaced, like the
+                // Secure fields draw SF Mono bullets at a fixed advance (evenly spaced, like the
                 // masked values in the table).
                 .fxInputField(shape, isFocused: isFocused, isInvalid: isInvalid, isMonospaced: isMonospaced || isSecure)
                 .accessibilityLabel(label ?? prompt ?? "")
@@ -120,7 +120,7 @@ struct FXTextField: View {
 
     @ViewBuilder
     private var field: some View {
-        // A placeholder sentence stays in Geist Sans, even in a secure field (drawn in mono). A
+        // A placeholder sentence stays in SF Pro, even in a secure field (drawn in mono). A
         // secure field shows its label as the placeholder when there is no prompt.
         let promptFont = isMonospaced ? Theme.Typography.monospaced : Theme.Typography.body
         let promptText = prompt.map { Text($0).font(promptFont).foregroundStyle(Theme.Colors.subtleText) }

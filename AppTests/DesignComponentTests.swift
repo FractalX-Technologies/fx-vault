@@ -175,11 +175,11 @@ struct DesignComponentTests {
         #expect(pill.sizeThatFits(in: CGSize(width: 40, height: 100)).width > 40)
     }
 
-    @Test func appKitMonospacedFontIsGeistMono() {
-        #expect(Theme.Typography.nsMonospaced.fontName == FontRegistry.Face.monoRegular.postScriptName)
-        #expect(Theme.Typography.nsMonospaced.pointSize == Theme.Typography.Size.body)
-        let fallback = FontRegistry.nsFont(.monoMedium, size: Theme.Typography.Size.caption)
-        #expect(fallback.isFixedPitch)
+    @Test func appKitMonospacedFontIsTheSystemMono() {
+        let font = Theme.Typography.nsMonospaced
+        #expect(font.isFixedPitch)
+        #expect(font.pointSize == Theme.Typography.Size.body)
+        #expect(font.fontName == NSFont.monospacedSystemFont(ofSize: font.pointSize, weight: .regular).fontName)
     }
 
     @Test func sharedTextStylesLiveInTheTheme() {

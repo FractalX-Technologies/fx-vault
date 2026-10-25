@@ -135,11 +135,9 @@ FXVault/
 │   │   │                            # GHAccountSummaryModel, BranchPatternType,
 │   │   │                            # DestinationProvider/DestinationModel titles, symbols (v0.8.0)
 │   │   └── Theme/                   # Theme (+ Layout, Opacity, Stroke, Shadow), Colors,
-│   │                                # Typography (+ TextStyle, .fxTextStyle), FontRegistry,
+│   │                                # Typography (+ TextStyle, .fxTextStyle),
 │   │                                # Spacing, Radius, Durations
 │   └── Resources/                   # Assets.xcassets (AppIcon, design color sets),
-│                                    # Fonts/ (Geist Sans + Mono 400/500/600, Geist-OFL.txt;
-│                                    # registered by ATSApplicationFontsPath),
 │                                    # Localizable.xcstrings, InfoPlist.xcstrings,
 │                                    # Credits.rtf (About panel: LICENSE + THIRD_PARTY_NOTICES.md;
 │                                    # regenerate with textutil when either changes)
@@ -160,8 +158,8 @@ FXVault/
 │   │                                # Sync sheet), SharingScopeTreeModel (tri-state tree),
 │   │                                # DestinationViewModel (sidebar rows, detail, Add
 │   │                                # Destination, Preferences; v0.8.0)
-│   ├── DesignTokenTests.swift       # v0.3.0: every color set's light/dark values, Geist
-│   │                                # registration and fallback, OFL credits, AppIcon set
+│   ├── DesignTokenTests.swift       # every color set's light/dark values (1.0), the
+│   │                                # type scale, no bundled fonts, AppIcon set
 │   ├── DesignComponentTests.swift   # v0.3.0: component resolution rules, light/dark render
 │   │                                # smoke tests, the 52 pt table row on a real NSTableView
 │   ├── SheetPresentationTests.swift # v0.3.0: Sync footer pills and shortcuts, drift banner

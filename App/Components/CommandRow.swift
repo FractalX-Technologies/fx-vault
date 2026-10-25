@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A copyable shell command (`brew install gh`, `gh auth login`, scope fixes): Geist Mono,
+/// A copyable shell command (`brew install gh`, `gh auth login`, scope fixes): SF Mono,
 /// selectable, in a 12 pt quiet row with a ghost Copy button.
 struct CommandRow: View {
     let command: String

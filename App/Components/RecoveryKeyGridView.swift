@@ -1,7 +1,7 @@
 import SwiftUI
 import VaultCore
 
-/// The recovery key as 14 numbered groups of 4 on two rows (§5.3), in Geist Mono on a hairline
+/// The recovery key as 14 numbered groups of 4 on two rows (§5.3), in SF Mono on a hairline
 /// container. The window it appears in is excluded from screen capture while it is visible.
 struct RecoveryKeyGridView: View {
     let groups: [String]

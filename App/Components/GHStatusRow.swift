@@ -4,7 +4,7 @@ import VaultCore
 
 /// The non-blocking GitHub CLI status row on Welcome, the lock screen and Settings (§10): a tinted
 /// symbol and one muted line. Hidden while the status is unknown. Paths and commands inside the
-/// sentence are set in Geist Mono (docs/DESIGN.md: mono for paths); the sentence stays one
+/// sentence are set in SF Mono (docs/DESIGN.md: mono for paths); the sentence stays one
 /// localized string.
 struct GHStatusRow: View {
     let status: GHStatusModel
@@ -30,7 +30,7 @@ struct GHStatusRow: View {
         }
     }
 
-    /// The sentence with each of `monoSpans` (its first occurrence) in Geist Mono.
+    /// The sentence with each of `monoSpans` (its first occurrence) in SF Mono.
     static func styled(_ text: String, monoSpans: [String]) -> AttributedString {
         var attributed = AttributedString(text)
         for span in monoSpans where !span.isEmpty {
