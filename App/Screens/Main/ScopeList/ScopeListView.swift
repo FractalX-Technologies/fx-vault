@@ -124,8 +124,8 @@ private struct DestinationsSection: View {
 }
 
 /// One destination row: provider symbol, name, stage, value-missing warning, pending dot and the
-/// mono item count.
-private struct DestinationRow: View {
+/// mono item count. The sidebar's Key Vaults of their own use it too.
+struct DestinationRow: View {
     let destination: DestinationModel
     let isSelected: Bool
 

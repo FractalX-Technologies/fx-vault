@@ -17,7 +17,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     private(set) var detail: RepoDetailViewModel?
     /// The detail column of the selected folder (v0.7.0).
     private(set) var folderDetail: FolderDetailViewModel?
-    /// The detail column of the selected destination (v0.8.0).
+    /// The detail column of the selected destination (v0.8.0), or of the selected Key Vault of
+    /// its own (1.0).
     private(set) var destinationDetail: DestinationDetailViewModel?
     /// The detail column of the selected imported organization (1.0).
     private(set) var organizationDetail: OrganizationDetailViewModel?
@@ -88,12 +89,13 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     @ObservationIgnored private var pendingScope: (repositoryID: RepoID, scope: ConfigScope)?
 
     /// Shows a destination (v0.8.0, a linked copy's place): selects its repository, then the
-    /// destination once its column has it.
+    /// destination once its column has it; a Key Vault of its own is selected in the sidebar.
     func open(destinationID id: DestinationID) {
-        // A Key Vault of its own has no repository column; its sidebar node arrives with B8b2.
-        guard let destination = try? app.container.data.destinations.destination(id),
-              let repositoryID = destination.repositoryID
-        else { return }
+        guard let destination = try? app.container.data.destinations.destination(id) else { return }
+        guard let repositoryID = destination.repositoryID else {
+            sidebar.select(keyVaultID: id)
+            return
+        }
         sidebar.select(repositoryID: repositoryID)
         if scopeList?.repositoryID == repositoryID {
             scopeList?.select(destination: id)
@@ -135,8 +137,11 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     }
 
     /// The selected place as the toolbar's path: `GitHub › owner › repo › environment`, or
-    /// `Folders › name`; empty with nothing selected.
+    /// `Folders › name`, `Azure Key Vault › name`; empty with nothing selected.
     var breadcrumb: [String] {
+        if let vault = sidebar.selectedKeyVault {
+            return [MainCopy.azureSection, vault.title]
+        }
         if let folder = sidebar.selectedFolder {
             return [FolderCopy.sectionTitle, folder.name]
         }
@@ -153,9 +158,24 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         return path
     }
 
-    /// Rebuilds the scopes and detail columns when the selected repository, folder or
-    /// organization changes (or the repository or organization becomes imported, or is removed).
+    /// Rebuilds the scopes and detail columns when the selected repository, folder, organization
+    /// or Key Vault changes (or the repository or organization becomes imported, or is removed).
     private func followSelection() {
+        if let id = sidebar.selectedKeyVaultID {
+            detail = nil
+            scopeList = nil
+            folderDetail = nil
+            organizationDetail = nil
+            guard destinationDetail?.destinationID != id, let vault = sidebar.keyVault(id) else { return }
+            destinationDetail = DestinationDetailViewModel(destination: vault, dependencies: featureDependencies) { [weak sidebar] in
+                sidebar?.keyVault(id)
+            }
+            return
+        }
+        // A Key Vault's detail has no repository column to clear it with below.
+        if destinationDetail?.repositoryID == nil {
+            destinationDetail = nil
+        }
         if let owner = sidebar.selectedOrganizationOwner {
             detail = nil
             scopeList = nil

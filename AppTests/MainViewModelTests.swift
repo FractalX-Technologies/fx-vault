@@ -125,6 +125,59 @@ struct MainViewModelTests {
         #expect(main.breadcrumb.last == row.name)
     }
 
+    /// A Key Vault of its own (B8b3) is listed under AZURE KEY VAULT and opens its destination
+    /// detail; selecting anything else, or nothing, closes it.
+    @Test func aKeyVaultOfItsOwnOpensFromTheSidebar() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
+        let main = harness.app.makeMainViewModel()
+        let repoID = try await harness.stageRepository(items: [])
+        let vaultID = try harness.data.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-example-prod", tenantID: nil),
+            stage: nil
+        )
+        #expect(await TestFixtures.eventually { main.sidebar.keyVaults.map(\.id) == [vaultID] })
+        #expect(await TestFixtures.eventually { !main.sidebar.sections.isEmpty })
+
+        main.sidebar.selectedKeyVaultID = vaultID
+        let detail = try #require(main.destinationDetail)
+        #expect(detail.destinationID == vaultID)
+        #expect(detail.repositoryID == nil)
+        #expect(main.scopeList == nil)
+        #expect(main.breadcrumb == [MainCopy.azureSection, "kv-example-prod"])
+        #expect(main.canImportEnv)
+
+        main.sidebar.selectedKeyVaultID = nil
+        #expect(main.destinationDetail == nil, "deselecting closes the vault")
+        #expect(main.breadcrumb.isEmpty)
+
+        main.open(destinationID: vaultID)
+        #expect(main.destinationDetail?.destinationID == vaultID, "a linked copy's place opens the vault")
+        main.sidebar.searchText = "nothing-matches"
+        #expect(main.sidebar.visibleKeyVaults.isEmpty)
+        main.sidebar.searchText = ""
+
+        let row = try #require(main.sidebar.sections.first?.owners.flatMap(\.repos).first)
+        main.select(repository: row)
+        #expect(main.sidebar.selectedKeyVaultID == nil)
+        #expect(main.scopeList?.repositoryID == repoID)
+        #expect(main.destinationDetail == nil)
+
+        main.sidebar.selectedKeyVaultID = vaultID
+        #expect(main.sidebar.selectedRowID == nil)
+        try harness.data.destinations.deleteDestination(vaultID)
+        #expect(await TestFixtures.eventually { main.sidebar.selectedKeyVaultID == nil })
+        #expect(main.destinationDetail == nil, "a removed vault closes")
+
+        let imported = try harness.data.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-example-new", tenantID: nil),
+            stage: nil
+        )
+        main.open(destinationID: imported)
+        #expect(await TestFixtures.eventually { main.destinationDetail?.destinationID == imported }, "a vault opened before it is listed opens once listed")
+    }
+
     /// A repository just imported from a project file is not in the sidebar yet: the scope asked
     /// for is selected once the sidebar row and the scope column exist.
     @Test func openingAScopeBeforeItsSidebarRowExistsSelectsItWhenTheRowAppears() async throws {

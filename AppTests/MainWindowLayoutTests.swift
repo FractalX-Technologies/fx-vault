@@ -78,4 +78,14 @@ struct MainWindowLayoutTests {
         }
         return views
     }
+
+    /// A path too wide for the toolbar drops its first steps down to the last one (B8b3: "Azure
+    /// Key Vault › name" fell straight back to the app name beside the DEV chip).
+    @Test func toolbarPathFallsBackStepByStep() {
+        #expect(MainToolbarTitle.fallbacks(["Azure Key Vault", "kv-example-prod"]) == [
+            ["Azure Key Vault", "kv-example-prod"], ["kv-example-prod"], [],
+        ])
+        #expect(MainToolbarTitle.fallbacks(["GitHub", "owner", "repo"]).map(\.count) == [3, 2, 1, 0])
+        #expect(MainToolbarTitle.fallbacks([]) == [[]])
+    }
 }

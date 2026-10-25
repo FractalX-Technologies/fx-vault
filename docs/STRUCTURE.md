@@ -53,7 +53,8 @@ FXVault/
 │   │   │   ├── MainColumnSelection.swift  # Up/Down selection of the custom-drawn sidebar and
 │   │   │   │                        # scope rows (pure helper + modifier)
 │   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel,
-│   │   │   │                        # SidebarFoldersSection (v0.7.0)
+│   │   │   │                        # SidebarFoldersSection (v0.7.0),
+│   │   │   │                        # SidebarKeyVaultsSection (1.0)
 │   │   │   ├── ScopeList/           # ScopeListView/ViewModel ("Build · GitHub Actions":
 │   │   │   │                        # Repository + environments, "Runtime": destination rows,
 │   │   │   │                        # Add Destination, DestinationContextMenu; v0.8.0)

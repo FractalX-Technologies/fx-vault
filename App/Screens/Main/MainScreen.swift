@@ -132,18 +132,17 @@ private struct MainToolbar: ToolbarContent {
 
 /// The mark, then the selected place as a mono path (``MainViewModel/breadcrumb``), or the app
 /// name with nothing selected, and in Debug builds the DEV chip. It is `toolbarTitleWidth` wide:
-/// a long path drops its first steps, then the whole path, rather than pushing the buttons.
-private struct MainToolbarTitle: View {
+/// a long path drops its first steps down to the last one, then the whole path, rather than
+/// pushing the buttons.
+struct MainToolbarTitle: View {
     let viewModel: MainViewModel
 
     var body: some View {
         let path = viewModel.breadcrumb
         ViewThatFits(in: .horizontal) {
-            row(path)
-            if path.count > 2 {
-                row(Array(path.suffix(2)))
+            ForEach(Self.fallbacks(path), id: \.self) { steps in
+                row(steps)
             }
-            row([])
         }
         .frame(width: Theme.Layout.toolbarTitleWidth, alignment: .leading)
         .padding(.horizontal, Theme.Spacing.small)
@@ -151,6 +150,11 @@ private struct MainToolbarTitle: View {
     }
 
     private static let separator = " › "
+
+    /// The rows to try, widest first: the path, its tails down to the last step, then the app name.
+    static func fallbacks(_ path: [String]) -> [[String]] {
+        path.indices.map { Array(path.dropFirst($0)) } + [[]]
+    }
 
     private func row(_ path: [String]) -> some View {
         HStack(spacing: Theme.Spacing.mediumMinus) {
