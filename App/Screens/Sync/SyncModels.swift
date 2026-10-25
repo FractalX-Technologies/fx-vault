@@ -100,7 +100,8 @@ struct SyncSummaryScopeModel: Identifiable, Hashable {
 
 /// One repository of the summary (§7.2).
 struct SyncSummaryRepoModel: Identifiable, Hashable {
-    let id: RepoID
+    /// nil: the Key Vaults of their own (1.0).
+    let id: RepoID?
     let fullName: String
     /// "New repository · Private · README · MIT" when the run creates it.
     let newRepository: String?
@@ -466,7 +467,8 @@ struct SyncDeletionEnvironmentModel: Identifiable, Hashable {
 
 /// One repository's deletions.
 struct SyncDeletionRepoModel: Identifiable, Hashable {
-    let id: RepoID
+    /// nil: the Key Vaults of their own (1.0).
+    let id: RepoID?
     let fullName: String
     /// Item deletions: "Delete secret OLD_TOKEN in Repository".
     let items: [SyncIssueModel]

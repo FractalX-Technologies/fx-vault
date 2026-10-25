@@ -70,7 +70,7 @@ final class AppViewModel {
     /// Pending and blocked counts per repository (live, from `ConfigRepository`).
     private(set) var pendingCounts: PendingCountsModel = .empty
     /// Pending destination changes per repository (live, from `DestinationRepository`, v0.8.0).
-    private(set) var destinationPendingCounts: [RepoID: Int] = [:]
+    private(set) var destinationPendingCounts: [RepoID?: Int] = [:]
     /// True while at least one ``SyncActivity`` is active (the Sync button shows progress).
     private(set) var isSyncing = false
     /// Incremented by every lock that dropped keys or left a phase.

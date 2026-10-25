@@ -149,13 +149,14 @@ public struct DestinationRepository: Sendable {
         store.observeDestinations(repositoryID: repositoryID)
     }
 
-    /// Pending destination changes per repository (added to the Sync badge).
-    public func observePendingCounts() -> AsyncThrowingStream<[RepoID: Int], any Error> {
+    /// Pending destination changes per repository (added to the Sync badge); nil: the Key Vaults
+    /// of their own.
+    public func observePendingCounts() -> AsyncThrowingStream<[RepoID?: Int], any Error> {
         store.observePendingCounts()
     }
 
-    /// Pending destination changes per repository.
-    public func pendingCounts() throws(ConfigRepositoryError) -> [RepoID: Int] {
+    /// Pending destination changes per repository; nil: the Key Vaults of their own.
+    public func pendingCounts() throws(ConfigRepositoryError) -> [RepoID?: Int] {
         try performConfig { try store.fetchPendingCounts() }
     }
 

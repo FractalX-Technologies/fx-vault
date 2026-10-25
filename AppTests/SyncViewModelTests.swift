@@ -54,6 +54,32 @@ struct SyncViewModelTests {
 
     // MARK: - Summary
 
+    /// B8c: the Key Vaults of their own count on the Sync badge and get a group of their own in
+    /// the summary, after the repositories.
+    @Test func keyVaultsOfTheirOwnJoinTheBadgeAndTheSummary() async throws {
+        let fixture = try await Fixture(review: .success(SyncFixtures.review([])))
+        let harness = fixture.harness
+        try harness.installFakeGH()
+        try harness.installFakeAZ()
+        harness.transport.stubKeyVault("kv-example-shared", secrets: [:])
+        let vault = try harness.data.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-example-shared", tenantID: nil),
+            stage: nil
+        )
+        try harness.data.destinations.addItem(destinationID: vault, kind: .secret, name: "DATABASE_URL", value: SecretBytes(utf8: "FXV_FIXTURE_SECRET"))
+        #expect(await TestFixtures.eventually { harness.app.pendingChangeCount == 1 })
+
+        let model = fixture.viewModel
+        await model.load()
+        #expect(model.step == .summary)
+        let group = try #require(model.repositories.first { $0.id == nil })
+        #expect(group.fullName == MainCopy.azureSection)
+        #expect(group.scopes.first?.details == ["+ DATABASE_URL as DATABASE-URL"])
+        #expect(model.pendingCount == 1)
+        #expect(model.executableCount == 1)
+    }
+
     @Test func summaryShowsNamesCountsAndTheWriteLimit() async throws {
         let review = SyncFixtures.review([SyncFixtures.preflight(executable: [
             SyncFixtures.set(.secret, "API_TOKEN"),

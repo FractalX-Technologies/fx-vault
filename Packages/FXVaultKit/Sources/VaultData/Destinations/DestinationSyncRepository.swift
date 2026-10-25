@@ -60,9 +60,10 @@ public actor DestinationSyncRepository {
 
     // MARK: - Review
 
-    /// The destination changes of `repositoryID`, listed and checked (no writes except journal
-    /// reconciliation). Destinations without pending changes are not contacted.
-    public func review(repositoryID: RepoID) async -> DestinationReviewModel {
+    /// The destination changes of `repositoryID` (nil: the Key Vaults of their own), listed and
+    /// checked (no writes except journal reconciliation). Destinations without pending changes
+    /// are not contacted.
+    public func review(repositoryID: RepoID?) async -> DestinationReviewModel {
         guard let destinations = try? repository.destinations(repositoryID: repositoryID) else {
             return .empty(repositoryID)
         }

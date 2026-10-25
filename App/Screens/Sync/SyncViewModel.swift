@@ -115,12 +115,12 @@ final class SyncViewModel: LockObserving {
     }
 
     /// The destination reviews of the sync's repositories (all repositories with destination
-    /// changes when the sync covers every repository).
+    /// changes, then the Key Vaults of their own, when the sync covers every repository).
     private func reviewDestinations(_ review: SyncReviewModel) async -> [DestinationReviewModel] {
         let counts = (try? dependencies.destinations.pendingCounts()) ?? [:]
-        let ids = context.repositoryIDs.map { Array($0) } ?? Array(counts.keys)
+        let ids: [RepoID?] = context.repositoryIDs.map { $0.sorted() } ?? counts.keys.compactMap(\.self).sorted() + [nil]
         var reviews: [DestinationReviewModel] = []
-        for id in ids.sorted() where (counts[id] ?? 0) > 0 {
+        for id in ids where (counts[id] ?? 0) > 0 {
             let destinationReview = await dependencies.destinationSync.review(repositoryID: id)
             if HeldSharePresentation.hasContent(destinationReview) {
                 reviews.append(destinationReview)
@@ -177,26 +177,23 @@ final class SyncViewModel: LockObserving {
     /// in the credential rows asks for the confirmation again.
     private func present() {
         guard let review = effectiveReview else { return }
-        var names: [RepoID: String] = [:]
+        repositoryModels = [:]
         for repository in review.preflight.repositories {
-            names[repository.id] = repository.snapshot.repository.fullName
+            repositoryModels[repository.id] = repository.snapshot.repository
         }
-        let config = dependencies.config
         repositories = DestinationSyncPresentation.merge(
             SyncPresentationBuilder.summary(review),
             with: effectiveDestinationReviews,
-            fullName: { names[$0] ?? (try? config.changeSet(repositoryID: $0))??.repository.fullName ?? "" }
+            fullName: fullName(of:)
         )
         let rows = SyncPresentationBuilder.credentialRows(review)
         if rows != credentialRows {
             credentialRows = rows
             credentialsConfirmed = false
         }
-        repositoryModels = [:]
         changeNames = [:]
         environmentNames = [:]
         for repository in review.preflight.repositories {
-            repositoryModels[repository.id] = repository.snapshot.repository
             for change in repository.executable {
                 changeNames[change.id] = SyncCopy.changeName(change)
             }
@@ -530,8 +527,10 @@ final class SyncViewModel: LockObserving {
         }
     }
 
-    private func fullName(of id: RepoID) -> String {
-        repositoryModels[id]?.fullName ?? (try? dependencies.config.changeSet(repositoryID: id))??.repository.fullName ?? ""
+    /// nil: the Key Vaults of their own.
+    private func fullName(of id: RepoID?) -> String {
+        guard let id else { return MainCopy.azureSection }
+        return repositoryModels[id]?.fullName ?? (try? dependencies.config.changeSet(repositoryID: id))??.repository.fullName ?? ""
     }
 
     /// The stop reason line, when the run stopped early.

@@ -47,15 +47,16 @@ public struct DestinationStore: Sendable {
         }
     }
 
-    /// Pending destination changes per repository (the Sync badge), now and after each change.
-    public func observePendingCounts() -> AsyncThrowingStream<[RepoID: Int], any Error> {
+    /// Pending destination changes per repository (the Sync badge), now and after each change;
+    /// the nil key counts the Key Vaults of their own.
+    public func observePendingCounts() -> AsyncThrowingStream<[RepoID?: Int], any Error> {
         database.observe { db in
             try Self.pendingCounts(db: db)
         }
     }
 
-    /// Pending destination changes per repository.
-    public func fetchPendingCounts() throws -> [RepoID: Int] {
+    /// Pending destination changes per repository; nil: the Key Vaults of their own.
+    public func fetchPendingCounts() throws -> [RepoID?: Int] {
         try database.read { try Self.pendingCounts(db: $0.db) }
     }
 
@@ -333,15 +334,14 @@ public struct DestinationStore: Sendable {
         }
     }
 
-    static func pendingCounts(db: Database) throws -> [RepoID: Int] {
+    static func pendingCounts(db: Database) throws -> [RepoID?: Int] {
         let destinations = try DestinationRecord.fetchAll(db)
         guard !destinations.isEmpty else { return [:] }
         let repositoryOf = Dictionary(uniqueKeysWithValues: destinations.map { ($0.id, $0.repositoryID) })
         let states = try itemStates(destinationIDs: destinations.map(\.id), db: db)
-        var counts: [RepoID: Int] = [:]
+        var counts: [RepoID?: Int] = [:]
         for state in states where state.pendingOperation != nil {
-            // A Key Vault of its own has no repository Sync yet (B8c); its changes are not counted here.
-            guard let repositoryID = repositoryOf[state.destinationID] ?? nil else { continue }
+            guard let repositoryID = repositoryOf[state.destinationID] else { continue }
             counts[repositoryID, default: 0] += 1
         }
         return counts
