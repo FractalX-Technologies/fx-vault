@@ -15,6 +15,8 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
     case branchPolicyList = "B5"
     case secretList = "B6"
     case variableList = "B8"
+    case orgSecretList = "B12"
+    case orgVariableList = "B13"
     case gitignoreList = "B10g"
     case licenseList = "B10l"
     case repoCreate = "C1"

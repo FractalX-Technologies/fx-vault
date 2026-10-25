@@ -19,6 +19,16 @@ extension GHCommandScheduler {
         try GHOrgsCommands.decodeMembership(try await run(try GHOrgsCommands.membership(organization: organization)))
     }
 
+    /// B12: the organization's secrets with their visibility (names only).
+    public func listOrganizationSecrets(_ organization: String) async throws(GHError) -> [GHSecretDTO] {
+        try GHSecretsCommands.decodeList(try await run(try GHSecretsCommands.list(organization: organization)))
+    }
+
+    /// B13: the organization's variables with their values and visibility; wipe each value.
+    public func listOrganizationVariables(_ organization: String) async throws(GHError) -> [GHVariableListingModel] {
+        try GHVariablesCommands.decodeList(try await run(try GHVariablesCommands.list(organization: organization)))
+    }
+
     /// B1: repositories owned by `owner`.
     public func listRepositories(owner: String) async throws(GHError) -> [GHRepoDTO] {
         try GHReposCommands.decodeList(try await run(try GHReposCommands.list(owner: owner)))

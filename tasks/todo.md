@@ -1933,7 +1933,7 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B3b Share Securely: passphrase `.fxvault` export of an org, repository or environment, and the open/preview/held import, from D2's Share boards; **Send with AirDrop** of that file (system share, Bryan 2026-10-25).
 - [x] B4 `admin:org` scope check per organization and the refresh flow (copyable commands and Re-check).
 - [ ] B4b In-app Approve (D1's device code) through `gh auth refresh`: needs a check against a real gh login first (non-TTY behaviour, the browser step); reserved for Bryan's real account.
-- [ ] B5 Organization list commands and store (v15, additive); read-only organization node.
+- [ ] B5 Organization list commands and store (additive migration); read-only organization node. Split: B5a GitHubKit listings [x]; B5b store and import; B5c the read-only node and its e2e.
 - [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list.
 - [ ] B7 Organization drift and verify; inherited and shadowed names on a repository.
 - [ ] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source.
@@ -2042,3 +2042,12 @@ Review B4 — organization access (2026-10-25, automatic):
 - Review: by me (subagent cap). Found and fixed: a comment claimed organizations are absent while loading.
 - Lesson: a read test on a network failure hangs (reads retry on the manual clock); use a non-transient account error.
 - Docs: README, CHANGELOG, API (A6), ARCHITECTURE, DESIGN (Accounts), RELEASING #50.
+- Commit: `69281f9` `feat(accounts): show each organization's access and the admin:org commands`.
+
+Review B5a — organization listings in GitHubKit (2026-10-25, automatic):
+- B12 `GHSecretsCommands.list(organization:)` and B13 `GHVariablesCommands.list(organization:)` with `--org=` and the `visibility,numSelectedRepos` fields (checked against gh 2.102.0's help); scheduler `listOrganizationSecrets` / `listOrganizationVariables`.
+- `OrgVisibility` (VaultCore: `all`, `private`, `selected`); `GHSecretDTO` and the variable DTO/listing gain optional `visibility` and `numSelectedRepos` (nil for repository listings), so the decoders are shared.
+- No UI yet: B5b stores them, B5c shows them; no e2e in this part (the UI-test gh gets org stubs in B5c).
+- Tests: `OrgListingTests` (argv, invalid org, decoding of each visibility, an unknown visibility is malformed, repository listings carry none); `CommandBuilderTests` registers B12/B13 (seen failing before).
+- Gates: `swift test` 1,304 green; app and test targets build; lint OK; check-secrets OK (951 files). Full CI and UI tests run with B5c.
+- Docs: API (B12/B13).

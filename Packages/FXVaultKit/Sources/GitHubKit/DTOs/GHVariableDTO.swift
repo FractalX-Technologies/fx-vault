@@ -1,15 +1,19 @@
 import Foundation
 import VaultCore
 
-/// The raw JSON row of `gh variable list --json name,value,updatedAt,createdAt` (§8 B8/B9).
-/// Internal: the value is moved into ``GHVariableListingModel`` immediately.
+/// The raw JSON row of `gh variable list --json name,value,updatedAt,createdAt` (§8 B8/B9), or
+/// with `--org` also the visibility (B13). Internal: the value is moved into
+/// ``GHVariableListingModel`` immediately.
 struct GHVariableDTO: Decodable {
     let name: String
     let value: String
     let updatedAt: Date?
     let createdAt: Date?
+    let visibility: OrgVisibility?
+    let numSelectedRepos: Int?
 
     static let jsonFields = "name,value,updatedAt,createdAt"
+    static let orgJSONFields = "name,value,updatedAt,createdAt,visibility,numSelectedRepos"
 }
 
 /// One listed variable. The value is in `SecretBytes`: encrypt it, then wipe it
@@ -23,12 +27,25 @@ public struct GHVariableListingModel: Sendable {
     public let value: SecretBytes
     public let updatedAt: Date?
     public let createdAt: Date?
+    /// Organization listings only.
+    public let visibility: OrgVisibility?
+    /// Organization listings only; meaningful for `.selected`.
+    public let numSelectedRepos: Int?
 
-    public init(name: String, value: SecretBytes, updatedAt: Date?, createdAt: Date?) {
+    public init(
+        name: String,
+        value: SecretBytes,
+        updatedAt: Date?,
+        createdAt: Date?,
+        visibility: OrgVisibility? = nil,
+        numSelectedRepos: Int? = nil
+    ) {
         self.name = name
         self.value = value
         self.updatedAt = updatedAt
         self.createdAt = createdAt
+        self.visibility = visibility
+        self.numSelectedRepos = numSelectedRepos
     }
 
     /// Wipes the value.
