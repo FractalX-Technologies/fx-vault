@@ -101,16 +101,26 @@ struct SyncViewModelTests {
         let group = try #require(model.repositories.first { $0.id == .keyVaults })
         #expect(group.fullName == MainCopy.azureSection)
         #expect(group.scopes.first?.details == ["+ DATABASE_URL as DATABASE-URL"])
-        #expect(model.pendingCount == 1)
+        #expect(group.cards.map(\.place.name) == ["kv-example-shared"])
+        #expect(group.cards.first?.place.kind == "Key Vault")
+        #expect(group.cards.first?.lines.map(\.detail) == ["secret · as DATABASE-URL"])
         #expect(model.executableCount == 1)
     }
 
+    /// Board Sync-Review: one card per place, the blocked change in its place's card, and the
+    /// footer counting it while the button counts what will run.
     @Test func summaryShowsNamesCountsAndTheWriteLimit() async throws {
-        let review = SyncFixtures.review([SyncFixtures.preflight(executable: [
-            SyncFixtures.set(.secret, "API_TOKEN"),
-            SyncFixtures.set(.variable, "BASE_URL", isNew: false, reason: .modified),
-            SyncFixtures.set(.secret, "DB_URL", environment: "production"),
-        ])])
+        let review = SyncFixtures.review([SyncFixtures.preflight(
+            executable: [
+                SyncFixtures.set(.secret, "API_TOKEN"),
+                SyncFixtures.set(.variable, "BASE_URL", isNew: false, reason: .modified),
+                SyncFixtures.set(.secret, "DB_URL", environment: "production"),
+            ],
+            blocked: [SyncBlockedChangeModel(
+                change: SyncFixtures.set(.secret, "DOCKER_PASSWORD", environment: "production"),
+                reason: .change(.valueMissing)
+            )]
+        )])
         let fixture = try await Fixture(review: .success(review))
         let model = fixture.viewModel
         await model.load()
@@ -120,16 +130,67 @@ struct SyncViewModelTests {
         #expect(repository.fullName == SyncFixtures.fullName)
         #expect(repository.scopes.map(\.sentence) == ["1 added, 1 modified in Repository", "1 added in production"])
         #expect(repository.scopes.first?.details == ["+ API_TOKEN (secret)", "~ BASE_URL (variable)"])
+        let cards = repository.cards
+        #expect(cards.map(\.place.name) == [TestFixtures.repoName, "\(TestFixtures.repoName) › production"])
+        #expect(cards.map(\.place.kind) == ["repository", "environment"])
+        #expect(cards[0].lines.map(\.symbol) == [.added, .modified])
+        #expect(cards[0].lines.map(\.name) == ["API_TOKEN", "BASE_URL"])
+        #expect(cards[0].lines.map(\.detail) == ["secret", "variable"])
+        #expect(cards[0].blocked.isEmpty)
+        #expect(cards[1].blocked.map(\.title) == ["Add secret DOCKER_PASSWORD in production"])
+        #expect(cards[1].blocked.map(\.name) == ["DOCKER_PASSWORD"])
         #expect(model.writeBudgetLine == "FX Vault write limit this hour: \(SyncFixtures.usedWrites) of \(Limits.writesPerHour)")
-        #expect(model.pendingCount == 3)
+        #expect(model.executableCount == 3)
+        #expect(model.summaryCountsLine == "4 changes in 2 places · 1 blocked")
 
         let primary = try #require(model.buttons.last)
         #expect(primary.action == .sync)
-        #expect(primary.title == "Sync 3")
+        #expect(primary.title == "Sync 3 Changes")
         #expect(primary.isDefault)
         #expect(primary.isEnabled)
         #expect(model.buttons.first?.isCancel == true)
         #expect(fixture.service.preflightCalls == [nil])
+    }
+
+    /// §7.1: an environment rename counts once, as on the toolbar's Sync button, however many
+    /// items it copies; the footer builds on the same number.
+    @Test func anEnvironmentRenameCountsOnceOnTheButtonAndInTheFooter() async throws {
+        let rename = ConfigChangeModel(repositoryID: SyncFixtures.repository.id, operation: .renameEnvironment(EnvironmentRenameChangeModel(
+            environmentID: SyncFixtures.environmentID, fromName: "staging", toName: "stage", policy: .all, fromGitHubID: 7
+        )))
+        let copies = ["A", "B", "C", "D", "E"].map { suffix in
+            SyncFixtures.set(.secret, "KEY_\(suffix)", environment: "stage", reason: .copiedForEnvironmentRename)
+        }
+        let fixture = try await Fixture(review: .success(SyncFixtures.review([SyncFixtures.preflight(executable: [rename] + copies)])))
+        let model = fixture.viewModel
+        await model.load()
+
+        #expect(model.step == .summary)
+        #expect(model.summaryCountsLine == "1 change in 1 place")
+        #expect(model.buttons.last?.title == "Sync 1 Change")
+    }
+
+    /// A rename reads `~ NEW_NAME` with where it came from; the deployment branches line has
+    /// no symbol or name, so it reads muted.
+    @Test func renameAndPolicyLinesKeepTheirParts() throws {
+        let policy = ConfigChangeModel(repositoryID: SyncFixtures.repository.id, operation: .upsertEnvironment(EnvironmentUpsertChangeModel(
+            environmentID: SyncFixtures.environmentID, name: "production", policy: .protectedBranches, syncedPolicy: .all, isNew: false
+        )))
+        let repository = SyncPresentationBuilder.repository(SyncFixtures.preflight(executable: [
+            policy,
+            SyncFixtures.set(.variable, "NEW_NAME", isNew: false, reason: .renamed(from: "OLD_NAME")),
+        ]))
+        let cards = repository.cards
+        let rename = try #require(cards.first { $0.place.kind == "repository" }?.lines.first)
+        #expect(rename.symbol == .modified)
+        #expect(rename.name == "NEW_NAME")
+        #expect(rename.detail == "variable · renamed from OLD_NAME")
+        #expect(rename.text == "OLD_NAME → NEW_NAME (variable)")
+        let production = try #require(cards.first { $0.place.kind == "environment" })
+        #expect(production.sentence == nil)
+        #expect(production.lines.map(\.symbol) == [nil])
+        #expect(production.lines.map(\.name) == [nil])
+        #expect(production.lines.map(\.detail) == ["Deployment branches: protected only"])
     }
 
     @Test func preflightIsLimitedToTheContextRepositories() async throws {
@@ -172,6 +233,15 @@ struct SyncViewModelTests {
         #expect(repository.blocked[0].reason == "Value missing locally.")
         #expect(repository.dependentCount == 1)
         #expect(repository.remoteChanged.map(\.title) == ["Update secret ROTATED in Repository"])
+        // Production has nothing that runs: its blocked changes still get a card of their own.
+        let cards = repository.cards
+        #expect(cards.map(\.place.kind) == ["repository", "environment"])
+        #expect(cards[0].blocked.count == 2)
+        #expect(cards[0].dependentCount == 1)
+        #expect(cards[0].remoteChanged.count == 1)
+        #expect(cards[1].lines.isEmpty)
+        #expect(cards[1].blocked.map(\.title) == ["Add secret DB_PASSWORD in production", "Add variable PLAN_VAR in production"])
+        #expect(model.summaryCountsLine == "7 changes in 2 places · 6 blocked")
 
         let fill = ItemEditorContext(
             repositoryID: SyncFixtures.repository.id,

@@ -51,6 +51,11 @@ nonisolated enum DestinationSyncCopy {
         }
     }
 
+    /// "deleted in Key Vault".
+    static func deletedIn(_ provider: DestinationProvider) -> String {
+        String(localized: "sync.destination.deletedIn", defaultValue: "deleted in \(provider.shortTitle)")
+    }
+
     static func deletionTitle(name: String, destination: String) -> String {
         String(localized: "sync.destination.deletion", defaultValue: "Delete \(name) in \(destination)")
     }

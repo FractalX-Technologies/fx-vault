@@ -14,7 +14,7 @@ enum DestinationSyncPresentation {
     static func merge(
         _ repositories: [SyncSummaryRepoModel],
         with reviews: [DestinationReviewModel],
-        fullName: (RepoID?) -> String
+        repository: (RepoID) -> RepoModel?
     ) -> [SyncSummaryRepoModel] {
         var merged = repositories
         for review in reviews where !review.isEmpty {
@@ -25,24 +25,26 @@ enum DestinationSyncPresentation {
                 merged[index] = SyncSummaryRepoModel(
                     id: current.id,
                     fullName: current.fullName,
+                    place: current.place,
                     newRepository: current.newRepository,
                     scopes: current.scopes + scopes,
                     blocked: current.blocked + blocked,
-                    dependentCount: current.dependentCount,
+                    dependents: current.dependents,
                     remoteChanged: current.remoteChanged,
                     notes: current.notes,
                     pendingCount: current.pendingCount + review.executableCount
                 )
-            } else {
+            } else if let section = review.sections.first {
+                let model = review.repositoryID.flatMap(repository)
                 merged.append(SyncSummaryRepoModel(
                     id: SyncGroupID(repositoryID: review.repositoryID),
-                    fullName: fullName(review.repositoryID),
-                    newRepository: nil,
+                    fullName: review.repositoryID == nil ? MainCopy.azureSection : model?.fullName ?? "",
+                    // The Key Vaults of their own have no place above their vaults.
+                    place: review.repositoryID == nil
+                        ? place(section.destination)
+                        : SyncPresentationBuilder.repositoryPlace(name: model?.name ?? ""),
                     scopes: scopes,
                     blocked: blocked,
-                    dependentCount: 0,
-                    remoteChanged: [],
-                    notes: [],
                     pendingCount: review.executableCount
                 ))
             }
@@ -50,23 +52,50 @@ enum DestinationSyncPresentation {
         return merged
     }
 
-    private static func scope(_ section: DestinationReviewSectionModel) -> SyncSummaryScopeModel {
-        let destination = section.destination
-        let writes = section.writes.count
-        let deletions = section.deletions.count
-        return SyncSummaryScopeModel(
+    /// "kv-example-prod · Key Vault".
+    static func place(_ destination: DestinationModel) -> SyncPlaceModel {
+        SyncPlaceModel(
             id: "destination|\(destination.id.uuidString)",
-            title: "\(destination.copyTargetTitle) · \(destination.provider.accessDescription)",
-            sentence: DestinationSyncCopy.sentence(writes: writes, deletions: deletions),
-            details: section.changes.map(line)
+            systemImage: destination.provider.symbolName,
+            name: destination.title,
+            kind: destination.provider.shortTitle
         )
     }
 
-    /// "↑ STRIPE_SECRET_KEY as STRIPE-SECRET-KEY", "− LEGACY_API_KEY".
+    private static func scope(_ section: DestinationReviewSectionModel) -> SyncSummaryScopeModel {
+        SyncSummaryScopeModel(
+            place: place(section.destination),
+            sentence: DestinationSyncCopy.sentence(writes: section.writes.count, deletions: section.deletions.count),
+            lines: section.changes.map { lineModel($0, provider: section.destination.provider) }
+        )
+    }
+
+    /// "~ STRIPE_SECRET_KEY as STRIPE-SECRET-KEY", "− LEGACY_API_KEY".
     static func line(_ change: DestinationChangeModel) -> String {
-        let symbol = change.operation == .delete ? "−" : (change.operation == .add ? "+" : "↑")
         let remote = change.remoteName == change.name ? "" : " " + DestinationSyncCopy.asRemote(change.remoteName)
-        return "\(symbol) \(change.name)\(remote)"
+        return "\(symbol(change).rawValue) \(change.name)\(remote)"
+    }
+
+    /// The card's line: `~ STRIPE_SECRET_KEY  secret · as STRIPE-SECRET-KEY`.
+    private static func lineModel(_ change: DestinationChangeModel, provider: DestinationProvider) -> SyncChangeLineModel {
+        SyncChangeLineModel(
+            symbol: symbol(change),
+            name: change.name,
+            detail: SyncCopy.lineDetail(
+                SyncCopy.kindTitle(change.kind),
+                change.remoteName == change.name ? nil : DestinationSyncCopy.asRemote(change.remoteName),
+                change.operation == .delete ? DestinationSyncCopy.deletedIn(provider) : nil
+            ),
+            text: line(change)
+        )
+    }
+
+    private static func symbol(_ change: DestinationChangeModel) -> SyncChangeLineModel.Symbol {
+        switch change.operation {
+        case .add: .added
+        case .update: .modified
+        case .delete: .deleted
+        }
     }
 
     private static func issue(_ blocked: DestinationBlockedChangeModel, destination: DestinationModel) -> SyncIssueModel {
@@ -74,7 +103,9 @@ enum DestinationSyncPresentation {
             id: "destination|\(blocked.id)",
             title: "\(blocked.change.name) · \(destination.copyTargetTitle)",
             reason: DestinationSyncCopy.reason(blocked.reason, provider: destination.provider),
-            fix: fix(for: blocked.reason, change: blocked.change)
+            fix: fix(for: blocked.reason, change: blocked.change),
+            place: place(destination),
+            name: blocked.change.name
         )
     }
 

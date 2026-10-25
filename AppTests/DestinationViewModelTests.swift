@@ -198,11 +198,33 @@ struct DestinationViewModelTests {
                 blocked: [DestinationBlockedChangeModel(change: missing, reason: .valueMissing)]
             ),
         ])
-        let merged = DestinationSyncPresentation.merge([], with: [review]) { _ in "owner-a/repo-a" }
+        let merged = DestinationSyncPresentation.merge([], with: [review]) { id in
+            RepoModel(
+                id: id,
+                accountLogin: "owner-a",
+                githubID: nil,
+                ownerLogin: "owner-a",
+                ownerType: .user,
+                name: "repo-a",
+                visibility: .private,
+                hasAdmin: true,
+                hasPush: true,
+                origin: .imported,
+                importedAt: Date(timeIntervalSince1970: 0)
+            )
+        }
         let repository = try #require(merged.first)
         #expect(repository.fullName == "owner-a/repo-a")
+        #expect(repository.place.name == "repo-a")
         #expect(repository.pendingCount == 2)
-        #expect(repository.scopes.first?.details == ["↑ DATABASE_URL as DATABASE-URL", "− OLD_KEY as OLD-KEY"])
+        #expect(repository.scopes.first?.details == ["~ DATABASE_URL as DATABASE-URL", "− OLD_KEY as OLD-KEY"])
+        #expect(repository.scopes.first?.lines.map(\.symbol) == [.modified, .deleted])
+        // The vault's card holds its lines and its blocked change.
+        let card = try #require(repository.cards.first)
+        #expect(repository.cards.count == 1)
+        #expect(card.place.name == destination.title)
+        #expect(card.lines.map(\.detail) == ["secret · as DATABASE-URL", "secret · as OLD-KEY · deleted in Key Vault"])
+        #expect(card.blocked.count == 1)
         #expect(repository.blocked.first?.fix == .fillValue(ItemEditorContext(destinationID: destination.id, mode: .fill(missing.itemID))))
 
         let deletions = DestinationSyncPresentation.mergeDeletions([], with: [review]) { _ in "owner-a/repo-a" }

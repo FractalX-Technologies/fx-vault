@@ -7,6 +7,11 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Changed
 
+- **Review Sync.** The Sync summary is one card per place: the repository, each environment,
+  each Key Vault, each organization. Its lines read `+ ~ −` with the kind (a rename says where
+  it came from), blocked changes sit in their place's card with their fix, and the footer counts
+  changes, places, deletions and blocked; the button says how many changes will run
+  ("Sync 8 Changes").
 - **Edit organization secrets and variables.** The organization view gains Add Secret, Add
   Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
   with the organization's repositories). A Selected item keeps GitHub's repository list until

@@ -90,14 +90,62 @@ struct SyncIssueModel: Identifiable, Hashable {
     let title: String
     let reason: String
     var fix: SyncFixActionModel?
+    /// The summary card it joins; nil: the group's own card.
+    var place: SyncPlaceModel?
+    /// The changed name alone, for that card's blocked line (the card already names the place).
+    var name: String?
 }
 
-/// One scope line of the summary: "2 added, 1 modified in production" plus its item names.
-struct SyncSummaryScopeModel: Identifiable, Hashable {
+/// A place of the summary (board Sync-Review): a repository, one of its environments, a Key
+/// Vault or an organization, as its card's header names it.
+struct SyncPlaceModel: Identifiable, Hashable {
+    /// The scope's journal key (`repo`, `env|production`), `destination|<id>` or
+    /// `organization|<id>`: a blocked change finds its card by it.
     let id: String
-    let title: String
+    let systemImage: String
+    let name: String
+    let kind: String
+}
+
+/// One line of a summary card: the `+ ~ −` column, the mono name and a muted detail
+/// ("variable · renamed from OLD_NAME"). `text` is the line as Copy as Text writes it.
+struct SyncChangeLineModel: Hashable {
+    enum Symbol: String, Hashable {
+        case added = "+"
+        case modified = "~"
+        case deleted = "−"
+    }
+
+    /// Nil for a line about the place itself (its deployment branches): it reads muted.
+    let symbol: Symbol?
+    let name: String?
+    let detail: String?
+    let text: String
+}
+
+/// One scope of the summary: its place, its counts sentence ("2 added, 1 modified in
+/// production", for Copy as Text) and its lines.
+struct SyncSummaryScopeModel: Identifiable, Hashable {
+    let place: SyncPlaceModel
     let sentence: String
-    let details: [String]
+    /// The card shows the sentence too: an environment created, renamed or deleted, or a scope
+    /// without lines.
+    var showsSentence = false
+    let lines: [SyncChangeLineModel]
+
+    var id: String {
+        place.id
+    }
+
+    var details: [String] {
+        lines.map(\.text)
+    }
+}
+
+/// A note of the summary ("differs only in case") and the place it is about.
+struct SyncSummaryNoteModel: Hashable {
+    let text: String
+    var place: SyncPlaceModel?
 }
 
 /// What one group of the summary and the deletion review stands for (1.0).
@@ -117,23 +165,101 @@ enum SyncGroupID: Hashable {
 struct SyncSummaryRepoModel: Identifiable, Hashable {
     let id: SyncGroupID
     let fullName: String
+    /// The group's own place: the card of what has no place of its own.
+    let place: SyncPlaceModel
     /// "New repository · Private · README · MIT" when the run creates it.
-    let newRepository: String?
+    var newRepository: String?
     let scopes: [SyncSummaryScopeModel]
-    /// Blocked changes with their reason and fix (dependents folded into ``dependentCount``).
+    /// Blocked changes with their reason and fix (dependents in ``dependents``).
     let blocked: [SyncIssueModel]
     /// Changes waiting only because another change is blocked.
-    let dependentCount: Int
+    var dependents: [SyncIssueModel] = []
     /// Changed on GitHub since the last check (D27), routed to Drift review.
-    let remoteChanged: [SyncIssueModel]
-    let notes: [String]
-    /// Executable changes of this repository.
-    let pendingCount: Int
+    var remoteChanged: [SyncIssueModel] = []
+    var notes: [SyncSummaryNoteModel] = []
+    /// What runs here, counted as the toolbar's Sync button counts it (§7.1: an environment
+    /// rename or delete is one change, whatever it copies).
+    var pendingCount = 0
+
+    var dependentCount: Int {
+        dependents.count
+    }
+
+    /// What will not run: blocked, waiting for a blocked change, or changed on GitHub.
+    var blockedCount: Int {
+        blocked.count + dependents.count + remoteChanged.count
+    }
 
     /// False when the summary has nothing to say about this repository (every change waits for
     /// a share file, v0.9.0): the block is left out.
     var hasContent: Bool {
-        newRepository != nil || !scopes.isEmpty || !blocked.isEmpty || !remoteChanged.isEmpty || !notes.isEmpty || dependentCount > 0
+        newRepository != nil || !scopes.isEmpty || blockedCount > 0 || !notes.isEmpty
+    }
+
+    /// One card per place (board Sync-Review): each scope's, then a place that only has blocked
+    /// changes. What has no place (the new repository, an unplaced issue) joins the group's own
+    /// card, else the first one.
+    var cards: [SyncSummaryCardModel] {
+        var cards = scopes.map(SyncSummaryCardModel.init(scope:))
+        func card(for target: SyncPlaceModel?) -> Int {
+            if let found = cards.firstIndex(where: { $0.id == (target ?? place).id }) {
+                return found
+            }
+            if target == nil, !cards.isEmpty {
+                return 0
+            }
+            cards.append(SyncSummaryCardModel(place: target ?? place))
+            return cards.count - 1
+        }
+        // The index is taken before the write: `cards[card(for:)]` would overlap two accesses.
+        if let newRepository {
+            let index = card(for: nil)
+            cards[index].newRepository = newRepository
+        }
+        for issue in blocked {
+            let index = card(for: issue.place)
+            cards[index].blocked.append(issue)
+        }
+        for issue in remoteChanged {
+            let index = card(for: issue.place)
+            cards[index].remoteChanged.append(issue)
+        }
+        for issue in dependents {
+            let index = card(for: issue.place)
+            cards[index].dependentCount += 1
+        }
+        for note in notes {
+            let index = card(for: note.place)
+            cards[index].notes.append(note.text)
+        }
+        return cards
+    }
+}
+
+/// One card of the summary: a place, its lines, then what is blocked there and its notes.
+struct SyncSummaryCardModel: Identifiable, Hashable {
+    let place: SyncPlaceModel
+    var newRepository: String?
+    /// The scope's sentence when it says more than the lines (``SyncSummaryScopeModel/showsSentence``).
+    var sentence: String?
+    var lines: [SyncChangeLineModel] = []
+    var blocked: [SyncIssueModel] = []
+    var remoteChanged: [SyncIssueModel] = []
+    var dependentCount = 0
+    var notes: [String] = []
+
+    var id: String {
+        place.id
+    }
+
+    init(place: SyncPlaceModel) {
+        self.place = place
+    }
+
+    init(scope: SyncSummaryScopeModel) {
+        place = scope.place
+        sentence = scope.showsSentence ? scope.sentence : nil
+        lines = scope.lines
     }
 }
 
@@ -217,27 +343,34 @@ enum SyncPresentationBuilder {
         let executable = ChangeSetModel(repository: repository, changes: preflight.executable, notes: preflight.changeSet.notes)
         let summary = ChangeSummaryBuilder.summarize(executable)
         let scopes = summary.scopes.map { scope in
-            SyncSummaryScopeModel(
-                id: scope.scope.journalKey,
-                title: SyncCopy.scopeTitle(scope),
+            let lines = (scope.policy.map { [SyncCopy.policyLine($0)] } ?? []) + scope.items.map(SyncCopy.itemLine)
+            let environmentName: String? = switch scope.label {
+            case .repository: nil
+            case .environment(let name): name
+            }
+            return SyncSummaryScopeModel(
+                place: place(scope.scope, environmentName: environmentName, repository: repository.name),
                 sentence: SyncCopy.scopeSentence(scope),
-                details: (scope.policy.map { [SyncCopy.policyLine($0)] } ?? []) + scope.items.map(SyncCopy.itemLine)
+                showsSentence: lines.isEmpty || showsSentence(scope.environmentChange),
+                lines: lines
             )
         }
         var blocked: [SyncIssueModel] = []
+        var dependents: [SyncIssueModel] = []
         var remoteChanged: [SyncIssueModel] = []
-        var dependentCount = 0
         for entry in preflight.blocked {
             let issue = SyncIssueModel(
                 id: entry.change.id,
                 title: SyncCopy.changeTitle(entry.change),
                 reason: SyncCopy.blockReason(entry.reason),
                 fix: renameFill(entry, snapshot: preflight.snapshot)
-                    ?? fix(for: entry.reason, change: entry.change, repository: repository)
+                    ?? fix(for: entry.reason, change: entry.change, repository: repository),
+                place: place(entry.change.scope, environmentName: environmentName(of: entry.change), repository: repository.name),
+                name: SyncCopy.changeName(entry.change)
             )
             switch entry.reason {
             case .dependsOn, .change(.dependsOn):
-                dependentCount += 1
+                dependents.append(issue)
             case .change(.remoteChanged):
                 remoteChanged.append(issue)
             default:
@@ -247,14 +380,70 @@ enum SyncPresentationBuilder {
         return SyncSummaryRepoModel(
             id: .repository(repository.id),
             fullName: repository.fullName,
+            place: repositoryPlace(name: repository.name),
             newRepository: summary.newRepository.map(SyncCopy.newRepositoryLine),
             scopes: scopes,
             blocked: blocked,
-            dependentCount: dependentCount,
+            dependents: dependents,
             remoteChanged: remoteChanged,
-            notes: summary.notes.map(SyncCopy.note),
+            notes: summary.notes.map { note in
+                SyncSummaryNoteModel(text: SyncCopy.note(note), place: place(of: note, repository: repository.name))
+            },
             pendingCount: summary.pendingCount
         )
+    }
+
+    // MARK: - Places (board Sync-Review)
+
+    /// "api-service · repository".
+    static func repositoryPlace(name: String) -> SyncPlaceModel {
+        place(.repository, environmentName: nil, repository: name)
+    }
+
+    /// "api-service · repository" or "api-service › production · environment".
+    static func place(_ scope: RemoteScopeKeyModel, environmentName: String?, repository: String) -> SyncPlaceModel {
+        guard let environmentName else {
+            return SyncPlaceModel(
+                id: scope.journalKey,
+                systemImage: Theme.Symbols.repository,
+                name: repository,
+                kind: SyncCopy.repositoryKind
+            )
+        }
+        return SyncPlaceModel(
+            id: scope.journalKey,
+            systemImage: Theme.Symbols.environment,
+            name: SyncCopy.environmentPlace(repository: repository, environment: environmentName),
+            kind: SyncCopy.environmentKind
+        )
+    }
+
+    /// An environment created, renamed or deleted: the sentence says what its lines cannot.
+    private static func showsSentence(_ change: EnvironmentChangeSummaryModel?) -> Bool {
+        switch change {
+        case .created, .renamed, .deleted: true
+        case .policyChanged, nil: false
+        }
+    }
+
+    /// The environment a change writes to (the new name for a rename); nil for the repository.
+    private static func environmentName(of change: ConfigChangeModel) -> String? {
+        switch change.operation {
+        case .createRepository: nil
+        case .upsertEnvironment(let upsert): upsert.name
+        case .renameEnvironment(let rename): rename.toName
+        case .reconcileBranchPatterns(let reconcile): reconcile.environmentName
+        case .deleteEnvironment(let delete): delete.name
+        case .setItem(let set): set.environmentName
+        case .deleteItem(let delete): delete.environmentName
+        }
+    }
+
+    private static func place(of note: ChangeNoteModel, repository: String) -> SyncPlaceModel {
+        switch note {
+        case .caseOnlyEnvironmentRename(_, let syncedName, _):
+            place(.environment(named: syncedName), environmentName: syncedName, repository: repository)
+        }
     }
 
     static func credentialRows(_ review: SyncReviewModel) -> [SyncCredentialRowModel] {

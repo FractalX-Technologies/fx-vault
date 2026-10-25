@@ -10,41 +10,57 @@ enum OrgSyncPresentation {
 
     static func summary(_ reviews: [OrgReviewModel]) -> [SyncSummaryRepoModel] {
         reviews.filter { !$0.isEmpty }.map { review in
-            let scopes = review.changes.isEmpty ? [] : [SyncSummaryScopeModel(
+            let place = SyncPlaceModel(
                 id: "organization|\(review.organizationID.uuidString)",
-                title: OrgSyncCopy.scopeTitle,
+                systemImage: Theme.Symbols.organization,
+                name: review.login,
+                kind: SyncCopy.organizationKind
+            )
+            let scopes = review.changes.isEmpty ? [] : [SyncSummaryScopeModel(
+                place: place,
                 sentence: DestinationSyncCopy.sentence(writes: review.writes.count, deletions: review.deletions.count),
-                details: review.changes.map(line)
+                lines: review.changes.map(lineModel)
             )]
             return SyncSummaryRepoModel(
                 id: .organization(review.organizationID),
                 fullName: review.login,
-                newRepository: nil,
+                place: place,
                 scopes: scopes,
                 blocked: review.blocked.map { blocked in
                     SyncIssueModel(
                         id: "organization|\(blocked.id.uuidString)",
                         title: blocked.change.name,
                         reason: OrgSyncCopy.reason(blocked.reason),
-                        fix: fix(for: blocked.reason, change: blocked.change, organizationID: review.organizationID)
+                        fix: fix(for: blocked.reason, change: blocked.change, organizationID: review.organizationID),
+                        place: place
                     )
                 },
-                dependentCount: 0,
-                remoteChanged: [],
-                notes: [],
                 pendingCount: review.changes.count
             )
         }
     }
 
-    /// "+ NPM_TOKEN", "↑ STRIPE_KEY", "− LEGACY_TOKEN".
+    /// "+ NPM_TOKEN", "~ STRIPE_KEY", "− LEGACY_TOKEN".
     static func line(_ change: OrgChangeModel) -> String {
-        let symbol = switch change.operation {
-        case .add: "+"
-        case .update: "↑"
-        case .delete: "−"
+        "\(symbol(change).rawValue) \(change.name)"
+    }
+
+    /// The card's line: `− LEGACY_TOKEN  secret · deleted on GitHub`.
+    private static func lineModel(_ change: OrgChangeModel) -> SyncChangeLineModel {
+        SyncChangeLineModel(
+            symbol: symbol(change),
+            name: change.name,
+            detail: SyncCopy.lineDetail(SyncCopy.kindTitle(change.kind), change.operation == .delete ? SyncCopy.deletedOnGitHub : nil),
+            text: line(change)
+        )
+    }
+
+    private static func symbol(_ change: OrgChangeModel) -> SyncChangeLineModel.Symbol {
+        switch change.operation {
+        case .add: .added
+        case .update: .modified
+        case .delete: .deleted
         }
-        return "\(symbol) \(change.name)"
     }
 
     static func fix(for reason: OrgBlockReason, change: OrgChangeModel, organizationID: OrganizationID) -> SyncFixActionModel? {
@@ -125,10 +141,6 @@ enum OrgSyncPresentation {
 
 /// The text of organization changes in the Sync sheet (1.0). Names only.
 enum OrgSyncCopy {
-    static var scopeTitle: String {
-        String(localized: "sync.organization.scope", defaultValue: "Organization secrets and variables")
-    }
-
     static func reason(_ reason: OrgBlockReason) -> String {
         switch reason {
         case .existsRemotely:

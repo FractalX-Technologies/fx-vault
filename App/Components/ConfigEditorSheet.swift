@@ -81,20 +81,17 @@ struct ConfigSheetFooter<Actions: View>: View {
     let meta: String?
     /// A full sentence (offline, a notice); shown instead of `meta` in caption type.
     let notice: String?
-    let metaHelp: String?
     let isWorking: Bool
     @ViewBuilder let actions: () -> Actions
 
     init(
         meta: String? = nil,
         notice: String? = nil,
-        metaHelp: String? = nil,
         isWorking: Bool = false,
         @ViewBuilder actions: @escaping () -> Actions
     ) {
         self.meta = meta
         self.notice = notice
-        self.metaHelp = metaHelp
         self.isWorking = isWorking
         self.actions = actions
     }
@@ -127,15 +124,10 @@ struct ConfigSheetFooter<Actions: View>: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         } else if let meta {
-            let text = Text(meta)
+            Text(meta)
                 .fxTextStyle(.statusLine)
                 .foregroundStyle(Theme.Colors.subtleText)
                 .lineLimit(2)
-            if let metaHelp {
-                text.help(metaHelp)
-            } else {
-                text
-            }
         } else {
             Color.clear
                 .frame(width: 0, height: 0)

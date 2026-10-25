@@ -57,17 +57,16 @@ struct SyncNoteRow: View {
     }
 }
 
-/// The footer of the Sync sheet (board SyncReview): mono meta (the write limit) or the notice on
-/// the left, then exactly the buttons the view model lists as pills, with their default and
+/// The footer of the Sync sheet (board Sync-Review): the notice or the summary's counts on the
+/// left, then exactly the buttons the view model lists as pills, with their default and
 /// cancel bindings (§7.5: the deletion buttons have neither).
 struct SyncFooterView: View {
     let buttons: [SyncButtonModel]
     let notice: String?
-    var meta: String?
     let onAction: (SyncButtonAction) -> Void
 
     var body: some View {
-        ConfigSheetFooter(meta: meta, notice: notice, metaHelp: SyncCopy.writeBudgetHelp) {
+        ConfigSheetFooter(notice: notice) {
             ForEach(buttons) { model in
                 Button(model.title, role: model.isDestructive ? .destructive : nil) {
                     onAction(model.action)

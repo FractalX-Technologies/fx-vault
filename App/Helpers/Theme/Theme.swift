@@ -12,6 +12,7 @@ import VaultCore
 /// - `Theme.Durations`: motion (140 ms, spring)
 /// - `Theme.Layout`: window and component sizes
 /// - `Theme.Opacity`, `Theme.Stroke`, `Theme.Shadow`: states, lines and the one sheet shadow
+/// - `Theme.Symbols`: the SF Symbols of places (organization, repository, environment)
 enum Theme {
     enum Layout {
         // MARK: Design components (App/Components/Design)
@@ -143,6 +144,8 @@ enum Theme {
         /// Wide enough for "Delete N Items on GitHub" next to the other footer buttons and for a
         /// scope line with its item names.
         static let syncSheetWidth: CGFloat = 620
+        /// The `+ ~ − !` column of the Sync summary lines (board Sync-Review).
+        static let syncSymbolWidth: CGFloat = 14
         static let syncSheetMinHeight: CGFloat = 360
         static let syncSheetIdealHeight: CGFloat = 520
         /// The progress bar's width in the progress step.
@@ -228,5 +231,13 @@ enum Theme {
     enum Shadow {
         static let sheetRadius: CGFloat = 32
         static let sheetY: CGFloat = 24
+    }
+
+    /// SF Symbols of the places FX Vault writes to, so the sidebar and the Sync summary draw a
+    /// place the same way (boards Main2, Sync-Review). A Key Vault's is its provider's.
+    enum Symbols {
+        static let organization = "building.2"
+        static let repository = "book.closed"
+        static let environment = "smallcircle.filled.circle"
     }
 }

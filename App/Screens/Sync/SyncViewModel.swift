@@ -201,7 +201,7 @@ final class SyncViewModel: LockObserving {
         repositories = DestinationSyncPresentation.merge(
             SyncPresentationBuilder.summary(review),
             with: effectiveDestinationReviews,
-            fullName: fullName(of:)
+            repository: repositoryModel(_:)
         ) + OrgSyncPresentation.summary(organizationReviews)
         let rows = SyncPresentationBuilder.credentialRows(review)
         if rows != credentialRows {
@@ -248,7 +248,8 @@ final class SyncViewModel: LockObserving {
         destinationReviews.reduce(0) { $0 + $1.deletions.count } + organizationReviews.reduce(0) { $0 + $1.deletions.count }
     }
 
-    /// The "Sync N" count of the sheet (§7.1 pending count of what will run).
+    /// The "Sync N Changes" count, the toolbar's (§7.1: an environment rename or delete is one
+    /// change, whatever it copies).
     var pendingCount: Int {
         repositories.map(\.pendingCount).reduce(0, +)
     }
@@ -260,6 +261,19 @@ final class SyncViewModel: LockObserving {
     /// Executable changes that are not deletions ("Sync Without Deleting" needs one).
     var nonDeletionCount: Int {
         executableCount - deletionCount
+    }
+
+    /// The summary footer (board Sync-Review): every change (``pendingCount`` and what will
+    /// not run), the summary's cards, the deletions, then what will not run.
+    var summaryCountsLine: String {
+        let groups = repositories.filter(\.hasContent)
+        let blocked = groups.reduce(0) { $0 + $1.blockedCount }
+        return SyncCopy.summaryCounts(
+            changes: pendingCount + blocked,
+            places: groups.reduce(0) { $0 + $1.cards.count },
+            deletions: deletionCount,
+            blocked: blocked
+        )
     }
 
     /// "FX Vault write limit this hour: X of 450".
@@ -576,7 +590,12 @@ final class SyncViewModel: LockObserving {
     /// nil: the Key Vaults of their own.
     private func fullName(of id: RepoID?) -> String {
         guard let id else { return MainCopy.azureSection }
-        return repositoryModels[id]?.fullName ?? (try? dependencies.config.changeSet(repositoryID: id))??.repository.fullName ?? ""
+        return repositoryModel(id)?.fullName ?? ""
+    }
+
+    /// A repository of the review, else one with destination changes only.
+    private func repositoryModel(_ id: RepoID) -> RepoModel? {
+        repositoryModels[id] ?? (try? dependencies.config.changeSet(repositoryID: id))??.repository
     }
 
     /// The stop reason line, when the run stopped early.
@@ -662,7 +681,7 @@ final class SyncViewModel: LockObserving {
             for issue in repository.blocked + repository.remoteChanged {
                 lines.append("  \(issue.title): \(issue.reason)")
             }
-            lines += repository.notes.map { "  \($0)" }
+            lines += repository.notes.map { "  \($0.text)" }
         }
         if let writeBudgetLine {
             lines.append(writeBudgetLine)
@@ -758,9 +777,7 @@ final class SyncViewModel: LockObserving {
         }
         return SyncButtonModel(
             action: .sync,
-            title: pendingCount > 0
-                ? String(localized: "sync.button.syncCount", defaultValue: "Sync \(pendingCount)")
-                : String(localized: "sync.button.sync", defaultValue: "Sync"),
+            title: SyncCopy.syncButtonTitle(changes: pendingCount),
             isDefault: true,
             isEnabled: canProceed
         )

@@ -3,6 +3,7 @@ import Foundation
 import GitHubKit
 import SharingKit
 import SwiftUI
+import SyncEngine
 import Testing
 import VaultCore
 import VaultData
@@ -318,17 +319,42 @@ struct VisualSnapshotTests {
 
     // MARK: - Sheets and windows
 
+    /// Board Sync-Review: an organization, a repository with its environments (a rename, a
+    /// deletion, a blocked change) and a Key Vault of its own.
     @Test func syncSummary() async throws {
-        let harness = try await TestHarness(vault: .unlocked)
+        let (harness, organization) = try await OrganizationEditingTests().imported()
+        try harness.data.organizationItems.addItem(
+            organizationID: organization.id,
+            kind: .variable,
+            name: "ZONE",
+            value: SecretBytes(utf8: "eu-west-1"),
+            access: .all
+        )
+        try harness.installFakeAZ()
+        harness.transport.stubKeyVault("kv-example-prod", secrets: [:])
+        let vault = try harness.data.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-example-prod", tenantID: nil),
+            stage: nil
+        )
+        try harness.data.destinations.addItem(destinationID: vault, kind: .secret, name: "CACHE_URL", value: SecretBytes(utf8: "FXV_FIXTURE_SECRET"))
+        #expect(await TestFixtures.eventually { harness.app.pendingChangeCount == 2 })
         let production = "production"
         let review = SyncFixtures.review(
-            [SyncFixtures.preflight(executable: [
-                SyncFixtures.set(.secret, "SENTRY_DSN"),
-                SyncFixtures.set(.secret, "STRIPE_SECRET_KEY", environment: production, isNew: false, reason: .modified),
-                SyncFixtures.set(.secret, "JWT_SIGNING_KEY", environment: production, isNew: false, reason: .forcePushed),
-                SyncFixtures.set(.variable, "FEATURE_FLAGS", environment: "staging"),
-                SyncFixtures.deleteItem(.secret, "LEGACY_TOKEN"),
-            ])],
+            [SyncFixtures.preflight(
+                executable: [
+                    SyncFixtures.set(.secret, "SENTRY_DSN"),
+                    SyncFixtures.set(.variable, "API_BASE_URL", isNew: false, reason: .renamed(from: "BASE_URL")),
+                    SyncFixtures.set(.secret, "STRIPE_SECRET_KEY", environment: production, isNew: false, reason: .modified),
+                    SyncFixtures.set(.secret, "JWT_SIGNING_KEY", environment: production, isNew: false, reason: .forcePushed),
+                    SyncFixtures.set(.variable, "FEATURE_FLAGS", environment: "staging"),
+                    SyncFixtures.deleteItem(.secret, "LEGACY_TOKEN"),
+                ],
+                blocked: [SyncBlockedChangeModel(
+                    change: SyncFixtures.set(.secret, "DOCKER_PASSWORD", environment: production),
+                    reason: .change(.valueMissing)
+                )]
+            )],
             estimatedWriteCost: 5
         )
         let viewModel = SyncViewModel(
@@ -339,13 +365,17 @@ struct VisualSnapshotTests {
         )
         await viewModel.load()
         #expect(viewModel.step == .summary)
+        #expect(viewModel.repositories.count == 3)
         try await SnapshotOutput.write(
             "sync-summary",
-            size: CGSize(width: Theme.Layout.syncSheetWidth, height: SnapshotOutput.sheetHeight)
+            size: CGSize(width: Theme.Layout.syncSheetWidth, height: Self.syncSummaryHeight)
         ) {
             SyncScreen(viewModel: viewModel)
         }
     }
+
+    /// Tall enough for every card of ``syncSummary()`` without scrolling.
+    private static let syncSummaryHeight: CGFloat = 900
 
     // MARK: - Destinations (v0.8.0)
 

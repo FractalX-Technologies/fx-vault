@@ -34,8 +34,7 @@ struct SyncScreen: View {
             HairlineDivider()
             SyncFooterView(
                 buttons: viewModel.buttons,
-                notice: viewModel.footerNotice,
-                meta: footerMeta
+                notice: footerNotice
             ) { action in
                 if viewModel.perform(action) {
                     dismiss()
@@ -58,7 +57,13 @@ struct SyncScreen: View {
     }
 
     private var header: some View {
-        SheetHeader(label: eyebrow, title: title, subtitle: subtitle) {
+        SheetHeader(
+            label: eyebrow,
+            title: title,
+            subtitle: subtitle,
+            titleStyle: viewModel.step == .summary ? .leadEmphasized : .title,
+            subtitleStyle: viewModel.step == .summary ? .callout : .body
+        ) {
             if viewModel.step == .summary || viewModel.step == .result {
                 Button {
                     viewModel.copySummary()
@@ -74,18 +79,19 @@ struct SyncScreen: View {
         }
     }
 
-    /// The write limit sits in the footer of the summary (board SyncReview); the progress step
-    /// shows it under the bar. The deletions footer needs its width for three pills.
-    private var footerMeta: String? {
-        switch viewModel.step {
-        case .summary: viewModel.writeBudgetLine
-        case .loading, .failed, .deletions, .progress, .result: nil
-        }
+    /// The summary's counts sit in the footer (board Sync-Review) unless a notice (offline) needs
+    /// it. The deletions footer needs its width for three pills.
+    private var footerNotice: String? {
+        if let notice = viewModel.footerNotice { return notice }
+        return viewModel.step == .summary ? viewModel.summaryCountsLine : nil
     }
 
-    private var eyebrow: String {
+    /// The summary has no eyebrow (board Sync-Review): its title already says it.
+    private var eyebrow: String? {
         switch viewModel.step {
-        case .loading, .failed, .summary, .deletions:
+        case .summary:
+            nil
+        case .loading, .failed, .deletions:
             String(localized: "sync.eyebrow.review", defaultValue: "Review before sync")
         case .progress, .result:
             String(localized: "sync.eyebrow.run", defaultValue: "Sync")
@@ -126,11 +132,7 @@ struct SyncScreen: View {
                 ? String(localized: "sync.result.title", defaultValue: "Sync Finished")
                 : String(localized: "sync.result.title.stopped", defaultValue: "Sync Stopped")
         case .summary:
-            if viewModel.repositories.count == 1, let repository = viewModel.repositories.first {
-                String(localized: "sync.title.repository", defaultValue: "Sync to \(repository.fullName)")
-            } else {
-                String(localized: "sync.title", defaultValue: "Sync")
-            }
+            String(localized: "sync.title.summary", defaultValue: "Review Sync")
         default:
             String(localized: "sync.title", defaultValue: "Sync")
         }
@@ -143,7 +145,7 @@ struct SyncScreen: View {
         case .summary:
             String(
                 localized: "sync.subtitle.summary",
-                defaultValue: "What changes on GitHub. Names only: values are never shown here."
+                defaultValue: "Names only · values go through gh and az, never shown"
             )
         case .deletions:
             String(
