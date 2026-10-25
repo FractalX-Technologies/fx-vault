@@ -22,6 +22,8 @@ struct CommandBuilderTests {
             try GHAuthService.tokenCommand(login: "user-a"),
             try GHOrgsCommands.list(),
             try GHOrgsCommands.membership(organization: "example-org"),
+            try GHSecretsCommands.list(organization: "example-org"),
+            try GHVariablesCommands.list(organization: "example-org"),
             try GHReposCommands.list(owner: "owner-a"),
             try GHReposCommands.view(repo),
             try GHReposCommands.create(GHRepoCreateRequest(

@@ -17,6 +17,15 @@ public enum GHSecretsCommands {
         )
     }
 
+    /// B12: `gh secret list --org=<O> --json name,updatedAt,visibility,numSelectedRepos`.
+    public static func list(organization: String) throws(GHError) -> GHCommand {
+        try GHCommand(
+            operation: .orgSecretList,
+            arguments: ["secret", "list", "--org=\(try GHReposCommands.validatedOwner(organization))", "--json", GHSecretDTO.orgJSONFields],
+            logTemplate: "secret list --org={o} --json \(GHSecretDTO.orgJSONFields)"
+        )
+    }
+
     /// C5: `gh secret set <N> --repo=<O>/<R> [--env=<E>]`, `value` on stdin.
     ///
     /// The command keeps its own copy of `value`; the caller still wipes its buffer.

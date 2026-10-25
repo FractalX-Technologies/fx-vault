@@ -106,6 +106,7 @@ while every foreign owner is that uid. Symlinks are resolved;
 | B5 patterns | `gh api -X GET repos/{o}/{r}/environments/{e}/deployment-branch-policies --paginate --slurp` | `.listBranchPolicies` / `decodeBranchPolicies` | `GHBranchPolicyDTO`; a missing `type` means branch. |
 | B6/B7 secrets | `gh secret list --repo={o}/{r} [--env={e}] --json name,updatedAt` | `GHSecretsCommands.list` / `decodeList` | gh follows every page. |
 | B8/B9 variables | `gh variable list --repo={o}/{r} [--env={e}] --json name,value,updatedAt,createdAt` | `GHVariablesCommands.list` / `decodeList` | Values become `SecretBytes` (`GHVariableListingModel`); stdout is wiped. The JSON decoder's transient `String` copies cannot be wiped. `FXVAULT_SPACE`, the marker 0.9's shared spaces wrote, is dropped from every listing (`droppingSpaceMarker`; 1.0 never writes it, so a leftover marker never shows as a variable). |
+| B12/B13 organization (1.0) | `gh secret list --org={o} --json name,updatedAt,visibility,numSelectedRepos`; the variable list with `--org={o}` and `name,value,updatedAt,createdAt,visibility,numSelectedRepos` | `GHSecretsCommands.list(organization:)`, `GHVariablesCommands.list(organization:)` / the same decoders | `visibility` is `all`, `private` (private and internal repositories) or `selected` (`OrgVisibility`); any other value is `malformedOutput`. Repository listings leave it nil. Needs `admin:org` (B4). |
 | B10g / B10l | `gh repo gitignore list`, `gh repo license list` | `GHTemplatesCommands` | Plain text by line; license key column first. |
 
 ## C. Write

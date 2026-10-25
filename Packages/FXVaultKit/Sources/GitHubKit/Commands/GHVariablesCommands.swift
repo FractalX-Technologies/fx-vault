@@ -17,6 +17,15 @@ public enum GHVariablesCommands {
         )
     }
 
+    /// B13: `gh variable list --org=<O> --json …,visibility,numSelectedRepos`.
+    public static func list(organization: String) throws(GHError) -> GHCommand {
+        try GHCommand(
+            operation: .orgVariableList,
+            arguments: ["variable", "list", "--org=\(try GHReposCommands.validatedOwner(organization))", "--json", GHVariableDTO.orgJSONFields],
+            logTemplate: "variable list --org={o} --json \(GHVariableDTO.orgJSONFields)"
+        )
+    }
+
     /// C7: `gh variable set <N> --repo=<O>/<R> [--env=<E>]`, `value` on stdin.
     ///
     /// `isUpdate` (the variable already exists on GitHub) only sets the throttle cost. The
@@ -68,7 +77,9 @@ public enum GHVariablesCommands {
                 name: row.name,
                 value: SecretBytes(utf8: row.value),
                 updatedAt: row.updatedAt,
-                createdAt: row.createdAt
+                createdAt: row.createdAt,
+                visibility: row.visibility,
+                numSelectedRepos: row.numSelectedRepos
             )
         }
     }
