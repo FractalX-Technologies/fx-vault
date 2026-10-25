@@ -186,9 +186,12 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
                 return
             }
             guard organizationDetail?.organizationID != id else { return }
-            organizationDetail = OrganizationDetailViewModel(organizationID: id, dependencies: featureDependencies) { [weak sidebar] in
-                sidebar?.vaultOrganization(id)
-            }
+            organizationDetail = OrganizationDetailViewModel(
+                organizationID: id,
+                dependencies: featureDependencies,
+                organization: { [weak sidebar] in sidebar?.vaultOrganization(id) },
+                repositoryNames: { [weak sidebar] in sidebar?.organizationRepositoryNames(id) ?? [] }
+            )
             return
         }
         organizationDetail = nil

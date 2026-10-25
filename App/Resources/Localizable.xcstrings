@@ -11540,6 +11540,39 @@
         }
       }
     },
+    "organization.access.all" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "All"
+          }
+        }
+      }
+    },
+    "organization.access.private" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Private"
+          }
+        }
+      }
+    },
+    "organization.access.selected" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Selected"
+          }
+        }
+      }
+    },
     "organization.counts" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11558,6 +11591,105 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ · %2$lld without value"
+          }
+        }
+      }
+    },
+    "organization.editor.access" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Access"
+          }
+        }
+      }
+    },
+    "organization.editor.access.githubList" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub's repository list stays unless you pick repositories here."
+          }
+        }
+      }
+    },
+    "organization.editor.access.noRepositories" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No repositories of this organization are listed in the sidebar."
+          }
+        }
+      }
+    },
+    "organization.editor.access.pickOne" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pick at least one repository."
+          }
+        }
+      }
+    },
+    "organization.editor.nameRevives" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ is pending deletion. Adding it restores it with the new value instead."
+          }
+        }
+      }
+    },
+    "organization.editor.nameTaken" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This organization already has an item of this kind with this name."
+          }
+        }
+      }
+    },
+    "organization.editor.newSecret" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Secret"
+          }
+        }
+      }
+    },
+    "organization.editor.newVariable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Variable"
+          }
+        }
+      }
+    },
+    "organization.editor.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "In the organization %@"
           }
         }
       }
@@ -11591,28 +11723,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Import this organization's own secrets and variables. Secrets arrive without values: GitHub never returns them. Reading them needs admin:org and the organization's admin role."
-          }
-        }
-      }
-    },
-    "organization.readOnly" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Read only"
-          }
-        }
-      }
-    },
-    "organization.readOnly.help" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Organization secrets and variables can't be changed from FX Vault yet."
           }
         }
       }
@@ -11690,6 +11800,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Kind"
+          }
+        }
+      }
+    },
+    "organization.table.revertAccess" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Revert Access"
           }
         }
       }

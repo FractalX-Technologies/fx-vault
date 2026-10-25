@@ -3,21 +3,36 @@ import Observation
 import VaultCore
 import VaultData
 
-/// Column 3 for an imported organization (1.0, tasks/todo.md B5c): its name and counts and a
-/// read-only table of its secrets and variables with their visibility. Values are never shown:
-/// writes and Reveal come with B6.
+/// Column 3 for an imported organization (1.0, B5c, B6b3a): its name and counts and the table of
+/// its secrets and variables with their visibility and sync status. Add, edit, delete and revert
+/// change the vault; the next Sync sends them.
 @Observable
 final class OrganizationDetailViewModel {
     let organizationID: OrganizationID
     private(set) var items: [OrgItemModel] = []
+    var selection: Set<ConfigItemID> = []
+    /// Rows on GitHub waiting for the Delete confirmation.
+    var pendingDeletion: [OrgItemModel]?
+    var alert: ErrorPresentationModel?
 
+    @ObservationIgnored private let dependencies: FeatureDependencies
     @ObservationIgnored private let organizationProvider: () -> OrganizationModel?
+    @ObservationIgnored private let repositoryNames: () -> [String]
     @ObservationIgnored private let tasks = TaskBag()
 
-    /// - Parameter organization: the live vault row (its counts follow the sidebar).
-    init(organizationID: OrganizationID, dependencies: FeatureDependencies, organization: @escaping () -> OrganizationModel?) {
+    /// - Parameters:
+    ///   - organization: the live vault row (its counts follow the sidebar).
+    ///   - repositoryNames: the organization's repositories the sidebar lists (Selected access).
+    init(
+        organizationID: OrganizationID,
+        dependencies: FeatureDependencies,
+        organization: @escaping () -> OrganizationModel?,
+        repositoryNames: @escaping () -> [String]
+    ) {
         self.organizationID = organizationID
+        self.dependencies = dependencies
         organizationProvider = organization
+        self.repositoryNames = repositoryNames
         observeItems(dependencies.organizations)
     }
 
@@ -38,6 +53,75 @@ final class OrganizationDetailViewModel {
         )
     }
 
+    // MARK: - Changes
+
+    func add(_ kind: ConfigKind) {
+        present(.add(kind))
+    }
+
+    func edit(_ row: OrgItemModel) {
+        guard row.syncStatus != .deleted else { return }
+        present(.edit(row.id))
+    }
+
+    private func present(_ mode: OrgItemEditorContext.Mode) {
+        dependencies.actions.present(.orgItemEditor(OrgItemEditorContext(
+            organizationID: organizationID,
+            mode: mode,
+            repositoryCandidates: repositoryNames()
+        )))
+    }
+
+    func rows(for ids: Set<ConfigItemID>) -> [OrgItemModel] {
+        rows.filter { ids.contains($0.id) }
+    }
+
+    /// Rows on GitHub need the confirmation (the next Sync deletes them there after its review);
+    /// rows never synced are removed at once.
+    func requestDeletion(of rows: [OrgItemModel]) {
+        let deletable = rows.filter { $0.syncStatus != .deleted }
+        guard !deletable.isEmpty else { return }
+        if deletable.contains(where: \.isOnGitHub) {
+            pendingDeletion = deletable
+        } else {
+            delete(deletable)
+        }
+    }
+
+    func confirmDeletion() {
+        guard let rows = pendingDeletion else { return }
+        pendingDeletion = nil
+        delete(rows)
+    }
+
+    private func delete(_ rows: [OrgItemModel]) {
+        do {
+            try dependencies.organizationItems.deleteItems(rows.map(\.id))
+            selection.subtract(rows.map(\.id))
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    /// Undoes adds, deletions and access changes; a changed value stays.
+    func revert(_ rows: [OrgItemModel]) {
+        let revertible = rows.filter(\.canRevert)
+        guard !revertible.isEmpty else { return }
+        do {
+            try dependencies.organizationItems.revertItems(revertible.map(\.id))
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    func copy(_ row: OrgItemModel) {
+        do {
+            try dependencies.copyOrganizationValue(of: row.id)
+        } catch {
+            alert = error.presentation
+        }
+    }
+
     private func observeItems(_ organizations: OrganizationRepository) {
         let stream = organizations.observeItems(of: organizationID)
         tasks.set("items", Task { [weak self] in
@@ -49,5 +133,17 @@ final class OrganizationDetailViewModel {
                 AppLog.ui.error("Organization item observation ended")
             }
         })
+    }
+}
+
+extension OrgItemModel {
+    /// False for an add the next Sync creates: deleting it removes it at once.
+    var isOnGitHub: Bool {
+        syncStatus != .added
+    }
+
+    /// An add, a deletion or an access change; a changed value alone cannot be reverted.
+    var canRevert: Bool {
+        syncStatus == .added || syncStatus == .deleted || isAccessChanged
     }
 }

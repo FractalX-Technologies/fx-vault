@@ -63,6 +63,9 @@ FXVault/
 │   │   │   │                        # ConfigValueRevealer, ItemCopyFlow, LinkedCopiesView (Linked
 │   │   │   │                        # chip and popover, v0.4.1)
 │   │   │   ├── Folder/              # FolderDetailScreen/ViewModel (column 3 of a folder, v0.7.0)
+│   │   │   ├── Organization/        # 1.0: OrganizationDetailScreen/ViewModel (column 3 of an
+│   │   │   │                        # organization), OrgItemEditorScreen/ViewModel (add or edit
+│   │   │   │                        # an item and its access), OrganizationCopy
 │   │   │   ├── Destination/         # v0.8.0: DestinationDetailScreen/ViewModel (column 3 of a
 │   │   │   │                        # destination), DestinationCopy,
 │   │   │   │                        # AddDestinationScreen/ViewModel (+ AddDestinationCopy),
@@ -77,6 +80,9 @@ FXVault/
 │   │   │                            # FolderDestinationModel/View (a received copy), FolderCopy,
 │   │   │                            # FolderRepository+Extension (v0.7.0)
 │   │   ├── ItemEditor/              # ItemEditorScreen/ViewModel (add, edit, fill, convert/move),
+│   │   │                            # ItemEditorFields (ItemNameField, ItemValueRules,
+│   │   │                            # ItemFillChoiceField, ItemEditorReadOnlyName,
+│   │   │                            # CredentialWarningView; shared with the organization editor),
 │   │   │                            # ItemEditorModels, ItemEditorError, ConfigRepository+Editor,
 │   │   │                            # ConfigKind+ItemEditor, CredentialReason+ItemEditor extensions
 │   │   ├── Environment/             # New / Settings / Rename / Duplicate Environment Screen+ViewModel,

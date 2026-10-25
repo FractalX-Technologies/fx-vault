@@ -384,8 +384,14 @@ foreground color, so `.primary` text still turns white on selected rows.
   "Secrets and variables" row (`building.2`, `.callout`, ink once imported and subtle before;
   the item count in `monoLabel` subtle, or "Import" in brand). Selected, the detail shows the Import prompt (`EmptyStateView`, primary Import) or
   the organization header (ORGANIZATION, the login in `.largeTitle`, counts in `.monoMeta` with
-  "· N without value", a Read only tag, Remove from Vault… outline) above a read-only `.fxTable()`:
-  Name, Kind, Value (`MaskedValueCell`, no eye), Visibility, Updated.
+  "· N without value"; `.primary` Add Secret, `.secondary` Add Variable, Remove from Vault…
+  outline) above a `.fxTable()`: Name (struck through when deleted), Kind, Value
+  (`MaskedValueCell`, no eye), Visibility, Status (`StatusChip(status:)`), Updated; the row menu
+  Copy Value, Edit…, Revert / Revert Access, Delete… (B6b3a). The item editor is a
+  `ConfigEditorSheet` (ORGANIZATION, the name or New Secret/Variable): Kind `SegmentedPill` on
+  add, `ItemNameField` (or the read-only name), `SecretValueEditor`, `ItemFillChoiceField` for a
+  secret without a value, and ACCESS: a `SegmentedPill` All / Private / Selected, the
+  visibility's caption, and for Selected one `FXCheckboxRow` per repository.
 - Runtime destinations under the selected repository (v0.8.0, canvas "FX Vault Destinations"):
   after "New Environment", `SectionLabel` RUNTIME with an Experimental `StatusChip.tag`, then one 2-line
   row per destination: the provider symbol in `monoLabel` `mutedText`

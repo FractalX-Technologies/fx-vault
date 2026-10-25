@@ -50,6 +50,8 @@ public struct OrgItemModel: Sendable, Hashable, Identifiable {
     public var remoteUpdatedAt: Date?
     /// A change waiting for Sync (1.0, B6b): added, modified, deleted or synced.
     public var syncStatus: ConfigSyncStatus
+    /// Who can use it differs from GitHub (Revert Access undoes it; a changed value stays).
+    public var isAccessChanged: Bool
 
     public init(
         id: ConfigItemID,
@@ -60,7 +62,8 @@ public struct OrgItemModel: Sendable, Hashable, Identifiable {
         visibility: OrgVisibility,
         selectedRepositoryCount: Int?,
         remoteUpdatedAt: Date?,
-        syncStatus: ConfigSyncStatus = .synced
+        syncStatus: ConfigSyncStatus = .synced,
+        isAccessChanged: Bool = false
     ) {
         self.id = id
         self.organizationID = organizationID
@@ -71,5 +74,6 @@ public struct OrgItemModel: Sendable, Hashable, Identifiable {
         self.selectedRepositoryCount = selectedRepositoryCount
         self.remoteUpdatedAt = remoteUpdatedAt
         self.syncStatus = syncStatus
+        self.isAccessChanged = isAccessChanged
     }
 }

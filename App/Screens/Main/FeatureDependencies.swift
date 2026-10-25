@@ -72,6 +72,8 @@ struct FeatureDependencies {
     let folders: FolderRepository
     /// Organizations' own secrets and variables (1.0).
     let organizations: OrganizationRepository
+    /// Local changes to organization items (1.0).
+    let organizationItems: OrganizationItemRepository
     /// Runtime destinations (v0.8.0).
     let destinations: DestinationRepository
     /// Destination Sync, Refresh and import (v0.8.0).
@@ -114,6 +116,7 @@ struct FeatureDependencies {
         sharing = data.sharing
         folders = data.folders
         organizations = data.organizations
+        organizationItems = data.organizationItems
         destinations = data.destinations
         destinationSync = data.destinationSync
         creation = data.creation
@@ -136,7 +139,15 @@ struct FeatureDependencies {
     /// - Throws: `.valueMissing`, `.itemNotFound`, `.vault(.locked)`, `.unexpected` for bytes
     ///   that are not UTF-8 (never stored by FX Vault).
     func copyValue(of id: ConfigItemID) throws(ConfigRepositoryError) {
-        let value = try config.reveal(id)
+        try copy(config.reveal(id))
+    }
+
+    /// ``copyValue(of:)`` for an organization item (1.0).
+    func copyOrganizationValue(of id: ConfigItemID) throws(ConfigRepositoryError) {
+        try copy(organizationItems.reveal(id))
+    }
+
+    private func copy(_ value: SecretBytes) throws(ConfigRepositoryError) {
         defer { value.wipe() }
         guard let text = value.utf8String() else { throw .unexpected }
         clipboard.copy(text)

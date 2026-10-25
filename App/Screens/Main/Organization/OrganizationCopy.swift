@@ -4,11 +4,6 @@ import Foundation
 enum OrganizationCopy {
     static let eyebrow = String(localized: "organization.eyebrow", defaultValue: "Organization")
     static let rowTitle = String(localized: "organization.row", defaultValue: "Secrets and variables")
-    static let readOnlyTag = String(localized: "organization.readOnly", defaultValue: "Read only")
-    static let readOnlyHelp = String(
-        localized: "organization.readOnly.help",
-        defaultValue: "Organization secrets and variables can't be changed from FX Vault yet."
-    )
     static let importMessage = String(
         localized: "organization.import.message",
         defaultValue: "Import this organization's own secrets and variables. Secrets arrive without values: GitHub never returns them. Reading them needs admin:org and the organization's admin role."
@@ -19,6 +14,12 @@ enum OrganizationCopy {
     static let removeConfirm = String(localized: "organization.remove.confirm", defaultValue: "Remove from Vault")
     static let kind = String(localized: "organization.table.kind", defaultValue: "Kind")
     static let visibility = String(localized: "organization.table.visibility", defaultValue: "Visibility")
+    static let access = String(localized: "organization.editor.access", defaultValue: "Access")
+    static let noRepositories = String(
+        localized: "organization.editor.access.noRepositories",
+        defaultValue: "No repositories of this organization are listed in the sidebar."
+    )
+    static let revertAccess = String(localized: "organization.table.revertAccess", defaultValue: "Revert Access")
     static let empty = String(localized: "organization.table.empty", defaultValue: "This organization has no secrets or variables.")
 
     static func removeMessage(_ login: String) -> String {

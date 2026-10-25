@@ -1,22 +1,47 @@
 import XCTest
 
-/// An organization's own secrets and variables (tasks/todo.md B5c): the scripted example-org
-/// row offers Import, which reads them read-only with their visibility.
+/// An organization's own secrets and variables (tasks/todo.md B5c, B6b3a): the scripted
+/// example-org row offers Import, which reads them with their visibility; then they are edited
+/// in the vault for the next Sync (nothing is written to GitHub here).
 final class OrganizationUITests: VaultUITestCase {
     @MainActor
     func testImportingAnOrganizationListsItsItemsWithTheirVisibility() throws {
         let app = launch()
+        let table = try importExampleOrganization(app)
+        for text in ["NPM_TOKEN", "STRIPE_KEY", "REGION", "All repositories", "Selected · 3 repositories", "Private and internal repositories"] {
+            XCTAssertTrue(table.staticTexts[text].waitForExistence(timeout: timeout), "\(text) is not in the table")
+        }
+        XCTAssertFalse(app.buttons[AccessibilityID.Main.importOrganization].exists)
+    }
+
+    @MainActor
+    func testAddingAVariableAndDeletingASecretWaitForTheNextSync() throws {
+        let app = launch()
+        let table = try importExampleOrganization(app)
+
+        click(app.buttons[AccessibilityID.Main.organizationAdd("variable")])
+        type("zone", into: app.textFields[AccessibilityID.ItemEditor.name])
+        type("eu-west-1", into: app.textViews[AccessibilityID.ItemEditor.value])
+        click(app.sheets.firstMatch.buttons["Add"])
+        XCTAssertTrue(table.staticTexts["ZONE"].waitForExistence(timeout: timeout), "The new variable is not in the table")
+        XCTAssertTrue(table.staticTexts["Added"].waitForExistence(timeout: timeout), "The new variable is not pending")
+
+        table.staticTexts["NPM_TOKEN"].rightClick()
+        click(app.menuItems["Delete…"])
+        click(dialogButton("Delete", in: app))
+        XCTAssertTrue(table.staticTexts["Deleted"].waitForExistence(timeout: timeout), "NPM_TOKEN is not pending deletion")
+    }
+
+    /// Onboards, imports example-org from its sidebar row and returns its table.
+    @MainActor
+    private func importExampleOrganization(_ app: XCUIApplication) throws -> XCUIElement {
         _ = try onboard(app)
         let row = app.descendants(matching: .any)[AccessibilityID.Main.organization("example-org")]
         XCTAssertTrue(row.waitForExistence(timeout: timeout), "example-org has no organization row")
         click(row)
         click(app.buttons[AccessibilityID.Main.importOrganization])
-
         let table = app.descendants(matching: .any)[AccessibilityID.Main.organizationTable]
         XCTAssertTrue(table.waitForExistence(timeout: timeout), "The import never showed the table")
-        for text in ["NPM_TOKEN", "STRIPE_KEY", "REGION", "All repositories", "Selected · 3 repositories", "Private and internal repositories"] {
-            XCTAssertTrue(table.staticTexts[text].waitForExistence(timeout: timeout), "\(text) is not in the table")
-        }
-        XCTAssertFalse(app.buttons[AccessibilityID.Main.importOrganization].exists)
+        return table
     }
 }

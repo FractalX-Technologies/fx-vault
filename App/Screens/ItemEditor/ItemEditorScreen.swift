@@ -90,7 +90,6 @@ struct ItemEditorScreen: View {
 /// The labelled fields of a loaded editor, by mode.
 private struct ItemEditorForm: View {
     @Bindable var viewModel: ItemEditorViewModel
-    @FocusState private var isNameFocused: Bool
 
     var body: some View {
         if let reason = viewModel.readOnlyReason {
@@ -119,7 +118,7 @@ private struct ItemEditorForm: View {
     }
 
     private static var onGitHubLabel: String {
-        String(localized: "itemEditor.fill.header", defaultValue: "On GitHub")
+        ItemFillChoiceField.label
     }
 
     // MARK: - Kind and name
@@ -141,37 +140,13 @@ private struct ItemEditorForm: View {
     @ViewBuilder private var nameField: some View {
         ConfigSheetField(Self.nameLabel) {
             if viewModel.isNameEditable {
-                TextField(
-                    Self.nameLabel,
-                    text: $viewModel.name,
-                    prompt: Text(verbatim: "API_TOKEN").foregroundStyle(Theme.Colors.subtleText)
+                ItemNameField(
+                    name: $viewModel.name,
+                    note: viewModel.nameNote,
+                    suggestion: viewModel.suggestedName,
+                    isEnabled: viewModel.canEdit,
+                    onUseSuggestion: viewModel.applySuggestedName
                 )
-                .focused($isNameFocused)
-                .autocorrectionDisabled()
-                .labelsHidden()
-                .fxInputField(
-                    .rounded,
-                    isFocused: isNameFocused,
-                    isInvalid: viewModel.nameNote?.isError ?? false,
-                    isMonospaced: true
-                )
-                .disabled(!viewModel.canEdit)
-                if let note = viewModel.nameNote {
-                    ConfigEditorNoteView(note: note)
-                }
-                if let suggestion = viewModel.suggestedName {
-                    HStack(spacing: Theme.Spacing.small) {
-                        Text(String(localized: "itemEditor.name.suggestion", defaultValue: "Suggested: \(suggestion)"))
-                            .fxTextStyle(.monoMeta)
-                            .foregroundStyle(Theme.Colors.mutedText)
-                            .textSelection(.enabled)
-                        Spacer()
-                        Button(String(localized: "itemEditor.name.useSuggestion", defaultValue: "Use Suggestion")) {
-                            viewModel.applySuggestedName()
-                        }
-                        .fxButtonStyle(.outline)
-                    }
-                }
             } else {
                 ItemEditorReadOnlyName(name: viewModel.item?.name ?? "")
             }
@@ -210,21 +185,7 @@ private struct ItemEditorForm: View {
     // MARK: - Fill (§7.1, §7.8)
 
     private var fillField: some View {
-        ConfigSheetField(Self.onGitHubLabel) {
-            FXCheckboxRow(
-                title: String(localized: "itemEditor.fill.matchesGitHub", defaultValue: "Already matches GitHub (don't push)"),
-                isOn: $viewModel.fillMatchesGitHub
-            )
-            ConfigEditorNoteView(note: .info(viewModel.fillMatchesGitHub
-                ? String(
-                    localized: "itemEditor.fill.matchesGitHub.note",
-                    defaultValue: "Only when you are sure GitHub has exactly this value. Nothing is pushed."
-                )
-                : String(
-                    localized: "itemEditor.fill.pushes.note",
-                    defaultValue: "The next Sync replaces the secret on GitHub with this value, so GitHub matches FX Vault."
-                )))
-        }
+        ItemFillChoiceField(matchesGitHub: $viewModel.fillMatchesGitHub)
     }
 
     // MARK: - Push on Next Sync (v0.1.2)
@@ -305,61 +266,6 @@ private struct ItemEditorForm: View {
             }
         }
     }
-}
-
-/// A name that cannot change here: mono in a quiet rounded frame, selectable.
-private struct ItemEditorReadOnlyName: View {
-    let name: String
-
-    var body: some View {
-        Text(verbatim: name)
-            .fxTextStyle(.mono)
-            .foregroundStyle(Theme.Colors.ink)
-            .textSelection(.enabled)
-            .lineLimit(1)
-            .truncationMode(.middle)
-            .padding(.horizontal, Theme.Spacing.large)
-            .frame(maxWidth: .infinity, minHeight: Theme.Layout.inputHeight, alignment: .leading)
-            .background(Theme.Colors.surface, in: Self.shape)
-            .overlay(Self.shape.strokeBorder(Theme.Colors.hairline, lineWidth: Theme.Stroke.hairline))
-    }
-
-    private static let shape = RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
-}
-
-/// The credential-looking-variable warning (§5.13) with its "make it a secret" action.
-private struct CredentialWarningView: View {
-    let warning: CredentialWarningModel
-    let onAction: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            ConfigEditorNoteView(note: .warning(String(
-                localized: "itemEditor.credential.title",
-                defaultValue: "This looks like a credential. Variable values are stored in plain text on GitHub; keep it as a secret instead."
-            )))
-            ForEach(warning.reasons, id: \.self) { reason in
-                Text(reason)
-                    .fxTextStyle(.caption)
-                    .foregroundStyle(Theme.Colors.mutedText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if let action = warning.action {
-                Button(action == .switchToSecret
-                    ? String(localized: "itemEditor.credential.makeSecret", defaultValue: "Make It a Secret")
-                    : String(localized: "itemEditor.credential.convert", defaultValue: "Convert to Secret…")) {
-                        onAction()
-                    }
-                    .fxButtonStyle(.outline)
-            }
-        }
-        .padding(Theme.Spacing.large)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Colors.surface2, in: Self.shape)
-        .overlay(Self.shape.strokeBorder(Theme.Colors.hairlineStrong, lineWidth: Theme.Stroke.hairline))
-    }
-
-    private static let shape = RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
 }
 
 #Preview {
