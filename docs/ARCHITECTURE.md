@@ -1125,7 +1125,9 @@ AppTests).
     own are observed (`observeDestinations(repositoryID: nil)`, `SidebarViewModel.keyVaults`) and
     listed by `SidebarKeyVaultsSection`; `selectedKeyVaultID` is a fourth exclusive selection, and
     `MainViewModel` builds a `DestinationDetailViewModel` for it (no scope column, path `Azure Key
-    Vault › name`); `open(destinationID:)` selects one there. v0.3.0 draws the sidebar
+    Vault › name`); `open(destinationID:)` selects one there. B8c2a: `KeyVaultContextMenu` (its
+    row and the detail's Actions button) asks for Remove from FX Vault, confirmed in the sidebar
+    (`pendingKeyVaultRemoval`, `confirmKeyVaultRemoval()`, `deleteDestination`). v0.3.0 draws the sidebar
     and scope rows itself (`.fxRowBackground`, docs/DESIGN.md) instead of a native `List`
     selection; `MainColumnSelection` (pure) keeps Up/Down keyboard selection and owner groups
     collapse from their mono label.

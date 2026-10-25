@@ -61,6 +61,8 @@ final class SidebarViewModel {
             onChange?()
         }
     }
+    /// The Key Vault of its own waiting for the "Remove this destination?" confirmation.
+    var pendingKeyVaultRemoval: DestinationModel?
     /// The organization waiting for the "Remove from vault?" confirmation.
     var pendingOrganizationRemoval: OrganizationModel?
     /// The folder waiting for the "Delete the folder?" confirmation.
@@ -280,6 +282,17 @@ final class SidebarViewModel {
     func select(keyVaultID id: DestinationID) {
         searchText = ""
         selectedKeyVaultID = id
+    }
+
+    /// Removes the vault and its items from FX Vault; nothing changes in Azure.
+    func confirmKeyVaultRemoval() {
+        guard let vault = pendingKeyVaultRemoval else { return }
+        pendingKeyVaultRemoval = nil
+        do {
+            try data.destinations.deleteDestination(vault.id)
+        } catch {
+            alert = error.presentation
+        }
     }
 
     private func observeKeyVaults() {

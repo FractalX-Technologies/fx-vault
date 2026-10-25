@@ -1936,7 +1936,7 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B5 Organization list commands and store (additive migration); read-only organization node. Split: B5a GitHubKit listings [x]; B5b store and import [x]; B5c the read-only node and its e2e [x].
 - [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list.
 - [ ] B7 Organization drift and verify; inherited and shadowed names on a repository.
-- [ ] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source. Split: B8a discovery, package layer [x]; B8b1 Key Vaults of their own in the store (`v18`) [x]; B8b2 Connect Azure (requirements, subscriptions and vaults, import), the vaults in the first-import summary [x]; B8b3 the sidebar Azure node opening the vault (and Show in Sidebar for a linked copy there) [x]; B8c1 Sync of the vaults of their own (review, run, badge) [x]; B8c2 Remove from Vault for a vault of its own and moving 0.9's repository Key Vaults beside GitHub.
+- [x] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source. Split: B8a discovery, package layer [x]; B8b1 Key Vaults of their own in the store (`v18`) [x]; B8b2 Connect Azure (requirements, subscriptions and vaults, import), the vaults in the first-import summary [x]; B8b3 the sidebar Azure node opening the vault (and Show in Sidebar for a linked copy there) [x]; B8c1 Sync of the vaults of their own (review, run, badge) [x]; B8c2a Remove from FX Vault for a vault of its own [x]; B8c2b dropped (2026-10-25, Bryan: 0.9's repository Key Vaults stay under their repositories; no migration).
 - [ ] B9 Notes view read-only, then editable with the change review.
 - [ ] B10 File secrets: picker and drop, base64 option, limits (GitHub 48 KiB, Key Vault 25 KiB), trailing-newline notice.
 - [ ] B11 New start, onboarding, notch unlock island (`LAAuthenticationView`), allowlisted setup-command runner and main window from D1–D2; macOS 26 deployment target.
@@ -2150,6 +2150,13 @@ Review B11e — notch unlock island (2026-10-25, automatic):
 - Tests: `NotchIslandTests` (geometry with and without a notch, states, shared model, no island without side effects); `DesignTokenTests` (Island color sets); UI `NotchIslandUITests` (⌃⌘L closes the window, the island's password unlocks); snapshots `island-touchid`, `island-password` checked. Waiver for the notch hardware and Touch ID checks (tasks/waivers.md).
 - Docs: README (Unlocking), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
 - Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 580 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (7 tests); lint OK (first run flagged a literal symbol size, now `Theme.Typography.title`); check-secrets OK in the worktree; strings synced.
+
+Review B8c2a — Remove from FX Vault for a Key Vault of its own (2026-10-25, automatic):
+- `KeyVaultContextMenu` (shared by the sidebar row's context menu and the destination detail's Actions button, which now shows for a vault of its own) sets `SidebarViewModel.pendingKeyVaultRemoval`; `SidebarView` confirms with the destination removal copy; `confirmKeyVaultRemoval()` calls `deleteDestination` (nothing in Azure), and the observation clears the selection.
+- UI tests: `VaultUITestCase.dialogButton(_:in:)` finds a confirmation dialog's button (the Touch Bar's disabled copy matched first; lesson added).
+- Tests: `aKeyVaultOfItsOwnOpensFromTheSidebar` now removes through the sidebar; `ConnectUITests` removes the vault from its context menu. Mutation caught: confirm without deleting.
+- Docs: DESIGN, ARCHITECTURE, CHANGELOG, lessons.
+- Gates: the full CI run passed (package suites, app tests, Debug and Release builds, 7 UI tests twice, lint); check-secrets OK in the worktree (991 files); strings up to date.
 
 Review B8c1 — Sync of the Key Vaults of their own (2026-10-25, automatic):
 - `DestinationStore.pendingCounts` (and `DestinationRepository.pendingCounts` / `observePendingCounts`) now key by `RepoID?`: nil counts the vaults of their own, so they reach the Sync button and the Dock badge (`AppViewModel.destinationPendingCounts`).

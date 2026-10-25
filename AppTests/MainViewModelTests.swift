@@ -126,7 +126,7 @@ struct MainViewModelTests {
     }
 
     /// A Key Vault of its own (B8b3) is listed under AZURE KEY VAULT and opens its destination
-    /// detail; selecting anything else, or nothing, closes it.
+    /// detail; selecting anything else, or nothing, closes it; Remove from FX Vault (B8c2a) too.
     @Test func aKeyVaultOfItsOwnOpensFromTheSidebar() async throws {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
         let main = harness.app.makeMainViewModel()
@@ -165,7 +165,10 @@ struct MainViewModelTests {
 
         main.sidebar.selectedKeyVaultID = vaultID
         #expect(main.sidebar.selectedRowID == nil)
-        try harness.data.destinations.deleteDestination(vaultID)
+        main.sidebar.pendingKeyVaultRemoval = main.sidebar.keyVault(vaultID)
+        main.sidebar.confirmKeyVaultRemoval()
+        #expect(main.sidebar.pendingKeyVaultRemoval == nil)
+        #expect(try harness.data.destinations.destination(vaultID) == nil, "Remove from FX Vault deletes it locally")
         #expect(await TestFixtures.eventually { main.sidebar.selectedKeyVaultID == nil })
         #expect(main.destinationDetail == nil, "a removed vault closes")
 

@@ -1,8 +1,9 @@
 import XCTest
 
-/// The Connect phase after onboarding (tasks/todo.md B11d2, B8b2, B8b3): the scripted account can
+/// The Connect phase after onboarding (tasks/todo.md B11d2, B8b2, B8b3, B8c2a): the scripted account can
 /// read example-org's secrets, so it is checked; Continue leads to Azure, where the scripted vault
-/// is checked; Continue imports both, and the Key Vault opens from the sidebar's Azure section.
+/// is checked; Continue imports both, and the Key Vault opens from the sidebar's Azure section
+/// and leaves it with Remove from FX Vault (B8c2a).
 final class ConnectUITests: VaultUITestCase {
     @MainActor
     func testConnectImportsTheOrganizationAndTheKeyVaultThenOpensItFromTheSidebar() throws {
@@ -33,5 +34,10 @@ final class ConnectUITests: VaultUITestCase {
         let path = app.staticTexts[AccessibilityID.Main.breadcrumb]
         XCTAssertTrue(path.waitForExistence(timeout: timeout))
         expect(path, toEndWith: "Azure Key Vault › kv-example-prod")
+
+        vaultRow.rightClick()
+        click(app.menuItems["Remove from FX Vault…"])
+        click(dialogButton("Remove Destination", in: app))
+        XCTAssertTrue(vaultRow.waitForNonExistence(timeout: timeout), "The removed vault is still in the sidebar")
     }
 }
