@@ -74,6 +74,13 @@ class VaultUITestCase: XCTestCase {
         sidebar.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", name)).firstMatch
     }
 
+    /// A confirmation dialog's button. The Touch Bar repeats it, disabled, under the same title,
+    /// so a plain `app.buttons[title]` finds that copy first and never becomes enabled.
+    @MainActor
+    func dialogButton(_ title: String, in app: XCUIApplication) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label == %@ AND identifier BEGINSWITH %@", title, "action-button")).firstMatch
+    }
+
     /// Waits until the toolbar path (`AccessibilityID.Main.breadcrumb`) ends with `suffix`.
     @MainActor
     func expect(_ path: XCUIElement, toEndWith suffix: String) {

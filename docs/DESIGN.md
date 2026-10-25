@@ -332,7 +332,8 @@ foreground color, so `.primary` text still turns white on selected rows.
 - Sidebar tree (the window's native sidebar glass, no fill of its own): GITHUB, then each account
   and its owner groups (PERSONAL, org names), 32 pt rows with `.fxRowBackground(style: .sidebar)`,
   counts in `.monoMeta`, "Import" in `brand`; AZURE KEY VAULT after GitHub when a Key Vault of
-  its own exists (`DestinationRow`s, as under a repository), then FOLDERS; footer status in
+  its own exists (`DestinationRow`s, as under a repository; context menu and the detail's
+  Actions: Remove from FX Vault…), then FOLDERS; footer status in
   `.statusLine`.
 - The selected imported repository's row stands for its repository scope; its environments
   (`ScopeListView`) nest under it, `Theme.Layout.sidebarTreeIndent` in, as 32 pt sidebar rows with

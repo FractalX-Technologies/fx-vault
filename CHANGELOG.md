@@ -13,6 +13,8 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   installs it with Homebrew; `az login` stays Copy. The vaults are listed under **Azure Key
   Vault** in the sidebar, after GitHub, and open with their secrets; their edits count on the
   Sync button and Sync sends them, shown as an "Azure Key Vault" group after the repositories.
+  **Remove from FX Vault…** (the vault's context menu or Actions) drops one locally; nothing
+  changes in Azure.
   Existing Key Vault destinations stay where they are.
 
 - **First launch in three phases.** Welcome names them (Secure · Connect · Import); the Secure

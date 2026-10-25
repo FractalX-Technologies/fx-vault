@@ -121,9 +121,13 @@ private struct DestinationDetailHeader: View {
             .fxButtonStyle(.secondary)
             .disabled(viewModel.isRefreshing || !main.isOnline)
             .help(main.networkHelp(DestinationCopy.refreshHelp))
-            if let destination = viewModel.destination, let scopeList = main.scopeList {
+            if let destination = viewModel.destination {
                 Menu {
-                    DestinationContextMenu(destination: destination, viewModel: scopeList)
+                    if destination.repositoryID == nil {
+                        KeyVaultContextMenu(vault: destination, sidebar: main.sidebar)
+                    } else if let scopeList = main.scopeList {
+                        DestinationContextMenu(destination: destination, viewModel: scopeList)
+                    }
                 } label: {
                     Label(String(localized: "main.detail.actions", defaultValue: "Actions"), systemImage: "ellipsis")
                 }

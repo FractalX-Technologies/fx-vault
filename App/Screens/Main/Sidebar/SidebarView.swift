@@ -82,6 +82,18 @@ struct SidebarView: View {
             Text(OrganizationCopy.removeMessage(organization.login))
         }
         .confirmationDialog(
+            DestinationCopy.removeTitle,
+            isPresented: keyVaultRemovalBinding,
+            titleVisibility: .visible,
+            presenting: sidebar.pendingKeyVaultRemoval
+        ) { _ in
+            Button(DestinationCopy.removeConfirm, role: .destructive) {
+                sidebar.confirmKeyVaultRemoval()
+            }
+        } message: { vault in
+            Text(DestinationCopy.removeMessage(vault.copyTargetTitle))
+        }
+        .confirmationDialog(
             FolderCopy.deleteTitle(sidebar.pendingFolderDeletion?.name ?? ""),
             isPresented: folderDeletionBinding,
             titleVisibility: .visible,
@@ -99,6 +111,13 @@ struct SidebarView: View {
         Binding(
             get: { main.sidebar.pendingOrganizationRemoval != nil },
             set: { if !$0 { main.sidebar.pendingOrganizationRemoval = nil } }
+        )
+    }
+
+    private var keyVaultRemovalBinding: Binding<Bool> {
+        Binding(
+            get: { main.sidebar.pendingKeyVaultRemoval != nil },
+            set: { if !$0 { main.sidebar.pendingKeyVaultRemoval = nil } }
         )
     }
 
