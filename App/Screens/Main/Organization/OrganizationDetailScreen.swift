@@ -3,10 +3,10 @@ import VaultCore
 import VaultData
 
 /// Column 3 for an imported organization (1.0; mockup Org-Visibility): ORGANIZATION, the login
-/// in the large title with the counts and the Read only tag, Remove from Vault, and the table
-/// Name | Kind | Value | Visibility | Updated.
+/// in the large title with the counts, Add Secret, Add Variable and Remove from Vault, and the
+/// table Name | Kind | Value | Visibility | Status | Updated.
 struct OrganizationDetailScreen: View {
-    let viewModel: OrganizationDetailViewModel
+    @Bindable var viewModel: OrganizationDetailViewModel
     let main: MainViewModel
 
     var body: some View {
@@ -17,12 +17,33 @@ struct OrganizationDetailScreen: View {
                     .fxTextStyle(.caption)
                     .foregroundStyle(Theme.Colors.mutedText)
             } else {
-                OrganizationItemsTable(rows: viewModel.rows)
+                OrganizationItemsTable(viewModel: viewModel)
             }
         }
         .padding(.horizontal, Theme.Spacing.xxLargePlus)
         .padding(.vertical, Theme.Spacing.xLargePlus)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .errorAlert($viewModel.alert)
+        .confirmationDialog(
+            ConfigDeletionModel.title(count: viewModel.pendingDeletion?.count ?? 0),
+            isPresented: Binding(
+                get: { viewModel.pendingDeletion != nil },
+                set: { if !$0 { viewModel.pendingDeletion = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: viewModel.pendingDeletion
+        ) { rows in
+            Button(ConfigDeletionModel.confirmTitle(count: rows.count), role: .destructive) {
+                viewModel.confirmDeletion()
+            }
+            Button(String(localized: "common.cancel", defaultValue: "Cancel"), role: .cancel) {}
+                .keyboardShortcut(.defaultAction)
+        } message: { rows in
+            Text(ConfigDeletionModel.message(
+                syncedNames: rows.filter(\.isOnGitHub).map(\.name),
+                unsyncedCount: rows.filter { !$0.isOnGitHub }.count
+            ))
+        }
     }
 
     private var header: some View {
@@ -35,16 +56,21 @@ struct OrganizationDetailScreen: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .textSelection(.enabled)
-                HStack(spacing: Theme.Spacing.small) {
-                    Text(viewModel.counts)
-                        .fxTextStyle(.monoMeta)
-                        .foregroundStyle(Theme.Colors.mutedText)
-                    StatusChip.tag(OrganizationCopy.readOnlyTag)
-                        .help(OrganizationCopy.readOnlyHelp)
-                }
-                .padding(.top, Theme.Spacing.xSmall)
+                Text(viewModel.counts)
+                    .fxTextStyle(.monoMeta)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .padding(.top, Theme.Spacing.xSmall)
             }
             Spacer(minLength: 0)
+            ForEach(ConfigKind.allCases, id: \.self) { kind in
+                Button {
+                    viewModel.add(kind)
+                } label: {
+                    Label(kind.addTitle, systemImage: "plus")
+                }
+                .fxButtonStyle(kind == .secret ? .primary : .secondary)
+                .accessibilityIdentifier(AccessibilityID.Main.organizationAdd(kind.rawValue))
+            }
             if let organization = viewModel.organization {
                 Button(OrganizationCopy.remove, role: .destructive) {
                     main.sidebar.requestRemoval(organization)
@@ -55,15 +81,15 @@ struct OrganizationDetailScreen: View {
     }
 }
 
-/// The read-only table: names in mono, a masked value or "Value missing", who can use the item
-/// and when GitHub last changed it.
+/// Names in mono, a masked value or "Value missing", who can use the item, its sync status and
+/// when GitHub last changed it; the row menu edits, deletes, reverts and copies.
 private struct OrganizationItemsTable: View {
-    let rows: [OrgItemModel]
+    @Bindable var viewModel: OrganizationDetailViewModel
 
     var body: some View {
-        Table(rows) {
+        Table(viewModel.rows, selection: $viewModel.selection) {
             TableColumn(ConfigTableFormat.header(String(localized: "main.table.name", defaultValue: "Name"))) { row in
-                TableNameText(name: row.name)
+                TableNameText(name: row.name, isDeleted: row.syncStatus == .deleted)
                     .fxTableCell()
             }
             TableColumn(ConfigTableFormat.header(OrganizationCopy.kind)) { row in
@@ -78,6 +104,11 @@ private struct OrganizationItemsTable: View {
                 TableMetaText(row.visibility.title(selectedCount: row.selectedRepositoryCount))
                     .fxTableCell()
             }
+            TableColumn(ConfigTableFormat.header(String(localized: "main.table.status", defaultValue: "Status"))) { row in
+                StatusChip(status: row.syncStatus)
+                    .fxTableCell()
+            }
+            .width(Theme.Layout.tableStatusMinWidth)
             TableColumn(ConfigTableFormat.header(String(localized: "main.table.updated", defaultValue: "Updated"))) { row in
                 Group {
                     if let updated = row.remoteUpdatedAt {
@@ -89,7 +120,51 @@ private struct OrganizationItemsTable: View {
             }
         }
         .fxTable()
+        .contextMenu(forSelectionType: ConfigItemID.self) { ids in
+            OrganizationRowActions(rows: viewModel.rows(for: ids), viewModel: viewModel)
+        } primaryAction: { ids in
+            if ids.count == 1, let row = viewModel.rows(for: ids).first {
+                viewModel.edit(row)
+            }
+        }
+        .onDeleteCommand {
+            viewModel.requestDeletion(of: viewModel.rows(for: viewModel.selection))
+        }
         .accessibilityIdentifier(AccessibilityID.Main.organizationTable)
+    }
+}
+
+/// Copy Value and Edit… for one row; Revert and Delete… for every selected row that allows it.
+private struct OrganizationRowActions: View {
+    let rows: [OrgItemModel]
+    let viewModel: OrganizationDetailViewModel
+
+    var body: some View {
+        if rows.count == 1, let row = rows.first {
+            Button(String(localized: "main.table.copy", defaultValue: "Copy Value")) {
+                viewModel.copy(row)
+            }
+            .disabled(!row.hasValue)
+            Divider()
+            Button(String(localized: "main.table.edit", defaultValue: "Edit…")) {
+                viewModel.edit(row)
+            }
+            .disabled(row.syncStatus == .deleted)
+        }
+        let revertible = rows.filter(\.canRevert)
+        if !revertible.isEmpty {
+            Button(revertible.allSatisfy { $0.syncStatus == .modified }
+                ? OrganizationCopy.revertAccess
+                : String(localized: "main.table.revert", defaultValue: "Revert")) {
+                    viewModel.revert(revertible)
+                }
+        }
+        if rows.contains(where: { $0.syncStatus != .deleted }) {
+            Divider()
+            Button(String(localized: "main.table.delete", defaultValue: "Delete…"), role: .destructive) {
+                viewModel.requestDeletion(of: rows)
+            }
+        }
     }
 }
 

@@ -272,6 +272,8 @@ private struct MainSheetContent: View {
         switch sheet {
         case .itemEditor(let context):
             ItemEditorScreen(context: context, dependencies: dependencies)
+        case .orgItemEditor(let context):
+            OrgItemEditorScreen(context: context, dependencies: dependencies)
         case .copyToRepository(let context):
             CopyToRepositoryScreen(context: context, dependencies: dependencies)
         case .newEnvironment(let context):

@@ -1122,8 +1122,11 @@ AppTests).
     are observed too (`SidebarInputModel.vaultOrganizations`); an organization group carries its
     `OrganizationModel` and its own row (`selectedOrganizationOwnerID`; a repository, a folder
     and an organization are selected one at a time), with Import and Remove from Vault;
-    `MainViewModel` builds `OrganizationDetailViewModel` (`Main/Organization`, read-only items
-    observed from `OrganizationRepository`) for an imported one. B8b3: the Key Vaults of their
+    `MainViewModel` builds `OrganizationDetailViewModel` (`Main/Organization`, items observed
+    from `OrganizationRepository`) for an imported one. B6b3a: the detail adds, edits, deletes
+    and reverts through `OrganizationItemRepository` (`VaultDataComponents.organizationItems`);
+    `MainSheet.orgItemEditor(OrgItemEditorContext)` carries the organization's repository names
+    from the sidebar (`organizationRepositoryNames`) for Selected access. B8b3: the Key Vaults of their
     own are observed (`observeDestinations(repositoryID: nil)`, `SidebarViewModel.keyVaults`) and
     listed by `SidebarKeyVaultsSection`; `selectedKeyVaultID` is a fourth exclusive selection, and
     `MainViewModel` builds a `DestinationDetailViewModel` for it (no scope column, path `Azure Key

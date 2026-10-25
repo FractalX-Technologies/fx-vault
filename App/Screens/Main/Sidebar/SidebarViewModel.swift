@@ -136,6 +136,16 @@ final class SidebarViewModel {
         input.vaultOrganizations.first { $0.id == id }
     }
 
+    /// The names of the repositories listed under an imported organization (Selected access
+    /// offers them).
+    func organizationRepositoryNames(_ id: OrganizationID) -> [String] {
+        SidebarGrouping.sections(input, query: "")
+            .lazy
+            .flatMap(\.owners)
+            .first { $0.organization?.id == id }?
+            .repos.map(\.name) ?? []
+    }
+
     private enum SelectionKind {
         case repository, folder, organization, keyVault
     }

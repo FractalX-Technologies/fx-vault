@@ -132,9 +132,15 @@ public struct OrgItemRecord: Codable, Sendable, Hashable, FetchableRecord, Persi
     /// A secret without a value (GitHub never returns one) is synced.
     public var syncStatus: ConfigSyncStatus {
         if isDeleted { return .deleted }
-        guard let syncedVisibility else { return .added }
+        guard syncedVisibility != nil else { return .added }
         let valueChanged = valueFingerprint != nil && valueFingerprint != syncedFingerprint
-        return valueChanged || visibility != syncedVisibility || repositoriesEdited ? .modified : .synced
+        return valueChanged || isAccessChanged ? .modified : .synced
+    }
+
+    /// The visibility or repository list differs from the synced one (what Revert undoes).
+    public var isAccessChanged: Bool {
+        guard let syncedVisibility else { return false }
+        return visibility != syncedVisibility || repositoriesEdited
     }
 
     /// The domain model (no ciphertext).
@@ -148,7 +154,8 @@ public struct OrgItemRecord: Codable, Sendable, Hashable, FetchableRecord, Persi
             visibility: visibility,
             selectedRepositoryCount: visibility == .selected ? selectedCount : nil,
             remoteUpdatedAt: remoteUpdatedAt,
-            syncStatus: syncStatus
+            syncStatus: syncStatus,
+            isAccessChanged: isAccessChanged
         )
     }
 

@@ -1,6 +1,15 @@
 import VaultCore
 
 extension OrgVisibility {
+    /// The editor's Access segments: "All", "Private", "Selected".
+    var accessTitle: String {
+        switch self {
+        case .all: String(localized: "organization.access.all", defaultValue: "All")
+        case .private: String(localized: "organization.access.private", defaultValue: "Private")
+        case .selected: String(localized: "organization.access.selected", defaultValue: "Selected")
+        }
+    }
+
     /// Who can use an organization item (mockup Org-Visibility): "All repositories", "Private
     /// and internal repositories" or "Selected · 3 repositories".
     func title(selectedCount: Int?) -> String {

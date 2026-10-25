@@ -7,6 +7,11 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Changed
 
+- **Edit organization secrets and variables.** The organization view gains Add Secret, Add
+  Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
+  with the organization's repositories). A Selected item keeps GitHub's repository list until
+  you pick repositories. The row menu offers Copy Value, Edit…, Revert (Revert Access for a
+  changed item) and Delete…. Changes wait in the vault for Sync (sending them comes next).
 - **Connect Azure.** After GitHub, the first launch lists your Azure subscriptions and their Key
   Vaults through `az`, every vault checked; Continue imports each vault with its secret values
   as a Key Vault of its own (no repository), and the summary counts them. Without `az`, Run
@@ -43,11 +48,11 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Organization access.** Settings › Accounts lists each account's organizations with whether
   it can manage their secrets: Ready, Needs admin:org (copy the commands, approve in the browser,
   Re-check), Org secrets need an org admin, or Needs SSO authorization.
-- **Organization secrets and variables (read only).** Each organization in the sidebar starts
+- **Organization secrets and variables.** Each organization in the sidebar starts
   with a Secrets and variables row: Import reads its own secrets (names only) and variables, and
   the organization view lists them with who can use each one (all repositories, private and
   internal, or the selected ones) and when GitHub last changed it. Remove from Vault deletes
-  them from this Mac only. Editing comes later.
+  them from this Mac only.
 - **Send with AirDrop.** After the passphrase is saved, Send with AirDrop opens the AirDrop
   window for the file; Share… and Save… stay.
 

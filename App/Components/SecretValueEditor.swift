@@ -191,6 +191,8 @@ final class SecretTextView: NSTextView {
         textView.autoresizingMask = [.width]
         textView.textContainer?.widthTracksTextView = true
         textView.textContainerInset = NSSize(width: Theme.Spacing.small, height: Theme.Spacing.small)
+        // On the text view itself: a SwiftUI identifier stops at the hosting scroll view.
+        textView.setAccessibilityIdentifier(AccessibilityID.ItemEditor.value)
         textView.configureForSecrets()
         scrollView.documentView = textView
         return scrollView

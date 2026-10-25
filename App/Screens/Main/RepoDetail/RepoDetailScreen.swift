@@ -407,28 +407,41 @@ struct ConfigSelectionActionsModel {
 
 extension ConfigDeletionModel {
     var title: String {
-        rows.count == 1
-            ? String(localized: "main.detail.delete.title", defaultValue: "Delete this item?")
-            : String(localized: "main.detail.delete.several.title", defaultValue: "Delete \(rows.count) items?")
+        Self.title(count: rows.count)
     }
 
     var confirmTitle: String {
-        rows.count == 1
-            ? String(localized: "main.detail.delete.confirm", defaultValue: "Delete")
-            : String(localized: "main.detail.delete.several.confirm", defaultValue: "Delete \(rows.count) Items")
+        Self.confirmTitle(count: rows.count)
     }
 
     var message: String {
-        let synced = syncedRows
-        let onGitHub = if synced.count == 1, let row = synced.first {
+        Self.message(syncedNames: syncedRows.map(\.name), unsyncedCount: unsyncedCount)
+    }
+
+    // The texts by count and name, shared with the organization detail (1.0).
+
+    static func title(count: Int) -> String {
+        count == 1
+            ? String(localized: "main.detail.delete.title", defaultValue: "Delete this item?")
+            : String(localized: "main.detail.delete.several.title", defaultValue: "Delete \(count) items?")
+    }
+
+    static func confirmTitle(count: Int) -> String {
+        count == 1
+            ? String(localized: "main.detail.delete.confirm", defaultValue: "Delete")
+            : String(localized: "main.detail.delete.several.confirm", defaultValue: "Delete \(count) Items")
+    }
+
+    static func message(syncedNames synced: [String], unsyncedCount: Int) -> String {
+        let onGitHub = if synced.count == 1, let name = synced.first {
             String(
                 localized: "main.detail.delete.message",
-                defaultValue: "\(row.name) is deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
+                defaultValue: "\(name) is deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
             )
         } else {
             String(
                 localized: "main.detail.delete.several.message",
-                defaultValue: "\(Self.names(synced.map(\.name))) are deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
+                defaultValue: "\(names(synced)) are deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
             )
         }
         switch unsyncedCount {

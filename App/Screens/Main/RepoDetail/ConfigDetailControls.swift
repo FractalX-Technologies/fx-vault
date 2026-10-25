@@ -48,7 +48,7 @@ struct ConfigAddActions<Model: ConfigTableModel>: View {
             Button {
                 viewModel.add()
             } label: {
-                Label(addTitle, systemImage: "plus")
+                Label(viewModel.kind.addTitle, systemImage: "plus")
             }
             .fxButtonStyle(.primary)
             .help(String(
@@ -58,12 +58,6 @@ struct ConfigAddActions<Model: ConfigTableModel>: View {
         }
         .fixedSize()
         .disabled(!viewModel.canEdit)
-    }
-
-    private var addTitle: String {
-        viewModel.kind == .secret
-            ? String(localized: "main.detail.addSecret", defaultValue: "Add Secret")
-            : String(localized: "main.detail.addVariable", defaultValue: "Add Variable")
     }
 }
 

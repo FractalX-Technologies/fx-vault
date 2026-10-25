@@ -476,14 +476,6 @@ final class ItemEditorViewModel: LockObserving {
         keepsValueWhenEmpty && item?.hasValue == true && !isCurrentValueLoaded && canEdit
     }
 
-    private var normalizedValueByteCount: Int {
-        ValueNormalizer.strippingTrailingNewlines(value).utf8.count
-    }
-
-    private var hasTrailingNewlines: Bool {
-        normalizedValueByteCount != value.utf8.count
-    }
-
     /// The value the save writes, or nil when it keeps the current one.
     private var newValue: String? {
         switch context.mode {
@@ -497,35 +489,18 @@ final class ItemEditorViewModel: LockObserving {
     }
 
     private var isValueValid: Bool {
-        guard newValue != nil else { return true }
-        return (1...Limits.maxValueBytes).contains(normalizedValueByteCount)
+        ItemValueRules.isValid(newValue)
     }
 
     /// Feedback under the value editor: size and emptiness errors, and the D32 notice before
     /// the editor commits (the editor shows its own notice after it strips).
     var valueNotes: [ConfigEditorNoteModel] {
         guard showsValueEditor else { return [] }
-        var notes: [ConfigEditorNoteModel] = []
-        if normalizedValueByteCount > Limits.maxValueBytes {
-            notes.append(.error(ValidationError.valueTooLarge(limit: Limits.maxValueBytes).localizedMessage))
-        } else if !value.isEmpty, normalizedValueByteCount == 0 {
-            notes.append(.error(ValidationError.emptyValue.localizedMessage))
-        } else if isEditing, isValueEdited, !keepsValueWhenEmpty, value.isEmpty {
-            notes.append(.error(ValidationError.emptyValue.localizedMessage))
-        }
-        if hasTrailingNewlines {
-            notes.append(.info(String(
-                localized: "itemEditor.value.trailingNewlines",
-                defaultValue: "Trailing line breaks are removed when you save. GitHub removes them too, so FX Vault stores the value as GitHub will."
-            )))
-        }
-        if keepsValueWhenEmpty, !isCurrentValueLoaded, value.isEmpty {
-            notes.append(.info(String(
-                localized: "itemEditor.value.keep",
-                defaultValue: "Leave the value empty to keep the current one."
-            )))
-        }
-        return notes
+        return ItemValueRules.notes(
+            for: value,
+            isEmptyAnError: isEditing && isValueEdited && !keepsValueWhenEmpty,
+            keepsCurrent: keepsValueWhenEmpty && !isCurrentValueLoaded
+        )
     }
 
     // MARK: - Credential warning (§5.13)

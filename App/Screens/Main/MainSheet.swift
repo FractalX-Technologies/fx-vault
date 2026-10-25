@@ -14,6 +14,10 @@ enum MainSheet: Hashable, Identifiable {
     /// Add, edit, fill or convert/move one secret or variable.
     case itemEditor(ItemEditorContext)
 
+    // Main/Organization/ (1.0)
+    /// Add or edit an organization secret or variable, with who can use it.
+    case orgItemEditor(OrgItemEditorContext)
+
     // CopyToRepository/
     /// Copy To › Another Repository… (v0.4.1): linked copies into any repository of the vault.
     case copyToRepository(CopyToRepositoryContext)
@@ -104,6 +108,22 @@ struct CopyToRepositoryContext: Hashable {
     init(itemIDs: [ConfigItemID], sourceRepositoryID: RepoID, sourceScope: ConfigScope) {
         self.init(itemIDs: itemIDs, source: .scope(repositoryID: sourceRepositoryID, scope: sourceScope))
     }
+}
+
+/// What ``OrgItemEditorScreen`` adds or edits (1.0).
+struct OrgItemEditorContext: Hashable {
+    enum Mode: Hashable {
+        /// A new item; the kind is preselected and still changeable.
+        case add(ConfigKind)
+        /// A new value and/or access; names never change (a rename is a delete and an add).
+        case edit(ConfigItemID)
+    }
+
+    let organizationID: OrganizationID
+    let mode: Mode
+    /// The organization's repositories the sidebar lists, offered for Selected access. Only
+    /// names to pick from: GitHub checks them on Sync.
+    let repositoryCandidates: [String]
 }
 
 /// What ``ItemEditorScreen`` edits. `scope` is where the item is (or will be) and `kind` the
