@@ -1,7 +1,7 @@
 import Foundation
 import VaultCore
 
-/// argv builders and decoders for `gh variable` (tasks/todo.md §8 B8/B9, C7, C8).
+/// argv builders and decoders for `gh variable` (tasks/todo.md §8 B8/B9, B13, B15, C7, C8, C12, C13).
 ///
 /// Values go **only** on stdin; one command per item. `gh variable set` is an upsert (POST,
 /// then PATCH on 409), so there is no create/update split; an update costs 2 writes (D12).
@@ -21,7 +21,7 @@ public enum GHVariablesCommands {
     public static func list(organization: String) throws(GHError) -> GHCommand {
         try GHCommand(
             operation: .orgVariableList,
-            arguments: ["variable", "list", "--org=\(try GHReposCommands.validatedOwner(organization))", "--json", GHVariableDTO.orgJSONFields],
+            arguments: ["variable", "list", try GHNameArguments.organizationFlag(organization), "--json", GHVariableDTO.orgJSONFields],
             logTemplate: "variable list --org={o} --json \(GHVariableDTO.orgJSONFields)"
         )
     }
@@ -56,6 +56,39 @@ public enum GHVariablesCommands {
             arguments: ["variable", "delete", name, repo.repoFlag] + (try GHNameArguments.environmentFlag(environment)),
             logTemplate: "variable delete {n} --repo={o}/{r}\(GHNameArguments.environmentTemplate(environment))"
         )
+    }
+
+    /// B15: `gh api ... -X GET --paginate --slurp orgs/{o}/actions/variables/{n}/repositories?per_page=100`;
+    /// decode with ``GHSecretsCommands/decodeSelectedRepositories(_:)``.
+    public static func selectedRepositories(name: String, organization: String) throws(GHError) -> GHCommand {
+        let built = try GHOrgItemArguments.selectedRepositories(.variable, name: name, organization: organization)
+        return try GHCommand(operation: .orgVariableRepositories, arguments: built.arguments, logTemplate: built.logTemplate)
+    }
+
+    /// C12: `gh variable set <N> --org=<O> --visibility=<v> [--repos=<r1,r2,…>]`, `value` on
+    /// stdin. An upsert like C7 (POST, then PATCH on 409), so `isUpdate` only sets the cost.
+    public static func set(
+        name: String,
+        organization: String,
+        access: GHOrgRepositoryAccess,
+        value: SecretBytes,
+        isUpdate: Bool
+    ) throws(GHError) -> GHCommand {
+        let built = try GHOrgItemArguments.set(.variable, name: name, organization: organization, access: access)
+        try GHSecretsCommands.validateValue(value)
+        return try GHCommand(
+            operation: .orgVariableSet,
+            arguments: built.arguments,
+            logTemplate: built.logTemplate,
+            stdinValue: value.copy(),
+            writeCost: isUpdate ? Limits.variableUpdateWriteCost : Limits.defaultWriteCost
+        )
+    }
+
+    /// C13: `gh variable delete <N> --org=<O>`.
+    public static func delete(name: String, organization: String) throws(GHError) -> GHCommand {
+        let built = try GHOrgItemArguments.delete(.variable, name: name, organization: organization)
+        return try GHCommand(operation: .orgVariableDelete, arguments: built.arguments, logTemplate: built.logTemplate)
     }
 
     /// Every listing but `FXVAULT_SPACE`, the marker 0.9's shared spaces wrote (S4), which is

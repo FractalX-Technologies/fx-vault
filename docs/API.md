@@ -32,8 +32,9 @@ from `az` (section G).
   An hourly budget that would need more than a minute's wait throws `.writeBudgetExhausted`.
 - **Success is exit code 0.** Native commands expose no HTTP status; stdout is parsed only on
   success and failures are classified from stderr plus the exit code (section E).
-- **`gh api`** (written `API` below) is used only for environments, deployment branch
-  policies. It always sends `-H "Accept: application/vnd.github+json"`,
+- **`gh api`** (written `API` below) is used only for the organization role (A6), environments,
+  deployment branch policies and the repositories of a `selected` organization item (B14/B15),
+  which no native command lists. It always sends `-H "Accept: application/vnd.github+json"`,
   `-H "X-GitHub-Api-Version: 2026-03-10"` and an explicit `-X <METHOD>`. `GitHubPath`
   percent-encodes each segment (ASCII unreserved set; `a/b c` becomes `a%2Fb%20c`) and throws on
   dot segments and their encoded forms. List reads use `--paginate --slurp`; single-object reads
@@ -107,6 +108,7 @@ while every foreign owner is that uid. Symlinks are resolved;
 | B6/B7 secrets | `gh secret list --repo={o}/{r} [--env={e}] --json name,updatedAt` | `GHSecretsCommands.list` / `decodeList` | gh follows every page. |
 | B8/B9 variables | `gh variable list --repo={o}/{r} [--env={e}] --json name,value,updatedAt,createdAt` | `GHVariablesCommands.list` / `decodeList` | Values become `SecretBytes` (`GHVariableListingModel`); stdout is wiped. The JSON decoder's transient `String` copies cannot be wiped. `FXVAULT_SPACE`, the marker 0.9's shared spaces wrote, is dropped from every listing (`droppingSpaceMarker`; 1.0 never writes it, so a leftover marker never shows as a variable). |
 | B12/B13 organization (1.0) | `gh secret list --org={o} --json name,updatedAt,visibility,numSelectedRepos`; the variable list with `--org={o}` and `name,value,updatedAt,createdAt,visibility,numSelectedRepos` | `GHSecretsCommands.list(organization:)`, `GHVariablesCommands.list(organization:)` / the same decoders | `visibility` is `all`, `private` (private and internal repositories) or `selected` (`OrgVisibility`); any other value is `malformedOutput`. Repository listings leave it nil. Needs `admin:org` (B4). |
+| B14/B15 selected repositories (1.0) | `gh api -X GET orgs/{o}/actions/secrets/{n}/repositories --paginate --slurp` (`?per_page=100`); variables at `orgs/{o}/actions/variables/{n}/repositories` | `GHSecretsCommands.selectedRepositories(name:organization:)`, `GHVariablesCommands.selectedRepositories(name:organization:)` / `GHSecretsCommands.decodeSelectedRepositories` | Repository names, every page. A count other than `total_count` or an invalid name is `malformedOutput`: a C10/C12 built from a partial list would revoke the missing repositories. Only `selected` items have a list (GitHub answers 409 otherwise). |
 | B10g / B10l | `gh repo gitignore list`, `gh repo license list` | `GHTemplatesCommands` | Plain text by line; license key column first. |
 
 ## C. Write
@@ -124,6 +126,10 @@ parallel. Values and JSON bodies are on stdin.
 | C6 secret delete | `gh secret delete {n} --repo={o}/{r} [--env={e}]` | `.delete` | A 404 is thrown as `.notFound`; the caller treats it as done only after a successful re-list of the same scope. |
 | C7 variable set | `gh variable set {n} --repo={o}/{r} [--env={e}]` | `GHVariablesCommands.set(…isUpdate:)` | Upsert; write cost 2 when `isUpdate`. Empty values are rejected before argv. The reserved name `FXVAULT_SPACE` is refused here. |
 | C8 variable delete | `gh variable delete {n} --repo={o}/{r} [--env={e}]` | `.delete` | As C6. |
+| C10 org secret set (1.0) | `gh secret set {n} --org={o} --visibility=all\|private` or `--visibility=selected --repos={repos}` | `GHSecretsCommands.set(name:organization:access:value:)` | Value on stdin. `GHOrgRepositoryAccess` always sends the visibility (gh's default is `private`); `selected` needs a `GHSelectedRepositories`, which throws for an empty list, an invalid name or a duplicate. gh replaces GitHub's repository list with `--repos`, so it is always the complete synced list. Repository names stay out of the log. |
+| C11 org secret delete (1.0) | `gh secret delete {n} --org={o}` | `GHSecretsCommands.delete(name:organization:)` | As C6, confirmed by B12. |
+| C12 org variable set (1.0) | `gh variable set {n} --org={o} --visibility=…` as C10 | `GHVariablesCommands.set(name:organization:access:value:isUpdate:)` | Value on stdin, upsert and write cost as C7, visibility and repositories as C10. |
+| C13 org variable delete (1.0) | `gh variable delete {n} --org={o}` | `GHVariablesCommands.delete(name:organization:)` | As C8, confirmed by B13. |
 | C9 env delete | `gh api -X DELETE -i repos/{o}/{r}/environments/{e}` | `GHEnvironmentsAPI.delete` | 204; a 404 is `.notFound` until a B3 re-list confirms it. |
 
 ### Retries (`GHCommandScheduler.run`)

@@ -17,6 +17,8 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
     case variableList = "B8"
     case orgSecretList = "B12"
     case orgVariableList = "B13"
+    case orgSecretRepositories = "B14"
+    case orgVariableRepositories = "B15"
     case gitignoreList = "B10g"
     case licenseList = "B10l"
     case repoCreate = "C1"
@@ -28,12 +30,17 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
     case variableSet = "C7"
     case variableDelete = "C8"
     case environmentDelete = "C9"
+    case orgSecretSet = "C10"
+    case orgSecretDelete = "C11"
+    case orgVariableSet = "C12"
+    case orgVariableDelete = "C13"
 
     /// True for catalog section C (writes to GitHub).
     public var isWrite: Bool {
         switch self {
         case .repoCreate, .environmentUpsert, .branchPolicyAdd, .branchPolicyDelete,
-             .secretSet, .secretDelete, .variableSet, .variableDelete, .environmentDelete:
+             .secretSet, .secretDelete, .variableSet, .variableDelete, .environmentDelete,
+             .orgSecretSet, .orgSecretDelete, .orgVariableSet, .orgVariableDelete:
             true
         default:
             false
@@ -55,10 +62,11 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
         }
     }
 
-    /// True for `gh api` operations (the organization role, environments and branch policies, D4).
+    /// True for `gh api` operations (the organization role, environments, branch policies and
+    /// the repositories of a `selected` organization item, D4).
     public var usesAPI: Bool {
         switch self {
-        case .orgMembership, .environmentList, .environmentGet, .branchPolicyList, .environmentUpsert,
+        case .orgMembership, .orgSecretRepositories, .orgVariableRepositories, .environmentList, .environmentGet, .branchPolicyList, .environmentUpsert,
              .branchPolicyAdd, .branchPolicyDelete, .environmentDelete:
             true
         default:

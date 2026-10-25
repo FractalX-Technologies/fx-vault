@@ -7,7 +7,7 @@ import VaultCore
 /// Each dynamic segment must pass `PathSegmentValidator` (no empty strings, no `.`/`..` or
 /// encoded forms, no separators, no control/bidi/zero-width characters) and is then encoded
 /// with the RFC 3986 unreserved set, so `/`, `?`, `#`, `%` and spaces can never change the
-/// request's shape. Only `environments`, branch-policy and (v0.8.0) root-file content paths are built (D4).
+/// request's shape. Only the org role, `environments`, branch-policy and org item repository paths are built (D4).
 public struct GitHubPath: Sendable, Hashable, CustomStringConvertible {
     /// The encoded path, without a leading slash, with the query string if any.
     public let rendered: String
@@ -26,6 +26,8 @@ public struct GitHubPath: Sendable, Hashable, CustomStringConvertible {
     private static let userSegment = "user"
     private static let membershipsSegment = "memberships"
     private static let orgsSegment = "orgs"
+    private static let actionsSegment = "actions"
+    private static let repositoriesSegment = "repositories"
 
     /// Validates and encodes `segments`. Literal segments are validated too.
     init(segments: [String], query: [(key: String, value: String)] = []) throws(GHError) {
@@ -67,11 +69,30 @@ public struct GitHubPath: Sendable, Hashable, CustomStringConvertible {
         return encoded
     }
 
-    // MARK: - The paths FX Vault uses (§8 A6, B3–B5, C2–C4, C9)
+    // MARK: - The paths FX Vault uses (§8 A6, B3–B5, B14/B15, C2–C4, C9)
 
     /// `user/memberships/orgs/{org}`: the token's own membership (state and role).
     static func orgMembership(_ organization: String) throws(GHError) -> GitHubPath {
         try GitHubPath(segments: [userSegment, membershipsSegment, orgsSegment, organization])
+    }
+
+    /// `orgs/{o}/actions/{secrets|variables}/{n}/repositories?per_page=100`: who a `selected`
+    /// organization item is shared with.
+    static func orgItemRepositories(_ kind: ConfigKind, organization: String, name: String) throws(GHError)
+        -> GitHubPath
+    {
+        try GitHubPath(
+            segments: [orgsSegment, organization, actionsSegment, orgItemsSegment(kind), name, repositoriesSegment],
+            query: [(perPageKey, String(GHConstants.apiPerPage))]
+        )
+    }
+
+    /// `secrets` or `variables`.
+    static func orgItemsSegment(_ kind: ConfigKind) -> String {
+        switch kind {
+        case .secret: "secrets"
+        case .variable: "variables"
+        }
     }
 
     /// `repos/{o}/{r}/environments?per_page=100`

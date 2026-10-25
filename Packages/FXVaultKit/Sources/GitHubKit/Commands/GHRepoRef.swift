@@ -85,6 +85,11 @@ enum GHNameArguments {
         }
     }
 
+    /// `--org=O` for a validated organization login.
+    static func organizationFlag(_ organization: String) throws(GHError) -> String {
+        "--org=\(try GHReposCommands.validatedOwner(organization))"
+    }
+
     /// `[--env=E]` for an optional environment.
     static func environmentFlag(_ environment: String?) throws(GHError) -> [String] {
         guard let environment else { return [] }
