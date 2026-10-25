@@ -159,7 +159,7 @@ struct FolderNameContext: Hashable {
     let mode: Mode
 }
 
-/// "+ New Environment" in the scopes column.
+/// "+ New Environment" under the selected repository in the sidebar.
 struct NewEnvironmentContext: Hashable {
     let repositoryID: RepoID
 }

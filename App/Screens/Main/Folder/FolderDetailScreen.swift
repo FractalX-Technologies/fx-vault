@@ -92,6 +92,14 @@ private struct FolderDetailHeader: View {
             StatusChip.tag(FolderCopy.localTag)
                 .help(FolderCopy.localHelp)
                 .padding(.top, Theme.Spacing.xSmall)
+            // Moved here from the folder column 1.0 removed: how a folder's items reach repositories.
+            if !viewModel.items.isEmpty {
+                Text(FolderCopy.overviewHint)
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, Theme.Spacing.xSmall)
+            }
         }
     }
 

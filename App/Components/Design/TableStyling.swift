@@ -33,7 +33,7 @@ extension View {
     }
 
     /// The background of a selectable row outside a native `List`/`Table` selection (mockup
-    /// sidebar and scope column).
+    /// sidebar tree and Copy To).
     ///
     /// ```swift
     /// ScopeRow(scope).fxRowBackground(isSelected: scope.id == selection, style: .scope)

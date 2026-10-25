@@ -1,13 +1,15 @@
 import SwiftUI
 import VaultCore
 
-/// Column 1 (§10; mockup Main): accounts with their scope warning, owner groups (Personal, then
-/// organizations, with a SAML notice where needed and, 1.0, the organization's own row first),
-/// repositories with badges, and "Add repository by name…" per account, on `surface` with a
-/// mono status line at the bottom.
+/// The sidebar tree (§10; mockups Main2-Home and Main2-Repository): GITHUB with each account and
+/// its scope warning, owner groups (Personal, then organizations, with a SAML notice where needed
+/// and the organization's own row first), repositories with badges, the selected repository's
+/// environments and destinations nested under it, and "Add repository by name…" per account;
+/// then FOLDERS, and a mono status line at the bottom. It sits on the window's native sidebar
+/// glass (1.0).
 ///
-/// The rows are drawn with `.fxRowBackground(style: .sidebar)` (32 pt, `surface2` when
-/// selected) instead of a native `List` selection; ``MainColumnSelection`` keeps Up and Down.
+/// The rows are drawn with `.fxRowBackground(style: .sidebar)` instead of a native `List`
+/// selection; ``MainColumnSelection`` keeps Up and Down.
 struct SidebarView: View {
     let main: MainViewModel
     @State private var collapsedOwnerIDs: Set<SidebarOwnerModel.ID> = []
@@ -23,19 +25,19 @@ struct SidebarView: View {
             }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-                    SidebarFoldersSection(main: main)
-                        .padding(.bottom, Theme.Spacing.large)
                     if sections.isEmpty {
                         emptyState
-                            .padding(.top, Theme.Spacing.xLarge)
+                            .padding(.vertical, Theme.Spacing.xLarge)
                     } else {
-                        SectionLabel(String(localized: "main.sidebar.accounts", defaultValue: "Accounts"))
+                        SectionLabel(MainCopy.gitHubSection)
                             .padding(.horizontal, Theme.Spacing.small)
                             .padding(.bottom, Theme.Spacing.small)
                         ForEach(sections) { account in
                             accountSection(account)
                         }
                     }
+                    SidebarFoldersSection(main: main)
+                        .padding(.top, Theme.Spacing.large)
                 }
                 .padding(.horizontal, Theme.Spacing.medium)
                 .padding(.vertical, Theme.Spacing.largePlus)
@@ -47,7 +49,6 @@ struct SidebarView: View {
             )
             SidebarFooter(sidebar: sidebar, autoLockMinutes: main.app.container.preferences.autoLockMinutes)
         }
-        .background(Theme.Colors.surface)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(AccessibilityID.Main.sidebar)
         .errorAlert($sidebar.alert)
@@ -121,7 +122,7 @@ struct SidebarView: View {
             }
             if isExpanded {
                 OwnerContentView(owner: owner, main: main) { repo in
-                    sidebar.selectedRowID = repo.id
+                    main.select(repository: repo)
                     isListFocused = true
                 } onSelectOrganization: {
                     sidebar.select(organization: owner)
@@ -321,13 +322,16 @@ private struct OwnerContentView: View {
                 SidebarRepoRow(
                     repo: repo,
                     isBusy: main.sidebar.isBusy(repo),
-                    isSelected: main.sidebar.selectedRowID == repo.id
+                    isSelected: main.isRowSelected(repo)
                 )
             }
             .buttonStyle(.plain)
             .id(repo.id)
             .contextMenu {
                 RepoContextMenu(repo: repo, main: main)
+            }
+            if main.sidebar.selectedRowID == repo.id, let scopeList = main.scopeList {
+                ScopeListView(viewModel: scopeList)
             }
         }
     }

@@ -48,7 +48,7 @@ final class DestinationDetailViewModel: LockObserving {
     /// The senders of the share files that hold rows here, for the Held chip (v0.9.0).
     @ObservationIgnored private lazy var heldSenders = HeldSenderNames { [dependencies] in dependencies.shareHolds }
 
-    /// - Parameter destination: the live destination row (its counts follow the scope column).
+    /// - Parameter destination: the live destination row (its counts follow its sidebar row).
     init(destination: DestinationModel, dependencies: FeatureDependencies, live: @escaping () -> DestinationModel?) {
         destinationID = destination.id
         repositoryID = destination.repositoryID

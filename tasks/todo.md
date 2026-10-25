@@ -2099,3 +2099,14 @@ Review B8a — Azure discovery, package layer (2026-10-25, automatic, built in a
 - Tests: `AzureDiscoveryTests`, `AzureDiscoveryRepositoryTests`, fixtures `Fixtures/az/`; 11 mutations caught.
 - Docs: API (G rows), ARCHITECTURE, SECURITY-MODEL (`az` runs more than one read command).
 - Gates: `swift test` 1,340 green; app and test targets build; lint OK; check-secrets OK (974 files).
+
+Review B11b — two-column main window, sidebar tree (2026-10-25, automatic):
+- `NavigationSplitView` has two columns: the sidebar tree and the selected place. `ScopeColumnView` and `FolderOverviewView` are gone; the folder hint moved into the folder header.
+- Sidebar: GITHUB (accounts, owners, repositories), the selected imported repository's environments, New Environment and destinations nested under its row (`ScopeListView`, `sidebarTreeIndent`), FOLDERS after GitHub, no `surface` fill (the window's sidebar glass shows).
+- The repository row stands for the repository scope: `MainViewModel.select(repository:)` goes back to it from an environment, `isRowSelected(_:)` highlights it only then; `ScopeListViewModel.environmentScopes`; Up and Down still walk repository scope › environments › destinations.
+- Toolbar: the mark and `MainViewModel.breadcrumb` (`GitHub › owner › repo › environment`, `Folders › name`), last two steps when long; the app name with nothing selected. `toolbarTitleWidth` 340, sidebar 240–280.
+- Strings: `main.sidebar.github` added; Accounts, Scopes, Build · GitHub Actions, the scopes empty state and the organization column note removed.
+- Tests: app `theRepositoryRowIsItsRepositoryScopeAndThePathFollowsTheSelection` (seen failing when re-clicking the row does not return to the repository scope); e2e `MainTreeUITests` (staging and production under api-service, the path follows staging and back).
+- Visual check: `main-sidebar` shows the tree; full-window captures still leave the glass sidebar blank (known capture limit, DESIGN.md).
+- Docs: README, CHANGELOG, DESIGN (main window), ARCHITECTURE, STRUCTURE.
+- Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 568 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (5 tests); lint OK; check-secrets OK in the worktree; strings synced (second run: no change).

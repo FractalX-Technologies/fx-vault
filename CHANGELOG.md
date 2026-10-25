@@ -7,6 +7,10 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Changed
 
+- **Two-column main window.** The sidebar is one tree: GitHub, each account and owner, the
+  repositories, and the selected repository's environments and destinations under it; Folders
+  follow GitHub. The middle scopes column is gone: the repository row stands for the repository
+  itself, and the toolbar shows where you are (GitHub › owner › repository › environment).
 - **Sharing production.** Share Project lists production stages unchecked; checking one asks
   for Touch ID (or, without Touch ID, your master password at Create), and the send step names
   the production places. The file is refused unless that confirmation was given.

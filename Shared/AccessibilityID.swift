@@ -32,6 +32,13 @@ enum AccessibilityID {
         static let importRepository = "main.import"
         static let importOrganization = "main.importOrganization"
         static let organizationTable = "main.organizationTable"
+        /// The toolbar's path of the selected place (1.0).
+        static let breadcrumb = "main.breadcrumb"
+
+        /// An environment row nested under the selected repository in the sidebar tree (1.0).
+        static func environment(_ name: String) -> String {
+            "main.environment.\(name)"
+        }
 
         /// The organization row of a sidebar owner group (its secrets and variables, 1.0).
         static func organization(_ login: String) -> String {

@@ -2,9 +2,9 @@ import AppKit
 import SwiftUI
 import VaultCore
 
-/// The main window (§10.4; mockup Main and MainDark): a three-column split view (sidebar,
-/// scopes, detail), the toolbar and the sheet router of the UI feature contract. The
-/// connectivity banner sits at the top of the detail column.
+/// The main window (§10.4; mockups Main2-Home and Main2-Repository): a two-column split view (the
+/// sidebar tree and the selected place), the toolbar and the sheet router of the UI feature
+/// contract. The connectivity banner sits at the top of the detail column.
 struct MainScreen: View {
     @State private var viewModel: MainViewModel
 
@@ -61,7 +61,7 @@ struct MainScreen: View {
             }
     }
 
-    /// The three columns (sidebar, scopes, detail), each as tall as the window
+    /// The two columns (sidebar tree, detail), each as tall as the window
     /// (`mainColumnHeight()`).
     private var splitView: some View {
         @Bindable var sidebar = viewModel.sidebar
@@ -69,10 +69,6 @@ struct MainScreen: View {
             SidebarView(main: viewModel)
                 .mainColumnHeight()
                 .navigationSplitViewColumnWidth(min: Theme.Layout.sidebarMinWidth, ideal: Theme.Layout.sidebarIdealWidth)
-        } content: {
-            ScopeColumnView(main: viewModel)
-                .mainColumnHeight()
-                .navigationSplitViewColumnWidth(min: Theme.Layout.scopeListMinWidth, ideal: Theme.Layout.scopeListIdealWidth)
         } detail: {
             DetailColumnView(main: viewModel)
                 .frame(minWidth: Theme.Layout.detailMinWidth)
@@ -98,8 +94,8 @@ private extension View {
     }
 }
 
-/// Installs the toolbar. The window title is drawn by ``MainToolbarTitle`` (mark, name and
-/// repository path), so the system title is removed; every item hides the shared glass so the
+/// Installs the toolbar. The window title is drawn by ``MainToolbarTitle`` (mark and the
+/// selected place's path), so the system title is removed; every item hides the shared glass so the
 /// pills keep their own fill (docs/DESIGN.md).
 private struct MainToolbarModifier: ViewModifier {
     let viewModel: MainViewModel
@@ -111,8 +107,8 @@ private struct MainToolbarModifier: ViewModifier {
     }
 }
 
-/// The toolbar (§10 Toolbar; mockup Main): the mark, "FX Vault" and the mono `owner / repo`
-/// path; the search field; New repository, Import .env, Share and Lock as outline circles; Sync
+/// The toolbar (§10 Toolbar; mockup Main2-Repository): the mark and the mono
+/// `GitHub › owner › repo › environment` path; the search field; New repository, Import .env, Share and Lock as outline circles; Sync
 /// last. Import .env is not on the mockup but stays: it is the import without a default kind
 /// that remains enabled offline (ARCHITECTURE decisions 39 and 51).
 private struct MainToolbar: ToolbarContent {
@@ -134,43 +130,44 @@ private struct MainToolbar: ToolbarContent {
     }
 }
 
-/// The mark, the app name, the selected repository as a mono
-/// `owner / repo` path and, in Debug builds, the DEV chip. The native toolbar places it at the
-/// scope column's leading edge (a `.navigation` item on the detail column lands there too), and
-/// the scope/detail divider runs through the toolbar. So the title is `toolbarTitleWidth` wide
-/// (the default scope column less the insets): it drops the path, then the app name, when they do
-/// not fit, rather than crossing the divider, and the buttons after it start right of the divider.
+/// The mark, then the selected place as a mono path (``MainViewModel/breadcrumb``), or the app
+/// name with nothing selected, and in Debug builds the DEV chip. It is `toolbarTitleWidth` wide:
+/// a long path drops its first steps, then the whole path, rather than pushing the buttons.
 private struct MainToolbarTitle: View {
     let viewModel: MainViewModel
 
     var body: some View {
+        let path = viewModel.breadcrumb
         ViewThatFits(in: .horizontal) {
-            row(showsAppName: true, showsPath: true)
-            row(showsAppName: true, showsPath: false)
-            row(showsAppName: false, showsPath: false)
+            row(path)
+            if path.count > 2 {
+                row(Array(path.suffix(2)))
+            }
+            row([])
         }
         .frame(width: Theme.Layout.toolbarTitleWidth, alignment: .leading)
         .padding(.horizontal, Theme.Spacing.small)
+        .help(path.joined(separator: Self.separator))
     }
 
-    private func row(showsAppName: Bool, showsPath: Bool) -> some View {
+    private static let separator = " › "
+
+    private func row(_ path: [String]) -> some View {
         HStack(spacing: Theme.Spacing.mediumMinus) {
             BrandMark()
-            if showsAppName {
+            if path.isEmpty {
                 Text(AppIdentity.windowTitle)
                     .fxTextStyle(.headline)
                     .foregroundStyle(Theme.Colors.ink)
                     .lineLimit(1)
                     .fixedSize()
-            }
-            if showsPath, let repo = viewModel.selectedRepo {
-                Text(verbatim: "\(repo.ownerLogin) / \(repo.name)")
+            } else {
+                Text(verbatim: path.joined(separator: Self.separator))
                     .fxTextStyle(.monoMeta)
                     .foregroundStyle(Theme.Colors.subtleText)
                     .lineLimit(1)
                     .fixedSize()
-                    .padding(.leading, Theme.Spacing.smallMinus)
-                    .help(repo.fullName)
+                    .accessibilityIdentifier(AccessibilityID.Main.breadcrumb)
             }
             if AppIdentity.isDevelopmentBuild {
                 DevBuildBadge()
@@ -318,33 +315,8 @@ private struct MainSheetContent: View {
     }
 }
 
-/// Column 2: the scopes of the selected imported repository, or an empty state.
-private struct ScopeColumnView: View {
-    let main: MainViewModel
-
-    var body: some View {
-        if main.folderDetail != nil, let folder = main.sidebar.selectedFolder {
-            FolderOverviewView(folder: folder, main: main)
-        } else if main.sidebar.selectedOrganizationOwner != nil {
-            EmptyStateView(systemImage: "building.2", title: OrganizationCopy.eyebrow, message: OrganizationCopy.scopesMessage)
-                .background(Theme.Colors.ground)
-        } else if let scopeList = main.scopeList {
-            ScopeListView(viewModel: scopeList)
-        } else {
-            EmptyStateView(
-                systemImage: "square.stack.3d.up",
-                title: String(localized: "main.scopes.empty.title", defaultValue: "No repository selected"),
-                message: String(
-                    localized: "main.scopes.empty.message",
-                    defaultValue: "Select an imported repository to see its environments."
-                )
-            )
-            .background(Theme.Colors.ground)
-        }
-    }
-}
-
-/// Column 3: the repository detail, the Import prompt for a repository not in the vault, or an
+/// The detail column: the selected place (a repository scope, a destination, a folder or an
+/// organization), the Import prompt for a repository or organization not in the vault, or an
 /// empty state. The detail draws the connectivity banner itself (above its header); the other
 /// states show it here.
 private struct DetailColumnView: View {

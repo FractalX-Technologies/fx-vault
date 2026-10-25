@@ -85,14 +85,15 @@ enum Theme {
 
         // MARK: Main window
 
-        static let sidebarMinWidth: CGFloat = 220
-        static let sidebarIdealWidth: CGFloat = 260
-        static let scopeListMinWidth: CGFloat = 200
-        static let scopeListIdealWidth: CGFloat = 220
-        /// The toolbar title item (mark, name, path) sits over the scope column. Sized from the
-        /// default scope column so the title stays left of the scope/detail divider and the
-        /// toolbar buttons after it start just right of the divider.
-        static let toolbarTitleWidth: CGFloat = scopeListIdealWidth - Theme.Spacing.xLarge
+        /// The sidebar holds the whole tree (1.0): owner › repository › environment.
+        static let sidebarMinWidth: CGFloat = 240
+        static let sidebarIdealWidth: CGFloat = 280
+        /// How far a repository's environments sit right of its row in the sidebar tree.
+        static let sidebarTreeIndent: CGFloat = 16
+        /// The toolbar title item (mark and path) at the detail column's leading edge. A fixed
+        /// width: the toolbar proposes no width, so the title picks the longest path that fits
+        /// it, and the toolbar buttons still fit beside it in the narrowest window.
+        static let toolbarTitleWidth: CGFloat = 340
         static let detailMinWidth: CGFloat = 420
         /// Detail table columns. Name and value are flexible from their minimums; the name starts
         /// at its ideal width so a long mono name ("STRIPE_SECRET_KEY") is not truncated; the value

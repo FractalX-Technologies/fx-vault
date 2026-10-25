@@ -4,12 +4,14 @@ import Observation
 import VaultCore
 import VaultData
 
-/// The three-column main window (§10.4): it owns the column view models, the toolbar and menu
-/// commands, and the sheet router of the UI feature contract (``activeSheet``).
+/// The two-column main window (§10.4, 1.0): it owns the sidebar tree, the detail view models,
+/// the toolbar and menu commands, and the sheet router of the UI feature contract
+/// (``activeSheet``).
 @Observable
 final class MainViewModel: LockObserving, ConnectivityObserving {
     let sidebar: SidebarViewModel
-    /// The scopes column of the selected imported repository.
+    /// The environments and destinations of the selected imported repository, nested under its
+    /// sidebar row (1.0).
     private(set) var scopeList: ScopeListViewModel?
     /// The detail column of the selected imported repository.
     private(set) var detail: RepoDetailViewModel?
@@ -111,6 +113,43 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         selectedRepo?.importedRepoID.flatMap(sidebar.vaultRepository)
     }
 
+    /// Selects a repository row. The row stands for the repository scope (1.0 has no separate
+    /// "Repository" row), so clicking it again from one of its environments goes back there.
+    func select(repository repo: SidebarRepoModel) {
+        if sidebar.selectedRowID == repo.id {
+            scopeList?.selectedScopeID = ScopeListViewModel.repositoryScopeID
+        } else {
+            sidebar.selectedRowID = repo.id
+        }
+    }
+
+    /// True for the selected repository's row while its repository scope (not an environment or
+    /// a destination) is on screen.
+    func isRowSelected(_ repo: SidebarRepoModel) -> Bool {
+        guard sidebar.selectedRowID == repo.id else { return false }
+        guard let scopeList else { return true }
+        return scopeList.selectedScopeID == ScopeListViewModel.repositoryScopeID
+    }
+
+    /// The selected place as the toolbar's path: `GitHub › owner › repo › environment`, or
+    /// `Folders › name`; empty with nothing selected.
+    var breadcrumb: [String] {
+        if let folder = sidebar.selectedFolder {
+            return [FolderCopy.sectionTitle, folder.name]
+        }
+        if let owner = sidebar.selectedOrganizationOwner {
+            return [MainCopy.gitHubSection, owner.login]
+        }
+        guard let repo = selectedRepo else { return [] }
+        var path = [MainCopy.gitHubSection, repo.ownerLogin, repo.name]
+        if let destination = scopeList?.selectedDestination {
+            path.append(destination.title)
+        } else if let scope = scopeList?.selectedScope, scope.environment != nil {
+            path.append(scope.title)
+        }
+        return path
+    }
+
     /// Rebuilds the scopes and detail columns when the selected repository, folder or
     /// organization changes (or the repository or organization becomes imported, or is removed).
     private func followSelection() {
@@ -176,7 +215,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         }
     }
 
-    /// Column 3 follows column 2's selection: a destination's detail or the repository detail of
+    /// The detail follows the tree's selection: a destination's detail or the repository detail of
     /// the selected scope (v0.8.0).
     private func followScopeSelection(_ scopes: ScopeListViewModel) {
         if let destination = scopes.selectedDestination {
