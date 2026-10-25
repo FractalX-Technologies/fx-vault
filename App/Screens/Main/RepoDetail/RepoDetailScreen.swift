@@ -71,7 +71,7 @@ struct RepoDetailScreen: View {
 }
 
 /// The Secrets | Variables pill with the add actions on its right, or under it when the column is
-/// too narrow for one row, so the actions never spill under the scope column. While several rows
+/// too narrow for one row, so the actions never spill under the sidebar. While several rows
 /// are selected, the selection's actions take the add actions' place (v0.4.0).
 private struct RepoDetailControls: View {
     @Bindable var viewModel: RepoDetailViewModel

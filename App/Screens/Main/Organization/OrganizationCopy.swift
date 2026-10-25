@@ -14,10 +14,6 @@ enum OrganizationCopy {
         defaultValue: "Import this organization's own secrets and variables. Secrets arrive without values: GitHub never returns them. Reading them needs admin:org and the organization's admin role."
     )
     static let importButton = String(localized: "organization.import.button", defaultValue: "Import")
-    static let scopesMessage = String(
-        localized: "organization.scopes.message",
-        defaultValue: "Organization secrets and variables reach its repositories by their visibility."
-    )
     static let remove = String(localized: "organization.remove", defaultValue: "Remove from Vault…")
     static let removeTitle = String(localized: "organization.remove.title", defaultValue: "Remove this organization from FX Vault?")
     static let removeConfirm = String(localized: "organization.remove.confirm", defaultValue: "Remove from Vault")

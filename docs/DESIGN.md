@@ -321,18 +321,23 @@ foreground color, so `.primary` text still turns white on selected rows.
 
 ## Screen patterns
 
-### Main window (boards Main, MainDark)
+### Main window (boards Main2-Home, Main2-Repository; two columns since 1.0, B11b)
 
-- Toolbar: `BrandMark()` + window title (`.headline`) + repository path (`.monoMeta`,
-  `subtleText`) in a `Theme.Layout.toolbarTitleWidth` item over the scope column, which drops the
-  path, then the name, when they do not fit; icon actions as `.fxIconButtonStyle()`;
-  `SyncToolbarButton` last.
-- Sidebar (`surface`, hairline on the right): `SectionLabel` group headers (ACCOUNTS, PERSONAL,
-  org names), 32 pt rows with `.fxRowBackground(style: .sidebar)`, counts in `.monoMeta`,
-  "Import" in `brand`; footer status in `.statusLine`.
-- Scope column (`ground`): `SectionLabel("Scopes")`, 36 pt rows with `.fxRowBackground(style:
-  .scope)`, a 6 pt `brand` dot for pending scopes, counts in `.monoMeta`; "New environment" as a
-  dashed `hairlineStrong` row.
+- Toolbar: `BrandMark()` + the selected place's path (`MainViewModel.breadcrumb`, `.monoMeta`,
+  `subtleText`, `GitHub › owner › repo › environment` or `Folders › name`), or the window title
+  (`.headline`) with nothing selected, in a fixed `Theme.Layout.toolbarTitleWidth` item at the
+  detail column's leading edge; a long path keeps its last two steps, then only the mark. Icon
+  actions as `.fxIconButtonStyle()`; `SyncToolbarButton` last.
+- Sidebar tree (the window's native sidebar glass, no fill of its own): GITHUB, then each account
+  and its owner groups (PERSONAL, org names), 32 pt rows with `.fxRowBackground(style: .sidebar)`,
+  counts in `.monoMeta`, "Import" in `brand`; FOLDERS after GitHub; footer status in
+  `.statusLine`.
+- The selected imported repository's row stands for its repository scope; its environments
+  (`ScopeListView`) nest under it, `Theme.Layout.sidebarTreeIndent` in, as 32 pt sidebar rows with
+  a 6 pt `brand` dot for pending scopes and counts in `.monoMeta`, then "New environment" as a
+  dashed `hairlineStrong` row and the runtime destinations. Clicking the repository row again
+  goes back to the repository scope; Up and Down walk the branch once one of its rows was
+  clicked.
 - Detail (`ground`, insets 28 top / 36 sides, 20 between blocks): `Banner`s first; then
   `SectionLabel("Environment")` + `.largeTitle` name + `StatusChip.tag`s + branch patterns in
   `.monoMeta`, with outline/secondary actions on the right (Clone, Refresh, and since v0.4.0
@@ -361,34 +366,30 @@ foreground color, so `.primary` text still turns white on selected rows.
 - The detail fits its narrowest column (`Theme.Layout.detailMinWidth`): Clone and Refresh move
   under the title, the tags stack, and the add actions move under the Secrets / Variables pill
   when a row does not fit (`ViewThatFits`); the table scrolls sideways inside its card. Nothing
-  spills under the scope column or past the window edge. `MainWindowLayoutTests` checks both.
+  spills under the sidebar or past the window edge. `MainWindowLayoutTests` checks both.
 - On macOS 26+ the sidebar's rows scroll under the traffic lights and the sidebar button with the
   system's soft scroll-edge effect, as in Finder; at rest they start below the title bar.
 
 - Folders (v0.7.0): the sidebar starts with FOLDERS (`SectionLabel` and a quiet `plus` for New
   Folder…), one 32 pt row per folder (`folder` / `folder.fill` when selected, the name in
   `.callout` ink, the item count in `monoLabel` subtle, `.fxRowBackground(style: .sidebar)`), or
-  a quiet "New Folder…" row when there is none. A selected folder fills column 2 with
-  `FolderOverviewView` (FOLDER, the folder as a selected scope row with its counts in
-  `.monoMeta`, then how its items reach repositories as a caption) and column 3 with the folder
-  header (FOLDER, the name in `.largeTitle`, a "Never on GitHub" tag, Share as File… outline and a
-  ••• menu) above the same Secrets / Variables pill, add actions and table as a repository, without
+  a quiet "New Folder…" row when there is none. A selected folder fills the detail with the folder
+  header (FOLDER, the name in `.largeTitle`, a "Never on GitHub" tag, how its items reach
+  repositories as a caption once it has some, Share as File… outline and a ••• menu) above the same Secrets / Variables pill, add actions and table as a repository, without
   the Status column.
 - Organizations (1.0, B5c; mockup Org-Visibility): each organization group starts with a 32 pt
   "Secrets and variables" row (`building.2`, `.callout`, ink once imported and subtle before;
-  the item count in `monoLabel` subtle, or "Import" in brand). Selected, column 2 shows an
-  ORGANIZATION empty state and column 3 the Import prompt (`EmptyStateView`, primary Import) or
+  the item count in `monoLabel` subtle, or "Import" in brand). Selected, the detail shows the Import prompt (`EmptyStateView`, primary Import) or
   the organization header (ORGANIZATION, the login in `.largeTitle`, counts in `.monoMeta` with
   "· N without value", a Read only tag, Remove from Vault… outline) above a read-only `.fxTable()`:
   Name, Kind, Value (`MaskedValueCell`, no eye), Visibility, Updated.
-- Runtime destinations in the scope column (v0.8.0, canvas "FX Vault Destinations"):
-  `SectionLabel` BUILD · GITHUB ACTIONS over the GitHub scopes; after "New
-  Environment", `SectionLabel` RUNTIME with an Experimental `StatusChip.tag`, then one 2-line
+- Runtime destinations under the selected repository (v0.8.0, canvas "FX Vault Destinations"):
+  after "New Environment", `SectionLabel` RUNTIME with an Experimental `StatusChip.tag`, then one 2-line
   row per destination: the provider symbol in `monoLabel` `mutedText`
   (`destinationSymbolWidth`, so names line up), the name in `.callout` (`.calloutEmphasized`
   when selected; tail-truncated) over "provider · stage" in `.caption` `mutedText`, then the
   value-missing `exclamationmark.triangle` in `warning`, the 6 pt `brand` pending dot and the
-  count in `monoLabel` subtle, on `.fxRowBackground(style: .scope)`. "Add Destination" is a dashed
+  count in `monoLabel` subtle, on `.fxRowBackground(style: .sidebar)`. "Add Destination" is a dashed
   `hairlineStrong` row like "New Environment". A destination's context menu (and the detail's
   ••• menu): Settings…, Export .env…, Remove from FX Vault… (destructive confirmation).
 - Destination detail (v0.8.0, canvas board 3): `SectionLabel` DESTINATION · RUNTIME, the name in
@@ -600,12 +601,9 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 - The drift banner is `.info`, or `.warning` when a change on GitHub also changed in the vault
   (a decision is needed; nothing failed). `DriftBannerView` is the only implementation.
 - On macOS 26+ the toolbar draws shared glass behind items unless hidden per item.
-- The native split view runs the scope/detail divider through the toolbar, and a `.navigation`
-  item lands at the scope column's leading edge even when attached to the detail column. So the
-  toolbar title is a fixed-width item sized to the default scope column: at that width the path
-  does not fit and is dropped (the board's one-row header with `owner / repo` has no column
-  dividers). With the sidebar collapsed, or the scope column narrowed below its default, a long
-  title can still reach the divider.
+- The toolbar proposes no width to its items, so the title is a fixed-width item
+  (`toolbarTitleWidth`) and picks the longest path that fits it; a path longer than that keeps its
+  last two steps.
 - Tracking is not part of `Font`; text styled with a bare `Theme.Typography` font has no tracking.
 - Import Share for a project file (v0.9.0) previews one repository at a time: the list chooses
   which; the others are not expanded together.

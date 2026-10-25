@@ -9725,17 +9725,6 @@
         }
       }
     },
-    "main.scopes.build" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Build · GitHub Actions"
-          }
-        }
-      }
-    },
     "main.scopes.delete" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9787,28 +9776,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Duplicate…"
-          }
-        }
-      }
-    },
-    "main.scopes.empty.message" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Select an imported repository to see its environments."
-          }
-        }
-      }
-    },
-    "main.scopes.empty.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "No repository selected"
           }
         }
       }
@@ -9945,17 +9912,6 @@
         }
       }
     },
-    "main.scopes.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Scopes"
-          }
-        }
-      }
-    },
     "main.scopes.valueMissing.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9974,17 +9930,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Search repositories"
-          }
-        }
-      }
-    },
-    "main.sidebar.accounts" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Accounts"
           }
         }
       }
@@ -10062,6 +10007,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "No repositories yet"
+          }
+        }
+      }
+    },
+    "main.sidebar.github" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub"
           }
         }
       }
@@ -11371,17 +11327,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Secrets and variables"
-          }
-        }
-      }
-    },
-    "organization.scopes.message" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Organization secrets and variables reach its repositories by their visibility."
           }
         }
       }

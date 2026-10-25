@@ -2,56 +2,48 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// Column 2 (§10; mockup Main): the mono SCOPES label, "Repository" then each environment with
-/// its pending dot, item count and value-missing warning, the row context menu and the dashed
-/// "+ New environment" row. Since v0.8.0: the GitHub scopes under BUILD · GITHUB ACTIONS, and the
-/// RUNTIME destinations with "+ Add Destination" (experimental).
+/// The selected repository's branch of the sidebar tree (1.0; mockup Main2-Repository): each
+/// environment with its pending dot, item count and value-missing warning, the row context menu
+/// and the dashed "+ New environment" row, then the RUNTIME destinations with "+ Add
+/// Destination" (experimental). The repository scope is the repository's own row.
 ///
-/// The rows are drawn with `.fxRowBackground(style: .scope)` (36 pt, `card` with a hairline when
-/// selected) instead of a native `List` selection; ``MainColumnSelection`` keeps Up and Down.
+/// The rows are drawn with `.fxRowBackground(style: .sidebar)` instead of a native `List`
+/// selection; ``MainColumnSelection`` keeps Up and Down once a row here was clicked.
 struct ScopeListView: View {
     @Bindable var viewModel: ScopeListViewModel
     @FocusState private var isListFocused: Bool
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                SectionLabel(String(localized: "main.scopes.title", defaultValue: "Scopes"))
-                    .padding(.horizontal, Theme.Spacing.small)
-                    .padding(.bottom, Theme.Spacing.small)
-                SectionLabel(String(localized: "main.scopes.build", defaultValue: "Build · GitHub Actions"))
-                    .padding(.horizontal, Theme.Spacing.small)
-                    .padding(.bottom, Theme.Spacing.xSmall)
-                ForEach(viewModel.scopes) { scope in
-                    Button {
-                        viewModel.selectedScopeID = scope.id
-                        isListFocused = true
-                    } label: {
-                        ScopeRow(
-                            scope: scope,
-                            isSelected: viewModel.selectedScopeID == scope.id
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .id(scope.id)
-                    .contextMenu {
-                        ScopeContextMenu(scope: scope, viewModel: viewModel)
-                    }
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+            ForEach(viewModel.environmentScopes) { scope in
+                Button {
+                    viewModel.selectedScopeID = scope.id
+                    isListFocused = true
+                } label: {
+                    ScopeRow(
+                        scope: scope,
+                        isSelected: viewModel.selectedScopeID == scope.id
+                    )
                 }
-                NewEnvironmentButton(viewModel: viewModel)
-                    .padding(.top, Theme.Spacing.small)
-                DestinationsSection(viewModel: viewModel, isListFocused: $isListFocused)
-                    .padding(.top, Theme.Spacing.medium)
+                .buttonStyle(.plain)
+                .id(scope.id)
+                .accessibilityIdentifier(AccessibilityID.Main.environment(scope.title))
+                .contextMenu {
+                    ScopeContextMenu(scope: scope, viewModel: viewModel)
+                }
             }
-            .padding(.horizontal, Theme.Spacing.medium)
-            .padding(.vertical, Theme.Spacing.largePlus)
+            NewEnvironmentButton(viewModel: viewModel)
+                .padding(.top, Theme.Spacing.xxSmall)
+            DestinationsSection(viewModel: viewModel, isListFocused: $isListFocused)
+                .padding(.top, Theme.Spacing.small)
         }
+        .padding(.leading, Theme.Layout.sidebarTreeIndent)
+        .padding(.bottom, Theme.Spacing.small)
         .mainColumnKeyboardSelection(
             ids: viewModel.rowIDs,
             selection: $viewModel.selectedScopeID,
             isFocused: $isListFocused
         )
-        .background(Theme.Colors.ground)
         .errorAlert($viewModel.alert)
         .confirmationDialog(
             String(localized: "main.scopes.delete.title", defaultValue: "Delete this environment?"),
@@ -177,7 +169,7 @@ private struct DestinationRow: View {
                 .foregroundStyle(Theme.Colors.subtleText)
                 .accessibilityLabel(String(localized: "main.scopes.itemCount", defaultValue: "\(destination.itemCount) items"))
         }
-        .fxRowBackground(isSelected: isSelected, style: .scope)
+        .fxRowBackground(isSelected: isSelected, style: .sidebar)
     }
 }
 
@@ -276,7 +268,7 @@ private struct ScopeRow: View {
                 .foregroundStyle(Theme.Colors.subtleText)
                 .accessibilityLabel(String(localized: "main.scopes.itemCount", defaultValue: "\(scope.itemCount) items"))
         }
-        .fxRowBackground(isSelected: isSelected, style: .scope)
+        .fxRowBackground(isSelected: isSelected, style: .sidebar)
     }
 }
 

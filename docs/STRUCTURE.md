@@ -39,7 +39,7 @@ FXVault/
 │   │   ├── GHSetup/                 # GHSetupScreen/ViewModel (install, upgrade, untrusted, Trust
 │   │   │                            # This gh, login, GH_TOKEN, unusable accounts, Copy
 │   │   │                            # Diagnostics, Check Again, Not Now)
-│   │   ├── Main/                    # MainScreen/ViewModel (three columns, toolbar, router)
+│   │   ├── Main/                    # MainScreen/ViewModel (two columns, toolbar, router)
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
 │   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel
@@ -66,7 +66,7 @@ FXVault/
 │   │   │   └── AddRepository/       # AddRepositorySheet/ViewModel (Add repository by name)
 │   │   ├── CopyToRepository/        # CopyToRepositoryScreen/ViewModel (Copy To › Another
 │   │   │                            # Repository…, v0.4.1)
-│   │   ├── Folders/                 # FolderOverviewView (column 2), FolderContextMenu,
+│   │   ├── Folders/                 # FolderContextMenu,
 │   │   │                            # FolderNameScreen/ViewModel (New Folder…, Rename…),
 │   │   │                            # FolderDestinationModel/View (a received copy), FolderCopy,
 │   │   │                            # FolderRepository+Extension (v0.7.0)
@@ -158,7 +158,7 @@ FXVault/
 │   │                                # Connectivity (monitor, GitHub reachability, offline gating),
 │   │                                # SyncConnectivity (Sync and drift review reporting, offline
 │   │                                # Sync sheet), SharingScopeTreeModel (tri-state tree),
-│   │                                # DestinationViewModel (scope column, detail, Add
+│   │                                # DestinationViewModel (sidebar rows, detail, Add
 │   │                                # Destination, Preferences; v0.8.0)
 │   ├── DesignTokenTests.swift       # v0.3.0: every color set's light/dark values, Geist
 │   │                                # registration and fallback, OFL credits, AppIcon set

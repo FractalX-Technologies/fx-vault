@@ -6,7 +6,8 @@ EnvTools, SharingKit, **SyncEngine** (pure change model plus execution), **Desti
 (v0.8.0, runtime destinations over HTTPS) and **VaultData** (vault core plus the accounts,
 catalog, config, `.env`, sync, creation, drift, sharing and destination repositories).
 The app builds every repository in `AppContainer`, detects gh, shows `GHSetupScreen`, and runs the
-three-column main window on live data (sidebar, scopes, detail table, toolbar and menu commands,
+two-column main window on live data (the sidebar tree with each repository's environments nested
+under it since 1.0, the detail table, toolbar and menu commands,
 Preferences › Accounts, `.fxvault` open handling), and every feature sheet (item editor,
 environments, sync, drift review, create repository, `.env` import/export, file sharing) plugs
 in through one contract ("UI feature contract" below). Everything is verified by
@@ -875,7 +876,7 @@ tasks/todo.md), dragging rows onto a folder or repository in the sidebar, and re
 by drag (the order is stored and `reorderFolders` exists).
 
 App side (v0.7.0): `Screens/Main/Folder/` (`FolderDetailViewModel`, `FolderDetailScreen`),
-`Screens/Folders/` (`FolderOverviewView` for column 2, `FolderContextMenu`, `FolderNameScreen`,
+`Screens/Folders/` (`FolderContextMenu`, `FolderNameScreen`,
 `FolderDestinationModel`/`View` for received copies, `FolderCopy`),
 `Screens/Main/Sidebar/SidebarFoldersSection`; `MainViewModel`
 builds a `FolderDetailViewModel` for `SidebarViewModel.selectedFolderID` (a repository and a
@@ -976,6 +977,12 @@ D1–D5). This slice removed every peer-to-peer feature:
   › Accounts shows them; FX Vault never runs `gh auth refresh` itself (it needs a browser and the
   active account, §2). `GHError.stopsAccountReads` is the one rule for errors that end an
   account's reads (the catalog uses it too).
+- Slice B11b makes the main window two columns. `ScopeListView` is the selected repository's
+  branch of the sidebar tree (environments, New Environment, destinations); the repository row
+  stands for the repository scope (`MainViewModel.select(repository:)` goes back to it,
+  `isRowSelected(_:)` highlights it only then), and `MainViewModel.breadcrumb` is the toolbar's
+  path. `ScopeColumnView` and `FolderOverviewView` are gone; decision 112's BUILD · GITHUB ACTIONS
+  label went with the column.
 
 ## App shell
 
@@ -1103,15 +1110,15 @@ AppTests).
     and scope rows itself (`.fxRowBackground`, docs/DESIGN.md) instead of a native `List`
     selection; `MainColumnSelection` (pure) keeps Up/Down keyboard selection and owner groups
     collapse from their mono label.
-  - `ScopeListViewModel` (`Main/ScopeList`): "Repository" plus environments
-    (`observeScopes`), pending dot, value-missing count, context menu Settings / Rename /
-    Duplicate / Export .env / Share / Revert / Delete (confirmed), "+ New Environment" (admin).
-    v0.8.0 (R7): the GitHub scopes under BUILD · GITHUB ACTIONS, then RUNTIME
+  - `ScopeListViewModel` (`Main/ScopeList`): the repository scope (its sidebar row since 1.0)
+    plus environments nested under it (`observeScopes`, `environmentScopes`), pending dot,
+    value-missing count, context menu Settings / Rename / Duplicate / Export .env / Share /
+    Revert / Delete (confirmed), "+ New Environment" (admin). v0.8.0 (R7): then RUNTIME
     with the Experimental tag: one row per destination (`observeDestinations`; provider symbol,
     name, provider · stage, value-missing warning, pending dot, count) with the
     `DestinationContextMenu` (Settings…, Export .env…, Remove from FX Vault…, confirmed) and
     "+ Add Destination" (`.addDestination`). A selection is a scope or a destination
-    (`selectedDestination`); Up and Down walk both (`rowIDs`). `MainViewModel.followScopeSelection` puts the matching view model in column 3:
+    (`selectedDestination`); Up and Down walk both (`rowIDs`). `MainViewModel.followScopeSelection` puts the matching view model in the detail column:
   - `DestinationDetailViewModel` (`Main/Destination`, v0.8.0): the header (DESTINATION · RUNTIME,
     title, provider / stage / Experimental tags, how it is reached, Refresh, the actions menu),
     the STAGE / TARGET / NAMES AND VALUES card, the Refresh banner (changes → `.destinationDrift`,

@@ -3,7 +3,8 @@ import Observation
 import VaultCore
 import VaultData
 
-/// Column 2 (§10): "Repository" then one row per environment, with the pending dot and the
+/// The scopes of one repository (§10): the repository scope, which its sidebar row stands for,
+/// then one row per environment nested under it (1.0), with the pending dot and the
 /// value-missing count, "+ New Environment" and the environment context menu. Since v0.8.0
 /// (tasks/todo.md R7) also the RUNTIME destinations with "+ Add Destination"; a selection is a
 /// scope or a destination.
@@ -152,6 +153,13 @@ final class ScopeListViewModel {
     }
 
     /// Every row id in column order, for Up and Down.
+    /// The environments, in order: the rows nested under the repository's sidebar row.
+    var environmentScopes: [ConfigScopeSummaryModel] {
+        scopes.filter { $0.environment != nil }
+    }
+
+    /// Up and Down walk the repository scope (its sidebar row), the environments, then the
+    /// destinations.
     var rowIDs: [String] {
         scopes.map(\.id) + destinations.map { Self.selectionID(of: $0.id) }
     }

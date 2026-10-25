@@ -96,6 +96,35 @@ struct MainViewModelTests {
         #expect(main.activeSheet == nil)
     }
 
+    /// The sidebar tree (B11b): the repository row stands for the repository scope, its
+    /// environments nest under it, and the toolbar path follows the selection.
+    @Test func theRepositoryRowIsItsRepositoryScopeAndThePathFollowsTheSelection() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
+        let main = harness.app.makeMainViewModel()
+        #expect(main.breadcrumb.isEmpty)
+        let id = try await harness.stageRepository(items: [])
+        try harness.data.config.createEnvironment(in: id, name: "staging")
+        #expect(await TestFixtures.eventually { !main.sidebar.sections.isEmpty })
+        let row = try #require(main.sidebar.sections.first?.owners.flatMap(\.repos).first)
+
+        main.select(repository: row)
+        let scopes = try #require(main.scopeList)
+        #expect(await TestFixtures.eventually { scopes.environmentScopes.map(\.title) == ["staging"] })
+        #expect(main.isRowSelected(row))
+        #expect(main.breadcrumb == [MainCopy.gitHubSection, row.ownerLogin, row.name])
+
+        let staging = try #require(scopes.environmentScopes.first)
+        scopes.selectedScopeID = staging.id
+        #expect(!main.isRowSelected(row), "the environment row is the selected one")
+        #expect(main.breadcrumb == [MainCopy.gitHubSection, row.ownerLogin, row.name, "staging"])
+
+        main.select(repository: row)
+        #expect(scopes.selectedScopeID == ScopeListViewModel.repositoryScopeID)
+        #expect(main.scopeList === scopes, "clicking the selected row keeps its tree")
+        #expect(main.isRowSelected(row))
+        #expect(main.breadcrumb.last == row.name)
+    }
+
     /// A repository just imported from a project file is not in the sidebar yet: the scope asked
     /// for is selected once the sidebar row and the scope column exist.
     @Test func openingAScopeBeforeItsSidebarRowExistsSelectsItWhenTheRowAppears() async throws {

@@ -9,7 +9,8 @@ the secrets your code reads at runtime in Azure Key Vault.
 ## Features
 
 - **One vault for every account.** Every `gh` account you are logged in to, its organizations
-  and their repositories in one sidebar, with search, badges and scope warnings. Settings ›
+  and their repositories in one sidebar tree, with each repository's environments under it,
+  search, badges and scope warnings; the toolbar shows where you are. Settings ›
   Accounts shows, per organization, whether you can manage its secrets: **Ready**, **Needs
   admin:org** (with the `gh auth refresh -s admin:org` commands to copy, then Re-check), **Org
   secrets need an org admin**, or **Needs SSO authorization** (with GitHub's SSO page).
@@ -39,7 +40,7 @@ the secrets your code reads at runtime in Azure Key Vault.
   overwritten: Refresh lists them first. 1.0 removed the Supabase and Vercel destinations: the
   first unlock lists the ones it deleted from your vault (nothing is deleted remotely).
 - **Folders.** Keep the secrets and variables you use in several repositories in folders of your
-  own ("Mobile App", "Stripe test") at the top of the sidebar (New Folder…, ⇧⌘N). A folder never
+  own ("Mobile App", "Stripe test") under GitHub in the sidebar (New Folder…, ⇧⌘N). A folder never
   goes to GitHub by itself: copy its items into any repository with ⌘C / ⌘V or Copy To, and every
   copy stays linked, so changing a value in the folder offers to update the repositories that
   use it. Folders take Paste Multiple…, `.env` import and export too.
