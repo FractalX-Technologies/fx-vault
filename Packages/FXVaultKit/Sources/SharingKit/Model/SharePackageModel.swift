@@ -2,7 +2,7 @@ import Foundation
 import VaultCore
 
 /// Tag for ids of entries inside a share package: config items and environments share one id
-/// space so the nearby DECISION can list both (§9.4 step 8).
+/// space.
 public enum ShareEntryTag {}
 
 /// Id of a config item or environment inside a share package (not a vault row id).
@@ -32,7 +32,7 @@ public enum ShareSyncState: String, Sendable, Hashable, Codable, CaseIterable {
     case pending
 }
 
-/// A `.fxvault` / nearby share document, schema `io.fractalx.fxvault.share` v1 or v2 (§9.3).
+/// A `.fxvault` share document, schema `io.fractalx.fxvault.share` v1 or v2 (§9.3).
 ///
 /// Values are ``SecretBytes`` and are only present in a full package; the manifest
 /// (``manifest()``) carries the same document with every value set to null. Value hashes are
@@ -167,7 +167,7 @@ public struct SharePackageModel: Sendable, Equatable {
     // MARK: - Manifest and filtering
 
     /// The same document with every value set to null (`valueState` is kept), used for the
-    /// nearby MANIFEST and the preview. The returned package shares no value buffers.
+    /// preview. The returned package shares no value buffers.
     public func manifest() -> SharePackageModel {
         var copy = self
         copy.repository = repository.mapItems { item in
@@ -186,25 +186,6 @@ public struct SharePackageModel: Sendable, Equatable {
             ids.formUnion(environment.secrets.map(\.id) + environment.variables.map(\.id))
         }
         return ids
-    }
-
-    /// The package restricted to `ids` (nearby step 9: manifest ∩ itemIds). An environment is
-    /// kept when any of its items is selected, or when its own id is and it carries a branch
-    /// policy (a partial environment without items would say nothing); only selected items are
-    /// kept. The branch policy and `schemaVersion` stay as they are: the receiver's choice never
-    /// adds or removes a policy.
-    public func filtered(to ids: Set<ShareEntryID>) -> SharePackageModel {
-        var copy = self
-        copy.repository.secrets = repository.secrets.filter { ids.contains($0.id) }
-        copy.repository.variables = repository.variables.filter { ids.contains($0.id) }
-        copy.repository.environments = repository.environments.compactMap { environment in
-            var kept = environment
-            kept.secrets = environment.secrets.filter { ids.contains($0.id) }
-            kept.variables = environment.variables.filter { ids.contains($0.id) }
-            let keepsPolicy = ids.contains(environment.id) && environment.includesBranchPolicy
-            return keepsPolicy || kept.itemCount > 0 ? kept : nil
-        }
-        return copy
     }
 
     /// Every config item with its location, repository level first, in document order.
@@ -323,40 +304,6 @@ public struct ShareRepositoryModel: Sendable, Equatable {
     /// `owner/name`.
     public var fullName: String {
         "\(owner)/\(name)"
-    }
-
-    /// This repository with the entry ids of `other` (v0.4.0 chat configurations): entry ids are
-    /// random per package, so a package rebuilt from the vault for an offer's payload takes the
-    /// offer's ids before both are compared. Nil when the two differ in shape (environments or
-    /// items added, removed or reordered); names, states, policies and values are not compared.
-    public func withEntryIDs(of other: ShareRepositoryModel) -> ShareRepositoryModel? {
-        func items(_ items: [ShareItemModel], _ others: [ShareItemModel]) -> [ShareItemModel]? {
-            guard items.count == others.count else { return nil }
-            return zip(items, others).map { item, other in
-                var copy = item
-                copy.id = other.id
-                return copy
-            }
-        }
-        guard environments.count == other.environments.count,
-              let secrets = items(secrets, other.secrets),
-              let variables = items(variables, other.variables)
-        else { return nil }
-        var copy = self
-        copy.secrets = secrets
-        copy.variables = variables
-        copy.environments = []
-        for (environment, otherEnvironment) in zip(environments, other.environments) {
-            guard let secrets = items(environment.secrets, otherEnvironment.secrets),
-                  let variables = items(environment.variables, otherEnvironment.variables)
-            else { return nil }
-            var renumbered = environment
-            renumbered.id = otherEnvironment.id
-            renumbered.secrets = secrets
-            renumbered.variables = variables
-            copy.environments.append(renumbered)
-        }
-        return copy
     }
 
     /// Every config item with its location, repository level first, in document order.

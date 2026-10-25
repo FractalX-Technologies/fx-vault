@@ -28,8 +28,6 @@ final class ScopeListViewModel {
     }
     /// The environment waiting for the "Delete environment?" confirmation.
     var pendingDeletion: ConfigScopeSummaryModel?
-    /// The shared spaces of this repository (v0.6.0), by scope.
-    private(set) var spaces: [ConfigScope: SpaceSummaryModel] = [:]
     var alert: ErrorPresentationModel?
 
     /// Called when the selected scope changes (the detail column follows it).
@@ -59,7 +57,6 @@ final class ScopeListViewModel {
         self.dependencies = dependencies
         self.repository = repository
         observe()
-        observeSpaces()
         observeDestinations()
     }
 
@@ -102,23 +99,6 @@ final class ScopeListViewModel {
 
     func selectOverview() {
         selectedScopeID = Self.overviewID
-    }
-
-    private func observeSpaces() {
-        let stream = dependencies.spaces.observeSpaces()
-        let repositoryID = repositoryID
-        tasks.set("spaces", Task { [weak self] in
-            do {
-                for try await all in stream {
-                    self?.spaces = Dictionary(
-                        all.filter { $0.repositoryID == repositoryID }.map { ($0.scope, $0) },
-                        uniquingKeysWith: { first, _ in first }
-                    )
-                }
-            } catch {
-                AppLog.ui.error("Space observation ended")
-            }
-        })
     }
 
     private func observe() {
@@ -285,29 +265,6 @@ final class ScopeListViewModel {
         } catch {
             alert = error.presentation
         }
-    }
-
-    // MARK: - Shared spaces (v0.6.0)
-
-    func space(of scope: ConfigScopeSummaryModel) -> SpaceSummaryModel? {
-        spaces[scope.scope]
-    }
-
-    /// Share with Teammates… needs the scope on GitHub (a synced environment of a repository
-    /// that exists there).
-    func canShareWithTeammates(_ scope: ConfigScopeSummaryModel) -> Bool {
-        guard repository()?.existsOnGitHub == true, !scope.isDeleted, space(of: scope) == nil else { return false }
-        return scope.environment.map { $0.syncedName != nil } ?? true
-    }
-
-    func shareWithTeammates(_ scope: ConfigScopeSummaryModel) {
-        guard canShareWithTeammates(scope) else { return }
-        dependencies.actions.present(.shareSpace(ShareSpaceContext(repositoryID: repositoryID, scope: scope.scope)))
-    }
-
-    func showSpace(_ scope: ConfigScopeSummaryModel) {
-        guard let space = space(of: scope) else { return }
-        dependencies.actions.present(.space(SpaceContext(spaceID: space.id)))
     }
 
     func requestDeletion(_ scope: ConfigScopeSummaryModel) {

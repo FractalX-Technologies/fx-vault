@@ -245,8 +245,7 @@ public struct FolderRepository: Sendable {
 
     // MARK: - Received copies (F7)
 
-    /// "Save as Folder" for a folder package received in Nearby Chat or opened from a `.fxvault`
-    /// file: a new folder, or merged into an existing one where a name it already has for that
+    /// "Save as Folder" for a folder package opened from a `.fxvault` file: a new folder, or merged into an existing one where a name it already has for that
     /// kind is replaced or kept. Values are normalized (D32); received items are not linked to
     /// anything. The package id is recorded, as an import's is. One transaction; nothing is
     /// written when one item fails. Does not wipe `package`.

@@ -15,9 +15,6 @@ struct DEKRotationReportModel: Sendable, Hashable {
     /// `synced_fp` values that could not be recomputed (no plaintext available) and were cleared,
     /// so the item shows as modified and is pushed again on the next sync.
     var syncedFingerprintsCleared = 0
-    /// Secret fields re-encrypted: this device's teammate keys and teammates' announce keys
-    /// (v0.5.0), and shared space keys (v0.6.0).
-    var secretFields = 0
     /// Folder item values re-encrypted (and their fingerprints recomputed), v0.7.0.
     var folderValues = 0
     /// Destination item values re-encrypted (and their fingerprints recomputed), v0.8.0.
@@ -42,25 +39,20 @@ struct DEKRotationReportModel: Sendable, Hashable {
 /// - a `synced_fp` without `synced_value_ct` is recomputed from the current value when the two
 ///   matched under the old key, otherwise cleared (see ``DEKRotationReportModel``).
 ///
-/// Then `device_identity.secret_ct`, every non-null `teammates.announce_ct` (v0.5.0), every
-/// `space_keys.key_ct` (v0.6.0) and every `folder_items.value_ct` (v0.7.0, with `value_fp`
-/// recomputed) are opened under the old keys and sealed under the new ones.
+/// Then every `folder_items.value_ct` (v0.7.0, with `value_fp` recomputed) is opened under the
+/// old keys and sealed under the new ones.
 ///
 /// Any decryption failure aborts the whole transaction: a rotation never leaves rows under two
 /// different DEKs.
 struct DEKRotator {
     let repoStore: RepoStore
     let configStore: ConfigStore
-    let teamStore: TeamStore
-    let spaceStore: SpaceStore
     let folderStore: FolderStore
     let destinationStore: DestinationStore
 
     init(database: VaultDatabase) {
         repoStore = RepoStore(database: database)
         configStore = ConfigStore(database: database)
-        teamStore = TeamStore(database: database)
-        spaceStore = SpaceStore(database: database)
         folderStore = FolderStore(database: database)
         destinationStore = DestinationStore(database: database)
     }
@@ -76,27 +68,6 @@ struct DEKRotator {
                 try reencrypt(&record, from: oldKeys, to: newKeys, report: &report)
                 try configStore.updateItem(record, in: tx)
             }
-        }
-        if var identity = try teamStore.fetchIdentity(in: tx), let deviceID = TeamDeviceID(hex: identity.deviceID) {
-            let aad = TeamRepository.identityAAD(deviceID: deviceID)
-            identity.secretCiphertext = try reseal(identity.secretCiphertext, for: aad, from: oldKeys, to: newKeys)
-            try teamStore.saveIdentity(identity, in: tx)
-            report.secretFields += 1
-        }
-        for var teammate in try teamStore.fetchTeammates(in: tx) {
-            // A teammate paired remotely may not have sent its announce key yet (v0.9.0).
-            guard let ciphertext = teammate.announceCiphertext else { continue }
-            guard let deviceID = TeamDeviceID(hex: teammate.deviceID) else { throw VaultError.corrupted(.invalidStoredValue) }
-            let aad = TeamRepository.announceAAD(deviceID: deviceID)
-            teammate.announceCiphertext = try reseal(ciphertext, for: aad, from: oldKeys, to: newKeys)
-            try teamStore.saveTeammate(teammate, in: tx)
-            report.secretFields += 1
-        }
-        for var key in try spaceStore.fetchAllKeys(in: tx) {
-            let aad = SpaceRepository.keyAAD(spaceID: key.spaceID, epoch: key.epoch)
-            key.keyCiphertext = try reseal(key.keyCiphertext, for: aad, from: oldKeys, to: newKeys)
-            try spaceStore.saveKey(key, in: tx)
-            report.secretFields += 1
         }
         for folder in try folderStore.fetchFolderRecords(in: tx) {
             for var item in try folderStore.fetchItemRecords(folderID: folder.id, in: tx) {

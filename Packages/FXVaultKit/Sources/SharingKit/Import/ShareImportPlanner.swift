@@ -16,8 +16,8 @@ import VaultCore
 /// | Existing environment, different policy | Keep mine; widening needs a second confirmation | Only if accepted |
 /// | Existing environment, partial (no policy) | Items only; the local policy is never touched | No |
 ///
-/// Run it on the manifest for the nearby preview (Same/Differs unknown, chip
-/// `existsLocally`) and again on the payload before applying.
+/// Run it on the manifest for a preview (Same/Differs unknown, chip `existsLocally`) and again
+/// on the payload before applying.
 public enum ShareImportPlanner {
     /// Glob characters GitHub honours in deployment branch patterns.
     static let wildcardCharacters: Set<Character> = ["*", "?", "["]

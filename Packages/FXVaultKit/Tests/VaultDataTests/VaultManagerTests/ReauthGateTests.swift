@@ -14,7 +14,7 @@ struct ReauthGateTests {
     }
 
     @Test(arguments: ReauthPurpose.allCases)
-    func touchIDAuthorizesExportShareAndNearby(purpose: ReauthPurpose) async throws {
+    func touchIDAuthorizesExportAndShare(purpose: ReauthPurpose) async throws {
         let (harness, recoveryKey) = try await Self.enabledHarness()
         defer { recoveryKey.wipe() }
         try await harness.manager.reauthGate.authorize(purpose, with: .biometrics(VaultFixture.prompt))
@@ -23,7 +23,7 @@ struct ReauthGateTests {
     }
 
     @Test(arguments: ReauthPurpose.allCases)
-    func passwordAuthorizesExportShareAndNearby(purpose: ReauthPurpose) async throws {
+    func passwordAuthorizesExportAndShare(purpose: ReauthPurpose) async throws {
         let (harness, recoveryKey) = try await Self.enabledHarness()
         defer { recoveryKey.wipe() }
         try await harness.manager.reauthGate.authorize(purpose, with: .password(VaultFixture.password))
@@ -98,7 +98,7 @@ struct ReauthGateTests {
         defer { recoveryKey.wipe() }
         try harness.biometrics.replaceItem(account: harness.account, with: Data(repeating: 0x42, count: Limits.dekBytes))
         let error = await vaultError {
-            try await harness.manager.reauthGate.authorize(.nearbySend, with: .biometrics(VaultFixture.prompt))
+            try await harness.manager.reauthGate.authorize(.share, with: .biometrics(VaultFixture.prompt))
         }
         #expect(error == .corrupted(.keyCheckMismatch))
         #expect(harness.manager.state == .unlocked)

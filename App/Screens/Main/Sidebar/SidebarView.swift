@@ -44,9 +44,6 @@ struct SidebarView: View {
                 selection: $sidebar.selectedRowID,
                 isFocused: $isListFocused
             )
-            HairlineDivider()
-                .padding(.horizontal, Theme.Spacing.medium)
-            SidebarTeammatesSection(main: main)
             SidebarFooter(sidebar: sidebar, autoLockMinutes: main.app.container.preferences.autoLockMinutes)
         }
         .background(Theme.Colors.surface)

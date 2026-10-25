@@ -25,12 +25,6 @@ public enum SyncBlockReason: Sendable, Hashable {
     case protectionRulesPresent
     /// Depends on a change blocked by preflight.
     case dependsOn(changeID: String)
-    /// The scope is shared with teammates and its gate does not allow a push (v0.6.0, S5): a
-    /// member published versions this Mac does not have, is publishing now, or the marker is
-    /// forked or invalid.
-    case space(SyncSpaceBlockModel)
-    /// A rename or deletion of an environment shared with teammates (not supported in v0.6).
-    case sharedEnvironment
 
     /// True for the reason "Review drift" resolves (§7.4).
     public var isRemoteChanged: Bool {
@@ -162,12 +156,6 @@ public enum SyncWarningModel: Sendable, Hashable {
     case repositoryNotConfirmed(repositoryID: RepoID, name: String)
     /// A repository created with "clone after" (§8 D3); the app clones it with `GitService`.
     case cloneRequested(repositoryID: RepoID)
-    /// The shared space's version was recorded but its `published` marker was not confirmed on
-    /// GitHub (or the version could not be recorded); the next Sync or launch finishes it.
-    case spaceNotPublished(spaceID: SpaceID)
-    /// Right after this Mac published, GitHub's marker named another member's version: two
-    /// members published at once (S5 residual risk). The scope shows Forked.
-    case spaceForked(spaceID: SpaceID)
 }
 
 /// The result of one repository.

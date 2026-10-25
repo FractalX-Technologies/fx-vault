@@ -18,7 +18,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// shows the share import sheet. Also runs at launch, before any window exists.
     func application(_ application: NSApplication, open urls: [URL]) {
         bootstrap.viewModel?.openShareFiles(urls)
-        bootstrap.viewModel?.openPairingCards(urls)
     }
 
     /// Clears FX Vault's clipboard contents, drops the keys and checkpoints the database (§5.9).

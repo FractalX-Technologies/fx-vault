@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Places its subviews left to right and wraps them onto new lines when the width runs out
-/// (chips of item names in a shared scope's history).
+/// (repository chips and stage checkboxes in Share Project).
 struct FlowLayout: Layout {
     var spacing: CGFloat
 

@@ -137,7 +137,7 @@ struct ConnectivityMonitorTests {
         let pending = monitor.settleTask
         clock.advance(by: Self.debounce - Self.tick)
         // Interfaces going away one by one report several offline paths.
-        source.send(NetworkPathModel(status: .unsatisfied, hasInterface: true))
+        source.send(NetworkPathModel(status: .requiresConnection))
         source.send(.offline)
         #expect(monitor.settleTask == pending)
         #expect(clock.sleeperCount == 1)
@@ -426,13 +426,12 @@ struct MainConnectivityTests {
         await main.retryGitHub()
         #expect(harness.runner.invocations.count == callsBefore, "No gh call runs while offline")
 
-        // Local work and nearby sharing (peer-to-peer, no internet needed) stay available.
+        // Local work and sharing a file (no internet needed) stay available.
         #expect(main.canImportEnv)
         #expect(detail.canEdit)
-        main.shareNearby()
-        #expect({ if case .nearbySend = main.activeSheet { true } else { false } }())
-        main.receiveNearby()
-        #expect(main.activeSheet == .nearbyReceive(NearbyReceiveContext()))
+        #expect(main.canShareProject)
+        main.shareProject()
+        #expect({ if case .shareExport = main.activeSheet { true } else { false } }())
         main.activeSheet = nil
 
         // Back online: everything returns.
@@ -560,8 +559,7 @@ struct MainConnectivityTests {
         #expect(MainSheet.sync(SyncContext(repositoryIDs: nil)).needsInternet)
         #expect(MainSheet.createRepository(CreateRepoContext(accountLogin: nil, ownerLogin: nil)).needsInternet)
         #expect(MainSheet.addRepositoryByName(AddRepositoryContext(accountLogin: TestFixtures.account)).needsInternet)
-        #expect(!MainSheet.nearbySend(NearbySendContext(selection: nil)).needsInternet)
-        #expect(!MainSheet.nearbyReceive(NearbyReceiveContext()).needsInternet)
+        #expect(!MainSheet.shareExport(ShareExportContext(selection: .repository(id))).needsInternet)
         #expect(!MainSheet.envExport(EnvExportContext(repositoryID: id, scope: .repository)).needsInternet)
         #expect(!MainSheet.driftReview(DriftReviewContext(repositoryID: id)).needsInternet)
     }

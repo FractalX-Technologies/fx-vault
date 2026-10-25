@@ -11,11 +11,7 @@ useDefault = true
 description = "Synthetic cryptographic test vectors and a sample .env with placeholder values"
 paths = [
   '''^Packages/FXVaultKit/Tests/VaultCryptoTests/Fixtures/kat/kat_vectors\.json$''',
-  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/nearby_kat\.json$''',
-  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/chat_kat\.json$''',
-  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/team_kat\.json$''',
-  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/space_kat\.json$''',
+  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/file_v1_kat\.json$''',
   '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/file_v2_kat\.json$''',
-  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/pairing_kat\.json$''',
   '''^Packages/FXVaultKit/Tests/EnvToolsTests/Fixtures/sample\.env$''',
 ]

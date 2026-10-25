@@ -1971,4 +1971,23 @@ Review B0 — XCUITest target and throwaway vault (2026-10-25, automatic):
 - e2e: `OnboardingSmokeTests` (create vault → recovery key → confirm 2 groups → open → sidebar shows owner-a, example-org, api-service, no "Could not be listed"); seen failing with the org's repo stub removed; green twice in `scripts/ci-local.sh`.
 - Gates: `scripts/ci-local.sh` green (package tests, 661 app tests, Release build, no `fxvault-uitests` string in Debug or Release binaries, UI tests ×2, lint, check-secrets). Not in GitHub CI: hosted runners may refuse UI automation.
 - Review: anton — 3 blockers (Release check never ran, plan edits mixed in, test stopped at the account row) and 6 changes (activate like live, duplicated container code, swallowed missing group, positional fields, deleting a running suite's folder, fake PATH to Homebrew, README tip disabling a macOS protection); all applied. Plan edits committed apart (`0ab5f7b`, quoting Bryan).
-- Commit: (pending).
+- Commit: `2a98f50` `test(ui): add XCUITest suite on a throwaway vault`.
+
+Review B1–B3a — remove teammates, nearby, chat and spaces (2026-10-25, automatic):
+- Built: B1, B2 and the sharing half of B3 as one change (they don't build apart). Removed teammates, pairing, presence, nearby (Bonjour, Local Network), chat and spaces from the app, SharingKit, VaultData and SyncEngine. Kept: passphrase `.fxvault` files (format 2 passphrase mode; v1 still opens), open/preview/held import, Share Project with the system share.
+- `PassphraseGenerator` stays in SharingKit: the module is kept, so the B1 move is not needed.
+- Migration `v15_drop_teammates` drops the removed tables, then a WAL checkpoint. Old settings (nearby display name and visibility, mute pings, remote space port) are deleted at launch.
+- 0.9 compatibility: a teammates file is refused as `invalidFile`; `FXVAULT_SPACE` stays reserved and is hidden from listings; sent-share rows to teammates read "Removed teammate"; held rows still show Verified.
+- Interim rule: production values are refused when sharing (`productionNotShared`). B3b brings in the brief's rule: production behind Touch ID, unticked by default.
+- Tests: `HeldShareSnapshotTests` (held renders moved out of a deleted suite); 7 tests ported from `SharingExportViewModelTests` to `ProjectShareExportViewModelTests`; `settingsOfTheRemovedFeaturesAreDeleted`; `droppingTheTeammateTablesLeavesNoKeyBytesInTheWAL` (seen failing before the checkpoint); v14→v15 seed checks `sender_device_id`. Ported checks seen failing under mutations (no passphrase wipe, no saved gate, no settings cleanup).
+- Test files removed: 43, all for removed features; Bryan approved and ran the deletion (2026-10-25).
+- Gates: XcodeGen drift OK; `swift test` all suites green; `xcodebuild test` 561 app tests green; Release build OK; no UI-testing code in the binaries; UI tests ×2 green (`OnboardingSmokeTests`); lint OK; check-secrets OK (1,002 files). The first overnight run stopped at the UI tests because the screen was locked (automation mode needs an unlocked session); re-run after Bryan unlocked it and approved the deletion.
+- Review: anton found 1 blocker (a test file on the deletion list still covered kept behaviour → 7 tests ported) and 6 changes:
+  - WAL copies of dropped keys → checkpoint plus test.
+  - v14→v15 test too thin → extended.
+  - Orphan settings left on disk → deleted, with a test.
+  - Production allowed in folders' copies → documented as a residual risk (SECURITY-MODEL).
+  - Comment nits → fixed.
+  - Cross-purpose authorization → no change; the types keep the purposes apart (`EnvExportAuthorizationModel` vs `ShareAuthorizationModel`, `.fileExport` only).
+- Left in B3: remove Supabase, Vercel, Overview and `fxvault.yml` (Azure Key Vault stays).
+- Commit: (pending: Bryan approves the test deletions).

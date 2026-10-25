@@ -14,7 +14,7 @@ final class SharingSettingsViewModel: LockObserving {
         let createdAt: Date
         let expiresAt: Date
         let isExpired: Bool
-        /// "Passphrase" or "Teammates: Ana, Ben".
+        /// "Passphrase", or for a 0.9 row "Teammates: Removed teammate 0123…".
         let recipients: String
         /// `owner/name` of each repository, in file order.
         let repositories: [String]
@@ -37,7 +37,6 @@ final class SharingSettingsViewModel: LockObserving {
     var alert: ErrorPresentationModel?
 
     @ObservationIgnored private let sharing: SharingRepository
-    @ObservationIgnored private let team: TeamRepository
     @ObservationIgnored private let clock: any VaultClock
     @ObservationIgnored private let isUnlockedCheck: () -> Bool
     @ObservationIgnored private let tasks = TaskBag()
@@ -45,16 +44,14 @@ final class SharingSettingsViewModel: LockObserving {
     convenience init(app: AppViewModel) {
         self.init(
             sharing: app.container.data.sharing,
-            team: app.container.data.team,
             clock: app.container.clock,
             isUnlocked: { [weak app] in app?.phase == .unlocked }
         )
         app.addLockObserver(self)
     }
 
-    init(sharing: SharingRepository, team: TeamRepository, clock: any VaultClock, isUnlocked: @escaping () -> Bool) {
+    init(sharing: SharingRepository, clock: any VaultClock, isUnlocked: @escaping () -> Bool) {
         self.sharing = sharing
-        self.team = team
         self.clock = clock
         isUnlockedCheck = isUnlocked
         observe()
@@ -77,22 +74,19 @@ final class SharingSettingsViewModel: LockObserving {
         })
     }
 
-    /// Builds the rows; teammates are named as this vault stores them now.
+    /// Builds the rows.
     func show(_ sent: [SentShareModel]) {
-        let names = Dictionary(
-            ((try? team.teammates()) ?? []).map { ($0.id, $0.name) },
-            uniquingKeysWith: { first, _ in first }
-        )
         let now = clock.now
         entries = sent.map { share in
-            Self.entry(share, names: names, now: now)
+            Self.entry(share, now: now)
         }
     }
 
-    static func entry(_ share: SentShareModel, names: [String: String], now: Date) -> EntryModel {
+    static func entry(_ share: SentShareModel, now: Date) -> EntryModel {
+        // 0.9 rows sealed for teammates outlive the teammates table (dropped in v15): ids only.
         let recipients: String = switch share.mode {
         case .passphrase: ProjectShareCopy.passphraseMode
-        case .teammates: ProjectShareCopy.teammatesMode(share.recipientIDs.map { names[$0] ?? ProjectShareCopy.unknownTeammate($0) })
+        case .teammates: ProjectShareCopy.teammatesMode(share.recipientIDs.map(ProjectShareCopy.unknownTeammate))
         }
         var repositories: [String] = []
         for place in share.summary.places {

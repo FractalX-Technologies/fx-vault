@@ -273,92 +273,8 @@ nonisolated enum SyncCopy {
                 localized: "sync.blocked.protectionRules",
                 defaultValue: "This environment has other protection rules on GitHub (reviewers, wait timers or app rules). Change its branch policy on GitHub so they are kept."
             )
-        case .space(let block):
-            spaceBlock(block.decision)
-        case .sharedEnvironment:
-            String(
-                localized: "sync.blocked.sharedEnvironment",
-                defaultValue: "This environment is shared with teammates. Renaming or deleting a shared environment is not supported yet."
-            )
         }
     }
-
-    // MARK: - Shared spaces (v0.6.0)
-
-    /// Why a shared scope cannot be pushed now (S5).
-    static func spaceBlock(_ decision: SpaceGateDecision) -> String {
-        switch decision {
-        case .behind(let version, let login):
-            String(
-                localized: "sync.space.behind",
-                defaultValue: "\(login) published v\(version), which this Mac does not have yet. Get it from your teammates first, so nothing they changed is overwritten."
-            )
-        case .publishing(let login, let since, false):
-            String(
-                localized: "sync.space.publishing",
-                defaultValue: "\(login) has been pushing to this scope since \(since.formatted(date: .omitted, time: .shortened)). Sync again when they are done."
-            )
-        case .publishing(let login, let since, true):
-            String(
-                localized: "sync.space.publishingStale",
-                defaultValue: "\(login) started pushing to this scope at \(since.formatted(date: .abbreviated, time: .shortened)) and never finished. You can take over."
-            )
-        case .forked:
-            String(
-                localized: "sync.space.forked",
-                defaultValue: "Two teammates pushed to this scope at the same time. Get updates from your teammates and check its history before pushing."
-            )
-        case .invalidMarker:
-            String(
-                localized: "sync.space.invalidMarker",
-                defaultValue: "The version marker on GitHub was not written by a member of this shared scope. Check its history before pushing."
-            )
-        case .notAMember:
-            String(
-                localized: "sync.space.notAMember",
-                defaultValue: "This Mac was removed from the shared scope. Ask a member to add you again."
-            )
-        case .clear, .ahead:
-            String(localized: "sync.space.clear", defaultValue: "Shared with teammates.")
-        }
-    }
-
-    /// The title of a shared scope's issue: "Shared with teammates · production".
-    static func spaceTitle(scope: String) -> String {
-        String(localized: "sync.space.title", defaultValue: "Shared with teammates · \(scope)")
-    }
-
-    static func spaceBlockedCount(_ count: Int) -> String {
-        String(localized: "sync.space.blockedCount", defaultValue: "\(count) changes wait for it.")
-    }
-
-    /// The note of a repository whose push publishes shared versions.
-    static let spacePublishNote = String(
-        localized: "sync.space.publishNote",
-        defaultValue: "Some scopes are shared with teammates: this push becomes a new version they get automatically."
-    )
-
-    static let spaceReasonTitle = String(localized: "sync.space.reason.title", defaultValue: "What changed?")
-    static let spaceReasonPlaceholder = String(
-        localized: "sync.space.reason.placeholder",
-        defaultValue: "Optional. Your teammates see it in the history."
-    )
-
-    static func takeOverTitle(_ login: String) -> String {
-        String(localized: "sync.space.takeOver.title", defaultValue: "Take over \(login)'s unfinished push?")
-    }
-
-    static let takeOverMessage = String(
-        localized: "sync.space.takeOver.message",
-        defaultValue: "Do this only if they are not pushing anymore. Your push becomes the next version, and the takeover is recorded in its history."
-    )
-
-    static let takeOverConfirm = String(localized: "sync.space.takeOver.confirm", defaultValue: "Take Over")
-
-    static let gettingUpdates = String(
-        localized: "sync.space.gettingUpdates",
-        defaultValue: "Getting updates from your teammates…"
-    )
 
     static func failureReason(_ reason: SyncFailureReason) -> String {
         switch reason {
@@ -476,16 +392,6 @@ nonisolated enum SyncCopy {
             )
         case .cloneRequested:
             nil
-        case .spaceNotPublished:
-            String(
-                localized: "sync.warning.spaceNotPublished",
-                defaultValue: "GitHub did not confirm the shared version marker. FX Vault finishes it at the next Sync or unlock; until then teammates may see the scope as being pushed."
-            )
-        case .spaceForked:
-            String(
-                localized: "sync.warning.spaceForked",
-                defaultValue: "A teammate pushed to a shared scope at the same moment. Get updates from your teammates and check its history."
-            )
         }
     }
 
@@ -528,10 +434,6 @@ nonisolated enum SyncCopy {
             String(localized: "sync.fix.learnMore", defaultValue: "Learn More")
         case .clone:
             String(localized: "sync.fix.clone", defaultValue: "Clone")
-        case .getTeammateUpdates:
-            String(localized: "sync.fix.getTeammateUpdates", defaultValue: "Get Updates from Teammates")
-        case .takeOverSpace:
-            String(localized: "sync.fix.takeOver", defaultValue: "Take Over…")
         case .openDestination:
             String(localized: "sync.fix.openDestination", defaultValue: "Show Destination")
         }

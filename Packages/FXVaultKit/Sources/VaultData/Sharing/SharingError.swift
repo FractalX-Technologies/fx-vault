@@ -10,8 +10,8 @@ import VaultStore
 /// app maps each case in `SharingError+Extension.swift`. Every `.fxvault` read failure stays the
 /// single `.share(.invalidFile)` ("Wrong passphrase or damaged file", §9.1).
 public enum SharingError: Error, Sendable, Hashable {
-    /// SharingKit refused: an unreadable file or wrong passphrase, an invalid package, a bad
-    /// passphrase format, a nearby abort or a wrong-phase nearby action.
+    /// SharingKit refused: an unreadable file or wrong passphrase, an invalid package or a bad
+    /// passphrase format.
     case share(ShareError)
     /// The re-authentication (D30) is missing, used, for another purpose, or from before a
     /// lock, unlock or key rotation.
@@ -33,14 +33,8 @@ public enum SharingError: Error, Sendable, Hashable {
     /// The file could not be read from disk.
     case fileUnreadable
     case write(SecureFileWriteError)
-    /// The project share holds a production stage (``StageRisk``), which only travels sealed for
-    /// teammates, never under a passphrase (v0.9.0, Q13).
-    case productionNeedsTeammates
-    /// The chosen recipients are not 1–``Limits/maxShareRecipients`` distinct paired teammates
-    /// (v0.9.0).
-    case invalidRecipients
-    /// This Mac's teammate keys or the teammates' could not be read (v0.9.0).
-    case team(TeamRepositoryError)
+    /// The project share holds a production stage (``StageRisk``), which is never shared (Q13).
+    case productionNotShared
     case config(ConfigRepositoryError)
     case validation(ValidationError)
     case vault(VaultError)
@@ -53,7 +47,6 @@ public enum SharingError: Error, Sendable, Hashable {
         case let error as SharingError: error
         case let error as ShareError: .share(error)
         case let error as SecureFileWriteError: .write(error)
-        case let error as TeamRepositoryError: .team(error)
         case let error as ConfigRepositoryError: .config(error)
         case let error as ItemEditError: .config(.edit(error))
         case let error as ValidationError: .validation(error)

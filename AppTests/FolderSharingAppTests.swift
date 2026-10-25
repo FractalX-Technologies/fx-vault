@@ -5,10 +5,9 @@ import VaultCore
 import VaultData
 @testable import FXVault
 
-/// Sending a copy of a folder (v0.7.0, tasks/todo.md F7) and the sidebar (F3, N1): a `.fxvault`
-/// folder saved as a folder or imported into a repository scope, a folder sent in Nearby Chat
-/// and saved by the other Mac, Send Folder from a teammate, folder selection in the main window,
-/// and the TEAMMATES rows.
+/// Sending a copy of a folder (v0.7.0, tasks/todo.md F7) and the sidebar (F3): a `.fxvault`
+/// folder saved as a folder or imported into a repository scope, and folder selection in the main
+/// window.
 @MainActor
 @Suite("Folder sharing and the sidebar", .timeLimit(.minutes(1)))
 struct FolderSharingAppTests {
@@ -97,61 +96,6 @@ struct FolderSharingAppTests {
         #expect(Set(model.result?.added ?? []) == ["\(SharingWorld.environment)/FIREBASE_API_KEY", "\(SharingWorld.environment)/API_URL"])
     }
 
-    // MARK: - Nearby Chat
-
-    @Test func aFolderSentInChatIsSavedByTheOtherMac() async throws {
-        let fixture = try await NearbyChatViewModelTests.Fixture()
-        let folderID = try Self.mobileFolder(fixture.world.sender)
-        try await fixture.chat()
-        let macA = fixture.macA
-        let macB = fixture.macB
-
-        macA.attach(folder: folderID)
-        let picker = try #require(macA.picker)
-        #expect(picker.mode == .folder)
-        #expect(picker.acceptsFolders)
-        await picker.begin()
-        picker.reauth.password = testPassword
-        await picker.authenticateWithPassword()
-        #expect(picker.selectedFolder?.name == "Mobile App")
-        await picker.send()
-        #expect(await TestFixtures.eventually { !macB.cards.isEmpty })
-        let id = try #require(macB.cards.keys.first)
-        let card = try #require(macB.cards[id])
-        #expect(card.offer.folderName == "Mobile App")
-        #expect(card.offer.isPackage)
-
-        await macB.handleConfiguration(id, .importInto)
-        #expect(await TestFixtures.eventually { macB.saveSheet != nil })
-        let sheet = try #require(macB.saveSheet)
-        #expect(sheet.isFolder)
-        #expect(sheet.step == .choosingFolderDestination)
-        await sheet.continueFolder()
-        #expect(sheet.step == .folderSaved)
-        let saved = try #require(try fixture.world.receiver.data.folders.folders().first)
-        #expect(saved.name == "Mobile App" && saved.itemCount == 2)
-        sheet.finish()
-        #expect(await TestFixtures.eventually { macB.cards[id]?.status == .saved })
-        fixture.close()
-    }
-
-    // MARK: - Send Folder from a teammate
-
-    @Test func sendFolderOpensAChatThatAttachesIt() async throws {
-        let (network, ana, ben) = try await TeamPresenceTests.pairedMacs()
-        let folderID = try Self.mobileFolder(ana.harness)
-        #expect(await TestFixtures.eventually { ana.person("Ben") != nil })
-        let person = try #require(ana.person("Ben"))
-
-        ana.presence.chat(with: person, sendingFolder: folderID)
-
-        let start = try #require(ana.harness.app.takePendingChatStart())
-        #expect(start.folderToSend == folderID)
-        #expect(start.teammate != nil)
-        start.transport.close()
-        withExtendedLifetime((ben, network)) {}
-    }
-
     // MARK: - Sidebar
 
     @Test func selectingAFolderReplacesTheRepositoryColumns() async throws {
@@ -190,25 +134,5 @@ struct FolderSharingAppTests {
         main.newFolder()
         #expect(main.activeSheet == .folderName(FolderNameContext(mode: .create(itemIDs: []))))
         withExtendedLifetime(harness) {}
-    }
-
-    @Test func teammateRowsListNearbyTeammatesFirst() {
-        let now = Date(timeIntervalSince1970: 1_790_000_000)
-        func teammate(_ id: String, _ name: String) -> TeammateModel {
-            TeammateModel(id: id, login: name.lowercased(), displayName: name, macName: "\(name)'s Mac", pairedAt: now)
-        }
-        let ana = teammate(String(repeating: "a", count: 32), "Ana")
-        let ben = teammate(String(repeating: "b", count: 32), "Ben")
-        let cleo = teammate(String(repeating: "c", count: 32), "Cleo")
-        let people = [
-            NearbyPersonModel(kind: .teammate(deviceID: cleo.id), name: "Cleo", macName: nil, lastSeenAt: now),
-            NearbyPersonModel(kind: .stranger(serviceName: "Dev"), name: "Dev", macName: nil, lastSeenAt: now),
-        ]
-
-        let rows = SidebarTeammateRowModel.rows(teammates: [ben, cleo, ana], people: people)
-
-        #expect(rows.map(\.teammate.name) == ["Cleo", "Ana", "Ben"])
-        #expect(rows.map(\.isNearby) == [true, false, false])
-        #expect(TeammatesSidebarCopy.lastSeen(nil, now: now) == "Not seen yet")
     }
 }

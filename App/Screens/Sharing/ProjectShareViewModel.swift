@@ -9,10 +9,9 @@ import VaultData
 /// repositories, their GitHub scopes and runtime destinations, and optional folders.
 ///
 /// 1. **What to share**: the repositories (the current one preselected), the stages across them
-///    (production starts unchecked and asks for a confirmation), the repository-level toggle and
-///    a tree per repository to adjust; a live summary (``SharingRepository/previewBundle(_:)``).
-/// 2. **Send to**: paired teammates (1–10; the file is sealed for them and signed) or anyone
-///    with a passphrase (refused when the selection holds production, Q13), and the expiry.
+///    (production is never shared, Q13), the repository-level toggle and a tree per repository
+///    to adjust; a live summary (``SharingRepository/previewBundle(_:)``).
+/// 2. **Send to**: anyone with a fresh passphrase, and the expiry.
 /// 3. **Authenticate** with Touch ID or the master password (`.fileExport`, single use).
 /// 4. **Deliver**: the sealed file sits 0600 in a private staging folder named
 ///    ``SharingRepository/defaultFileName(timeZone:)``; Share… (Mail, Messages, AirDrop, any
@@ -30,12 +29,6 @@ final class ProjectShareViewModel: LockObserving {
         case done
     }
 
-    /// Who can open the file.
-    enum Protection: Equatable {
-        case teammates
-        case passphrase
-    }
-
     private(set) var step: Step = .contents
     let reauth: ShareReauthModel
     let fileName: String
@@ -47,8 +40,6 @@ final class ProjectShareViewModel: LockObserving {
     private(set) var stageOptions: [ShareStageOptionModel] = []
     /// Fold keys of the checked stages.
     private(set) var chosenStageKeys: Set<String> = []
-    /// The production stage waiting for "Include Production".
-    private(set) var pendingProductionStage: ShareStageOptionModel?
     private(set) var includesRepositoryLevel = true
     private(set) var tree: ProjectShareTreeModel?
     private(set) var preview: ShareBundleExportPreviewModel?
@@ -56,20 +47,16 @@ final class ProjectShareViewModel: LockObserving {
 
     // MARK: Send to
 
-    private(set) var protection: Protection = .teammates
-    private(set) var teammates: [TeammateModel] = []
-    private(set) var chosenTeammateIDs: Set<String> = []
     var expiry: ShareExpiryChoice = .default {
         didSet { schedulePreview() }
     }
 
     // MARK: Done
 
-    /// The passphrase, shown once (`w1-…-w6`); nil for a teammates file.
+    /// The passphrase, shown once (`w1-…-w6`); nil until the file is sealed.
     private(set) var passphrase: String?
-    /// "I've saved it": unlocks Save and Share for a passphrase file.
+    /// "I've saved it": unlocks Save and Share.
     var hasSavedPassphrase = false
-    private(set) var sealedForNames: [String] = []
     private(set) var expiresAt: Date?
     private(set) var savedFileURL: URL?
     private(set) var hasSent = false
@@ -126,7 +113,7 @@ final class ProjectShareViewModel: LockObserving {
 
     // MARK: - Loading
 
-    /// Loads the repositories, the teammates and the tree for the context's selection (once: the
+    /// Loads the repositories and the tree for the context's selection (once: the
     /// sheet's task runs again when the view reappears).
     func start() async {
         guard !hasStarted else { return }
@@ -135,10 +122,6 @@ final class ProjectShareViewModel: LockObserving {
         defer { isLoading = false }
         do {
             allRepositories = try await loader.repositories()
-            teammates = try dependencies.team.teammates().sorted {
-                $0.name.localizedStandardCompare($1.name) == .orderedAscending
-            }
-            protection = teammates.isEmpty ? .passphrase : .teammates
             let initial = try await initialSelection()
             chosenRepositoryIDs = initial.repositoryIDs
             try await loadStageOptions()
@@ -158,11 +141,13 @@ final class ProjectShareViewModel: LockObserving {
             return ([], [], ShareBundleSelectionModel(folderIDs: [id]))
         case .repository(let id):
             let options = try await dependencies.sharing.stageOptions(repositoryIDs: [id])
+            let shareable = Set(options.filter { !$0.isProduction }.map(\.id))
             let keys: Set<String>
             if let stage = context.stage {
-                keys = [EnvironmentNameValidator.foldKey(stage)]
+                // A production Overview opens with nothing checked: its checkbox is disabled.
+                keys = shareable.intersection([EnvironmentNameValidator.foldKey(stage)])
             } else {
-                keys = Set(options.filter { !$0.isProduction }.map(\.id))
+                keys = shareable
             }
             return ([id], keys, nil)
         case .environment(let id):
@@ -229,27 +214,10 @@ final class ProjectShareViewModel: LockObserving {
         chosenStageKeys.contains(option.id)
     }
 
-    /// Checks or unchecks a stage for every chosen repository. Checking a production stage asks
-    /// first (``confirmProductionStage()``).
+    /// Checks or unchecks a stage for every chosen repository. A production stage is never
+    /// checked (Q13).
     func setStage(_ option: ShareStageOptionModel, chosen: Bool) {
-        if chosen, option.isProduction, !isStageChosen(option) {
-            pendingProductionStage = option
-            return
-        }
-        applyStage(option, chosen: chosen)
-    }
-
-    func confirmProductionStage() {
-        guard let option = pendingProductionStage else { return }
-        pendingProductionStage = nil
-        applyStage(option, chosen: true)
-    }
-
-    func cancelProductionStage() {
-        pendingProductionStage = nil
-    }
-
-    private func applyStage(_ option: ShareStageOptionModel, chosen: Bool) {
+        guard !(chosen && option.isProduction) else { return }
         if chosen {
             chosenStageKeys.insert(option.id)
         } else {
@@ -344,9 +312,6 @@ final class ProjectShareViewModel: LockObserving {
             let fresh = try await dependencies.sharing.previewBundle(selection)
             guard generation == previewGeneration else { return }
             preview = fresh
-            if fresh.includesProduction, protection == .passphrase, !teammates.isEmpty {
-                protection = .teammates
-            }
         } catch {
             guard generation == previewGeneration else { return }
             alert = error.presentation
@@ -374,8 +339,8 @@ final class ProjectShareViewModel: LockObserving {
 
     // MARK: - Step 2: send to
 
-    /// A passphrase is refused for production (Q13).
-    var isPassphraseAllowed: Bool {
+    /// Production is never shared (Q13): an environment picked in the tree still counts.
+    var isShareAllowed: Bool {
         preview?.includesProduction != true
     }
 
@@ -383,35 +348,8 @@ final class ProjectShareViewModel: LockObserving {
         preview?.productionPlaces ?? []
     }
 
-    func setProtection(_ protection: Protection) {
-        guard protection != .passphrase || isPassphraseAllowed else { return }
-        self.protection = protection
-    }
-
-    func isTeammateChosen(_ teammate: TeammateModel) -> Bool {
-        chosenTeammateIDs.contains(teammate.id)
-    }
-
-    /// Adds or removes a recipient; at most ``Limits/maxShareRecipients``.
-    func setTeammate(_ teammate: TeammateModel, chosen: Bool) {
-        if chosen {
-            guard chosenTeammateIDs.count < Limits.maxShareRecipients else { return }
-            chosenTeammateIDs.insert(teammate.id)
-        } else {
-            chosenTeammateIDs.remove(teammate.id)
-        }
-    }
-
-    var canChooseMoreTeammates: Bool {
-        chosenTeammateIDs.count < Limits.maxShareRecipients
-    }
-
     var canCreate: Bool {
-        guard step == .sendTo, selection != nil else { return false }
-        switch protection {
-        case .passphrase: return isPassphraseAllowed
-        case .teammates: return (1...Limits.maxShareRecipients).contains(chosenTeammateIDs.count)
-        }
+        step == .sendTo && selection != nil && isShareAllowed
     }
 
     /// Moves to the authentication step and tries Touch ID once (no error when it is off).
@@ -445,28 +383,21 @@ final class ProjectShareViewModel: LockObserving {
             return
         }
         step = .creating
-        let protection: ShareBundleProtectionModel = switch self.protection {
-        case .passphrase: .passphrase
-        case .teammates: .teammates(teammates.map(\.id).filter(chosenTeammateIDs.contains))
-        }
         do {
             let folder = try staging ?? ShareStagingFolder(root: stagingRoot ?? ShareStagingFolder.defaultRoot)
             staging = folder
             let result = try await dependencies.sharing.exportBundle(
                 selection,
-                protection: protection,
                 to: folder.fileURL(named: fileName),
                 senderName: identity.displayName,
                 appVersion: identity.appVersion,
                 authorization: authorization,
                 existingFile: .replace
             )
-            if let secret = result.passphrase {
-                defer { secret.wipe() }
-                guard let words = secret.utf8String() else { throw SharingError.unexpected }
-                passphrase = words
-            }
-            sealedForNames = teammates.filter { chosenTeammateIDs.contains($0.id) }.map(\.name)
+            let secret = result.passphrase
+            defer { secret.wipe() }
+            guard let words = secret.utf8String() else { throw SharingError.unexpected }
+            passphrase = words
             expiresAt = result.preview.expiresAt
             preview = result.preview
             stagedFileURL = result.fileURL
@@ -480,12 +411,8 @@ final class ProjectShareViewModel: LockObserving {
 
     // MARK: - Step 4: deliver
 
-    var isPassphraseFile: Bool {
-        passphrase != nil
-    }
-
     var canDeliver: Bool {
-        step == .done && !isDelivering && stagedFileURL != nil && (!isPassphraseFile || hasSavedPassphrase)
+        step == .done && !isDelivering && stagedFileURL != nil && hasSavedPassphrase
     }
 
     /// Copies the passphrase (concealed, cleared after 30 s, §5.9).
@@ -508,7 +435,7 @@ final class ProjectShareViewModel: LockObserving {
             let data = try Data(contentsOf: stagedFileURL, options: .uncached)
             try SecureFileWriter().write(data, to: destination, existingFile: .replace)
             savedFileURL = destination
-            notice = ProjectShareCopy.saved(destination.lastPathComponent, passphrase: isPassphraseFile)
+            notice = ProjectShareCopy.saved(destination.lastPathComponent)
         } catch let error as SecureFileWriteError {
             alert = SharingError.write(error).presentation
         } catch {
@@ -532,7 +459,7 @@ final class ProjectShareViewModel: LockObserving {
         switch outcome {
         case .shared:
             hasSent = true
-            notice = ProjectShareCopy.sent(passphrase: isPassphraseFile)
+            notice = ProjectShareCopy.sent
         case .cancelled:
             break
         case .failed:

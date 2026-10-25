@@ -5,8 +5,8 @@ import VaultCore
 import VaultData
 @testable import FXVault
 
-/// Share Project (v0.9.0, tasks/todo.md P1–P6): stages with production unchecked and confirmed,
-/// passphrases refused for production, up to 10 teammates, the expiry, delivery and clean-up.
+/// Share Project (v0.9.0, tasks/todo.md P1–P6; passphrase only since 1.0): stages with production
+/// never shared, the expiry, delivery and clean-up.
 @MainActor
 @Suite("Project share export", .serialized)
 struct ProjectShareExportViewModelTests {
@@ -33,7 +33,7 @@ struct ProjectShareExportViewModelTests {
         await model.authenticateWithPassword()
     }
 
-    @Test func productionStartsUncheckedAndNeedsAConfirmation() async throws {
+    @Test func productionIsListedButNeverChecked() async throws {
         let world = try await ProjectShareWorld()
         let model = await model(world)
 
@@ -42,58 +42,44 @@ struct ProjectShareExportViewModelTests {
         let staging = try #require(model.stageOptions.first { !$0.isProduction })
         #expect(model.isStageChosen(staging))
         #expect(!model.isStageChosen(production))
-        #expect(model.preview?.includesProduction == false)
 
         model.setStage(production, chosen: true)
-        #expect(model.pendingProductionStage == production)
-        #expect(!model.isStageChosen(production))
-        model.cancelProductionStage()
-        #expect(!model.isStageChosen(production))
-
-        model.setStage(production, chosen: true)
-        model.confirmProductionStage()
         await model.settle()
-        #expect(model.isStageChosen(production))
-        #expect(model.preview?.includesProduction == true)
+        #expect(!model.isStageChosen(production))
+        #expect(model.preview?.includesProduction == false)
+        #expect(model.isShareAllowed)
     }
 
     @Test func aStageFromTheOverviewStartsCheckedAlone() async throws {
         let world = try await ProjectShareWorld()
-        let model = await model(world, stage: "production")
-        #expect(model.chosenStageKeys == ["production"])
-        #expect(model.preview?.includesProduction == true)
+        let model = await model(world, stage: "staging")
+        #expect(model.chosenStageKeys == ["staging"])
+        #expect(model.preview?.includesProduction == false)
     }
 
-    @Test func productionRefusesAPassphrase() async throws {
+    /// Share from a production Overview opens with nothing checked rather than a checked stage
+    /// the user cannot uncheck-and-recheck (the checkbox is disabled).
+    @Test func aProductionStageFromTheOverviewIsNotChecked() async throws {
         let world = try await ProjectShareWorld()
         let model = await model(world, stage: "production")
-        model.continueToSendTo()
-        #expect(model.step == .sendTo)
-        #expect(!model.isPassphraseAllowed)
-        #expect(model.productionPlaces.isEmpty == false)
-        model.setProtection(.passphrase)
-        #expect(model.protection == .teammates)
-        #expect(!model.canCreate)
-        model.setTeammate(try #require(model.teammates.first), chosen: true)
-        #expect(model.canCreate)
+        #expect(model.chosenStageKeys.isEmpty)
+        #expect(model.preview?.includesProduction != true)
     }
 
-    @Test func atMostTenTeammates() async throws {
+    /// A production environment picked in the tree still blocks the file (Q13).
+    @Test func aProductionEnvironmentInTheTreeBlocksCreating() async throws {
         let world = try await ProjectShareWorld()
-        for index in 0..<Limits.maxShareRecipients {
-            try world.sender.data.team.addTeammate(
-                TeamDeviceKeys.generate().card(login: "user-\(index)", displayName: "Teammate \(index)", macName: "Mac \(index)")
-            )
-        }
+        let production = try EditorFixtures.environment(world.sender, world.senderRepositoryID, named: "production")
         let model = await model(world)
-        #expect(model.teammates.count == Limits.maxShareRecipients + 1)
-        for teammate in model.teammates {
-            model.setTeammate(teammate, chosen: true)
-        }
-        #expect(model.chosenTeammateIDs.count == Limits.maxShareRecipients)
-        #expect(!model.canChooseMoreTeammates)
-        model.setTeammate(try #require(model.teammates.first { model.isTeammateChosen($0) }), chosen: false)
-        #expect(model.canChooseMoreTeammates)
+        let tree = try #require(model.tree)
+        let node = try #require(tree.roots.first?.children?.first { $0.id == .environment(production.id) })
+        model.setChecked(true, for: node)
+        await model.settle()
+        #expect(model.preview?.includesProduction == true)
+        #expect(!model.isShareAllowed)
+        #expect(!model.productionPlaces.isEmpty)
+        model.continueToSendTo()
+        #expect(!model.canCreate)
     }
 
     @Test func theExpiryMovesThePreviewDate() async throws {
@@ -129,7 +115,6 @@ struct ProjectShareExportViewModelTests {
         let delivery = FakeShareFileDelivery()
         let model = await model(world, delivery: delivery)
         model.continueToSendTo()
-        model.setProtection(.passphrase)
         #expect(model.canCreate)
         await authenticateAndCreate(model)
 
@@ -153,22 +138,6 @@ struct ProjectShareExportViewModelTests {
         #expect(!FileManager.default.fileExists(atPath: staged.path))
         #expect(model.passphrase == nil)
         #expect(try await world.sender.data.sharing.sentShares().count == 1)
-    }
-
-    @Test func aTeammatesFileHasNoPassphrase() async throws {
-        let world = try await ProjectShareWorld()
-        let model = await model(world)
-        model.continueToSendTo()
-        model.setTeammate(try #require(model.teammates.first), chosen: true)
-        await authenticateAndCreate(model)
-
-        #expect(model.step == .done, "\(String(describing: model.alert))")
-        #expect(model.passphrase == nil)
-        #expect(model.sealedForNames == ["Ben"])
-        #expect(model.canDeliver)
-        let sent = try await world.sender.data.sharing.sentShares()
-        #expect(sent.first?.mode == .teammates)
-        #expect(sent.first?.recipientIDs == [world.receiverTeammateID])
     }
 
     @Test func aFolderOpensTheSheetWithOnlyThatFolder() async throws {
@@ -207,5 +176,147 @@ struct ProjectShareExportViewModelTests {
         await model.removeRepository(world.senderRepositoryID)
         await model.settle()
         #expect(model.preview?.summary.repositories.map(\.name) == ["example-web"])
+    }
+
+    // MARK: - Authentication and delivery (ported from the 0.9 Save as File… suite)
+
+    @Test func touchIDRunsFirstAndCreatesTheFile() async throws {
+        let world = try await ProjectShareWorld()
+        try await world.sender.enableTouchID()
+        let model = await model(world)
+        model.continueToSendTo()
+        let loadsBefore = world.sender.biometrics.loadCount
+
+        await model.requestCreate()
+
+        #expect(world.sender.biometrics.loadCount == loadsBefore + 1)
+        #expect(world.sender.biometrics.lastPrompt == FeatureDependencies.reauthPrompt(for: .share))
+        #expect(model.step == .done, "\(String(describing: model.alert))")
+        #expect(model.passphrase != nil)
+        // The authorization was single-use.
+        #expect(!model.reauth.isAuthorized)
+    }
+
+    @Test func withoutTouchIDThePasswordIsRequiredAndAWrongOneIsRejected() async throws {
+        let world = try await ProjectShareWorld()
+        let model = await model(world)
+        model.continueToSendTo()
+        await model.requestCreate()
+        // The automatic Touch ID attempt fails quietly: no error, the password field remains.
+        #expect(model.step == .authenticate)
+        #expect(model.reauth.error == nil)
+        #expect(model.passphrase == nil)
+
+        model.reauth.password = otherTestPassword
+        await model.authenticateWithPassword()
+        #expect(model.step == .authenticate)
+        #expect(model.reauth.error != nil)
+        #expect(model.reauth.password.isEmpty)
+        #expect(model.passphrase == nil)
+        #expect(try await world.sender.data.sharing.sentShares().isEmpty)
+
+        model.reauth.password = testPassword
+        await model.authenticateWithPassword()
+        #expect(model.step == .done)
+    }
+
+    @Test func copyingThePassphraseIsConcealedAndClearedAfter30Seconds() async throws {
+        let world = try await ProjectShareWorld()
+        let model = await model(world)
+        model.continueToSendTo()
+        await authenticateAndCreate(model)
+        let passphrase = try #require(model.passphrase)
+        let harness = world.sender
+        let sleepersBefore = harness.clock.sleeperCount
+
+        model.copyPassphrase()
+        #expect(harness.pasteboardString == passphrase)
+        let types = harness.pasteboard.types ?? []
+        #expect(types.contains(ClipboardManager.Marker.concealed))
+        #expect(types.contains(ClipboardManager.Marker.transient))
+        #expect(model.notice?.contains(passphrase) == false)
+
+        await harness.clock.waitForSleepers(count: sleepersBefore + 1)
+        harness.clock.advance(by: Timeouts.clipboardClear)
+        await harness.container.clipboard.pendingClear?.value
+        #expect(harness.pasteboardString == nil)
+    }
+
+    @Test func saveAndShareNeedTheSavedConfirmation() async throws {
+        let world = try await ProjectShareWorld()
+        let delivery = FakeShareFileDelivery()
+        let model = await model(world, delivery: delivery)
+        model.continueToSendTo()
+        await authenticateAndCreate(model)
+        let staged = try #require(model.stagedFileURL)
+        let destination = world.sender.sandbox.appendingPathComponent("Saved.fxvault")
+        delivery.saveDestination = destination
+
+        #expect(!model.canDeliver)
+        await model.saveToFile()
+        model.shareFile()
+        #expect(delivery.suggestedNames.isEmpty)
+        #expect(delivery.sharedFiles.isEmpty)
+
+        model.hasSavedPassphrase = true
+        await model.saveToFile()
+        #expect(delivery.suggestedNames == [model.fileName])
+        #expect(model.savedFileURL == destination)
+        #expect(try Data(contentsOf: destination) == Data(contentsOf: staged))
+        let attributes = try FileManager.default.attributesOfItem(atPath: destination.path)
+        #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
+
+        model.shareFile()
+        #expect(delivery.sharedFiles == [staged])
+        #expect(model.isDelivering)
+        // Closing while AirDrop runs keeps the staged file until the hand-off ends.
+        model.close()
+        #expect(model.passphrase == nil)
+        #expect(FileManager.default.fileExists(atPath: staged.path))
+        delivery.finishSharing(.shared)
+        #expect(model.hasSent)
+        #expect(!FileManager.default.fileExists(atPath: staged.path))
+    }
+
+    @Test func aCancelledSavePanelWritesNothing() async throws {
+        let world = try await ProjectShareWorld()
+        let delivery = FakeShareFileDelivery()
+        let model = await model(world, delivery: delivery)
+        model.continueToSendTo()
+        await authenticateAndCreate(model)
+        model.hasSavedPassphrase = true
+        delivery.saveDestination = nil
+        await model.saveToFile()
+        #expect(model.savedFileURL == nil)
+        #expect(model.alert == nil)
+        let staged = try #require(model.stagedFileURL)
+        model.close()
+        #expect(!FileManager.default.fileExists(atPath: staged.path))
+    }
+
+    @Test func aLockDropsTheTypedPasswordAndTheAuthorization() async throws {
+        let world = try await ProjectShareWorld()
+        let model = await model(world)
+        model.continueToSendTo()
+        await model.requestCreate()
+        model.reauth.password = "typed"
+
+        world.sender.app.lock(trigger: .manual)
+
+        #expect(model.step == .sendTo)
+        #expect(model.reauth.password.isEmpty)
+        #expect(!model.reauth.isAuthorized)
+    }
+
+    /// A lock after the file was made drops the words shown once.
+    @Test func aLockAfterCreatingDropsThePassphrase() async throws {
+        let world = try await ProjectShareWorld()
+        let created = await model(world)
+        created.continueToSendTo()
+        await authenticateAndCreate(created)
+        #expect(created.passphrase != nil)
+        world.sender.app.lock(trigger: .manual)
+        #expect(created.passphrase == nil)
+        #expect(!created.hasSavedPassphrase)
     }
 }

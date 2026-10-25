@@ -4,7 +4,6 @@ import VaultData
 
 /// What a share contains, per scope (v0.2.0): the repository level, then each environment with
 /// its counts and whether its branch policy is included. Names and counts only, never values.
-/// Used by Share › File… and Share › Nearby….
 struct ShareContentSummaryView: View {
     let preview: ShareExportPreviewModel
 

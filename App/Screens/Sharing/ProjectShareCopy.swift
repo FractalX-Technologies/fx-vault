@@ -39,21 +39,8 @@ enum ProjectShareCopy {
     static let productionChip = String(localized: "projectShare.production", defaultValue: "Production")
     static let productionHelp = String(
         localized: "projectShare.production.help",
-        defaultValue: "Production starts unchecked and only goes to paired teammates, never with a passphrase."
+        defaultValue: "Production is never shared. Teammates get production values from your secret store."
     )
-    static let includeProductionTitle = String(
-        localized: "projectShare.production.confirm.title",
-        defaultValue: "Include production?"
-    )
-
-    static func includeProductionMessage(_ stage: String) -> String {
-        String(
-            localized: "projectShare.production.confirm.message",
-            defaultValue: "“\(stage)” is a production stage. Its values can only be sent to paired teammates, never with a passphrase."
-        )
-    }
-
-    static let includeProduction = String(localized: "projectShare.production.confirm.include", defaultValue: "Include Production")
     static let repositoryLevel = String(
         localized: "projectShare.repositoryLevel",
         defaultValue: "Repository-level secrets and variables"
@@ -95,34 +82,16 @@ enum ProjectShareCopy {
 
     // MARK: - Send to
 
-    static let teammatesOption = String(localized: "projectShare.protection.teammates", defaultValue: "Teammates")
-    static let teammatesHelp = String(
-        localized: "projectShare.protection.teammates.help",
-        defaultValue: "Only FX Vault on these teammates' Macs can open it, and they see it came from you. Safe to send in any chat or email."
-    )
     static let passphraseOption = String(localized: "projectShare.protection.passphrase", defaultValue: "Anyone, with a passphrase")
     static let passphraseHelp = String(
         localized: "projectShare.protection.passphrase.help",
         defaultValue: "Six words that you send another way. Whoever has the file and the words can open it."
     )
 
-    static func passphraseBlocked(_ places: [String]) -> String {
+    static func productionBlocked(_ places: [String]) -> String {
         String(
-            localized: "projectShare.protection.passphrase.blocked",
-            defaultValue: "Not available: the file includes production (\(places.joined(separator: ", "))). Production only goes to teammates."
-        )
-    }
-
-    static let noTeammates = String(
-        localized: "projectShare.teammates.none",
-        defaultValue: "No paired teammates yet. Add one in Settings › Teammates, nearby or by file."
-    )
-    static let pairedRemotely = String(localized: "projectShare.teammates.remote", defaultValue: "Paired remotely")
-
-    static func teammateLimit(chosen: Int) -> String {
-        String(
-            localized: "projectShare.teammates.limit",
-            defaultValue: "\(chosen) of up to \(Limits.maxShareRecipients) teammates"
+            localized: "projectShare.production.blocked",
+            defaultValue: "Can't be shared: the file includes production (\(places.joined(separator: ", "))). Uncheck it to continue."
         )
     }
 
@@ -138,10 +107,6 @@ enum ProjectShareCopy {
         localized: "projectShare.expiry.passphrase",
         defaultValue: "FX Vault refuses to open it after this date. Anyone with the passphrase could still read it with other software."
     )
-    static let expiryTeammatesNote = String(
-        localized: "projectShare.expiry.teammates",
-        defaultValue: "FX Vault refuses to open it after this date. Only FX Vault on your teammates' Macs can open it."
-    )
     static let create = String(localized: "projectShare.create", defaultValue: "Create Share File")
     static let reauthMessage = String(
         localized: "projectShare.reauth.message",
@@ -150,17 +115,6 @@ enum ProjectShareCopy {
     static let creating = String(localized: "projectShare.creating", defaultValue: "Encrypting the share…")
 
     // MARK: - Done
-
-    static func sealedFor(_ names: [String]) -> String {
-        String(localized: "projectShare.done.sealedFor", defaultValue: "Sealed for \(names.joined(separator: ", ")).")
-    }
-
-    static func teammatesDelivery(expiresAt: Date) -> String {
-        String(
-            localized: "projectShare.done.teammates",
-            defaultValue: "Send it in any chat or email. It opens only on their Macs, until \(expiresAt.formatted(date: .abbreviated, time: .shortened))."
-        )
-    }
 
     static let passphraseHint = String(
         localized: "projectShare.done.passphraseHint",
@@ -174,17 +128,11 @@ enum ProjectShareCopy {
     static let share = String(localized: "projectShare.share", defaultValue: "Share…")
     static let save = String(localized: "projectShare.save", defaultValue: "Save…")
 
-    static func saved(_ name: String, passphrase: Bool) -> String {
-        passphrase
-            ? String(localized: "projectShare.saved.passphrase", defaultValue: "Saved “\(name)”. Send the passphrase separately.")
-            : String(localized: "projectShare.saved", defaultValue: "Saved “\(name)”.")
+    static func saved(_ name: String) -> String {
+        String(localized: "projectShare.saved.passphrase", defaultValue: "Saved “\(name)”. Send the passphrase separately.")
     }
 
-    static func sent(passphrase: Bool) -> String {
-        passphrase
-            ? String(localized: "projectShare.sent.passphrase", defaultValue: "File sent. Send the passphrase through a different app.")
-            : String(localized: "projectShare.sent", defaultValue: "File sent.")
-    }
+    static let sent = String(localized: "projectShare.sent.passphrase", defaultValue: "File sent. Send the passphrase through a different app.")
 
     // MARK: - Opening a bundle
 
@@ -194,15 +142,10 @@ enum ProjectShareCopy {
             : String(localized: "projectShare.open.from", defaultValue: "From \(sender)")
     }
 
-    static let verified = String(localized: "projectShare.open.verified", defaultValue: "Verified teammate")
-    static let verifiedHelp = String(
-        localized: "projectShare.open.verified.help",
-        defaultValue: "Sealed for this Mac and signed by a teammate you paired with."
-    )
     static let unverified = String(localized: "projectShare.open.unverified", defaultValue: "Not verified")
     static let unverifiedHelp = String(
         localized: "projectShare.open.unverified.help",
-        defaultValue: "A passphrase file says who sent it but can't prove it."
+        defaultValue: "A share file says who sent it but can't prove it."
     )
 
     static func dates(created: Date, expires: Date) -> String {

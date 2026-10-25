@@ -24,7 +24,6 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         didSet {
             if activeSheet == nil {
                 presentNextPendingImport()
-                presentNextPendingPairingCard()
             }
         }
     }
@@ -59,11 +58,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             open: { [weak self] id, scope in self?.open(repositoryID: id, scope: scope) },
             openFolder: { [weak self] id in self?.sidebar.select(folderID: id) },
             openDestination: { [weak self] id in self?.open(destinationID: id) },
-            openOverview: { [weak self] id, stage in self?.openOverview(repositoryID: id, stage: stage) },
-            syncSpaces: { [app] in await app.spaceSync.syncAllAndWait() },
-            spacesPublished: { [app] in app.spaceSync.syncAll() },
-            spaceIdentity: { [app] in app.spaceIdentity },
-            spaceSyncCount: { [app] in app.spaceSync.receivedCount }
+            openOverview: { [weak self] id, stage in self?.openOverview(repositoryID: id, stage: stage) }
         )
     }
 
@@ -218,12 +213,6 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         activeSheet = .shareImport(ShareImportContext(fileURL: url))
     }
 
-    /// An opened `.fxvcard` (v0.9.0): the remote pairing sheet.
-    func presentNextPendingPairingCard() {
-        guard activeSheet == nil, let url = app.takeNextPendingPairingCard() else { return }
-        activeSheet = .remotePairing(RemotePairingContext(fileURL: url))
-    }
-
     /// The share selection for the current column selection: the environment, the repository,
     /// or the folder (v0.7.0).
     var currentShareSelection: ShareSelectionModel? {
@@ -320,16 +309,6 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         present(.folderName(FolderNameContext(mode: .create(itemIDs: []))))
     }
 
-    var canShareFile: Bool {
-        isUnlocked && currentShareSelection != nil
-    }
-
-    /// Share › File… for the selected scope.
-    func shareFile() {
-        guard canShareFile, let selection = currentShareSelection else { return }
-        present(.shareExport(ShareExportContext(selection: selection)))
-    }
-
     /// File › Share Project… (v0.9.0): the selected scope or folder, or the selected repository.
     var canShareProject: Bool {
         isUnlocked && projectShareSelection != nil
@@ -342,18 +321,6 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
 
     private var projectShareSelection: ShareSelectionModel? {
         currentShareSelection ?? selectedVaultRepo.map { .repository($0.id) }
-    }
-
-    /// Share › Nearby… (the sheet asks what to send when nothing is selected).
-    func shareNearby() {
-        guard isUnlocked else { return }
-        present(.nearbySend(NearbySendContext(selection: currentShareSelection)))
-    }
-
-    /// Share › Receive Nearby….
-    func receiveNearby() {
-        guard isUnlocked else { return }
-        present(.nearbyReceive(NearbyReceiveContext()))
     }
 
     func addRepositoryByName(accountLogin: String) {

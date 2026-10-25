@@ -4,8 +4,7 @@ import VaultCore
 @testable import SharingKit
 
 /// Folder packages (v0.7.0, schema v3, tasks/todo.md F7): the wire form (`folder` instead of
-/// `repository`), the validator rules, retargeting at a repository for "Import Into…", and
-/// folder cards in Nearby Chat version 4 only.
+/// `repository`), the validator rules and retargeting at a repository for "Import Into…".
 @Suite("Folder packages")
 struct FolderPackageTests {
     static func folder(
@@ -128,59 +127,5 @@ struct FolderPackageTests {
         #expect(throws: ShareError.invalidPackage(.scopeMismatch(.folder))) {
             _ = try ShareImportPlanner.plan(package, mode: .payload, local: local) { _, _ in nil }
         }
-    }
-
-    // MARK: - Nearby Chat version 4
-
-    @Test(arguments: [(UInt8(4), UInt8(4), true), (4, 3, false), (3, 4, false)])
-    func bothMacsMustOfferVersionFour(initiator: UInt8, responder: UInt8, accepts: Bool) throws {
-        var harness = try ChatHarness.kat(maxVersions: (initiator, responder))
-        try harness.runToChatting()
-        #expect(harness.initiator.acceptsFolderAttachments == accepts)
-        #expect(harness.responder.acceptsFolderAttachments == accepts)
-    }
-
-    @Test func aChatV3RefusesAFolderBeforeAnythingIsSent() throws {
-        var harness = try ChatHarness.kat(maxVersions: (4, 3))
-        try harness.runToChatting()
-        let framesBefore = harness.initiatorFrames.count
-        let package = Self.folder()
-        defer { package.wipeValues() }
-        #expect(throws: ChatError.peerNeedsUpdate) { _ = try harness.initiator.offerAttachment(package) }
-        #expect(harness.initiatorFrames.count == framesBefore)
-        #expect(NearbyChatMachine.attachmentViolation(package.manifest(), acceptsConfiguration: true, acceptsFolder: false)
-            == .invalidPackage(.scopeMismatch(.folder)))
-    }
-
-    @Test func aFolderTravelsAsOneCardInChatVersionFour() throws {
-        var harness = try ChatHarness.kat(maxVersions: (4, 4))
-        try harness.runToChatting()
-        let package = Self.folder()
-        defer { package.wipeValues() }
-        let (offerStep, sent) = try harness.initiator.offerAttachment(package)
-        harness.recordInitiator(offerStep)
-        harness.pump()
-        #expect(sent?.folderName == "Mobile App")
-
-        let card = try #require(harness.responderEvents.compactMap(\.offerModel).first)
-        guard case .folder(let summary) = card.content else {
-            Issue.record("expected a folder card")
-            return
-        }
-        #expect(summary == ChatFolderSummaryModel(package.manifest()))
-        #expect(summary.name == "Mobile App" && summary.secretCount == 1 && summary.variableCount == 1)
-        #expect(card.repositoryFullName.isEmpty)
-        #expect(!card.isConfiguration)
-
-        harness.recordResponder(try harness.responder.requestAttachment(card.id))
-        harness.pump()
-        harness.recordInitiator(try harness.initiator.sendAttachmentPayload(card.id, package: package))
-        harness.pump()
-        let (_, payload) = try #require(harness.responderEvents.compactMap(\.receivedAttachment).first)
-        defer { payload.wipeValues() }
-        #expect(payload.isFolder)
-        #expect(payload.flattenedItems.compactMap { $0.item.value?.utf8String() } == package.flattenedItems.compactMap { $0.item.value?.utf8String() })
-        #expect(harness.initiatorAbort == nil)
-        #expect(harness.responderAbort == nil)
     }
 }

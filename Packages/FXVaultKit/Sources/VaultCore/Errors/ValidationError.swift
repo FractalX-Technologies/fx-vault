@@ -39,7 +39,7 @@ public enum NameRule: Sendable, Hashable {
     case leadingDigit
     /// Starts with `GITHUB_` (GitHub secrets and variables).
     case reservedPrefix
-    /// A name FX Vault uses itself (`FXVAULT_SPACE`, the shared space marker).
+    /// A name FX Vault reserves (`FXVAULT_SPACE`, the marker 0.9's shared spaces wrote on GitHub).
     case reservedName
     /// A prefix the destination's provider reserves (`SUPABASE_` in Supabase; v0.8.0).
     case reservedByProvider

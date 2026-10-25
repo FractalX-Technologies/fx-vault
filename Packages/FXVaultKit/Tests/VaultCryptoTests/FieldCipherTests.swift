@@ -203,7 +203,8 @@ struct AADBuilderTests {
     }
 }
 
-/// Secret fields (v0.5.0): teammate keys sealed under `K_field` with their own AAD.
+/// Secret fields (v0.5.0; since 1.0 only provider connection tokens): sealed under `K_field`
+/// with their own AAD. The table names below are labels, so the 0.9 ones still test the binding.
 @Suite("Secret fields")
 struct SecretFieldTests {
     @Test func roundTripsAndBindsTableColumnRowAndDEKVersion() throws {

@@ -22,10 +22,6 @@ public struct DriftReportModel: Sendable, Hashable, Identifiable {
     public var expiredItems: [ConfigItemID]
     /// Remote names the vault cannot hold (D29), never acted on.
     public var skippedNames: [SkippedRemoteNameModel]
-    /// Shared scopes whose marker says a teammate published versions this Mac does not have
-    /// (v0.6.0, S9): their findings are a teammate's change, resolved by getting the versions,
-    /// not by Keep Local or Accept GitHub.
-    public var spaces: [DriftSpaceModel]
 
     public init(
         repositoryID: RepoID,
@@ -34,8 +30,7 @@ public struct DriftReportModel: Sendable, Hashable, Identifiable {
         unreadable: [ImportReadFailureModel] = [],
         verifiedItems: [ConfigItemID] = [],
         expiredItems: [ConfigItemID] = [],
-        skippedNames: [SkippedRemoteNameModel] = [],
-        spaces: [DriftSpaceModel] = []
+        skippedNames: [SkippedRemoteNameModel] = []
     ) {
         self.repositoryID = repositoryID
         self.checkedAt = checkedAt
@@ -44,13 +39,6 @@ public struct DriftReportModel: Sendable, Hashable, Identifiable {
         self.verifiedItems = verifiedItems
         self.expiredItems = expiredItems
         self.skippedNames = skippedNames
-        self.spaces = spaces
-    }
-
-    /// The shared scope a finding is in when that scope is behind its teammates (S9).
-    public func space(of drift: DriftModel) -> DriftSpaceModel? {
-        guard case .item(let item) = drift.subject else { return nil }
-        return spaces.first { $0.scope == item.scope }
     }
 
     public var id: RepoID {
@@ -147,18 +135,5 @@ struct DriftRemoteStateModel: Sendable {
     func wipe() {
         item?.value?.wipe()
         environment?.variables.forEach { $0.wipe() }
-    }
-}
-
-/// A shared scope that is behind or forked at a drift check (v0.6.0, S9).
-public struct DriftSpaceModel: Sendable, Hashable {
-    public let spaceID: SpaceID
-    public let scope: ConfigScope
-    public let decision: SpaceGateDecision
-
-    public init(spaceID: SpaceID, scope: ConfigScope, decision: SpaceGateDecision) {
-        self.spaceID = spaceID
-        self.scope = scope
-        self.decision = decision
     }
 }

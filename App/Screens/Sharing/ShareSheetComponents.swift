@@ -1,9 +1,9 @@
 import SwiftUI
 
-// Small pieces shared by the sharing, nearby, chat and `.env` sheets. The header, callout,
+// Small pieces shared by the sharing and `.env` sheets. The header, callout,
 // checkbox row and sheet chrome are design components (App/Components/Design/SheetChrome.swift).
 
-/// The ``SheetHeader`` labels of the sharing, nearby, chat and `.env` sheets, one per feature.
+/// The ``SheetHeader`` labels of the sharing and `.env` sheets, one per feature.
 enum ShareSheetLabel {
     static var environmentFile: String {
         String(localized: "envFile.sheet.label", defaultValue: "Environment file")
@@ -11,14 +11,6 @@ enum ShareSheetLabel {
 
     static var share: String {
         String(localized: "share.sheet.label", defaultValue: "Share")
-    }
-
-    static var nearby: String {
-        String(localized: "nearby.sheet.label", defaultValue: "Nearby")
-    }
-
-    static var nearbyChat: String {
-        String(localized: "chat.sheet.label", defaultValue: "Nearby Chat")
     }
 }
 
@@ -43,7 +35,7 @@ struct ShareNoteView: View {
 }
 
 /// Spinner and status line while a sheet waits.
-struct NearbyProgressRow: View {
+struct SheetProgressRow: View {
     let text: String
 
     var body: some View {

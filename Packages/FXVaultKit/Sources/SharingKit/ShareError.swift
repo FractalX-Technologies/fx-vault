@@ -19,40 +19,10 @@ public enum ShareError: Error, Sendable, Hashable {
     case encryptionFailed
     /// The task was cancelled (for example while Argon2id was running).
     case cancelled
-    /// The nearby session ended with this abort (§9.4). The session cannot be resumed.
-    case nearbyAborted(NearbyAbortReason)
-    /// The requested nearby action is not allowed in the session's current phase
-    /// (for example sending the manifest before both sides confirmed the code).
-    case nearbyActionNotAllowed
-    /// The nearby session already finished or aborted. There is no automatic retry: a new
-    /// attempt needs a new session started by a new user action (D21).
-    case nearbySessionFinished
-    /// The nearby transport failed to send or deliver a frame.
-    case transport(NearbyTransportFailure)
     /// The import plan cannot apply the requested action to this item or environment.
     case importActionNotAllowed
-    /// A teammate card read back from the vault does not match its keys (v0.5.0).
-    case teamCardInvalid
-    /// This Mac's teammate keys in the vault have the wrong size or were rejected (v0.5.0).
-    case teamKeysInvalid
-    /// A space version could not be read (v0.6.0).
-    case spaceVersionInvalid
-    /// A space log broke a rule (v0.6.0).
-    case spaceLogInvalid(SpaceLogFailure)
-    /// A teammates file (format 2) has no slot for this Mac: it was sealed for other teammates (v0.9.0).
-    case notARecipient
-    /// A teammates file was sealed by a device that is not one of this vault's teammates, so its
-    /// signature cannot be checked (v0.9.0).
-    case senderNotTeammate
     /// The share file's `expiresAt` has passed (v0.9.0).
     case expired
-    /// A remote pairing card (`.fxvcard`) is damaged, forged or not a reply to this Mac's
-    /// invitation (v0.9.0).
-    case invalidPairingCard
-    /// A remote pairing invitation is too old, or dated in the future (v0.9.0).
-    case pairingExpired
-    /// The pairing card is this Mac's own (v0.9.0).
-    case pairingOwnCard
 }
 
 /// Why a typed passphrase was rejected (§9.2). Never carries the typed text.

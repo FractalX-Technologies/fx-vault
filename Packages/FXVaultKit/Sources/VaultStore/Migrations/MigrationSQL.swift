@@ -382,4 +382,16 @@ enum MigrationSQL {
         DROP TABLE teammates;
         ALTER TABLE teammates_v14 RENAME TO teammates;
         """
+
+    /// v15 (1.0): drops the teammate and shared-space tables. 1.0 removes nearby pairing,
+    /// presence and spaces, so these rows (this Mac's teammate keys, paired devices, space keys
+    /// and versions) are never read again; keeping them would leave key material behind.
+    static let v15DropTeammates = """
+        DROP TABLE teammate_addresses;
+        DROP TABLE space_versions;
+        DROP TABLE space_keys;
+        DROP TABLE spaces;
+        DROP TABLE teammates;
+        DROP TABLE device_identity;
+        """
 }

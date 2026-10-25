@@ -81,8 +81,6 @@ enum Theme {
         static let recoveryKeyRows = 2
         static let recoveryKeyColumns = Limits.recoveryKeyGroupCount / recoveryKeyRows
         static let recoveryGroupFieldWidth: CGFloat = 88
-        /// Preferences › Teammates › port field (v0.6.0).
-        static let portFieldWidth: CGFloat = 88
         static let secretEditorMinHeight: CGFloat = 96
 
         // MARK: Main window
@@ -175,10 +173,10 @@ enum Theme {
 
         // MARK: Sharing sheets
 
-        /// Width of every sharing sheet (export, import, nearby send and receive).
+        /// Width of every sharing sheet (export, import).
         static let shareSheetWidth: CGFloat = 560
         static let shareSheetMinHeight: CGFloat = 420
-        /// Height of the scope tree, the import preview and the nearby peer list.
+        /// Height of the scope tree and the import preview.
         static let shareListHeight: CGFloat = 260
         /// The scope tree gives way down to this height when the sheet is short.
         static let shareListMinHeight: CGFloat = 140
@@ -187,24 +185,6 @@ enum Theme {
         /// Tallest scrolling content of a project share sheet (v0.9.0): the tree, stages and
         /// summary of Share Project, the repositories and previews of Import Share.
         static let projectShareContentMaxHeight: CGFloat = 520
-        /// Minimum width of each SAS decision button ("Codes match" / "Don't match").
-        static let sasButtonMinWidth: CGFloat = 160
-
-        // MARK: Nearby Chat window (v0.2.0)
-
-        static let chatWindowMinWidth: CGFloat = 720
-        static let chatWindowMinHeight: CGFloat = 480
-        static let chatWindowDefaultWidth: CGFloat = 860
-        static let chatWindowDefaultHeight: CGFloat = 600
-        /// Width of the "Nearby" people column.
-        static let chatPeerListWidth: CGFloat = 240
-        /// Widest a message bubble or attachment card grows.
-        static let chatBubbleMaxWidth: CGFloat = 420
-        /// Height of the message field (about four lines).
-        static let chatComposerHeight: CGFloat = 76
-        /// The attachment picker sheet and its item list.
-        static let chatPickerWidth: CGFloat = 520
-        static let chatPickerListHeight: CGFloat = 300
 
         // MARK: Linked copies (v0.4.1)
 
@@ -214,21 +194,6 @@ enum Theme {
         static let linkedListMaxHeight: CGFloat = 280
         /// Height of the repository list in "Copy to Another Repository".
         static let copyTargetListHeight: CGFloat = 320
-
-        // MARK: Teammates nearby (v0.5.0)
-
-        /// Bubbles shown in the toolbar before "+N".
-        static let presenceMaxBubbles = 4
-        /// How much neighbouring bubbles overlap.
-        static let presenceOverlap: CGFloat = 6
-        /// Width of a person's popover and of the "+N" list.
-        static let presencePopoverWidth: CGFloat = 300
-        /// The sidebar's TEAMMATES section scrolls beyond this height (v0.7.0).
-        static let sidebarTeammatesMaxHeight: CGFloat = 220
-        /// The Add Teammate sheet.
-        static let addTeammateSheetWidth: CGFloat = 520
-        /// The people list in Add Teammate.
-        static let addTeammateListHeight: CGFloat = 220
     }
 
     /// Opacity levels for states and tinted backgrounds.
@@ -249,8 +214,6 @@ enum Theme {
     nonisolated enum Stroke {
         /// Every border and divider: 1 pt hairlines instead of shadows.
         static let hairline: CGFloat = 1
-        /// The ring that separates overlapping presence bubbles (v0.5.0).
-        static let emphasis: CGFloat = 2
         /// Dashed hairlines ("+ New Environment"): 4 pt dashes, 4 pt gaps.
         static let dashPattern: [CGFloat] = [4, 4]
         /// The outlined center cell of the brand mark, as a fraction of the mark's size.

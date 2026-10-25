@@ -1,10 +1,9 @@
 import Foundation
 
 /// What this Mac tells a teammate about itself in a share (§9.3 `sender.displayName`,
-/// `producer.version`; §9.4 the nearby display name). The receiver sees the name as
-/// unverified, and nearby names travel in cleartext on the local network (SECURITY-MODEL.md).
+/// `producer.version`). The receiver sees the name as unverified (SECURITY-MODEL.md).
 struct ShareLocalIdentityModel: Equatable {
-    /// The sender name in packages and the nearby display name (sanitized by VaultData).
+    /// The sender name in packages (sanitized by VaultData).
     let displayName: String
     /// `CFBundleShortVersionString`.
     let appVersion: String
@@ -19,14 +18,4 @@ struct ShareLocalIdentityModel: Equatable {
 
     private static let versionKey = "CFBundleShortVersionString"
     private static let unknownVersion = "0"
-}
-
-extension ShareLocalIdentityModel {
-    /// The identity nearby Macs see (Nearby Chat, nearby send and receive, v0.2.0): the name from
-    /// Preferences › General, or ``current`` when none is set.
-    static func nearby(preferences: PreferencesManager) -> ShareLocalIdentityModel {
-        let system = ShareLocalIdentityModel.current
-        guard let name = preferences.nearbyName else { return system }
-        return ShareLocalIdentityModel(displayName: name, appVersion: system.appVersion)
-    }
 }

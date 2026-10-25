@@ -9,7 +9,6 @@ enum FolderCopy {
     static let delete = String(localized: "folder.delete", defaultValue: "Delete Folder…")
     static let exportEnv = String(localized: "folder.exportEnv", defaultValue: "Export .env…")
     static let shareAsFile = String(localized: "folder.shareAsFile", defaultValue: "Share as File…")
-    static let sendToTeammate = String(localized: "folder.sendToTeammate", defaultValue: "Send to Teammate")
     static let actions = String(localized: "folder.actions", defaultValue: "Folder Actions")
     static let localTag = String(localized: "folder.localTag", defaultValue: "Never on GitHub")
     static let localHelp = String(

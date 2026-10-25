@@ -46,13 +46,9 @@ struct ShareImportScreen: View {
     private var content: some View {
         switch viewModel.step {
         case .reading:
-            NearbyProgressRow(text: String(localized: "shareImport.reading", defaultValue: "Reading the file…"))
+            SheetProgressRow(text: String(localized: "shareImport.reading", defaultValue: "Reading the file…"))
         case .passphrase, .opening:
-            if viewModel.needsPassphrase {
-                passphraseStep
-            } else {
-                NearbyProgressRow(text: String(localized: "shareImport.openingTeammates", defaultValue: "Opening the file with this Mac's teammate keys…"))
-            }
+            passphraseStep
         case .preview, .applying:
             previewStep
         case .done:
@@ -80,7 +76,7 @@ struct ShareImportScreen: View {
                 .frame(maxHeight: Theme.Layout.projectShareContentMaxHeight)
                 .disabled(viewModel.step == .bundleApplying)
                 if viewModel.step == .bundleApplying {
-                    NearbyProgressRow(text: editor.needsRepositoryImport && viewModel.isOnline
+                    SheetProgressRow(text: editor.needsRepositoryImport && viewModel.isOnline
                         ? ProjectShareCopy.importing
                         : String(localized: "shareImport.applying", defaultValue: "Importing…"))
                 }

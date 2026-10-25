@@ -35,13 +35,6 @@ struct VaultDataComponents {
     let cloner: any RepoCloning
     let drift: DriftRepository
     let sharing: SharingRepository
-    /// Nearby chat conversations and the items that can be attached (v0.2.0).
-    let chat: ChatRepository
-    /// This device's teammate keys and the paired devices (v0.5.0).
-    let team: TeamRepository
-    /// Shared spaces (v0.6.0): the versioned scopes teammates keep in sync. ``sync`` gates and
-    /// publishes through it.
-    let spaces: SpaceRepository
     /// Folders of secrets and variables (v0.7.0).
     let folders: FolderRepository
     /// Runtime destinations of repositories and the provider connections (v0.8.0).
@@ -114,7 +107,6 @@ struct VaultDataComponents {
             writePolicy: writePolicy,
             repositoryAccess: CatalogShareRepositoryAccess(github: github, catalog: catalog, isGitHubReady: { true })
         )
-        let spaces = SpaceRepository(session: session, schedulers: github, clock: clock)
         let azureTokens = ShellResolvingAzureTokens(
             github: github,
             runner: runner,
@@ -142,16 +134,12 @@ struct VaultDataComponents {
                 schedulers: github,
                 cloner: cloner,
                 clock: clock,
-                writePolicy: writePolicy,
-                spaces: spaces
+                writePolicy: writePolicy
             ),
             creation: RepoCreationRepository(session: session, schedulers: github, git: nil, clock: clock, writePolicy: writePolicy),
             cloner: cloner,
-            drift: DriftRepository(session: session, schedulers: github, clock: clock, writePolicy: writePolicy, spaces: spaces),
+            drift: DriftRepository(session: session, schedulers: github, clock: clock, writePolicy: writePolicy),
             sharing: sharing,
-            chat: ChatRepository(session: session, sharing: sharing, clock: clock),
-            team: TeamRepository(session: session, clock: clock),
-            spaces: spaces,
             folders: FolderRepository(session: session, clock: clock),
             destinations: DestinationRepository(session: session, clock: clock),
             overview: StageOverviewRepository(session: session, schedulers: github),

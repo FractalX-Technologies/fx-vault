@@ -7,7 +7,7 @@ import VaultStore
 /// Linked copies (v0.4.1, tasks/todo.md L1–L5).
 ///
 /// ``copyItems(_:to:repositoryID:conflicts:)`` links every copy to its source (`link_id`). The
-/// link is local metadata only: it never travels in shares, chat or `.env` files, and it does
+/// link is local metadata only: it never travels in shares or `.env` files, and it does
 /// not change how a row syncs. Whether two copies hold the same value is never stored: it is
 /// computed here when it is asked for (decrypted in memory, compared in constant time, wiped).
 extension ConfigRepository {

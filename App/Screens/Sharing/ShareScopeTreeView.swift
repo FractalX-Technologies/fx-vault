@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The scope tree with tri-state checkboxes (§10 `ShareExportScreen`, v0.2.0): repository,
+/// The scope tree with tri-state checkboxes (`ProjectShareScreen`, v0.2.0): repository,
 /// repository level, environments, items. See ``ShareScopeTreeModel`` for the rules.
 ///
 /// The repository row starts expanded, so its scopes fill the box; the box grows up to

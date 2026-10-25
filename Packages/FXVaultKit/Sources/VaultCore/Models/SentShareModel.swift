@@ -4,7 +4,7 @@ import Foundation
 public enum ShareProtectionMode: String, Sendable, Hashable, CaseIterable, Codable {
     /// Argon2id over a 6-word passphrase that travels by another channel.
     case passphrase
-    /// Sealed for 1–``Limits/maxShareRecipients`` paired teammates and signed by this Mac.
+    /// 0.9 only: sealed for paired teammates. 1.0 never writes it but still lists such rows.
     case teammates
 }
 
@@ -17,7 +17,7 @@ public struct SentShareModel: Sendable, Hashable, Identifiable {
     public var createdAt: Date
     public var expiresAt: Date
     public var mode: ShareProtectionMode
-    /// Lowercase device ids of the teammates the file was sealed for; empty for a passphrase.
+    /// Lowercase device ids a 0.9 teammates file was sealed for; empty for a passphrase.
     public var recipientIDs: [String]
     public var summary: SentShareSummaryModel
 

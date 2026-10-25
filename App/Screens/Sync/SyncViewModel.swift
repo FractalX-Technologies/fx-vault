@@ -54,14 +54,6 @@ final class SyncViewModel: LockObserving {
     private(set) var notice: String?
     var alert: ErrorPresentationModel?
 
-    /// "What changed?" (v0.6.0): recorded in every shared version this run publishes.
-    var spaceReason = ""
-    /// The stale push the user is asked to take over (Q3), while the confirmation is shown.
-    var pendingTakeover: (spaceID: SpaceID, login: String)?
-    /// Shared spaces whose stale push the user confirmed taking over.
-    private(set) var spaceTakeovers: Set<SpaceID> = []
-    /// True while Get Updates from Teammates runs.
-    private(set) var isGettingTeammateUpdates = false
 
     let context: SyncContext
     @ObservationIgnored private let dependencies: FeatureDependencies
@@ -111,10 +103,7 @@ final class SyncViewModel: LockObserving {
             return
         }
         do {
-            let review = try await service.preflight(
-                repositoryIDs: context.repositoryIDs.map { Array($0) },
-                spaceTakeovers: spaceTakeovers
-            )
+            let review = try await service.preflight(repositoryIDs: context.repositoryIDs.map { Array($0) })
             dependencies.gitHubReachability.recordSuccess()
             destinationReviews = await reviewDestinations(review)
             apply(review)
@@ -238,13 +227,6 @@ final class SyncViewModel: LockObserving {
 
     private var destinationDeletionCount: Int {
         destinationReviews.reduce(0) { $0 + $1.deletions.count }
-    }
-
-    /// The run pushes to a shared scope: "What changed?" is offered.
-    var publishesSharedVersions: Bool {
-        effectiveReview?.preflight.repositories.contains { repository in
-            repository.spaces.contains(where: \.allowsPush)
-        } ?? false
     }
 
     /// The "Sync N" count of the sheet (§7.1 pending count of what will run).
@@ -377,13 +359,11 @@ final class SyncViewModel: LockObserving {
         if gitHubCount > 0 {
             let run: any SyncRunControlling
             do {
-                let reason = spaceReason.trimmingCharacters(in: .whitespacesAndNewlines)
                 run = try await service.startRun(
                     review,
                     includeDeletions: includeDeletions,
                     includeHeld: included,
-                    cloneFolder: dependencies.preferences.cloneFolderURL,
-                    spaceReason: reason.isEmpty ? nil : reason
+                    cloneFolder: dependencies.preferences.cloneFolderURL
                 )
             } catch {
                 dependencies.gitHubReachability.record(error)
@@ -499,9 +479,6 @@ final class SyncViewModel: LockObserving {
         step = .result
         if let outcome {
             reportReachability(outcome.result)
-            if publishesSharedVersions, !outcome.result.succeeded.isEmpty {
-                dependencies.actions.spacesPublished()
-            }
             AppLog.ui.info(
                 """
                 Sync finished: \(outcome.result.succeeded.count, privacy: .public) succeeded, \
@@ -620,34 +597,9 @@ final class SyncViewModel: LockObserving {
             openURL(url)
         case .clone(let repositoryID):
             Task { await clone(repositoryID) }
-        case .getTeammateUpdates:
-            Task { await getTeammateUpdates() }
-        case .takeOverSpace(let spaceID, let login):
-            pendingTakeover = (spaceID, login)
         case .openDestination(let destinationID):
             dependencies.actions.openPlace(.destination(destinationID))
         }
-    }
-
-    // MARK: - Shared spaces (v0.6.0)
-
-    /// Pulls every shared space from the teammates, then runs the preflight again.
-    func getTeammateUpdates() async {
-        guard !isGettingTeammateUpdates, step == .summary || step == .result else { return }
-        isGettingTeammateUpdates = true
-        notice = SyncCopy.gettingUpdates
-        await dependencies.actions.syncSpaces()
-        isGettingTeammateUpdates = false
-        notice = nil
-        await load()
-    }
-
-    /// The user confirmed taking over a teammate's unfinished push (Q3): preflight again.
-    func confirmTakeover() async {
-        guard let pendingTakeover else { return }
-        self.pendingTakeover = nil
-        spaceTakeovers.insert(pendingTakeover.spaceID)
-        await load()
     }
 
     // MARK: - Copyable text (names only)

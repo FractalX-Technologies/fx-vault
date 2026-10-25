@@ -94,8 +94,8 @@ public enum SharePackageViolation: Sendable, Hashable {
 /// folders: a valid folder name, no repository or environments, at most
 /// ``Limits/maxFolderItems`` items, every item with a value).
 ///
-/// Run on every boundary: after decrypting a `.fxvault`, on a received nearby MANIFEST and
-/// PAYLOAD, and before exporting.
+/// Run on every boundary: after decrypting a `.fxvault`, on a preview manifest, and before
+/// exporting.
 public enum SharePackageValidator {
     /// What kind of document is being validated.
     public enum Mode: Sendable, Hashable {

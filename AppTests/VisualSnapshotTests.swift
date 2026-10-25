@@ -132,32 +132,7 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
-    // MARK: - Teammates nearby (v0.5.0)
-
-    @Test func presenceBubblesAndPopover() async throws {
-        let (network, ana, ben) = try await TeamPresenceTests.pairedMacs()
-        for name in ["Cleo", "Dev", "Eli", "Fay"] {
-            let other = try await TeamPresenceTests.Mac(name, network: network)
-            try ana.pair(with: other)
-            try other.pair(with: ana)
-            other.presence.start()
-        }
-        ana.presence.start()
-        #expect(await TestFixtures.eventually { ana.presence.people.count == 5 })
-        try await SnapshotOutput.write("presence-bubbles", size: CGSize(width: 260, height: 44)) {
-            NearbyPresenceView(presence: ana.presence)
-                .padding(Theme.Spacing.small)
-                .background(Theme.Colors.ground)
-        }
-        let person = try #require(ana.person("Ben"))
-        try await SnapshotOutput.write("presence-popover", size: CGSize(width: Theme.Layout.presencePopoverWidth, height: 150)) {
-            NearbyPersonPopover(person: person, presence: ana.presence)
-                .background(Theme.Colors.card)
-        }
-        withExtendedLifetime((ben, network)) {}
-    }
-
-    // MARK: - Folders and teammates in the sidebar (v0.7.0)
+    // MARK: - Folders in the sidebar (v0.7.0)
 
     /// "Mobile App" with a copied secret, a linked copy and a variable, selected.
     @Test func mainWindowFolder() async throws {
@@ -176,33 +151,24 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
-    /// The sidebar with FOLDERS on top and TEAMMATES pinned at the bottom (one nearby, one not).
-    @Test func sidebarFoldersAndTeammates() async throws {
-        let (network, ana, ben) = try await TeamPresenceTests.pairedMacs()
-        let cleo = TeamDeviceKeys.generate().card(login: "cleo-b", displayName: "Cleo", macName: "Cleo's MacBook Pro")
-        try ana.harness.data.team.addTeammate(cleo)
-        try ana.harness.data.team.setMuted(true, teammate: cleo.deviceID.hex)
-        let folders = ana.harness.data.folders
+    /// The sidebar with FOLDERS on top and one selected.
+    @Test func sidebarFolders() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let folders = harness.data.folders
         let mobile = try folders.createFolder(named: "Mobile App")
         try folders.addItem(folderID: mobile, kind: .secret, name: "FIREBASE_API_KEY", value: SecretBytes(utf8: "FXV_SNAPSHOT_FIREBASE"))
         try folders.createFolder(named: "Stripe test")
-        let main = ana.harness.app.makeMainViewModel()
-        #expect(await TestFixtures.eventually { main.sidebar.folders.count == 2 && main.sidebar.teammates.count == 2 })
-        #expect(await TestFixtures.eventually { ana.person("Ben") != nil })
+        let main = harness.app.makeMainViewModel()
+        #expect(await TestFixtures.eventually { main.sidebar.folders.count == 2 })
         main.sidebar.selectedFolderID = mobile
         try await SnapshotOutput.write(
-            "main-sidebar-teammates",
+            "main-sidebar-folders",
             size: CGSize(width: Theme.Layout.sidebarIdealWidth, height: Theme.Layout.windowDefaultHeight)
         ) {
             SidebarView(main: main)
                 .background(Theme.Colors.surface)
         }
-        let person = try #require(ana.person("Ben"))
-        try await SnapshotOutput.write("presence-popover-folder", size: CGSize(width: Theme.Layout.presencePopoverWidth, height: 150)) {
-            NearbyPersonPopover(person: person, presence: ana.presence, folders: main.sidebar.folders)
-                .background(Theme.Colors.card)
-        }
-        withExtendedLifetime((ben, network)) {}
+        withExtendedLifetime(harness) {}
     }
 
     /// A received copy of a folder: Save as Folder into the folder of the same name.
@@ -230,40 +196,6 @@ struct VisualSnapshotTests {
                 .padding(Theme.Spacing.xLarge)
                 .background(Theme.Colors.ground)
         }
-    }
-
-    @Test func teammatesSettings() async throws {
-        let (network, ana, ben) = try await TeamPresenceTests.pairedMacs()
-        let cleo = TeamDeviceKeys.generate().card(login: "cleo-b", displayName: "Cleo", macName: "Cleo's MacBook Pro")
-        try ana.harness.data.team.addTeammate(cleo)
-        try ana.harness.data.team.setMuted(true, teammate: cleo.deviceID.hex)
-        let settings = TeammatesSettingsViewModel(app: ana.harness.app)
-        #expect(await TestFixtures.eventually { settings.teammates.count == 2 })
-        try await SnapshotOutput.write("settings-teammates", size: CGSize(width: Theme.Layout.settingsWidth, height: SnapshotOutput.settingsHeight)) {
-            TeammatesSettingsScreen(viewModel: settings)
-        }
-        withExtendedLifetime((ben, network)) {}
-    }
-
-    @Test func addTeammateCode() async throws {
-        let network = FakeNearbyNetwork()
-        let ana = try await TeamPresenceTests.Mac("Ana", network: network)
-        let ben = try await TeamPresenceTests.Mac("Ben", network: network)
-        let anaSheet = AddTeammateViewModel(app: ana.harness.app)
-        let benSheet = AddTeammateViewModel(app: ben.harness.app)
-        await anaSheet.start()
-        await benSheet.start()
-        #expect(await TestFixtures.eventually { !anaSheet.peers.isEmpty })
-        try await SnapshotOutput.write("add-teammate-list", size: CGSize(width: Theme.Layout.addTeammateSheetWidth, height: 460)) {
-            AddTeammateSheet(viewModel: anaSheet)
-        }
-        anaSheet.pair(with: try #require(anaSheet.peers.first))
-        #expect(await TestFixtures.eventually { if case .comparing = anaSheet.step { true } else { false } })
-        try await SnapshotOutput.write("add-teammate-code", size: CGSize(width: Theme.Layout.addTeammateSheetWidth, height: 520)) {
-            AddTeammateSheet(viewModel: anaSheet)
-        }
-        anaSheet.close()
-        benSheet.close()
     }
 
     /// The sidebar on its own: inside the split view it sits in a macOS 26+ glass view that a
@@ -319,197 +251,6 @@ struct VisualSnapshotTests {
         ) {
             SyncScreen(viewModel: viewModel)
         }
-    }
-
-    // MARK: - Shared spaces (v0.6.0)
-
-    @Test func sharedSpaces() async throws {
-        let (_, ana, ben, anaRepo, _) = try await SpaceSyncTests.pairedMacs()
-        let cleo = TeamDeviceKeys.generate().card(login: "cleo-b", displayName: "Cleo", macName: "Cleo's MacBook Pro")
-        try ana.harness.data.team.addTeammate(cleo)
-        let share = ShareSpaceViewModel(
-            context: ShareSpaceContext(repositoryID: anaRepo, scope: .repository),
-            dependencies: ana.dependencies()
-        )
-        share.load()
-        share.toggle(ben.keys.deviceID.hex)
-        share.reason = "Start sharing the deploy keys"
-        try await SnapshotOutput.write("space-share", size: CGSize(width: Theme.Layout.editorSheetWidth, height: 560)) {
-            ShareSpaceScreen(viewModel: share)
-        }
-        await share.share()
-        let spaceID = try #require(share.sharedSpaceID)
-        try await ana.harness.data.spaces.addMembers(
-            spaceID,
-            teammateIDs: [cleo.deviceID.hex],
-            me: SpaceLocalIdentityModel(login: "ana", displayName: "Ana", macName: "Ana's Mac")
-        )
-        let space = SpaceViewModel(context: SpaceContext(spaceID: spaceID), dependencies: ana.dependencies())
-        space.load()
-        try await SnapshotOutput.write("space-history", size: CGSize(width: Theme.Layout.editorSheetWidth, height: 560)) {
-            SpaceScreen(viewModel: space)
-        }
-        space.tab = .members
-        try await SnapshotOutput.write("space-members", size: CGSize(width: Theme.Layout.editorSheetWidth, height: 560)) {
-            SpaceScreen(viewModel: space)
-        }
-    }
-
-    @Test func syncSummaryWithASharedScopeBehind() async throws {
-        let fixture = try await SyncSpaceSheetTests.fixture(
-            .behind(version: 9, login: "user-b"),
-            executable: [SyncFixtures.set(.variable, "FEATURE_FLAGS", environment: "staging")]
-        )
-        await fixture.viewModel.load()
-        try await SnapshotOutput.write(
-            "sync-summary-space",
-            size: CGSize(width: Theme.Layout.syncSheetWidth, height: SnapshotOutput.sheetHeight)
-        ) {
-            SyncScreen(viewModel: fixture.viewModel)
-        }
-    }
-
-    @Test func teammatesSettingsRemote() async throws {
-        let network = FakeNearbyNetwork()
-        let ana = try await SpaceSyncTests.Mac("Ana", network: network)
-        let ben = try await SpaceSyncTests.Mac("Ben", network: network)
-        try ana.pair(with: ben)
-        let settings = TeammatesSettingsViewModel(app: ana.harness.app)
-        #expect(await TestFixtures.eventually { settings.teammates.count == 1 })
-        let teammate = try #require(settings.teammates.first)
-        try ana.harness.data.team.setRemoteAccess(
-            teammate.id,
-            isAllowed: true,
-            address: TeamRemoteAddressModel(text: "mac-b.example.ts.net:52731")
-        )
-        #expect(await TestFixtures.eventually { settings.isRemoteAllowed(teammate) })
-        try await SnapshotOutput.write("settings-teammates-remote", size: CGSize(width: Theme.Layout.settingsWidth, height: 760)) {
-            TeammatesSettingsScreen(viewModel: settings)
-        }
-    }
-
-    @Test func nearbyChatConversation() async throws {
-        let fixture = try await NearbyChatViewModelTests.Fixture()
-        try await fixture.chat()
-        let macA = fixture.macA
-        let macB = fixture.macB
-        macA.draft = "Hi, sending the staging token now."
-        await macA.send()
-        #expect(await TestFixtures.eventually { macB.messages.count == 1 })
-        macB.draft = "Thanks. Codes matched on my side."
-        await macB.send()
-        #expect(await TestFixtures.eventually { macA.messages.count == 2 })
-        macA.draft = "Attaching it as a card."
-        #expect(macA.step == .chatting)
-        // `NearbyChatScreen` restarts discovery in its `.task` (the window opening), which would
-        // end this conversation, so the conversation is drawn with the screen's own columns:
-        // the visibility pill, the people list and the conversation.
-        try await SnapshotOutput.write(
-            "nearby-chat",
-            size: CGSize(width: Theme.Layout.chatWindowDefaultWidth, height: Theme.Layout.chatWindowDefaultHeight)
-        ) {
-            VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    ChatVisibilityIndicator(isVisible: macA.isVisible, displayName: macA.displayName)
-                }
-                .padding(.horizontal, Theme.Spacing.xLarge)
-                .padding(.vertical, Theme.Spacing.largePlus)
-                HairlineDivider()
-                HStack(spacing: 0) {
-                    ChatPeerListView(viewModel: macA)
-                        .frame(width: Theme.Layout.chatPeerListWidth)
-                        .background(Theme.Colors.surface)
-                    HairlineDivider(axis: .vertical)
-                    ChatConversationView(viewModel: macA)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            }
-        }
-        fixture.close()
-    }
-
-    // MARK: - Nearby Chat repositories (v0.4.0)
-
-    @Test func nearbyChatRepositoryPicker() async throws {
-        let fixture = try await NearbyChatViewModelTests.Fixture()
-        try await fixture.chat()
-        fixture.macA.attach()
-        let picker = try #require(fixture.macA.picker)
-        picker.reauth.password = testPassword
-        await picker.authenticateWithPassword()
-        picker.mode = .repository
-        picker.selectedRepositoryID = fixture.world.senderRepositoryID
-        try await SnapshotOutput.write(
-            "nearby-chat-repository-picker",
-            size: CGSize(width: Theme.Layout.chatPickerWidth, height: SnapshotOutput.tallSheetHeight)
-        ) {
-            ChatAttachmentPickerSheet(viewModel: picker)
-        }
-        fixture.close()
-    }
-
-    /// Mac B's side: a repository offered (Import Into…, Save as File…, Dismiss) and one saved as
-    /// a file; Mac A's side: the repository it sent.
-    @Test func nearbyChatRepositoryCards() async throws {
-        let fixture = try await NearbyChatViewModelTests.Fixture()
-        try await fixture.chat()
-        let saved = try await fixture.attachRepository()
-        _ = try await fixture.saveRepositoryAsFile(saved)
-        _ = try await fixture.attachRepository()
-        let size = CGSize(width: Theme.Layout.chatWindowDefaultWidth - Theme.Layout.chatPeerListWidth, height: Theme.Layout.chatWindowDefaultHeight)
-        try await SnapshotOutput.write("nearby-chat-repository-received", size: size) {
-            ChatConversationView(viewModel: fixture.macB)
-        }
-        try await SnapshotOutput.write("nearby-chat-repository-sent", size: size) {
-            ChatConversationView(viewModel: fixture.macA)
-        }
-        fixture.close()
-    }
-
-    @Test func nearbyChatImportTarget() async throws {
-        let fixture = try await NearbyChatViewModelTests.Fixture()
-        _ = try await fixture.world.receiver.stageRepository(name: "another-service-with-a-long-name")
-        try await fixture.chat()
-        let id = try await fixture.attachRepository()
-        let macB = fixture.macB
-        await macB.handleConfiguration(id, .importInto)
-        #expect(await TestFixtures.eventually { macB.saveSheet != nil })
-        let sheet = try #require(macB.saveSheet)
-        try await SnapshotOutput.write(
-            "nearby-chat-import-target",
-            size: CGSize(width: Theme.Layout.shareSheetWidth, height: SnapshotOutput.sheetHeight)
-        ) {
-            ChatSaveSheet(viewModel: sheet)
-        }
-        await sheet.importIntoSelectedTarget()
-        try await SnapshotOutput.write(
-            "nearby-chat-import-preview",
-            size: CGSize(width: Theme.Layout.shareSheetWidth, height: SnapshotOutput.sheetHeight)
-        ) {
-            ChatSaveSheet(viewModel: sheet)
-        }
-        fixture.close()
-    }
-
-    @Test func nearbyChatSaveAsFile() async throws {
-        let fixture = try await NearbyChatViewModelTests.Fixture()
-        try await fixture.chat()
-        let id = try await fixture.attachRepository()
-        let macB = fixture.macB
-        await macB.handleConfiguration(id, .saveAsFile)
-        #expect(await TestFixtures.eventually { macB.fileSheet != nil })
-        let sheet = try #require(macB.fileSheet)
-        await sheet.start()
-        sheet.reauth.password = testPassword
-        await sheet.authenticateWithPassword()
-        try await SnapshotOutput.write(
-            "nearby-chat-save-as-file",
-            size: CGSize(width: Theme.Layout.shareSheetWidth, height: SnapshotOutput.sheetHeight)
-        ) {
-            ShareExportScreen(viewModel: sheet)
-        }
-        fixture.close()
     }
 
     // MARK: - Destinations (v0.8.0)

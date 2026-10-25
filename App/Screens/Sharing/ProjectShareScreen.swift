@@ -40,23 +40,6 @@ struct ProjectShareScreen: View {
         .task { await viewModel.start() }
         .onDisappear { viewModel.close() }
         .errorAlert($viewModel.alert)
-        .confirmationDialog(
-            ProjectShareCopy.includeProductionTitle,
-            isPresented: Binding(
-                get: { viewModel.pendingProductionStage != nil },
-                set: { if !$0 { viewModel.cancelProductionStage() } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button(ProjectShareCopy.includeProduction) {
-                viewModel.confirmProductionStage()
-            }
-            Button(String(localized: "common.cancel", defaultValue: "Cancel"), role: .cancel) {
-                viewModel.cancelProductionStage()
-            }
-        } message: {
-            Text(ProjectShareCopy.includeProductionMessage(viewModel.pendingProductionStage?.name ?? ""))
-        }
     }
 
     @ViewBuilder
@@ -74,7 +57,7 @@ struct ProjectShareScreen: View {
                 onPassword: { await viewModel.authenticateWithPassword() }
             )
         case .creating:
-            NearbyProgressRow(text: ProjectShareCopy.creating)
+            SheetProgressRow(text: ProjectShareCopy.creating)
         case .done:
             ProjectShareDoneStep(viewModel: viewModel)
         }
@@ -233,6 +216,7 @@ private struct ProjectShareContentsStep: View {
                                 .toggleStyle(.checkbox)
                                 .fxTextStyle(.monoName)
                                 .foregroundStyle(Theme.Colors.ink)
+                                .disabled(option.isProduction)
                                 if option.isProduction {
                                     StatusChip(title: ProjectShareCopy.productionChip, tone: .warning)
                                         .help(ProjectShareCopy.productionHelp)
@@ -293,28 +277,19 @@ private struct ProjectShareSendToStep: View {
                     .fxTextStyle(.statusLine)
                     .foregroundStyle(Theme.Colors.subtleText)
             }
-            ProjectShareOption(
-                title: ProjectShareCopy.teammatesOption,
-                message: ProjectShareCopy.teammatesHelp,
-                isSelected: viewModel.protection == .teammates,
-                isEnabled: !viewModel.teammates.isEmpty
-            ) {
-                viewModel.setProtection(.teammates)
-            } content: {
-                teammates
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+                Text(ProjectShareCopy.passphraseOption)
+                    .fxTextStyle(.bodyEmphasized)
+                    .foregroundStyle(Theme.Colors.ink)
+                // A blocked share says why at full strength.
+                Text(viewModel.isShareAllowed ? ProjectShareCopy.passphraseHelp : ProjectShareCopy.productionBlocked(viewModel.productionPlaces))
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(viewModel.isShareAllowed ? Theme.Colors.mutedText : Theme.Colors.warning)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            ProjectShareOption(
-                title: ProjectShareCopy.passphraseOption,
-                message: viewModel.isPassphraseAllowed
-                    ? ProjectShareCopy.passphraseHelp
-                    : ProjectShareCopy.passphraseBlocked(viewModel.productionPlaces),
-                isSelected: viewModel.protection == .passphrase,
-                isEnabled: viewModel.isPassphraseAllowed
-            ) {
-                viewModel.setProtection(.passphrase)
-            } content: {
-                EmptyView()
-            }
+            .padding(Theme.Spacing.medium)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fxCardBackground(.container)
             VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                 HStack(spacing: Theme.Spacing.medium) {
                     SectionLabel(ProjectShareCopy.expiry)
@@ -327,109 +302,12 @@ private struct ProjectShareSendToStep: View {
                     )
                     .fixedSize()
                 }
-                Text(viewModel.protection == .passphrase ? ProjectShareCopy.expiryPassphraseNote : ProjectShareCopy.expiryTeammatesNote)
+                Text(ProjectShareCopy.expiryPassphraseNote)
                     .fxTextStyle(.caption)
                     .foregroundStyle(Theme.Colors.subtleText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-    }
-
-    @ViewBuilder
-    private var teammates: some View {
-        if viewModel.teammates.isEmpty {
-            Text(ProjectShareCopy.noTeammates)
-                .fxTextStyle(.caption)
-                .foregroundStyle(Theme.Colors.subtleText)
-                .fixedSize(horizontal: false, vertical: true)
-        } else if viewModel.protection == .teammates {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-                if viewModel.teammates.count > Self.unscrolledTeammates {
-                    ScrollView {
-                        teammateRows
-                    }
-                    .frame(height: Theme.Layout.shareListMinHeight)
-                } else {
-                    teammateRows
-                }
-                Text(ProjectShareCopy.teammateLimit(chosen: viewModel.chosenTeammateIDs.count))
-                    .fxTextStyle(.monoMeta)
-                    .foregroundStyle(Theme.Colors.subtleText)
-            }
-        }
-    }
-
-    /// Up to this many teammates are listed without a scroll view.
-    private static let unscrolledTeammates = 6
-
-    private var teammateRows: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-                        ForEach(viewModel.teammates) { teammate in
-                            HStack(spacing: Theme.Spacing.small) {
-                                Toggle(
-                                    teammate.name,
-                                    isOn: Binding(
-                                        get: { viewModel.isTeammateChosen(teammate) },
-                                        set: { viewModel.setTeammate(teammate, chosen: $0) }
-                                    )
-                                )
-                                .toggleStyle(.checkbox)
-                                .fxTextStyle(.callout)
-                                .foregroundStyle(Theme.Colors.ink)
-                                .disabled(!viewModel.isTeammateChosen(teammate) && !viewModel.canChooseMoreTeammates)
-                                if teammate.pairedVia == .remote {
-                                    Text(ProjectShareCopy.pairedRemotely)
-                                        .fxTextStyle(.caption)
-                                        .foregroundStyle(Theme.Colors.subtleText)
-                                }
-                                Spacer(minLength: 0)
-                            }
-                        }
-        }
-    }
-}
-
-/// One way to protect the file: a radio row with its explanation and, when selected, its options.
-private struct ProjectShareOption<Content: View>: View {
-    let title: String
-    let message: String
-    let isSelected: Bool
-    let isEnabled: Bool
-    let onSelect: () -> Void
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            Button(action: onSelect) {
-                HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
-                    Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
-                        .foregroundStyle(isSelected ? Theme.Colors.brand : Theme.Colors.subtleText)
-                        .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                        Text(title)
-                            .fxTextStyle(.bodyEmphasized)
-                            .foregroundStyle(Theme.Colors.ink)
-                            .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
-                        // A disabled option says why at full strength.
-                        Text(message)
-                            .fxTextStyle(.caption)
-                            .foregroundStyle(isEnabled ? Theme.Colors.mutedText : Theme.Colors.warning)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!isEnabled)
-            .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-            content()
-                .padding(.leading, Theme.Spacing.xLarge)
-        }
-        .padding(Theme.Spacing.medium)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .fxCardBackground(.container)
     }
 }
 
@@ -456,20 +334,8 @@ private struct ProjectShareDoneStep: View {
                         set: { viewModel.hasSavedPassphrase = $0 }
                     )
                 )
-            } else {
-                SheetCallout(
-                    systemImage: "lock.shield",
-                    tint: Theme.Colors.success,
-                    text: ProjectShareCopy.sealedFor(viewModel.sealedForNames)
-                )
-                if let expiresAt = viewModel.expiresAt {
-                    Text(ProjectShareCopy.teammatesDelivery(expiresAt: expiresAt))
-                        .fxTextStyle(.callout)
-                        .foregroundStyle(Theme.Colors.mutedText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
             }
-            if viewModel.isPassphraseFile, let expiresAt = viewModel.expiresAt {
+            if let expiresAt = viewModel.expiresAt {
                 Text(ProjectShareCopy.expires(expiresAt))
                     .fxTextStyle(.monoMeta)
                     .foregroundStyle(Theme.Colors.subtleText)

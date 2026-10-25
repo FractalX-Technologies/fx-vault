@@ -20,20 +20,17 @@ nonisolated extension SyncRunHandle: SyncRunControlling {}
 /// What ``SyncViewModel`` needs from VaultData (`SyncRepository`, the account scope status and
 /// `RepoCloning`). The live implementation is ``LiveSyncService``; view-model tests use a fake.
 nonisolated protocol SyncServicing: Sendable {
-    /// §7.3 preflight of `repositoryIDs` (nil: every repository with pending changes), taking
-    /// over the stale pushes of `spaceTakeovers` (Q3).
-    func preflight(repositoryIDs: [RepoID]?, spaceTakeovers: Set<SpaceID>) async throws(SyncRepositoryError) -> SyncReviewModel
+    /// §7.3 preflight of `repositoryIDs` (nil: every repository with pending changes).
+    func preflight(repositoryIDs: [RepoID]?) async throws(SyncRepositoryError) -> SyncReviewModel
     /// §7.5 live contents of every environment being deleted. Never throws.
     func deletionPreview(for review: SyncReviewModel) async -> [RepoDeletionPreviewModel]
-    /// Plans and starts the run (§7.3, §7.4). `spaceReason` goes into the shared versions.
-    /// `includeHeld` (v0.9.0): the share files the From Files review included; their holds are
-    /// released and their rows run.
+    /// Plans and starts the run (§7.3, §7.4). `includeHeld` (v0.9.0): the share files the From
+    /// Files review included; their holds are released and their rows run.
     func startRun(
         _ review: SyncReviewModel,
         includeDeletions: Bool,
         includeHeld: Set<SharePackageID>,
-        cloneFolder: URL?,
-        spaceReason: String?
+        cloneFolder: URL?
     ) async throws(SyncRepositoryError) -> any SyncRunControlling
     /// Clones a repository a run created (retry, or a clone folder chosen afterwards).
     func clone(_ repositoryID: RepoID, into folder: URL) async throws(RepoCreationError) -> URL
@@ -46,9 +43,9 @@ nonisolated struct LiveSyncService: SyncServicing {
     let github: GitHubEnvironmentRepository
     let cloner: any RepoCloning
 
-    func preflight(repositoryIDs: [RepoID]?, spaceTakeovers: Set<SpaceID>) async throws(SyncRepositoryError) -> SyncReviewModel {
+    func preflight(repositoryIDs: [RepoID]?) async throws(SyncRepositoryError) -> SyncReviewModel {
         let scopeStatus = await scopeStatus()
-        return try await sync.preflight(repositoryIDs: repositoryIDs, scopeStatus: scopeStatus, spaceTakeovers: spaceTakeovers)
+        return try await sync.preflight(repositoryIDs: repositoryIDs, scopeStatus: scopeStatus)
     }
 
     func deletionPreview(for review: SyncReviewModel) async -> [RepoDeletionPreviewModel] {
@@ -59,16 +56,9 @@ nonisolated struct LiveSyncService: SyncServicing {
         _ review: SyncReviewModel,
         includeDeletions: Bool,
         includeHeld: Set<SharePackageID>,
-        cloneFolder: URL?,
-        spaceReason: String?
+        cloneFolder: URL?
     ) async throws(SyncRepositoryError) -> any SyncRunControlling {
-        try await sync.startRun(
-            review,
-            includeDeletions: includeDeletions,
-            includeHeld: includeHeld,
-            cloneFolder: cloneFolder,
-            spaceReason: spaceReason
-        )
+        try await sync.startRun(review, includeDeletions: includeDeletions, includeHeld: includeHeld, cloneFolder: cloneFolder)
     }
 
     func clone(_ repositoryID: RepoID, into folder: URL) async throws(RepoCreationError) -> URL {

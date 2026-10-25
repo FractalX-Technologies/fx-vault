@@ -37,8 +37,6 @@ final class SidebarViewModel {
     }
     /// The folder waiting for the "Delete the folder?" confirmation.
     var pendingFolderDeletion: FolderModel?
-    /// The paired teammates (v0.7.0, the TEAMMATES section), whether nearby or not.
-    private(set) var teammates: [TeammateModel] = []
     private(set) var input = SidebarInputModel()
     private(set) var isLoadingCatalog = false
     /// Why accounts could not be listed at all; nil when they were (or gh is not ready).
@@ -65,20 +63,6 @@ final class SidebarViewModel {
         self.app = app
         observeVault()
         observeFolders()
-        observeTeammates()
-    }
-
-    private func observeTeammates() {
-        let stream = data.team.observeTeammates()
-        tasks.set("teammates", Task { [weak self] in
-            do {
-                for try await teammates in stream {
-                    self?.teammates = teammates
-                }
-            } catch {
-                AppLog.ui.error("Teammate observation ended")
-            }
-        })
     }
 
     private var data: VaultDataComponents {

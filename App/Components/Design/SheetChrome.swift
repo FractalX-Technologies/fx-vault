@@ -10,7 +10,6 @@ import SwiftUI
 /// The top of a sheet or a full-window form: a ``SectionLabel`` eyebrow, the title and a muted
 /// subtitle (board SyncReview: `REVIEW BEFORE SYNC` / 28 pt title / one muted line, 6 pt apart).
 ///
-/// - `isExperimental` adds the "Experimental" tag after the title (nearby sharing and chat).
 /// - `accessory` (Copy as Text, Refresh) sits at the trailing end of the eyebrow row, so the
 ///   title and subtitle use the full width; without an eyebrow (or when centered) it sits
 ///   beside them, top-aligned.
@@ -25,7 +24,6 @@ struct SheetHeader<Accessory: View>: View {
     let label: String?
     let title: String
     let subtitle: String?
-    let isExperimental: Bool
     let titleStyle: Theme.TextStyle
     let subtitleStyle: Theme.TextStyle
     let subtitleSpacing: CGFloat
@@ -36,7 +34,6 @@ struct SheetHeader<Accessory: View>: View {
         label: String?,
         title: String,
         subtitle: String? = nil,
-        isExperimental: Bool = false,
         titleStyle: Theme.TextStyle = .title,
         subtitleStyle: Theme.TextStyle = .body,
         subtitleSpacing: CGFloat = Theme.Spacing.smallMinus,
@@ -46,7 +43,6 @@ struct SheetHeader<Accessory: View>: View {
         self.label = label
         self.title = title
         self.subtitle = subtitle
-        self.isExperimental = isExperimental
         self.titleStyle = titleStyle
         self.subtitleStyle = subtitleStyle
         self.subtitleSpacing = subtitleSpacing
@@ -104,13 +100,6 @@ struct SheetHeader<Accessory: View>: View {
                 .multilineTextAlignment(textAlignment)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            if isExperimental {
-                StatusChip.tag(String(localized: "share.nearby.experimental", defaultValue: "Experimental"))
-                    .help(String(
-                        localized: "share.nearby.experimental.help",
-                        defaultValue: "Nearby sharing is new. If it fails, share a file instead."
-                    ))
-            }
         }
     }
 
@@ -124,7 +113,6 @@ extension SheetHeader where Accessory == EmptyView {
         label: String?,
         title: String,
         subtitle: String? = nil,
-        isExperimental: Bool = false,
         titleStyle: Theme.TextStyle = .title,
         subtitleStyle: Theme.TextStyle = .body,
         subtitleSpacing: CGFloat = Theme.Spacing.smallMinus,
@@ -134,7 +122,6 @@ extension SheetHeader where Accessory == EmptyView {
             label: label,
             title: title,
             subtitle: subtitle,
-            isExperimental: isExperimental,
             titleStyle: titleStyle,
             subtitleStyle: subtitleStyle,
             subtitleSpacing: subtitleSpacing,

@@ -1,7 +1,6 @@
 import Foundation
 
-/// Which stages count as production when sharing (v0.9.0, P2): they start unchecked, need a
-/// confirmation and can only be sent to teammates, never under a passphrase (Q13).
+/// Which stages count as production when sharing (v0.9.0, P2): 1.0 never shares them (Q13).
 public enum StageRisk {
     /// The words that mark a production stage, lowercase.
     public static let productionWords: Set<String> = ["prod", "production", "prd", "live"]

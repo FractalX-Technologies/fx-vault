@@ -2,7 +2,7 @@ import SharingKit
 import SwiftUI
 import VaultCore
 
-/// The import preview (§9.5), shared by `ShareImportScreen` and `NearbyReceiveScreen`: chips,
+/// The import preview (§9.5) of `ShareImportScreen`: chips,
 /// per-item choices, "Overwrite all", "Deployment branches differ" rows with the widening
 /// warning and its second confirmation, and the replay warning. Values are never shown.
 struct ShareImportPreviewView: View {
@@ -321,9 +321,8 @@ private struct SharePolicyDifferenceRow: View {
     }
 }
 
-/// The one-click "Import <owner/name> from GitHub" of a share import preview (§9.5), shared by
-/// the file import, nearby receive and chat save sheets. It runs gh, so it is disabled offline
-/// and says why.
+/// The one-click "Import <owner/name> from GitHub" of a share import preview (§9.5). It runs gh,
+/// so it is disabled offline and says why.
 struct ShareImportRepositoryButton: View {
     let title: String
     let isImporting: Bool

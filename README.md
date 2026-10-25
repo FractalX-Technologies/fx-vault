@@ -42,23 +42,9 @@ the secrets your code reads at runtime in Azure Key Vault, Supabase and Vercel.
   goes to GitHub by itself: copy its items into any repository with ⌘C / ⌘V or Copy To, and every
   copy stays linked, so changing a value in the folder offers to update the repositories that
   use it. Folders take Paste Multiple…, `.env` import and export too.
-- **Send a folder to a teammate.** From the folder's menu or a teammate's card: a verified chat
-  opens with the folder attached (after Touch ID or your master password), or save it as an
-  encrypted `.fxvault` file. The teammate saves it as a folder of their own or imports it into
-  one of their repositories. Each person keeps their own copy.
-- **Teammates nearby.** Pair once with a teammate's Mac (Settings › Teammates › Add Teammate…,
-  compare a 6-digit code), or, experimentally, from anywhere with **Not Nearby…**: swap two small
-  card files by chat and compare six words on a call. Your teammates are always listed at the bottom of the sidebar, with a
-  green dot while they are nearby and FX Vault is open: click one to **Ping** (their Mac plays a
-  sound), **Chat** (no code needed between teammates) or **Send Folder**. Only your teammates recognize your Mac: it shows up under a name that
-  changes every 15 minutes. Choose Nobody, Teammates or Everyone nearby, and mute pings per
-  teammate or all at once.
-- **Shared scopes (experimental).** Share a repository level or an environment with paired
-  teammates: every push becomes a signed version they get Mac to Mac (nearby, or at an address
-  you allow, such as a Tailscale name), with its values, author and time. Before anyone pushes,
-  FX Vault checks a small signed marker on GitHub and asks you to get your teammates' newer
-  versions first, so nobody overwrites anyone. History shows every version and restores an older
-  value. No server and no extra repository: GitHub holds only the marker.
+- **Send a folder to a teammate.** From the folder's menu, share it as an encrypted `.fxvault`
+  file (after Touch ID or your master password). The teammate saves it as a folder of their own
+  or imports it into one of their repositories. Each person keeps their own copy.
 - **Copy once, use everywhere.** Select secrets or variables, press ⌘C, open any other scope of
   any repository in the vault (any account) and press ⌘V, or choose **Copy To › Another
   Repository…**. Each copy stays **linked** to its item: a link chip with the number of places
@@ -74,12 +60,11 @@ the secrets your code reads at runtime in Azure Key Vault, Supabase and Vercel.
 - **`.env` import and export.** Import with key fixes and credential detection; export after
   Touch ID or your master password, with iCloud and git-exposure warnings.
 - **Share a project as one file.** File › Share Project… (⌥⌘S) puts several repositories into
-  one encrypted `.fxvault` file you can send by WhatsApp, Mail or AirDrop: pick the stages
-  (production starts unchecked), and each repository brings its GitHub environments and its
-  runtime destinations with their values, then adjust the tree down to single secrets. Send it
-  to up to 10 **paired teammates** (only FX Vault on their Macs can open it, no passphrase, and
-  they see it came from you) or to **anyone, with a 6-word passphrase** you send another way;
-  production only goes to teammates. The file expires after 1, 7 or 30 days, and Settings ›
+  one encrypted `.fxvault` file you can send by AirDrop, WhatsApp or Mail: pick the stages, and
+  each repository brings its GitHub environments and its runtime destinations with their values,
+  then adjust the tree down to single secrets. The file opens with a **6-word passphrase** you
+  send another way. **Production is never shared**: teammates get production values from your
+  secret store. The file expires after 1, 7 or 30 days, and Settings ›
   Sharing lists what you sent, names only, so you know what to rotate if a file leaks. Tokens
   for Supabase, Vercel or Azure never travel: the receiver connects their own account.
 - **Open a project file.** Double-click it: FX Vault lists each repository as already in your
@@ -91,16 +76,6 @@ the secrets your code reads at runtime in Azure Key Vault, Supabase and Vercel.
   responding (with Retry). Your edits stay in the vault; Sync, Import, New Repository, Refresh
   and drift checks wait until you are back online, and drift is checked again when the
   connection returns.
-- **Experimental: nearby sharing.** Send directly to a teammate's Mac nearby after both people
-  compare a 6-digit code. No shared Wi-Fi network is needed (see
-  [Nearby without internet](#nearby-without-internet)). Marked experimental in the app.
-- **Experimental: Nearby Chat.** Share › Nearby Chat… opens an end-to-end encrypted 1:1 chat
-  with a teammate's Mac nearby, after the same 6-digit code check. Messages live only in memory
-  and are wiped when the chat ends, the window closes or the vault locks. You can attach a
-  secret or variable (after Touch ID or your master password); the other person sees its name,
-  never the value, until they choose **Save to my vault**, which opens the normal import
-  preview.
-
 ## Requirements
 
 - macOS 14 Sonoma or later
@@ -166,28 +141,6 @@ It prints a JSON report (version, signing, keychain access group, Touch ID avail
 keychain probe that adds and deletes a throwaway item, and since 0.3.1 the GitHub CLI it finds;
 see [Troubleshooting](#troubleshooting-fx-vault-doesnt-see-my-gh-login)) and exits without
 opening a window. It never reads your vault or a keychain item and prints no secret.
-
-### Nearby without internet
-
-Nearby sharing and Nearby Chat work between two Macs with no router, no shared Wi-Fi network
-and no internet, over peer-to-peer Wi-Fi (AWDL, the link AirDrop uses). They also work when
-both Macs are on the same network.
-
-- **Turn on Wi-Fi and Bluetooth** on both Macs. Wi-Fi does not need to be joined to a network.
-- **Stay close:** about 10 m (30 ft), as for AirDrop.
-- **Allow Local Network access** when macOS asks the first time (or later in **System Settings ›
-  Privacy & Security › Local Network**). Without it FX Vault cannot find or reach the other
-  Mac, and says so.
-- **Firewall:** the receiving Mac (Receive Nearby, or the person listed in Nearby Chat)
-  accepts one incoming connection. If the macOS firewall asks whether FX Vault may accept
-  incoming connections, choose **Allow**. With "Block all incoming connections" turned on, that
-  Mac cannot be reached: turn the option off while you share, or let the other person receive.
-- **Both Macs need FX Vault 0.2.0** to meet without a shared network. A 0.1.x Mac uses the
-  shared network only, and cannot open a share in which an environment is only partly checked.
-- You are visible to nearby Macs only while **Receive Nearby** is open (under a random name) or
-  while the **Nearby Chat** window lists people (under your name from **Settings › General ›
-  Name for nearby Macs**, or your macOS name). Anyone nearby can see that name, and it proves
-  nothing: always compare the 6-digit code.
 
 ### Verify a download
 
@@ -287,16 +240,11 @@ Neither contains a token, a secret, or the value of an environment variable.
 - Runtime destinations are reached over HTTPS only at the Azure Key Vault, Supabase and Vercel
   API hosts, with no cookies, cache or redirects; their tokens are encrypted in the vault, and
   the Azure token stays in memory until the vault locks.
-- Nothing leaves your Mac except what Sync sends to GitHub and your destinations, and what you
-  choose to share or send in Nearby Chat. Chat messages are never written to disk.
-- Nearby sharing and chat are end-to-end encrypted after a 6-digit code that both people
-  compare; a mismatch means someone is in the middle, and nothing is sent.
-- A project file for teammates is sealed for their Macs' keys and signed by yours; a passphrase
-  file uses Argon2id and six words that should travel another way. FX Vault refuses a file after
-  its expiry date (the app enforces it, not the cryptography). Imported rows are held until you
-  include them in a Sync.
-- Pairing at a distance exchanges public keys only; comparing the six words on a call is what
-  proves no one swapped a card on the way.
+- Nothing leaves your Mac except what Sync sends to GitHub and your destinations, and the files
+  you choose to share.
+- A share file uses Argon2id and six words that should travel another way, and never contains a
+  production stage. FX Vault refuses a file after its expiry date (the app enforces it, not the
+  cryptography). Imported rows are held until you include them in a Sync.
 
 The full model, threat model and residual risks are in
 [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md).
@@ -337,8 +285,8 @@ xcodebuild -project FXVault.xcodeproj -scheme FXVaultUITests -destination 'platf
 - [docs/DATABASE.md](docs/DATABASE.md): the local encrypted vault schema
 - [docs/API.md](docs/API.md): every gh, git, ssh and az command the app runs, and the HTTPS
   endpoints of runtime destinations
-- [docs/SHARING-PROTOCOL.md](docs/SHARING-PROTOCOL.md): `.fxvault` files (formats 1 and 2),
-  project bundles, remote pairing, nearby sharing and Nearby Chat
+- [docs/SHARING-PROTOCOL.md](docs/SHARING-PROTOCOL.md): `.fxvault` files (formats 1 and 2) and
+  project bundles
 - [docs/RELEASING.md](docs/RELEASING.md): signing, notarization, the Homebrew cask and the
   manual release checklist
 

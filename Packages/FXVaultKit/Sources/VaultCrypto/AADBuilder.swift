@@ -45,14 +45,14 @@ public struct AADBuilder: Sendable {
     }
 }
 
-/// The identity of an encrypted column that is not a configuration value (v0.5.0): this
-/// device's teammate keys, a teammate's announce key and, in v0.6.0, space keys. Sealed under
+/// The identity of an encrypted column that is not a configuration value (v0.5.0; since 1.0
+/// only provider connection tokens). Sealed under
 /// `K_field` like values, with its own label, so a blob never opens as a value or in another
 /// table, column or row.
 public struct SecretFieldAAD: Sendable, Hashable {
     public let table: String
     public let column: String
-    /// The row's key bytes (a fixed id, a device id, a space id and epoch).
+    /// The row's key bytes (the row id).
     public let rowKey: Data
 
     public init(table: String, column: String, rowKey: Data) {

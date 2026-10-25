@@ -5,13 +5,10 @@ import VaultCore
 public enum ShareAuthorizationPurpose: String, Sendable, Hashable, CaseIterable {
     /// Writing a `.fxvault` file (``ReauthPurpose/share``).
     case fileExport
-    /// Sending a nearby MANIFEST, and then the payload (``ReauthPurpose/nearbySend``).
-    case nearbySend
 
     var reauthPurpose: ReauthPurpose {
         switch self {
         case .fileExport: .share
-        case .nearbySend: .nearbySend
         }
     }
 }

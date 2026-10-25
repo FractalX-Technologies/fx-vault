@@ -150,7 +150,7 @@ struct DesignComponentTests {
         #expect(Self.renders(DotGridBackground().frame(width: 88, height: 88), scheme: scheme))
         #expect(Self.renders(SyncToolbarButton(count: 3, isSyncing: false, isEnabled: true) {}, scheme: scheme))
         #expect(Self.renders(TableNameText(name: "DATABASE_URL"), scheme: scheme))
-        #expect(Self.renders(SheetHeader(label: "Review before sync", title: "Sync", subtitle: "Names only.", isExperimental: true), scheme: scheme))
+        #expect(Self.renders(SheetHeader(label: "Review before sync", title: "Sync", subtitle: "Names only."), scheme: scheme))
         #expect(Self.renders(SheetCallout(systemImage: "info.circle", tint: Theme.Colors.brand, text: "Note"), scheme: scheme))
         #expect(Self.renders(FXCheckboxRow(title: "I understand", isOn: .constant(true)), scheme: scheme))
         #expect(Self.renders(InlineErrorView(error: ErrorPresentationModel(title: "Failed", message: "Try again.")), scheme: scheme))
@@ -183,8 +183,6 @@ struct DesignComponentTests {
     }
 
     @Test func sharedTextStylesLiveInTheTheme() {
-        #expect(Theme.TextStyle.sasCode.size == Theme.Typography.Size.sasCode)
-        #expect(Theme.TextStyle.sasCode.trackingEm == Theme.Typography.Tracking.label)
         #expect(Theme.TextStyle.passphraseWord.size == Theme.Typography.Size.title2)
         #expect(Theme.Stroke.dashPattern.count == 2)
     }

@@ -40,7 +40,8 @@ struct ProjectShareSnapshotTests {
         try await write("project-share-contents", await shareModel(world))
     }
 
-    @Test func contentsThreeRepositoriesAndProduction() async throws {
+    /// The production stage is listed but cannot be chosen (1.0 never shares production).
+    @Test func contentsThreeRepositoriesWithProductionBlocked() async throws {
         let world = try await ProjectShareWorld()
         let web = try await world.sender.stageRepository(
             name: "example-web",
@@ -56,30 +57,22 @@ struct ProjectShareSnapshotTests {
         await model.addRepository(web)
         await model.addRepository(api)
         await model.settle()
-        let production = try #require(model.stageOptions.first { $0.isProduction })
-        model.setStage(production, chosen: true)
-        model.confirmProductionStage()
-        await model.settle()
+        #expect(model.stageOptions.contains { $0.isProduction })
         try await write("project-share-contents-three", model)
     }
 
-    @Test func sendToWithProduction() async throws {
+    /// Opened on the production stage: the stage stays unchecked, since 1.0 never shares it.
+    @Test func contentsOpenedOnProduction() async throws {
         let world = try await ProjectShareWorld()
-        try world.sender.data.team.addTeammate(
-            TeamDeviceKeys.generate().card(login: "user-c", displayName: "Cy", macName: "Cy's Mac"),
-            pairedVia: .remote
-        )
         let model = await shareModel(world, stage: "production")
-        model.continueToSendTo()
-        model.setTeammate(try #require(model.teammates.first), chosen: true)
-        try await write("project-share-send-to", model)
+        #expect(model.chosenStageKeys.isEmpty)
+        try await write("project-share-production-blocked", model)
     }
 
     @Test func sendToPassphrase() async throws {
         let world = try await ProjectShareWorld()
         let model = await shareModel(world)
         model.continueToSendTo()
-        model.setProtection(.passphrase)
         try await write("project-share-send-to-passphrase", model)
     }
 
@@ -87,24 +80,11 @@ struct ProjectShareSnapshotTests {
         let world = try await ProjectShareWorld()
         let model = await shareModel(world)
         model.continueToSendTo()
-        model.setProtection(.passphrase)
         await model.requestCreate()
         model.reauth.password = testPassword
         await model.authenticateWithPassword()
         #expect(model.step == .done)
         try await write("project-share-passphrase", model)
-    }
-
-    @Test func teammatesDone() async throws {
-        let world = try await ProjectShareWorld()
-        let model = await shareModel(world)
-        model.continueToSendTo()
-        model.setTeammate(try #require(model.teammates.first), chosen: true)
-        await model.requestCreate()
-        model.reauth.password = testPassword
-        await model.authenticateWithPassword()
-        #expect(model.step == .done)
-        try await write("project-share-teammates-done", model)
     }
 
     /// ✓ in the vault, ⇣ will import from GitHub, ✕ skipped.
@@ -126,13 +106,13 @@ struct ProjectShareSnapshotTests {
         let url = world.sender.sandbox.appendingPathComponent("three.fxvault")
         let result = try await world.sender.data.sharing.exportBundle(
             selection,
-            protection: .teammates([world.receiverTeammateID]),
             to: url,
             senderName: ProjectShareWorld.identity.displayName,
             appVersion: ProjectShareWorld.identity.appVersion,
             authorization: authorization
         )
-        #expect(result.passphrase == nil)
+        let passphrase = try #require(result.passphrase.utf8String())
+        result.passphrase.wipe()
 
         try world.receiver.installFakeGH()
         world.receiver.stubAuthStatus(TestFixtures.authStatusTwoAccounts)
@@ -148,6 +128,8 @@ struct ProjectShareSnapshotTests {
             dependencies: world.receiverDependencies()
         )
         await model.start()
+        model.passphrase = passphrase
+        await model.open()
         #expect(model.step == .bundlePreview, "\(String(describing: model.failure))")
         try await SnapshotOutput.write("project-share-open", size: Self.sheetSize) {
             ShareImportScreen(viewModel: model)
@@ -156,13 +138,15 @@ struct ProjectShareSnapshotTests {
 
     @Test func openExpired() async throws {
         let world = try await ProjectShareWorld()
-        let exported = try await world.exportBundle(protection: .teammates([world.receiverTeammateID]), expiry: .oneDay)
+        let exported = try await world.exportBundle(expiry: .oneDay)
         world.receiver.clock.advance(by: .seconds(2 * Timeouts.secondsPerDay))
         let model = ShareImportViewModel(
             context: ShareImportContext(fileURL: try world.deliver(exported.url)),
             dependencies: world.receiverDependencies()
         )
         await model.start()
+        model.passphrase = exported.passphrase
+        await model.open()
         #expect(model.step == .failed)
         try await SnapshotOutput.write(
             "project-share-expired",
@@ -176,10 +160,9 @@ struct ProjectShareSnapshotTests {
         let world = try await ProjectShareWorld()
         _ = try await world.exportBundle()
         world.sender.clock.advance(by: .seconds(Timeouts.secondsPerMinute))
-        _ = try await world.exportBundle(protection: .teammates([world.receiverTeammateID]))
+        _ = try await world.exportBundle()
         let model = SharingSettingsViewModel(
             sharing: world.sender.data.sharing,
-            team: world.sender.data.team,
             clock: world.sender.clock,
             isUnlocked: { true }
         )

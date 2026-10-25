@@ -15,19 +15,19 @@ struct FxVaultFileCodecTests {
     }
 
     static func katFile() throws -> KATFile {
-        let kat = try NearbyKAT.load()
+        let kat = try KATDocument.load("file_v1_kat.json")
         let header = try FxVaultHeaderModel(
-            opsLimit: kat.inputs.fxvault_opsLimit,
-            memLimitKiB: kat.inputs.fxvault_memLimitKiB,
-            salt: Array(try kat.bytes(kat.inputs.fxvault_salt)),
-            nonce: Array(try kat.bytes(kat.inputs.fxvault_nonce))
+            opsLimit: UInt32(try kat.number("fxvault_opsLimit")),
+            memLimitKiB: UInt32(try kat.number("fxvault_memLimitKiB")),
+            salt: Array(try kat.bytes("fxvault_salt")),
+            nonce: Array(try kat.bytes("fxvault_nonce"))
         )
-        let file = try kat.bytes(try kat.output("fxvault_header")) + kat.bytes(try kat.output("fxvault_ciphertext_and_tag"))
+        let file = try kat.outputBytes("fxvault_header") + kat.outputBytes("fxvault_ciphertext_and_tag")
         return KATFile(
             header: header,
             file: file,
-            payload: Data(kat.inputs.fxvault_payload_utf8.utf8),
-            key: try kat.bytes(kat.inputs.fxvault_key)
+            payload: Data(try kat.input("fxvault_payload_utf8").utf8),
+            key: try kat.bytes("fxvault_key")
         )
     }
 
@@ -36,7 +36,7 @@ struct FxVaultFileCodecTests {
     // MARK: - Known answers
 
     @Test func headerMatchesTheVector() throws {
-        let kat = try NearbyKAT.load()
+        let kat = try KATDocument.load("file_v1_kat.json")
         let vector = try Self.katFile()
         #expect(vector.header.encoded().hex == (try kat.output("fxvault_header")))
         #expect(vector.header.encoded().count == Limits.shareHeaderBytes)

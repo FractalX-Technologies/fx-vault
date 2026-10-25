@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The Settings window (§10 Preferences): General, Security, Accounts, Teammates (v0.5.0),
-/// Destinations (v0.8.0), Sharing (v0.9.0), Advanced.
+/// The Settings window (§10 Preferences): General, Security, Accounts, Destinations (v0.8.0),
+/// Sharing (v0.9.0), Advanced.
 struct PreferencesScreen: View {
     @State private var viewModel: PreferencesViewModel
 
@@ -27,11 +27,6 @@ struct PreferencesScreen: View {
                     Label(String(localized: "settings.tab.accounts", defaultValue: "Accounts"), systemImage: "person.2")
                 }
                 .tag(PreferencesViewModel.Tab.accounts)
-            TeammatesSettingsScreen(viewModel: viewModel.teammates)
-                .tabItem {
-                    Label(String(localized: "settings.tab.teammates", defaultValue: "Teammates"), systemImage: "person.line.dotted.person")
-                }
-                .tag(PreferencesViewModel.Tab.teammates)
             DestinationsSettingsScreen(viewModel: viewModel.destinations)
                 .tabItem {
                     Label(String(localized: "settings.tab.destinations", defaultValue: "Destinations"), systemImage: "server.rack")
@@ -50,8 +45,6 @@ struct PreferencesScreen: View {
         }
         .frame(width: Theme.Layout.settingsWidth)
         .frame(minHeight: Theme.Layout.settingsMinHeight)
-        .onAppear { viewModel.showRequestedTab() }
-        .onChange(of: viewModel.requestedTab) { viewModel.showRequestedTab() }
         .background(WindowAccessor { window in
             // Its sheets can show a recovery key: never restore this window with state (§5.11).
             window.isRestorable = false

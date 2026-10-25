@@ -60,7 +60,7 @@ public enum UnicodeScalarPolicy {
     /// person: every format character (General_Category `Cf`: soft hyphen, invisible operators,
     /// tag characters, interlinear annotation, U+180E, besides the bidi and zero-width ones), the
     /// Hangul fillers and the combining grapheme joiner. Not a name ``Violation``: validators
-    /// keep their rules; display sanitizers (peer names, chat text) drop these too.
+    /// keep their rules; display sanitizers (sender names) drop these too.
     public static func isInvisible(_ scalar: Unicode.Scalar) -> Bool {
         scalar.properties.generalCategory == .format
             || hangulFillers.contains(scalar.value)

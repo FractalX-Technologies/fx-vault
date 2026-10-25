@@ -4,13 +4,12 @@ import Testing
 import VaultCore
 @testable import VaultStore
 
-/// §6 `v14_project_shares` (v0.9.0): constraints of `sent_shares`, `share_hold` and the rebuilt
-/// `teammates`, and the stores over them.
+/// §6 `v14_project_shares` (v0.9.0): constraints of `sent_shares` and `share_hold`, and the
+/// stores over them. (v15 drops `teammates`; ``MigrationTests`` covers that.)
 @Suite("Project share tables and stores")
 struct ProjectShareStoreTests {
     static let check = StoreError.constraintViolation(.check)
     static let start = Date(timeIntervalSince1970: 1_700_000_000)
-    static let key = "x'" + String(repeating: "11", count: 32) + "'"
 
     // MARK: - Constraints
 
@@ -64,41 +63,6 @@ struct ProjectShareStoreTests {
             try seeded.execute("UPDATE destination_items SET share_hold = 'pkg-a' WHERE id = '\(destinationItem)'")
         }
         try seeded.execute("UPDATE destination_items SET share_hold = NULL WHERE id = '\(destinationItem)'")
-    }
-
-    @Test func teammatesAllowAMissingAnnounceKeyOnlyWhenPairedRemotely() throws {
-        let seeded = try SeededDatabase()
-        func insert(_ id: String, announce: String, via: String?) throws {
-            let viaColumn = via == nil ? "" : ", paired_via"
-            let viaValue = via.map { ", '\($0)'" } ?? ""
-            try seeded.execute("""
-                INSERT INTO teammates (device_id, signing_pk, agreement_pk, announce_ct, login, display_name, mac_name, paired_at\(viaColumn))
-                VALUES ('\(id)', \(Self.key), \(Self.key), \(announce), '', '', '', 't'\(viaValue))
-                """)
-        }
-        try insert(String(repeating: "a1", count: 16), announce: "x'00'", via: nil)
-        #expect(try seeded.text("SELECT paired_via FROM teammates") == "nearby")
-        try insert(String(repeating: "b2", count: 16), announce: "NULL", via: "remote")
-        try insert(String(repeating: "c3", count: 16), announce: "x'00'", via: "remote")
-        #expect(throws: Self.check) { try insert(String(repeating: "d4", count: 16), announce: "NULL", via: nil) }
-        #expect(throws: Self.check) { try insert(String(repeating: "d4", count: 16), announce: "NULL", via: "nearby") }
-        #expect(throws: Self.check) { try insert(String(repeating: "d4", count: 16), announce: "x'00'", via: "email") }
-        #expect(throws: Self.check) { try insert(String(repeating: "AB", count: 16), announce: "x'00'", via: "remote") }
-    }
-
-    @Test func teammateAddressesStillCascadeAfterTheRebuild() throws {
-        let seeded = try SeededDatabase()
-        let device = String(repeating: "ab", count: 16)
-        try seeded.execute("""
-            INSERT INTO teammates (device_id, signing_pk, agreement_pk, announce_ct, login, display_name, mac_name, paired_at)
-            VALUES ('\(device)', \(Self.key), \(Self.key), x'00', '', '', '', 't')
-            """)
-        try seeded.execute("INSERT INTO teammate_addresses (device_id, host, port) VALUES ('\(device)', 'mac-a.example', 7000)")
-        #expect(throws: StoreError.constraintViolation(.foreignKey)) {
-            try seeded.execute("INSERT INTO teammate_addresses (device_id) VALUES ('\(String(repeating: "cd", count: 16))')")
-        }
-        try seeded.execute("DELETE FROM teammates")
-        #expect(try seeded.integer("SELECT COUNT(*) FROM teammate_addresses") == 0)
     }
 
     // MARK: - SentShareStore
@@ -219,35 +183,6 @@ struct ProjectShareStoreTests {
         let released = try seeded.database.write { tx in try store.clearShareHold(packageID: package, in: tx) }
         #expect(released == 1)
         #expect(try store.fetchHeldItemStates().isEmpty)
-    }
-
-    // MARK: - Teammate records
-
-    @Test func teammateRecordsRoundTripAMissingAnnounceKey() throws {
-        let seeded = try SeededDatabase()
-        let team = TeamStore(database: seeded.database)
-        let record = TeammateRecord(
-            deviceID: String(repeating: "ef", count: 16),
-            signingPublicKey: Data(repeating: 1, count: 32),
-            agreementPublicKey: Data(repeating: 2, count: 32),
-            announceCiphertext: nil,
-            login: "user-b",
-            displayName: "User B",
-            macName: "User B Mac",
-            pairedAt: Self.start,
-            pairedVia: .remote
-        )
-        try seeded.database.write { tx in try team.saveTeammate(record, in: tx) }
-        let fetched = try seeded.database.read { tx in try team.fetchTeammate(deviceID: record.deviceID, in: tx) }
-        #expect(fetched == record)
-        let model = try #require(try team.fetchTeammateModels().first)
-        #expect(model.pairedVia == .remote && !model.hasAnnounceKey)
-
-        var nearby = record
-        nearby.pairedVia = .nearby
-        #expect(throws: Self.check) {
-            try seeded.database.write { tx in try team.saveTeammate(nearby, in: tx) }
-        }
     }
 
     // MARK: - Helpers

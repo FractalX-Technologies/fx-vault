@@ -130,8 +130,7 @@ public struct ShareImportResultModel: Sendable, Hashable {
     }
 }
 
-/// One opened share package and its preview (§9.5), from a `.fxvault` file or a nearby
-/// MANIFEST or PAYLOAD.
+/// One opened share package and its preview (§9.5), from a `.fxvault` file.
 ///
 /// Holds the package's values (payload) until ``SharingRepository/apply(_:plan:confirmReplay:)``
 /// or ``discard()``, then wipes them; it also wipes them when released. The UI edits a copy of

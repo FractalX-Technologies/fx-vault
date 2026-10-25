@@ -48,7 +48,7 @@ FXVault/
 │   │   │   ├── MainColumnSelection.swift  # Up/Down selection of the custom-drawn sidebar and
 │   │   │   │                        # scope rows (pure helper + modifier)
 │   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel,
-│   │   │   │                        # SidebarFoldersSection, SidebarTeammatesSection (v0.7.0)
+│   │   │   │                        # SidebarFoldersSection (v0.7.0)
 │   │   │   ├── ScopeList/           # ScopeListView/ViewModel (Overview, "Build · GitHub Actions":
 │   │   │   │                        # Repository + environments, "Runtime": destination rows,
 │   │   │   │                        # Add Destination, DestinationContextMenu; v0.8.0)
@@ -63,8 +63,6 @@ FXVault/
 │   │   │   │                        # AddDestinationScreen/ViewModel (+ AddDestinationCopy),
 │   │   │   │                        # DestinationSettingsScreen, DestinationDriftScreen (Refresh
 │   │   │   │                        # findings, Keep Mine / Use Remote)
-│   │   │   ├── Presence/            # NearbyPresenceView (toolbar people button, person popover,
-│   │   │   │                        # nearby list; v0.5.0, compact since v0.7.0)
 │   │   │   └── AddRepository/       # AddRepositorySheet/ViewModel (Add repository by name)
 │   │   ├── CopyToRepository/        # CopyToRepositoryScreen/ViewModel (Copy To › Another
 │   │   │                            # Repository…, v0.4.1)
@@ -72,14 +70,6 @@ FXVault/
 │   │   │                            # FolderNameScreen/ViewModel (New Folder…, Rename…),
 │   │   │                            # FolderDestinationModel/View (a received copy), FolderCopy,
 │   │   │                            # FolderRepository+Extension (v0.7.0)
-│   │   ├── Team/                    # TeammatesSettingsScreen/ViewModel (Preferences › Teammates,
-│   │   │                            # Outside this network since v0.6.0), AddTeammateSheet/ViewModel
-│   │   │                            # (pairing), v0.5.0; v0.9.0 Not Nearby…: RemotePairingSheet
-│   │   │                            # (+ RemotePairingScreen), RemotePairingViewModel,
-│   │   │                            # RemotePairingCopy
-│   │   ├── Spaces/                  # ShareSpaceScreen/ViewModel (Share with Teammates…),
-│   │   │                            # SpaceScreen/ViewModel (History, Members), SpaceCopy,
-│   │   │                            # SpaceRepositoryError+Extension (v0.6.0)
 │   │   ├── ItemEditor/              # ItemEditorScreen/ViewModel (add, edit, fill, convert/move),
 │   │   │                            # ItemEditorModels, ItemEditorError, ConfigRepository+Editor,
 │   │   │                            # ConfigKind+ItemEditor, CredentialReason+ItemEditor extensions
@@ -100,23 +90,15 @@ FXVault/
 │   │   │                            # EnvPasteEditorView,
 │   │   │                            # EnvExportScreen/ViewModel, EnvFilePanels,
 │   │   │                            # EnvFileError+Extension, EnvParseIssue+Extension
-│   │   ├── Sharing/                 # ShareExport (Nearby Chat's Save as File…)/ShareImport/
-│   │   │                            # NearbySend/NearbyReceive
-│   │   │                            # Screen+ViewModel, ShareReauthModel/View, ShareScopeTree
-│   │   │                            # Model/View (tri-state), ShareContentSummaryView,
-│   │   │                            # ShareImportPlanEditor/PreviewView, SASCodeView,
-│   │   │                            # NearbyNetworking, ShareRepositoryImporter, ShareFileDelivery,
+│   │   ├── Sharing/                 # ShareImport Screen+ViewModel, ShareReauthModel/View,
+│   │   │                            # ShareScopeTree Model/View (tri-state), ShareContentSummaryView,
+│   │   │                            # ShareImportPlanEditor/PreviewView, ShareRepositoryImporter,
+│   │   │                            # ShareFileDelivery (share picker, AirDrop included),
 │   │   │                            # ShareStagingFolder, ShareLocalIdentityModel, ShareSheetComponents,
 │   │   │                            # SharingError and SharingKit-type +Extension files; v0.9.0
 │   │   │                            # project shares: ProjectShareScreen/ViewModel (Share Project),
 │   │   │                            # ProjectShareTreeModel, ProjectShareImportView/Editor (a
 │   │   │                            # bundle in Import Share), ProjectShareCopy
-│   │   ├── NearbyChat/              # Window › Nearby Chat (v0.2.0, its own scene): NearbyChatScreen/
-│   │   │                            # ViewModel, NearbyChatModels, NearbyChatNetworking, ChatPeerList,
-│   │   │                            # ChatConversation (transcript, bubbles, composer), ChatAttachment
-│   │   │                            # Card, ChatAttachmentPicker Sheet/ViewModel, ChatSave Sheet/
-│   │   │                            # ViewModel, NearbyChatCopy (aborts, ChatError, NearbyChatError),
-│   │   │                            # AppViewModel+NearbyChat (dependencies of the window)
 │   │   └── Preferences/             # PreferencesScreen/ViewModel, General, Security(+ViewModel),
 │   │                                # Accounts(+ViewModel), Advanced, Destinations(+ViewModel:
 │   │                                # az sign-in, Supabase and Vercel connections; v0.8.0),
@@ -139,9 +121,7 @@ FXVault/
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
 │   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe,
 │   │                                # ConnectivityMonitor (NWPathMonitor, path sources),
-│   │                                # WiFiRadio (CoreWLAN power state), GitHubReachability,
-│   │                                # TeamPresenceManager, TeamPresenceNetworking, PingAlertManager (v0.5.0),
-│   │                                # SpaceSyncManager, SpaceSyncNetworking (v0.6.0)
+│   │                                # GitHubReachability
 │   ├── Helpers/
 │   │   ├── AppIdentity.swift        # FX Vault vs FX Vault Dev (bundle id, window title, DEV)
 │   │   ├── AppLog.swift             # os.Logger categories
@@ -174,12 +154,11 @@ FXVault/
 │   │                                # Sidebar, ScopeList, RepoDetail, ItemEditor, Environment
 │   │                                # (+ EnvironmentBranchPolicyForm), Sync, DriftReview,
 │   │                                # CreateRepo (+ CreateRepoEditor), EnvFileImport,
-│   │                                # EnvFilePaste, EnvFileExport, SharingExport, SharingImport,
-│   │                                # SharingNearby, SecretValueEditor, AppSmoke,
+│   │                                # EnvFilePaste, EnvFileExport, SharingImport,
+│   │                                # SecretValueEditor, AppSmoke,
 │   │                                # Connectivity (monitor, GitHub reachability, offline gating),
 │   │                                # SyncConnectivity (Sync and drift review reporting, offline
 │   │                                # Sync sheet), SharingScopeTreeModel (tri-state tree),
-│   │                                # NearbyChat (window, picker, save preview, wipe),
 │   │                                # DestinationViewModel (scope column, detail, Add
 │   │                                # Destination, Overview, Preferences; v0.8.0)
 │   ├── DesignTokenTests.swift       # v0.3.0: every color set's light/dark values, Geist
@@ -195,8 +174,6 @@ FXVault/
 │   │                                # ImportViewModelTests (+ ProjectShareTestSupport), and the
 │   │                                # opt-in ProjectShareSnapshotTests
 │   ├── HeldShareTests.swift         # v0.9.0: From Files toggles, the run input, the Held chip
-│   ├── RemotePairingTests.swift     # v0.9.0: Not Nearby… between two harness Macs
-│   ├── ProjectShareTeamSnapshotTests.swift # v0.9.0, opt-in: From Files, Held, pairing steps.
 │   │                                # These suites hold rows with `@_spi(Testing) import VaultData`
 │   │                                # (`ShareHoldRepository.hold`): App and AppTests never import
 │   │                                # VaultStore (scripts/lint.sh)
@@ -209,7 +186,6 @@ FXVault/
 │   │   ├── VaultCore/               # Identifiers, SecretBytes, Clock (VaultClock), Limits, Timeouts
 │   │   │   ├── Models/              # Account, Repo, RepoCapability, Environment, ConfigItem,
 │   │   │   │                        # ConfigKind, BranchPattern, DeploymentBranchPolicy,
-│   │   │   │                        # Teammate (v0.5.0), SpaceGateDecision (v0.6.0),
 │   │   │   │                        # Folder/FolderItem, ItemPlace (v0.7.0), Destination
 │   │   │   │                        # (provider, target, destination, item, connection; v0.8.0),
 │   │   │   │                        # SentShare, ShareExpiryChoice (v0.9.0)
@@ -230,14 +206,13 @@ FXVault/
 │   │   │                            # DestinationFieldAAD v0.8.0)
 │   │   ├── VaultStore/              # (only GRDB import)
 │   │   │   ├── Database/            # VaultDatabase, DatabaseFactory, DatabaseTimestamp, StoreConstants
-│   │   │   ├── Migrations/          # VaultMigrator, MigrationSQL (v1–v14, frozen)
+│   │   │   ├── Migrations/          # VaultMigrator, MigrationSQL (v1–v15, frozen)
 │   │   │   ├── Records/             # Vault/KeyWrap, Account, Repository, Environment/BranchPattern,
 │   │   │   │                        # ConfigItem/ConfigItemState, SyncJournal/ImportedSharePackage,
-│   │   │   │                        # Team (v0.5.0), Space (spaces, keys, versions, addresses; v0.6.0),
 │   │   │   │                        # Folder/FolderItem (v0.7.0), Destination (destinations,
 │   │   │   │                        # settings, items, connections, journal; v0.8.0), SentShare (v0.9.0)
 │   │   │   ├── Stores/              # VaultRecord, Account, Repo, Config, SyncJournal, SharePackage,
-│   │   │   │                        # Team (v0.5.0), Space (v0.6.0), Folder (+LinkCountQuery, v0.7.0),
+│   │   │   │                        # Folder (+LinkCountQuery, v0.7.0),
 │   │   │   │                        # Destination (v0.8.0), SentShare, ShareHold (held rows of both
 │   │   │   │                        # item tables; v0.9.0)
 │   │   │   └── Errors/              # StoreError
@@ -279,25 +254,8 @@ FXVault/
 │   │   │   │                        # ShareDocumentCoder), ShareBundleValidator, ShareBundlePlanner,
 │   │   │   │                        # ShareBundlePlanModel
 │   │   │   ├── File/                # FxVaultHeaderModel, FxVaultFileCodec, KeyDeriving; v0.9.0
-│   │   │   │                        # format 2: FxVaultHeaderV2Model, FxVaultFileV2Codec,
-│   │   │   │                        # FxVaultRecipientModels (slots, teammate keys, labels)
+│   │   │   │                        # format 2: FxVaultHeaderV2Model, FxVaultFileV2Codec
 │   │   │   ├── Passphrase/          # PassphraseGenerator
-│   │   │   ├── Nearby/              # NearbyProtocol, NearbyPurpose, NearbyCrypto, NearbyFrame,
-│   │   │   │                        # NearbyKeyExchange (shared handshake), NearbyHandshake,
-│   │   │   │                        # NearbySession, NearbyTransport, NearbyLengthFramer,
-│   │   │   │                        # NWNearbyTransport, NearbyChannel (encrypted channel)
-│   │   │   ├── Team/                # fxvault-team/v1 (v0.5.0): TeamProtocol, TeamIdentity,
-│   │   │   │                        # TeamPseudonym, TeamPairingMachine, TeamSessionMachine,
-│   │   │   │                        # TeamSessions (sessions, router, preamble/watched
-│   │   │   │                        # transports), NWTeamListener; v0.6.0: TeamSpaceWire,
-│   │   │   │                        # TeamSpaceExchanging, NWSpaceListener (remote, Q4); v0.9.0:
-│   │   │   │                        # RemotePairing, RemotePairingProtocol (.fxvcard files)
-│   │   │   ├── Space/               # fxvault-space/v1 (v0.6.0): SpaceModels, SpaceLog (+ keychain,
-│   │   │   │                        # crypto), SpaceVersionBuilder (+ snapshot codec), SpaceMarker
-│   │   │   │                        # (marker, gate)
-│   │   │   ├── Chat/                # fxvault-chat/v1: NearbyChatProtocol (+ chat Limits/Timeouts),
-│   │   │   │                        # NearbyChatModels, ChatTextSanitizer, NearbyChatMachine,
-│   │   │   │                        # NearbyChatSession
 │   │   │   ├── Import/              # ShareImportPlanner, ShareImportPlanModel
 │   │   │   ├── Extensions/          # Data+Extension
 │   │   │   └── Resources/           # eff_large_wordlist.txt
@@ -313,9 +271,7 @@ FXVault/
 │   │   │       │                    # SyncPlanner(+PlanModel), SyncExecutor(+Environments, +Items),
 │   │   │       │                    # WriteVerifier, SyncReconciler, DeletionPreviewLoader,
 │   │   │       │                    # RepositoryAdoption, SyncJournalWriter, SyncResultModel,
-│   │   │       │                    # SyncError, SyncExecutionConstants; v0.6.0:
-│   │   │       │                    # SyncSpaceCoordinating, SyncExecutor+Spaces,
-│   │   │       │                    # SpaceClaimReconciler
+│   │   │       │                    # SyncError, SyncExecutionConstants
 │   │   │       └── Testing/         # InMemorySyncVault (reference fake for the seams)
 │   │   ├── DestinationKit/          # v0.8.0, depends on VaultCore and GitHubKit (GHFileInspecting):
 │   │   │   │                        # HTTPS clients for runtime destinations; no database, no UI
@@ -345,12 +301,6 @@ FXVault/
 │   │       ├── Accounts/            # GitHubEnvironmentRepository (+Models)
 │   │       ├── Catalog/             # RepoCatalogRepository (+Models), RemoteConfigReader,
 │   │       │                        # RepoImportWriter
-│   │       ├── Team/                # TeamRepository (device keys, teammates; v0.5.0),
-│   │       │                        # TeamRepository+Remote (remote access, v0.6.0),
-│   │       │                        # TeamRepository+Pairing (remote pairing, v0.9.0)
-│   │       ├── Spaces/              # SpaceRepository (+Coordinating, +Exchange), SpaceSnapshots
-│   │       │                        # (builder, applier), SpaceMarkerTarget, SpaceRepositoryModels
-│   │       │                        # (v0.6.0)
 │   │       ├── Config/              # ConfigRepository (+Links), ConfigRepositoryError
 │   │       │   ├── Models/          # BranchPolicyDraftModel, ConfigScopeSummaryModel,
 │   │       │   │                    # ItemWriteResultModel, ItemCopyModels, ItemLinkModels
@@ -381,18 +331,14 @@ FXVault/
 │   │       ├── Creation/            # RepoCreationRepository (+Models, +Error)
 │   │       ├── Drift/               # DriftRepository (+Models), DriftEffectApplier,
 │   │       │                        # DriftRemoteInputs
-│   │       ├── Chat/                # ChatRepository (attachable items, conversations),
-│   │       │                        # NearbyChatConversation, ChatModels (ChatAttachableItemModel,
-│   │       │                        # NearbyChatError)
 │   │       └── Sharing/             # SharingRepository (+Models, +Error), ShareAuthorizationModel,
-│   │           │                    # ReauthGate+Share, ShareExportBuilder, ShareImportPlanning,
-│   │           │                    # ShareImporter, FolderPackageTargeting (v0.7.0); v0.9.0
-│   │           │                    # project shares: SharingRepository+ProjectShare,
-│   │           │                    # ProjectShareModels, ProjectShareExportBuilder,
-│   │           │                    # ProjectSharePlanning, ProjectShareImporter,
-│   │           │                    # CatalogShareRepositoryAccess (+ `@_spi(Testing)`
-│   │           │                    # exportLegacyFile: format 1 files for tests)
-│   │           └── Nearby/          # NearbyShareSender, NearbyShareReceiver
+│   │                                # ReauthGate+Share, ShareExportBuilder, ShareImportPlanning,
+│   │                                # ShareImporter, FolderPackageTargeting (v0.7.0); v0.9.0
+│   │                                # project shares: SharingRepository+ProjectShare,
+│   │                                # ProjectShareModels, ProjectShareExportBuilder,
+│   │                                # ProjectSharePlanning, ProjectShareImporter,
+│   │                                # CatalogShareRepositoryAccess (+ `@_spi(Testing)`
+│   │                                # exportLegacyFile: format 1 files for tests)
 │   └── Tests/<Module>Tests/         # one Swift Testing target per module, each with Fixtures/
 │       ├── FXVaultTestSupport/                   # test-only target (no product): GitHubSimulator
 │       │                                         # (+ GHMatch), SteppingClock
@@ -402,9 +348,8 @@ FXVault/
 │       │                                         # ConfigTests/, EnvFilesTests/, SyncTests/ (+Support/;
 │       │                                         # HeldShareSyncTests v0.9.0),
 │       │                                         # CreationTests/, DriftTests/, SharingTests/
-│       │                                         # (ProjectShareExport/ImportTests v0.9.0), ChatTests/,
-│       │                                         # TeamTests/ (RemotePairingRepositoryTests v0.9.0),
-│       │                                         # SpacesTests/, FoldersTests/,
+│       │                                         # (ProjectShareExport/ImportTests v0.9.0),
+│       │                                         # FoldersTests/,
 │       │                                         # DestinationsTests/ (repository, sync with a fake
 │       │                                         # remote, stage overview; v0.8.0; held rows,
 │       │                                         # HeldDestinationTests v0.9.0),
@@ -412,17 +357,15 @@ FXVault/
 │       │                                         # GitHubSimulator dry run that always runs;
 │       │                                         # LiveDestinationTests, opt-in FXV_LIVE_DEST_*)
 │       ├── VaultStoreTests/                      # Store, Constraint, Observation, Migration (seed
-│       │                                         # ladder to v14), SyncJournalStore, DestinationStore,
+│       │                                         # ladder to v15), SyncJournalStore, DestinationStore,
 │       │                                         # ProjectShareStore, HeldShareStore (v0.9.0)
 │       ├── DestinationKitTests/                  # v0.8.0: HTTP policy, retries, JSON writer and
 │       │                                         # scanner, Key Vault, Supabase, Vercel, az, factory;
 │       │                                         # Fixtures/ keyvault/, supabase/, vercel/ (synthetic)
 │       ├── VaultCryptoTests/Fixtures/kat/        # generate_kat.py + kat_vectors.json
 │       │                                         # (destination_field vectors since v0.8.0)
-│       ├── SharingKitTests/Fixtures/             # nearby_kat.json, chat_kat.json, team_kat.json,
-│       │                                         # space_kat.json, file_v2_kat.json and
-│       │                                         # pairing_kat.json (v0.9.0), kat/ (crosscheck.py,
-│       │                                         # file_v2_kat.py, pairing_kat.py, reference),
+│       ├── SharingKitTests/Fixtures/             # file_v1_kat.json and file_v2_kat.json, kat/
+│       │                                         # (file_v1_kat.py, file_v2_kat.py),
 │       │                                         # item-v1-0.1.1.json (package written by 0.1.1)
 │       ├── VaultDataTests/Fixtures/Sharing/      # repository-v1-0.1.1.fxvault (file written by 0.1.1)
 │       ├── GitHubKitTests/Fixtures/              # gh/, api/ (manifest-get-* since v0.8.0), ssh/,
@@ -453,7 +396,7 @@ FXVault/
 │   ├── DATABASE.md                  # migrations, tables, transactions
 │   ├── API.md                       # gh / git / ssh command catalog
 │   ├── SECURITY-MODEL.md            # keys, rotation, lock, Touch ID, threat model, residual risks
-│   ├── SHARING-PROTOCOL.md          # payload, .fxvault, nearby protocol, merge rules
+│   ├── SHARING-PROTOCOL.md          # payload, bundles, .fxvault, merge rules
 │   └── RELEASING.md                 # signing, notarization, cask, manual checklist
 ├── tasks/                           # todo.md (plan), lessons.md
 ├── README.md, CHANGELOG.md, LICENSE, SECURITY.md, CONTRIBUTING.md, THIRD_PARTY_NOTICES.md

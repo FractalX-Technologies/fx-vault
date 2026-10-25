@@ -83,8 +83,7 @@ public struct ShareBundleRepositorySelectionModel: Sendable, Hashable {
 public struct ShareStageOptionModel: Sendable, Hashable, Identifiable {
     /// The first spelling found (repository order, then environments, then destinations).
     public var name: String
-    /// ``StageRisk/isProduction(_:)``: starts unchecked, needs a confirmation and can only be
-    /// sent to teammates (Q13).
+    /// ``StageRisk/isProduction(_:)``: never shared (Q13).
     public var isProduction: Bool
     /// The chosen repositories that have this stage.
     public var repositoryIDs: [RepoID]
@@ -101,23 +100,6 @@ public struct ShareStageOptionModel: Sendable, Hashable, Identifiable {
     }
 }
 
-/// Who can open a project share file (P3).
-public enum ShareBundleProtectionModel: Sendable, Hashable {
-    /// A fresh 6-word passphrase, returned once. Refused when the selection holds a production
-    /// stage (``SharingError/productionNeedsTeammates``).
-    case passphrase
-    /// Sealed for these teammates (``TeammateModel/id``, 1–``Limits/maxShareRecipients``) and
-    /// signed by this Mac.
-    case teammates([String])
-
-    public var mode: ShareProtectionMode {
-        switch self {
-        case .passphrase: .passphrase
-        case .teammates: .teammates
-        }
-    }
-}
-
 /// What a project share would hold, for the share sheet's summary (names and counts only).
 public struct ShareBundleExportPreviewModel: Sendable, Hashable {
     public var summary: ShareBundleSummaryModel
@@ -125,8 +107,8 @@ public struct ShareBundleExportPreviewModel: Sendable, Hashable {
     /// Secrets whose value is missing locally: shared by name only (`owner/name · NAME`, or
     /// `Folder · NAME`).
     public var valueMissingNames: [String]
-    /// Production places in the selection (environments and destinations, by name): the file can
-    /// only be sealed for teammates when this is not empty.
+    /// Production places in the selection (environments and destinations, by name): the file
+    /// cannot be written while this is not empty.
     public var productionPlaces: [String]
     /// When the file would expire if written now.
     public var expiresAt: Date
@@ -149,7 +131,7 @@ public struct ShareBundleExportPreviewModel: Sendable, Hashable {
         summary.itemCount
     }
 
-    /// True when a passphrase is not allowed (Q13).
+    /// True when the selection cannot be shared (Q13).
     public var includesProduction: Bool {
         !productionPlaces.isEmpty
     }
@@ -158,9 +140,9 @@ public struct ShareBundleExportPreviewModel: Sendable, Hashable {
 /// A written project share file (format 2, schema 4).
 public struct ShareBundleExportResultModel: Sendable {
     public let fileURL: URL
-    /// The fresh 6-word passphrase for a passphrase file (show it once with the "send it another
-    /// way" hint, then wipe it); nil for a teammates file.
-    public let passphrase: SecretBytes?
+    /// The fresh 6-word passphrase (show it once with the "send it another way" hint, then wipe
+    /// it).
+    public let passphrase: SecretBytes
     public let preview: ShareBundleExportPreviewModel
     /// The `sent_shares` row written for it (names only).
     public let sentShare: SentShareModel
@@ -169,41 +151,18 @@ public struct ShareBundleExportResultModel: Sendable {
 // MARK: - Opening (v0.9.0, P3, P7)
 
 /// A share file read from disk whose header passed the format checks (`.fxvault` format 1 or 2).
-/// Ask for a passphrase only when ``needsPassphrase``.
 public struct ShareInspectedFileModel: Sendable, Hashable {
     public let data: Data
     public let info: FxVaultFileInfo
-
-    public var needsPassphrase: Bool {
-        info.needsPassphrase
-    }
-
-    /// True for a file sealed for teammates (no passphrase; the sender is verified).
-    public var isForTeammates: Bool {
-        !needsPassphrase
-    }
-
-    /// The number of teammates a teammates file was sealed for; 0 otherwise.
-    public var recipientCount: Int {
-        if case .v2Teammates(_, let count) = info { return count }
-        return 0
-    }
 }
 
 /// Who sent an opened share file.
 public struct ShareFileSenderModel: Sendable, Hashable {
-    /// For a teammates file, the teammate's name as this vault stores it; otherwise the name the
-    /// file states (unverified).
+    /// The name the file states (unverified).
     public var displayName: String
-    /// True only for a teammates file whose signature this Mac checked against a paired teammate.
-    public var isVerified: Bool
-    /// The teammate's device id (``TeammateModel/id``) for a verified sender.
-    public var teammateID: String?
 
-    public init(displayName: String, isVerified: Bool, teammateID: String? = nil) {
+    public init(displayName: String) {
         self.displayName = displayName
-        self.isVerified = isVerified
-        self.teammateID = teammateID
     }
 }
 

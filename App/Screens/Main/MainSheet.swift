@@ -39,18 +39,6 @@ enum MainSheet: Hashable, Identifiable {
     // Sharing/
     case shareExport(ShareExportContext)
     case shareImport(ShareImportContext)
-    case nearbySend(NearbySendContext)
-
-    // Team/ (v0.9.0)
-    /// An opened `.fxvcard`: an invitation or a reply of Add Teammate › Not Nearby….
-    case remotePairing(RemotePairingContext)
-    case nearbyReceive(NearbyReceiveContext)
-
-    // Spaces/ (v0.6.0)
-    /// Scope menu › Share with Teammates…: choose teammates, version 1, the marker on GitHub.
-    case shareSpace(ShareSpaceContext)
-    /// A shared scope: its history and members.
-    case space(SpaceContext)
 
     // Folders/ (v0.7.0)
     /// New Folder… (optionally with items to copy in) and Rename….
@@ -73,10 +61,10 @@ enum MainSheet: Hashable, Identifiable {
     }
 
     /// Routes that cannot do anything without GitHub; the router refuses them while offline
-    /// (v0.2.0). Nearby sharing is peer-to-peer and works without an internet route.
+    /// (v0.2.0).
     var needsInternet: Bool {
         switch self {
-        case .sync, .createRepository, .addRepositoryByName, .shareSpace, .addDestination, .destinationDrift:
+        case .sync, .createRepository, .addRepositoryByName, .addDestination, .destinationDrift:
             true
         default:
             false
@@ -171,17 +159,6 @@ struct FolderNameContext: Hashable {
     }
 
     let mode: Mode
-}
-
-/// Share with Teammates… for one scope (v0.6.0).
-struct ShareSpaceContext: Hashable {
-    let repositoryID: RepoID
-    let scope: ConfigScope
-}
-
-/// A shared scope's sheet (v0.6.0).
-struct SpaceContext: Hashable {
-    let spaceID: SpaceID
 }
 
 /// "+ New Environment" in the scopes column.
@@ -319,15 +296,6 @@ struct ShareExportContext: Hashable {
 struct ShareImportContext: Hashable {
     let fileURL: URL
 }
-
-/// Share › Nearby… (send).
-struct NearbySendContext: Hashable {
-    /// The current selection; nil lets the sheet ask what to send.
-    let selection: ShareSelectionModel?
-}
-
-/// Share › Receive Nearby….
-struct NearbyReceiveContext: Hashable {}
 
 /// "Add repository by name…" for one account.
 struct AddRepositoryContext: Hashable {

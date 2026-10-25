@@ -2,7 +2,7 @@ import Foundation
 
 /// A folder of secrets and variables (v0.7.0, `folders` row): a named collection that belongs to
 /// no repository or account and is never pushed by itself. Repositories get its items by copy
-/// and paste; teammates by a copy sent through chat or a `.fxvault` file.
+/// and paste; teammates by a copy sent in a `.fxvault` file.
 public struct FolderModel: Sendable, Hashable, Identifiable {
     public var id: FolderID
     /// NFC, 1–``Limits/maxFolderNameLength`` scalars (``FolderNameValidator``), unique by fold key.

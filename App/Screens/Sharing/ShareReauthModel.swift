@@ -54,7 +54,7 @@ final class ShareReauthModel {
     @discardableResult
     func authorizeWithTouchID(automatic: Bool = false) async -> Bool {
         guard canUseTouchID, !isAuthorizing, !isAuthorized else { return isAuthorized }
-        let prompt = FeatureDependencies.reauthPrompt(for: purpose == .fileExport ? .share : .nearbySend)
+        let prompt = FeatureDependencies.reauthPrompt(for: .share)
         return await authorize(with: .biometrics(prompt), automatic: automatic)
     }
 
