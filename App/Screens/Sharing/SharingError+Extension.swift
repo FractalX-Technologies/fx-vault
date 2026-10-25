@@ -80,12 +80,12 @@ nonisolated extension SharingError: PresentableError {
                     defaultValue: "FX Vault could not write the share file there. Choose another folder."
                 )
             )
-        case .productionNotShared:
+        case .productionNotAuthorized:
             ErrorPresentationModel(
-                title: String(localized: "share.error.production.title", defaultValue: "Production is never shared"),
+                title: String(localized: "share.error.production.title", defaultValue: "Confirm production first"),
                 message: String(
                     localized: "share.error.production.message",
-                    defaultValue: "The selection includes a production stage. Uncheck production to share the rest."
+                    defaultValue: "The selection includes production. Create the file again and confirm with Touch ID or your master password."
                 )
             )
         case .config(let error):

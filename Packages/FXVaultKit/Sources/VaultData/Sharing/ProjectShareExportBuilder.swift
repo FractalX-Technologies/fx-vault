@@ -13,7 +13,8 @@ import VaultStore
 ///   one selected member travels without one. The sender's `link_id`s never leave the vault.
 /// - Destinations carry their target, stage and items, and the names marked public (R10); never
 ///   the connection that reaches them.
-/// - Production places (``StageRisk``) are reported, so a passphrase can be refused (Q13).
+/// - Production places (``StageRisk``) are reported, so the export can require the production
+///   confirmation.
 struct ProjectShareExportBuilder: Sendable {
     let session: VaultSession
     let clock: any VaultClock

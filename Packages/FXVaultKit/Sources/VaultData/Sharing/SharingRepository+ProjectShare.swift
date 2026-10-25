@@ -82,9 +82,10 @@ extension SharingRepository {
     ///
     /// - Parameters:
     ///   - senderName: shown to the receiver as an unverified name.
-    ///   - authorization: from `ReauthGate.authorizeShare(.fileExport, …)`; consumed here, after
-    ///     the selection was checked.
-    /// - Throws: `.productionNotShared`, `.authorizationInvalid`, `.nothingToShare`, `.share`,
+    ///   - authorization: from `ReauthGate.authorizeShare(.fileExport, …)`, or
+    ///     `.productionFileExport` when the selection holds a production place; consumed here,
+    ///     after the selection was checked.
+    /// - Throws: `.productionNotAuthorized`, `.authorizationInvalid`, `.nothingToShare`, `.share`,
     ///   `.write`, `.vault(.locked)`.
     public func exportBundle(
         _ selection: ShareBundleSelectionModel,
@@ -95,12 +96,16 @@ extension SharingRepository {
         existingFile: SecureFileWriter.ExistingFilePolicy = .fail
     ) async throws(SharingError) -> ShareBundleExportResultModel {
         let checked = try projectBuilder.build(selection, senderName: senderName, appVersion: appVersion, includeValues: false)
-        guard checked.productionPlaces.isEmpty else { throw .productionNotShared }
-        try authorization.consume(.fileExport, for: session)
+        guard authorization.purpose.allows(includesProduction: !checked.productionPlaces.isEmpty) else {
+            throw .productionNotAuthorized
+        }
+        try authorization.consume(authorization.purpose, for: session)
         let built = try projectBuilder.build(selection, senderName: senderName, appVersion: appVersion, includeValues: true)
         defer { built.bundle.wipeValues() }
         // Checked again on what is sealed: an environment renamed since the first read counts.
-        guard built.productionPlaces.isEmpty else { throw .productionNotShared }
+        guard authorization.purpose.allows(includesProduction: !built.productionPlaces.isEmpty) else {
+            throw .productionNotAuthorized
+        }
         let json: SecretBytes
         do {
             json = try ShareBundleCoder.encode(built.bundle)

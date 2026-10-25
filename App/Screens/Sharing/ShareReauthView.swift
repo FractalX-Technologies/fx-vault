@@ -32,9 +32,11 @@ struct ShareReauthView: View {
                         .fxInputField(.pill, isFocused: isPasswordFocused)
                         .onSubmit(submitPassword)
                         .disabled(model.isAuthorizing)
+                        .accessibilityIdentifier(AccessibilityID.Share.password)
                     Button(String(localized: "share.reauth.continue", defaultValue: "Continue"), action: submitPassword)
                         .fxButtonStyle(.primary, size: .large)
                         .disabled(!model.canSubmitPassword)
+                        .accessibilityIdentifier(AccessibilityID.Share.passwordContinue)
                 }
             }
             HStack(spacing: Theme.Spacing.medium) {

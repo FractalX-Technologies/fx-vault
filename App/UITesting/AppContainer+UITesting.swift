@@ -39,9 +39,10 @@ enum UITestLaunch {
     }
 }
 
-/// The scripted gh of the UI-testing host: one account in one organization with one repository,
-/// read commands only. Every other call gets the fake runner's "no stub" failure, so nothing can
-/// be written anywhere.
+/// The scripted gh of the UI-testing host: one account in one organization with one repository
+/// that can be imported (environments `production` and `staging`, one variable in each scope and
+/// no secrets), read commands only. Every other call gets the fake runner's "no stub" failure, so
+/// nothing can be written anywhere.
 enum UITestGitHub {
     static let account = "owner-a"
     static let organization = "example-org"
@@ -81,7 +82,38 @@ enum UITestGitHub {
             argumentsPrefix: ["repo", "list", organization],
             with: .success("[\(FakeGHOutput.repo(owner: organization, name: repository, permission: "ADMIN"))]")
         )
+        stubImport(on: runner)
         return runner
+    }
+
+    private static var fullName: String { "\(organization)/\(repository)" }
+
+    /// What Import reads: `repo view`, the environments (open branch policies, so no policy
+    /// call) and the secret and variable lists of each scope.
+    private static func stubImport(on runner: FakeCommandRunner) {
+        // A local: the Sendable handlers below cannot read the main-actor statics.
+        let fullName = fullName
+        runner.stub(
+            argumentsPrefix: ["repo", "view", fullName],
+            with: .success(FakeGHOutput.repo(owner: organization, name: repository, permission: "ADMIN"))
+        )
+        let environments = """
+        [{"total_count":2,"environments":[
+         {"id":101,"name":"production","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z","protection_rules":[],"deployment_branch_policy":null},
+         {"id":102,"name":"staging","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z","protection_rules":[],"deployment_branch_policy":null}]}]
+        """
+        runner.respond(argumentsPrefix: ["api"]) { invocation in
+            invocation.arguments.contains("repos/\(fullName)/environments?per_page=100")
+                ? .success(environments)
+                : .failure(exitCode: FakeCommandRunner.unmatchedExitCode, stderr: FakeCommandRunner.unmatchedStderr)
+        }
+        let variables: [String?: String] = [nil: "BASE_URL", "production": "REGION", "staging": "MODE"]
+        runner.respond(argumentsPrefix: ["variable", "list", "--repo=\(fullName)"]) { invocation in
+            let environment = invocation.arguments.first { $0.hasPrefix("--env=") }.map { String($0.dropFirst("--env=".count)) }
+            guard let name = variables[environment] else { return .success("[]") }
+            return .success(#"[{"createdAt":"2026-09-01T08:00:00Z","name":"\#(name)","updatedAt":"2026-09-01T08:00:00Z","value":"ui-test"}]"#)
+        }
+        runner.stub(argumentsPrefix: ["secret", "list", "--repo=\(fullName)"], with: .success("[]"))
     }
 }
 

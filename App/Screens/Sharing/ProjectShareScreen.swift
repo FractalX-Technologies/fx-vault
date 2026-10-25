@@ -51,8 +51,8 @@ struct ProjectShareScreen: View {
             ProjectShareSendToStep(viewModel: viewModel)
         case .authenticate:
             ShareReauthView(
-                model: viewModel.reauth,
-                message: ProjectShareCopy.reauthMessage,
+                model: viewModel.activeReauth,
+                message: viewModel.includesProduction ? ProjectShareCopy.productionReauthMessage : ProjectShareCopy.reauthMessage,
                 onTouchID: { await viewModel.authenticateWithTouchID() },
                 onPassword: { await viewModel.authenticateWithPassword() }
             )
@@ -92,6 +92,7 @@ struct ProjectShareScreen: View {
                     .fxButtonStyle(.primary, size: .large)
                     .keyboardShortcut(.defaultAction)
                     .disabled(!viewModel.canContinue)
+                    .accessibilityIdentifier(AccessibilityID.Share.continueToSendTo)
                 case .sendTo, .creating:
                     Button(ProjectShareCopy.create) {
                         Task { await viewModel.requestCreate() }
@@ -99,6 +100,7 @@ struct ProjectShareScreen: View {
                     .fxButtonStyle(.primary, size: .large)
                     .keyboardShortcut(.defaultAction)
                     .disabled(!viewModel.canCreate)
+                    .accessibilityIdentifier(AccessibilityID.Share.create)
                 case .authenticate, .done:
                     EmptyView()
                 }
@@ -216,7 +218,7 @@ private struct ProjectShareContentsStep: View {
                                 .toggleStyle(.checkbox)
                                 .fxTextStyle(.monoName)
                                 .foregroundStyle(Theme.Colors.ink)
-                                .disabled(option.isProduction)
+                                .accessibilityIdentifier(AccessibilityID.Share.stage(option.name))
                                 if option.isProduction {
                                     StatusChip(title: ProjectShareCopy.productionChip, tone: .warning)
                                         .help(ProjectShareCopy.productionHelp)
@@ -281,11 +283,18 @@ private struct ProjectShareSendToStep: View {
                 Text(ProjectShareCopy.passphraseOption)
                     .fxTextStyle(.bodyEmphasized)
                     .foregroundStyle(Theme.Colors.ink)
-                // A blocked share says why at full strength.
-                Text(viewModel.isShareAllowed ? ProjectShareCopy.passphraseHelp : ProjectShareCopy.productionBlocked(viewModel.productionPlaces))
+                Text(ProjectShareCopy.passphraseHelp)
                     .fxTextStyle(.caption)
-                    .foregroundStyle(viewModel.isShareAllowed ? Theme.Colors.mutedText : Theme.Colors.warning)
+                    .foregroundStyle(Theme.Colors.mutedText)
                     .fixedSize(horizontal: false, vertical: true)
+                if viewModel.includesProduction {
+                    ShareNoteView(
+                        systemImage: "exclamationmark.triangle",
+                        text: ProjectShareCopy.productionIncluded(viewModel.productionPlaces),
+                        tint: Theme.Colors.warning
+                    )
+                    .accessibilityIdentifier(AccessibilityID.Share.productionNote)
+                }
             }
             .padding(Theme.Spacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -322,6 +331,7 @@ private struct ProjectShareDoneStep: View {
                 PassphraseView(passphrase: passphrase) {
                     viewModel.copyPassphrase()
                 }
+                .accessibilityIdentifier(AccessibilityID.Share.passphrase)
                 SheetCallout(
                     systemImage: "exclamationmark.bubble",
                     tint: Theme.Colors.warning,
@@ -334,6 +344,7 @@ private struct ProjectShareDoneStep: View {
                         set: { viewModel.hasSavedPassphrase = $0 }
                     )
                 )
+                .accessibilityIdentifier(AccessibilityID.Share.passphraseSaved)
             }
             if let expiresAt = viewModel.expiresAt {
                 Text(ProjectShareCopy.expires(expiresAt))
@@ -341,12 +352,21 @@ private struct ProjectShareDoneStep: View {
                     .foregroundStyle(Theme.Colors.subtleText)
             }
             HStack(spacing: Theme.Spacing.small) {
+                if viewModel.canSendWithAirDrop {
+                    Button {
+                        viewModel.sendWithAirDrop()
+                    } label: {
+                        Label(ProjectShareCopy.airDrop, systemImage: "dot.radiowaves.up.forward")
+                    }
+                    .fxButtonStyle(.primary)
+                    .accessibilityIdentifier(AccessibilityID.Share.airDrop)
+                }
                 Button {
                     viewModel.shareFile()
                 } label: {
                     Label(ProjectShareCopy.share, systemImage: "square.and.arrow.up")
                 }
-                .fxButtonStyle(.primary)
+                .fxButtonStyle(viewModel.canSendWithAirDrop ? .secondary : .primary)
                 .background(ShareDeliveryAnchor(delivery: viewModel.delivery))
                 Button {
                     Task { await viewModel.saveToFile() }

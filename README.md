@@ -54,11 +54,12 @@ the secrets your code reads at runtime in Azure Key Vault.
 - **`.env` import and export.** Import with key fixes and credential detection; export after
   Touch ID or your master password, with iCloud and git-exposure warnings.
 - **Share a project as one file.** File › Share Project… (⌥⌘S) puts several repositories into
-  one encrypted `.fxvault` file you can send by AirDrop, WhatsApp or Mail: pick the stages, and
+  one encrypted `.fxvault` file you send with **Send with AirDrop** to a Mac nearby, or by
+  WhatsApp or Mail: pick the stages, and
   each repository brings its GitHub environments and its runtime destinations with their values,
   then adjust the tree down to single secrets. The file opens with a **6-word passphrase** you
-  send another way. **Production is never shared**: teammates get production values from your
-  secret store. The file expires after 1, 7 or 30 days, and Settings ›
+  send another way. **Production is unchecked by default**: checking it asks for Touch ID (or
+  your master password), and the file is refused without that confirmation. The file expires after 1, 7 or 30 days, and Settings ›
   Sharing lists what you sent, names only, so you know what to rotate if a file leaks. Azure
   sessions never travel: the receiver uses their own `az login`.
 - **Open a project file.** Double-click it: FX Vault lists each repository as already in your

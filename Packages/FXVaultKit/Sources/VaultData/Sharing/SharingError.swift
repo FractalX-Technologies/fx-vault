@@ -33,8 +33,10 @@ public enum SharingError: Error, Sendable, Hashable {
     /// The file could not be read from disk.
     case fileUnreadable
     case write(SecureFileWriteError)
-    /// The project share holds a production stage (``StageRisk``), which is never shared (Q13).
-    case productionNotShared
+    /// The project share holds a production stage (``StageRisk``) but the authorization is not
+    /// ``ShareAuthorizationPurpose/productionFileExport`` (1.0: production behind its own
+    /// confirmation).
+    case productionNotAuthorized
     case config(ConfigRepositoryError)
     case validation(ValidationError)
     case vault(VaultError)

@@ -39,7 +39,7 @@ enum ProjectShareCopy {
     static let productionChip = String(localized: "projectShare.production", defaultValue: "Production")
     static let productionHelp = String(
         localized: "projectShare.production.help",
-        defaultValue: "Production is never shared. Teammates get production values from your secret store."
+        defaultValue: "Unchecked by default. Checking it asks for Touch ID."
     )
     static let repositoryLevel = String(
         localized: "projectShare.repositoryLevel",
@@ -88,10 +88,11 @@ enum ProjectShareCopy {
         defaultValue: "Six words that you send another way. Whoever has the file and the words can open it."
     )
 
-    static func productionBlocked(_ places: [String]) -> String {
+    /// The send-to card when the file carries production values.
+    static func productionIncluded(_ places: [String]) -> String {
         String(
-            localized: "projectShare.production.blocked",
-            defaultValue: "Can't be shared: the file includes production (\(places.joined(separator: ", "))). Uncheck it to continue."
+            localized: "projectShare.production.included",
+            defaultValue: "Includes production (\(places.joined(separator: ", "))). Whoever has the file and the words gets these values."
         )
     }
 
@@ -112,6 +113,10 @@ enum ProjectShareCopy {
         localized: "projectShare.reauth.message",
         defaultValue: "Sharing exports values. Use Touch ID or your master password to continue."
     )
+    static let productionReauthMessage = String(
+        localized: "projectShare.reauth.production",
+        defaultValue: "This file includes production values. Use Touch ID or your master password to continue."
+    )
     static let creating = String(localized: "projectShare.creating", defaultValue: "Encrypting the share…")
 
     // MARK: - Done
@@ -126,6 +131,7 @@ enum ProjectShareCopy {
     }
 
     static let share = String(localized: "projectShare.share", defaultValue: "Share…")
+    static let airDrop = String(localized: "projectShare.airDrop", defaultValue: "Send with AirDrop")
     static let save = String(localized: "projectShare.save", defaultValue: "Save…")
 
     static func saved(_ name: String) -> String {

@@ -79,8 +79,8 @@ struct ProjectShareWorld {
     }
 
     /// A single-use authorization for the sender.
-    func authorization() -> ShareAuthorizationModel {
-        ShareAuthorizationModel(purpose: .fileExport, session: sender.session)
+    func authorization(_ purpose: ShareAuthorizationPurpose = .fileExport) -> ShareAuthorizationModel {
+        ShareAuthorizationModel(purpose: purpose, session: sender.session)
     }
 
     /// The sender's repository-level and `staging` selection with the Key Vault destination.
@@ -228,9 +228,9 @@ struct ProjectShareExportTests {
         #expect(draft.plan.repositories.first?.status == .inVault)
     }
 
-    /// 1.0 never shares a production stage: the refusal comes before the authorization is used,
-    /// so the same one still exports a selection without production.
-    @Test func aProductionStageIsRefusedBeforeTheAuthorizationIsUsed() async throws {
+    /// Production needs its own confirmation (1.0, B3b): with the plain authorization the refusal
+    /// comes before it is used, so the same one still exports a selection without production.
+    @Test func aProductionStageNeedsTheProductionAuthorization() async throws {
         let world = try await ProjectShareWorld.make()
         defer { world.folder.remove() }
         let repository = try world.sender.repository()
@@ -239,7 +239,7 @@ struct ProjectShareExportTests {
         #expect(preview.productionPlaces == ["owner-a/api · production"])
         let authorization = world.authorization()
         let url = world.folder.url.appendingPathComponent("production.fxvault")
-        await #expect(throws: SharingError.productionNotShared) {
+        await #expect(throws: SharingError.productionNotAuthorized) {
             _ = try await world.senderSharing.exportBundle(
                 selection,
                 to: url,
@@ -260,6 +260,41 @@ struct ProjectShareExportTests {
         defer { result.passphrase.wipe() }
         #expect(!result.preview.includesProduction)
         #expect(FileManager.default.fileExists(atPath: result.fileURL.path))
+    }
+
+    /// With the production confirmation the file carries production, and the receiver sees it.
+    @Test func aProductionStageExportsWithTheProductionAuthorization() async throws {
+        let world = try await ProjectShareWorld.make()
+        defer { world.folder.remove() }
+        let repository = try world.sender.repository()
+        let selection = try await world.senderSharing.selection(repositoryIDs: [repository.id], stages: ["production"])
+        let authorization = world.authorization(.productionFileExport)
+        let result = try await world.senderSharing.exportBundle(
+            selection,
+            to: world.folder.url.appendingPathComponent("production.fxvault"),
+            senderName: ProjectShareWorld.senderName,
+            appVersion: ProjectShareWorld.appVersion,
+            authorization: authorization
+        )
+        defer { result.passphrase.wipe() }
+        #expect(result.preview.productionPlaces == ["owner-a/api · production"])
+        #expect(!authorization.isUsable)
+        #expect(try await world.senderSharing.sentShares().first?.summary.stages == ["production"])
+    }
+
+    /// The production confirmation also covers a file without production (the user unticked it).
+    @Test func theProductionAuthorizationAlsoExportsWithoutProduction() async throws {
+        let world = try await ProjectShareWorld.make()
+        defer { world.folder.remove() }
+        let result = try await world.senderSharing.exportBundle(
+            try await world.stagingSelection(),
+            to: world.folder.url.appendingPathComponent("staging.fxvault"),
+            senderName: ProjectShareWorld.senderName,
+            appVersion: ProjectShareWorld.appVersion,
+            authorization: world.authorization(.productionFileExport)
+        )
+        defer { result.passphrase.wipe() }
+        #expect(!result.preview.includesProduction)
     }
 
     /// Only a stage makes a destination a production place (a Vercel production environment did,

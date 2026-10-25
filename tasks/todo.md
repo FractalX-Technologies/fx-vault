@@ -1925,12 +1925,12 @@ Design (designer, reviewed by anton):
 
 Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B0 XCUITest target with a throwaway-vault launch mode and `gh`/`az` fakes; one smoke flow (onboarding → main). e2e: the smoke flow twice.
-- [ ] B1 Move `PassphraseGenerator` to VaultCrypto; cut the Spaces hooks from SyncEngine and `DEKRotator`. e2e: smoke flow.
-- [ ] B2 Remove the sharing, chat, teammates and spaces screens and managers, the Bonjour and `.fxvault`/`.fxvcard` entries in `project.yml`. e2e: smoke flow, nothing about teammates in the UI.
-- [ ] B3 Remove the teammate, nearby, chat and spaces parts of SharingKit and `VaultData` (keep passphrase files: File, Passphrase, Bundle, Import); the tables stay, unread. Remove Supabase, Vercel, Overview and `fxvault.yml`.
+- [x] B1 Move `PassphraseGenerator` to VaultCrypto; cut the Spaces hooks from SyncEngine and `DEKRotator`. e2e: smoke flow.
+- [x] B2 Remove the sharing, chat, teammates and spaces screens and managers, the Bonjour and `.fxvault`/`.fxvcard` entries in `project.yml`. e2e: smoke flow, nothing about teammates in the UI.
+- [x] B3 Remove the teammate, nearby, chat and spaces parts of SharingKit and `VaultData` (keep passphrase files: File, Passphrase, Bundle, Import); the tables stay, unread. Remove Supabase, Vercel, Overview and `fxvault.yml`.
 - [x] B3c Remove the stage Overview and `fxvault.yml`: EnvTools `Manifest/`, `GHManifestAPI`, VaultData `Destinations/Overview/`, the Overview screens and row. Add Destination keeps its stage suggestions (moved to `DestinationRepository`); after an import FX Vault opens the repository at the first stage's environment instead of the Overview. e2e: smoke flow.
-- [ ] B3d Remove Supabase and Vercel (DestinationKit remotes and account clients, connections, settings, Add Destination). Migration `v16_drop_runtime_providers` deletes their destinations, items, journal and tokens (Bryan, 2026-10-25: delete them) and keeps their names in `retired_destinations` for a one-time notice after unlock; nothing is deleted remotely. A 0.9 file that carries them imports without them, and the preview says so. Key Vault stays. e2e: smoke flow.
-- [ ] B3b Share Securely: passphrase `.fxvault` export of an org, repository or environment, and the open/preview/held import, from D2's Share boards; **Send with AirDrop** of that file (system share, Bryan 2026-10-25).
+- [x] B3d Remove Supabase and Vercel (DestinationKit remotes and account clients, connections, settings, Add Destination). Migration `v16_drop_runtime_providers` deletes their destinations, items, journal and tokens (Bryan, 2026-10-25: delete them) and keeps their names in `retired_destinations` for a one-time notice after unlock; nothing is deleted remotely. A 0.9 file that carries them imports without them, and the preview says so. Key Vault stays. e2e: smoke flow.
+- [x] B3b Share Securely: passphrase `.fxvault` export of an org, repository or environment, and the open/preview/held import, from D2's Share boards; **Send with AirDrop** of that file (system share, Bryan 2026-10-25).
 - [ ] B4 `admin:org` scope check per organization and the refresh flow.
 - [ ] B5 Organization list commands and store (v15, additive); read-only organization node.
 - [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list.
@@ -2016,4 +2016,15 @@ Review B3d — remove Supabase and Vercel (2026-10-25, automatic):
 - Waiver: the notice is tested through injected closures; the app tests' in-memory vault can't seed `retired_destinations` (only v16 writes it). The SQL is covered by the store test.
 - Review: by me (subagent cap). Found and fixed: a double clear when the alert's binding and OK both dismiss.
 - Docs: README, CHANGELOG, ARCHITECTURE (decision 115 gone; 106–109, 111, 116–118, 124 updated), API (G.2/G.3 Supabase and Vercel gone), DATABASE (v16, `retired_destinations`), DESIGN, SECURITY-MODEL, SHARING-PROTOCOL, STRUCTURE, RELEASING (#41, #43 gone; #49 upgrade check).
-- Commit: `refactor(destinations)!: remove Supabase and Vercel` (hash recorded with the next slice).
+- Commit: `3a90a62` `refactor(destinations)!: remove Supabase and Vercel`.
+
+Review B3b — Share Securely: production behind Touch ID, Send with AirDrop (2026-10-25, automatic):
+- Scope: repositories and environments. Exporting an organization waits for organizations in the store (B5/B6).
+- Production stages are listed unchecked. Checking one asks for Touch ID; cancelling leaves it unchecked. Without Touch ID it is checked and Create asks for the master password with a production message. A production environment picked in the tree asks at Create too.
+- Enforced in VaultData: `ShareAuthorizationPurpose.productionFileExport`; `exportBundle` refuses production without it (`productionNotAuthorized`, renamed from `productionNotShared`) before the authorization is consumed and again on the sealed bundle. The tick's confirmation is reused at Create (one prompt).
+- Send with AirDrop: `NSSharingService(named: .sendViaAirDrop)` for the same staged file, gated by "I've saved it", shown only where the Mac offers AirDrop; Share… and Save… stay.
+- Tests: VaultData `aProductionStageNeedsTheProductionAuthorization`, `aProductionStageExportsWithTheProductionAuthorization`, `theProductionAuthorizationAlsoExportsWithoutProduction`; app `productionIsListedUncheckedAndTickingItAsksForTouchIDOnce`, `cancellingTouchIDLeavesProductionUnchecked`, `withoutTouchIDProductionIsConfirmedWithThePasswordAtCreate`, `aProductionEnvironmentInTheTreeNeedsTheProductionConfirmation` (replace the two "never shared" tests), `sendWithAirDropNeedsTheSavedConfirmationAndHandsOverTheFile`. Seen failing under mutations: `allows` always true, `activeReauth` always the ordinary model, no cancel guard, no saved gate on AirDrop.
+- e2e: `ShareProjectUITests` (import the scripted repository → Share Project → check production → note names it → password → passphrase; AirDrop disabled until "I've saved it" where offered). The scripted gh gained read-only import stubs. It fails when the app sends the ordinary authorization. Onboarding helpers moved to `VaultUITestCase`.
+- Gates: XcodeGen drift OK; `swift test` 1,291 green; `xcodebuild test` 559 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (onboarding, share); lint OK; check-secrets OK in the worktree (944 files); strings synced (second run: no change).
+- Review: by me (subagent cap).
+- Docs: README, CHANGELOG, ARCHITECTURE, DESIGN, SECURITY-MODEL §10.5, SHARING-PROTOCOL, RELEASING #47.

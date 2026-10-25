@@ -447,16 +447,16 @@ foreground color, so `.primary` text still turns white on selected rows.
   Step 1, what to share: REPOSITORIES as removable chips in a
   `FlowLayout` (`shippingbox`, `.monoName`, an `xmark.circle.fill`) with an Add Repository
   borderless menu; STAGES as checkboxes across those repositories, a production stage with a
-  `.warning` "Production" chip and its checkbox disabled (help: "Production is never shared…"); "Repository-level secrets and variables" as a
+  `.warning` "Production" chip and its checkbox unchecked (help: "Unchecked by default. Checking it asks for Touch ID."); "Repository-level secrets and variables" as a
   checkbox beside ADJUST WHAT'S INCLUDED; then the scope tree with one root per repository (and
   folders), destinations as nodes with their provider symbol; the summary ("7 secrets and
   variables in 3 repositories") in `.statusLine` `subtleText` and the value-missing names as a
   warning note. Step 2, SEND TO: one `fxCardBackground(.container)` card, "Anyone, with a passphrase" in
-  `.bodyEmphasized` with its explanation in `.caption` (`warning`, naming the production places,
-  when the tree still holds one); EXPIRES AFTER as a `SegmentedPill` (1 day / 7 days / 30 days)
+  `.bodyEmphasized` with its explanation in `.caption` and a `warning` note naming the production
+  places when the file includes production; EXPIRES AFTER as a `SegmentedPill` (1 day / 7 days / 30 days)
   with the honest note in `.caption` `subtleText`. Then Touch ID or the password (`ShareReauthView`) and
   the result: the six words (`PassphraseView`, a `warning` `SheetCallout` "Send these words
-  another way…", "I've saved it") with the expiry; Share… (primary, the system picker, AirDrop included) and Save… (secondary), the file name in
+  another way…", "I've saved it") with the expiry; Send with AirDrop (primary, `dot.radiowaves.up.forward`, only where this Mac offers AirDrop), Share… (the system picker; primary without AirDrop) and Save… (secondary), the file name in
   `.monoMeta`. The footer: Back (secondary), Cancel, Continue / Create Share File (primary).
 - Import Share for a project file (v0.9.0, `ProjectShareImportView`): a passphrase field; "This share file has
   expired" is a failure with its own title. The sender row: a person symbol, "From Ana" in

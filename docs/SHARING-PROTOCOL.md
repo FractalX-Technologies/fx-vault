@@ -430,9 +430,9 @@ state, `ProjectShareImporter` applies a plan.
   expands stages by fold key: the environment whose fold key equals the stage plus
   the destinations with that stage.
 - **Production places** (Q13): an environment or a destination stage `StageRisk` flags.
-  `previewBundle(_:)` lists them; with the teammates mode gone an
-  export refuses them (until tasks/todo.md B3b allows them behind Touch ID) (`.productionNotShared`) before the authorization is consumed and
-  again on the bundle actually sealed.
+  `previewBundle(_:)` lists them; an export that includes them needs the
+  `.productionFileExport` authorization (1.0, B3b), else it throws `.productionNotAuthorized`
+  before the authorization is consumed, and again on the bundle actually sealed.
 - **Export** (`exportBundle(_:to:senderName:appVersion:authorization:existingFile:)`), in this
   order:
   1. the production rule;

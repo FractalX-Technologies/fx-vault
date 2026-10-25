@@ -5,8 +5,8 @@ import VaultCore
 import VaultData
 @testable import FXVault
 
-/// Share Project (v0.9.0, tasks/todo.md P1–P6; passphrase only since 1.0): stages with production
-/// never shared, the expiry, delivery and clean-up.
+/// Share Project (v0.9.0, tasks/todo.md P1–P6; passphrase only since 1.0): stages, production
+/// behind its own confirmation (1.0, B3b), the expiry, delivery (AirDrop included) and clean-up.
 @MainActor
 @Suite("Project share export", .serialized)
 struct ProjectShareExportViewModelTests {
@@ -32,8 +32,9 @@ struct ProjectShareExportViewModelTests {
         await model.authenticateWithPassword()
     }
 
-    @Test func productionIsListedButNeverChecked() async throws {
+    @Test func productionIsListedUncheckedAndTickingItAsksForTouchIDOnce() async throws {
         let world = try await ProjectShareWorld()
+        try await world.sender.enableTouchID()
         let model = await model(world)
 
         #expect(model.stageOptions.map(\.name).sorted() == ["production", "staging"])
@@ -41,16 +42,62 @@ struct ProjectShareExportViewModelTests {
         let staging = try #require(model.stageOptions.first { !$0.isProduction })
         #expect(model.isStageChosen(staging))
         #expect(!model.isStageChosen(production))
+        let loadsBefore = world.sender.biometrics.loadCount
+
+        model.setStage(production, chosen: true)
+        await model.settle()
+        #expect(model.isStageChosen(production))
+        #expect(model.preview?.includesProduction == true)
+        #expect(world.sender.biometrics.loadCount == loadsBefore + 1)
+        #expect(world.sender.biometrics.lastPrompt == FeatureDependencies.reauthPrompt(for: .share))
+
+        // Create reuses the confirmation from the tick: no second prompt.
+        model.continueToSendTo()
+        #expect(model.canCreate)
+        await model.requestCreate()
+        #expect(model.step == .done, "\(String(describing: model.alert))")
+        #expect(world.sender.biometrics.loadCount == loadsBefore + 1)
+        #expect(model.preview?.includesProduction == true)
+        #expect(!model.productionReauth.isAuthorized)
+    }
+
+    @Test func cancellingTouchIDLeavesProductionUnchecked() async throws {
+        let world = try await ProjectShareWorld()
+        try await world.sender.enableTouchID()
+        let model = await model(world)
+        let production = try #require(model.stageOptions.first { $0.isProduction })
+        world.sender.biometrics.failNextLoad(with: .cancelled)
 
         model.setStage(production, chosen: true)
         await model.settle()
         #expect(!model.isStageChosen(production))
         #expect(model.preview?.includesProduction == false)
-        #expect(model.isShareAllowed)
+        #expect(!model.productionReauth.isAuthorized)
     }
 
-    /// A production environment picked in the tree still blocks the file (Q13).
-    @Test func aProductionEnvironmentInTheTreeBlocksCreating() async throws {
+    /// Without Touch ID the box is checked and Create asks for the password as the production
+    /// confirmation; the repository refuses production with the ordinary one.
+    @Test func withoutTouchIDProductionIsConfirmedWithThePasswordAtCreate() async throws {
+        let world = try await ProjectShareWorld()
+        let model = await model(world)
+        let production = try #require(model.stageOptions.first { $0.isProduction })
+
+        model.setStage(production, chosen: true)
+        await model.settle()
+        #expect(model.isStageChosen(production))
+        model.continueToSendTo()
+        await model.requestCreate()
+        #expect(model.step == .authenticate)
+        #expect(model.activeReauth === model.productionReauth)
+
+        model.activeReauth.password = testPassword
+        await model.authenticateWithPassword()
+        #expect(model.step == .done, "\(String(describing: model.alert))")
+        #expect(model.preview?.includesProduction == true)
+    }
+
+    /// A production environment picked in the tree also needs the production confirmation.
+    @Test func aProductionEnvironmentInTheTreeNeedsTheProductionConfirmation() async throws {
         let world = try await ProjectShareWorld()
         let production = try EditorFixtures.environment(world.sender, world.senderRepositoryID, named: "production")
         let model = await model(world)
@@ -58,11 +105,16 @@ struct ProjectShareExportViewModelTests {
         let node = try #require(tree.roots.first?.children?.first { $0.id == .environment(production.id) })
         model.setChecked(true, for: node)
         await model.settle()
-        #expect(model.preview?.includesProduction == true)
-        #expect(!model.isShareAllowed)
+        #expect(model.includesProduction)
         #expect(!model.productionPlaces.isEmpty)
+
         model.continueToSendTo()
-        #expect(!model.canCreate)
+        #expect(model.canCreate)
+        await model.requestCreate()
+        #expect(model.activeReauth === model.productionReauth)
+        model.activeReauth.password = testPassword
+        await model.authenticateWithPassword()
+        #expect(model.step == .done, "\(String(describing: model.alert))")
     }
 
     @Test func theExpiryMovesThePreviewDate() async throws {
@@ -259,6 +311,30 @@ struct ProjectShareExportViewModelTests {
         delivery.finishSharing(.shared)
         #expect(model.hasSent)
         #expect(!FileManager.default.fileExists(atPath: staged.path))
+    }
+
+    @Test func sendWithAirDropNeedsTheSavedConfirmationAndHandsOverTheFile() async throws {
+        let world = try await ProjectShareWorld()
+        let delivery = FakeShareFileDelivery()
+        let model = await model(world, delivery: delivery)
+        model.continueToSendTo()
+        await authenticateAndCreate(model)
+        let staged = try #require(model.stagedFileURL)
+        #expect(model.canSendWithAirDrop)
+
+        model.sendWithAirDrop()
+        #expect(delivery.airDroppedFiles.isEmpty)
+
+        model.hasSavedPassphrase = true
+        model.sendWithAirDrop()
+        #expect(delivery.airDroppedFiles == [staged])
+        #expect(delivery.sharedFiles.isEmpty)
+        #expect(model.isDelivering)
+        delivery.finishSharing(.shared)
+        #expect(model.hasSent)
+
+        delivery.isAirDropAvailable = false
+        #expect(!model.canSendWithAirDrop)
     }
 
     @Test func aCancelledSavePanelWritesNothing() async throws {

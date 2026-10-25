@@ -9,14 +9,15 @@ import VaultData
 /// repositories, their GitHub scopes and runtime destinations, and optional folders.
 ///
 /// 1. **What to share**: the repositories (the current one preselected), the stages across them
-///    (production is never shared, Q13), the repository-level toggle and a tree per repository
-///    to adjust; a live summary (``SharingRepository/previewBundle(_:)``).
+///    (production unchecked; ticking it asks for Touch ID, 1.0 B3b), the repository-level toggle
+///    and a tree per repository to adjust; a live summary (``SharingRepository/previewBundle(_:)``).
 /// 2. **Send to**: anyone with a fresh passphrase, and the expiry.
-/// 3. **Authenticate** with Touch ID or the master password (`.fileExport`, single use).
+/// 3. **Authenticate** with Touch ID or the master password (`.fileExport`, single use; with
+///    production, `.productionFileExport`, which the production tick may already hold).
 /// 4. **Deliver**: the sealed file sits 0600 in a private staging folder named
-///    ``SharingRepository/defaultFileName(timeZone:)``; Share… (Mail, Messages, AirDrop, any
-///    app that takes files) or Save…. A passphrase is shown once. The staged file is removed
-///    when the sheet closes.
+///    ``SharingRepository/defaultFileName(timeZone:)``; Send with AirDrop, Share… (Mail,
+///    Messages, any app that takes files) or Save…. A passphrase is shown once. The staged file
+///    is removed when the sheet closes.
 ///
 /// Values never reach this view model; the passphrase is held only while the sheet is open.
 @Observable
@@ -31,6 +32,9 @@ final class ProjectShareViewModel: LockObserving {
 
     private(set) var step: Step = .contents
     let reauth: ShareReauthModel
+    /// The production confirmation: asked when production is ticked, or at Create when the tree
+    /// picked a production environment.
+    let productionReauth: ShareReauthModel
     let fileName: String
 
     // MARK: Contents
@@ -101,11 +105,18 @@ final class ProjectShareViewModel: LockObserving {
             destinations: dependencies.destinations,
             folders: dependencies.folders
         )
+        let touchIDStatus = dependencies.touchIDStatus()
         reauth = ShareReauthModel(
             purpose: .fileExport,
             reauth: dependencies.reauth,
             session: dependencies.session,
-            touchIDStatus: dependencies.touchIDStatus()
+            touchIDStatus: touchIDStatus
+        )
+        productionReauth = ShareReauthModel(
+            purpose: .productionFileExport,
+            reauth: dependencies.reauth,
+            session: dependencies.session,
+            touchIDStatus: touchIDStatus
         )
         fileName = dependencies.sharing.defaultFileName()
         dependencies.actions.addLockObserver(self)
@@ -206,10 +217,25 @@ final class ProjectShareViewModel: LockObserving {
         chosenStageKeys.contains(option.id)
     }
 
-    /// Checks or unchecks a stage for every chosen repository. A production stage is never
-    /// checked (Q13).
+    /// Checks or unchecks a stage for every chosen repository. Checking production asks for Touch
+    /// ID first; cancelling leaves it unchecked. Without Touch ID it is checked and Create asks for
+    /// the password.
     func setStage(_ option: ShareStageOptionModel, chosen: Bool) {
-        guard !(chosen && option.isProduction) else { return }
+        guard chosen, option.isProduction, !productionReauth.isAuthorized, productionReauth.canUseTouchID else {
+            updateStage(option, chosen: chosen)
+            return
+        }
+        stageTask = Task { [weak self] in
+            guard let self else { return }
+            let authorized = await productionReauth.authorizeWithTouchID(automatic: true)
+            // Touch ID turned out unusable: the password at Create confirms production instead.
+            guard authorized || !productionReauth.canUseTouchID else { return }
+            chosenStageKeys.insert(option.id)
+            await applyStageSelection()
+        }
+    }
+
+    private func updateStage(_ option: ShareStageOptionModel, chosen: Bool) {
         if chosen {
             chosenStageKeys.insert(option.id)
         } else {
@@ -323,7 +349,8 @@ final class ProjectShareViewModel: LockObserving {
         switch step {
         case .sendTo: step = .contents
         case .authenticate:
-            reauth.reset()
+            // Only the step's own model: a production confirmation from the tick stays.
+            activeReauth.reset()
             step = .sendTo
         case .contents, .creating, .done: break
         }
@@ -331,38 +358,50 @@ final class ProjectShareViewModel: LockObserving {
 
     // MARK: - Step 2: send to
 
-    /// Production is never shared (Q13): an environment picked in the tree still counts.
-    var isShareAllowed: Bool {
-        preview?.includesProduction != true
+    /// The file includes production (a stage or an environment picked in the tree).
+    var includesProduction: Bool {
+        preview?.includesProduction == true
     }
 
     var productionPlaces: [String] {
         preview?.productionPlaces ?? []
     }
 
-    var canCreate: Bool {
-        step == .sendTo && selection != nil && isShareAllowed
+    /// The authentication the file needs: the production confirmation when it includes
+    /// production.
+    var activeReauth: ShareReauthModel {
+        includesProduction ? productionReauth : reauth
     }
 
-    /// Moves to the authentication step and tries Touch ID once (no error when it is off).
+    // The preview says whether production is in, which picks the confirmation Create asks for.
+    var canCreate: Bool {
+        step == .sendTo && selection != nil && preview != nil
+    }
+
+    /// Moves to the authentication step and tries Touch ID once (no error when it is off). A
+    /// production confirmation from the tick is used as it is, without a second prompt.
     func requestCreate() async {
         guard canCreate else { return }
         step = .authenticate
-        await authenticateWithTouchID(automatic: true)
+        if activeReauth.isAuthorized {
+            await create()
+        } else {
+            await authenticateWithTouchID(automatic: true)
+        }
     }
 
     // MARK: - Step 3: authenticate
 
     func authenticateWithTouchID(automatic: Bool = false) async {
         guard step == .authenticate else { return }
-        if await reauth.authorizeWithTouchID(automatic: automatic) {
+        if await activeReauth.authorizeWithTouchID(automatic: automatic) {
             await create()
         }
     }
 
     func authenticateWithPassword() async {
         guard step == .authenticate else { return }
-        if await reauth.authorizeWithPassword() {
+        if await activeReauth.authorizeWithPassword() {
             await create()
         }
     }
@@ -370,7 +409,7 @@ final class ProjectShareViewModel: LockObserving {
     /// Seals the selection into the staged file. Consumes the authorization: a failure after
     /// that needs a new authentication.
     private func create() async {
-        guard let selection, let authorization = reauth.takeAuthorization() else {
+        guard let selection, let authorization = activeReauth.takeAuthorization() else {
             step = .sendTo
             return
         }
@@ -397,6 +436,7 @@ final class ProjectShareViewModel: LockObserving {
         } catch {
             alert = error.presentation
             reauth.reset()
+            productionReauth.reset()
             step = .sendTo
         }
     }
@@ -441,6 +481,22 @@ final class ProjectShareViewModel: LockObserving {
         isDelivering = true
         isShareInFlight = true
         delivery.share(fileURL: stagedFileURL) { [weak self] outcome in
+            self?.deliveryFinished(outcome)
+        }
+    }
+
+    /// Send with AirDrop is shown only where this Mac offers AirDrop.
+    var canSendWithAirDrop: Bool {
+        stagedFileURL.map(delivery.canSendWithAirDrop(fileURL:)) == true
+    }
+
+    /// Send with AirDrop: the system AirDrop window for the same passphrase file (1.0, B3b). The
+    /// receiver opens it as any `.fxvault` file.
+    func sendWithAirDrop() {
+        guard canDeliver, canSendWithAirDrop, let stagedFileURL else { return }
+        isDelivering = true
+        isShareInFlight = true
+        delivery.sendWithAirDrop(fileURL: stagedFileURL) { [weak self] outcome in
             self?.deliveryFinished(outcome)
         }
     }
@@ -492,6 +548,7 @@ final class ProjectShareViewModel: LockObserving {
         hasSavedPassphrase = false
         notice = nil
         reauth.reset()
+        productionReauth.reset()
     }
 
     private func removeStaging() {

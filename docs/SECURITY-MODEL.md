@@ -240,7 +240,7 @@ another.
   `.gitignore` offer.
 - **Share staging:** a `.fxvault` export is first written (ciphertext only) to
   `$TMPDIR/io.fractalx.fxvault.shares/<uuid>/` (folder 0700, file 0600), then copied by Save…
-  (written again 0600) or handed to AirDrop. The staging folder is removed when the sheet closes
+  (written again 0600) or handed to AirDrop (Send with AirDrop or Share…). The staging folder is removed when the sheet closes
   or when a running AirDrop hand-off ends.
 
 ## 8. Child processes
@@ -400,13 +400,13 @@ destinations are dropped on opening; the preview names them.
 - **Passphrase only.** Argon2id (t = 3, 64 MiB) over a fresh 6-word EFF passphrase (about 77.5
   bits), shown once and never stored, to be sent another way than the file. The sender's name is
   unverified. A 0.9 teammates file (mode 2) is refused as "Wrong passphrase or damaged file".
-- **Production is not shared** (since 0.9's teammates mode was removed; tasks/todo.md B3b plans
-  production behind Touch ID, unchecked by default): a selection with a production environment or destination
-  stage (`StageRisk`) is refused
-  (`productionNotShared`) before the re-authentication is used, and the bundle sealed is checked
-  again. Production rows are listed in the sheet with their checkbox disabled.
-- **Re-authentication.** Exporting uses the single-use `.fileExport` authorization (§6), consumed
-  after the production check and before any value is decrypted.
+- **Production needs its own confirmation** (1.0, B3b): production stages are listed unchecked.
+  A selection with a production environment or destination stage (`StageRisk`) needs the
+  `.productionFileExport` authorization, else it is refused (`productionNotAuthorized`) before
+  the re-authentication is used, and the bundle sealed is checked again. Checking production
+  asks for Touch ID; without it, Create asks for the master password with a production message.
+- **Re-authentication.** Exporting uses a single-use `.fileExport` or `.productionFileExport`
+  authorization (§6), consumed after the production check and before any value is decrypted.
 - **Expiry.** The sender picks 1, 7 (default) or 30 days. `expiresAt` is inside the ciphertext
   and FX Vault refuses an expired file (10-minute skew). This is
   enforced by the app, not by the cryptography: anyone with the passphrase and their own software
@@ -428,7 +428,7 @@ destinations are dropped on opening; the preview names them.
 | A file kept and opened long after | `expiresAt`, enforced by FX Vault (above); rotation for anything that leaked; the sent log lists what each file carried. |
 | A forged or altered file | AES-GCM over everything after the header with the header as AAD. Every failure reads "Wrong passphrase or damaged file". Anyone with the passphrase can re-seal a file under any sender name: the name is a label, not an identity. |
 | A malicious bundle | `ShareBundleValidator` (names, provider rules, limits, link tokens, expiry), the merge defaults (keep mine on differences, nothing deleted), replay warnings, and holds: nothing reaches GitHub or a provider without the receiver including the file. |
-| Production values handed to a third party | Production places are never shared (`productionNotShared`), checked before the authorization is used and again on the sealed bundle. |
+| Production values handed to a third party | Production is unchecked by default and needs its own Touch ID or password confirmation (`productionNotAuthorized` otherwise), checked before the authorization is used and again on the sealed bundle. |
 | A leaked file exposing provider accounts | `az` sessions are never read by the exporter; the receiver reaches a created destination with their own `az login`. |
 **Residual risks:** §11 (project share files).
 
