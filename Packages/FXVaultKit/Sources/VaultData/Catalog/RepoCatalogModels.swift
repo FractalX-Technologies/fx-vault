@@ -191,7 +191,19 @@ public struct RepoImportResultModel: Sendable, Hashable {
     }
 }
 
-/// Why a ``RepoCatalogRepository`` operation failed. Carries no localized text.
+/// What ``OrganizationRepository/importOrganization(login:accountLogin:)`` stored (1.0).
+public struct OrgImportResultModel: Sendable, Hashable {
+    public let organization: OrganizationModel
+    public let skippedNames: [SkippedRemoteNameModel]
+
+    public init(organization: OrganizationModel, skippedNames: [SkippedRemoteNameModel]) {
+        self.organization = organization
+        self.skippedNames = skippedNames
+    }
+}
+
+/// Why a ``RepoCatalogRepository`` or ``OrganizationRepository`` operation failed. Carries no
+/// localized text.
 public enum RepoCatalogError: Error, Sendable, Hashable {
     /// A gh command failed (including `.invalidInput` for a malformed `owner/name`).
     case github(GHError)
@@ -203,6 +215,10 @@ public enum RepoCatalogError: Error, Sendable, Hashable {
     case repositoryNotFound
     /// The repository is already in the vault; use refresh or drift review instead.
     case alreadyImported(RepoID)
+    /// No organization row with that id (1.0).
+    case organizationNotFound
+    /// The organization is already in the vault (1.0).
+    case organizationAlreadyImported(OrganizationID)
     /// An error of an unknown type (never expected).
     case unexpected
 
@@ -214,6 +230,15 @@ public enum RepoCatalogError: Error, Sendable, Hashable {
         case let error as VaultError: .vault(error)
         case is CryptoError: .encryptionFailed
         default: .unexpected
+        }
+    }
+
+    /// Runs `body`, mapping whatever it throws with ``wrap(_:)``.
+    static func perform<Result>(_ body: () throws -> Result) throws(RepoCatalogError) -> Result {
+        do {
+            return try body()
+        } catch {
+            throw wrap(error)
         }
     }
 }

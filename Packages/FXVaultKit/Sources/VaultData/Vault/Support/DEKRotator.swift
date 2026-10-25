@@ -22,6 +22,10 @@ struct DEKRotationReportModel: Sendable, Hashable {
     /// Destination `synced_fp` values that could not be recomputed and were cleared (the item is
     /// pushed again on the next Sync), v0.8.0.
     var destinationSyncedFingerprintsCleared = 0
+    /// Organization item values re-encrypted (and their fingerprints recomputed), 1.0.
+    var organizationValues = 0
+    /// Organization `synced_fp` values that could not be recomputed and were cleared, 1.0.
+    var organizationSyncedFingerprintsCleared = 0
 }
 
 /// Re-encrypts every encrypted column under a new DEK inside the caller's transaction (§5.2
@@ -34,8 +38,9 @@ struct DEKRotationReportModel: Sendable, Hashable {
 /// - a `synced_fp` without `synced_value_ct` is recomputed from the current value when the two
 ///   matched under the old key, otherwise cleared (see ``DEKRotationReportModel``).
 ///
-/// Then every `folder_items.value_ct` (v0.7.0, with `value_fp` recomputed) is opened under the
-/// old keys and sealed under the new ones.
+/// Then every `folder_items.value_ct` (v0.7.0, with `value_fp` recomputed), `destination_items`
+/// (v0.8.0) and `org_items` (1.0) value is opened under the old keys and sealed under the new
+/// ones.
 ///
 /// Any decryption failure aborts the whole transaction: a rotation never leaves rows under two
 /// different DEKs.
@@ -44,12 +49,14 @@ struct DEKRotator {
     let configStore: ConfigStore
     let folderStore: FolderStore
     let destinationStore: DestinationStore
+    let organizationStore: OrganizationStore
 
     init(database: VaultDatabase) {
         repoStore = RepoStore(database: database)
         configStore = ConfigStore(database: database)
         folderStore = FolderStore(database: database)
         destinationStore = DestinationStore(database: database)
+        organizationStore = OrganizationStore(database: database)
     }
 
     func reencryptAll(
@@ -76,6 +83,7 @@ struct DEKRotator {
             }
         }
         try reencryptDestinations(from: oldKeys, to: newKeys, report: &report, in: tx)
+        try reencryptOrganizations(from: oldKeys, to: newKeys, report: &report, in: tx)
         return report
     }
 
@@ -90,31 +98,94 @@ struct DEKRotator {
     ) throws {
         for destination in try destinationStore.fetchAllDestinationRecords(in: tx) {
             for var item in try destinationStore.fetchItemRecords(destinationID: destination.id, in: tx) {
-                guard let ciphertext = item.valueCiphertext else {
-                    if item.syncedFingerprint != nil {
-                        item.syncedFingerprint = nil
-                        report.destinationSyncedFingerprintsCleared += 1
-                        try destinationStore.updateItem(item, in: tx)
-                    }
-                    continue
-                }
-                let aad = DestinationFieldCipher.valueAAD(of: item)
-                let plaintext = try oldKeys.open(ciphertext, for: aad)
-                defer { plaintext.wipe() }
-                if let synced = item.syncedFingerprint {
-                    if oldKeys.fingerprintMatches(synced, value: plaintext, rowID: item.id) {
-                        item.syncedFingerprint = newKeys.fingerprint(plaintext, rowID: item.id)
-                    } else {
-                        item.syncedFingerprint = nil
-                        report.destinationSyncedFingerprintsCleared += 1
-                    }
-                }
-                item.valueCiphertext = try newKeys.seal(plaintext, for: aad)
-                item.valueFingerprint = newKeys.fingerprint(plaintext, rowID: item.id)
+                let rotated = try rotate(
+                    ciphertext: item.valueCiphertext,
+                    syncedFingerprint: item.syncedFingerprint,
+                    aad: DestinationFieldCipher.valueAAD(of: item),
+                    rowID: item.id,
+                    from: oldKeys,
+                    to: newKeys
+                )
+                guard rotated.isChanged else { continue }
+                item.valueCiphertext = rotated.ciphertext
+                item.valueFingerprint = rotated.fingerprint ?? item.valueFingerprint
+                item.syncedFingerprint = rotated.syncedFingerprint
                 try destinationStore.updateItem(item, in: tx)
-                report.destinationValues += 1
+                if rotated.ciphertext != nil { report.destinationValues += 1 }
+                if rotated.clearedSyncedFingerprint { report.destinationSyncedFingerprintsCleared += 1 }
             }
         }
+    }
+
+    /// Organization item values (1.0), with the same `synced_fp` rule as destinations.
+    private func reencryptOrganizations(
+        from oldKeys: borrowing UnlockedKeys,
+        to newKeys: borrowing UnlockedKeys,
+        report: inout DEKRotationReportModel,
+        in tx: StoreTransaction
+    ) throws {
+        for organization in try organizationStore.fetchOrganizationRecords(in: tx) {
+            for var item in try organizationStore.fetchItemRecords(organizationID: organization.id, in: tx) {
+                let rotated = try rotate(
+                    ciphertext: item.valueCiphertext,
+                    syncedFingerprint: item.syncedFingerprint,
+                    aad: OrgFieldCipher.valueAAD(of: item),
+                    rowID: item.id,
+                    from: oldKeys,
+                    to: newKeys
+                )
+                guard rotated.isChanged else { continue }
+                item.valueCiphertext = rotated.ciphertext
+                item.valueFingerprint = rotated.fingerprint ?? item.valueFingerprint
+                item.syncedFingerprint = rotated.syncedFingerprint
+                try organizationStore.updateItem(item, in: tx)
+                if rotated.ciphertext != nil { report.organizationValues += 1 }
+                if rotated.clearedSyncedFingerprint { report.organizationSyncedFingerprintsCleared += 1 }
+            }
+        }
+    }
+
+    /// One value that may be missing (a secret GitHub never returned), with its `synced_fp`.
+    private struct RotatedValue {
+        var ciphertext: Data?
+        var fingerprint: Data?
+        var syncedFingerprint: Data?
+        var clearedSyncedFingerprint = false
+
+        /// False when the row has neither a value nor a `synced_fp`: nothing to rewrite.
+        var isChanged: Bool {
+            ciphertext != nil || clearedSyncedFingerprint
+        }
+    }
+
+    /// Re-seals a value under the new keys. A `synced_fp` is recomputed from the value when the
+    /// two matched under the old key and cleared otherwise (no value: always cleared), so the
+    /// item is pushed again rather than compared under a stale key.
+    private func rotate(
+        ciphertext: Data?,
+        syncedFingerprint: Data?,
+        aad: some FieldContext,
+        rowID: ConfigItemID,
+        from oldKeys: borrowing UnlockedKeys,
+        to newKeys: borrowing UnlockedKeys
+    ) throws -> RotatedValue {
+        guard let ciphertext else {
+            return RotatedValue(clearedSyncedFingerprint: syncedFingerprint != nil)
+        }
+        let plaintext = try oldKeys.open(ciphertext, for: aad)
+        defer { plaintext.wipe() }
+        var rotated = RotatedValue(
+            ciphertext: try newKeys.seal(plaintext, for: aad),
+            fingerprint: newKeys.fingerprint(plaintext, rowID: rowID)
+        )
+        if let syncedFingerprint {
+            if oldKeys.fingerprintMatches(syncedFingerprint, value: plaintext, rowID: rowID) {
+                rotated.syncedFingerprint = newKeys.fingerprint(plaintext, rowID: rowID)
+            } else {
+                rotated.clearedSyncedFingerprint = true
+            }
+        }
+        return rotated
     }
 
     // MARK: - Private

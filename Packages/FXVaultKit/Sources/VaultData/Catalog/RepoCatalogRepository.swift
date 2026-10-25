@@ -225,14 +225,9 @@ public actor RepoCatalogRepository {
     }
 
     private func perform<Result>(_ body: () throws -> Result) throws(RepoCatalogError) -> Result {
-        do {
-            return try body()
-        } catch {
-            throw RepoCatalogError.wrap(error)
-        }
+        try RepoCatalogError.perform(body)
     }
 
-    /// Failures that mean nothing else can be listed either.
     /// B1/B2 failures that make a repository unavailable rather than failing the call.
     private static func marksUnavailable(_ error: GHError) -> Bool {
         switch error {

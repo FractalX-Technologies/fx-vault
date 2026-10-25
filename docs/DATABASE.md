@@ -562,6 +562,36 @@ DELETE FROM provider_connections;
 - The checkpoint after migrating leaves no token bytes in the WAL
   (`droppingTheRuntimeProvidersLeavesNoTokenBytesOnDisk`).
 
+### v17_organizations (1.0)
+
+```sql
+CREATE TABLE organizations (id TEXT PRIMARY KEY CHECK (length(id) = 36),
+  login TEXT NOT NULL CHECK (length(login) BETWEEN 1 AND 39),
+  login_key TEXT NOT NULL UNIQUE CHECK (login_key = lower(login_key)),
+  account_login TEXT NOT NULL CHECK (length(account_login) BETWEEN 1 AND 255),
+  last_refreshed_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE org_items (id TEXT PRIMARY KEY CHECK (length(id) = 36),
+  organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('secret','variable')),
+  name TEXT NOT NULL CHECK (name = upper(name) AND length(name) BETWEEN 1 AND 255),
+  value_ct BLOB, value_fp BLOB,
+  visibility TEXT NOT NULL CHECK (visibility IN ('all','private','selected')),
+  selected_count INTEGER CHECK (selected_count IS NULL OR selected_count >= 0),
+  synced_fp BLOB, remote_updated_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  CHECK (kind = 'secret' OR value_ct IS NOT NULL),
+  CHECK ((value_ct IS NULL) = (value_fp IS NULL)));
+CREATE UNIQUE INDEX org_items_name ON org_items(organization_id, kind, name);
+```
+
+- Additive: nothing existing changes. Organizations get their own tables (as folders and
+  destinations do) rather than a generalized `config_items`, so no repository sync path reads them.
+- `login_key` = `OwnerLoginValidator.foldKey(login)`; one row per organization, whatever the case.
+- Secrets have no value (GitHub never returns one) and keep `remote_updated_at`; variables are
+  sealed with `OrgFieldAAD` and `synced_fp` is the fingerprint of the value last read.
+- `selected_count` is how many repositories a `selected` item reaches (nil for the others).
+- DEK rotation re-seals `org_items.value_ct` and recomputes `value_fp` and `synced_fp` (a
+  `synced_fp` that no longer matches is cleared).
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -583,6 +613,8 @@ DELETE FROM provider_connections;
 | `destination_journal` | `DestinationJournalRecord` | `DestinationStore` | Destination writes, names and push fingerprints only, v0.8.0 |
 | `retired_destinations` | — (labels as `String`) | `DestinationStore` | The one-time notice after v16, names only, 1.0 |
 | `sent_shares` | `SentShareRecord` (`SentShareModel`) | `SentShareStore` | Names only, v0.9.0 |
+| `organizations` | `OrganizationRecord` (`OrganizationModel` with counts) | `OrganizationStore` | Unique by `login_key`, 1.0 |
+| `org_items` | `OrgItemRecord` (with ciphertext; `OrgItemModel` without) | `OrganizationStore` | Value optional for secrets; visibility and selected count, 1.0 |
 | holds (`share_hold` on both item tables, the import records) | `HeldShareInputsModel` | `ShareHoldStore` | Read model of Sync's From Files review and bulk release, v0.9.0 |
 
 ## Transactions

@@ -196,6 +196,26 @@ def main():
             "blob_hex": (b"\x01" + nonce + sealed).hex(),
         })
 
+    # --- Organization item values (1.0): the §5.4 layout with the organization in the
+    # repository's place, no environment, and the table name org_items. ---
+    organization = uuid.UUID("6e5d4c3b-2a1f-4b0c-9d8e-7f6a5b4c3d2e")
+    organization_cases = [
+        ("organization-secret-value", row, organization, "secret", "FXV_FIXTURE_ORGANIZATION", 1,
+         b"FXV_FIXTURE_ORGANIZATION_VALUE", seq(0xA8, 12)),
+        ("organization-variable-v2", row, organization, "variable", "FXV_FIXTURE_ORGANIZATION_VAR", 2,
+         "organization ✓ value".encode(), seq(0xB8, 12)),
+    ]
+    vectors["organization_field"] = []
+    for label, r, o, kind, name, ver, plain, nonce in organization_cases:
+        aad = field_aad("org_items", "value_ct", r, o, None, kind, name, ver)
+        sealed = AESGCM(k_field).encrypt(nonce, plain, aad)
+        vectors["organization_field"].append({
+            "label": label, "aes_k_hex": k_field.hex(), "row": str(r), "organization": str(o),
+            "kind": kind, "name": name, "dek_version": ver, "plain_hex": plain.hex(),
+            "nonce_hex": nonce.hex(), "aad_hex": aad.hex(),
+            "blob_hex": (b"\x01" + nonce + sealed).hex(),
+        })
+
     # --- DEK wraps (§5.2): 62 bytes = fmt || aead || nonce || ct(32) || tag. ---
     pw_text = "FXV fixture pässwörd ✓"
     pw = unicodedata.normalize("NFC", pw_text).encode()

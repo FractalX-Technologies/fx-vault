@@ -21,6 +21,19 @@ nonisolated extension RepoCatalogError {
                 title: String(localized: "error.catalog.title", defaultValue: "Repository not available"),
                 message: String(localized: "error.config.repositoryNotFound", defaultValue: "This repository is no longer in the vault.")
             )
+        case .organizationAlreadyImported:
+            ErrorPresentationModel(
+                title: String(localized: "error.catalog.alreadyImported.title", defaultValue: "Already in the vault"),
+                message: String(
+                    localized: "error.organization.alreadyImported",
+                    defaultValue: "This organization is already imported."
+                )
+            )
+        case .organizationNotFound:
+            ErrorPresentationModel(
+                title: String(localized: "error.organization.title", defaultValue: "Organization not available"),
+                message: String(localized: "error.organization.notFound", defaultValue: "This organization is no longer in the vault.")
+            )
         case .store, .encryptionFailed, .unexpected:
             ErrorPresentationModel(
                 title: String(localized: "error.catalog.title", defaultValue: "Repository not available"),
