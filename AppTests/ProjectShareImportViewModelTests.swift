@@ -106,6 +106,13 @@ struct ProjectShareImportViewModelTests {
         #expect(!ProjectShareImportEditor.detail(of: status).isEmpty)
     }
 
+    /// A 0.9 file with Supabase or Vercel destinations imports without them (SharingKit drops
+    /// them); the repository preview names each one.
+    @Test func theRepositoryPreviewNamesTheDestinationsLeftOut() {
+        let line = ProjectShareCopy.retiredDestinations(["Supabase abcdefghijklmnopqrst", "Vercel example-web (preview)"])
+        #expect(line == "Left out: Supabase abcdefghijklmnopqrst, Vercel example-web (preview). Supabase and Vercel are no longer supported.")
+    }
+
     @Test func theImportAccountIsNamedWhenKnown() {
         #expect(ProjectShareImportEditor.detail(of: .willImportFromGitHub(accountLogin: "user-a")).contains("user-a"))
     }

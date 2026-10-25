@@ -1,4 +1,3 @@
-import CryptoKit
 import DestinationKit
 import Foundation
 import Testing
@@ -37,7 +36,7 @@ final class FakeDestinationRemote: DestinationRemoting, @unchecked Sendable {
                 value: Data(value.utf8),
                 kind: kind,
                 version: nextVersion,
-                isReadable: readable ?? provider.returnsValues
+                isReadable: readable ?? true
             )
         }
     }
@@ -58,17 +57,13 @@ final class FakeDestinationRemote: DestinationRemoting, @unchecked Sendable {
         if let failList { throw failList }
         return lock.withLock {
             entries.map { remoteName, entry in
-                let digest = provider == .supabase ? SHA256.hash(data: entry.value).map { String(format: "%02x", $0) }.joined() : nil
-                return RemoteDestinationItemModel(
+                RemoteDestinationItemModel(
                     remoteName: remoteName,
                     name: DestinationRules.localName(forRemoteName: remoteName, provider: provider),
                     unusableReason: DestinationRules.unusableReason(forRemoteName: remoteName, provider: provider).map { .invalidName($0) },
                     kind: entry.kind,
-                    remoteRef: provider == .vercel ? "env_\(remoteName)" : nil,
-                    version: digest ?? String(entry.version),
-                    digest: digest,
+                    version: String(entry.version),
                     isValueReadable: entry.isReadable,
-                    otherTargets: [],
                     updatedAt: nil
                 )
             }
@@ -93,11 +88,11 @@ final class FakeDestinationRemote: DestinationRemoting, @unchecked Sendable {
         let bytes = value.withUnsafeBytes { Data($0) }
         let version = lock.withLock { () -> Int in
             nextVersion += 1
-            entries[remoteName] = Entry(value: bytes, kind: provider.storedKind(for: kind), version: nextVersion, isReadable: provider.returnsValues)
+            entries[remoteName] = Entry(value: bytes, kind: provider.storedKind(for: kind), version: nextVersion, isReadable: true)
             writes.append(name)
             return nextVersion
         }
-        return RemoteWriteResultModel(version: provider == .supabase ? nil : String(version), remoteRef: nil)
+        return RemoteWriteResultModel(version: String(version))
     }
 
     func delete(_ item: RemoteDestinationItemModel) async throws(DestinationError) {
@@ -114,13 +109,9 @@ final class FakeDestinationRemote: DestinationRemoting, @unchecked Sendable {
 final class FakeDestinationRemotes: DestinationRemoteProviding, @unchecked Sendable {
     private let lock = NSLock()
     private var remotes: [DestinationID: FakeDestinationRemote] = [:]
-    private(set) var tokens: [String] = []
 
-    func remote(for destination: DestinationModel, token: SecretBytes?) async throws(DestinationError) -> any DestinationRemoting {
-        if let token, let text = token.utf8String() {
-            lock.withLock { tokens.append(text) }
-        }
-        return fake(for: destination.id, provider: destination.provider)
+    func remote(for destination: DestinationModel) async throws(DestinationError) -> any DestinationRemoting {
+        fake(for: destination.id, provider: destination.provider)
     }
 
     func fake(for id: DestinationID, provider: DestinationProvider) -> FakeDestinationRemote {
@@ -159,32 +150,9 @@ struct DestinationSyncRepositoryTests {
             let id = try destinations.createDestination(
                 repositoryID: repo.id,
                 target: .azureKeyVault(vaultName: "kv-sample-prod", tenantID: nil),
-                stage: "production",
-                connectionID: nil
+                stage: "production"
             )
             return (id, remotes.fake(for: id, provider: .azureKeyVault))
-        }
-
-        func supabase() throws -> (DestinationID, FakeDestinationRemote) {
-            let connection = try destinations.addConnection(provider: .supabase, label: "Supabase", token: SecretBytes(utf8: "sbp_sample"), accountHint: nil)
-            let id = try destinations.createDestination(
-                repositoryID: repo.id,
-                target: .supabase(projectRef: "abcdefghijklmnopqrst"),
-                stage: "production",
-                connectionID: connection
-            )
-            return (id, remotes.fake(for: id, provider: .supabase))
-        }
-
-        func vercel() throws -> (DestinationID, FakeDestinationRemote) {
-            let connection = try destinations.addConnection(provider: .vercel, label: "Vercel", token: SecretBytes(utf8: "vercel-token"), accountHint: nil)
-            let id = try destinations.createDestination(
-                repositoryID: repo.id,
-                target: .vercel(projectID: "prj_sample", projectName: "sample-web", teamID: nil, environment: .production),
-                stage: "production",
-                connectionID: connection
-            )
-            return (id, remotes.fake(for: id, provider: .vercel))
         }
 
         @discardableResult
@@ -243,26 +211,15 @@ struct DestinationSyncRepositoryTests {
 
     @Test func reviewBlocksWhatCannotBeSent() async throws {
         let fixture = try await Fixture.make()
-        let (web, remote) = try fixture.vercel()
-        try fixture.add(web, "NEXT_PUBLIC_STRIPE_KEY", kind: .variable, value: "sk_live_" + String(repeating: "a", count: 24))
-        try fixture.add(web, "NEXT_PUBLIC_ANON_KEY", kind: .variable, value: ConfigFixture.sampleJWT)
-        try fixture.add(web, "TAKEN_KEY", value: "mine")
+        let (vault, remote) = try fixture.keyVault()
+        try fixture.add(vault, "TAKEN_KEY", value: "mine")
         remote.put("TAKEN_KEY", value: "theirs")
-        try fixture.add(web, "API_KEY", value: "a")
+        try fixture.add(vault, "API_KEY", value: "a")
         let review = await fixture.sync.review(repositoryID: fixture.repo.id)
         let section = try #require(review.sections.first)
-        #expect(section.changes.map(\.name) == ["API_KEY", "NEXT_PUBLIC_ANON_KEY"])
-        let reasons = Dictionary(uniqueKeysWithValues: section.blocked.map { ($0.change.name, $0.reason) })
-        #expect(reasons["NEXT_PUBLIC_STRIPE_KEY"] == .publicCredential(prefix: "NEXT_PUBLIC_"))
-        #expect(reasons["TAKEN_KEY"] == .existsRemotely)
-        #expect(section.warnings.map(\.name) == ["NEXT_PUBLIC_ANON_KEY"])
-        // The provider token reached the remote.
-        #expect(fixture.remotes.tokens.contains("vercel-token"))
-
-        // Mark as Public lets the value through.
-        try fixture.destinations.setPublicAllowed(try fixture.item(web, "NEXT_PUBLIC_STRIPE_KEY").id, allowed: true)
-        let again = await fixture.sync.review(repositoryID: fixture.repo.id)
-        #expect(again.sections.first?.changes.map(\.name).contains("NEXT_PUBLIC_STRIPE_KEY") == true)
+        #expect(section.changes.map(\.name) == ["API_KEY"])
+        #expect(section.blocked.map(\.change.name) == ["TAKEN_KEY"])
+        #expect(section.blocked.map(\.reason) == [.existsRemotely])
     }
 
     @Test func aRemoteChangeSinceTheLastSyncBlocksTheUpdate() async throws {
@@ -341,73 +298,6 @@ struct DestinationSyncRepositoryTests {
         #expect(remote.value(of: "API_KEY") == "b")
     }
 
-    @Test func supabaseDigestsAreStoredOnlyAsKeyedMarkers() async throws {
-        let fixture = try await Fixture.make()
-        let (functions, remote) = try fixture.supabase()
-        let id = try fixture.add(functions, "STRIPE_SECRET_KEY", value: "sk_test_value")
-        remote.put("OTHER_KEY", value: "other")
-        _ = try await fixture.sync.importRemote(destinationID: functions)
-        _ = await fixture.syncAll()
-
-        let store = DestinationStore(database: fixture.harness.database)
-        let digest = SHA256.hash(data: Data("sk_test_value".utf8)).map { String(format: "%02x", $0) }.joined()
-        let records = try fixture.harness.database.read { tx in try store.fetchItemRecords(destinationID: functions, in: tx) }
-        #expect(records.count == 2)
-        for record in records {
-            let marker = try #require(record.remoteVersion)
-            #expect(marker.hasPrefix(DestinationFieldCipher.markerPrefix))
-            #expect(!marker.contains(digest))
-            #expect(record.preWriteVersion.map { $0.hasPrefix(DestinationFieldCipher.markerPrefix) } ?? true)
-        }
-        #expect(try store.fetchJournal().allSatisfy { $0.preWriteVersion.map { !$0.contains(digest) } ?? true })
-        // Equal listings still compare equal: nothing changed since the sync.
-        #expect(try await fixture.sync.refresh(destinationID: functions).findings.isEmpty)
-        // A teammate's new value shows as a change.
-        remote.put("STRIPE_SECRET_KEY", value: "sk_test_rotated")
-        let findings = try await fixture.sync.refresh(destinationID: functions).findings
-        #expect(findings.map(\.itemID) == [id])
-    }
-
-    @Test func dekRotationReKeysSupabaseMarkers() async throws {
-        let fixture = try await Fixture.make()
-        let (functions, _) = try fixture.supabase()
-        let id = try fixture.add(functions, "STRIPE_SECRET_KEY", value: "sk_test_value")
-        _ = await fixture.syncAll()
-        let store = DestinationStore(database: fixture.harness.database)
-        let before = try #require(try store.fetchItemRecord(id: id)?.remoteVersion)
-
-        _ = try await fixture.harness.manager.rotateDEK(password: ConfigFixture.password)
-
-        let after = try #require(try store.fetchItemRecord(id: id)?.remoteVersion)
-        #expect(after != before)
-        #expect(after.hasPrefix(DestinationFieldCipher.markerPrefix))
-        #expect(try await fixture.sync.refresh(destinationID: functions).findings.isEmpty)
-        try fixture.destinations.editItem(id, name: "STRIPE_SECRET_KEY", kind: .secret, value: SecretBytes(utf8: "sk_test_next"))
-        let review = await fixture.sync.review(repositoryID: fixture.repo.id)
-        #expect(review.executableCount == 1)
-    }
-
-    @Test func supabaseWritesAreConfirmedByTheirDigest() async throws {
-        let fixture = try await Fixture.make()
-        let (functions, remote) = try fixture.supabase()
-        try fixture.add(functions, "STRIPE_SECRET_KEY", value: "sk_test_value")
-        let (_, result) = await fixture.syncAll()
-        #expect(result.outcomes.values.allSatisfy { $0 == .done })
-        #expect(remote.value(of: "STRIPE_SECRET_KEY") == "sk_test_value")
-        #expect(try fixture.item(functions, "STRIPE_SECRET_KEY").verifyState == .verified)
-    }
-
-    @Test func aMissingConnectionBlocksEveryChange() async throws {
-        let fixture = try await Fixture.make()
-        let (functions, _) = try fixture.supabase()
-        try fixture.add(functions, "API_KEY", value: "a")
-        let connection = try #require(try fixture.destinations.destination(functions)?.connectionID)
-        try fixture.destinations.deleteConnection(connection)
-        let review = await fixture.sync.review(repositoryID: fixture.repo.id)
-        #expect(review.sections.first?.blocked.map(\.reason) == [.connectionMissing])
-        #expect(review.executableCount == 0)
-    }
-
     @Test func aListingFailureBlocksTheDestination() async throws {
         let fixture = try await Fixture.make()
         let (vault, remote) = try fixture.keyVault()
@@ -455,14 +345,16 @@ struct DestinationSyncRepositoryTests {
 
     @Test func importBringsReadableValuesAndListsWriteOnlyOnes() async throws {
         let fixture = try await Fixture.make()
-        let (functions, remote) = try fixture.supabase()
-        remote.put("STRIPE_SECRET_KEY", value: "sk_test")
-        remote.put("SUPABASE_URL", value: "reserved")
-        let result = try await fixture.sync.importRemote(destinationID: functions)
-        #expect(result.imported == ["STRIPE_SECRET_KEY"])
+        let (vault, remote) = try fixture.keyVault()
+        remote.put("DATABASE_URL", value: "postgres://a")
+        remote.put("STRIPE_SECRET_KEY", value: "sk_test", readable: false)
+        remote.put("GITHUB_TOKEN", value: "reserved")
+        let result = try await fixture.sync.importRemote(destinationID: vault)
+        #expect(result.imported.sorted() == ["DATABASE_URL", "STRIPE_SECRET_KEY"])
         #expect(result.withoutValue == ["STRIPE_SECRET_KEY"])
-        #expect(result.unusable.map(\.remoteName) == ["SUPABASE_URL"])
-        let item = try fixture.item(functions, "STRIPE_SECRET_KEY")
+        #expect(result.unusable.map(\.remoteName) == ["GITHUB-TOKEN"])
+        #expect(try fixture.reveal(try fixture.item(vault, "DATABASE_URL").id) == "postgres://a")
+        let item = try fixture.item(vault, "STRIPE_SECRET_KEY")
         #expect(item.valueState == .missing)
         #expect(item.isSynced)
         #expect(try fixture.destinations.pendingCounts().isEmpty)

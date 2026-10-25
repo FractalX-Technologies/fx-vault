@@ -59,7 +59,7 @@ extension HTTPRequestModel: CustomStringConvertible, CustomDebugStringConvertibl
 
 /// A provider's answer.
 ///
-/// ``body`` may hold values (a Key Vault secret, a Vercel variable): read the fields you need
+/// ``body`` may hold values (a Key Vault secret): read the fields you need
 /// with the secret JSON scanner, then call `body.wipe()`.
 public struct HTTPResponseModel: Sendable {
     public let status: Int

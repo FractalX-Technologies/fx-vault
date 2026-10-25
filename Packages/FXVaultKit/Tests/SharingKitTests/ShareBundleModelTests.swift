@@ -14,13 +14,8 @@ enum BundleFactory {
     static let webRepoID = "R_kgDOWebAAA"
     static let apiRepoID = "R_kgDOApiBBB"
     static let keyVault = DestinationTargetModel.azureKeyVault(vaultName: "kv-example-staging", tenantID: nil)
-    static let supabase = DestinationTargetModel.supabase(projectRef: "abcdefghijklmnopqrst")
-    static let vercelPreview = DestinationTargetModel.vercel(
-        projectID: "prj_sample",
-        projectName: "example-web",
-        teamID: "team_sample",
-        environment: .preview
-    )
+    static let webVault = DestinationTargetModel.azureKeyVault(vaultName: "kv-example-web", tenantID: "example-org.onmicrosoft.com")
+    static let prodVault = DestinationTargetModel.azureKeyVault(vaultName: "kv-example-prod", tenantID: nil)
     /// Joined at runtime so the gitleaks `generic-api-key` rule does not read a fixed per-file
     /// link token as a credential.
     static let linkToken = ["6f1c2a3b", "4d5e", "4f60", "8a71", "92b3c4d5e6f7"].joined(separator: "-")
@@ -78,8 +73,8 @@ enum BundleFactory {
         )
     }
 
-    /// Two repositories, the three providers, a partial environment, a folder and one link group
-    /// (a repository-level secret and its Vercel copy).
+    /// Two repositories, three Key Vault destinations, a partial environment, a folder and one
+    /// link group (a repository-level secret and its Key Vault copy).
     static func sample() -> ShareBundleModel {
         bundle(
             repositories: [
@@ -93,11 +88,9 @@ enum BundleFactory {
                     ],
                     destinations: [
                         ShareDestinationModel(
-                            target: vercelPreview,
+                            target: webVault,
                             stage: "staging",
-                            secrets: [item("API_KEY", link: linkToken)],
-                            variables: [item("NEXT_PUBLIC_SITE_URL")],
-                            publicNames: ["NEXT_PUBLIC_SITE_URL"]
+                            secrets: [item("API_KEY", link: linkToken), item("SITE_URL")]
                         ),
                     ]
                 ),
@@ -106,7 +99,7 @@ enum BundleFactory {
                     githubRepoID: apiRepoID,
                     destinations: [
                         ShareDestinationModel(target: keyVault, stage: "staging", secrets: [item("DATABASE_URL")]),
-                        ShareDestinationModel(target: supabase, stage: nil, secrets: [item("STRIPE_KEY")]),
+                        ShareDestinationModel(target: prodVault, stage: nil, secrets: [item("STRIPE_KEY")]),
                     ]
                 ),
             ],
@@ -143,22 +136,21 @@ struct ShareBundleModelTests {
         #expect(secrets[1]["link"] == nil)
         let environments = try #require(web["environments"] as? [[String: Any]])
         #expect(environments[0]["deploymentBranchPolicy"] is NSNull)
-        let vercel = try #require((web["destinations"] as? [[String: Any]])?.first)
-        #expect(Set(vercel.keys) == ["id", "stage", "target", "secrets", "variables", "publicNames"])
-        let target = try #require(vercel["target"] as? [String: Any])
-        #expect(target["provider"] as? String == "vercel")
-        #expect(target["projectId"] as? String == "prj_sample")
-        #expect(target["teamId"] as? String == "team_sample")
-        #expect(target["environment"] as? String == "preview")
-        #expect(vercel["publicNames"] as? [String] == ["NEXT_PUBLIC_SITE_URL"])
+        // 1.0 no longer writes `publicNames`.
+        let webVault = try #require((web["destinations"] as? [[String: Any]])?.first)
+        #expect(Set(webVault.keys) == ["id", "stage", "target", "secrets", "variables"])
+        let target = try #require(webVault["target"] as? [String: Any])
+        #expect(target["provider"] as? String == "azureKeyVault")
+        #expect(target["vaultName"] as? String == "kv-example-web")
+        #expect(target["tenantId"] as? String == "example-org.onmicrosoft.com")
         let apiDestinations = try #require(repositories[1]["destinations"] as? [[String: Any]])
         let keyVault = try #require(apiDestinations[0]["target"] as? [String: Any])
         #expect(keyVault["provider"] as? String == "azureKeyVault")
         #expect(keyVault["vaultName"] as? String == "kv-example-staging")
         #expect(keyVault["tenantId"] is NSNull)
         #expect(apiDestinations[1]["stage"] is NSNull)
-        let supabase = try #require(apiDestinations[1]["target"] as? [String: Any])
-        #expect(supabase["projectRef"] as? String == "abcdefghijklmnopqrst")
+        let prodVault = try #require(apiDestinations[1]["target"] as? [String: Any])
+        #expect(prodVault["vaultName"] as? String == "kv-example-prod")
         let folder = try #require((document["folders"] as? [[String: Any]])?.first)
         #expect(Set(folder.keys) == ["id", "name", "secrets", "variables"])
     }
@@ -193,7 +185,7 @@ struct ShareBundleModelTests {
                     destinations: [
                         ShareDestinationModel(
                             id: try #require(ShareEntryID(uuidString: "33333333-3333-4333-8333-333333333333")),
-                            target: .supabase(projectRef: "abcdefghijklmnopqrst"),
+                            target: BundleFactory.keyVault,
                             stage: "staging",
                             secrets: [
                                 ShareItemModel(
@@ -218,15 +210,55 @@ struct ShareBundleModelTests {
         }
         let expected = "{\"createdAt\":\"2026-09-21T14:13:20Z\",\"expiresAt\":\"2026-09-22T14:13:20Z\",\"folders\":[],"
             + "\"packageId\":\"11111111-1111-4111-8111-111111111111\",\"producer\":{\"app\":\"FX Vault\",\"version\":\"0.9.0\"},"
-            + "\"repositories\":[{\"destinations\":[{\"id\":\"33333333-3333-4333-8333-333333333333\",\"publicNames\":[],"
+            + "\"repositories\":[{\"destinations\":[{\"id\":\"33333333-3333-4333-8333-333333333333\","
             + "\"secrets\":[\(item("44444444-4444-4444-8444-444444444444", "pending"))],\"stage\":\"staging\","
-            + "\"target\":{\"projectRef\":\"abcdefghijklmnopqrst\",\"provider\":\"supabase\"},\"variables\":[]}],"
+            + "\"target\":{\"provider\":\"azureKeyVault\",\"tenantId\":null,\"vaultName\":\"kv-example-staging\"},\"variables\":[]}],"
             + "\"environments\":[],\"githubRepoId\":null,\"host\":\"github.com\",\"name\":\"example-web\",\"owner\":\"owner-a\","
             + "\"secrets\":[\(item("22222222-2222-4222-8222-222222222222", "synced"))],\"variables\":[]}],"
             + "\"schema\":\"io.fractalx.fxvault.share\",\"schemaVersion\":4,\"scope\":\"bundle\",\"sender\":{\"displayName\":\"Sam\"},"
             + "\"stages\":[\"staging\"]}"
         #expect(text == expected)
         #expect(try ShareBundleCoder.decode(SecretBytes(utf8: expected)) == bundle)
+    }
+
+    /// A 0.9 file: its Supabase and Vercel destinations are dropped with their items and
+    /// `publicNames`, named for the preview, and the Vercel copy's lone link token goes too.
+    @Test func a09FileDropsItsSupabaseAndVercelDestinations() throws {
+        let item = { (id: String, name: String, link: String) in
+            "{\"githubUpdatedAt\":null,\"id\":\"\(id)\",\"link\":\(link),\"name\":\"\(name)\","
+                + "\"syncState\":\"pending\",\"value\":\"one\",\"valueState\":\"present\"}"
+        }
+        let link = "\"\(BundleFactory.linkToken)\""
+        let json = "{\"createdAt\":\"2026-09-21T14:13:20Z\",\"expiresAt\":\"2026-09-22T14:13:20Z\",\"folders\":[],"
+            + "\"packageId\":\"11111111-1111-4111-8111-111111111111\",\"producer\":{\"app\":\"FX Vault\",\"version\":\"0.9.0\"},"
+            + "\"repositories\":[{\"destinations\":["
+            + "{\"id\":\"33333333-3333-4333-8333-333333333333\",\"publicNames\":[\"NEXT_PUBLIC_URL\"],"
+            + "\"secrets\":[\(item("44444444-4444-4444-8444-444444444444", "API_KEY", link))],\"stage\":\"staging\","
+            + "\"target\":{\"environment\":\"preview\",\"projectId\":\"prj_sample\",\"projectName\":\"example-web\","
+            + "\"provider\":\"vercel\",\"teamId\":null},"
+            + "\"variables\":[\(item("55555555-5555-4555-8555-555555555555", "NEXT_PUBLIC_URL", "null"))]},"
+            + "{\"id\":\"66666666-6666-4666-8666-666666666666\",\"publicNames\":[],\"secrets\":[],\"stage\":null,"
+            + "\"target\":{\"projectRef\":\"abcdefghijklmnopqrst\",\"provider\":\"supabase\"},\"variables\":[]},"
+            + "{\"id\":\"77777777-7777-4777-8777-777777777777\",\"publicNames\":[],"
+            + "\"secrets\":[\(item("88888888-8888-4888-8888-888888888888", "DATABASE_URL", "null"))],\"stage\":\"staging\","
+            + "\"target\":{\"provider\":\"azureKeyVault\",\"tenantId\":null,\"vaultName\":\"kv-example-staging\"},\"variables\":[]}],"
+            + "\"environments\":[],\"githubRepoId\":null,\"host\":\"github.com\",\"name\":\"example-web\",\"owner\":\"owner-a\","
+            + "\"secrets\":[\(item("22222222-2222-4222-8222-222222222222", "API_KEY", link))],\"variables\":[]}],"
+            + "\"schema\":\"io.fractalx.fxvault.share\",\"schemaVersion\":4,\"scope\":\"bundle\",\"sender\":{\"displayName\":\"Sam\"},"
+            + "\"stages\":[\"staging\"]}"
+
+        let bundle = try ShareBundleCoder.decode(SecretBytes(utf8: json))
+
+        let entry = try #require(bundle.repositories.first)
+        #expect(entry.destinations.map(\.target) == [BundleFactory.keyVault])
+        #expect(entry.retiredDestinations == ["Vercel example-web (preview)", "Supabase abcdefghijklmnopqrst"])
+        #expect(bundle.contentSummary.repositories.first?.retiredDestinations == entry.retiredDestinations)
+        #expect(bundle.itemCount == 2)
+        #expect(entry.repository.secrets.first?.linkToken == nil, "its linked copy was in the Vercel destination")
+        try ShareBundleValidator.validate(bundle, mode: .payload)
+        // Re-encoded, it carries Key Vault only.
+        let reencoded = try #require(try ShareBundleCoder.encode(bundle).utf8String())
+        #expect(!reencoded.contains("vercel") && !reencoded.contains("supabase") && !reencoded.contains("publicNames"))
     }
 
     @Test func roundTripsThroughJSON() throws {
@@ -274,10 +306,10 @@ struct ShareBundleModelTests {
     @Test func itemsAreListedWithTheirPlace() throws {
         let bundle = BundleFactory.sample()
         #expect(bundle.itemCount == 10)
-        let vercelID = bundle.repositories[0].destinations[0].id
+        let webVaultID = bundle.repositories[0].destinations[0].id
         let places = bundle.allItems.map(\.place)
         #expect(places.contains(.environment(repository: 0, name: "staging")))
-        #expect(places.contains(.destination(repository: 0, id: vercelID)))
+        #expect(places.contains(.destination(repository: 0, id: webVaultID)))
         #expect(places.contains(.folder(id: bundle.folders[0].id)))
         #expect(bundle.linkGroups[BundleFactory.linkToken]?.count == 2)
         let located = try #require(bundle.item(withID: bundle.repositories[1].destinations[1].secrets[0].id))
@@ -288,7 +320,7 @@ struct ShareBundleModelTests {
         let summary = BundleFactory.sample().contentSummary
         #expect(summary.repositories.map(\.fullName) == ["owner-a/example-web", "owner-a/example-api"])
         #expect(summary.repositories[0].content.itemCount == 4)
-        #expect(summary.repositories[0].destinations[0].counts == ShareItemCountModel(secrets: 1, variables: 1))
+        #expect(summary.repositories[0].destinations[0].counts == ShareItemCountModel(secrets: 2, variables: 0))
         #expect(summary.folders[0].counts.total == 2)
         #expect(summary.itemCount == 10)
     }

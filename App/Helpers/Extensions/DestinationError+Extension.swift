@@ -29,12 +29,12 @@ nonisolated extension DestinationError {
         case .tokenMissing:
             String(
                 localized: "error.destination.tokenMissing",
-                defaultValue: "This destination has no connection. Choose one in its Settings…"
+                defaultValue: "The Azure CLI gave FX Vault an unusable token. Run az login in Terminal, then try again."
             )
         case .unauthorized:
             String(
                 localized: "error.destination.unauthorized",
-                defaultValue: "\(provider.title) did not accept the credentials. Replace the token in Settings › Destinations, or sign in again."
+                defaultValue: "\(provider.title) did not accept the credentials. Run az login in Terminal, then try again."
             )
         case .forbidden:
             String(
@@ -44,7 +44,7 @@ nonisolated extension DestinationError {
         case .notFound:
             String(
                 localized: "error.destination.notFound",
-                defaultValue: "\(provider.title) does not have this vault, project or item, or the account cannot see it."
+                defaultValue: "\(provider.title) does not have this vault or item, or the account cannot see it."
             )
         case .deletedButRecoverable:
             String(
@@ -89,8 +89,6 @@ nonisolated extension DestinationSyncError {
             error.presentation
         case .remote(let error):
             ErrorPresentationModel(title: DestinationCopy.syncErrorTitle, message: error.localizedMessage(provider: .azureKeyVault))
-        case .connectionMissing:
-            ErrorPresentationModel(title: DestinationCopy.syncErrorTitle, message: DestinationCopy.connectionMissing)
         case .stale:
             ErrorPresentationModel(
                 title: DestinationCopy.syncErrorTitle,
@@ -120,12 +118,6 @@ nonisolated extension DestinationUnusableReason {
             String(localized: "destination.unusable.disabled", defaultValue: "Disabled in Key Vault")
         case .managed:
             String(localized: "destination.unusable.managed", defaultValue: "Managed by a Key Vault certificate")
-        case .gitBranch:
-            String(localized: "destination.unusable.gitBranch", defaultValue: "Only for one Git branch in Vercel")
-        case .customEnvironment:
-            String(localized: "destination.unusable.customEnvironment", defaultValue: "Also used by a custom Vercel environment")
-        case .system:
-            String(localized: "destination.unusable.system", defaultValue: "Set by the provider itself")
         }
     }
 }

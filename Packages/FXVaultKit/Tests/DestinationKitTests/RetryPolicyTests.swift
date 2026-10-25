@@ -7,7 +7,7 @@ import VaultCore
 @Suite("Retry policy")
 struct RetryPolicyTests {
     private var url: URL {
-        get throws { try #require(URL(string: "https://api.vercel.com/v2/user")) }
+        get throws { try #require(URL(string: "https://kv-sample-prod.vault.azure.net/secrets?api-version=7.4")) }
     }
 
     private func client(
@@ -16,10 +16,10 @@ struct RetryPolicyTests {
         credential: ProviderCredential? = nil
     ) throws -> ProviderHTTPClient {
         ProviderHTTPClient(
-            provider: .vercel,
+            provider: .azureKeyVault,
             transport: transport,
             clock: clock,
-            credential: try credential ?? .personalToken(TestValues.secret(TestValues.vercelToken))
+            credential: credential ?? .azure(FakeAccessTokenProvider(), tenantID: nil)
         )
     }
 
@@ -136,15 +136,6 @@ struct RetryPolicyTests {
         }
         #expect(transport.requests.count == 2)
         #expect(await tokens.invalidatedTenants == [nil])
-    }
-
-    @Test func personalToken401IsNotRetried() async throws {
-        let transport = FakeHTTPTransport()
-        transport.stub(.status(401))
-        await #expect(throws: DestinationError.unauthorized) {
-            try await client(transport, clock: InstantClock()).send(.get, try url, retry: .idempotent)
-        }
-        #expect(transport.requests.count == 1)
     }
 
     @Test func tokenProviderFailureStopsBeforeSending() async throws {

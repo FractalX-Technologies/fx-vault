@@ -11,13 +11,12 @@ import VaultStore
 /// - **GitHub scopes** of every repository imported now (✓) through ``ShareImporter``, exactly as
 ///   a schema 2 package (environments, items, provenance), without recording the package per
 ///   repository.
-/// - **Destinations** merged into the local destination with the same target key, or created
-///   without a connection (Sync leaves them alone until the receiver connects an account). Items
-///   go through ``DestinationItemWriter``; the names the sender marked public keep the mark.
+/// - **Destinations** merged into the local destination with the same target key, or created.
+///   Items go through ``DestinationItemWriter``.
 /// - **Folders** created or merged (kind and fold-key name match, as Save as Folder does).
 /// - **Holds** (P8): every written row that would make the next Sync change a remote gets
 ///   `share_hold` = the package id: a GitHub add, fill or overwrite that is pending, and every
-///   destination row written (except a Supabase fill whose digest the last listing already shows).
+///   destination row written.
 ///   Folder rows never sync, so they are never held.
 /// - **Links** (P9): each link group of the plan whose written rows number at least two gets one
 ///   fresh `link_id`; rows kept as they were keep their links.
@@ -125,7 +124,6 @@ struct ProjectShareImporter {
         for itemPlan in plan.items where itemPlan.writesRow {
             guard let located = bundle.item(withID: itemPlan.id) else { throw SharingError.planOutdated }
             let rowID: ConfigItemID
-            var isPending = true
             switch itemPlan.outcome {
             case .unchanged:
                 continue
@@ -139,10 +137,8 @@ struct ProjectShareImporter {
                 guard let localID = itemPlan.localItemID else { throw SharingError.planOutdated }
                 let value = try normalizedValue(of: located.item)
                 defer { value.wipe() }
-                let matches = try supabaseListingMatches(value, rowID: localID, destinationID: destinationID, store: store)
-                try writer.fill(localID, value: value, alreadyMatchesRemote: matches)
+                try writer.fill(localID, value: value, alreadyMatchesRemote: false)
                 rowID = localID
-                isPending = !matches
             case .overwritten:
                 guard let localID = itemPlan.localItemID else { throw SharingError.planOutdated }
                 let value = try normalizedValue(of: located.item)
@@ -150,16 +146,13 @@ struct ProjectShareImporter {
                 try writer.editValue(localID, value: value)
                 rowID = localID
             }
-            if itemPlan.isPublic {
-                try writer.setPublicAllowed(rowID, true)
-            }
-            rows[itemPlan.id] = ShareImportedRowModel(id: rowID, isPending: isPending)
+            rows[itemPlan.id] = ShareImportedRowModel(id: rowID, isPending: true)
             result.destinationItemsWritten += 1
         }
         return rows
     }
 
-    /// A destination of the receiver's repository, created without a connection.
+    /// A destination of the receiver's repository.
     private func createDestination(
         _ plan: ShareDestinationPlanModel,
         repositoryID: RepoID,
@@ -177,7 +170,6 @@ struct ProjectShareImporter {
             repositoryID: repositoryID,
             target: target,
             stage: stage,
-            connectionID: nil,
             sortOrder: try store.nextSortOrder(repositoryID: repositoryID, in: tx),
             createdAt: now,
             updatedAt: now
@@ -210,27 +202,6 @@ struct ProjectShareImporter {
         )
         try store.insertItem(record, in: tx)
         return record.id
-    }
-
-    /// True when the destination is Supabase and its last listing already shows exactly `value`
-    /// for the row (Supabase lists digests, stored as keyed markers): the fill then pushes nothing.
-    private func supabaseListingMatches(
-        _ value: SecretBytes,
-        rowID: ConfigItemID,
-        destinationID: DestinationID,
-        store: DestinationStore
-    ) throws -> Bool {
-        guard let destination = try store.fetchDestination(id: destinationID, in: tx), destination.provider == .supabase,
-              let record = try store.fetchItemRecord(id: rowID, in: tx),
-              let marker = record.remoteVersion, marker.hasPrefix(DestinationFieldCipher.markerPrefix)
-        else { return false }
-        let expected = DestinationFieldCipher.keyedMarker(
-            digest: DestinationFieldCipher.supabaseDigest(of: value),
-            remoteName: record.syncedName ?? record.name,
-            destinationID: destinationID,
-            keys: keys
-        )
-        return expected == marker
     }
 
     // MARK: - Folders

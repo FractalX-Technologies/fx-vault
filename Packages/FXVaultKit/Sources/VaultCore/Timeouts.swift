@@ -35,7 +35,7 @@ public enum Timeouts {
 
     // MARK: - Destinations (v0.8.0)
 
-    /// One HTTPS request to Key Vault, Supabase or Vercel.
+    /// One HTTPS request to Key Vault.
     public static let destinationRequest: Duration = .seconds(30)
     /// `az account get-access-token` (it may refresh the login first).
     public static let azAccessToken: Duration = .seconds(60)

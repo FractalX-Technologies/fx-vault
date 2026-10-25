@@ -186,12 +186,21 @@ enum ProjectShareCopy {
     static let destinations = String(localized: "projectShare.open.destinations", defaultValue: "Destinations")
     static let newDestination = String(
         localized: "projectShare.open.destination.new",
-        defaultValue: "New, without a connection. Connect your account in Settings › Destinations."
+        defaultValue: "New. FX Vault reaches it with your az login."
     )
     static let mergedDestination = String(
         localized: "projectShare.open.destination.merge",
         defaultValue: "Merges into your destination with the same target."
     )
+
+    /// Supabase and Vercel destinations a 0.9 file still carries; 1.0 imports it without them.
+    static func retiredDestinations(_ labels: [String]) -> String {
+        String(
+            localized: "projectShare.open.destinations.retired",
+            defaultValue: "Left out: \(labels.joined(separator: ", ")). Supabase and Vercel are no longer supported."
+        )
+    }
+
     static let folders = String(localized: "projectShare.open.folders", defaultValue: "Folders")
     static let newFolder = String(localized: "projectShare.open.folder.new", defaultValue: "New folder")
     static let mergeFolderKeep = String(localized: "projectShare.open.folder.mergeKeep", defaultValue: "Merge, keep mine")
@@ -228,8 +237,8 @@ enum ProjectShareCopy {
 
     static func doneDestinations(_ count: Int) -> String {
         count == 1
-            ? String(localized: "projectShare.done.destination.one", defaultValue: "1 destination added without a connection")
-            : String(localized: "projectShare.done.destinations", defaultValue: "\(count) destinations added without a connection")
+            ? String(localized: "projectShare.done.destination.one", defaultValue: "1 destination added")
+            : String(localized: "projectShare.done.destinations", defaultValue: "\(count) destinations added")
     }
 
     static func doneDestinationItems(_ count: Int) -> String {

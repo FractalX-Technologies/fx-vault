@@ -4,8 +4,6 @@ import VaultCore
 
 /// How a provider request is authorized.
 enum ProviderCredential: Sendable {
-    /// A personal access token (Supabase, Vercel). The client owns this copy.
-    case token(SecretBytes)
     /// An `az` access token for Key Vault, asked for on every attempt. A 401 invalidates it and
     /// the request is sent once more with a fresh one.
     case azure(any AccessTokenProviding, tenantID: String?)
@@ -13,12 +11,12 @@ enum ProviderCredential: Sendable {
 
 /// Whether a request may be sent again after a transient failure.
 enum RequestRetry: Sendable {
-    /// GET, PUT, DELETE and Supabase's upserting POST: 429 is retried after `Retry-After` (or
+    /// GET, PUT and DELETE: 429 is retried after `Retry-After` (or
     /// `Timeouts.destinationRateLimitBackoff`), up to `Limits.rateLimitRetries` times; 5xx and
     /// network errors up to `Limits.idempotentRetries` times, after
     /// `Timeouts.idempotentRetryBackoff` × attempt.
     case idempotent
-    /// Sent once (Key Vault recover, Vercel POST and PATCH), apart from the Key Vault 401
+    /// Sent once (Key Vault recover), apart from the Key Vault 401
     /// refresh, which a request that was refused cannot have applied.
     case never
 }
@@ -104,8 +102,6 @@ struct ProviderHTTPClient: Sendable {
     /// A copy of the token for one attempt.
     private func bearerToken() async throws(DestinationError) -> SecretBytes {
         switch credential {
-        case .token(let token):
-            return token.copy()
         case .azure(let tokens, let tenantID):
             return try await tokens.token(tenantID: tenantID)
         }
@@ -127,15 +123,6 @@ struct ProviderHTTPClient: Sendable {
         DestinationLog.http.debug(
             "\(provider, privacy: .public) \(method, privacy: .public) → \(status, privacy: .public) \(code, privacy: .public)"
         )
-    }
-}
-
-extension ProviderCredential {
-    /// A credential from a personal access token: a copy, or ``DestinationError/tokenMissing``
-    /// when `token` is nil, empty or not printable ASCII (it becomes a header).
-    static func personalToken(_ token: SecretBytes?) throws(DestinationError) -> ProviderCredential {
-        guard let token, BearerToken.isUsable(token) else { throw .tokenMissing }
-        return .token(token.copy())
     }
 }
 

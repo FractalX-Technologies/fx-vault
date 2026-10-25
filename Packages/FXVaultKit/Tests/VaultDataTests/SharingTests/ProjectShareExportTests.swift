@@ -17,18 +17,12 @@ import VaultStore
 /// | `staging` | `FXV_STAGE` = `s1` | empty, on GitHub |
 /// | `production` | `FXV_PROD` = `p1` | absent |
 /// | Key Vault `kv-example-staging` (stage `staging`) | `FXV_S1` (linked), `FXV_KV` = `k1` | absent |
-/// | Vercel `example-web` production | `NEXT_PUBLIC_URL` (public) = `https://example.test` | absent |
+/// | Key Vault `kv-example-web` (no stage) | `FXV_URL` = `https://example.test` | absent |
 struct ProjectShareWorld {
     static let senderName = "Sender Mac"
     static let appVersion = "0.9.0"
     static let keyVault = DestinationTargetModel.azureKeyVault(vaultName: "kv-example-staging", tenantID: nil)
-    static let vercel = DestinationTargetModel.vercel(
-        projectID: "prj_sample",
-        projectName: "example-web",
-        teamID: nil,
-        environment: .production
-    )
-    static let vercelToken = "vercel-token-sample-7f3a"
+    static let webVault = DestinationTargetModel.azureKeyVault(vaultName: "kv-example-web", tenantID: nil)
 
     let sender: SyncHarness
     let receiver: SyncHarness
@@ -54,23 +48,11 @@ struct ProjectShareWorld {
         try sender.config.fillValue(known, value: SecretBytes(utf8: "g1"), pushOnNextSync: false)
 
         let destinations = DestinationRepository(session: sender.session, clock: sender.clock)
-        let keyVault = try destinations.createDestination(repositoryID: repository.id, target: keyVault, stage: "staging", connectionID: nil)
+        let keyVault = try destinations.createDestination(repositoryID: repository.id, target: keyVault, stage: "staging")
         try destinations.copyItems([secret], to: keyVault, conflicts: .replace)
         try destinations.addItem(destinationID: keyVault, kind: .secret, name: "FXV_KV", value: SecretBytes(utf8: "k1"))
-        let connection = try destinations.addConnection(
-            provider: .vercel,
-            label: "Sample Vercel",
-            token: SecretBytes(utf8: vercelToken),
-            accountHint: nil
-        )
-        let web = try destinations.createDestination(repositoryID: repository.id, target: vercel, stage: nil, connectionID: connection)
-        let url = try destinations.addItem(
-            destinationID: web,
-            kind: .variable,
-            name: "NEXT_PUBLIC_URL",
-            value: SecretBytes(utf8: "https://example.test")
-        ).itemID
-        try destinations.setPublicAllowed(url, allowed: true)
+        let web = try destinations.createDestination(repositoryID: repository.id, target: webVault, stage: nil)
+        try destinations.addItem(destinationID: web, kind: .secret, name: "FXV_URL", value: SecretBytes(utf8: "https://example.test"))
 
         let receiverGitHub = GitHubSimulator(owner: SyncFixture.owner, name: SyncFixture.repoName)
         receiverGitHub.addVariable("FXV_V1", value: "different")
@@ -280,20 +262,22 @@ struct ProjectShareExportTests {
         #expect(FileManager.default.fileExists(atPath: result.fileURL.path))
     }
 
-    @Test func aVercelProductionDestinationWithoutAStageCountsAsProduction() async throws {
+    /// Only a stage makes a destination a production place (a Vercel production environment did,
+    /// until 1.0).
+    @Test func aDestinationWithoutAStageIsNotAProductionPlace() async throws {
         let world = try await ProjectShareWorld.make()
         defer { world.folder.remove() }
         let repository = try world.sender.repository()
         let web = try DestinationRepository(session: world.sender.session).destinations(repositoryID: repository.id)
-            .first { $0.target == ProjectShareWorld.vercel }
+            .first { $0.target == ProjectShareWorld.webVault }
         let selection = ShareBundleSelectionModel(repositories: [
             ShareBundleRepositorySelectionModel(repositoryID: repository.id, includesRepositoryLevel: false, destinationIDs: [try #require(web).id]),
         ])
         let preview = try await world.senderSharing.previewBundle(selection)
-        #expect(preview.productionPlaces == ["owner-a/api · Vercel example-web (production)"])
+        #expect(preview.productionPlaces.isEmpty)
     }
 
-    @Test func linkedCopiesShareAFreshTokenAndPublicNamesTravel() async throws {
+    @Test func linkedCopiesShareAFreshToken() async throws {
         let world = try await ProjectShareWorld.make()
         defer { world.folder.remove() }
         let repository = try world.sender.repository()
@@ -312,9 +296,6 @@ struct ProjectShareExportTests {
         let senderRow = try #require(try world.sender.item("FXV_S1", kind: .secret))
         let linkID = try #require(try world.sender.record(senderRow.id).linkID)
         #expect(repositoryToken != linkID.uuidString)
-        let web = try #require(entry.destinations.first { $0.target == ProjectShareWorld.vercel })
-        #expect(web.publicNames == ["NEXT_PUBLIC_URL"])
-        #expect(web.variables.map(\.name) == ["NEXT_PUBLIC_URL"])
 
         // Only one member selected: no token.
         let alone = ShareBundleSelectionModel(repositories: [
@@ -323,27 +304,6 @@ struct ProjectShareExportTests {
         let single = try ProjectShareExportBuilder(session: world.sender.session, clock: world.sender.clock)
             .build(alone, senderName: "", appVersion: "0", includeValues: false)
         #expect(single.bundle.repositories.first?.repository.secrets.allSatisfy { $0.linkToken == nil } == true)
-    }
-
-    @Test func connectionTokensNeverEnterABundle() async throws {
-        let world = try await ProjectShareWorld.make()
-        defer { world.folder.remove() }
-        let repository = try world.sender.repository()
-        let destinations = try DestinationRepository(session: world.sender.session).destinations(repositoryID: repository.id)
-        var selection = try await world.stagingSelection()
-        selection.repositories[0].destinationIDs = Set(destinations.map(\.id))
-        let built = try ProjectShareExportBuilder(session: world.sender.session, clock: world.sender.clock)
-            .build(selection, senderName: ProjectShareWorld.senderName, appVersion: "0", includeValues: true)
-        defer { built.bundle.wipeValues() }
-        let json = try ShareBundleCoder.encode(built.bundle)
-        defer { json.wipe() }
-        let text = try #require(json.utf8String())
-        #expect(text.contains("https://example.test"))
-        #expect(!text.contains(ProjectShareWorld.vercelToken))
-        #expect(!text.contains("Sample Vercel"))
-        for connection in try DestinationRepository(session: world.sender.session).connections() {
-            #expect(!text.contains(connection.id.uuidString))
-        }
     }
 
     @Test func theSentLogKeepsNamesOnly() async throws {

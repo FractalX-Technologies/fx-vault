@@ -231,7 +231,7 @@ final class ScopeListViewModel {
         dependencies.actions.present(.addDestination(AddDestinationContext(repositoryID: repositoryID)))
     }
 
-    /// Settings…: the stage and (Supabase, Vercel) the connection.
+    /// Settings…: the stage.
     func openSettings(_ destination: DestinationModel) {
         dependencies.actions.present(.destinationSettings(DestinationSettingsContext(destinationID: destination.id)))
     }

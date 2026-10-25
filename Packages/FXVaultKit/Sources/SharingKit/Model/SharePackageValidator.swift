@@ -84,8 +84,6 @@ public enum SharePackageViolation: Sendable, Hashable {
     case duplicateDestinationItem
     /// A destination holds more than `limit` items (``Limits/maxDestinationItems``).
     case tooManyDestinationItems(limit: Int)
-    /// `publicNames` names no item of its destination, or names one twice.
-    case invalidPublicName
     /// Two folders of the bundle have the same name (case-insensitive).
     case duplicateFolder
 }

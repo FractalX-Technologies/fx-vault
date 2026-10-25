@@ -14,8 +14,8 @@ import VaultStore
 ///   carrying the value and the link over.
 /// - Adding a name held by a tombstone revives that row with the new value.
 ///
-/// Names follow GitHub's rules plus the provider's (``DestinationRules``); Key Vault and Supabase
-/// hold secrets only, so a variable written there becomes a secret. Values passed in must already
+/// Names follow GitHub's rules plus the provider's (``DestinationRules``); Key Vault
+/// holds secrets only, so a variable written there becomes a secret. Values passed in must already
 /// be normalized (D32).
 struct DestinationItemWriter {
     private let store: DestinationStore
@@ -217,16 +217,6 @@ struct DestinationItemWriter {
         var record = try existing(id)
         guard record.isSynced, !record.isDeleted, record.valueCiphertext != nil else { return }
         record.forcePush = true
-        record.updatedAt = now
-        try store.updateItem(record, in: tx)
-    }
-
-    /// "Mark as Public" (R10): the value is meant to be public, so a credential-looking value
-    /// under a public prefix no longer blocks the Sync.
-    func setPublicAllowed(_ id: ConfigItemID, _ allowed: Bool) throws {
-        var record = try existing(id)
-        guard record.isPublicAllowed != allowed else { return }
-        record.isPublicAllowed = allowed
         record.updatedAt = now
         try store.updateItem(record, in: tx)
     }

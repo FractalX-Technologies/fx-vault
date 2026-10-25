@@ -70,12 +70,10 @@ struct FeatureDependencies {
     let sharing: SharingRepository
     /// Folders of secrets and variables (v0.7.0).
     let folders: FolderRepository
-    /// Runtime destinations and provider connections (v0.8.0).
+    /// Runtime destinations (v0.8.0).
     let destinations: DestinationRepository
     /// Destination Sync, Refresh and import (v0.8.0).
     let destinationSync: DestinationSyncRepository
-    /// Token checks and the Add Destination pickers (v0.8.0).
-    let destinationAccess: DestinationAccessRepository
     /// Staging, owners, templates and name checks. Clone through ``cloner``.
     let creation: RepoCreationRepository
     let cloner: any RepoCloning
@@ -115,7 +113,6 @@ struct FeatureDependencies {
         folders = data.folders
         destinations = data.destinations
         destinationSync = data.destinationSync
-        destinationAccess = data.destinationAccess
         creation = data.creation
         cloner = data.cloner
         reauth = container.reauth

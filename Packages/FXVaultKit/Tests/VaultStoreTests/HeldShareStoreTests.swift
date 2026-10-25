@@ -39,9 +39,8 @@ struct HeldShareStoreTests {
         try seeded.config.insertItem(item)
         let record = DestinationRecord(
             repositoryID: seeded.repo.id,
-            target: .vercel(projectID: "prj_sample", projectName: "example-web", teamID: nil, environment: .preview),
+            target: .azureKeyVault(vaultName: "kv-example-staging", tenantID: nil),
             stage: "staging",
-            connectionID: nil,
             sortOrder: 0,
             createdAt: Sample.start,
             updatedAt: Sample.start

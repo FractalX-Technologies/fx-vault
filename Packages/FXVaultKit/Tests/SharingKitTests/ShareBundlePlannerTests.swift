@@ -68,7 +68,6 @@ struct ShareBundlePlannerTests {
             repositoryID: repository.id,
             target: target,
             stage: "staging",
-            connectionID: nil,
             sortOrder: 0,
             createdAt: earlier,
             updatedAt: earlier
@@ -119,8 +118,8 @@ struct ShareBundlePlannerTests {
         "\(BundleFactory.owner)/\(name)"
     }
 
-    /// web: secret API_KEY linked to its Vercel copy; api: a Key Vault destination.
-    static func linkedBundle(webValue: String = "one", vercelValue: String = "one") -> ShareBundleModel {
+    /// web: secret API_KEY linked to its copy in a Key Vault destination.
+    static func linkedBundle(webValue: String = "one", vaultValue: String = "one") -> ShareBundleModel {
         BundleFactory.bundle(repositories: [
             BundleFactory.repository(
                 BundleFactory.web,
@@ -128,9 +127,9 @@ struct ShareBundlePlannerTests {
                 secrets: [BundleFactory.item("API_KEY", value: webValue, link: BundleFactory.linkToken)],
                 destinations: [
                     ShareDestinationModel(
-                        target: BundleFactory.vercelPreview,
+                        target: BundleFactory.webVault,
                         stage: "staging",
-                        secrets: [BundleFactory.item("API_KEY", value: vercelValue, link: BundleFactory.linkToken)]
+                        secrets: [BundleFactory.item("API_KEY", value: vaultValue, link: BundleFactory.linkToken)]
                     ),
                 ]
             ),
@@ -187,7 +186,7 @@ struct ShareBundlePlannerTests {
     @Test func destinationsMergeByTargetKeyOrAreCreated() throws {
         let local = Self.localRepository(BundleFactory.web, githubID: BundleFactory.webRepoID)
         let existing = Self.localDestination(
-            .vercel(projectID: "PRJ_SAMPLE", projectName: "example-web", teamID: "TEAM_SAMPLE", environment: .preview),
+            .azureKeyVault(vaultName: "KV-EXAMPLE-WEB", tenantID: nil),
             repository: local,
             items: [
                 ("SAME", .secret, "same", false, Self.earlier),
@@ -203,7 +202,7 @@ struct ShareBundlePlannerTests {
                 githubRepoID: BundleFactory.webRepoID,
                 destinations: [
                     ShareDestinationModel(
-                        target: BundleFactory.vercelPreview,
+                        target: BundleFactory.webVault,
                         stage: "staging",
                         secrets: [
                             BundleFactory.item("SAME", value: "same"),
@@ -213,9 +212,8 @@ struct ShareBundlePlannerTests {
                             BundleFactory.item("OTHER_KIND", value: "secret"),
                             BundleFactory.item("BRAND_NEW", value: "new"),
                             BundleFactory.item("NO_VALUE", value: nil),
-                        ],
-                        variables: [BundleFactory.item("NEXT_PUBLIC_SITE_URL", value: "https://example.test")],
-                        publicNames: ["NEXT_PUBLIC_SITE_URL"]
+                            BundleFactory.item("SITE_URL", value: "https://example.test"),
+                        ]
                     ),
                     ShareDestinationModel(target: BundleFactory.keyVault, stage: "staging", secrets: [BundleFactory.item("DATABASE_URL")]),
                 ]
@@ -236,8 +234,6 @@ struct ShareBundlePlannerTests {
         #expect(items[1].outcome(for: .overwrite) == .overwritten)
         #expect(items[2].outcome == .filled(pending: true))
         #expect(items[5].outcome == .added(pending: true))
-        #expect(items[7].isPublic)
-        #expect(!items[5].isPublic)
         #expect(items[0].localItemID != nil)
         #expect(items[4].localItemID == nil)
         #expect(plan.changedItemCount == 5)
@@ -246,11 +242,11 @@ struct ShareBundlePlannerTests {
     @Test func overwriteAndOverwriteAllReachDestinationItems() throws {
         let local = Self.localRepository(BundleFactory.web, githubID: BundleFactory.webRepoID)
         let existing = Self.localDestination(
-            BundleFactory.vercelPreview,
+            BundleFactory.webVault,
             repository: local,
             items: [("API_KEY", .secret, "mine", false, Self.earlier)]
         )
-        var plan = try Self.plan(Self.linkedBundle(vercelValue: "theirs"), repositories: [
+        var plan = try Self.plan(Self.linkedBundle(vaultValue: "theirs"), repositories: [
             Self.key(BundleFactory.web): ShareBundleRepositoryStateModel(repository: local, destinations: [existing]),
         ])
         let itemID = try #require(plan.repositories[0].destinations[0].items.first?.id)
@@ -269,9 +265,9 @@ struct ShareBundlePlannerTests {
             Self.key(BundleFactory.web): ShareBundleRepositoryStateModel(repository: local),
         ])
         let githubID = try #require(plan.repositories[0].githubPlan?.repositoryItems.first?.id)
-        let vercelID = try #require(plan.repositories[0].destinations.first?.items.first?.id)
-        #expect(plan.linkGroups == [ShareLinkGroupModel(token: BundleFactory.linkToken, memberIDs: [githubID, vercelID].sorted())])
-        try plan.select(.skip, forItem: vercelID)
+        let vaultID = try #require(plan.repositories[0].destinations.first?.items.first?.id)
+        #expect(plan.linkGroups == [ShareLinkGroupModel(token: BundleFactory.linkToken, memberIDs: [githubID, vaultID].sorted())])
+        try plan.select(.skip, forItem: vaultID)
         #expect(plan.linkGroups.isEmpty)
     }
 
@@ -283,7 +279,7 @@ struct ShareBundlePlannerTests {
                 items: [Self.localItem("API_KEY", value: "mine", repository: local)]
             ),
         ])
-        // Keep mine on GitHub plus a new Vercel row: only one member is written, so no group.
+        // Keep mine on GitHub plus a new Key Vault row: only one member is written, so no group.
         #expect(plan.repositories[0].githubPlan?.repositoryItems.first?.action == .keepMine)
         #expect(plan.linkGroups.isEmpty)
         let githubID = try #require(plan.repositories[0].githubPlan?.repositoryItems.first?.id)
@@ -362,8 +358,8 @@ struct ShareBundlePlannerTests {
 
     @Test func anInvalidBundleIsRefusedBeforePlanning() {
         var bundle = BundleFactory.sample()
-        bundle.repositories[0].destinations[0].publicNames = ["MISSING"]
-        #expect(throws: ShareError.invalidPackage(.invalidPublicName)) {
+        bundle.repositories[0].destinations[0].target = .azureKeyVault(vaultName: "1-kv", tenantID: nil)
+        #expect(throws: ShareError.invalidPackage(.invalidDestinationTarget(.invalidDestinationTarget(.keyVaultName)))) {
             _ = try Self.plan(bundle, repositories: [:])
         }
     }
@@ -388,7 +384,7 @@ struct ShareBundlePlannerTests {
         let local = Self.localRepository(BundleFactory.web, githubID: BundleFactory.webRepoID)
         let later = BundleFactory.createdAt.addingTimeInterval(60)
         let existing = Self.localDestination(
-            BundleFactory.vercelPreview,
+            BundleFactory.webVault,
             repository: local,
             items: [("API_KEY", .secret, "mine", false, later)]
         )
@@ -406,8 +402,8 @@ struct ShareBundlePlannerTests {
         let state = [Self.key(BundleFactory.web): ShareBundleRepositoryStateModel(repository: local)]
         let bundle = Self.linkedBundle()
         var plan = try Self.plan(bundle, repositories: state)
-        let vercelID = try #require(plan.repositories[0].destinations.first?.items.first?.id)
-        try plan.select(.skip, forItem: vercelID)
+        let vaultID = try #require(plan.repositories[0].destinations.first?.items.first?.id)
+        try plan.select(.skip, forItem: vaultID)
         let fresh = try Self.plan(bundle, repositories: state)
         #expect(plan.isSamePreview(as: fresh))
         #expect(plan != fresh)

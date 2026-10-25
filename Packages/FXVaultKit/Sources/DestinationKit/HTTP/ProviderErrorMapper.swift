@@ -22,7 +22,7 @@ enum ProviderErrorMapper {
         case HTTPStatus.paymentRequired:
             return .forbidden
         case HTTPStatus.forbidden:
-            return isAlreadyExists(codes) ? .conflict(code: code) : .forbidden
+            return .forbidden
         case HTTPStatus.notFound, HTTPStatus.gone:
             return .notFound
         case HTTPStatus.conflict:
@@ -34,37 +34,22 @@ enum ProviderErrorMapper {
         case HTTPStatus.redirection:
             return .disallowedHost
         case HTTPStatus.clientError:
-            return isAlreadyExists(codes) ? .conflict(code: code) : .invalidRequest(code: code)
+            return .invalidRequest(code: code)
         default:
             return .server(status: status)
         }
     }
 
     /// The provider's error codes in the body, most specific first, sanitized:
-    /// - Key Vault: `error.innererror.code`, then `error.code`;
-    /// - Vercel: `error.code`;
-    /// - Supabase: a top-level `code`, then `error.code`, when present (it usually sends only a
-    ///   `message`).
+    /// Key Vault: `error.innererror.code`, then `error.code`.
     static func errorCodes(in body: SecretBytes, provider: DestinationProvider) -> [String] {
         guard !body.isEmpty, let document = try? SecretJSONDocument(parsing: body) else { return [] }
         let candidates: [String?]
         switch provider {
         case .azureKeyVault:
             candidates = [document.string("error", "innererror", "code"), document.string("error", "code")]
-        case .vercel:
-            candidates = [document.string("error", "code")]
-        case .supabase:
-            candidates = [document.string("code"), document.string("error", "code")]
         }
         return candidates.compactMap(DestinationError.sanitizedCode)
-    }
-
-    /// Vercel answers "already exists" with 400 or 403 and a code such as `ENV_ALREADY_EXISTS`.
-    static func isAlreadyExists(_ codes: [String]) -> Bool {
-        codes.contains { code in
-            let upper = code.uppercased()
-            return upper.contains("ALREADY_EXISTS") || upper.contains("ENV_CONFLICT")
-        }
     }
 }
 

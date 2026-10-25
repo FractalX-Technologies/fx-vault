@@ -37,12 +37,10 @@ struct VaultDataComponents {
     let sharing: SharingRepository
     /// Folders of secrets and variables (v0.7.0).
     let folders: FolderRepository
-    /// Runtime destinations of repositories and the provider connections (v0.8.0).
+    /// Runtime destinations of repositories (v0.8.0).
     let destinations: DestinationRepository
     /// Destination Sync, Refresh and import over HTTPS (v0.8.0).
     let destinationSync: DestinationSyncRepository
-    /// Token checks and the Add Destination pickers (v0.8.0).
-    let destinationAccess: DestinationAccessRepository
     /// The `az` tokens; reset on lock.
     let azureTokens: ShellResolvingAzureTokens
 
@@ -141,7 +139,6 @@ struct VaultDataComponents {
             folders: FolderRepository(session: session, clock: clock),
             destinations: DestinationRepository(session: session, clock: clock),
             destinationSync: DestinationSyncRepository(session: session, remotes: remotes, clock: clock),
-            destinationAccess: DestinationAccessRepository(session: session, transport: transport, azureTokens: azureTokens, clock: clock),
             azureTokens: azureTokens
         )
     }

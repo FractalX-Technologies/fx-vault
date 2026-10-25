@@ -9,9 +9,8 @@ import VaultStore
 /// How VaultData reaches a destination's provider (v0.8.0). The live implementation wraps
 /// DestinationKit's ``DestinationRemoteFactory``; tests use an in-memory remote.
 public protocol DestinationRemoteProviding: Sendable {
-    /// A client for `destination`. `token` is the connection's token for Supabase and Vercel
-    /// (the provider copies it; the caller wipes its own copy).
-    func remote(for destination: DestinationModel, token: SecretBytes?) async throws(DestinationError) -> any DestinationRemoting
+    /// A client for `destination`.
+    func remote(for destination: DestinationModel) async throws(DestinationError) -> any DestinationRemoting
 }
 
 /// The live provider access: DestinationKit's HTTPS clients and the `az` token provider.
@@ -22,20 +21,19 @@ public struct LiveDestinationRemoteProvider: DestinationRemoteProviding {
         self.factory = factory
     }
 
-    public func remote(for destination: DestinationModel, token: SecretBytes?) async throws(DestinationError) -> any DestinationRemoting {
-        try factory.remote(for: destination.target, token: token)
+    public func remote(for destination: DestinationModel) async throws(DestinationError) -> any DestinationRemoting {
+        try factory.remote(for: destination.target)
     }
 }
 
 /// The destination side of Sync, Refresh and import (v0.8.0, tasks/todo.md R5, R6).
 ///
 /// - **Review** lists every destination with pending changes and blocks what cannot be sent:
-///   a missing value or connection, a listing failure, an item that changed remotely since the
-///   last sync (optimistic concurrency), a new item the remote already has, a credential-looking
-///   value under a public name (R10).
+///   a missing value, a listing failure, an item that changed remotely since the last sync
+///   (optimistic concurrency), a new item the remote already has.
 /// - **Run** lists each destination again right before writing, journals every write
 ///   `in_flight` first, writes, records the new sync state, then re-lists once to confirm
-///   (a Supabase write by the value's digest, the others by a new version). An unconfirmed write
+///   by a new version. An unconfirmed write
 ///   is pushed again on the next Sync.
 /// - **Refresh** reports remote adds, changes and deletions since the last sync; **resolve**
 ///   applies Keep Mine or Use Remote after checking the remote did not move again.
@@ -82,7 +80,6 @@ public actor DestinationSyncRepository {
             listed = try await listing(remote, of: destination)
         } catch {
             let reason: DestinationBlockReason = switch error {
-            case .connectionMissing: .connectionMissing
             case .remote(let remoteError): .listingFailed(remoteError)
             case .config, .stale: .listingFailed(.decoding)
             }
@@ -94,7 +91,6 @@ public actor DestinationSyncRepository {
                 blocked: rows.filter { !Self.isHeld($0) }.map {
                     DestinationBlockedChangeModel(change: change(for: $0, in: destination, remote: nil), reason: reason)
                 },
-                warnings: [],
                 held: held.compactMap { row in
                     row.shareHold.map {
                         DestinationHeldChangeModel(change: change(for: row, in: destination, remote: nil), packageID: $0, reason: reason)
@@ -107,36 +103,23 @@ public actor DestinationSyncRepository {
         let rows = (try? pendingRows(destination.id)) ?? []
         var changes: [DestinationChangeModel] = []
         var blocked: [DestinationBlockedChangeModel] = []
-        var warnings: [DestinationReviewWarningModel] = []
         var held: [DestinationHeldChangeModel] = []
         for row in rows {
             guard let operation = row.pendingOperation else { continue }
             let remoteItem = byName[GitHubNameValidator.foldKey(row.name)]
             let change = change(for: row, in: destination, remote: remoteItem)
-            var reason = blockReason(for: row, operation: operation, remote: remoteItem, destination: destination)
-            var warning: DestinationReviewWarningModel?
-            if reason == nil, operation != .delete {
-                switch publicVerdict(row, destination: destination) {
-                case .block(let prefix):
-                    reason = .publicCredential(prefix: prefix)
-                case .warn(let prefix):
-                    warning = DestinationReviewWarningModel(itemID: row.id, name: row.name, prefix: prefix)
-                case .none:
-                    break
-                }
-            }
+            let reason = blockReason(for: row, operation: operation, remote: remoteItem, destination: destination)
             if Self.isHeld(row), let packageID = row.shareHold {
-                held.append(DestinationHeldChangeModel(change: change, packageID: packageID, reason: reason, warning: warning))
+                held.append(DestinationHeldChangeModel(change: change, packageID: packageID, reason: reason))
             } else if let reason {
                 blocked.append(DestinationBlockedChangeModel(change: change, reason: reason))
             } else {
-                if let warning { warnings.append(warning) }
                 changes.append(change)
             }
         }
         changes.sort { ($0.operation == .delete ? 1 : 0, $0.name) < ($1.operation == .delete ? 1 : 0, $1.name) }
         held.sort { $0.change.name < $1.change.name }
-        return DestinationReviewSectionModel(destination: destination, changes: changes, blocked: blocked, warnings: warnings, held: held)
+        return DestinationReviewSectionModel(destination: destination, changes: changes, blocked: blocked, held: held)
     }
 
     /// A row a share file holds (v0.9.0, P8). A deletion is the user's own change and is never
@@ -209,7 +192,6 @@ public actor DestinationSyncRepository {
             listed = try await listing(remote, of: destination)
         } catch {
             let outcome: DestinationChangeOutcome = switch error {
-            case .connectionMissing: .blocked(.connectionMissing)
             case .remote(let remoteError): .failed(remoteError)
             case .config, .stale: .failed(.decoding)
             }
@@ -245,8 +227,6 @@ public actor DestinationSyncRepository {
         let itemID: ConfigItemID
         let preWriteVersion: String?
         let resultVersion: String?
-        /// Supabase only: SHA-256 of the value as lowercase hex (in memory, never stored).
-        let digest: String?
     }
 
     private func execute(
@@ -288,7 +268,6 @@ public actor DestinationSyncRepository {
             ) else {
                 return .failed(.decoding)
             }
-            let digest = destination.provider == .supabase ? DestinationFieldCipher.supabaseDigest(of: opened.value) : nil
             do throws(DestinationError) {
                 let written = try await remote.setValue(opened.value, name: row.name, kind: row.kind, existing: remoteItem)
                 try? recordPush(row.id, pushedFingerprint: opened.fingerprint, kind: row.kind, written: written, existing: remoteItem)
@@ -297,8 +276,7 @@ public actor DestinationSyncRepository {
                     change: change,
                     itemID: row.id,
                     preWriteVersion: remoteItem?.version,
-                    resultVersion: written.version,
-                    digest: digest
+                    resultVersion: written.version
                 ))
                 return .done
             } catch {
@@ -325,8 +303,7 @@ public actor DestinationSyncRepository {
     }
 
     /// Re-lists once after the writes: a write is confirmed when the remote lists the item with
-    /// the version the write returned, a version other than the one before the write, or (Supabase)
-    /// the value's digest. Unconfirmed writes are pushed again on the next Sync.
+    /// the version the write returned or a version other than the one before the write. Unconfirmed writes are pushed again on the next Sync.
     private func confirm(
         _ writes: [PushedWrite],
         destination: DestinationModel,
@@ -349,9 +326,6 @@ public actor DestinationSyncRepository {
     }
 
     private static func isConfirmed(_ write: PushedWrite, listed: RemoteDestinationItemModel) -> Bool {
-        if let digest = write.digest, let listedDigest = listed.digest, listedDigest.count == digest.count {
-            return listedDigest == digest
-        }
         if let version = write.resultVersion {
             return listed.version == version || listed.version != write.preWriteVersion
         }
@@ -519,7 +493,6 @@ public actor DestinationSyncRepository {
             if let itemID = finding.itemID, var row = try store.fetchItemRecord(id: itemID, in: tx) {
                 row.syncedName = row.name
                 row.syncedKind = item.kind
-                row.remoteRef = item.remoteRef
                 row.remoteVersion = item.version
                 row.updatedAt = now
                 if choice == .useRemote {
@@ -543,7 +516,6 @@ public actor DestinationSyncRepository {
                 isDeleted: choice == .keepMine,
                 syncedName: finding.name,
                 syncedKind: item.kind,
-                remoteRef: item.remoteRef,
                 remoteVersion: item.version,
                 createdAt: now,
                 updatedAt: now
@@ -557,7 +529,6 @@ public actor DestinationSyncRepository {
                 throw DestinationSyncError.stale
             }
             row.syncedKind = item.kind
-            row.remoteRef = item.remoteRef ?? row.remoteRef
             row.remoteVersion = item.version
             row.forcePush = false
             row.updatedAt = now
@@ -568,7 +539,6 @@ public actor DestinationSyncRepository {
                 throw DestinationSyncError.stale
             }
             row.syncedKind = item.kind
-            row.remoteRef = item.remoteRef ?? row.remoteRef
             row.remoteVersion = item.version
             row.forcePush = true
             row.updatedAt = now
@@ -583,7 +553,6 @@ public actor DestinationSyncRepository {
             row.syncedName = nil
             row.syncedKind = nil
             row.syncedFingerprint = nil
-            row.remoteRef = nil
             row.remoteVersion = nil
             row.forcePush = false
             row.updatedAt = now
@@ -605,17 +574,6 @@ public actor DestinationSyncRepository {
             row.valueFingerprint = nil
             row.syncedFingerprint = nil
         }
-    }
-
-    // MARK: - Public values (R10)
-
-    /// ``PublicValuePolicy`` on the row's value; the value is opened only for a public name.
-    private func publicVerdict(_ row: DestinationItemRecord, destination: DestinationModel) -> PublicValuePolicy.Verdict {
-        guard !row.isPublicAllowed, PublicValuePolicy.publicPrefix(of: row.name, provider: destination.provider) != nil,
-              let opened = try? openValue(row)
-        else { return .none }
-        defer { opened.value.wipe() }
-        return PublicValuePolicy.verdict(name: row.name, value: opened.value, provider: destination.provider, isPublicAllowed: row.isPublicAllowed)
     }
 
     // MARK: - Journal
@@ -665,7 +623,6 @@ public actor DestinationSyncRepository {
                         row.syncedName = row.name
                         row.syncedKind = item.kind
                         row.syncedFingerprint = pushed
-                        row.remoteRef = item.remoteRef ?? row.remoteRef
                         row.remoteVersion = item.version
                         row.forcePush = false
                         try store.updateItem(row, in: tx)
@@ -721,8 +678,7 @@ public actor DestinationSyncRepository {
             name: name,
             remoteName: remote?.remoteName ?? DestinationRules.remoteName(for: name, provider: destination.provider),
             kind: row.kind,
-            operation: row.pendingOperation ?? .update,
-            otherEnvironments: remote?.otherTargets ?? []
+            operation: row.pendingOperation ?? .update
         )
     }
 
@@ -754,7 +710,6 @@ public actor DestinationSyncRepository {
             row.syncedName = row.isDeleted ? (row.syncedName ?? row.name) : row.name
             row.syncedKind = kind
             row.syncedFingerprint = pushedFingerprint
-            row.remoteRef = written.remoteRef ?? existing?.remoteRef ?? row.remoteRef
             row.preWriteVersion = existing?.version
             row.remoteVersion = written.version ?? row.remoteVersion
             row.forcePush = false
@@ -770,7 +725,6 @@ public actor DestinationSyncRepository {
             if let listed {
                 row.verifyState = .verified
                 row.remoteVersion = listed.version
-                row.remoteRef = listed.remoteRef ?? row.remoteRef
             } else {
                 row.verifyState = .pending
                 row.forcePush = row.valueCiphertext != nil
@@ -809,60 +763,18 @@ public actor DestinationSyncRepository {
     }
 
     private func remote(for destination: DestinationModel) async throws(DestinationSyncError) -> any DestinationRemoting {
-        var token: SecretBytes?
-        if destination.provider.usesConnection {
-            guard let connectionID = destination.connectionID else { throw .connectionMissing }
-            do throws(ConfigRepositoryError) {
-                token = try repository.token(of: connectionID)
-            } catch .connectionNotFound {
-                throw .connectionMissing
-            } catch {
-                throw .config(error)
-            }
-        }
-        defer { token?.wipe() }
         do throws(DestinationError) {
-            return try await remotes.remote(for: destination, token: token)
+            return try await remotes.remote(for: destination)
         } catch {
             throw .remote(error)
         }
     }
 
-    /// The destination's items, with each Supabase digest replaced as the change marker by its
-    /// keyed form (``DestinationFieldCipher/keyedMarker(digest:remoteName:destinationID:keys:)``)
-    /// before anything compares or stores it. The digest itself stays on the item, in memory,
-    /// for the confirming re-list.
     private func listing(_ remote: any DestinationRemoting, of destination: DestinationModel) async throws(DestinationSyncError) -> [RemoteDestinationItemModel] {
-        let items: [RemoteDestinationItemModel]
         do throws(DestinationError) {
-            items = try await remote.list()
+            return try await remote.list()
         } catch {
             throw .remote(error)
-        }
-        guard items.contains(where: { $0.digest != nil }) else { return items }
-        do throws(ConfigRepositoryError) {
-            return try performConfig {
-                try session.read { keys, _ in
-                    var keyed: [RemoteDestinationItemModel] = []
-                    keyed.reserveCapacity(items.count)
-                    for item in items {
-                        guard let digest = item.digest else {
-                            keyed.append(item)
-                            continue
-                        }
-                        let marker = DestinationFieldCipher.keyedMarker(
-                            digest: digest,
-                            remoteName: item.remoteName,
-                            destinationID: destination.id,
-                            keys: keys
-                        )
-                        keyed.append(item.replacingVersion(marker))
-                    }
-                    return keyed
-                }
-            }
-        } catch {
-            throw .config(error)
         }
     }
 
@@ -878,22 +790,4 @@ public actor DestinationSyncRepository {
     }
 
     private static let log = Logger(subsystem: ConfigConstants.logSubsystem, category: "destination-sync")
-}
-
-private extension RemoteDestinationItemModel {
-    /// The same item with another change marker.
-    func replacingVersion(_ version: String?) -> RemoteDestinationItemModel {
-        RemoteDestinationItemModel(
-            remoteName: remoteName,
-            name: name,
-            unusableReason: unusableReason,
-            kind: kind,
-            remoteRef: remoteRef,
-            version: version,
-            digest: digest,
-            isValueReadable: isValueReadable,
-            otherTargets: otherTargets,
-            updatedAt: updatedAt
-        )
-    }
 }

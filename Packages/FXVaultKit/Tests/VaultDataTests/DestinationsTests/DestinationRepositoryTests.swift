@@ -9,13 +9,12 @@ import VaultStore
 
 /// Destinations (v0.8.0, tasks/todo.md R1–R3): targets and stages, provider rules for items,
 /// pending state (tombstones, renames, fills), copy and links across the three item tables,
-/// `.env` import and export, connections, DEK rotation, and that no GitHub sync input ever sees a
-/// destination item.
+/// `.env` import and export, DEK rotation, and that no GitHub sync input ever sees a destination
+/// item.
 @Suite("DestinationRepository")
 struct DestinationRepositoryTests {
     static let keyVault = DestinationTargetModel.azureKeyVault(vaultName: "kv-sample-prod", tenantID: nil)
-    static let supabase = DestinationTargetModel.supabase(projectRef: "abcdefghijklmnopqrst")
-    static let vercel = DestinationTargetModel.vercel(projectID: "prj_sample", projectName: "sample-web", teamID: nil, environment: .production)
+    static let webVault = DestinationTargetModel.azureKeyVault(vaultName: "kv-sample-web", tenantID: nil)
 
     struct Fixture {
         let harness: ConfigHarness
@@ -33,12 +32,7 @@ struct DestinationRepositoryTests {
         }
 
         func keyVault(stage: String? = "production") throws -> DestinationID {
-            try destinations.createDestination(repositoryID: repo.id, target: DestinationRepositoryTests.keyVault, stage: stage, connectionID: nil)
-        }
-
-        func vercel() throws -> DestinationID {
-            let connection = try destinations.addConnection(provider: .vercel, label: "Sample Vercel", token: SecretBytes(utf8: "vercel-token-a"), accountHint: "user-a")
-            return try destinations.createDestination(repositoryID: repo.id, target: DestinationRepositoryTests.vercel, stage: "production", connectionID: connection)
+            try destinations.createDestination(repositoryID: repo.id, target: DestinationRepositoryTests.keyVault, stage: stage)
         }
 
         @discardableResult
@@ -85,49 +79,36 @@ struct DestinationRepositoryTests {
 
     // MARK: - Destinations (R1)
 
-    @Test func destinationsValidateTargetsStagesAndConnections() async throws {
+    @Test func destinationsValidateTargetsAndStages() async throws {
         let fixture = try await Fixture.make()
         let vault = try fixture.keyVault()
         #expect(configError {
-            try fixture.destinations.createDestination(repositoryID: fixture.repo.id, target: Self.keyVault, stage: nil, connectionID: nil)
+            try fixture.destinations.createDestination(repositoryID: fixture.repo.id, target: Self.keyVault, stage: nil)
         } == .destinationExists)
         #expect(configError {
             try fixture.destinations.createDestination(
                 repositoryID: fixture.repo.id,
                 target: .azureKeyVault(vaultName: "kv--bad", tenantID: nil),
-                stage: nil,
-                connectionID: nil
+                stage: nil
             )
         } == .validation(.invalidDestinationTarget(.keyVaultName)))
         #expect(configError {
-            try fixture.destinations.createDestination(repositoryID: fixture.repo.id, target: Self.supabase, stage: nil, connectionID: nil)
-        } == .connectionNotFound)
-        let vercelToken = try fixture.destinations.addConnection(provider: .vercel, label: "Vercel", token: SecretBytes(utf8: "t"), accountHint: nil)
-        // A Vercel token does not reach Supabase.
-        #expect(configError {
-            try fixture.destinations.createDestination(repositoryID: fixture.repo.id, target: Self.supabase, stage: nil, connectionID: vercelToken)
-        } == .connectionNotFound)
-        #expect(configError {
-            try fixture.destinations.createDestination(repositoryID: fixture.repo.id, target: Self.vercel, stage: " bad", connectionID: vercelToken)
+            try fixture.destinations.createDestination(repositoryID: fixture.repo.id, target: Self.webVault, stage: " bad")
         } == .validation(.invalidName(.leadingOrTrailingWhitespace)))
         #expect(configError {
-            try fixture.destinations.createDestination(repositoryID: RepoID(), target: Self.vercel, stage: nil, connectionID: vercelToken)
+            try fixture.destinations.createDestination(repositoryID: RepoID(), target: Self.webVault, stage: nil)
         } == .repositoryNotFound)
 
-        let web = try fixture.destinations.createDestination(repositoryID: fixture.repo.id, target: Self.vercel, stage: "staging", connectionID: vercelToken)
-        try fixture.destinations.updateDestination(web, stage: "Production", connectionID: vercelToken)
+        let web = try fixture.destinations.createDestination(repositoryID: fixture.repo.id, target: Self.webVault, stage: "staging")
+        try fixture.destinations.updateDestination(web, stage: "Production")
         let models = try fixture.destinations.destinations(repositoryID: fixture.repo.id)
         #expect(models.map(\.id) == [vault, web])
         #expect(models.map(\.stageKey) == ["production", "production"])
-        #expect(models.first?.connectionID == nil)
 
         try fixture.destinations.reorderDestinations([web, vault], repositoryID: fixture.repo.id)
         #expect(try fixture.destinations.destinations(repositoryID: fixture.repo.id).map(\.id) == [web, vault])
         try fixture.destinations.deleteDestination(web)
         #expect(configError { try fixture.destinations.deleteDestination(web) } == .destinationNotFound)
-        // Removing the connection keeps nothing dangling.
-        try fixture.destinations.deleteConnection(vercelToken)
-        #expect(try fixture.destinations.connections().isEmpty)
     }
 
     // MARK: - Items (R3)
@@ -137,8 +118,7 @@ struct DestinationRepositoryTests {
         try fixture.destinations.createDestination(
             repositoryID: fixture.repo.id,
             target: .azureKeyVault(vaultName: "kv-sample-qa", tenantID: nil),
-            stage: "qa",
-            connectionID: nil
+            stage: "qa"
         )
         try fixture.harness.config.createEnvironment(in: fixture.repo.id, name: "preview")
         try fixture.harness.config.createEnvironment(in: fixture.repo.id, name: "QA")
@@ -146,25 +126,18 @@ struct DestinationRepositoryTests {
         #expect(try fixture.destinations.stageSuggestions(repositoryID: fixture.repo.id) == ["qa", "preview"])
     }
 
-    @Test func keyVaultAndSupabaseHoldSecretsOnly() async throws {
+    @Test func keyVaultHoldsSecretsOnly() async throws {
         let fixture = try await Fixture.make()
         let vault = try fixture.keyVault()
         let id = try fixture.add(vault, "API_URL", kind: .variable, value: "https://api.example.invalid")
         #expect(try fixture.record(id).kind == .secret)
 
-        let connection = try fixture.destinations.addConnection(provider: .supabase, label: "Supabase", token: SecretBytes(utf8: "sbp_sample"), accountHint: nil)
-        let functions = try fixture.destinations.createDestination(repositoryID: fixture.repo.id, target: Self.supabase, stage: nil, connectionID: connection)
-        #expect(configError { try fixture.add(functions, "SUPABASE_URL", value: "x") } == .validation(.invalidName(.reservedByProvider)))
-        #expect(configError { try fixture.add(functions, "BAD-NAME", value: "x") } == .validation(.invalidName(.invalidCharacter)))
-        try fixture.add(functions, "STRIPE_SECRET_KEY", value: ConfigFixture.valueA)
-        #expect(configError { try fixture.add(functions, "STRIPE_SECRET_KEY", value: ConfigFixture.valueB) } == .validation(.duplicateName))
+        #expect(configError { try fixture.add(vault, "BAD-NAME", value: "x") } == .validation(.invalidName(.invalidCharacter)))
+        try fixture.add(vault, "STRIPE_SECRET_KEY", value: ConfigFixture.valueA)
+        #expect(configError { try fixture.add(vault, "STRIPE_SECRET_KEY", value: ConfigFixture.valueB) } == .validation(.duplicateName))
 
         let tooLarge = String(repeating: "a", count: Limits.maxKeyVaultValueBytes + 1)
         #expect(configError { try fixture.add(vault, "BIG", value: tooLarge) } == .validation(.valueTooLarge(limit: Limits.maxKeyVaultValueBytes)))
-
-        let web = try fixture.vercel()
-        let variable = try fixture.add(web, "NEXT_PUBLIC_API_URL", kind: .variable, value: "https://api.example.invalid")
-        #expect(try fixture.record(variable).kind == .variable)
     }
 
     @Test func pendingStateFollowsEditsDeletesAndReverts() async throws {
@@ -234,16 +207,6 @@ struct DestinationRepositoryTests {
         #expect(try fixture.status(pushed) == .modified)
         #expect(try fixture.status(matched) == .synced)
         #expect(try fixture.reveal(matched) == ConfigFixture.valueB)
-    }
-
-    @Test func publicValuesCanBeMarkedAsMeantToBePublic() async throws {
-        let fixture = try await Fixture.make()
-        let web = try fixture.vercel()
-        let id = try fixture.add(web, "NEXT_PUBLIC_SUPABASE_ANON_KEY", kind: .variable, value: "eyJhbGciOiJIUzI1NiJ9.sample")
-        #expect(try fixture.record(id).isPublicAllowed == false)
-        try fixture.destinations.setPublicAllowed(id, allowed: true)
-        #expect(try fixture.record(id).isPublicAllowed)
-        #expect(try fixture.destinations.items(destinationID: web).first?.isPublicAllowed == true)
     }
 
     // MARK: - Copy and links
@@ -335,14 +298,13 @@ struct DestinationRepositoryTests {
 
     // MARK: - Keys and sync isolation
 
-    @Test func dekRotationReSealsValuesFingerprintsAndTokens() async throws {
+    @Test func dekRotationReSealsValuesAndFingerprints() async throws {
         let fixture = try await Fixture.make()
         let vault = try fixture.keyVault()
         let synced = try fixture.add(vault, "API_KEY", value: ConfigFixture.valueA)
         let changed = try fixture.add(vault, "OTHER_KEY", value: ConfigFixture.valueB)
         try fixture.markSynced(vault)
         try fixture.destinations.editItem(changed, name: "OTHER_KEY", kind: .secret, value: SecretBytes(utf8: ConfigFixture.valueC))
-        let connection = try fixture.destinations.addConnection(provider: .supabase, label: "Supabase", token: SecretBytes(utf8: "sbp_sample"), accountHint: nil)
         let before = try fixture.record(synced)
 
         _ = try await fixture.harness.manager.rotateDEK(password: ConfigFixture.password)
@@ -354,9 +316,6 @@ struct DestinationRepositoryTests {
         #expect(try fixture.status(synced) == .synced)
         #expect(try fixture.status(changed) == .modified)
         #expect(try fixture.reveal(synced) == ConfigFixture.valueA)
-        let token = try fixture.destinations.token(of: connection)
-        defer { token.wipe() }
-        #expect(token.utf8String() == "sbp_sample")
     }
 
     @Test func noGitHubSyncInputSeesADestinationItem() async throws {
@@ -370,32 +329,5 @@ struct DestinationRepositoryTests {
         #expect(try fixture.harness.changeSet(fixture.repo) == before)
         #expect(try fixture.harness.states(fixture.repo).map(\.name) == ["API_KEY"])
         #expect(try fixture.destinations.pendingCounts() == [fixture.repo.id: 2])
-    }
-
-    @Test func connectionsSealTheirTokens() async throws {
-        let fixture = try await Fixture.make()
-        let id = try fixture.destinations.addConnection(provider: .vercel, label: "Sample Vercel", token: SecretBytes(utf8: "vercel-token-a"), accountHint: "user-a\u{202E}")
-        #expect(configError {
-            try fixture.destinations.addConnection(provider: .azureKeyVault, label: "Azure", token: SecretBytes(utf8: "t"), accountHint: nil)
-        } == .connectionNotFound)
-        #expect(configError {
-            try fixture.destinations.addConnection(provider: .vercel, label: "Empty", token: SecretBytes(utf8: ""), accountHint: nil)
-        } == .validation(.emptyValue))
-        let record = try #require(try fixture.harness.database.read { tx in try fixture.store.fetchConnection(id: id, in: tx) })
-        #expect(!record.tokenCiphertext.contains(Data("vercel-token-a".utf8)))
-        #expect(try fixture.destinations.connections().map(\.accountHint) == ["user-a"])
-
-        try fixture.destinations.renameConnection(id, to: "FractalX Vercel")
-        try fixture.destinations.replaceToken(of: id, with: SecretBytes(utf8: "vercel-token-b"), accountHint: nil)
-        let token = try fixture.destinations.token(of: id)
-        defer { token.wipe() }
-        #expect(token.utf8String() == "vercel-token-b")
-        #expect(try fixture.destinations.connections().map(\.label) == ["FractalX Vercel"])
-    }
-}
-
-private extension Data {
-    func contains(_ other: Data) -> Bool {
-        range(of: other) != nil
     }
 }

@@ -2,7 +2,7 @@
 
 A native macOS app for managing GitHub Actions secrets and variables across repositories,
 environments and accounts, with a local encrypted vault and the GitHub CLI, and, experimentally,
-the secrets your code reads at runtime in Azure Key Vault, Supabase and Vercel.
+the secrets your code reads at runtime in Azure Key Vault.
 
 **Status: Beta.** Under active development; expect breaking changes before 1.0.
 
@@ -26,12 +26,11 @@ the secrets your code reads at runtime in Azure Key Vault, Supabase and Vercel.
 - **New repositories.** Stage a repository with its environments, secrets and variables, create
   everything in one Sync, and clone it through your SSH alias.
 - **Runtime destinations (experimental).** Next to a repository's GitHub scopes, add the places
-  its code reads at runtime: an **Azure Key Vault** (through your `az login`), a **Supabase**
-  project's Edge Function secrets or a **Vercel** environment (with a personal access token,
-  encrypted in the vault). A destination works like a scope (table, paste, `.env`, ⌘C / ⌘V,
-  linked copies), and Sync pushes its changes after GitHub's, in the same review. Changes made
-  in the provider are never overwritten: Refresh lists them first. Public names such as
-  `NEXT_PUBLIC_` never receive a value that looks like a credential.
+  its code reads at runtime: an **Azure Key Vault**, reached through your `az login`. A
+  destination works like a scope (table, paste, `.env`, ⌘C / ⌘V, linked copies), and Sync pushes
+  its changes after GitHub's, in the same review. Changes made in the vault are never
+  overwritten: Refresh lists them first. 1.0 removed the Supabase and Vercel destinations: the
+  first unlock lists the ones it deleted from your vault (nothing is deleted remotely).
 - **Folders.** Keep the secrets and variables you use in several repositories in folders of your
   own ("Mobile App", "Stripe test") at the top of the sidebar (New Folder…, ⇧⌘N). A folder never
   goes to GitHub by itself: copy its items into any repository with ⌘C / ⌘V or Copy To, and every
@@ -60,8 +59,8 @@ the secrets your code reads at runtime in Azure Key Vault, Supabase and Vercel.
   then adjust the tree down to single secrets. The file opens with a **6-word passphrase** you
   send another way. **Production is never shared**: teammates get production values from your
   secret store. The file expires after 1, 7 or 30 days, and Settings ›
-  Sharing lists what you sent, names only, so you know what to rotate if a file leaks. Tokens
-  for Supabase, Vercel or Azure never travel: the receiver connects their own account.
+  Sharing lists what you sent, names only, so you know what to rotate if a file leaks. Azure
+  sessions never travel: the receiver uses their own `az login`.
 - **Open a project file.** Double-click it: FX Vault lists each repository as already in your
   vault, to import from GitHub with your account, or skipped (no access), previews the merge
   (nothing of yours is deleted) and then opens the first repository at the environment of the
@@ -233,9 +232,8 @@ Neither contains a token, a secret, or the value of an environment variable.
   cleared 30 seconds after a copy.
 - `.env` export and every share need a fresh Touch ID or master-password check.
 - Every GitHub operation goes through `gh` with values passed on stdin, never as arguments.
-- Runtime destinations are reached over HTTPS only at the Azure Key Vault, Supabase and Vercel
-  API hosts, with no cookies, cache or redirects; their tokens are encrypted in the vault, and
-  the Azure token stays in memory until the vault locks.
+- Runtime destinations are reached over HTTPS only at `<vault>.vault.azure.net`, with no
+  cookies, cache or redirects; the Azure token stays in memory until the vault locks.
 - Nothing leaves your Mac except what Sync sends to GitHub and your destinations, and the files
   you choose to share.
 - A share file uses Argon2id and six words that should travel another way, and never contains a

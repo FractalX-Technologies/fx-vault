@@ -95,7 +95,6 @@ enum HeldSharePresentation {
                 destination: section.destination,
                 changes: section.writes + writes + section.deletions,
                 blocked: section.blocked + blocked,
-                warnings: section.warnings + included.compactMap(\.warning),
                 held: section.held
             )
         }

@@ -7,9 +7,7 @@ enforces it); every other module uses the opaque `VaultDatabase` and the stores.
 The database holds **no plaintext values**. Secret and variable values are stored only as
 AES-256-GCM blobs (`value_ct`, `synced_value_ct`) encrypted by VaultCrypto with the field AAD
 (docs/ARCHITECTURE.md, "VaultCrypto"), next to HMAC-SHA256 fingerprints (`value_fp`,
-`synced_fp`). Supabase and Vercel tokens (v0.8.0) are sealed the same way (`token_ct`). Names,
-timestamps, GitHub ids and provider identifiers (vault names, project references, project ids)
-are plaintext.
+`synced_fp`). Names, timestamps, GitHub ids and vault names are plaintext.
 
 ## Storage
 
@@ -421,47 +419,35 @@ CREATE TABLE destination_journal (id INTEGER PRIMARY KEY AUTOINCREMENT,
 CREATE INDEX destination_journal_time ON destination_journal(started_at);
 ```
 
-- Runtime destinations of a repository: an Azure Key Vault, a Supabase project's Edge Function
-  secrets or one Vercel environment of a project. No GitHub sync path (`ChangeSetBuilder`,
-  preflight, executor, drift) reads these tables; destination items reach their
-  provider only through `DestinationSyncRepository`.
-- `target_key` = `DestinationTargetModel.targetKey`, lowercase: `kv|<vault>`, `sb|<ref>` or
-  `vc|<team or ->|<project id>|<environment>`. A repository cannot add the same place twice.
+- Runtime destinations of a repository: Azure Key Vaults (since v16 the only provider; the
+  `supabase` and `vercel` values the CHECKs allow are no longer written). No GitHub sync path
+  (`ChangeSetBuilder`, preflight, executor, drift) reads these tables; destination items reach
+  their provider only through `DestinationSyncRepository`.
+- `target_key` = `DestinationTargetModel.targetKey`, lowercase: `kv|<vault>`. A repository
+  cannot add the same place twice.
 - `settings_json` = `DestinationSettings`, a flat object with sorted keys: `version` (1),
-  `vaultName` and `tenantID` (Key Vault), `projectRef` (Supabase), `projectID`, `projectName`,
-  `teamID` and `environment` (Vercel: `production`, `preview` or `development`). A row whose
-  settings do not decode for its provider reads as `StoreError.invalidStoredValue`.
+  `vaultName` and `tenantID`. A row whose settings do not decode reads as
+  `StoreError.invalidStoredValue`.
 - `stage` names the stage the destination serves (the GitHub environment of the same fold key,
   as Share Project matches them); `stage_key` = `EnvironmentNameValidator.foldKey(stage)`, set with it.
-- `connection_id`: the Supabase or Vercel token the destination uses; NULL for Key Vault (the
-  `az` sign-in) and after its connection is removed (the destination stays, and Sync blocks it
-  until another connection is chosen).
-- `provider_connections.token_ct` is the token sealed as a secret field
-  (`SecretFieldAAD`: `provider_connections`, `token_ct`, the connection id's 16 bytes,
-  `ConnectionTokenCipher`). `account_hint` is the Vercel username or the Supabase project
-  count, shown in Preferences › Destinations.
+- `connection_id` and `provider_connections` held the Supabase and Vercel tokens until v16,
+  which nulls and empties them; nothing reads or writes them since. Key Vault uses the `az`
+  sign-in.
 - `destination_items.value_ct` is sealed with `DestinationFieldAAD` (row, destination, kind,
   name: the §5.4 field layout with table `destination_items` and an empty environment,
   `DestinationFieldCipher`); a rename or kind change re-seals it. `value_fp` is the row-bound
   fingerprint, as for `config_items`. There is no `synced_value_ct`: `synced_fp` alone records
   what the remote was last confirmed to hold.
-- A secret without a value is legal: Supabase never returns values and Vercel returns none for
-  sensitive variables, so imported rows are value-missing until filled. A variable always has
-  one.
-- Names are unique per destination whatever the kind (one remote name holds either a secret or
-  a variable). Key Vault rows keep FX Vault's name; the remote name (`DATABASE-URL`) is derived
+- A secret without a value is legal (a disabled Key Vault secret, an item received without a
+  value): it is value-missing until filled. Key Vault holds secrets only, so 1.0 writes no
+  `variable` rows.
+- Names are unique per destination whatever the kind. Key Vault rows keep FX Vault's name; the remote name (`DATABASE-URL`) is derived
   by `DestinationRules`, never stored.
-- `remote_version` = the provider's change marker: a Key Vault `updated`, a Vercel `updatedAt`,
-  or for Supabase a keyed form of the value digest its API lists (`k1:` + the row-bound
-  fingerprint under `K_fp`, with the destination id in the row's place, over
-  `<remote name>:<digest>`; `DestinationFieldCipher.keyedMarker`). The digest itself is an
-  unkeyed hash of the secret and is never stored; DEK rotation re-keys a marker when the synced
-  value's digest gives it under the old key. `pre_write_version` is the marker
-  listed right before FX Vault's last write (the verification baseline); `remote_ref` = the
-  Vercel variable id. `force_push`, `verify_state` and `is_deleted` behave as in
-  `config_items`.
-- `is_public_allowed` = "Mark as Public": a Vercel item under a public prefix (`NEXT_PUBLIC_`,
-  ...) whose value looks like a credential no longer blocks or warns.
+- `remote_version` = Key Vault's `updated` change marker. `pre_write_version` is the marker
+  listed right before FX Vault's last write (the verification baseline). `force_push`,
+  `verify_state` and `is_deleted` behave as in `config_items`.
+- `remote_ref` (the Vercel variable id) and `is_public_allowed` (Vercel's "Mark as Public") are
+  unused since 1.0; the columns stay at their defaults.
 - `link_id` joins the link groups of `config_items` and `folder_items`: `LinkCountQuery` counts
   live members of all three tables, and `DestinationStore.setLinkID` changes only this column.
 - `destination_journal` is appended `in_flight` before every write and finished afterwards. The
@@ -475,10 +461,9 @@ CREATE INDEX destination_journal_time ON destination_journal(started_at);
   remote adds while the provider still lists them.
 - Removing a repository removes its destinations and their items; removing a destination
   removes its items and nulls its journal rows. Nothing is deleted in the provider.
-- DEK rotation re-seals every destination value with its fingerprint and every connection
-  token. A `synced_fp` is recomputed when it matched the value under the old key and cleared
+- DEK rotation re-seals every destination value with its fingerprint. A `synced_fp` is recomputed when it matched the value under the old key and cleared
   otherwise, so that item is pushed again (the safe direction).
-- `DestinationRepository` owns `destinations`, `destination_items` and `provider_connections`;
+- `DestinationRepository` owns `destinations`, `destination_items` and `retired_destinations`;
   `DestinationSyncRepository` writes the sync columns and `destination_journal`.
 
 ### v14_project_shares (v0.9.0)
@@ -552,6 +537,31 @@ DROP TABLE device_identity;
 - `MigrationTests` seeds every dropped table from v10 on and checks they are gone after
   migrating; `sent_shares` and the share holds read back unchanged.
 
+### v16_drop_runtime_providers (1.0)
+
+```sql
+CREATE TABLE retired_destinations (id INTEGER PRIMARY KEY AUTOINCREMENT,
+  label TEXT NOT NULL CHECK (length(label) BETWEEN 1 AND 1024));
+INSERT INTO retired_destinations (label) SELECT …;   -- one label per Supabase or Vercel destination
+DELETE FROM destination_journal WHERE destination_id IN (… supabase, vercel …);
+DELETE FROM destination_items WHERE destination_id IN (… supabase, vercel …);
+DELETE FROM destinations WHERE provider IN ('supabase','vercel');
+UPDATE destinations SET connection_id = NULL WHERE connection_id IS NOT NULL;
+DELETE FROM provider_connections;
+```
+
+- 1.0 keeps Azure Key Vault only. The Supabase and Vercel destinations, their items, their
+  journal rows and every sealed provider token are deleted from the vault; nothing is deleted
+  in Supabase or Vercel.
+- Migrations run with foreign keys off, so children are deleted explicitly. `provider_connections`
+  stays (empty) because `destinations.connection_id` references it.
+- `retired_destinations.label` = `owner/name · Supabase <projectRef>` or `owner/name · Vercel
+  <projectName> (<environment>)`, in owner, name, `sort_order`, `created_at` order. The main
+  window lists them once after unlock (`DestinationStore.fetchRetiredDestinationLabels`); OK
+  deletes every row (`deleteRetiredDestinations`). Names only, never values or tokens.
+- The checkpoint after migrating leaves no token bytes in the WAL
+  (`droppingTheRuntimeProvidersLeavesNoTokenBytesOnDisk`).
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -567,10 +577,11 @@ DROP TABLE device_identity;
 | `imported_share_packages` | `ImportedSharePackageRecord` | `SharePackageStore` | `sender_device_id` for a 0.9 teammates file, v0.9.0 |
 | `folders` | `FolderRecord` | `FolderStore` | Unique by `name_key`, sidebar order, v0.7.0 |
 | `folder_items` | `FolderItemRecord` (with ciphertext; `FolderItemModel` without) | `FolderStore` | Always with a value; `link_id` groups span `config_items`, v0.7.0 |
-| `provider_connections` | `ConnectionRecord` (with the sealed token; `ConnectionModel` without) | `DestinationStore` | Supabase and Vercel tokens, v0.8.0 |
+| `provider_connections` | — | — | Empty and unused since v16 (Supabase and Vercel tokens, v0.8.0) |
 | `destinations` | `DestinationRecord` (`DestinationSettings` in `settings_json`) | `DestinationStore` | Unique per repository by `target_key`, v0.8.0 |
 | `destination_items` | `DestinationItemRecord` (with ciphertext), `DestinationItemState` (without) | `DestinationStore` | Value optional for secrets; `link_id` groups span all three item tables, v0.8.0; `share_hold` (v0.9.0) |
 | `destination_journal` | `DestinationJournalRecord` | `DestinationStore` | Destination writes, names and push fingerprints only, v0.8.0 |
+| `retired_destinations` | — (labels as `String`) | `DestinationStore` | The one-time notice after v16, names only, 1.0 |
 | `sent_shares` | `SentShareRecord` (`SentShareModel`) | `SentShareStore` | Names only, v0.9.0 |
 | holds (`share_hold` on both item tables, the import records) | `HeldShareInputsModel` | `ShareHoldStore` | Read model of Sync's From Files review and bulk release, v0.9.0 |
 
@@ -623,7 +634,7 @@ DROP TABLE device_identity;
 `AccountStore.observeAll`, `RepoStore.observeAll/observe(id:)`,
 `ConfigStore.observeEnvironments/observeItems/observePendingInputs/observeAllPendingInputs`,
 `FolderStore.observeFolders/observeItems` (v0.7.0),
-`DestinationStore.observeDestinations/observeItems/observePendingCounts/observeConnections`
+`DestinationStore.observeDestinations/observeItems/observePendingCounts`
 (v0.8.0), `SentShareStore.observe` and `ShareHoldStore.observeInputs` (v0.9.0) and
 `SyncJournalStore.observeLatestRun` return
 `AsyncThrowingStream`s. Each emits the current value,
@@ -640,6 +651,4 @@ Destinations (v0.8.0) keep these out of the database too:
 - Azure Key Vault access tokens from `az account get-access-token` live in memory only
   (`ShellResolvingAzureTokens`) and are dropped when the vault locks.
 - Remote values are never cached: a listed value is either stored sealed in `value_ct` (an
-  import or Use Remote) or wiped after the comparison. The SHA-256 FX Vault computes of a value
-  it sends to Supabase, to confirm the write, and the digests Supabase lists are kept in memory
-  for that run only; `remote_version` holds their keyed form (above).
+  import or Use Remote) or wiped after the comparison.

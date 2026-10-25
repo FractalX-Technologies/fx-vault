@@ -28,7 +28,7 @@ nonisolated enum DestinationCopy {
     static var addDestinationHelp: String {
         String(
             localized: "destination.add.help",
-            defaultValue: "Add an Azure Key Vault, a Supabase project or a Vercel environment this repository's code reads at runtime"
+            defaultValue: "Add an Azure Key Vault this repository's code reads at runtime"
         )
     }
 
@@ -106,24 +106,7 @@ nonisolated enum DestinationCopy {
                 localized: "destination.rules.keyVault",
                 defaultValue: "Secrets only. Key Vault names allow letters, digits and dashes: FX Vault keeps your names and writes DATABASE-URL for DATABASE_URL. Deletes are soft deletes."
             )
-        case .supabase:
-            String(
-                localized: "destination.rules.supabase",
-                defaultValue: "Secrets only, for Edge Functions. Supabase never returns values, so FX Vault compares digests. Names starting with SUPABASE_ are reserved."
-            )
-        case .vercel:
-            String(
-                localized: "destination.rules.vercel",
-                defaultValue: "Secrets are encrypted variables, variables are plain. A variable shared with other environments changes for all of them. NEXT_PUBLIC_ names are public in the browser."
-            )
         }
-    }
-
-    static var connectionMissing: String {
-        String(
-            localized: "destination.detail.connectionMissing",
-            defaultValue: "This destination has no connection. Choose one in its settings before the next Sync."
-        )
     }
 
     static func driftBanner(_ count: Int, provider: DestinationProvider) -> String {
@@ -153,12 +136,16 @@ nonisolated enum DestinationCopy {
         )
     }
 
-    static var markPublic: String {
-        String(localized: "destination.table.markPublic", defaultValue: "Mark as Public")
+    static var retiredTitle: String {
+        String(localized: "destination.retired.title", defaultValue: "Supabase and Vercel Destinations Removed")
     }
 
-    static var unmarkPublic: String {
-        String(localized: "destination.table.unmarkPublic", defaultValue: "Not Meant to Be Public")
+    /// The one-time notice after the 1.0 migration deleted them from the vault (nothing remote).
+    static func retiredMessage(_ labels: [String]) -> String {
+        String(
+            localized: "destination.retired.message",
+            defaultValue: "FX Vault 1.0 keeps Azure Key Vault only. These destinations were removed from the vault; nothing was deleted in Supabase or Vercel:\n\(labels.joined(separator: "\n"))"
+        )
     }
 
     static var fillValue: String {

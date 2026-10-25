@@ -4,9 +4,8 @@ import VaultData
 
 /// Column 3 for a runtime destination (v0.8.0, canvas board 3): DESTINATION · RUNTIME and the
 /// destination's name with its provider, stage and Experimental tags; Refresh and the actions; a
-/// card with the stage, the target and the provider's rules; the Refresh banner; the kind pill
-/// (Secrets only for Key Vault and Supabase) with the add actions; and the table with the Status
-/// column.
+/// card with the stage, the target and the provider's rules; the Refresh banner; the Secrets
+/// label (Key Vault holds secrets only) with the add actions; and the table with the Status column.
 struct DestinationDetailScreen: View {
     @Bindable var viewModel: DestinationDetailViewModel
     let main: MainViewModel
@@ -19,9 +18,6 @@ struct DestinationDetailScreen: View {
             DestinationDetailHeader(viewModel: viewModel, main: main)
             if let destination = viewModel.destination {
                 DestinationInfoCard(destination: destination)
-                if destination.provider.usesConnection, destination.connectionID == nil {
-                    Banner(.warning, message: DestinationCopy.connectionMissing, systemImage: "link.badge.plus")
-                }
             }
             DestinationRefreshBanner(viewModel: viewModel)
             DestinationDetailControls(viewModel: viewModel)
@@ -227,16 +223,11 @@ private struct DestinationDetailControls: View {
         }
     }
 
-    @ViewBuilder
     private var kinds: some View {
-        if viewModel.holdsVariables {
-            ConfigKindPill(viewModel: viewModel)
-        } else {
-            SectionLabel(String(
-                localized: "destination.detail.secretsOnly",
-                defaultValue: "Secrets · \(viewModel.count(of: .secret))"
-            ))
-        }
+        SectionLabel(String(
+            localized: "destination.detail.secretsOnly",
+            defaultValue: "Secrets · \(viewModel.count(of: .secret))"
+        ))
     }
 
     @ViewBuilder
@@ -318,11 +309,6 @@ private struct DestinationRowActions: View {
                 viewModel.pushOnNextSync([row])
             }
         }
-        if viewModel.publicPrefix(of: row) != nil, !row.isDeleted {
-            Button(viewModel.isMarkedPublic(row) ? DestinationCopy.unmarkPublic : DestinationCopy.markPublic) {
-                viewModel.togglePublic(row)
-            }
-        }
         if viewModel.canRevert(row) {
             Button(String(localized: "main.table.revert", defaultValue: "Revert")) {
                 viewModel.revert([row])
@@ -368,16 +354,11 @@ private struct DestinationSelectionMenu: View {
 }
 
 extension DestinationModel {
-    /// The target as the info card shows it: the vault (and tenant), the project reference, or the
-    /// project, team and environment.
+    /// The target as the info card shows it: the vault, and its tenant when one is set.
     var targetDescription: String {
         switch target {
         case .azureKeyVault(let vaultName, let tenantID):
             [vaultName, tenantID].compactMap { $0 }.joined(separator: " · ")
-        case .supabase(let projectRef):
-            projectRef
-        case .vercel(_, let projectName, let teamID, let environment):
-            [projectName, teamID, environment.rawValue].compactMap { $0 }.joined(separator: " · ")
         }
     }
 }

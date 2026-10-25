@@ -156,7 +156,7 @@ public enum ShareBundlePlanner {
             stage: destination.stage,
             action: .create,
             items: located(destination).map { item, kind in
-                newItemPlan(item, kind: kind, isPublic: destination.isPublic(item.name))
+                newItemPlan(item, kind: kind)
             }
         )
     }
@@ -183,7 +183,6 @@ public enum ShareBundlePlanner {
             planItem(
                 item,
                 kind: kind,
-                isPublic: destination.isPublic(item.name),
                 local: itemsByName[GitHubNameValidator.foldKey(item.name)],
                 createdAt: createdAt,
                 mode: mode,
@@ -203,7 +202,7 @@ public enum ShareBundlePlanner {
         destination.secrets.map { ($0, ConfigKind.secret) } + destination.variables.map { ($0, ConfigKind.variable) }
     }
 
-    private static func newItemPlan(_ item: ShareItemModel, kind: ConfigKind, isPublic: Bool) -> ShareDestinationItemPlanModel {
+    private static func newItemPlan(_ item: ShareItemModel, kind: ConfigKind) -> ShareDestinationItemPlanModel {
         if item.valueState == .missing {
             return ShareDestinationItemPlanModel(
                 id: item.id,
@@ -212,8 +211,7 @@ public enum ShareBundlePlanner {
                 localItemID: nil,
                 chip: .valueNotIncluded,
                 defaultAction: .addWithoutValue,
-                allowedActions: [.addWithoutValue, .skip],
-                isPublic: isPublic
+                allowedActions: [.addWithoutValue, .skip]
             )
         }
         return ShareDestinationItemPlanModel(
@@ -223,21 +221,19 @@ public enum ShareBundlePlanner {
             localItemID: nil,
             chip: .new,
             defaultAction: .add,
-            allowedActions: [.add, .skip],
-            isPublic: isPublic
+            allowedActions: [.add, .skip]
         )
     }
 
     private static func planItem(
         _ item: ShareItemModel,
         kind: ConfigKind,
-        isPublic: Bool,
         local localItem: ShareLocalDestinationItemModel?,
         createdAt: Date,
         mode: SharePackageValidator.Mode,
         fingerprint: ShareDestinationFingerprinter
     ) -> ShareDestinationItemPlanModel {
-        guard let localItem else { return newItemPlan(item, kind: kind, isPublic: isPublic) }
+        guard let localItem else { return newItemPlan(item, kind: kind) }
         let local = localItem.item
         func skipped(_ chip: ShareItemChip, warnings: Set<ShareItemWarning>) -> ShareDestinationItemPlanModel {
             ShareDestinationItemPlanModel(
@@ -248,8 +244,7 @@ public enum ShareBundlePlanner {
                 chip: chip,
                 defaultAction: .skip,
                 allowedActions: [.skip],
-                warnings: warnings,
-                isPublic: isPublic
+                warnings: warnings
             )
         }
         var warnings = Set<ShareItemWarning>()
@@ -269,8 +264,7 @@ public enum ShareBundlePlanner {
                 chip: .otherKindExists,
                 defaultAction: .skip,
                 allowedActions: [.skip],
-                warnings: warnings.union([.otherKindExists]),
-                isPublic: isPublic
+                warnings: warnings.union([.otherKindExists])
             )
         }
         if item.valueState == .missing {
@@ -285,8 +279,7 @@ public enum ShareBundlePlanner {
                 chip: .fillsMissingValue,
                 defaultAction: .fill,
                 allowedActions: [.fill, .skip],
-                warnings: warnings,
-                isPublic: isPublic
+                warnings: warnings
             )
         }
         let chip: ShareItemChip
@@ -304,8 +297,7 @@ public enum ShareBundlePlanner {
             chip: chip,
             defaultAction: chip == .same ? .skip : .keepMine,
             allowedActions: chip == .same ? [.skip] : [.keepMine, .overwrite],
-            warnings: warnings,
-            isPublic: isPublic
+            warnings: warnings
         )
     }
 

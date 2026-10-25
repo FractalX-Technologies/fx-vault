@@ -36,10 +36,9 @@ struct ShareBundleValidatorTests {
         _ target: DestinationTargetModel,
         stage: String? = "staging",
         secrets: [ShareItemModel] = [],
-        variables: [ShareItemModel] = [],
-        publicNames: [String] = []
+        variables: [ShareItemModel] = []
     ) -> ShareDestinationModel {
-        ShareDestinationModel(target: target, stage: stage, secrets: secrets, variables: variables, publicNames: publicNames)
+        ShareDestinationModel(target: target, stage: stage, secrets: secrets, variables: variables)
     }
 
     static let cases: [Case] = [
@@ -75,9 +74,6 @@ struct ShareBundleValidatorTests {
         Case("untrimmed Key Vault name", .invalidDestinationTarget(.invalidDestinationTarget(.keyVaultName))) {
             $0.repositories[1].destinations[0].target = .azureKeyVault(vaultName: " kv-example-staging", tenantID: nil)
         },
-        Case("bad Supabase reference", .invalidDestinationTarget(.invalidDestinationTarget(.supabaseProjectRef))) {
-            $0.repositories[1].destinations[1].target = .supabase(projectRef: "ABC")
-        },
         Case("bad destination stage", .invalidDestinationTarget(.invalidName(.leadingOrTrailingWhitespace))) {
             $0.repositories[1].destinations[0].stage = "staging "
         },
@@ -92,9 +88,6 @@ struct ShareBundleValidatorTests {
         Case("a variable in Key Vault", .invalidDestinationItem(.kindNotSupported)) {
             $0.repositories[1].destinations[0].variables = [BundleFactory.item("REGION")]
         },
-        Case("Supabase's reserved prefix", .invalidDestinationItem(.invalidName(.reservedByProvider))) {
-            $0.repositories[1].destinations[1].secrets = [BundleFactory.item("SUPABASE_URL")]
-        },
         Case("a value above Key Vault's limit", .invalidDestinationItem(.valueTooLarge(limit: Limits.maxKeyVaultValueBytes))) {
             $0.repositories[1].destinations[0].secrets = [
                 BundleFactory.item("BIG", value: String(repeating: "a", count: Limits.maxKeyVaultValueBytes + 1)),
@@ -105,20 +98,14 @@ struct ShareBundleValidatorTests {
                 BundleFactory.item("BIG", value: String(repeating: "a", count: Limits.maxValueBytes + 1)),
             ]
         },
-        Case("a secret and a variable with one name", .duplicateDestinationItem) {
-            $0.repositories[0].destinations[0].variables.append(BundleFactory.item("API_KEY"))
+        Case("one name twice", .duplicateDestinationItem) {
+            $0.repositories[0].destinations[0].secrets.append(BundleFactory.item("API_KEY"))
         },
         Case("a lowercase destination item", .invalidItemName(.notNormalized)) {
             $0.repositories[1].destinations[0].secrets = [BundleFactory.item("database_url")]
         },
         Case("1,001 destination items", .tooManyDestinationItems(limit: 1000)) { bundle in
             bundle.repositories[1].destinations[0].secrets = (0...Limits.maxDestinationItems).map { BundleFactory.item("KEY_\($0)") }
-        },
-        Case("a public name that is not an item", .invalidPublicName) {
-            $0.repositories[0].destinations[0].publicNames = ["NEXT_PUBLIC_OTHER"]
-        },
-        Case("a public name twice", .invalidPublicName) {
-            $0.repositories[0].destinations[0].publicNames = ["NEXT_PUBLIC_SITE_URL", "next_public_site_url"]
         },
         Case("a folder without a name", .invalidFolderName(.invalidName(.empty))) { $0.folders[0].name = "" },
         Case("two folders with one name", .duplicateFolder) {
@@ -172,17 +159,13 @@ struct ShareBundleValidatorTests {
         try ShareBundleValidator.validate(bundle, mode: .payload)
     }
 
-    @Test func acceptsFiftyRepositoriesAndValuesUpToEachProvidersLimit() throws {
+    @Test func acceptsFiftyRepositoriesAndValuesUpToKeyVaultsLimit() throws {
         var bundle = BundleFactory.bundle(repositories: (1...Limits.maxShareRepositories).map { BundleFactory.repository("example-\($0)") })
         try ShareBundleValidator.validate(bundle, mode: .payload)
         bundle.repositories[0].destinations = [
             Self.destination(
                 BundleFactory.keyVault,
                 secrets: [BundleFactory.item("BIG", value: String(repeating: "a", count: Limits.maxKeyVaultValueBytes))]
-            ),
-            Self.destination(
-                BundleFactory.vercelPreview,
-                secrets: [BundleFactory.item("BIG", value: String(repeating: "a", count: Limits.maxValueBytes))]
             ),
         ]
         try ShareBundleValidator.validate(bundle, mode: .payload)

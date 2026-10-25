@@ -96,7 +96,7 @@ public enum ShareBundleValidator {
         do {
             // The trimmed form must already be the one written.
             guard try DestinationRules.validate(destination.target) == destination.target else {
-                return .invalidDestinationTarget(.invalidDestinationTarget(rule(for: destination.provider)))
+                return .invalidDestinationTarget(.invalidDestinationTarget(.keyVaultName))
             }
         } catch {
             return .invalidDestinationTarget(error)
@@ -125,11 +125,6 @@ public enum ShareBundleValidator {
                 }
             }
         }
-        var publicKeys = Set<String>()
-        for name in destination.publicNames {
-            let key = GitHubNameValidator.foldKey(name)
-            guard nameKeys.contains(key), publicKeys.insert(key).inserted else { return .invalidPublicName }
-        }
         return nil
     }
 
@@ -140,14 +135,6 @@ public enum ShareBundleValidator {
             return nil
         }
         return .invalidDestinationItem(.valueTooLarge(limit: limit))
-    }
-
-    private static func rule(for provider: DestinationProvider) -> DestinationTargetRule {
-        switch provider {
-        case .azureKeyVault: .keyVaultName
-        case .supabase: .supabaseProjectRef
-        case .vercel: .vercelProject
-        }
     }
 
     // MARK: - Folders

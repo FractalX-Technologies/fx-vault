@@ -2,12 +2,10 @@ import VaultCore
 
 /// Display text and symbols of runtime destinations (v0.8.0).
 nonisolated extension DestinationProvider {
-    /// "Azure Key Vault", "Supabase", "Vercel".
+    /// "Azure Key Vault".
     var title: String {
         switch self {
         case .azureKeyVault: String(localized: "destination.provider.keyVault", defaultValue: "Azure Key Vault")
-        case .supabase: String(localized: "destination.provider.supabase", defaultValue: "Supabase")
-        case .vercel: String(localized: "destination.provider.vercel", defaultValue: "Vercel")
         }
     }
 
@@ -15,8 +13,6 @@ nonisolated extension DestinationProvider {
     var shortTitle: String {
         switch self {
         case .azureKeyVault: String(localized: "destination.provider.keyVault.short", defaultValue: "Key Vault")
-        case .supabase: title
-        case .vercel: title
         }
     }
 
@@ -24,8 +20,6 @@ nonisolated extension DestinationProvider {
     var symbolName: String {
         switch self {
         case .azureKeyVault: "key"
-        case .supabase: "server.rack"
-        case .vercel: "globe"
         }
     }
 
@@ -33,29 +27,14 @@ nonisolated extension DestinationProvider {
     var accessDescription: String {
         switch self {
         case .azureKeyVault: String(localized: "destination.access.az", defaultValue: "via Azure CLI sign-in")
-        case .supabase: String(localized: "destination.access.supabase", defaultValue: "via Supabase API token")
-        case .vercel: String(localized: "destination.access.vercel", defaultValue: "via Vercel API token")
-        }
-    }
-}
-
-nonisolated extension VercelEnvironment {
-    var title: String {
-        switch self {
-        case .production: String(localized: "destination.vercel.production", defaultValue: "Production")
-        case .preview: String(localized: "destination.vercel.preview", defaultValue: "Preview")
-        case .development: String(localized: "destination.vercel.development", defaultValue: "Development")
         }
     }
 }
 
 nonisolated extension DestinationModel {
-    /// The row title: the vault name, the project reference, or "project · environment".
+    /// The row title: the vault name.
     var title: String {
-        switch target {
-        case .vercel(_, let projectName, _, let environment): "\(projectName) · \(environment.title)"
-        default: target.displayName
-        }
+        target.displayName
     }
 
     /// The row's second line: the provider and the stage ("Key Vault · production").

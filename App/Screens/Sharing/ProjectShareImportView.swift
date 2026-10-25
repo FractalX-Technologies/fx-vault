@@ -204,6 +204,13 @@ private struct ProjectShareRepositoryPreview: View {
             } else if case .noAccess = repository.status {
                 ShareNoteView(systemImage: "arrow.clockwise", text: ProjectShareCopy.skippedLater, tint: Theme.Colors.subtleText)
             }
+            if !repository.summary.retiredDestinations.isEmpty {
+                ShareNoteView(
+                    systemImage: "minus.circle",
+                    text: ProjectShareCopy.retiredDestinations(repository.summary.retiredDestinations),
+                    tint: Theme.Colors.subtleText
+                )
+            }
             if !repository.destinations.isEmpty {
                 VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                     SectionLabel(ProjectShareCopy.destinations)
@@ -264,10 +271,7 @@ private struct ProjectShareDestinationPreview: View {
     }
 
     private var title: String {
-        switch destination.target {
-        case .vercel(_, let projectName, _, let environment): "\(destination.target.provider.title) · \(projectName) · \(environment.title)"
-        default: "\(destination.target.provider.title) · \(destination.target.displayName)"
-        }
+        "\(destination.target.provider.title) · \(destination.target.displayName)"
     }
 }
 

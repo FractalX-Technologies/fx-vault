@@ -6,57 +6,19 @@ import VaultCore
 /// ``DestinationRemoteFactory`` and ``FakeHTTPTransport`` itself.
 @Suite("Factory and fake transport")
 struct FactoryAndFakeTests {
-    @Test func factoryBuildsEachProvider() throws {
+    @Test func factoryBuildsKeyVault() throws {
         let factory = TestValues.remoteFactory(FakeHTTPTransport())
-        let token = TestValues.secret(TestValues.vercelToken)
-        #expect(try factory.remote(for: .azureKeyVault(vaultName: TestValues.vaultName, tenantID: nil), token: nil).provider == .azureKeyVault)
-        #expect(try factory.remote(for: .supabase(projectRef: TestValues.supabaseRef), token: token).provider == .supabase)
-        #expect(try factory.remote(for: .vercel(projectID: "prj_sample", projectName: "sample-web", teamID: nil, environment: .preview), token: token).provider == .vercel)
-    }
-
-    @Test func factoryRequiresATokenForSupabaseAndVercel() {
-        let factory = TestValues.remoteFactory(FakeHTTPTransport())
-        let targets: [DestinationTargetModel] = [
-            .supabase(projectRef: TestValues.supabaseRef),
-            .vercel(projectID: "prj_sample", projectName: "sample-web", teamID: nil, environment: .production),
-        ]
-        for target in targets {
-            for token in [nil, SecretBytes(count: 0), TestValues.secret("has space"), TestValues.secret("é")] {
-                #expect(throws: DestinationError.tokenMissing) {
-                    try factory.remote(for: target, token: token)
-                }
-            }
-        }
+        #expect(try factory.remote(for: .azureKeyVault(vaultName: TestValues.vaultName, tenantID: nil)).provider == .azureKeyVault)
     }
 
     @Test func factoryValidatesTargets() {
         let factory = TestValues.remoteFactory(FakeHTTPTransport())
-        let token = TestValues.secret(TestValues.vercelToken)
         #expect(throws: DestinationError.invalidInput(.invalidDestinationTarget(.keyVaultName))) {
-            try factory.remote(for: .azureKeyVault(vaultName: "evil.example/x", tenantID: nil), token: nil)
+            try factory.remote(for: .azureKeyVault(vaultName: "evil.example/x", tenantID: nil))
         }
         #expect(throws: DestinationError.invalidInput(.invalidDestinationTarget(.tenantID))) {
-            try factory.remote(for: .azureKeyVault(vaultName: TestValues.vaultName, tenantID: "--flag"), token: nil)
+            try factory.remote(for: .azureKeyVault(vaultName: TestValues.vaultName, tenantID: "--flag"))
         }
-        #expect(throws: DestinationError.invalidInput(.invalidDestinationTarget(.supabaseProjectRef))) {
-            try factory.remote(for: .supabase(projectRef: "../projects"), token: token)
-        }
-        #expect(throws: DestinationError.invalidInput(.invalidDestinationTarget(.vercelProject))) {
-            try factory.remote(for: .vercel(projectID: "prj/x", projectName: "web", teamID: nil, environment: .production), token: token)
-        }
-    }
-
-    @Test func factoryCopiesTheToken() async throws {
-        let transport = FakeHTTPTransport()
-        transport.stub(.json(#"{"envs":[]}"#))
-        let token = TestValues.secret(TestValues.vercelToken)
-        let remote = try TestValues.remoteFactory(transport).remote(
-            for: .vercel(projectID: "prj_sample", projectName: "sample-web", teamID: nil, environment: .production),
-            token: token
-        )
-        token.wipe()
-        _ = try await remote.list()
-        #expect(transport.requests.first?.bearerToken == TestValues.vercelToken, "the caller's buffer can be wiped")
     }
 
     @Test func keyVaultTenantReachesTheTokenProvider() async throws {
@@ -72,10 +34,10 @@ struct FactoryAndFakeTests {
 
     @Test func fakeMatchesQueueThenStubs() async throws {
         let transport = FakeHTTPTransport()
-        transport.stub(.status(204), method: .get, pathPrefix: "/v2")
-        transport.enqueue(.status(201), method: .get, pathPrefix: "/v2/user")
+        transport.stub(.status(204), method: .get, pathPrefix: "/secrets")
+        transport.enqueue(.status(201), method: .get, pathPrefix: "/secrets/A")
         transport.enqueue(.status(202), method: .post)
-        let user = try #require(URL(string: "https://api.vercel.com/v2/user"))
+        let user = try #require(URL(string: "https://kv-sample-prod.vault.azure.net/secrets/A"))
         #expect(try await transport.send(HTTPRequestModel(method: .get, url: user)).status == 201)
         #expect(try await transport.send(HTTPRequestModel(method: .get, url: user)).status == 204, "the queue entry was used once")
         #expect(try await transport.send(HTTPRequestModel(method: .post, url: user)).status == 202)
@@ -83,10 +45,10 @@ struct FactoryAndFakeTests {
 
     @Test func fakeMatchesHost() async throws {
         let transport = FakeHTTPTransport()
-        transport.stub(.status(200), host: "api.supabase.com")
-        let vercel = try #require(URL(string: "https://api.vercel.com/v2/user"))
+        transport.stub(.status(200), host: "kv-other-vault.vault.azure.net")
+        let vault = try #require(URL(string: "https://kv-sample-prod.vault.azure.net/secrets"))
         await #expect(throws: DestinationError.invalidRequest(code: DestinationError.LocalCode.fakeUnmatched)) {
-            try await transport.send(HTTPRequestModel(method: .get, url: vercel))
+            try await transport.send(HTTPRequestModel(method: .get, url: vault))
         }
         #expect(transport.unmatchedRequests.count == 1)
         #expect(transport.requests.count == 1, "unmatched requests are recorded too")
@@ -122,7 +84,7 @@ struct FactoryAndFakeTests {
     @Test func fakeFailures() async throws {
         let transport = FakeHTTPTransport()
         transport.enqueue(.failure(.timeout))
-        let url = try #require(URL(string: "https://api.vercel.com/v2/user"))
+        let url = try #require(URL(string: "https://kv-sample-prod.vault.azure.net/secrets"))
         await #expect(throws: DestinationError.timeout) {
             try await transport.send(HTTPRequestModel(method: .get, url: url))
         }

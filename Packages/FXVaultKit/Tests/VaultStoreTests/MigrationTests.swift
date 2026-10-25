@@ -14,6 +14,7 @@ struct MigrationTests {
         "vaults", "key_wraps", "accounts", "repositories", "environments", "config_items",
         "sync_journal", "deployment_branch_patterns", "imported_share_packages", "folders", "folder_items",
         "provider_connections", "destinations", "destination_items", "destination_journal", "sent_shares",
+        "retired_destinations",
     ]
 
     // v15 drops these, with the teammate and space key material in them.
@@ -26,9 +27,9 @@ struct MigrationTests {
             "v1_vault", "v2_accounts_repos", "v3_config", "v4_sync_journal", "v5_create_policies", "v6_sharing",
             "v7_journal_fingerprints", "v8_force_push_requested_at", "v9_item_links", "v10_teammates",
             "v11_spaces", "v12_folders", "v13_destinations", "v14_project_shares",
-            "v15_drop_teammates",
+            "v15_drop_teammates", "v16_drop_runtime_providers",
         ])
-        #expect(Migration.latest == .v15DropTeammates)
+        #expect(Migration.latest == .v16DropRuntimeProviders)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -88,6 +89,39 @@ struct MigrationTests {
 
         #expect(try Self.size(of: walPath) == 0)
         #expect(try Self.bytesOnDisk(database).range(of: Self.seedAnnounceCiphertext) == nil)
+    }
+
+    /// v16 deletes the provider tokens and the Supabase and Vercel rows: the token bytes stay
+    /// neither in `vault.sqlite` nor in its WAL.
+    @Test func droppingTheRuntimeProvidersLeavesNoTokenBytesOnDisk() throws {
+        let temp = try TemporaryDirectory()
+        defer { temp.remove() }
+        let database = try DatabaseFactory.unmigratedOnDisk(directory: temp.vaultDirectory)
+        defer { try? database.close() }
+        try VaultMigrator.migrate(database, upTo: .v15DropTeammates)
+        try Self.seed(database, upTo: .v15DropTeammates)
+        try database.checkpointTruncate()
+        #expect(try Self.bytesOnDisk(database).range(of: Self.seedConnectionToken) != nil)
+        let walPath = try #require(database.fileURL).path + "-wal"
+
+        try VaultMigrator.migrate(database)
+
+        #expect(try Self.size(of: walPath) == 0)
+        #expect(try Self.bytesOnDisk(database).range(of: Self.seedConnectionToken) == nil)
+        #expect(try Self.bytesOnDisk(database).range(of: Self.seedRetiredValueCiphertext) == nil)
+    }
+
+    @Test func retiredDestinationsShowOnceThenClear() throws {
+        let database = try DatabaseFactory.unmigratedInMemory()
+        try VaultMigrator.migrate(database, upTo: .v15DropTeammates)
+        try Self.seed(database, upTo: .v15DropTeammates)
+        try VaultMigrator.migrate(database)
+        let store = DestinationStore(database: database)
+        #expect(try store.fetchRetiredDestinationLabels() == Self.seedRetiredLabels)
+
+        try store.deleteRetiredDestinations()
+
+        #expect(try store.fetchRetiredDestinationLabels().isEmpty)
     }
 
     @Test func migratingTwiceIsANoOp() throws {
@@ -334,6 +368,15 @@ struct MigrationTests {
     static let seedSigningKey = Data(repeating: 0x21, count: 32)
     static let seedAgreementKey = Data(repeating: 0x22, count: 32)
     static let seedAnnounceCiphertext = Data((0..<60).map { UInt8($0) })
+    static let seedConnectionToken = Data((100..<148).map { UInt8($0) })
+    static let seedVercelDestinationID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+    static let seedSupabaseDestinationID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+    static let seedRetiredItemID = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+    static let seedRetiredValueCiphertext = Data((150..<190).map { UInt8($0) })
+    static let seedRetiredLabels = [
+        "\(Sample.login)/seed-repo · Vercel web (production)",
+        "\(Sample.login)/seed-repo · Supabase abcdefghijklmnopqrst",
+    ]
 
     static func seed(_ database: VaultDatabase, upTo version: Migration) throws {
         try database.write { tx in
@@ -427,10 +470,6 @@ struct MigrationTests {
                 ])
             guard version >= .v13Destinations else { return }
             try db.execute(sql: """
-                INSERT INTO provider_connections (id, provider, label, token_ct, created_at, updated_at)
-                VALUES (?, 'vercel', 'Sample Vercel', ?, ?, ?)
-                """, arguments: [seedConnectionID, Data(repeating: 5, count: 48), seedTime, seedTime])
-            try db.execute(sql: """
                 INSERT INTO destinations (id, repository_id, provider, target_key, settings_json, stage, stage_key,
                   connection_id, sort_order, created_at, updated_at)
                 VALUES (?, ?, 'azure_keyvault', 'kv|kv-sample-prod', ?, 'Production', 'production', NULL, 0, ?, ?)
@@ -442,6 +481,10 @@ struct MigrationTests {
                     seedDestinationItemID, seedDestinationID, Data(repeating: 7, count: 40), Data(repeating: 8, count: 32),
                     seedLinkID, seedTime, seedTime,
                 ])
+            // Supabase and Vercel exist from v13 to v15 only (v16 deletes them).
+            if version < .v16DropRuntimeProviders {
+                try seedRuntimeProviders(db)
+            }
             guard version >= .v14ProjectShares else { return }
             // A file held under 0.9 from a verified teammate: Sync keeps showing it as verified.
             try db.execute(
@@ -467,6 +510,41 @@ struct MigrationTests {
                 VALUES (?, ?, ?, NULL, 'user-b', 'User B', 'User B Mac', ?, 'remote')
                 """, arguments: [seedRemoteTeammateID, seedSigningKey, seedAgreementKey, seedTime])
         }
+    }
+
+    /// A Vercel destination (with its connection, an item and a journal row) and a Supabase one.
+    static func seedRuntimeProviders(_ db: Database) throws {
+        try db.execute(sql: """
+            INSERT INTO provider_connections (id, provider, label, token_ct, created_at, updated_at)
+            VALUES (?, 'vercel', 'Sample Vercel', ?, ?, ?)
+            """, arguments: [seedConnectionID, seedConnectionToken, seedTime, seedTime])
+        try db.execute(sql: """
+            INSERT INTO destinations (id, repository_id, provider, target_key, settings_json, connection_id, sort_order,
+              created_at, updated_at)
+            VALUES (?, ?, 'vercel', 'vc|prj_web|production', ?, ?, 1, ?, ?),
+                   (?, ?, 'supabase', 'sb|abcdefghijklmnopqrst', ?, NULL, 2, ?, ?)
+            """, arguments: [
+                seedVercelDestinationID, seedRepoID,
+                #"{"environment":"production","projectID":"prj_web","projectName":"web","version":1}"#,
+                seedConnectionID, seedTime, seedTime,
+                seedSupabaseDestinationID, seedRepoID, #"{"projectRef":"abcdefghijklmnopqrst","version":1}"#,
+                seedTime, seedTime,
+            ])
+        try db.execute(sql: """
+            INSERT INTO destination_items (id, destination_id, kind, name, value_ct, value_fp, created_at, updated_at)
+            VALUES (?, ?, 'variable', 'NEXT_PUBLIC_URL', ?, ?, ?, ?)
+            """, arguments: [
+                seedRetiredItemID, seedVercelDestinationID, seedRetiredValueCiphertext, Data(repeating: 8, count: 32),
+                seedTime, seedTime,
+            ])
+        try db.execute(sql: """
+            INSERT INTO destination_journal (run_id, destination_id, item_id, op, item_name, state, started_at)
+            VALUES (?, ?, ?, 'set', 'NEXT_PUBLIC_URL', 'succeeded', ?)
+            """, arguments: [seedRunID, seedVercelDestinationID, seedRetiredItemID, seedTime])
+    }
+
+    static func rowCount(_ database: VaultDatabase, _ table: String) throws -> Int {
+        try database.read { tx in try Int.fetchOne(tx.db, sql: "SELECT count(*) FROM \(table)") ?? -1 }
     }
 
     /// After the remaining migrations, the seed reads back through the stores with the new
@@ -543,7 +621,12 @@ struct MigrationTests {
         #expect(destinations.first?.stageKey == "production")
         #expect(destinations.first?.secretCount == 1)
         #expect(destinations.first?.pendingCount == 1)
-        #expect(try DestinationStore(database: database).fetchConnections().map(\.label) == ["Sample Vercel"])
+        // v16 deleted the Vercel and Supabase rows and the token; their labels wait for the notice.
+        #expect(try rowCount(database, "provider_connections") == 0)
+        #expect(try rowCount(database, "destination_items") == 1)
+        #expect(try rowCount(database, "destination_journal") == 0)
+        #expect(try DestinationStore(database: database).fetchRetiredDestinationLabels()
+            == (version < .v16DropRuntimeProviders ? seedRetiredLabels : []))
         #expect(try FolderStore(database: database).fetchItems(folderID: folderID).map(\.linkCount) == [3])
         #expect(linkCount == 3)
     }

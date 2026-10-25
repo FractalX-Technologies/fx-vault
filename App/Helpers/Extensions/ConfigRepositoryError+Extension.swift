@@ -40,15 +40,8 @@ nonisolated extension ConfigRepositoryError {
         case .destinationExists:
             String(
                 localized: "error.config.destinationExists",
-                defaultValue: "This repository already has a destination for that vault, project or environment."
+                defaultValue: "This repository already has a destination for that vault."
             )
-        case .connectionNotFound:
-            String(
-                localized: "error.config.connectionNotFound",
-                defaultValue: "Choose a connection for this provider, or add one in Settings › Destinations."
-            )
-        case .tooManyConnections(let limit):
-            String(localized: "error.config.tooManyConnections", defaultValue: "FX Vault keeps at most \(limit) connections.")
         case .environmentDeleted:
             String(
                 localized: "error.config.environmentDeleted",

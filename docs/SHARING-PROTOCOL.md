@@ -125,11 +125,8 @@ repository or one folder, sealed in format 2 (§2.1). Schemas 1–3 stay readabl
   "repositories": [ { "host": "github.com", "owner": "owner-a", "name": "example-web", "githubRepoId": "<node id> | null",
       "secrets": [ITEM], "variables": [ITEM], "environments": [ENV (schema 2: policy or null)],
       "destinations": [ { "id": "<uuid>", "stage": "staging | null",
-          "target": {"provider": "azureKeyVault", "vaultName": "kv-example-staging", "tenantId": "… | null"}
-                  | {"provider": "supabase", "projectRef": "<20 lowercase letters>"}
-                  | {"provider": "vercel", "projectId": "prj_sample", "projectName": "example-web",
-                     "teamId": "… | null", "environment": "production | preview | development"},
-          "secrets": [ITEM], "variables": [ITEM], "publicNames": ["NEXT_PUBLIC_…"] } ] } ],
+          "target": {"provider": "azureKeyVault", "vaultName": "kv-example-staging", "tenantId": "… | null"},
+          "secrets": [ITEM], "variables": [ITEM] } ] } ],
   "folders": [ { "id": "<uuid>", "name": "Mobile App", "secrets": [ITEM], "variables": [ITEM] } ] }
 ```
 
@@ -138,11 +135,13 @@ repository or one folder, sealed in format 2 (§2.1). Schemas 1–3 stay readabl
   (`linkNotAllowed`), so older documents stay byte for byte the same.
 - **Link tokens** (P9) are random per export, never the sender's `link_id`. A token is written
   only when at least two items of the file belong to the same linked-copy group.
-- **`publicNames`** lists the destination items the sender marked public (v0.8.0 R10), so the
-  receiver keeps the mark.
+- **0.9 files** (1.0 reads them): a destination whose provider is `supabase` or `vercel` is
+  dropped on decode and its label (`Supabase <projectRef>`, `Vercel <projectName> (<environment>)`)
+  is kept in `ShareBundleRepositoryModel.retiredDestinations` (never encoded); the open sheet
+  shows "Left out: …" for the repository. A `link` token left with a single item by the drop is
+  removed. `publicNames` is ignored. 1.0 writes Key Vault destinations only.
 - **`stages`** are the stages the sender chose; after the import FX Vault opens the first repository at the environment of the first one.
-- **Never in a bundle:** connection tokens and labels, `az` sessions, GitHub accounts, SSH
-  aliases, value hashes.
+- **Never in a bundle:** `az` sessions, GitHub accounts, SSH aliases, value hashes.
 - **Encoding** follows schemas 1–3: sorted keys, whole-second ISO-8601 UTC dates (fractional
   seconds accepted), explicit `null` for absent values and optionals. A `scope` other than
   `bundle`, or any decoding failure, is `invalidFile`.
@@ -163,10 +162,8 @@ repository or one folder, sealed in format 2 (§2.1). Schemas 1–3 stay readabl
 - **Each destination.** The target passes `DestinationRules.validate` and is already trimmed;
   the stage follows the environment name rules (`invalidDestinationTarget`). At most 1,000 items
   (`tooManyDestinationItems`). Item names follow GitHub's rules plus the provider's
-  (`invalidDestinationItem`): Key Vault and Supabase hold secrets only and Supabase reserves
-  `SUPABASE_`; values are at most the provider's limit (25 KiB for Key Vault); a name is unique
-  across kinds (`duplicateDestinationItem`); `publicNames` name items of the destination, once
-  each (`invalidPublicName`).
+  (`invalidDestinationItem`): Key Vault holds secrets only; values are at most 25 KiB; a name is
+  unique across kinds (`duplicateDestinationItem`).
 - **Folders.** Strict folder names (`invalidFolderName`), unique by fold key
   (`duplicateFolder`), at most 1,000 items, every one with a value (`valueStateMismatch`).
 - **Entry ids** (environments, destinations, folders, items) are unique across the bundle
@@ -354,10 +351,9 @@ imported package ids and `now`. Destination values are compared with a separate
 | Not in the vault: not visible, unreachable or not checked | ✕ `noAccess(reason)` | Nothing; opening the same file again later imports it |
 | In the vault but another repository (name or id) | ✕ `blocked(reason)` | Nothing (§5 block reasons) |
 
-**Destinations.** A local destination of that repository with the same target key (`kv|…`,
-`sb|…`, `vc|team|project|env`, lowercase) is merged (`useExisting`); its stage and connection stay
-as they are. Otherwise the destination is created without a connection, and Sync leaves it alone
-until the receiver connects their own account. Items are matched by name, whatever their kind
+**Destinations.** A local destination of that repository with the same target key (`kv|<vault>`,
+lowercase) is merged (`useExisting`); its stage stays as it is. Otherwise the destination is
+created; Sync reaches it with the receiver's own `az login`. Items are matched by name, whatever their kind
 (one name per destination):
 
 | Incoming vs local | Chip | Default | Allowed |
@@ -433,8 +429,8 @@ state, `ProjectShareImporter` applies a plan.
   non-letters, is `prod`, `production`, `prd` or `live`). `selection(repositoryIDs:stages:…)`
   expands stages by fold key: the environment whose fold key equals the stage plus
   the destinations with that stage.
-- **Production places** (Q13): an environment or a destination stage `StageRisk` flags, and a
-  Vercel production destination without a stage. `previewBundle(_:)` lists them; with the teammates mode gone an
+- **Production places** (Q13): an environment or a destination stage `StageRisk` flags.
+  `previewBundle(_:)` lists them; with the teammates mode gone an
   export refuses them (until tasks/todo.md B3b allows them behind Touch ID) (`.productionNotShared`) before the authorization is consumed and
   again on the bundle actually sealed.
 - **Export** (`exportBundle(_:to:senderName:appVersion:authorization:existingFile:)`), in this
@@ -442,8 +438,7 @@ state, `ProjectShareImporter` applies a plan.
   1. the production rule;
   2. the single-use `ReauthGate` `.fileExport` authorization is consumed;
   3. values are decrypted inside one `VaultSession.read`; linked rows get one fresh lowercase UUID
-     `link` per group with at least two selected members; `publicNames` come from
-     `isPublicAllowed`; connection tokens, connection ids and labels are never read;
+     `link` per group with at least two selected members;
   4. sealing: `sealWithPassphrase` with a fresh 6-word passphrase (returned once, never stored);
   5. a `sent_shares` row (names only, DATABASE.md v14), then the file (0600, `SecureFileWriter`);
      a failed file write deletes that row again.
@@ -468,16 +463,14 @@ state, `ProjectShareImporter` applies a plan.
   1. re-plan, `.planOutdated` if the preview changed;
   2. per ✓ repository, the existing `ShareImporter` on `githubPackage(for:)`, without recording
      the package each time;
-  3. destinations merged by target key or created with `connection_id = NULL`; items through
-     `DestinationItemWriter` (a secret without a value is inserted value-missing);
-     `isPublicAllowed` from `publicNames`;
+  3. destinations merged by target key or created; items through `DestinationItemWriter` (a
+     secret without a value is inserted value-missing);
   4. folders created or merged (kind plus fold-key name, keep mine or replace) with
      `FolderItemWriter` in the same transaction;
   5. one fresh `link_id` per plan link group with at least two written rows, across the three
      item tables;
   6. `share_hold` = the package id, set after every value write, on the GitHub rows that would
-     push (a pending add, a pending fill, an overwrite) and on every destination row written,
-     except a Supabase fill whose keyed digest marker the last listing already shows;
+     push (a pending add, a pending fill, an overwrite) and on every destination row written;
   7. one `imported_share_packages` row (`sender_device_id` stays NULL; 0.9 wrote it for a
      teammates file).
 

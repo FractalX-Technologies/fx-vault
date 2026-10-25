@@ -47,7 +47,7 @@ enum MainSheet: Hashable, Identifiable {
     // Main/Destination/ (v0.8.0)
     /// "+ Add Destination" for a repository.
     case addDestination(AddDestinationContext)
-    /// A destination's Settings…: its stage and connection.
+    /// A destination's Settings…: its stage.
     case destinationSettings(DestinationSettingsContext)
     /// Refresh's findings for one destination: Keep Mine or Use Remote.
     case destinationDrift(DestinationDriftContext)

@@ -20,8 +20,7 @@ public enum DestinationError: Error, Sendable, Hashable {
 
     // MARK: - Credentials
 
-    /// No personal access token for Supabase or Vercel, or one that is empty or not printable
-    /// ASCII.
+    /// The access token to send is empty or not printable ASCII (it becomes a header).
     case tokenMissing
     /// HTTP 401: the token is not valid (Key Vault: after one refresh of the `az` token).
     case unauthorized
@@ -34,7 +33,7 @@ public enum DestinationError: Error, Sendable, Hashable {
     case notFound
     /// Key Vault: the name belongs to a soft-deleted secret (`ObjectIsDeletedButRecoverable`).
     case deletedButRecoverable
-    /// HTTP 409 (or Vercel's "already exists"), with the provider's code.
+    /// HTTP 409, with the provider's code.
     case conflict(code: String?)
     /// HTTP 429 after the retries; `retryAfter` is the provider's `Retry-After`, when it sent one.
     case rateLimited(retryAfter: Duration?)
@@ -69,17 +68,14 @@ public enum DestinationError: Error, Sendable, Hashable {
     /// Codes of ``invalidRequest(code:)`` that FX Vault produces itself, before sending.
     public enum LocalCode {
         /// ``DestinationRemoting/readValue(of:)`` on an item whose value the provider never
-        /// returns (Supabase, a Vercel `sensitive` or system variable, a disabled secret).
+        /// returns (a disabled secret).
         public static let writeOnly = "writeOnly"
-        /// A Vercel item without a usable environment variable id (missing, or not an
-        /// identifier) for a read, update or delete.
-        public static let missingRemoteRef = "missingRemoteRef"
         /// A header value with a line break, or a reserved header (programming error).
         public static let invalidHeader = "invalidHeader"
         /// An unmatched request in ``FakeHTTPTransport`` (tests only).
         public static let fakeUnmatched = "fakeUnmatched"
 
-        static let all: Set<String> = [writeOnly, missingRemoteRef, invalidHeader, fakeUnmatched]
+        static let all: Set<String> = [writeOnly, invalidHeader, fakeUnmatched]
     }
 
     /// A stable, value-free identifier for logs (`privacy: .public` is safe). Provider codes are

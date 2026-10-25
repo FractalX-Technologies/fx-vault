@@ -394,4 +394,31 @@ enum MigrationSQL {
         DROP TABLE teammates;
         DROP TABLE device_identity;
         """
+
+    /// v16 (1.0): deletes the Supabase and Vercel destinations, their items and journal, and every
+    /// provider connection token. 1.0 keeps Key Vault only; nothing is deleted remotely. Their
+    /// labels stay in `retired_destinations` for one notice after unlock. Items and journal are
+    /// deleted explicitly: migrations run with foreign keys off, so no cascade fires. The emptied
+    /// `provider_connections` table stays because `destinations.connection_id` references it.
+    static let v16DropRuntimeProviders = """
+        CREATE TABLE retired_destinations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          label TEXT NOT NULL CHECK (length(label) BETWEEN 1 AND 1024));
+        INSERT INTO retired_destinations (label)
+          SELECT r.owner_login || '/' || r.name || ' · ' || CASE d.provider
+              WHEN 'supabase' THEN 'Supabase ' || coalesce(json_extract(d.settings_json, '$.projectRef'), '?')
+              ELSE 'Vercel ' || coalesce(json_extract(d.settings_json, '$.projectName'), '?')
+                || ' (' || coalesce(json_extract(d.settings_json, '$.environment'), '?') || ')'
+            END
+          FROM destinations d JOIN repositories r ON r.id = d.repository_id
+          WHERE d.provider IN ('supabase','vercel')
+          ORDER BY r.owner_login, r.name, d.sort_order, d.created_at;
+        DELETE FROM destination_journal
+          WHERE destination_id IN (SELECT id FROM destinations WHERE provider IN ('supabase','vercel'));
+        DELETE FROM destination_items
+          WHERE destination_id IN (SELECT id FROM destinations WHERE provider IN ('supabase','vercel'));
+        DELETE FROM destinations WHERE provider IN ('supabase','vercel');
+        UPDATE destinations SET connection_id = NULL WHERE connection_id IS NOT NULL;
+        DELETE FROM provider_connections;
+        """
 }

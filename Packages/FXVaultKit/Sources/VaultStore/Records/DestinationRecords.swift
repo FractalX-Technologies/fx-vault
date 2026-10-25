@@ -19,7 +19,6 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
     public var stage: String?
     /// ``EnvironmentNameValidator/foldKey(_:)`` of ``stage``.
     public var stageKey: String?
-    public var connectionID: ConnectionID?
     public var sortOrder: Int
     public var lastRefreshedAt: Date?
     public var createdAt: Date
@@ -30,7 +29,6 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
         repositoryID: RepoID,
         target: DestinationTargetModel,
         stage: String?,
-        connectionID: ConnectionID?,
         sortOrder: Int,
         lastRefreshedAt: Date? = nil,
         createdAt: Date,
@@ -43,7 +41,6 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
         settingsJSON = DestinationSettings(target).json
         self.stage = stage
         stageKey = stage.map(EnvironmentNameValidator.foldKey)
-        self.connectionID = connectionID
         self.sortOrder = sortOrder
         self.lastRefreshedAt = lastRefreshedAt
         self.createdAt = createdAt
@@ -77,7 +74,6 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
             repositoryID: repositoryID,
             target: try target(),
             stage: stage,
-            connectionID: connectionID,
             sortOrder: sortOrder,
             lastRefreshedAt: lastRefreshedAt,
             secretCount: secretCount,
@@ -97,7 +93,6 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
         case settingsJSON = "settings_json"
         case stage
         case stageKey = "stage_key"
-        case connectionID = "connection_id"
         case sortOrder = "sort_order"
         case lastRefreshedAt = "last_refreshed_at"
         case createdAt = "created_at"
@@ -121,11 +116,6 @@ public struct DestinationSettings: Codable, Sendable, Hashable {
     public var version: Int
     public var vaultName: String?
     public var tenantID: String?
-    public var projectRef: String?
-    public var projectID: String?
-    public var projectName: String?
-    public var teamID: String?
-    public var environment: VercelEnvironment?
 
     public init(_ target: DestinationTargetModel) {
         version = Self.currentVersion
@@ -133,13 +123,6 @@ public struct DestinationSettings: Codable, Sendable, Hashable {
         case .azureKeyVault(let vaultName, let tenantID):
             self.vaultName = vaultName
             self.tenantID = tenantID
-        case .supabase(let projectRef):
-            self.projectRef = projectRef
-        case .vercel(let projectID, let projectName, let teamID, let environment):
-            self.projectID = projectID
-            self.projectName = projectName
-            self.teamID = teamID
-            self.environment = environment
         }
     }
 
@@ -168,12 +151,6 @@ public struct DestinationSettings: Codable, Sendable, Hashable {
         case .azureKeyVault:
             guard let vaultName else { return nil }
             return .azureKeyVault(vaultName: vaultName, tenantID: tenantID)
-        case .supabase:
-            guard let projectRef else { return nil }
-            return .supabase(projectRef: projectRef)
-        case .vercel:
-            guard let projectID, let projectName, let environment else { return nil }
-            return .vercel(projectID: projectID, projectName: projectName, teamID: teamID, environment: environment)
         }
     }
 }
@@ -184,7 +161,7 @@ public struct DestinationSettings: Codable, Sendable, Hashable {
 /// fingerprinted for its row. Sync state follows `config_items`: `synced_name` and `synced_kind`
 /// are what the remote has, `synced_fp` the fingerprint of the value last confirmed there (nil
 /// when the remote holds a value FX Vault never saw), `remote_version` the provider's change
-/// marker (a Key Vault version, a Supabase digest, a Vercel `updatedAt`).
+/// marker (a Key Vault version).
 public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "destination_items"
 
@@ -198,14 +175,11 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
     public var syncedName: String?
     public var syncedKind: ConfigKind?
     public var syncedFingerprint: Data?
-    /// The provider's id for the item (a Vercel environment variable id), or nil.
-    public var remoteRef: String?
     public var remoteVersion: String?
     public var forcePush: Bool
     public var verifyState: VerifyState
     /// ``remoteVersion`` listed right before FX Vault's last write (verification baseline).
     public var preWriteVersion: String?
-    public var isPublicAllowed: Bool
     public var linkID: ItemLinkID?
     /// `share_hold` (v0.9.0): the share file this row came from while Sync's From Files review
     /// has not released it; a held row is never written to the destination. Nil when not held.
@@ -224,12 +198,10 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
         syncedName: String? = nil,
         syncedKind: ConfigKind? = nil,
         syncedFingerprint: Data? = nil,
-        remoteRef: String? = nil,
         remoteVersion: String? = nil,
         forcePush: Bool = false,
         verifyState: VerifyState = .verified,
         preWriteVersion: String? = nil,
-        isPublicAllowed: Bool = false,
         linkID: ItemLinkID? = nil,
         shareHold: SharePackageID? = nil,
         createdAt: Date,
@@ -245,12 +217,10 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
         self.syncedName = syncedName
         self.syncedKind = syncedKind
         self.syncedFingerprint = syncedFingerprint
-        self.remoteRef = remoteRef
         self.remoteVersion = remoteVersion
         self.forcePush = forcePush
         self.verifyState = verifyState
         self.preWriteVersion = preWriteVersion
-        self.isPublicAllowed = isPublicAllowed
         self.linkID = linkID
         self.shareHold = shareHold
         self.createdAt = createdAt
@@ -299,7 +269,6 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
             isDeleted: isDeleted,
             forcePush: forcePush,
             verifyState: verifyState,
-            isPublicAllowed: isPublicAllowed,
             syncStatus: syncStatus,
             linkID: linkID,
             linkCount: linkCount,
@@ -320,12 +289,10 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
         case syncedName = "synced_name"
         case syncedKind = "synced_kind"
         case syncedFingerprint = "synced_fp"
-        case remoteRef = "remote_ref"
         case remoteVersion = "remote_version"
         case forcePush = "force_push"
         case verifyState = "verify_state"
         case preWriteVersion = "pre_write_version"
-        case isPublicAllowed = "is_public_allowed"
         case linkID = "link_id"
         case shareHold = "share_hold"
         case createdAt = "created_at"
@@ -471,72 +438,6 @@ public enum DestinationPendingOperation: String, Sendable, Hashable, CaseIterabl
     case update
     /// The remote has it; it is deleted there.
     case delete
-}
-
-/// One `provider_connections` row (§6 `v13_destinations`, v0.8.0). The token is sealed under
-/// `K_field` with `SecretFieldAAD(provider_connections, token_ct, id)`.
-public struct ConnectionRecord: Codable, Sendable, Hashable, FetchableRecord, PersistableRecord {
-    public static let databaseTableName = "provider_connections"
-
-    public var id: ConnectionID
-    public var provider: DestinationProvider
-    public var label: String
-    public var tokenCiphertext: Data
-    public var accountHint: String?
-    public var lastValidatedAt: Date?
-    public var createdAt: Date
-    public var updatedAt: Date
-
-    public init(
-        id: ConnectionID = ConnectionID(),
-        provider: DestinationProvider,
-        label: String,
-        tokenCiphertext: Data,
-        accountHint: String? = nil,
-        lastValidatedAt: Date? = nil,
-        createdAt: Date,
-        updatedAt: Date
-    ) {
-        self.id = id
-        self.provider = provider
-        self.label = label
-        self.tokenCiphertext = tokenCiphertext
-        self.accountHint = accountHint
-        self.lastValidatedAt = lastValidatedAt
-        self.createdAt = createdAt
-        self.updatedAt = updatedAt
-    }
-
-    public var model: ConnectionModel {
-        ConnectionModel(
-            id: id,
-            provider: provider,
-            label: label,
-            accountHint: accountHint,
-            lastValidatedAt: lastValidatedAt,
-            createdAt: createdAt,
-            updatedAt: updatedAt
-        )
-    }
-
-    enum CodingKeys: String, CodingKey, ColumnExpression {
-        case id
-        case provider
-        case label
-        case tokenCiphertext = "token_ct"
-        case accountHint = "account_hint"
-        case lastValidatedAt = "last_validated_at"
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
-
-    public static func databaseDateEncodingStrategy(for column: String) -> DatabaseDateEncodingStrategy {
-        DatabaseTimestamp.encodingStrategy
-    }
-
-    public static func databaseDateDecodingStrategy(for column: String) -> DatabaseDateDecodingStrategy {
-        DatabaseTimestamp.decodingStrategy
-    }
 }
 
 /// One `destination_journal` row (§6 `v13_destinations`, v0.8.0): a destination write, recorded

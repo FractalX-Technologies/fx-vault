@@ -14,10 +14,8 @@ struct HTTPPolicyTests {
     // MARK: - Host allowlist
 
     @Test(arguments: [
-        "https://api.supabase.com/v1/projects",
-        "https://api.vercel.com/v10/projects",
-        "https://API.Vercel.com/v2/user",
         "https://kv-sample-prod.vault.azure.net/secrets?api-version=7.4",
+        "https://KV-Sample-Prod.Vault.Azure.net/secrets",
         "https://kv-sample-prod.vault.azure.net:443/secrets?api-version=7.4&$skiptoken=x",
         "https://abc.vault.azure.net/secrets",
     ])
@@ -26,14 +24,14 @@ struct HTTPPolicyTests {
     }
 
     @Test(arguments: [
-        "http://api.vercel.com/v2/user",
-        "https://api.vercel.com:8443/v2/user",
-        "https://user-a@api.vercel.com/v2/user",
-        "https://user-a:pw@api.supabase.com/v1/projects",
-        "https://api.vercel.com.evil.example/v2/user",
-        "https://evil.example/api.vercel.com",
-        "https://vercel.com/api",
-        "https://api.supabase.co/v1/projects",
+        // Supabase and Vercel were allowed until 1.0.
+        "https://api.supabase.com/v1/projects",
+        "https://api.vercel.com/v10/projects",
+        "http://kv-sample-prod.vault.azure.net/secrets",
+        "https://kv-sample-prod.vault.azure.net:8443/secrets",
+        "https://user-a@kv-sample-prod.vault.azure.net/secrets",
+        "https://user-a:pw@kv-sample-prod.vault.azure.net/secrets",
+        "https://evil.example/kv-sample-prod.vault.azure.net",
         "https://vault.azure.net/secrets",
         "https://ab.vault.azure.net/secrets",
         "https://1kv.vault.azure.net/secrets",
@@ -43,7 +41,7 @@ struct HTTPPolicyTests {
         "https://kv-sample-prod.vault.azure.cn/secrets",
         "https://127.0.0.1/secrets",
         "file:///etc/passwd",
-        "ftp://api.vercel.com/",
+        "ftp://kv-sample-prod.vault.azure.net/",
     ])
     func refusedHosts(text: String) throws {
         #expect(!DestinationHostPolicy.isAllowed(try url(text)))
@@ -60,17 +58,17 @@ struct HTTPPolicyTests {
 
     @Test func providerURLEncodesSegmentsAndQuery() throws {
         let built = try ProviderURL.make(
-            host: DestinationConstants.vercelHost,
-            segments: ["v10", "projects", "prj_sample", "env"],
-            query: [(name: "from", value: "a+b/c=d e"), (name: "teamId", value: "team_sample")]
+            host: TestValues.vaultHost,
+            segments: ["secrets", "SAMPLE-NAME", "versions"],
+            query: [(name: "from", value: "a+b/c=d e"), (name: "api-version", value: "7.4")]
         )
-        #expect(built.absoluteString == "https://api.vercel.com/v10/projects/prj_sample/env?from=a%2Bb%2Fc%3Dd%20e&teamId=team_sample")
+        #expect(built.absoluteString == "https://kv-sample-prod.vault.azure.net/secrets/SAMPLE-NAME/versions?from=a%2Bb%2Fc%3Dd%20e&api-version=7.4")
     }
 
     @Test(arguments: ["..", ".", "a/b", "%2E%2E", "a\u{0}b", ""])
     func providerURLRejectsUnsafeSegments(segment: String) {
         #expect(throws: DestinationError.self) {
-            try ProviderURL.make(host: DestinationConstants.vercelHost, segments: ["v9", segment])
+            try ProviderURL.make(host: TestValues.vaultHost, segments: ["secrets", segment])
         }
     }
 
@@ -103,7 +101,7 @@ struct HTTPPolicyTests {
     }
 
     @Test func urlRequestRefusals() throws {
-        let allowed = try url("https://api.vercel.com/v2/user")
+        let allowed = try url("https://kv-sample-prod.vault.azure.net/secrets?api-version=7.4")
         #expect(throws: DestinationError.disallowedHost) {
             try URLSessionTransport.makeURLRequest(HTTPRequestModel(method: .get, url: try url("https://evil.example/v2/user")))
         }
@@ -148,7 +146,7 @@ struct HTTPPolicyTests {
         let delegate = RedirectRefusingDelegate()
         let session = URLSession(configuration: .ephemeral)
         defer { session.invalidateAndCancel() }
-        let original = try url("https://api.vercel.com/v2/user")
+        let original = try url("https://kv-sample-prod.vault.azure.net/secrets?api-version=7.4")
         let task = session.dataTask(with: original)
         let response = try #require(HTTPURLResponse(url: original, statusCode: 302, httpVersion: "HTTP/1.1", headerFields: ["Location": "https://evil.example/"]))
         let next = await delegate.urlSession(session, task: task, willPerformHTTPRedirection: response, newRequest: URLRequest(url: try url("https://evil.example/")))
@@ -178,7 +176,7 @@ struct HTTPPolicyTests {
 
     @Test func responseHeadersAreLowercased() throws {
         let response = try #require(HTTPURLResponse(
-            url: try url("https://api.vercel.com/"),
+            url: try url("https://kv-sample-prod.vault.azure.net/"),
             statusCode: 429,
             httpVersion: "HTTP/1.1",
             headerFields: ["Retry-After": "5", "X-RateLimit-Reset": "1"]
@@ -193,13 +191,13 @@ struct HTTPPolicyTests {
     @Test func descriptionsShowNoURLPathOrBody() throws {
         let request = HTTPRequestModel(
             method: .post,
-            url: try url("https://api.vercel.com/v10/projects/prj_sample/env?teamId=team_sample"),
-            bearerToken: TestValues.secret(TestValues.vercelToken),
+            url: try url("https://kv-sample-prod.vault.azure.net/secrets/SAMPLE-NAME?api-version=7.4"),
+            bearerToken: TestValues.secret(TestValues.azureToken),
             body: TestValues.secret("fixture-body")
         )
         for text in [String(describing: request), String(reflecting: request), "\(request)"] {
-            #expect(!text.contains("prj_sample") && !text.contains("team_sample") && !text.contains("fixture-body"))
-            #expect(!text.contains(TestValues.vercelToken))
+            #expect(!text.contains("SAMPLE-NAME") && !text.contains("api-version") && !text.contains("fixture-body"))
+            #expect(!text.contains(TestValues.azureToken))
         }
         let response = HTTPResponseModel(status: 200, body: TestValues.secret("fixture-body"))
         #expect(!String(describing: response).contains("fixture-body"))
@@ -240,31 +238,27 @@ struct HTTPPolicyTests {
         #expect(DestinationError.invalidRequest(code: "bad_request").reachedProvider)
         #expect(DestinationError.unauthorized.reachedProvider && DestinationError.conflict(code: nil).reachedProvider)
         #expect(DestinationError.azUntrusted(path: "/Users/user-a/bin/az").logCode == "azUntrusted", "no path in logs")
-        #expect(DestinationError.conflict(code: "ENV_ALREADY_EXISTS").logCode == "conflict(ENV_ALREADY_EXISTS)")
+        #expect(DestinationError.conflict(code: "ObjectIsBeingDeleted").logCode == "conflict(ObjectIsBeingDeleted)")
         #expect(DestinationError.invalidRequest(code: nil).logCode == "invalidRequest(-)")
         #expect(DestinationError.server(status: 502).logCode == "server(502)")
     }
 
     @Test(arguments: [
-        (400, DestinationProvider.vercel, "", DestinationError.invalidRequest(code: nil)),
-        (401, .vercel, "", .unauthorized),
-        (402, .vercel, "", .forbidden),
-        (403, .vercel, "vercel/error-forbidden.json", .forbidden),
-        (403, .vercel, "vercel/error-already-exists.json", .conflict(code: "ENV_ALREADY_EXISTS")),
-        (400, .vercel, "vercel/error-already-exists.json", .conflict(code: "ENV_ALREADY_EXISTS")),
+        (400, DestinationProvider.azureKeyVault, "", DestinationError.invalidRequest(code: nil)),
+        (401, .azureKeyVault, "", .unauthorized),
+        (402, .azureKeyVault, "", .forbidden),
         (404, .azureKeyVault, "keyvault/error-not-found.json", .notFound),
-        (410, .vercel, "", .notFound),
+        (410, .azureKeyVault, "", .notFound),
         (409, .azureKeyVault, "keyvault/error-deleted-recoverable.json", .deletedButRecoverable),
         (409, .azureKeyVault, "keyvault/error-being-deleted.json", .conflict(code: "ObjectIsBeingDeleted")),
         (403, .azureKeyVault, "keyvault/error-forbidden.json", .forbidden),
         (400, .azureKeyVault, "keyvault/error-message-quotes-name.json", .invalidRequest(code: nil)),
-        (413, .supabase, "", .valueTooLarge),
-        (422, .supabase, "supabase/error-unauthorized.json", .invalidRequest(code: nil)),
-        (429, .supabase, "", .rateLimited(retryAfter: nil)),
-        (302, .vercel, "", .disallowedHost),
-        (500, .vercel, "", .server(status: 500)),
+        (413, .azureKeyVault, "", .valueTooLarge),
+        (429, .azureKeyVault, "", .rateLimited(retryAfter: nil)),
+        (302, .azureKeyVault, "", .disallowedHost),
+        (500, .azureKeyVault, "", .server(status: 500)),
         (503, .azureKeyVault, "", .server(status: 503)),
-        (418, .vercel, "", .invalidRequest(code: nil)),
+        (418, .azureKeyVault, "", .invalidRequest(code: nil)),
     ])
     func statusMapping(status: Int, provider: DestinationProvider, fixture: String, expected: DestinationError) throws {
         let body = fixture.isEmpty ? SecretBytes(count: 0) : SecretBytes(try Fixture.data(fixture))
@@ -276,6 +270,6 @@ struct HTTPPolicyTests {
     @Test func errorCodesPreferTheInnermost() throws {
         let body = SecretBytes(try Fixture.data("keyvault/error-forbidden.json"))
         #expect(ProviderErrorMapper.errorCodes(in: body, provider: .azureKeyVault) == ["ForbiddenByRbac", "Forbidden"])
-        #expect(ProviderErrorMapper.errorCodes(in: TestValues.secret("not json"), provider: .vercel).isEmpty)
+        #expect(ProviderErrorMapper.errorCodes(in: TestValues.secret("not json"), provider: .azureKeyVault).isEmpty)
     }
 }

@@ -7,8 +7,8 @@ import VaultData
 @testable import FXVault
 
 /// Destinations in the app (v0.8.0, tasks/todo.md R7–R10): the scope column's Overview and
-/// RUNTIME rows, the destination detail, Add Destination, the Overview matrix, Settings ›
-/// Destinations and the destination part of the Sync sheet.
+/// RUNTIME rows, the destination detail, Add Destination, the Overview matrix and the
+/// destination part of the Sync sheet.
 @MainActor
 @Suite("Destinations in the app")
 struct DestinationViewModelTests {
@@ -35,7 +35,7 @@ struct DestinationViewModelTests {
         }
 
         func addVault(stage: String? = "production") throws -> DestinationID {
-            try destinations.createDestination(repositoryID: repositoryID, target: DestinationViewModelTests.vault, stage: stage, connectionID: nil)
+            try destinations.createDestination(repositoryID: repositoryID, target: DestinationViewModelTests.vault, stage: stage)
         }
 
         func detail(_ id: DestinationID) throws -> DestinationDetailViewModel {
@@ -71,8 +71,7 @@ struct DestinationViewModelTests {
         let later = try fixture.destinations.createDestination(
             repositoryID: fixture.repositoryID,
             target: .azureKeyVault(vaultName: "kv-sample-stg", tenantID: nil),
-            stage: "staging",
-            connectionID: nil
+            stage: "staging"
         )
         scopes.select(destination: later)
         #expect(await TestFixtures.eventually { scopes.selectedDestination?.id == later })
@@ -92,7 +91,6 @@ struct DestinationViewModelTests {
         let fixture = try await Fixture()
         let id = try fixture.addVault()
         let model = try fixture.detail(id)
-        #expect(!model.holdsVariables)
         #expect(model.showsSyncStatus)
         try fixture.destinations.addItem(destinationID: id, kind: .variable, name: "API_URL", value: SecretBytes(utf8: "https://api.example.invalid"))
         #expect(await TestFixtures.eventually { model.rows.map(\.name) == ["API_URL"] })
@@ -120,33 +118,11 @@ struct DestinationViewModelTests {
         #expect(!model.scopeCopyTargets.isEmpty)
     }
 
-    @Test func vercelPublicNamesCanBeMarkedAsPublic() async throws {
-        let fixture = try await Fixture()
-        let connection = try fixture.destinations.addConnection(provider: .vercel, label: "Vercel", token: SecretBytes(utf8: "t"), accountHint: nil)
-        let id = try fixture.destinations.createDestination(
-            repositoryID: fixture.repositoryID,
-            target: .vercel(projectID: "prj_sample", projectName: "sample-web", teamID: nil, environment: .production),
-            stage: "production",
-            connectionID: connection
-        )
-        let model = try fixture.detail(id)
-        #expect(model.holdsVariables)
-        model.kind = .variable
-        try fixture.destinations.addItem(destinationID: id, kind: .variable, name: "NEXT_PUBLIC_API_KEY", value: SecretBytes(utf8: "pk_live_sample"))
-        #expect(await TestFixtures.eventually { model.rows.count == 1 })
-        let row = try #require(model.rows.first)
-        #expect(model.publicPrefix(of: row) == "NEXT_PUBLIC_")
-        #expect(!model.isMarkedPublic(row))
-        model.togglePublic(row)
-        #expect(await TestFixtures.eventually { model.isMarkedPublic(row) })
-    }
-
     // MARK: - Add Destination
 
     @Test func addDestinationValidatesTheFormAndKeepsTheDestinationWhenTheImportFails() async throws {
         let fixture = try await Fixture()
         let model = AddDestinationViewModel(context: AddDestinationContext(repositoryID: fixture.repositoryID), dependencies: fixture.dependencies)
-        #expect(model.provider == .azureKeyVault)
         #expect(!model.canAdd)
         model.vaultName = "kv--bad"
         #expect(model.targetProblem != nil)
@@ -171,42 +147,33 @@ struct DestinationViewModelTests {
         #expect(fixture.recorder.openedDestinations == [added.destinationID])
     }
 
-    @Test func supabaseAndVercelNeedASavedConnection() async throws {
-        let fixture = try await Fixture()
-        let model = AddDestinationViewModel(context: AddDestinationContext(repositoryID: fixture.repositoryID), dependencies: fixture.dependencies)
-        model.provider = .supabase
-        #expect(model.connectionChoice == .newToken)
-        model.projectRef = "abcdefghijklmnopqrst"
-        #expect(!model.canAdd)
-        let connection = try fixture.destinations.addConnection(provider: .supabase, label: "Supabase", token: SecretBytes(utf8: "sbp"), accountHint: nil)
-        let again = AddDestinationViewModel(context: AddDestinationContext(repositoryID: fixture.repositoryID), dependencies: fixture.dependencies)
-        again.provider = .supabase
-        #expect(again.connectionChoice == .existing(connection))
-        again.projectRef = "abcdefghijklmnopqrst"
-        #expect(again.canAdd)
+    // MARK: - Supabase and Vercel removed (1.0)
+
+    @Test func theRetiredDestinationsNoticeShowsOnceThenClearsTheVault() {
+        var stored = ["owner-a/web · Supabase abcdefghijklmnopqrst", "owner-a/web · Vercel example-web (production)"]
+        var clears = 0
+        let notice = RetiredDestinationsNotice(load: { stored }, dismiss: { clears += 1; stored = [] })
+        #expect(notice.labels.isEmpty, "nothing shows before the window appears unlocked")
+        notice.load()
+        #expect(notice.labels == ["owner-a/web · Supabase abcdefghijklmnopqrst", "owner-a/web · Vercel example-web (production)"])
+        let message = DestinationCopy.retiredMessage(notice.labels)
+        #expect(message.contains("owner-a/web · Supabase abcdefghijklmnopqrst"))
+        #expect(message.contains("nothing was deleted in Supabase or Vercel"))
+
+        // OK and the alert's binding both dismiss: the vault is cleared once.
+        notice.dismiss()
+        notice.dismiss()
+        #expect(notice.labels.isEmpty)
+        #expect(clears == 1)
+        notice.load()
+        #expect(notice.labels.isEmpty, "the next unlock shows nothing")
     }
 
-    // MARK: - Settings › Destinations
-
-    @Test func settingsRenamesAndRemovesConnections() async throws {
-        let fixture = try await Fixture()
-        let settings = DestinationsSettingsViewModel(app: fixture.harness.app)
-        let id = try fixture.destinations.addConnection(provider: .vercel, label: "Vercel", token: SecretBytes(utf8: "t"), accountHint: "user-a")
-        #expect(await TestFixtures.eventually { settings.connections.map(\.id) == [id] })
-        let connection = try #require(settings.connections.first)
-        settings.startRename(connection)
-        settings.renameText = "FractalX Vercel"
-        settings.confirmRename()
-        #expect(await TestFixtures.eventually { settings.connections.first?.label == "FractalX Vercel" })
-        settings.addConnection()
-        #expect(settings.editor?.mode == .add)
-        #expect(settings.editor?.canSave == false)
-        settings.cancelEditor()
-        settings.requestRemoval(connection)
-        settings.confirmRemoval()
-        #expect(await TestFixtures.eventually { settings.connections.isEmpty })
-        settings.vaultDidLock()
-        #expect(settings.azureState == .unknown)
+    @Test func aFailingReadShowsNoNotice() {
+        struct Failure: Error {}
+        let notice = RetiredDestinationsNotice(load: { throw Failure() }, dismiss: {})
+        notice.load()
+        #expect(notice.labels.isEmpty)
     }
 
     // MARK: - Sync sheet
@@ -217,7 +184,6 @@ struct DestinationViewModelTests {
             repositoryID: repositoryID,
             target: Self.vault,
             stage: "production",
-            connectionID: nil,
             sortOrder: 0,
             createdAt: Date(),
             updatedAt: Date()
@@ -229,8 +195,7 @@ struct DestinationViewModelTests {
             DestinationReviewSectionModel(
                 destination: destination,
                 changes: [push, delete],
-                blocked: [DestinationBlockedChangeModel(change: missing, reason: .valueMissing)],
-                warnings: []
+                blocked: [DestinationBlockedChangeModel(change: missing, reason: .valueMissing)]
             ),
         ])
         let merged = DestinationSyncPresentation.merge([], with: [review]) { _ in "owner-a/repo-a" }

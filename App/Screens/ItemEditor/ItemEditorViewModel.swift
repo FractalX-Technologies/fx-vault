@@ -174,9 +174,8 @@ final class ItemEditorViewModel: LockObserving {
             let items = try dependencies.destinations.items(destinationID: destinationID).map(EditorItemModel.init)
             self.destination = destination
             siblings = items
-            if !destination.provider.holdsVariables {
-                kind = .secret
-            }
+            // Key Vault holds secrets only (R3).
+            kind = .secret
             if let id = editedID {
                 switch context.mode {
                 case .edit, .fill: try prepare(itemID: id, in: items)
@@ -356,7 +355,7 @@ final class ItemEditorViewModel: LockObserving {
 
     /// The kind picker can change (adding, or editing an item not yet on GitHub).
     var isKindEditable: Bool {
-        if let destination, !destination.provider.holdsVariables { return false }
+        if destination != nil { return false }
         return switch context.mode {
         case .add: true
         case .edit: item?.isKindAndScopeLocked == false

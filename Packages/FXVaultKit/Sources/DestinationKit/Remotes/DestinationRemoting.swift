@@ -10,12 +10,6 @@ public enum DestinationUnusableReason: Sendable, Hashable {
     case disabled
     /// Key Vault: the secret is managed by Key Vault (it backs a certificate).
     case managed
-    /// Vercel: the variable applies to one git branch of the preview environment.
-    case gitBranch
-    /// Vercel: the variable also applies to custom environments, which FX Vault does not manage.
-    case customEnvironment
-    /// The provider's own variable (a Vercel system variable, a Supabase `SUPABASE_` secret).
-    case system
 }
 
 /// One secret or variable as the provider lists it (v0.8.0). Never holds a value.
@@ -28,22 +22,14 @@ public struct RemoteDestinationItemModel: Sendable, Hashable {
     /// ``unusableReason`` is nil; a disabled or managed secret keeps its name.
     public let name: String?
     public let unusableReason: DestinationUnusableReason?
-    /// Key Vault and Supabase: `.secret`. Vercel: `plain` → `.variable`; `encrypted`,
-    /// `sensitive` and `secret` → `.secret` (Vercel's `visibility`, when present, decides).
+    /// Key Vault: always `.secret`.
     public let kind: ConfigKind
-    /// Vercel: the environment variable id. Nil elsewhere.
-    public let remoteRef: String?
-    /// Change marker: Key Vault `attributes.updated` (unix seconds), Supabase the value digest,
-    /// Vercel `updatedAt` (milliseconds), as text. Nil when the provider sent none.
+    /// Change marker: Key Vault `attributes.updated` (unix seconds), as text. Nil when the
+    /// provider sent none.
     public let version: String?
-    /// Supabase: the listed value digest, lowercased. Nil elsewhere.
-    public let digest: String?
     /// Whether ``DestinationRemoting/readValue(of:)`` can return the value: an enabled Key Vault
-    /// secret, a Vercel variable that is not `sensitive` or a system variable. Never Supabase.
+    /// secret.
     public let isValueReadable: Bool
-    /// Vercel: the variable's other standard environments, which share its value. Empty
-    /// elsewhere.
-    public let otherTargets: [VercelEnvironment]
     public let updatedAt: Date?
 
     public init(
@@ -51,22 +37,16 @@ public struct RemoteDestinationItemModel: Sendable, Hashable {
         name: String?,
         unusableReason: DestinationUnusableReason?,
         kind: ConfigKind,
-        remoteRef: String? = nil,
         version: String?,
-        digest: String? = nil,
         isValueReadable: Bool,
-        otherTargets: [VercelEnvironment] = [],
         updatedAt: Date?
     ) {
         self.remoteName = remoteName
         self.name = name
         self.unusableReason = unusableReason
         self.kind = kind
-        self.remoteRef = remoteRef
         self.version = version
-        self.digest = digest
         self.isValueReadable = isValueReadable
-        self.otherTargets = otherTargets
         self.updatedAt = updatedAt
     }
 
@@ -78,15 +58,11 @@ public struct RemoteDestinationItemModel: Sendable, Hashable {
 
 /// What a write left behind (v0.8.0).
 public struct RemoteWriteResultModel: Sendable, Hashable {
-    /// The new change marker (Key Vault `attributes.updated`, Vercel `updatedAt`), or nil
-    /// (Supabase: re-list to read the digest).
+    /// The new change marker (Key Vault `attributes.updated`), or nil.
     public let version: String?
-    /// Vercel: the environment variable id. Nil elsewhere.
-    public let remoteRef: String?
 
-    public init(version: String?, remoteRef: String?) {
+    public init(version: String?) {
         self.version = version
-        self.remoteRef = remoteRef
     }
 }
 
@@ -98,7 +74,6 @@ public protocol DestinationRemoting: Sendable {
     var provider: DestinationProvider { get }
 
     /// Every item the destination holds, usable or not (``RemoteDestinationItemModel/unusableReason``).
-    /// Vercel: only the variables that apply to the destination's environment.
     func list() async throws(DestinationError) -> [RemoteDestinationItemModel]
 
     /// The value of a listed item. Throws ``DestinationError/invalidRequest(code:)`` with
@@ -108,9 +83,9 @@ public protocol DestinationRemoting: Sendable {
 
     /// Creates or updates `name` (an FX Vault name) with `value`.
     ///
-    /// `kind` becomes the provider's stored kind (Key Vault and Supabase: secret). `existing` is
-    /// the listed item with that name, if any (Vercel updates it by id, keeping a `sensitive`
-    /// type; Key Vault writes to its remote name). Key Vault recovers a soft-deleted name first.
+    /// `kind` becomes the provider's stored kind (Key Vault: secret). `existing` is the listed
+    /// item with that name, if any (Key Vault writes to its remote name). Key Vault recovers a
+    /// soft-deleted name first.
     func setValue(
         _ value: SecretBytes,
         name: String,
@@ -118,8 +93,7 @@ public protocol DestinationRemoting: Sendable {
         existing: RemoteDestinationItemModel?
     ) async throws(DestinationError) -> RemoteWriteResultModel
 
-    /// Deletes a listed item: a soft delete in Key Vault (never a purge); in Vercel, a variable
-    /// with ``RemoteDestinationItemModel/otherTargets`` only loses this environment.
+    /// Deletes a listed item: a soft delete in Key Vault (never a purge).
     /// Throws ``DestinationError/notFound`` when it is already gone.
     func delete(_ item: RemoteDestinationItemModel) async throws(DestinationError)
 }
@@ -136,13 +110,9 @@ public struct DestinationRemoteFactory: Sendable {
         self.clock = clock
     }
 
-    /// The remote for `target`.
-    ///
-    /// - `token` is the Supabase or Vercel personal access token (copied; the caller keeps and
-    ///   wipes its own). ``DestinationError/tokenMissing`` when it is nil, empty or not printable
-    ///   ASCII for those providers; ignored for Key Vault, which asks `azureTokens`.
-    /// - The target is validated first (``DestinationError/invalidInput(_:)``).
-    public func remote(for target: DestinationTargetModel, token: SecretBytes?) throws(DestinationError) -> any DestinationRemoting {
+    /// The remote for `target`, validated first (``DestinationError/invalidInput(_:)``). Key Vault
+    /// asks `azureTokens` for its access token.
+    public func remote(for target: DestinationTargetModel) throws(DestinationError) -> any DestinationRemoting {
         let validated: DestinationTargetModel
         do {
             validated = try DestinationRules.validate(target)
@@ -158,27 +128,11 @@ public struct DestinationRemoteFactory: Sendable {
                 credential: .azure(azureTokens, tenantID: tenantID)
             )
             return AzureKeyVaultRemote(vaultName: vaultName, client: client, clock: clock)
-        case .supabase(let projectRef):
-            let client = ProviderHTTPClient(
-                provider: .supabase,
-                transport: transport,
-                clock: clock,
-                credential: try .personalToken(token)
-            )
-            return SupabaseRemote(projectRef: projectRef, client: client)
-        case .vercel(let projectID, _, let teamID, let environment):
-            let client = ProviderHTTPClient(
-                provider: .vercel,
-                transport: transport,
-                clock: clock,
-                credential: try .personalToken(token)
-            )
-            return VercelRemote(projectID: projectID, teamID: teamID, environment: environment, client: client)
         }
     }
 }
 
-/// Checks shared by the three remotes before a write.
+/// Checks a remote runs before a write.
 enum RemoteWriteCheck {
     /// Validates `name` for `provider` with the provider's stored kind and checks the value's
     /// size. Returns the stored kind.

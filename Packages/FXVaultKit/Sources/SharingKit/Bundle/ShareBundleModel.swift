@@ -7,8 +7,8 @@ import VaultCore
 ///
 /// Every export from 0.9 on writes this document; schemas 1–3 (``SharePackageModel``) stay
 /// readable through ``ShareDocumentCoder``. Values are ``SecretBytes`` and are present only in a
-/// full bundle; ``manifest()`` returns the same document with every value nil. Connection tokens,
-/// `az` sessions and the sender's `link_id`s never travel: linked copies inside the file share a
+/// full bundle; ``manifest()`` returns the same document with every value nil. `az` sessions and
+/// the sender's `link_id`s never travel: linked copies inside the file share a
 /// per-file ``ShareItemModel/linkToken``. Call ``wipeValues()`` once a bundle is no longer needed.
 public struct ShareBundleModel: Sendable, Equatable {
     /// The `schemaVersion` of a bundle.
@@ -213,7 +213,8 @@ public struct ShareBundleModel: Sendable, Equatable {
                                 variables: destination.variables.count
                             )
                         )
-                    }
+                    },
+                    retiredDestinations: entry.retiredDestinations
                 )
             },
             folders: folders.map { folder in
@@ -238,10 +239,14 @@ public struct ShareBundleModel: Sendable, Equatable {
 public struct ShareBundleRepositoryModel: Sendable, Equatable, Identifiable {
     public var repository: ShareRepositoryModel
     public var destinations: [ShareDestinationModel]
+    /// Labels of the Supabase and Vercel destinations a 0.9 file carried, dropped on decode (1.0
+    /// keeps Key Vault only) so the preview can say so. Never encoded.
+    public var retiredDestinations: [String]
 
-    public init(repository: ShareRepositoryModel, destinations: [ShareDestinationModel] = []) {
+    public init(repository: ShareRepositoryModel, destinations: [ShareDestinationModel] = [], retiredDestinations: [String] = []) {
         self.repository = repository
         self.destinations = destinations
+        self.retiredDestinations = retiredDestinations
     }
 
     /// The case-insensitive `owner/name` identity (owner and repository fold keys).
@@ -258,33 +263,27 @@ public struct ShareBundleRepositoryModel: Sendable, Equatable, Identifiable {
 }
 
 /// A runtime destination in a bundle (v0.9.0): where it is, its stage and its items with values.
-/// Never the connection used to reach it.
 public struct ShareDestinationModel: Sendable, Equatable, Identifiable {
     public var id: ShareEntryID
     public var target: DestinationTargetModel
     /// ``EnvironmentNameValidator`` rules, or nil.
     public var stage: String?
     public var secrets: [ShareItemModel]
-    /// Vercel only: Key Vault and Supabase hold secrets only (R3).
+    /// Always empty from 1.0: Key Vault holds secrets only (R3).
     public var variables: [ShareItemModel]
-    /// Names of items the sender marked as public (R10, "Mark as Public"), so the receiver keeps
-    /// the mark.
-    public var publicNames: [String]
 
     public init(
         id: ShareEntryID = ShareEntryID(),
         target: DestinationTargetModel,
         stage: String?,
         secrets: [ShareItemModel] = [],
-        variables: [ShareItemModel] = [],
-        publicNames: [String] = []
+        variables: [ShareItemModel] = []
     ) {
         self.id = id
         self.target = target
         self.stage = stage
         self.secrets = secrets
         self.variables = variables
-        self.publicNames = publicNames
     }
 
     public var provider: DestinationProvider {
@@ -294,12 +293,6 @@ public struct ShareDestinationModel: Sendable, Equatable, Identifiable {
     /// Secrets and variables together.
     public var itemCount: Int {
         secrets.count + variables.count
-    }
-
-    /// Whether the sender marked `name` as public.
-    public func isPublic(_ name: String) -> Bool {
-        let key = GitHubNameValidator.foldKey(name)
-        return publicNames.contains { GitHubNameValidator.foldKey($0) == key }
     }
 
     func mapItems(_ transform: (ShareItemModel) -> ShareItemModel) -> ShareDestinationModel {
@@ -416,12 +409,21 @@ public struct ShareBundleRepositorySummaryModel: Sendable, Hashable {
     public var name: String
     public var content: ShareContentSummaryModel
     public var destinations: [ShareDestinationSummaryModel]
+    /// ``ShareBundleRepositoryModel/retiredDestinations``.
+    public var retiredDestinations: [String]
 
-    public init(owner: String, name: String, content: ShareContentSummaryModel, destinations: [ShareDestinationSummaryModel]) {
+    public init(
+        owner: String,
+        name: String,
+        content: ShareContentSummaryModel,
+        destinations: [ShareDestinationSummaryModel],
+        retiredDestinations: [String] = []
+    ) {
         self.owner = owner
         self.name = name
         self.content = content
         self.destinations = destinations
+        self.retiredDestinations = retiredDestinations
     }
 
     public var fullName: String {

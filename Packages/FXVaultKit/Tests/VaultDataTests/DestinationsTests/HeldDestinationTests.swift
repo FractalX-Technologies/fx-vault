@@ -102,24 +102,25 @@ struct HeldDestinationTests {
 
     @Test func aHeldRowThatCannotBeSentKeepsItsReason() async throws {
         let fixture = try await DestinationSyncRepositoryTests.Fixture.make()
-        let (web, remote) = try fixture.vercel()
-        let blocked = try fixture.add(web, "NEXT_PUBLIC_STRIPE_KEY", kind: .variable, value: "sk_live_" + String(repeating: "a", count: 24))
+        let (vault, remote) = try fixture.keyVault()
+        let blocked = try fixture.add(vault, "TAKEN_KEY", value: "mine")
+        remote.put("TAKEN_KEY", value: "theirs")
         try hold([blocked], under: Self.first, in: fixture.harness)
 
         let review = await fixture.sync.review(repositoryID: fixture.repo.id)
         let held = try #require(review.sections.first?.held.first)
-        #expect(held.reason == .publicCredential(prefix: "NEXT_PUBLIC_"))
+        #expect(held.reason == .existsRemotely)
         #expect(review.sections.first?.blocked.isEmpty == true)
         let result = await fixture.sync.run(review, includeDeletions: true, includeHeld: [Self.first])
         #expect(result.doneCount == 0)
-        #expect(remote.names.isEmpty)
+        #expect(remote.value(of: "TAKEN_KEY") == "theirs")
     }
 
     @Test func heldSharesGroupRowsByRepositoryScopeAndDestination() async throws {
         let fixture = try await DestinationSyncRepositoryTests.Fixture.make()
         let (vault, _) = try fixture.keyVault()
         let destinationRow = try fixture.add(vault, "DATABASE_URL", value: "postgres://held")
-        let configRow = try fixture.harness.add(fixture.repo, "VERCEL_TOKEN", value: "vercel-token-held")
+        let configRow = try fixture.harness.add(fixture.repo, "DEPLOY_TOKEN", value: "deploy-token-held")
         try hold([destinationRow], under: Self.first, in: fixture.harness)
         try holdConfig([configRow], under: Self.first, in: fixture.harness)
 
@@ -131,7 +132,7 @@ struct HeldDestinationTests {
         let repository = try #require(share.repositories.first)
         #expect(repository.repository.id == fixture.repo.id)
         #expect(repository.scopes.map(\.scope) == [.repository])
-        #expect(repository.scopes.first?.items.map(\.name) == ["VERCEL_TOKEN"])
+        #expect(repository.scopes.first?.items.map(\.name) == ["DEPLOY_TOKEN"])
         #expect(repository.destinations.map(\.destination.id) == [vault])
         #expect(repository.destinations.first?.items.map(\.name) == ["DATABASE_URL"])
     }

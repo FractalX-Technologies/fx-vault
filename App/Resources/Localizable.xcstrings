@@ -210,50 +210,6 @@
         }
       }
     },
-    "addDestination.checkToken" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Check and Save"
-          }
-        }
-      }
-    },
-    "addDestination.chooseProject" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose a project"
-          }
-        }
-      }
-    },
-    "addDestination.connection" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Connection"
-          }
-        }
-      }
-    },
-    "addDestination.environment" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment"
-          }
-        }
-      }
-    },
     "addDestination.importFailed" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -287,17 +243,6 @@
         }
       }
     },
-    "addDestination.newToken" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "New Token…"
-          }
-        }
-      }
-    },
     "addDestination.note.keyVault" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -309,28 +254,6 @@
         }
       }
     },
-    "addDestination.note.supabase" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Edge Function secrets of one project, through a Supabase access token."
-          }
-        }
-      }
-    },
-    "addDestination.note.vercel" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "One environment of one project, through a Vercel access token."
-          }
-        }
-      }
-    },
     "addDestination.open" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -338,61 +261,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Open Destination"
-          }
-        }
-      }
-    },
-    "addDestination.personal" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Personal account"
-          }
-        }
-      }
-    },
-    "addDestination.personal.named" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Personal · %@"
-          }
-        }
-      }
-    },
-    "addDestination.project" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Project"
-          }
-        }
-      }
-    },
-    "addDestination.projectRef" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Project reference"
-          }
-        }
-      }
-    },
-    "addDestination.provider" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Provider"
           }
         }
       }
@@ -430,17 +298,6 @@
         }
       }
     },
-    "addDestination.team" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Team"
-          }
-        }
-      }
-    },
     "addDestination.tenant" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -470,61 +327,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Add Destination"
-          }
-        }
-      }
-    },
-    "addDestination.token" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Access token"
-          }
-        }
-      }
-    },
-    "addDestination.token.supabase" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Create one at supabase.com › Account › Access Tokens. FX Vault keeps it encrypted in the vault."
-          }
-        }
-      }
-    },
-    "addDestination.token.vercel" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Create one at vercel.com › Account Settings › Tokens. FX Vault keeps it encrypted in the vault."
-          }
-        }
-      }
-    },
-    "addDestination.tokenLabel" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Name"
-          }
-        }
-      }
-    },
-    "addDestination.tokenLabel.prompt" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ token"
           }
         }
       }
@@ -2179,28 +1981,6 @@
         }
       }
     },
-    "destination.access.supabase" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "via Supabase API token"
-          }
-        }
-      }
-    },
-    "destination.access.vercel" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "via Vercel API token"
-          }
-        }
-      }
-    },
     "destination.add" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2218,7 +1998,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Add an Azure Key Vault, a Supabase project or a Vercel environment this repository's code reads at runtime"
+            "value" : "Add an Azure Key Vault this repository's code reads at runtime"
           }
         }
       }
@@ -2252,17 +2032,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Items already in the destination are deleted there by the next Sync, after you confirm. Their linked copies elsewhere stay."
-          }
-        }
-      }
-    },
-    "destination.detail.connectionMissing" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "This destination has no connection. Choose one in its settings before the next Sync."
           }
         }
       }
@@ -2520,28 +2289,6 @@
         }
       }
     },
-    "destination.provider.supabase" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Supabase"
-          }
-        }
-      }
-    },
-    "destination.provider.vercel" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Vercel"
-          }
-        }
-      }
-    },
     "destination.remove.confirm" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2575,6 +2322,28 @@
         }
       }
     },
+    "destination.retired.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault 1.0 keeps Azure Key Vault only. These destinations were removed from the vault; nothing was deleted in Supabase or Vercel:\n%@"
+          }
+        }
+      }
+    },
+    "destination.retired.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Supabase and Vercel Destinations Removed"
+          }
+        }
+      }
+    },
     "destination.rules.keyVault" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2582,28 +2351,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Secrets only. Key Vault names allow letters, digits and dashes: FX Vault keeps your names and writes DATABASE-URL for DATABASE_URL. Deletes are soft deletes."
-          }
-        }
-      }
-    },
-    "destination.rules.supabase" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Secrets only, for Edge Functions. Supabase never returns values, so FX Vault compares digests. Names starting with SUPABASE_ are reserved."
-          }
-        }
-      }
-    },
-    "destination.rules.vercel" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Secrets are encrypted variables, variables are plain. A variable shared with other environments changes for all of them. NEXT_PUBLIC_ names are public in the browser."
           }
         }
       }
@@ -2641,39 +2388,6 @@
         }
       }
     },
-    "destination.table.markPublic" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Mark as Public"
-          }
-        }
-      }
-    },
-    "destination.table.unmarkPublic" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Not Meant to Be Public"
-          }
-        }
-      }
-    },
-    "destination.unusable.customEnvironment" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Also used by a custom Vercel environment"
-          }
-        }
-      }
-    },
     "destination.unusable.disabled" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2681,17 +2395,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Disabled in Key Vault"
-          }
-        }
-      }
-    },
-    "destination.unusable.gitBranch" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Only for one Git branch in Vercel"
           }
         }
       }
@@ -2707,17 +2410,6 @@
         }
       }
     },
-    "destination.unusable.system" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Set by the provider itself"
-          }
-        }
-      }
-    },
     "destination.valueMissing.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2725,39 +2417,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%lld secrets have no value in FX Vault"
-          }
-        }
-      }
-    },
-    "destination.vercel.development" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Development"
-          }
-        }
-      }
-    },
-    "destination.vercel.preview" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Preview"
-          }
-        }
-      }
-    },
-    "destination.vercel.production" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Production"
           }
         }
       }
@@ -2857,28 +2516,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Use %@ for All"
-          }
-        }
-      }
-    },
-    "destinationSettings.connection.note" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Add, check or replace tokens in Settings › Destinations."
-          }
-        }
-      }
-    },
-    "destinationSettings.noConnection" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose a connection"
           }
         }
       }
@@ -5358,24 +4995,13 @@
         }
       }
     },
-    "error.config.connectionNotFound" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose a connection for this provider, or add one in Settings › Destinations."
-          }
-        }
-      }
-    },
     "error.config.destinationExists" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This repository already has a destination for that vault, project or environment."
+            "value" : "This repository already has a destination for that vault."
           }
         }
       }
@@ -5508,17 +5134,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "The change was not saved"
-          }
-        }
-      }
-    },
-    "error.config.tooManyConnections" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "FX Vault keeps at most %lld connections."
           }
         }
       }
@@ -5793,7 +5408,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%@ does not have this vault, project or item, or the account cannot see it."
+            "value" : "%@ does not have this vault or item, or the account cannot see it."
           }
         }
       }
@@ -5831,17 +5446,6 @@
         }
       }
     },
-    "error.destination.supabaseProjectRef" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "A Supabase project reference is 20 lowercase letters."
-          }
-        }
-      }
-    },
     "error.destination.tenantID" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -5870,7 +5474,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This destination has no connection. Choose one in its Settings…"
+            "value" : "The Azure CLI gave FX Vault an unusable token. Run az login in Terminal, then try again."
           }
         }
       }
@@ -5881,7 +5485,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%@ did not accept the credentials. Replace the token in Settings › Destinations, or sign in again."
+            "value" : "%@ did not accept the credentials. Run az login in Terminal, then try again."
           }
         }
       }
@@ -5904,28 +5508,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "The value is too large for %@."
-          }
-        }
-      }
-    },
-    "error.destination.vercelProject" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose a Vercel project."
-          }
-        }
-      }
-    },
-    "error.destination.vercelTeam" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose a Vercel team or your personal account."
           }
         }
       }
@@ -6751,28 +6333,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "The name uses an unusual Unicode form."
-          }
-        }
-      }
-    },
-    "error.name.notUppercase" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "The name has lowercase letters. FX Vault keeps names in uppercase, so it leaves this one as it is."
-          }
-        }
-      }
-    },
-    "error.name.reservedByProvider" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Names starting with SUPABASE_ are reserved by Supabase."
           }
         }
       }
@@ -11876,7 +11436,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "1 destination added without a connection"
+            "value" : "1 destination added"
           }
         }
       }
@@ -11909,7 +11469,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%lld destinations added without a connection"
+            "value" : "%lld destinations added"
           }
         }
       }
@@ -12151,7 +11711,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "New, without a connection. Connect your account in Settings › Destinations."
+            "value" : "New. FX Vault reaches it with your az login."
           }
         }
       }
@@ -12163,6 +11723,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Destinations"
+          }
+        }
+      }
+    },
+    "projectShare.open.destinations.retired" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Left out: %@. Supabase and Vercel are no longer supported."
           }
         }
       }
@@ -13289,303 +12860,6 @@
         }
       }
     },
-    "settings.destinations.add" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Connection…"
-          }
-        }
-      }
-    },
-    "settings.destinations.azCopied" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copied az login. Run it in Terminal, then check again."
-          }
-        }
-      }
-    },
-    "settings.destinations.azure" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Azure Key Vault"
-          }
-        }
-      }
-    },
-    "settings.destinations.azure.checking" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Checking…"
-          }
-        }
-      }
-    },
-    "settings.destinations.azure.footnote" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "FX Vault asks your Azure CLI sign-in for a short-lived Key Vault token when it syncs; the token stays in memory."
-          }
-        }
-      }
-    },
-    "settings.destinations.azure.signedIn" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed in"
-          }
-        }
-      }
-    },
-    "settings.destinations.azure.status" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Azure CLI"
-          }
-        }
-      }
-    },
-    "settings.destinations.azure.unknown" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Not checked yet"
-          }
-        }
-      }
-    },
-    "settings.destinations.check" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Check"
-          }
-        }
-      }
-    },
-    "settings.destinations.connections" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Supabase and Vercel"
-          }
-        }
-      }
-    },
-    "settings.destinations.connections.footnote" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Personal access tokens, encrypted in the vault. Removing one keeps its destinations; choose another in their settings."
-          }
-        }
-      }
-    },
-    "settings.destinations.copyLogin" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy az login"
-          }
-        }
-      }
-    },
-    "settings.destinations.editor.add" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Connection"
-          }
-        }
-      }
-    },
-    "settings.destinations.editor.eyebrow" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Destinations"
-          }
-        }
-      }
-    },
-    "settings.destinations.editor.replace" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Replace Token"
-          }
-        }
-      }
-    },
-    "settings.destinations.empty" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "No tokens yet. Add one here, or while adding a Supabase or Vercel destination."
-          }
-        }
-      }
-    },
-    "settings.destinations.projects" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ projects"
-          }
-        }
-      }
-    },
-    "settings.destinations.projects.one" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1 project"
-          }
-        }
-      }
-    },
-    "settings.destinations.remove" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove…"
-          }
-        }
-      }
-    },
-    "settings.destinations.remove.confirm" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove Connection"
-          }
-        }
-      }
-    },
-    "settings.destinations.remove.message" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "The token is deleted from FX Vault. Its destinations stay and need another connection before the next Sync."
-          }
-        }
-      }
-    },
-    "settings.destinations.remove.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove this connection?"
-          }
-        }
-      }
-    },
-    "settings.destinations.rename" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
-          }
-        }
-      }
-    },
-    "settings.destinations.rename.confirm" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename"
-          }
-        }
-      }
-    },
-    "settings.destinations.rename.field" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Name"
-          }
-        }
-      }
-    },
-    "settings.destinations.rename.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename Connection"
-          }
-        }
-      }
-    },
-    "settings.destinations.replace" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Replace Token…"
-          }
-        }
-      }
-    },
     "settings.general.autoLock" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -14242,17 +13516,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Advanced"
-          }
-        }
-      }
-    },
-    "settings.tab.destinations" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Destinations"
           }
         }
       }
@@ -16655,17 +15918,6 @@
         }
       }
     },
-    "sync.destination.blocked.connection" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "The destination has no connection. Choose one in its settings."
-          }
-        }
-      }
-    },
     "sync.destination.blocked.exists" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -16684,17 +15936,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ could not be listed, so nothing is sent there: %2$@"
-          }
-        }
-      }
-    },
-    "sync.destination.blocked.public" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ names are public in the browser, and this value looks like a secret. Change the value, or Mark as Public in the destination."
           }
         }
       }
@@ -16743,17 +15984,6 @@
         }
       }
     },
-    "sync.destination.deletion.keeps" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Only this environment: %@ keep it."
-          }
-        }
-      }
-    },
     "sync.destination.deletions" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -16761,28 +15991,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%lld deleted"
-          }
-        }
-      }
-    },
-    "sync.destination.publicWarning" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ in %2$@ is public (%3$@) and its value looks like a token. Fine for a key meant to be public."
-          }
-        }
-      }
-    },
-    "sync.destination.shared" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is shared with %2$@ on Vercel: they get the new value too."
           }
         }
       }

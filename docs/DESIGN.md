@@ -386,16 +386,19 @@ foreground color, so `.primary` text still turns white on selected rows.
   ••• menu): Settings…, Export .env…, Remove from FX Vault… (destructive confirmation).
 - Destination detail (v0.8.0, canvas board 3): `SectionLabel` DESTINATION · RUNTIME, the name in
   `.largeTitle` (middle-truncated), `StatusChip.tag`s for the provider, the stage (or "No stage")
-  and Experimental, then how it is reached ("via Azure CLI sign-in", "via Vercel API token") in
+  and Experimental, then how it is reached ("via Azure CLI sign-in") in
   `.monoMeta` `subtleText`; Refresh (secondary, a small `ProgressView` while listing, disabled
   offline) and the ••• outline circle, beside the title or under it (`ViewThatFits`). A
   `container` card holds STAGE (`.callout`), TARGET (`.monoMeta`) and NAMES AND VALUES (the
   provider's rules in `.caption` `mutedText`), side by side or stacked. The Refresh banner is
   `.info` with Review ("2 changes in Key Vault since your last sync"), `.info` with a checkmark
   when nothing changed, and a `.warning` for items FX Vault cannot use (their names as help).
-  Then the same table as a repository with the Status column: Vercel keeps the Secrets /
-  Variables `SegmentedPill`; Key Vault and Supabase hold secrets only, so the pill gives way to a
-  `SectionLabel` "SECRETS · 4". Add actions, multi-selection and the linked chip are unchanged.
+  Then the same table as a repository with the Status column: Key Vault holds secrets only, so
+  a `SectionLabel` "SECRETS · 4" takes the place of the Secrets / Variables `SegmentedPill`. Add
+  actions, multi-selection and the linked chip are unchanged.
+- After the first unlock on 1.0, the main window shows a one-time alert, "Supabase and Vercel
+  Destinations Removed", listing each destination migration v16 deleted (`owner/name · Supabase
+  <ref>`); OK clears the list (`RetiredDestinationsNotice`).
 - Held rows (v0.9.0, tasks/todo.md P8): a row imported from a share file and not yet included
   in a Sync shows a `.warning` `StatusChip` "Held" in the Status column instead of Will push /
   Added, in repository scopes and destinations alike; its help names the sender's file and says
@@ -422,16 +425,12 @@ foreground color, so `.primary` text still turns white on selected rows.
   typed: one `FXCheckboxRow` per place ("owner/name · scope · account (Same value)") and an info
   note.
 - Add Destination (v0.8.0) is a `ConfigEditorSheet` (`destinationSheetWidth`, eyebrow RUNTIME):
-  PROVIDER as a `SegmentedPill` (Azure Key Vault / Supabase / Vercel) with a one-line note under
-  it; STAGE as a rounded field with a Stages menu (the repository's environments) and its note;
-  then the target: VAULT NAME and TENANT (OPTIONAL) as mono rounded fields for Key Vault, or a
-  CONNECTION picker (an existing connection or New Token…, which shows NAME and ACCESS TOKEN
-  fields and how to create a token) and the project, team and environment pickers for Supabase
-  and Vercel. The primary is "Add and Import". Afterwards the fields give way to the import
+  STAGE as a rounded field with a Stages menu (the repository's environments) and its note;
+  then VAULT NAME (with a note that FX Vault reaches it through the user's `az login`) and TENANT
+  (OPTIONAL) as mono rounded fields. The primary is "Add and Import". Afterwards the fields give way to the import
   result ("4 items imported from the destination.", the ones without a value, the names left as
   they are) with Open Destination.
-- A destination's Settings… (v0.8.0) is a `ConfigEditorSheet` with STAGE and, for Supabase and
-  Vercel, the CONNECTION picker and a note pointing to Settings › Destinations.
+- A destination's Settings… (v0.8.0) is a `ConfigEditorSheet` with STAGE.
 - Destination drift review (v0.8.0) is a `ConfigEditorSheet` titled with the banner's sentence:
   a `ConfigSheetList` with each name in `.monoName`, what happened in the provider as a caption,
   and Keep Mine (outline) / Use Key Vault (secondary) per row; the footer has Close and "Use Key
@@ -439,7 +438,7 @@ foreground color, so `.primary` text still turns white on selected rows.
 - The Sync sheet (v0.8.0, canvas board 4) shows each destination as one more scope of its
   repository ("Key Vault · kv-example-prod · via Azure CLI sign-in"), its lines as "DATABASE_URL
   as DATABASE-URL" where the provider stores another name, blocked changes as issues with a fix
-  (Show Destination), public-value warnings and Vercel variables shared with other environments.
+  (Show Destination).
   Destination deletions join the deletion review; the result shows "Confirmed in the
   destination", "Sent, but the destination did not list it yet…" or "Not sent" per item.
 - Share Project (v0.9.0, `ProjectShareScreen`, `shareSheetWidth`, eyebrow SHARE) replaces the
@@ -467,8 +466,9 @@ foreground color, so `.primary` text still turns white on selected rows.
   user-a", `xmark.circle` `warning` "Skipped: none of your GitHub accounts can see it" (the name
   muted), counts in `.monoMeta` and a chevron (`brand` when chosen). The chosen repository shows
   today's merge preview, then DESTINATIONS (provider symbol, "Azure Key Vault · kv-example-staging",
-  the stage as a chip, `.warning` for production, and "New, without a connection…" or "Merges
-  into your destination…" as a caption) and FOLDERS (a picker: New folder, Merge keep mine /
+  the stage as a chip, `.warning` for production, and "New. FX Vault reaches it with your az
+  login." or "Merges into your destination…" as a caption; a 0.9 file's Supabase and Vercel
+  destinations as one "Left out: …" note) and FOLDERS (a picker: New folder, Merge keep mine /
   replace mine, Don't import). A note closes it: "Nothing reaches GitHub or a provider until you
   include it in Sync." The content scrolls past `projectShareContentMaxHeight`. After Import,
   `SheetCallout`s list what changed ("1 change waits for you in Sync › From Files" in `brand`),
@@ -509,15 +509,6 @@ foreground color, so `.primary` text still turns white on selected rows.
 Native `Settings` + `TabView` + `Form`; the window gets `.fxWindowBackground()`. Use
 `SectionLabel` for group titles inside custom sections, `StatusChip` for states, and
 `.fxButtonStyle(.secondary)` for row actions. Do not restyle native toggles and pickers.
-
-Destinations (v0.8.0, tab symbol `server.rack`) uses the Preferences sections: AZURE KEY VAULT
-(one row "Azure CLI" with its state, Check (secondary) and, when something is wrong, Copy az
-login (outline); the footnote says the token stays in memory) and SUPABASE AND VERCEL (one row per
-connection: its name, "provider · account" as the detail, a ••• menu with Rename…, Replace
-Token… and Remove…; then Add Connection… (outline); the footnote says tokens are encrypted in the
-vault). Add Connection… and Replace Token… are a `ConfigEditorSheet` (provider pill and name when
-adding, the token in a mono `SecureField`, "Check and Save" as the primary; a failed check shows
-under the field in `danger`).
 
 Sharing (v0.9.0, tab symbol `paperplane`) has one section, FILES YOU SENT, with its footnote
 ("Values are never kept here"): one row per export, newest first: the date in `.monoMeta`, an
@@ -623,9 +614,8 @@ FXV_SNAPSHOTS_DIR=$PWD/.build-snapshots TEST_RUNNER_FXV_SNAPSHOTS_DIR=$PWD/.buil
 Each screen gives `<name>-<light|dark>.window.png` (an offscreen window): the review set is these
 window captures (9 screens × 2 appearances = 18 files; v0.7.0 adds `main-folder`,
 `main-folder-variables`, `main-sidebar-folders`, `folder-destination` and
-`folder-destination-new`; v0.8.0 adds `main-destination-keyvault`, `main-destination-vercel`,
-`add-destination` and `settings-destinations`, over
-`MainSnapshotFixture.destinations` (`kv-example-prod` and `example-web · Production`)).
+`folder-destination-new`; v0.8.0 adds `main-destination-keyvault` and `add-destination`, over
+`MainSnapshotFixture.destinations` (`kv-example-prod` and `kv-example-web`).
 v0.9.0 adds two suites gated the same way (pass `-only-testing:AppTests/ProjectShareSnapshotTests`
 and `-only-testing:AppTests/HeldShareSnapshotTests`): `project-share-contents`,
 `project-share-contents-three`, `project-share-production-blocked`,

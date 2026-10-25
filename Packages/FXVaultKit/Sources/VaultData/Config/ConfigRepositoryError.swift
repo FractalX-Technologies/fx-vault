@@ -23,12 +23,8 @@ public enum ConfigRepositoryError: Error, Sendable, Hashable {
     case destinationFull(limit: Int)
     /// The repository already has `limit` destinations (v0.8.0).
     case tooManyDestinations(limit: Int)
-    /// The repository already has a destination for the same vault, project or environment.
+    /// The repository already has a destination for the same vault.
     case destinationExists
-    /// No provider connection with that id, or one for another provider (v0.8.0).
-    case connectionNotFound
-    /// The vault already holds `limit` provider connections (v0.8.0).
-    case tooManyConnections(limit: Int)
     /// The environment is deleted (a tombstone pending deletion on GitHub): revert it first.
     case environmentDeleted
     /// The viewer cannot change this scope (§2 Permissions, `RepoCapabilityModel`).
