@@ -14,8 +14,8 @@ public enum DestinationError: Error, Sendable, Hashable {
     case azUntrusted(path: String)
     /// `az` has no usable login for the tenant ("Please run 'az login'").
     case azNotSignedIn
-    /// `az account get-access-token` failed otherwise (exit code, or
-    /// ``AzureCLITokenProvider/launchFailedExitCode`` when it could not start).
+    /// An `az` command failed otherwise (exit code, or
+    /// ``AzureCLIRunner/launchFailedExitCode`` when it could not start).
     case azFailed(exitCode: Int32)
 
     // MARK: - Credentials
@@ -24,7 +24,8 @@ public enum DestinationError: Error, Sendable, Hashable {
     case tokenMissing
     /// HTTP 401: the token is not valid (Key Vault: after one refresh of the `az` token).
     case unauthorized
-    /// HTTP 403 (or 402): the account may not do this (RBAC, access policy, firewall, plan).
+    /// HTTP 403 (or 402), or `az`'s `AuthorizationFailed`: the account may not do this (RBAC,
+    /// access policy, firewall, plan).
     case forbidden
 
     // MARK: - Provider answers

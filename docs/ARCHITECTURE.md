@@ -293,6 +293,9 @@ No database, no keys, no user-facing text.
   (absolute path of a trusted `az` from `AzureCLILocator`, which reuses `GHFileInspecting`;
   argv, empty stdin, an allowlisted environment), caches the token per tenant in memory until
   `Timeouts.accessTokenRefreshMargin` before expiry, and shares one run between concurrent calls.
+  `AzureCLIRunner` holds those run rules and the stderr classification for every `az` command;
+  `AzureCLIDiscovery` (1.0, B8) uses it for `az account list` and `az keyvault list`
+  (`AzureSubscriptionModel`, `AzureKeyVaultModel`, `AzureSubscriptionVaultsModel`).
 - **Errors:** `DestinationError` (`az` not installed, untrusted, not signed in, failed;
   unauthorized, forbidden, not found, deleted but recoverable, conflict, rate limited,
   invalid request with a sanitized code, value too large, server, network, timeout, decoding,
@@ -614,6 +617,9 @@ destination item never reaches GitHub except as a copy in a repository scope.
   `.remote(DestinationError)`, `.stale`).
 - `actor ShellResolvingAzureTokens` builds the `AzureCLITokenProvider` on first use with the probed
   login-shell environment (`github.shellEnvironment()`); `reset()` drops every cached token.
+- `AzureDiscoveryRepository` (1.0, B8): `subscriptions()`, `keyVaults(subscriptionID:)` and
+  `discover()` over `AzureCLIDiscovery`, read-only and without storage. It and the token
+  provider get their `AzureCLIRunner` from `ShellResolvingAzureCLI` (same shell probe).
 - Across places: `ItemCopySource` reads a row of any of the three tables and one `link_id` group
   spans them; `LinkedCopyPlaceModel.destination(…)`; `ConfigRepository+Links`,
   `EnvFileRepository` (import into and export from a destination) and Reveal take destination

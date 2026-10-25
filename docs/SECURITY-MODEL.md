@@ -278,8 +278,9 @@ trusted for that path (below). Details: [API.md](API.md).
   is writable by others (world, or a group other than `wheel` / `admin`). Writable binaries and
   binaries owned by several other users are never offered. A changed owner asks again;
   Settings › Advanced lists the trust with Revoke.
-- **`az` (v0.8.0).** The Azure CLI is run for one command only, `az account get-access-token`
-  for Key Vault ([API.md](API.md) §G.1), through the same runner rules. `AzureCLILocator`
+- **`az` (v0.8.0).** The Azure CLI is run for three read-only commands only (`AzureCLIRunner`):
+  `az account get-access-token` for Key Vault, and since 1.0 `az account list` and
+  `az keyvault list` for discovery ([API.md](API.md) §G.1), through the same runner rules. `AzureCLILocator`
   searches the login shell's PATH, then `/opt/homebrew/bin` and `/usr/local/bin`; the first `az`
   that exists decides and must pass gh's trust check (`GHLocator.evaluate`), re-run before every
   `az` run. There is no consented trust: an `az` owned by another user is refused

@@ -39,6 +39,8 @@ public enum Timeouts {
     public static let destinationRequest: Duration = .seconds(30)
     /// `az account get-access-token` (it may refresh the login first).
     public static let azAccessToken: Duration = .seconds(60)
+    /// `az account list` and `az keyvault list` (the second asks Azure Resource Manager).
+    public static let azList: Duration = .seconds(60)
     /// An access token is refreshed this long before it expires.
     public static let accessTokenRefreshMargin: Duration = .seconds(5 * secondsPerMinute)
     /// Wait before retrying a provider request after HTTP 429 without `Retry-After`.

@@ -2089,3 +2089,13 @@ Review B6a — organization write commands in GitHubKit (2026-10-25, automatic, 
 - Tests: `OrgWriteTests` (10) and the six commands in `CommandBuilderTests.allCommands`; 8 mutations caught.
 - Docs: API (B14/B15, C10–C13, the `gh api` rule).
 - Gates: `swift test` 1,326 green; the app builds; lint OK; check-secrets OK (967 files).
+
+Review B8a — Azure discovery, package layer (2026-10-25, automatic, built in a parallel worktree):
+- DestinationKit `AzureCLIRunner`: the trusted `az` run rules, the exact environment and stderr classification moved out of `AzureCLITokenProvider` so discovery shares them; new: ARM `AuthorizationFailed` → `.forbidden`, a truncated stdout → `.responseTooLarge`.
+- `AzureCLIDiscovery`: `az account list` (subscriptions, one per id, the default wins; `[]` → `.azNotSignedIn`) and `az keyvault list --resource-type vault --subscription <uuid>` (the id is a `UUID`, so it never becomes a flag; vault names pass `DestinationRules`; `vaultUri` kept only when it is the vault's own allowlisted host). `discover()` keeps one subscription's failure on that entry and runs one `az` at a time (token cache races).
+- VaultData `AzureDiscoveryRepository` (no storage, works while locked); `ShellResolvingAzureCLI` shared with `ShellResolvingAzureTokens`.
+- Not verified against a real `az`: `[]` with exit 0 when signed out, `properties.vaultUri` in the list, the exact `AuthorizationFailed` stderr. Check with Bryan's `az` before B8b ships.
+- Open for B8b: hide tenant-only entries and Disabled or Deleted subscriptions? One malformed entry fails the whole listing (strict on purpose for now).
+- Tests: `AzureDiscoveryTests`, `AzureDiscoveryRepositoryTests`, fixtures `Fixtures/az/`; 11 mutations caught.
+- Docs: API (G rows), ARCHITECTURE, SECURITY-MODEL (`az` runs more than one read command).
+- Gates: `swift test` 1,340 green; app and test targets build; lint OK; check-secrets OK (974 files).
