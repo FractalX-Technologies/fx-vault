@@ -4,6 +4,9 @@ import SwiftUI
 /// selectable, in a 12 pt quiet row with a ghost Copy button.
 struct CommandRow: View {
     let command: String
+    /// **Run** for an allowlisted setup command (1.0); nil keeps the row Copy-only.
+    var onRun: (() -> Void)?
+    var isRunning = false
     let onCopy: (String) -> Void
 
     var body: some View {
@@ -15,6 +18,13 @@ struct CommandRow: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: Theme.Spacing.small)
+            if let onRun {
+                Button(String(localized: "command.run", defaultValue: "Run"), action: onRun)
+                    .fxButtonStyle(.outline)
+                    .disabled(isRunning)
+                    .accessibilityIdentifier(AccessibilityID.Setup.run(command))
+                    .help(String(localized: "command.run.help", defaultValue: "FX Vault runs only this command, here on this Mac"))
+            }
             Button {
                 onCopy(command)
             } label: {

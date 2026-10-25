@@ -22,6 +22,15 @@ enum AccessibilityID {
         static let confirmGroupPrefix = "onboarding.confirm.group."
     }
 
+    /// Allowlisted setup commands (1.0).
+    enum Setup {
+        static let output = "setup.output"
+
+        static func run(_ command: String) -> String {
+            "setup.run.\(command)"
+        }
+    }
+
     /// The notch island that unlocks a locked vault (1.0).
     enum Island {
         static let panel = "island"

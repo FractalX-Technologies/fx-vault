@@ -26,6 +26,8 @@ public enum Timeouts {
     public static let shellProbe: Duration = .seconds(5)
     /// `git clone`.
     public static let gitClone: Duration = .seconds(300)
+    /// An allowlisted setup command (`brew install gh`, 1.0): a fresh install downloads bottles.
+    public static let setupCommand: Duration = .seconds(600)
     /// Grace period between SIGTERM and SIGKILL after a timeout.
     public static let processKillGrace: Duration = .seconds(2)
     /// `ConnectTimeout` passed to ssh inside `GIT_SSH_COMMAND` (argv, seconds).

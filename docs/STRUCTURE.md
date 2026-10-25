@@ -109,7 +109,8 @@ FXVault/
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
 │   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,
 │   │   │                            # PasswordStrengthMeter, NewPasswordFields,
-│   │   │                            # WindowAccessor, CommandRow, ErrorAlert, ConfigEditorSheet
+│   │   │                            # WindowAccessor, CommandRow (+ Run), CommandOutputView,
+│   │   │                            # ErrorAlert, ConfigEditorSheet
 │   │   │                            # (+ ConfigEditorNote, ConfigSheet footer/field/list),
 │   │   │                            # BranchPolicyEditorView,
 │   │   │                            # BranchPolicyFormModel
@@ -221,6 +222,7 @@ FXVault/
 │   │   │   ├── Process/             # CommandRunning, CommandSpec, StdinPayload, ProcessRunner,
 │   │   │   │                        # EmptyWorkingDirectory
 │   │   │   ├── Environment/         # ProcessEnvironmentBuilder, ShellEnvironmentResolver
+│   │   │   ├── Setup/               # SetupCommand (allowlist), SetupCommandRunner (Homebrew)
 │   │   │   ├── CLI/                 # GHLocator (+ GHLocatorReportModel, GHFileInspector),
 │   │   │   │                        # GHVersion, GHAuthService, GHTokenCache, AuthStatusDTO
 │   │   │   │                        # (account listing, unusable accounts), ScopeChecker

@@ -496,3 +496,21 @@ Clients come from `DestinationRemoteFactory(transport:azureTokens:clock:)` throu
 - **Recorded on 2026-10-16:** the `az` token test passed without contacting a vault. The Key
   Vault data plane has not run live yet: its behavior above comes from the client and its
   fixtures.
+
+## H. Setup commands (Homebrew, 1.0)
+
+```
+<brew> install gh | upgrade gh | install azure-cli
+```
+
+- Only `SetupCommand`'s fixed argv runs (**Run** on the gh setup screen); anything else, including
+  `gh auth login` and `az login`, stays Copy-only.
+- `brew` is `/opt/homebrew/bin/brew`, then `/usr/local/bin/brew`; it must pass
+  `GHLocator.evaluate` (no consented trust), otherwise there is no **Run**.
+- Environment: `ProcessEnvironmentBuilder.homebrew` (identity, `<prefix>/bin:<prefix>/sbin` before
+  the system PATH, `NONINTERACTIVE=1`, `HOMEBREW_NO_ENV_HINTS=1`, `HOMEBREW_NO_EMOJI=1`,
+  `NO_COLOR=1`, `TERM=dumb`). Timeout 600 s.
+- Output: stdout then stderr, redacted (`StderrRedactor`), last 40 lines. A success checks gh
+  again; a failure shows its exit code and lines.
+- Not run live from the app yet: the commands and their output come from Homebrew's documented
+  behavior and the fakes.

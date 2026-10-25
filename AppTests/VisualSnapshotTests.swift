@@ -105,6 +105,21 @@ struct VisualSnapshotTests {
         }
     }
 
+    /// gh missing, after **Run** of `brew install gh` (board GitHubSetup).
+    @Test func ghSetupAfterRun() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: .notInstalled, fileInspector: SetupCommandRunTests.homebrew())
+        harness.runner.stub(
+            argumentsPrefix: ["install", "gh"],
+            with: .success("==> Fetching gh\n==> Pouring gh--2.102.0.arm64_tahoe.bottle.tar.gz\n/opt/homebrew/Cellar/gh/2.102.0: 222 files, 52.3MB\n")
+        )
+        let setup = harness.app.makeGHSetupViewModel()
+        await setup.loadRunAvailability()
+        await setup.run(.installGH)
+        try await SnapshotOutput.write("gh-setup-run", size: SnapshotOutput.windowSize) {
+            GHSetupScreen(viewModel: setup)
+        }
+    }
+
     // MARK: - Main window
 
     @Test func mainWindow() async throws {
