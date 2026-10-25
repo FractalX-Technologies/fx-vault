@@ -354,6 +354,9 @@ private struct ScopeColumnView: View {
     var body: some View {
         if main.folderDetail != nil, let folder = main.sidebar.selectedFolder {
             FolderOverviewView(folder: folder, main: main)
+        } else if main.sidebar.selectedOrganizationOwner != nil {
+            EmptyStateView(systemImage: "building.2", title: OrganizationCopy.eyebrow, message: OrganizationCopy.scopesMessage)
+                .background(Theme.Colors.ground)
         } else if let scopeList = main.scopeList {
             ScopeListView(viewModel: scopeList)
         } else {
@@ -380,6 +383,8 @@ private struct DetailColumnView: View {
         Group {
             if let folderDetail = main.folderDetail {
                 FolderDetailScreen(viewModel: folderDetail, main: main)
+            } else if let organizationDetail = main.organizationDetail {
+                OrganizationDetailScreen(viewModel: organizationDetail, main: main)
             } else if let destinationDetail = main.destinationDetail {
                 DestinationDetailScreen(viewModel: destinationDetail, main: main)
             } else if let detail = main.detail {
@@ -393,6 +398,8 @@ private struct DetailColumnView: View {
                     }
                     if let repo = main.selectedRepo {
                         RepoImportPromptView(repo: repo, sidebar: main.sidebar)
+                    } else if let owner = main.sidebar.selectedOrganizationOwner {
+                        OrganizationImportPromptView(owner: owner, sidebar: main.sidebar)
                     } else {
                         EmptyStateView(
                             systemImage: "key.horizontal",

@@ -41,8 +41,8 @@ enum UITestLaunch {
 
 /// The scripted gh of the UI-testing host: one account (with `admin:org`) that owns one
 /// organization with one repository that can be imported (environments `production` and
-/// `staging`, one variable in each scope and no secrets) and is a plain member of a second,
-/// empty organization; read commands only. Every other call gets the fake runner's "no stub" failure, so
+/// `staging`, one variable in each scope and no secrets) and its own secrets and variables
+/// (B12, B13), and is a plain member of a second, empty organization; read commands only. Every other call gets the fake runner's "no stub" failure, so
 /// nothing can be written anywhere.
 enum UITestGitHub {
     static let account = "owner-a"
@@ -127,7 +127,19 @@ enum UITestGitHub {
             return .success(#"[{"createdAt":"2026-09-01T08:00:00Z","name":"\#(name)","updatedAt":"2026-09-01T08:00:00Z","value":"ui-test"}]"#)
         }
         runner.stub(argumentsPrefix: ["secret", "list", "--repo=\(fullName)"], with: .success("[]"))
+        runner.stub(argumentsPrefix: ["secret", "list", "--org=\(organization)"], with: .success(organizationSecrets))
+        runner.stub(argumentsPrefix: ["variable", "list", "--org=\(organization)"], with: .success(organizationVariables))
     }
+
+    /// example-org's own items: one secret for every repository, one for 3 selected ones, and a
+    /// variable for private and internal repositories.
+    static let organizationSecrets = """
+    [{"name":"NPM_TOKEN","numSelectedRepos":0,"updatedAt":"2026-08-02T10:00:00Z","visibility":"all"},
+     {"name":"STRIPE_KEY","numSelectedRepos":3,"updatedAt":"2026-10-12T10:00:00Z","visibility":"selected"}]
+    """
+    static let organizationVariables = """
+    [{"createdAt":"2026-08-01T10:00:00Z","name":"REGION","numSelectedRepos":0,"updatedAt":"2026-08-02T10:00:00Z","value":"ui-test","visibility":"private"}]
+    """
 }
 
 extension AppContainer {

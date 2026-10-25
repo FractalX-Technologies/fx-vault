@@ -2,8 +2,9 @@ import SwiftUI
 import VaultCore
 
 /// Column 1 (§10; mockup Main): accounts with their scope warning, owner groups (Personal, then
-/// organizations, with a SAML notice where needed), repositories with badges, and "Add
-/// repository by name…" per account, on `surface` with a mono status line at the bottom.
+/// organizations, with a SAML notice where needed and, 1.0, the organization's own row first),
+/// repositories with badges, and "Add repository by name…" per account, on `surface` with a
+/// mono status line at the bottom.
 ///
 /// The rows are drawn with `.fxRowBackground(style: .sidebar)` (32 pt, `surface2` when
 /// selected) instead of a native `List` selection; ``MainColumnSelection`` keeps Up and Down.
@@ -66,6 +67,18 @@ struct SidebarView: View {
             ))
         }
         .confirmationDialog(
+            OrganizationCopy.removeTitle,
+            isPresented: organizationRemovalBinding,
+            titleVisibility: .visible,
+            presenting: sidebar.pendingOrganizationRemoval
+        ) { _ in
+            Button(OrganizationCopy.removeConfirm, role: .destructive) {
+                Task { await sidebar.confirmOrganizationRemoval() }
+            }
+        } message: { organization in
+            Text(OrganizationCopy.removeMessage(organization.login))
+        }
+        .confirmationDialog(
             FolderCopy.deleteTitle(sidebar.pendingFolderDeletion?.name ?? ""),
             isPresented: folderDeletionBinding,
             titleVisibility: .visible,
@@ -77,6 +90,13 @@ struct SidebarView: View {
         } message: { _ in
             Text(FolderCopy.deleteMessage)
         }
+    }
+
+    private var organizationRemovalBinding: Binding<Bool> {
+        Binding(
+            get: { main.sidebar.pendingOrganizationRemoval != nil },
+            set: { if !$0 { main.sidebar.pendingOrganizationRemoval = nil } }
+        )
     }
 
     private var folderDeletionBinding: Binding<Bool> {
@@ -102,6 +122,9 @@ struct SidebarView: View {
             if isExpanded {
                 OwnerContentView(owner: owner, main: main) { repo in
                     sidebar.selectedRowID = repo.id
+                    isListFocused = true
+                } onSelectOrganization: {
+                    sidebar.select(organization: owner)
                     isListFocused = true
                 }
             }
@@ -245,14 +268,38 @@ private struct OwnerHeader: View {
     }
 }
 
-/// The rows of one owner group: the SAML or failure notice, the truncation note, then the
-/// repositories.
+/// The rows of one owner group: the SAML or failure notice, the organization's own row (1.0),
+/// the truncation note, then the repositories.
 private struct OwnerContentView: View {
     let owner: SidebarOwnerModel
     let main: MainViewModel
     let onSelect: (SidebarRepoModel) -> Void
+    let onSelectOrganization: () -> Void
 
     var body: some View {
+        if owner.isOrganization {
+            Button(action: onSelectOrganization) {
+                SidebarOrganizationRow(
+                    owner: owner,
+                    isBusy: main.sidebar.isBusy(owner),
+                    isSelected: main.sidebar.selectedOrganizationOwnerID == owner.id
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier(AccessibilityID.Main.organization(owner.login))
+            .contextMenu {
+                if let organization = owner.organization {
+                    Button(OrganizationCopy.remove, role: .destructive) {
+                        main.sidebar.requestRemoval(organization)
+                    }
+                } else {
+                    Button(OrganizationCopy.importButton) {
+                        Task { await main.sidebar.importOrganization(owner) }
+                    }
+                    .disabled(!main.sidebar.canImportOrganization(owner))
+                }
+            }
+        }
         if owner.requiresSAML {
             SAMLNoticeRow(owner: owner)
         } else if let failure = owner.failure {
@@ -368,6 +415,47 @@ private struct SidebarRepoRow: View {
 
     private var nameColor: Color {
         repo.isImported ? Theme.Colors.ink : Theme.Colors.subtleText
+    }
+}
+
+/// An organization's own secrets and variables (1.0): the counts once imported, "Import" in
+/// brand before.
+private struct SidebarOrganizationRow: View {
+    let owner: SidebarOwnerModel
+    let isBusy: Bool
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.mediumMinus) {
+            Image(systemName: "building.2")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(nameColor)
+                .accessibilityHidden(true)
+            Text(OrganizationCopy.rowTitle)
+                .font(Theme.Typography.callout)
+                .foregroundStyle(nameColor)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            if isBusy {
+                ProgressView()
+                    .controlSize(.mini)
+            }
+            if let organization = owner.organization {
+                Text(organization.secretCount + organization.variableCount, format: .number)
+                    .font(Theme.Typography.monoLabel)
+                    .foregroundStyle(Theme.Colors.subtleText)
+            } else {
+                Text(String(localized: "main.sidebar.import", defaultValue: "Import"))
+                    .font(Theme.Typography.monoLabel)
+                    .foregroundStyle(Theme.Colors.brand)
+            }
+        }
+        .fxRowBackground(isSelected: isSelected, style: .sidebar)
+        .help(owner.login)
+    }
+
+    private var nameColor: Color {
+        owner.organization != nil ? Theme.Colors.ink : Theme.Colors.subtleText
     }
 }
 

@@ -30,6 +30,13 @@ enum AccessibilityID {
     enum Main {
         static let sidebar = "main.sidebar"
         static let importRepository = "main.import"
+        static let importOrganization = "main.importOrganization"
+        static let organizationTable = "main.organizationTable"
+
+        /// The organization row of a sidebar owner group (its secrets and variables, 1.0).
+        static func organization(_ login: String) -> String {
+            "main.organization.\(login)"
+        }
     }
 
     /// Preferences › Accounts.

@@ -70,6 +70,8 @@ struct FeatureDependencies {
     let sharing: SharingRepository
     /// Folders of secrets and variables (v0.7.0).
     let folders: FolderRepository
+    /// Organizations' own secrets and variables (1.0).
+    let organizations: OrganizationRepository
     /// Runtime destinations (v0.8.0).
     let destinations: DestinationRepository
     /// Destination Sync, Refresh and import (v0.8.0).
@@ -111,6 +113,7 @@ struct FeatureDependencies {
         envFiles = data.envFiles
         sharing = data.sharing
         folders = data.folders
+        organizations = data.organizations
         destinations = data.destinations
         destinationSync = data.destinationSync
         creation = data.creation

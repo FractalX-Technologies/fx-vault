@@ -4,11 +4,14 @@ import Observation
 import VaultCore
 import VaultData
 
-/// Column 1 (§10): the folders (v0.7.0), then accounts, owner groups and repositories, with
-/// search, Import, Clone, Remove from vault and Add repository by name.
+/// Column 1 (§10): the folders (v0.7.0), then accounts, owner groups (each organization with
+/// its own row, 1.0) and repositories, with search, Import, Clone, Remove from vault and Add
+/// repository by name.
 ///
-/// - Vault repositories are observed (`ConfigRepository.observeRepositories()`), so imports,
-///   removals and created repositories appear at once and work without gh.
+/// - Vault repositories and organizations are observed (`ConfigRepository.observeRepositories()`,
+///   `OrganizationRepository.observeOrganizations()`), so imports, removals and created
+///   repositories appear at once and work without gh.
+/// - One place is selected at a time: a repository row, a folder or an organization row.
 /// - Accounts and catalogs come from gh (`GitHubEnvironmentRepository.accounts()`,
 ///   `RepoCatalogRepository.catalog(accountLogin:)`) and load when gh is ready.
 @Observable
@@ -17,8 +20,8 @@ final class SidebarViewModel {
     var selectedRowID: SidebarRepoModel.ID? {
         didSet {
             guard selectedRowID != oldValue else { return }
-            if selectedRowID != nil, selectedFolderID != nil {
-                selectedFolderID = nil
+            if selectedRowID != nil {
+                clearSelection(except: .repository)
             }
             onChange?()
         }
@@ -29,12 +32,24 @@ final class SidebarViewModel {
     var selectedFolderID: FolderID? {
         didSet {
             guard selectedFolderID != oldValue else { return }
-            if selectedFolderID != nil, selectedRowID != nil {
-                selectedRowID = nil
+            if selectedFolderID != nil {
+                clearSelection(except: .folder)
             }
             onChange?()
         }
     }
+    /// The owner group whose organization row is selected (1.0).
+    var selectedOrganizationOwnerID: SidebarOwnerModel.ID? {
+        didSet {
+            guard selectedOrganizationOwnerID != oldValue else { return }
+            if selectedOrganizationOwnerID != nil {
+                clearSelection(except: .organization)
+            }
+            onChange?()
+        }
+    }
+    /// The organization waiting for the "Remove from vault?" confirmation.
+    var pendingOrganizationRemoval: OrganizationModel?
     /// The folder waiting for the "Delete the folder?" confirmation.
     var pendingFolderDeletion: FolderModel?
     private(set) var input = SidebarInputModel()
@@ -63,6 +78,7 @@ final class SidebarViewModel {
         self.app = app
         observeVault()
         observeFolders()
+        observeOrganizations()
     }
 
     private var data: VaultDataComponents {
@@ -88,6 +104,31 @@ final class SidebarViewModel {
     /// The vault row of an imported repository.
     func vaultRepository(_ id: RepoID) -> RepoModel? {
         input.vaultRepos.first { $0.id == id }
+    }
+
+    /// The owner group of the selected organization row (searched in the unfiltered tree).
+    var selectedOrganizationOwner: SidebarOwnerModel? {
+        guard let selectedOrganizationOwnerID else { return nil }
+        return SidebarGrouping.sections(input, query: "")
+            .lazy
+            .flatMap(\.owners)
+            .first { $0.id == selectedOrganizationOwnerID }
+    }
+
+    /// The vault row of an imported organization.
+    func vaultOrganization(_ id: OrganizationID) -> OrganizationModel? {
+        input.vaultOrganizations.first { $0.id == id }
+    }
+
+    private enum SelectionKind {
+        case repository, folder, organization
+    }
+
+    /// Clears the other two selections (each `didSet` reports the change once).
+    private func clearSelection(except kept: SelectionKind) {
+        if kept != .repository, selectedRowID != nil { selectedRowID = nil }
+        if kept != .folder, selectedFolderID != nil { selectedFolderID = nil }
+        if kept != .organization, selectedOrganizationOwnerID != nil { selectedOrganizationOwnerID = nil }
     }
 
     var isUnlocked: Bool {
@@ -125,6 +166,15 @@ final class SidebarViewModel {
 
     func isBusy(_ repo: SidebarRepoModel) -> Bool {
         busyRepoKeys.contains(repo.repoKey)
+    }
+
+    func isBusy(_ owner: SidebarOwnerModel) -> Bool {
+        busyRepoKeys.contains(Self.busyKey(owner))
+    }
+
+    /// Organizations share ``busyRepoKeys``; `org|` keeps them apart from `owner/name` keys.
+    private static func busyKey(_ owner: SidebarOwnerModel) -> String {
+        "org|\(OwnerLoginValidator.foldKey(owner.login))"
     }
 
     // MARK: - Folders (v0.7.0)
@@ -188,6 +238,62 @@ final class SidebarViewModel {
                 }
             } catch {
                 AppLog.ui.error("Folder observation ended")
+            }
+        })
+    }
+
+    // MARK: - Organizations (1.0)
+
+    /// Selects an organization row.
+    func select(organization owner: SidebarOwnerModel) {
+        selectedOrganizationOwnerID = owner.id
+    }
+
+    func canImportOrganization(_ owner: SidebarOwnerModel) -> Bool {
+        owner.isOrganization && owner.organization == nil && isUnlocked && isGitHubReady && isOnline && !isBusy(owner)
+    }
+
+    /// Imports the organization's secrets (names) and variables (B12, B13) through the account
+    /// that lists it. Needs an unlocked vault.
+    func importOrganization(_ owner: SidebarOwnerModel) async {
+        guard canImportOrganization(owner) else { return }
+        await perform(busyKey: Self.busyKey(owner)) {
+            let result = try await data.organizations.importOrganization(login: owner.login, accountLogin: owner.accountLogin)
+            gitHubReachability.recordSuccess()
+            notice = String(
+                localized: "main.sidebar.organizationImported",
+                defaultValue: "Imported \(owner.login): \(result.organization.secretCount) secrets, \(result.organization.variableCount) variables."
+            )
+        }
+    }
+
+    /// Asks for confirmation before **Remove from vault** of an organization.
+    func requestRemoval(_ organization: OrganizationModel) {
+        pendingOrganizationRemoval = organization
+    }
+
+    /// Deletes the organization's secrets and variables locally. Nothing changes on GitHub.
+    func confirmOrganizationRemoval() async {
+        guard let organization = pendingOrganizationRemoval else { return }
+        pendingOrganizationRemoval = nil
+        do {
+            try await data.organizations.removeOrganization(organization.id)
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    private func observeOrganizations() {
+        let stream = data.organizations.observeOrganizations()
+        tasks.set("organizations", Task { [weak self] in
+            do {
+                for try await organizations in stream {
+                    guard let self else { return }
+                    input.vaultOrganizations = organizations
+                    onChange?()
+                }
+            } catch {
+                AppLog.ui.error("Organization observation ended")
             }
         })
     }
@@ -322,8 +428,12 @@ final class SidebarViewModel {
     }
 
     private func perform(on repo: SidebarRepoModel, _ body: () async throws -> Void) async {
-        busyRepoKeys.insert(repo.repoKey)
-        defer { busyRepoKeys.remove(repo.repoKey) }
+        await perform(busyKey: repo.repoKey, body)
+    }
+
+    private func perform(busyKey: String, _ body: () async throws -> Void) async {
+        busyRepoKeys.insert(busyKey)
+        defer { busyRepoKeys.remove(busyKey) }
         do {
             try await body()
         } catch {

@@ -17,6 +17,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     private(set) var folderDetail: FolderDetailViewModel?
     /// The detail column of the selected destination (v0.8.0).
     private(set) var destinationDetail: DestinationDetailViewModel?
+    /// The detail column of the selected imported organization (1.0).
+    private(set) var organizationDetail: OrganizationDetailViewModel?
     /// The sheet on screen (``MainSheet``). Setting another route replaces it.
     var activeSheet: MainSheet? {
         didSet {
@@ -109,9 +111,25 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         selectedRepo?.importedRepoID.flatMap(sidebar.vaultRepository)
     }
 
-    /// Rebuilds the scopes and detail columns when the selected repository or folder changes (or
-    /// the repository becomes imported, or is removed).
+    /// Rebuilds the scopes and detail columns when the selected repository, folder or
+    /// organization changes (or the repository or organization becomes imported, or is removed).
     private func followSelection() {
+        if let owner = sidebar.selectedOrganizationOwner {
+            detail = nil
+            scopeList = nil
+            destinationDetail = nil
+            folderDetail = nil
+            guard let id = owner.organization?.id else {
+                organizationDetail = nil
+                return
+            }
+            guard organizationDetail?.organizationID != id else { return }
+            organizationDetail = OrganizationDetailViewModel(organizationID: id, dependencies: featureDependencies) { [weak sidebar] in
+                sidebar?.vaultOrganization(id)
+            }
+            return
+        }
+        organizationDetail = nil
         if let folderID = sidebar.selectedFolderID {
             guard folderDetail?.folderID != folderID else { return }
             detail = nil
