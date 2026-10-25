@@ -1934,7 +1934,7 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B4 `admin:org` scope check per organization and the refresh flow (copyable commands and Re-check).
 - [ ] B4b In-app Approve (D1's device code) through `gh auth refresh`: needs a check against a real gh login first (non-TTY behaviour, the browser step); reserved for Bryan's real account.
 - [x] B5 Organization list commands and store (additive migration); read-only organization node. Split: B5a GitHubKit listings [x]; B5b store and import [x]; B5c the read-only node and its e2e [x].
-- [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list.
+- [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list. Split: B6a GitHubKit commands [x]; B6b1 local changes in the store (`v19`) [x]; B6b2 organization Sync in VaultData (review, run, confirm); B6b3 the editable organization detail, access picker and the Sync group.
 - [ ] B7 Organization drift and verify; inherited and shadowed names on a repository.
 - [x] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source. Split: B8a discovery, package layer [x]; B8b1 Key Vaults of their own in the store (`v18`) [x]; B8b2 Connect Azure (requirements, subscriptions and vaults, import), the vaults in the first-import summary [x]; B8b3 the sidebar Azure node opening the vault (and Show in Sidebar for a linked copy there) [x]; B8c1 Sync of the vaults of their own (review, run, badge) [x]; B8c2a Remove from FX Vault for a vault of its own [x]; B8c2b dropped (2026-10-25, Bryan: 0.9's repository Key Vaults stay under their repositories; no migration).
 - [ ] B9 Notes view read-only, then editable with the change review.
@@ -2150,6 +2150,15 @@ Review B11e — notch unlock island (2026-10-25, automatic):
 - Tests: `NotchIslandTests` (geometry with and without a notch, states, shared model, no island without side effects); `DesignTokenTests` (Island color sets); UI `NotchIslandUITests` (⌃⌘L closes the window, the island's password unlocks); snapshots `island-touchid`, `island-password` checked. Waiver for the notch hardware and Touch ID checks (tasks/waivers.md).
 - Docs: README (Unlocking), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
 - Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 580 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (7 tests); lint OK (first run flagged a literal symbol size, now `Theme.Typography.title`); check-secrets OK in the worktree; strings synced.
+
+Review B6b1 — organization changes in the store (2026-10-25, automatic):
+- Migration `v19_org_item_changes` (additive): `org_items.is_deleted`, `synced_visibility` (backfilled from `visibility`), `repositories_edited`; table `org_item_repositories`. Imports set `syncedVisibility`.
+- `OrgItemRecord.syncStatus` / `OrgItemModel.syncStatus`: deleted, added (never synced), modified (value fingerprint ≠ `synced_fp`, visibility ≠ synced, or the list edited), synced; a secret without a value is synced.
+- `OrganizationItemRepository` (VaultData): `addItem` (revives a pending deletion of the same name; 1,000 per kind, GitHub's limit), `setValue` (`alreadyMatchesRemote` for a secret filled to match GitHub), `setAccess` (`OrgItemAccessModel`; a `selected` list validated whole by `GHSelectedRepositories`), `repositories(of:)`, `deleteItems` (adds disappear), `revertItems` (adds, deletions, access; not a changed value: no synced copy is kept), `reveal`, `pendingCounts` / `observePendingCounts`. `ConfigRepositoryError.organizationNotFound` (app message added).
+- Not wired into the app yet (B6b3); not in the Sync badge yet (B6b2/B6b3).
+- Tests: `OrganizationItemRepositoryTests` (3), `MigrationTests.organizationItemsKeepTheirVisibilityAsSynced`, the migration list. Mutations caught: imports not synced, no backfill, list edits ignored, deleting an add leaves a tombstone, no revival, revert keeps the list.
+- Docs: DATABASE (v19), ARCHITECTURE (decision 139).
+- Gates: the full CI run passed (package suites, app tests, Debug and Release builds, 7 UI tests twice, lint); check-secrets OK in the worktree; strings up to date (`error.config.organizationNotFound` added).
 
 Review B8c2a — Remove from FX Vault for a Key Vault of its own (2026-10-25, automatic):
 - `KeyVaultContextMenu` (shared by the sidebar row's context menu and the destination detail's Actions button, which now shows for a vault of its own) sets `SidebarViewModel.pendingKeyVaultRemoval`; `SidebarView` confirms with the destination removal copy; `confirmKeyVaultRemoval()` calls `deleteDestination` (nothing in Azure), and the observation clears the selection.

@@ -19,6 +19,8 @@ public enum ConfigRepositoryError: Error, Sendable, Hashable {
     case folderFull(limit: Int)
     /// No destination with that id (v0.8.0).
     case destinationNotFound
+    /// No organization with that id (1.0).
+    case organizationNotFound
     /// The destination already holds `limit` secrets and variables (v0.8.0).
     case destinationFull(limit: Int)
     /// The repository already has `limit` destinations (v0.8.0).

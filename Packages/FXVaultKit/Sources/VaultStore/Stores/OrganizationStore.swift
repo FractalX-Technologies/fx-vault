@@ -2,7 +2,8 @@ import Foundation
 import GRDB
 import VaultCore
 
-/// `organizations` and `org_items` (§6 `v17_organizations`, 1.0).
+/// `organizations`, `org_items` and `org_item_repositories` (§6 `v17_organizations`,
+/// `v19_org_item_changes`, 1.0).
 public struct OrganizationStore: Sendable {
     public let database: VaultDatabase
 
@@ -85,6 +86,55 @@ public struct OrganizationStore: Sendable {
         try item.insert(tx.db)
     }
 
+    /// The row of `name` (exact, names are uppercase) for `kind`, tombstones included.
+    public func fetchItemRecord(organizationID: OrganizationID, kind: ConfigKind, name: String, in tx: StoreTransaction) throws -> OrgItemRecord? {
+        try OrgItemRecord
+            .filter(OrgItemRecord.CodingKeys.organizationID == organizationID.uuidString)
+            .filter(OrgItemRecord.CodingKeys.kind == kind.rawValue)
+            .filter(OrgItemRecord.CodingKeys.name == name)
+            .fetchOne(tx.db)
+    }
+
+    public func countItems(organizationID: OrganizationID, kind: ConfigKind, in tx: StoreTransaction) throws -> Int {
+        try OrgItemRecord
+            .filter(OrgItemRecord.CodingKeys.organizationID == organizationID.uuidString)
+            .filter(OrgItemRecord.CodingKeys.kind == kind.rawValue)
+            .fetchCount(tx.db)
+    }
+
+    @discardableResult
+    public func deleteItem(id: ConfigItemID, in tx: StoreTransaction) throws -> Bool {
+        try OrgItemRecord.deleteOne(tx.db, key: id.uuidString)
+    }
+
+    /// The repository list stored for an item (`repositories_edited`), by name.
+    public func fetchRepositories(itemID: ConfigItemID, in tx: StoreTransaction) throws -> [String] {
+        try String.fetchAll(
+            tx.db,
+            sql: "SELECT name FROM org_item_repositories WHERE item_id = ? ORDER BY name COLLATE NOCASE",
+            arguments: [itemID.uuidString]
+        )
+    }
+
+    /// Replaces the item's repository list (empty: none stored).
+    public func replaceRepositories(itemID: ConfigItemID, names: [String], in tx: StoreTransaction) throws {
+        try tx.db.execute(sql: "DELETE FROM org_item_repositories WHERE item_id = ?", arguments: [itemID.uuidString])
+        for name in names {
+            try tx.db.execute(sql: "INSERT INTO org_item_repositories (item_id, name) VALUES (?, ?)", arguments: [itemID.uuidString, name])
+        }
+    }
+
+    /// Pending item changes per organization (the Sync badge), now and after each change.
+    public func observePendingCounts() -> AsyncThrowingStream<[OrganizationID: Int], any Error> {
+        database.observe { db in
+            try Self.pendingCounts(db: db)
+        }
+    }
+
+    public func fetchPendingCounts() throws -> [OrganizationID: Int] {
+        try database.read { try Self.pendingCounts(db: $0.db) }
+    }
+
     /// Replaces an item row. Throws ``StoreError/notFound`` if there is none.
     public func updateItem(_ item: OrgItemRecord, in tx: StoreTransaction) throws {
         guard try OrgItemRecord.exists(tx.db, key: item.id.uuidString) else {
@@ -99,6 +149,14 @@ public struct OrganizationStore: Sendable {
         OrgItemRecord
             .filter(OrgItemRecord.CodingKeys.organizationID == organizationID.uuidString)
             .order(OrgItemRecord.CodingKeys.name, OrgItemRecord.CodingKeys.kind)
+    }
+
+    static func pendingCounts(db: Database) throws -> [OrganizationID: Int] {
+        var counts: [OrganizationID: Int] = [:]
+        for item in try OrgItemRecord.fetchAll(db) where item.syncStatus != .synced {
+            counts[item.organizationID, default: 0] += 1
+        }
+        return counts
     }
 
     static func organizationModels(db: Database) throws -> [OrganizationModel] {

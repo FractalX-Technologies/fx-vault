@@ -33,6 +33,8 @@ nonisolated extension ConfigRepositoryError {
             String(localized: "error.config.folderFull", defaultValue: "A folder can hold at most \(limit) secrets and variables.")
         case .destinationNotFound:
             String(localized: "error.config.destinationNotFound", defaultValue: "This destination is no longer in the vault.")
+        case .organizationNotFound:
+            String(localized: "error.config.organizationNotFound", defaultValue: "This organization is no longer in the vault.")
         case .destinationFull(let limit):
             String(localized: "error.config.destinationFull", defaultValue: "A destination can hold at most \(limit) secrets and variables.")
         case .tooManyDestinations(let limit):

@@ -5556,6 +5556,17 @@
         }
       }
     },
+    "error.config.organizationNotFound" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This organization is no longer in the vault."
+          }
+        }
+      }
+    },
     "error.config.pushNotApplicable" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

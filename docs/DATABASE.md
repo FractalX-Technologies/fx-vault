@@ -614,6 +614,28 @@ CREATE UNIQUE INDEX destinations_standalone_target ON destinations(target_key) W
   under the nil key of `DestinationStore.pendingCounts` (the Sync badge, B8c), and share imports
   only place destinations under repositories, so they hold no share rows.
 
+### v19_org_item_changes (1.0)
+
+```sql
+ALTER TABLE org_items ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1));
+ALTER TABLE org_items ADD COLUMN synced_visibility TEXT
+  CHECK (synced_visibility IS NULL OR synced_visibility IN ('all','private','selected'));
+ALTER TABLE org_items ADD COLUMN repositories_edited INTEGER NOT NULL DEFAULT 0 CHECK (repositories_edited IN (0, 1));
+UPDATE org_items SET synced_visibility = visibility;
+CREATE TABLE org_item_repositories (item_id TEXT NOT NULL REFERENCES org_items(id) ON DELETE CASCADE,
+  name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 100), PRIMARY KEY (item_id, name)) WITHOUT ROWID;
+```
+
+- Additive. Organization items get local changes (B6b): a tombstone, the visibility GitHub has
+  (NULL: never synced, an add; rows imported before v19 are synced), and an edited repository
+  list.
+- `org_item_repositories` holds the list to send only while `repositories_edited` is set;
+  otherwise Sync reads GitHub's list (B14/B15) right before a write, so every write sends the
+  complete list.
+- Status (`OrgItemRecord.syncStatus`): deleted, added, modified (value fingerprint differs from
+  `synced_fp`, visibility differs, or the list was edited), else synced. A secret with no value
+  is synced. No synced value is kept, so a changed value cannot be reverted (as destinations).
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -636,7 +658,8 @@ CREATE UNIQUE INDEX destinations_standalone_target ON destinations(target_key) W
 | `retired_destinations` | — (labels as `String`) | `DestinationStore` | The one-time notice after v16, names only, 1.0 |
 | `sent_shares` | `SentShareRecord` (`SentShareModel`) | `SentShareStore` | Names only, v0.9.0 |
 | `organizations` | `OrganizationRecord` (`OrganizationModel` with counts) | `OrganizationStore` | Unique by `login_key`, 1.0 |
-| `org_items` | `OrgItemRecord` (with ciphertext; `OrgItemModel` without) | `OrganizationStore` | Value optional for secrets; visibility and selected count, 1.0 |
+| `org_items` | `OrgItemRecord` (with ciphertext; `OrgItemModel` without) | `OrganizationStore` | Value optional for secrets; visibility and selected count, 1.0; pending state, v19 |
+| `org_item_repositories` | — (raw SQL) | `OrganizationStore` | The edited repository list of a `selected` item, v19 |
 | holds (`share_hold` on both item tables, the import records) | `HeldShareInputsModel` | `ShareHoldStore` | Read model of Sync's From Files review and bulk release, v0.9.0 |
 
 ## Transactions

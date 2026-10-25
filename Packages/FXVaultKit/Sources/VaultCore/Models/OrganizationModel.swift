@@ -48,6 +48,8 @@ public struct OrgItemModel: Sendable, Hashable, Identifiable {
     /// How many repositories a `.selected` item reaches; nil for the other visibilities.
     public var selectedRepositoryCount: Int?
     public var remoteUpdatedAt: Date?
+    /// A change waiting for Sync (1.0, B6b): added, modified, deleted or synced.
+    public var syncStatus: ConfigSyncStatus
 
     public init(
         id: ConfigItemID,
@@ -57,7 +59,8 @@ public struct OrgItemModel: Sendable, Hashable, Identifiable {
         hasValue: Bool,
         visibility: OrgVisibility,
         selectedRepositoryCount: Int?,
-        remoteUpdatedAt: Date?
+        remoteUpdatedAt: Date?,
+        syncStatus: ConfigSyncStatus = .synced
     ) {
         self.id = id
         self.organizationID = organizationID
@@ -67,5 +70,6 @@ public struct OrgItemModel: Sendable, Hashable, Identifiable {
         self.visibility = visibility
         self.selectedRepositoryCount = selectedRepositoryCount
         self.remoteUpdatedAt = remoteUpdatedAt
+        self.syncStatus = syncStatus
     }
 }
