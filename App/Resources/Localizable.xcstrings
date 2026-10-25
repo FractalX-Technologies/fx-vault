@@ -17381,6 +17381,94 @@
         }
       }
     },
+    "sync.organization.blocked.exists" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The organization already has this name on GitHub. Delete yours or pick another name."
+          }
+        }
+      }
+    },
+    "sync.organization.blocked.listing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The organization could not be listed, so nothing is sent there: %@"
+          }
+        }
+      }
+    },
+    "sync.organization.blocked.noRepositories" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Selected access needs at least one repository. Pick repositories or another access."
+          }
+        }
+      }
+    },
+    "sync.organization.blocked.remoteChanged" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It changed on GitHub since FX Vault last read it, so it is not sent."
+          }
+        }
+      }
+    },
+    "sync.organization.blocked.valueMissing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub needs the secret's value to change it, and FX Vault does not have it. Fill it first."
+          }
+        }
+      }
+    },
+    "sync.organization.confirmed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirmed on GitHub"
+          }
+        }
+      }
+    },
+    "sync.organization.scope" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Organization secrets and variables"
+          }
+        }
+      }
+    },
+    "sync.organization.unconfirmed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sent, but GitHub did not list it yet. The next Sync sends it again."
+          }
+        }
+      }
+    },
     "sync.progress.cancelling" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

@@ -54,6 +54,31 @@ struct SyncViewModelTests {
 
     // MARK: - Summary
 
+    /// B6b3b: organization changes count on the badge, get a group of their own in the toolbar
+    /// Sync, and are sent after the repositories.
+    @Test func organizationChangesJoinTheBadgeTheSummaryAndTheRun() async throws {
+        let (harness, organization) = try await OrganizationEditingTests().imported()
+        harness.runner.stub(argumentsPrefix: ["variable", "set"], with: .success(""))
+        try harness.data.organizationItems.addItem(organizationID: organization.id, kind: .variable, name: "ZONE", value: SecretBytes(utf8: "eu-west-1"), access: .all)
+        #expect(await TestFixtures.eventually { harness.app.pendingChangeCount == 1 })
+
+        let model = SyncViewModel(
+            context: SyncContext(repositoryIDs: nil),
+            dependencies: harness.dependencies(recorder: ActionRecorder(), isGitHubReady: true),
+            service: FakeSyncService(review: .success(SyncFixtures.review([])))
+        )
+        await model.load()
+        let group = try #require(model.repositories.first { $0.id == .organization(organization.id) })
+        #expect(group.fullName == "Example-Org")
+        #expect(group.scopes.first?.details == ["+ ZONE"])
+        #expect(model.executableCount == 1)
+
+        await model.startSync(includeDeletions: false)
+        #expect(model.step == .result)
+        #expect(harness.runner.invocations.contains { $0.arguments.starts(with: ["variable", "set", "ZONE"]) })
+        #expect(model.resultSections.flatMap(\.rows).map(\.title) == ["+ ZONE · Example-Org"])
+    }
+
     /// B8c: the Key Vaults of their own count on the Sync badge and get a group of their own in
     /// the summary, after the repositories.
     @Test func keyVaultsOfTheirOwnJoinTheBadgeAndTheSummary() async throws {
@@ -73,7 +98,7 @@ struct SyncViewModelTests {
         let model = fixture.viewModel
         await model.load()
         #expect(model.step == .summary)
-        let group = try #require(model.repositories.first { $0.id == nil })
+        let group = try #require(model.repositories.first { $0.id == .keyVaults })
         #expect(group.fullName == MainCopy.azureSection)
         #expect(group.scopes.first?.details == ["+ DATABASE_URL as DATABASE-URL"])
         #expect(model.pendingCount == 1)
@@ -630,7 +655,7 @@ struct SyncViewModelTests {
 
         #expect(model.step == .summary)
         let repository = try #require(model.repositories.first)
-        #expect(repository.id == repositoryID)
+        #expect(repository.id == .repository(repositoryID))
         #expect(!repository.blocked.isEmpty)
         #expect(model.executableCount == 0)
 

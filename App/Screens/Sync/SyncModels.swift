@@ -79,6 +79,8 @@ enum SyncFixActionModel: Hashable {
     /// A destination change needs a Refresh or its settings (v0.8.0): show the
     /// destination.
     case openDestination(DestinationID)
+    /// An organization change needs its value or repositories (1.0): the organization editor.
+    case editOrganizationItem(OrgItemEditorContext)
 }
 
 /// One line of the summary, the deletion review or the result: a title (names only), the
@@ -98,10 +100,22 @@ struct SyncSummaryScopeModel: Identifiable, Hashable {
     let details: [String]
 }
 
-/// One repository of the summary (§7.2).
+/// What one group of the summary and the deletion review stands for (1.0).
+enum SyncGroupID: Hashable {
+    case repository(RepoID)
+    /// The Key Vaults of their own.
+    case keyVaults
+    case organization(OrganizationID)
+
+    /// A destination review's group: its repository, or the Key Vaults of their own.
+    init(repositoryID: RepoID?) {
+        self = repositoryID.map(SyncGroupID.repository) ?? .keyVaults
+    }
+}
+
+/// One repository of the summary (§7.2), or (1.0) the Key Vaults of their own or an organization.
 struct SyncSummaryRepoModel: Identifiable, Hashable {
-    /// nil: the Key Vaults of their own (1.0).
-    let id: RepoID?
+    let id: SyncGroupID
     let fullName: String
     /// "New repository · Private · README · MIT" when the run creates it.
     let newRepository: String?
@@ -231,7 +245,7 @@ enum SyncPresentationBuilder {
             }
         }
         return SyncSummaryRepoModel(
-            id: repository.id,
+            id: .repository(repository.id),
             fullName: repository.fullName,
             newRepository: summary.newRepository.map(SyncCopy.newRepositoryLine),
             scopes: scopes,
@@ -467,8 +481,7 @@ struct SyncDeletionEnvironmentModel: Identifiable, Hashable {
 
 /// One repository's deletions.
 struct SyncDeletionRepoModel: Identifiable, Hashable {
-    /// nil: the Key Vaults of their own (1.0).
-    let id: RepoID?
+    let id: SyncGroupID
     let fullName: String
     /// Item deletions: "Delete secret OLD_TOKEN in Repository".
     let items: [SyncIssueModel]
@@ -479,7 +492,7 @@ extension SyncPresentationBuilder {
     static func deletions(_ previews: [RepoDeletionPreviewModel]) -> [SyncDeletionRepoModel] {
         previews.map { preview in
             SyncDeletionRepoModel(
-                id: preview.repositoryID,
+                id: .repository(preview.repositoryID),
                 fullName: preview.fullName,
                 items: preview.itemDeletions.map { change in
                     SyncIssueModel(id: change.id, title: SyncCopy.changeTitle(change), reason: "")

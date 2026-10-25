@@ -1934,7 +1934,7 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B4 `admin:org` scope check per organization and the refresh flow (copyable commands and Re-check).
 - [ ] B4b In-app Approve (D1's device code) through `gh auth refresh`: needs a check against a real gh login first (non-TTY behaviour, the browser step); reserved for Bryan's real account.
 - [x] B5 Organization list commands and store (additive migration); read-only organization node. Split: B5a GitHubKit listings [x]; B5b store and import [x]; B5c the read-only node and its e2e [x].
-- [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list. Split: B6a GitHubKit commands [x]; B6b1 local changes in the store (`v19`) [x]; B6b2 organization Sync in VaultData (review, run, confirm) [x]; B6b3a the editable organization detail and access picker [x]; B6b3b the Sync group and the badge.
+- [x] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list. Split: B6a GitHubKit commands [x]; B6b1 local changes in the store (`v19`) [x]; B6b2 organization Sync in VaultData (review, run, confirm) [x]; B6b3a the editable organization detail and access picker [x]; B6b3b the Sync group and the badge [x].
 - [ ] D6 Design pass after B6b3b: compare every screen with the D1–D5 boards (snapshots side by side) and fix the gaps in small slices; list what waits for later features (notes, drift, settings, menu bar, quick vault, Share Securely).
 - [ ] B7 Organization drift and verify; inherited and shadowed names on a repository.
 - [x] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source. Split: B8a discovery, package layer [x]; B8b1 Key Vaults of their own in the store (`v18`) [x]; B8b2 Connect Azure (requirements, subscriptions and vaults, import), the vaults in the first-import summary [x]; B8b3 the sidebar Azure node opening the vault (and Show in Sidebar for a linked copy there) [x]; B8c1 Sync of the vaults of their own (review, run, badge) [x]; B8c2a Remove from FX Vault for a vault of its own [x]; B8c2b dropped (2026-10-25, Bryan: 0.9's repository Key Vaults stay under their repositories; no migration).
@@ -2151,6 +2151,15 @@ Review B11e — notch unlock island (2026-10-25, automatic):
 - Tests: `NotchIslandTests` (geometry with and without a notch, states, shared model, no island without side effects); `DesignTokenTests` (Island color sets); UI `NotchIslandUITests` (⌃⌘L closes the window, the island's password unlocks); snapshots `island-touchid`, `island-password` checked. Waiver for the notch hardware and Touch ID checks (tasks/waivers.md).
 - Docs: README (Unlocking), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
 - Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 580 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (7 tests); lint OK (first run flagged a literal symbol size, now `Theme.Typography.title`); check-secrets OK in the worktree; strings synced.
+
+Review B6b3b — organizations in Sync (2026-10-25, automatic):
+- Badge: `AppViewModel.organizationPendingCounts` (observed from `OrganizationItemRepository`) joins the Sync count and the Dock badge.
+- Sync sheet: the toolbar Sync reviews each organization with pending changes (`OrganizationSyncRepository.review`), one summary group per organization (`OrgSyncPresentation`, "+ / ↑ / −" lines, blocked rows with Edit… for a missing value or empty list), its deletions in the deletion review, and runs them after GitHub and destinations; result rows per change. A repository's own Sync leaves organizations out.
+- `SyncGroupID` (repository, Key Vaults, organization) replaces `RepoID?` as the summary and deletion group id.
+- Assumptions: no per-change progress inside an organization (the progress line names the organization); a blocked "changed on GitHub" has no fix until B7 (organization refresh).
+- Tests: `SyncViewModelTests.organizationChangesJoinTheBadgeTheSummaryAndTheRun` (lean testing from here on, Bryan 2026-10-25).
+- Docs: README, CHANGELOG, ARCHITECTURE.
+- Gates: the full CI run passed (package suites, app tests, Debug and Release builds, UI tests twice, lint); check-secrets OK in the worktree.
 
 Review B6b3a — editable organization detail (2026-10-25, automatic):
 - Detail: Add Secret / Add Variable, a Status column, the struck-through name of a deletion; the row menu Copy Value, Edit… (also double-click), Revert for adds, deletions and access changes (Revert Access when every row is an access change; `OrgItemModel.isAccessChanged`, a value change alone offers none), Delete… (⌫ too); synced rows confirm with the repository texts (`ConfigDeletionModel.title/confirmTitle/message` now static by count and names), adds go at once. Read only tag removed.

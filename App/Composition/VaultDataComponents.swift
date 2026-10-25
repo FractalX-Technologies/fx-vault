@@ -41,6 +41,8 @@ struct VaultDataComponents {
     let organizations: OrganizationRepository
     /// Local changes to organization items, sent by Sync (1.0).
     let organizationItems: OrganizationItemRepository
+    /// Organization Sync through the importing account (1.0).
+    let organizationSync: OrganizationSyncRepository
     /// Runtime destinations of repositories (v0.8.0).
     let destinations: DestinationRepository
     /// Destination Sync, Refresh and import over HTTPS (v0.8.0).
@@ -145,6 +147,7 @@ struct VaultDataComponents {
             folders: FolderRepository(session: session, clock: clock),
             organizations: OrganizationRepository(session: session, schedulers: github, clock: clock),
             organizationItems: OrganizationItemRepository(session: session, clock: clock),
+            organizationSync: OrganizationSyncRepository(session: session, schedulers: github, clock: clock),
             destinations: DestinationRepository(session: session, clock: clock),
             destinationSync: DestinationSyncRepository(session: session, remotes: remotes, clock: clock),
             azureTokens: azureTokens,
