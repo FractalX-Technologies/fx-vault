@@ -76,10 +76,29 @@ struct VisualSnapshotTests {
         }
     }
 
-    @Test func connectSummary() async throws {
-        let harness = try await ConnectViewModelTests.scripted()
+    @Test func connectAzure() async throws {
+        let harness = try await ConnectAzureTests.scripted()
         let connect = harness.app.makeConnectViewModel()
         await connect.load()
+        connect.goToAzure()
+        await connect.azure.load()
+        try await SnapshotOutput.write("connect-azure", size: SnapshotOutput.windowSize) {
+            ConnectScreen(viewModel: connect)
+        }
+        harness.runner.replaceStub(argumentsPrefix: ["account", "list"], with: .success("[]"))
+        await connect.azure.load()
+        #expect(connect.azure.requirement == .notSignedIn)
+        try await SnapshotOutput.write("connect-azure-signin", size: SnapshotOutput.windowSize) {
+            ConnectScreen(viewModel: connect)
+        }
+    }
+
+    @Test func connectSummary() async throws {
+        let harness = try await ConnectAzureTests.scripted()
+        let connect = harness.app.makeConnectViewModel()
+        await connect.load()
+        connect.goToAzure()
+        await connect.azure.load()
         await connect.importSelected()
         #expect(connect.summary != nil)
         try await SnapshotOutput.write("connect-summary", size: SnapshotOutput.windowSize) {
@@ -113,7 +132,7 @@ struct VisualSnapshotTests {
             with: .success("==> Fetching gh\n==> Pouring gh--2.102.0.arm64_tahoe.bottle.tar.gz\n/opt/homebrew/Cellar/gh/2.102.0: 222 files, 52.3MB\n")
         )
         let setup = harness.app.makeGHSetupViewModel()
-        await setup.loadRunAvailability()
+        await setup.runs.loadAvailability()
         await setup.run(.installGH)
         try await SnapshotOutput.write("gh-setup-run", size: SnapshotOutput.windowSize) {
             GHSetupScreen(viewModel: setup)

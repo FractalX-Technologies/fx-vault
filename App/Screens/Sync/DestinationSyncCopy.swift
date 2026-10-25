@@ -1,4 +1,5 @@
 import DestinationKit
+import GitHubKit
 import Foundation
 import VaultCore
 import VaultData
@@ -6,7 +7,7 @@ import VaultData
 /// The text of destination changes in the Sync sheet (v0.8.0). Names only.
 nonisolated enum DestinationSyncCopy {
     static let azLoginCommand = "az login"
-    static let azInstallCommand = "brew install azure-cli"
+    static let azInstallCommand = SetupCommand.installAzureCLI.displayText
 
     static func sentence(writes: Int, deletions: Int) -> String {
         switch (writes, deletions) {

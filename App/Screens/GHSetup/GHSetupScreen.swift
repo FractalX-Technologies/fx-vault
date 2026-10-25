@@ -31,35 +31,14 @@ struct GHSetupScreen: View {
                 unusableAccountsList(accounts)
             }
             if !viewModel.commands.isEmpty || viewModel.copiedCommand != nil {
-                VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                    ForEach(viewModel.commands, id: \.self) { command in
-                        CommandRow(
-                            command: command,
-                            onRun: viewModel.runnable(command).map { runnable in
-                                { Task { await viewModel.run(runnable) } }
-                            },
-                            isRunning: viewModel.runningCommand != nil
-                        ) { viewModel.copy($0) }
-                    }
-                    if let run = viewModel.lastRun {
-                        if !run.lines.isEmpty {
-                            CommandOutputView(lines: run.lines)
-                        }
-                        Text(runStatus(run))
-                            .fxTextStyle(.caption)
-                            .foregroundStyle(run.failure == nil ? Theme.Colors.mutedText : Theme.Colors.danger)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else if viewModel.runningCommand != nil {
-                        Text(String(localized: "setupCommand.running", defaultValue: "Running… FX Vault runs only this command."))
-                            .fxTextStyle(.caption)
-                            .foregroundStyle(Theme.Colors.mutedText)
-                    }
-                    if let copied = viewModel.copiedCommand {
-                        Text(String(localized: "ghSetup.copied", defaultValue: "Copied \(copied). Run it in Terminal, then check again."))
-                            .fxTextStyle(.caption)
-                            .foregroundStyle(Theme.Colors.mutedText)
-                    }
-                }
+                SetupCommandList(
+                    commands: viewModel.commands,
+                    runs: viewModel.runs,
+                    copiedCommand: viewModel.copiedCommand,
+                    copiedMessage: { String(localized: "ghSetup.copied", defaultValue: "Copied \($0). Run it in Terminal, then check again.") },
+                    onRun: { command in Task { await viewModel.run(command) } },
+                    onCopy: { viewModel.copy($0) }
+                )
             }
             if viewModel.hasCopiedDiagnostics {
                 Text(String(
@@ -72,7 +51,7 @@ struct GHSetupScreen: View {
             }
             GHStatusRow(status: viewModel.status)
                 .task {
-                    await viewModel.loadRunAvailability()
+                    await viewModel.runs.loadAvailability()
                 }
             ShellFooter(isWorking: viewModel.isWorking) {
                 Button(String(localized: "ghSetup.copyDiagnostics", defaultValue: "Copy Diagnostics")) {
@@ -104,11 +83,6 @@ struct GHSetupScreen: View {
     }
 
     /// "Done · checked again", or why the run failed.
-    private func runStatus(_ run: SetupRunModel) -> String {
-        if let failure = run.failure { return failure }
-        return String(localized: "setupCommand.done", defaultValue: "Done · \(run.command.displayText) · checked again")
-    }
-
     /// The path, what trusting means, and **Trust This gh** (deliberately not the default
     /// button: Return checks again, it never consents).
     private func trustBlock(path: String, owner: GHBinaryOwnerModel) -> some View {

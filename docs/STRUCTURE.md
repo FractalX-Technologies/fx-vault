@@ -34,7 +34,8 @@ FXVault/
 │   │   │                            # (+ ShellLayout: centered card, dotted scroll, footer)
 │   │   ├── Onboarding/              # OnboardingScreen/ViewModel, Steps/OnboardingStepViews
 │   │   ├── Connect/                 # ConnectScreen/ViewModel (after onboarding: choose what to
-│   │   │                            # import, first-import summary), ConnectCopy
+│   │   │                            # import, first-import summary), ConnectAzureModel/View
+│   │   │                            # (subscriptions and vaults), ConnectCopy
 │   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel,
 │   │   │                            # Notch/ (NotchIslandController + panel, NotchIslandView
 │   │   │                            # + model, NotchGeometry),
@@ -110,6 +111,7 @@ FXVault/
 │   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,
 │   │   │                            # PasswordStrengthMeter, NewPasswordFields,
 │   │   │                            # WindowAccessor, CommandRow (+ Run), CommandOutputView,
+│   │   │                            # SetupCommandList (+ SetupCommandRunState),
 │   │   │                            # ErrorAlert, ConfigEditorSheet
 │   │   │                            # (+ ConfigEditorNote, ConfigSheet footer/field/list),
 │   │   │                            # BranchPolicyEditorView,

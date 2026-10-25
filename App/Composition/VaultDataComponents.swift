@@ -45,6 +45,8 @@ struct VaultDataComponents {
     let destinationSync: DestinationSyncRepository
     /// The `az` tokens; reset on lock.
     let azureTokens: ShellResolvingAzureTokens
+    /// Azure subscriptions and their Key Vaults through `az` (Connect Azure, 1.0).
+    let azureDiscovery: AzureDiscoveryRepository
 
     /// Builds every repository over `session`.
     ///
@@ -142,7 +144,14 @@ struct VaultDataComponents {
             organizations: OrganizationRepository(session: session, schedulers: github, clock: clock),
             destinations: DestinationRepository(session: session, clock: clock),
             destinationSync: DestinationSyncRepository(session: session, remotes: remotes, clock: clock),
-            azureTokens: azureTokens
+            azureTokens: azureTokens,
+            azureDiscovery: AzureDiscoveryRepository(
+                github: github,
+                runner: runner,
+                identity: identity,
+                workingDirectory: workingDirectory,
+                fileInspector: fileInspector
+            )
         )
     }
 
@@ -155,7 +164,8 @@ struct VaultDataComponents {
         clock: any VaultClock,
         sandbox: URL = FileManager.default.temporaryDirectory
             .appendingPathComponent(OfflineSandbox.directoryName, isDirectory: true),
-        fileInspector: any GHFileInspecting = SystemGHFileInspector()
+        fileInspector: any GHFileInspecting = SystemGHFileInspector(),
+        transport: FakeHTTPTransport = FakeHTTPTransport()
     ) -> VaultDataComponents {
         let home = sandbox.appendingPathComponent(OfflineSandbox.homeName, isDirectory: true)
         let identity = ProcessIdentityModel(
@@ -175,7 +185,7 @@ struct VaultDataComponents {
                 homeDirectory: home
             ),
             fileInspector: fileInspector,
-            transport: FakeHTTPTransport()
+            transport: transport
         )
     }
 

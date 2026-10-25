@@ -1,4 +1,5 @@
 import AppKit
+import DestinationKit
 import Foundation
 import GitHubKit
 import SharingKit
@@ -112,6 +113,8 @@ final class TestHarness {
     let capabilities: FakeBuildCapabilities
     /// Scripted gh, git and ssh.
     let runner = FakeCommandRunner()
+    /// Key Vault's HTTPS answers (Refresh, import, Sync of destinations).
+    let transport = FakeHTTPTransport()
     /// A per-harness temporary folder (fake gh, offline home); removed in `deinit`.
     let sandbox: URL
     /// Released in `deinit` (nonisolated); NSPasteboard is safe to release from any thread.
@@ -156,7 +159,8 @@ final class TestHarness {
             runner: runner,
             clock: clock,
             sandbox: sandbox,
-            fileInspector: fileInspector ?? SystemGHFileInspector()
+            fileInspector: fileInspector ?? SystemGHFileInspector(),
+            transport: transport
         )
         let github = data.github
         let manager = try VaultManager(
@@ -257,6 +261,18 @@ final class TestHarness {
     /// Scripts `gh auth token` (every call).
     func stubToken() {
         runner.stub(argumentsPrefix: ["auth", "token"], with: .success(TestFixtures.token + "\n"))
+    }
+
+    /// Writes a placeholder `az` (the fake runner answers its calls) into the sandbox's `bin`,
+    /// first on the probed PATH, so no test finds a real `az` in the Homebrew folders, and
+    /// scripts its access token. Call after ``installFakeGH(version:)``.
+    func installFakeAZ() throws {
+        let directory = sandbox.appendingPathComponent("bin", isDirectory: true)
+        let az = directory.appendingPathComponent("az", isDirectory: false)
+        try Data("#!/bin/sh\nexit 1\n".utf8).write(to: az)
+        try FileManager.default.setAttributes([.posixPermissions: TestFixtures.executableMode], ofItemAtPath: az.path)
+        stubShellProbe(FakeGHOutput.shellProbe(ghPath: preferences.ghPathOverride, path: "\(directory.path):/usr/bin:/bin"))
+        runner.stub(argumentsPrefix: ["account", "get-access-token"], with: .success(FakeAzureOutput.accessToken(expiresOn: .distantFuture)))
     }
 
     /// Scripts the interactive shell probe (`/bin/zsh -i -l -c …`, every call; replaces an

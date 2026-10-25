@@ -1,4 +1,5 @@
 #if FXVAULT_UI_TESTING
+import DestinationKit
 import Foundation
 import GitHubKit
 import VaultCore
@@ -58,14 +59,17 @@ enum UITestGitHub {
     ]}}
     """
 
-    /// Writes a placeholder `gh` (never run: the fake runner answers every call) where the gh
-    /// trust check accepts it, an owner-only folder of the current user. Returns its path.
+    /// Writes placeholder `gh` and `az` binaries (never run: the fake runner answers every
+    /// call) where the trust checks accept them, an owner-only folder of the current user that
+    /// leads the probed PATH, so no real `az` in the Homebrew folders is found. Returns gh's path.
     static func installPlaceholder(in bin: URL, fileManager: FileManager = .default) throws -> String {
         try fileManager.createDirectory(at: bin, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        let gh = bin.appendingPathComponent("gh", isDirectory: false)
-        try Data("#!/bin/sh\nexit 1\n".utf8).write(to: gh)
-        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: gh.path)
-        return gh.path
+        for name in ["gh", "az"] {
+            let binary = bin.appendingPathComponent(name, isDirectory: false)
+            try Data("#!/bin/sh\nexit 1\n".utf8).write(to: binary)
+            try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: binary.path)
+        }
+        return bin.appendingPathComponent("gh", isDirectory: false).path
     }
 
     /// `bin` is the shell probe's whole PATH (plus the system folders), so no locator looks at a
@@ -87,6 +91,7 @@ enum UITestGitHub {
             with: .success("[\(FakeGHOutput.repo(owner: organization, name: repository, permission: "ADMIN"))]")
         )
         stubImport(on: runner)
+        UITestAzure.stub(on: runner)
         return runner
     }
 
@@ -142,6 +147,30 @@ enum UITestGitHub {
     """
 }
 
+/// The scripted `az` and Key Vault of the UI-testing host (B8b2): one signed-in subscription
+/// with one vault holding one secret. Reads only; no write is scripted.
+enum UITestAzure {
+    static let vault = "kv-example-prod"
+    static let subscription = FakeAzureOutput.Subscription(
+        id: FakeAzureOutput.syntheticID(0x01),
+        name: "Example Production",
+        tenantID: FakeAzureOutput.syntheticID(0xA1),
+        isDefault: true
+    )
+
+    static func stub(on runner: FakeCommandRunner) {
+        runner.stub(argumentsPrefix: ["account", "list"], with: .success(FakeAzureOutput.accountList([subscription])))
+        runner.stub(argumentsPrefix: ["keyvault", "list"], with: .success(FakeAzureOutput.keyVaultList([vault], subscriptionID: subscription.id)))
+        runner.stub(argumentsPrefix: ["account", "get-access-token"], with: .success(FakeAzureOutput.accessToken(expiresOn: .distantFuture)))
+    }
+
+    static func makeTransport() -> FakeHTTPTransport {
+        let transport = FakeHTTPTransport()
+        transport.stubKeyVault(vault, secrets: ["DATABASE-URL": "ui-test"])
+        return transport
+    }
+}
+
 extension AppContainer {
     /// A vault on disk under `root`, the scripted gh, an ad-hoc build (so onboarding has no Touch
     /// ID step) and in-memory preferences, over ``sandboxed(mode:session:data:capabilities:preferences:ghStatusProbe:clock:)``:
@@ -165,7 +194,8 @@ extension AppContainer {
                 session: session,
                 runner: UITestGitHub.makeRunner(ghPath: ghPath, bin: bin),
                 clock: clock,
-                sandbox: root.appendingPathComponent("sandbox", isDirectory: true)
+                sandbox: root.appendingPathComponent("sandbox", isDirectory: true),
+                transport: UITestAzure.makeTransport()
             ),
             capabilities: capabilities,
             preferences: preferences,

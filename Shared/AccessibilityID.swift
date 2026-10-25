@@ -47,10 +47,22 @@ enum AccessibilityID {
         static let notNow = "connect.notNow"
         static let summary = "connect.summary"
         static let openVault = "connect.summary.continue"
+        static let back = "connect.back"
+        /// **Continue** on the GitHub step: to the Azure step.
+        static let toAzure = "connect.github.continue"
+        static let skipAzure = "connect.azure.skip"
+        static let azureRequirement = "connect.azure.requirement"
+        static let azureCheckAgain = "connect.azure.checkAgain"
+        static let stepCounter = "connect.stepCounter"
 
         /// The checkbox of a source row (`ConnectViewModel.Source.id`).
         static func source(_ id: String) -> String {
             "connect.source.\(id)"
+        }
+
+        /// The checkbox of a Key Vault row (`ConnectAzureModel.Vault.id`).
+        static func vault(_ id: String) -> String {
+            "connect.vault.\(id)"
         }
     }
 

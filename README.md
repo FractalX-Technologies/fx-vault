@@ -120,9 +120,15 @@ After installing, run `gh auth login` once if you have not used the GitHub CLI b
    too old and Homebrew is installed, **Run** next to `brew install gh` or `brew upgrade gh` runs
    it here and checks again (FX Vault runs only these fixed commands). Run `gh auth login` in
    Terminal, then choose **Check Again**.
-5. **Choose what to import.** Each account lists its organizations (checked when the account
-   can read their secrets) and its personal repositories. **Continue** imports the checked ones
-   (secret names, variable values) and shows what was found; **Not Now** imports nothing.
+5. **Choose what to import from GitHub.** Each account lists its organizations (checked when
+   the account can read their secrets) and its personal repositories. **Continue** goes on to
+   Azure; **Not Now** imports nothing.
+6. **Choose Azure Key Vaults.** FX Vault reads your subscriptions and their vaults through the
+   Azure CLI (`az`), every vault checked. Without `az`, **Run** next to `brew install azure-cli`
+   installs it; sign in with `az login` in Terminal (reading a vault needs the Key Vault Secrets
+   User role), then **Check Again**. **Continue** imports GitHub's checked sources (secret
+   names, variable values) and each checked vault with its secret values, and shows what was
+   found; **Skip** imports GitHub only. Nothing is written to GitHub or Azure.
 
 ### Unlocking
 

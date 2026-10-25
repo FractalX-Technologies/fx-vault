@@ -914,6 +914,138 @@
         }
       }
     },
+    "connect.azure.checkAgain" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check Again"
+          }
+        }
+      }
+    },
+    "connect.azure.copied" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied %@. Run it in Terminal, then check again."
+          }
+        }
+      }
+    },
+    "connect.azure.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This Azure account lists no Key Vault FX Vault can read."
+          }
+        }
+      }
+    },
+    "connect.azure.failed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Azure could not be read"
+          }
+        }
+      }
+    },
+    "connect.azure.notInstalled" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Install the Azure CLI, then sign in with az login."
+          }
+        }
+      }
+    },
+    "connect.azure.notSignedIn" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sign in with az login in Terminal. Reading a vault needs the Key Vault Secrets User role."
+          }
+        }
+      }
+    },
+    "connect.azure.requirements" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Requirements"
+          }
+        }
+      }
+    },
+    "connect.azure.selected" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld vault](inflect: true) selected · Secrets with values"
+          }
+        }
+      }
+    },
+    "connect.azure.skip" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        }
+      }
+    },
+    "connect.azure.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose the vaults to read."
+          }
+        }
+      }
+    },
+    "connect.azure.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connect Azure Key Vault."
+          }
+        }
+      }
+    },
+    "connect.azure.untrusted" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault does not run %@: another user can change it. Reinstall the Azure CLI."
+          }
+        }
+      }
+    },
     "connect.continue" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -1024,13 +1156,35 @@
         }
       }
     },
+    "connect.summary.keyVaultCount" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld vault](inflect: true)"
+          }
+        }
+      }
+    },
+    "connect.summary.keyVaults" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Azure Key Vault"
+          }
+        }
+      }
+    },
     "connect.summary.note" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "GitHub never returns secret values. Fill them next, or later in each place."
+            "value" : "GitHub never returns secret values: fill them next, or later in each place. Key Vault secrets came with theirs."
           }
         }
       }
@@ -1085,7 +1239,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Secrets (names)"
+            "value" : "Secrets"
           }
         }
       }

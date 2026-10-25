@@ -525,12 +525,19 @@ foreground color, so `.primary` text still turns white on selected rows.
   `.largeTitle`, `.lead` paragraph, rounded `FXTextField`s (460 pt), a `.caption` note, and footer
   `.outline` Back + `.primary` Continue (`.large`). The recovery key's Continue waits for the
   `FXCheckboxRow` "I saved it offline"; that step has no Back (the vault already exists).
-- Connect (boards ConnectGitHub, FirstImport), same column: a `SectionLabel` per account
+- Connect (boards ConnectGitHub, ConnectAzure, FirstImport), same column, a `StepCounter`
+  (01 / 02) beside the phase header: a `SectionLabel` per account
   ("user-a · github.com") over callout rows (checkbox, `.bodyEmphasized` login, `.caption`
   "Organization" or "N personal repositories", the org's `StatusChip` at the end); a `.caption`
-  "N selected · Secret names only"; `.outline` Not Now + `.primary` Continue. The summary is a
-  `Grid` (Source / Secrets (names) / Variables, counts in `.mono`), a `.bodyEmphasized` total, a
-  warning `Banner` naming failures, and the "GitHub never returns secret values" note.
+  "N selected · Secret names only"; `.outline` Not Now + `.primary` Continue. Azure: while `az`
+  is missing or signed out, a "Requirements" `SectionLabel`, one `.body` sentence and the
+  `SetupCommandList` (Run on `brew install azure-cli`, `az login` Copy only) with `.outline`
+  Check Again; then a `SectionLabel` per subscription over callout rows (checkbox,
+  `.bodyEmphasized` vault name, `.caption` location), a `.caption` "N vaults selected · Secrets
+  with values"; `.outline` Back + Skip, `.primary` Continue. The summary is a `Grid` (Source /
+  Secrets / Variables, counts in `.mono`; rows Organizations, Repositories, Azure Key Vault), a
+  `.bodyEmphasized` total, a warning `Banner` naming failures, and the "GitHub never returns
+  secret values" note.
 
 ### Settings
 

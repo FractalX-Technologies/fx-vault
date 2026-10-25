@@ -2,8 +2,8 @@ import GitHubKit
 import SwiftUI
 import VaultCore
 
-/// The Connect phase after onboarding (boards ConnectGitHub and FirstImport), in the onboarding
-/// column: choose what to import, then the summary of what was stored.
+/// The Connect phase after onboarding (boards ConnectGitHub, ConnectAzure and FirstImport), in
+/// the onboarding column: choose what to import on each step, then the summary of what was stored.
 struct ConnectScreen: View {
     @State private var viewModel: ConnectViewModel
 
@@ -20,16 +20,27 @@ struct ConnectScreen: View {
         GeometryReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xLargePlus) {
-                    OnboardingPhaseHeader(current: viewModel.summary == nil ? .connect : .import)
+                    HStack {
+                        OnboardingPhaseHeader(current: viewModel.summary == nil ? .connect : .import)
+                        Spacer(minLength: Theme.Spacing.large)
+                        if viewModel.summary == nil {
+                            StepCounter(current: viewModel.step.rawValue, total: ConnectViewModel.Step.allCases.count)
+                                .accessibilityIdentifier(AccessibilityID.Connect.stepCounter)
+                        }
+                    }
                     Group {
                         if let summary = viewModel.summary {
                             FirstImportSummaryView(summary: summary) {
                                 viewModel.finish()
                             }
                         } else {
-                            ConnectGitHubView(viewModel: viewModel)
+                            switch viewModel.step {
+                            case .github: ConnectGitHubView(viewModel: viewModel)
+                            case .azure: ConnectAzureView(viewModel: viewModel)
+                            }
                         }
                     }
+                    .transition(.opacity)
                     .frame(maxHeight: .infinity, alignment: .top)
                 }
                 .padding(.vertical, Theme.Spacing.huge)
@@ -40,6 +51,7 @@ struct ConnectScreen: View {
         }
         .background(Theme.Colors.ground)
         .animation(Theme.Durations.interactionAnimation, value: viewModel.summary)
+        .animation(Theme.Durations.interactionAnimation, value: viewModel.step)
         .task {
             if !viewModel.hasLoaded {
                 await viewModel.load()
@@ -88,14 +100,14 @@ private struct ConnectGitHubView: View {
             .accessibilityIdentifier(AccessibilityID.Connect.notNow)
             .disabled(viewModel.isImporting)
             Button {
-                Task { await viewModel.importSelected() }
+                viewModel.goToAzure()
             } label: {
                 ShellForwardLabel(title: String(localized: "connect.continue", defaultValue: "Continue"))
             }
             .fxButtonStyle(.primary, size: .large)
-            .accessibilityIdentifier(AccessibilityID.Connect.importSelected)
+            .accessibilityIdentifier(AccessibilityID.Connect.toAzure)
             .keyboardShortcut(.defaultAction)
-            .disabled(!viewModel.canContinue)
+            .disabled(!viewModel.canGoToAzure)
         }
     }
 
@@ -164,7 +176,7 @@ private struct FirstImportSummaryView: View {
             Grid(alignment: .leading, horizontalSpacing: Theme.Spacing.xLarge, verticalSpacing: Theme.Spacing.medium) {
                 GridRow {
                     SectionLabel(String(localized: "connect.summary.source", defaultValue: "Source"))
-                    SectionLabel(String(localized: "connect.summary.secrets", defaultValue: "Secrets (names)"))
+                    SectionLabel(String(localized: "connect.summary.secrets", defaultValue: "Secrets"))
                     SectionLabel(String(localized: "connect.summary.variables", defaultValue: "Variables"))
                 }
                 row(
@@ -178,6 +190,13 @@ private struct FirstImportSummaryView: View {
                     detail: ConnectCopy.repositories(summary.repositoryCount, environments: summary.environmentCount),
                     secrets: summary.repositorySecretCount,
                     variables: summary.repositoryVariableCount
+                )
+                // Key Vault holds secrets only.
+                row(
+                    title: String(localized: "connect.summary.keyVaults", defaultValue: "Azure Key Vault"),
+                    detail: ConnectCopy.keyVaults(summary.keyVaultCount),
+                    secrets: summary.keyVaultSecretCount,
+                    variables: 0
                 )
             }
             .accessibilityElement(children: .contain)
@@ -196,7 +215,7 @@ private struct FirstImportSummaryView: View {
             }
             OnboardingNote(String(
                 localized: "connect.summary.note",
-                defaultValue: "GitHub never returns secret values. Fill them next, or later in each place."
+                defaultValue: "GitHub never returns secret values: fill them next, or later in each place. Key Vault secrets came with theirs."
             ))
         } footer: {
             Button(action: open) {
