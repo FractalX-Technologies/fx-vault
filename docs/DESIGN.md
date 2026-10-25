@@ -304,8 +304,8 @@ One implementation each, in `SheetChrome.swift`; every sheet and full-window for
 - `.fxCalloutBackground()`: the quiet 12 pt `ground` row with a hairline. `SheetCallout`
   (symbol + message) and `FXCheckboxRow` (a confirmation checkbox) are drawn on it.
 - `InlineErrorView(error:)`: the danger `Banner` box with a title and a message line.
-- `.fxLinkButtonStyle(isEmphasized:)`: a `brand` text button with the pointing-hand cursor
-  (macOS 15+), 40% when disabled ("Use recovery key", "Edit").
+- `.fxLinkButtonStyle(isEmphasized:)`: a `brand` text button with the pointing-hand cursor,
+  40% when disabled ("Use recovery key", "Edit").
 - `.fxSheetContent(width:)`: the content of a system `.sheet`: 32 pt padding on
   `.fxSheetBackground()`, optionally at a fixed width.
 

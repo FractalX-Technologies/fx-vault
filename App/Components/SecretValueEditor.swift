@@ -216,9 +216,7 @@ final class SecretTextView: NSTextView {
         isAutomaticLinkDetectionEnabled = false
         isAutomaticDataDetectionEnabled = false
         inlinePredictionType = .no
-        if #available(macOS 15.0, *) {
-            writingToolsBehavior = .none
-        }
+        writingToolsBehavior = .none
         font = Theme.Typography.nsMonospaced
         textColor = .labelColor
         drawsBackground = false

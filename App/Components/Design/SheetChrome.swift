@@ -222,7 +222,7 @@ struct InlineErrorView: View {
 // MARK: - Links
 
 /// A text button in the brand color ("Use recovery key", "Edit"): no chrome, the pointing-hand
-/// cursor on macOS 15+, 40% when disabled.
+/// cursor, 40% when disabled.
 struct FXLinkButtonStyle: ButtonStyle {
     var isEmphasized = false
 
@@ -253,14 +253,9 @@ extension View {
         buttonStyle(FXLinkButtonStyle(isEmphasized: isEmphasized))
     }
 
-    /// The pointing-hand cursor over links, where the system offers it (macOS 15+).
-    @ViewBuilder
+    /// The pointing-hand cursor over links.
     fileprivate func linkPointer() -> some View {
-        if #available(macOS 15, *) {
-            pointerStyle(.link)
-        } else {
-            self
-        }
+        pointerStyle(.link)
     }
 }
 

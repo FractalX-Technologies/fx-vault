@@ -40,7 +40,8 @@ let testSupport: Target.Dependency = .target(name: "FXVaultTestSupport")
 let package = Package(
     name: "FXVaultKit",
     defaultLocalization: "en",
-    platforms: [.macOS(.v14)],
+    // A string: `.v26` needs tools 6.2, and nothing else here does.
+    platforms: [.macOS("26.0")],
     products: [
         .library(
             name: "FXVaultKit",

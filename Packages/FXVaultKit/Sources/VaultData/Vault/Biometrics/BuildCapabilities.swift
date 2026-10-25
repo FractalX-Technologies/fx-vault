@@ -52,10 +52,7 @@ public struct BuildCapabilities: BuildCapabilitiesProviding {
         guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
             return nil
         }
-        if #available(macOS 15.0, *) {
-            return context.domainState.biometry.stateHash
-        }
-        return context.evaluatedPolicyDomainState
+        return context.domainState.biometry.stateHash
     }
 
     public func bootSessionID() -> String? {

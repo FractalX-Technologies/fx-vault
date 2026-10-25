@@ -240,7 +240,7 @@ private struct SpawnedChild: Sendable {
         posix_spawn_file_actions_adddup2(&fileActions, stderrPipe.write, STDERR_FILENO)
         let chdirResult = spec.workingDirectory.withUnsafeFileSystemRepresentation { path -> Int32 in
             guard let path else { return EINVAL }
-            return posix_spawn_file_actions_addchdir_np(&fileActions, path)
+            return posix_spawn_file_actions_addchdir(&fileActions, path)
         }
         guard chdirResult == 0 else {
             closeAll(allDescriptors)

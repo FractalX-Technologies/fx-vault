@@ -99,24 +99,15 @@ private extension View {
 }
 
 /// Installs the toolbar. The window title is drawn by ``MainToolbarTitle`` (mark, name and
-/// repository path), so the system title is removed where macOS allows it (15+); on macOS 26+
-/// every item hides the shared glass so the pills keep their own fill (docs/DESIGN.md).
+/// repository path), so the system title is removed; every item hides the shared glass so the
+/// pills keep their own fill (docs/DESIGN.md).
 private struct MainToolbarModifier: ViewModifier {
     let viewModel: MainViewModel
 
     func body(content: Content) -> some View {
-        if #available(macOS 26, *) {
-            content
-                .toolbar { GlasslessMainToolbar(viewModel: viewModel) }
-                .toolbar(removing: .title)
-        } else if #available(macOS 15, *) {
-            content
-                .toolbar { MainToolbar(viewModel: viewModel, showsAppName: true) }
-                .toolbar(removing: .title)
-        } else {
-            content
-                .toolbar { MainToolbar(viewModel: viewModel, showsAppName: false) }
-        }
+        content
+            .toolbar { MainToolbar(viewModel: viewModel) }
+            .toolbar(removing: .title)
     }
 }
 
@@ -126,29 +117,10 @@ private struct MainToolbarModifier: ViewModifier {
 /// that remains enabled offline (ARCHITECTURE decisions 39 and 51).
 private struct MainToolbar: ToolbarContent {
     let viewModel: MainViewModel
-    let showsAppName: Bool
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigation) {
-            MainToolbarTitle(viewModel: viewModel, showsAppName: showsAppName)
-        }
-        ToolbarItemGroup(placement: .primaryAction) {
-            MainToolbarActions(viewModel: viewModel)
-        }
-        ToolbarItem(placement: .primaryAction) {
-            MainSyncButton(viewModel: viewModel)
-        }
-    }
-}
-
-/// ``MainToolbar`` without the macOS 26 shared glass behind its items.
-@available(macOS 26, *)
-private struct GlasslessMainToolbar: ToolbarContent {
-    let viewModel: MainViewModel
-
-    var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            MainToolbarTitle(viewModel: viewModel, showsAppName: true)
+            MainToolbarTitle(viewModel: viewModel)
         }
         .sharedBackgroundVisibility(.hidden)
         ToolbarItemGroup(placement: .primaryAction) {
@@ -162,7 +134,7 @@ private struct GlasslessMainToolbar: ToolbarContent {
     }
 }
 
-/// The mark, the app name (when the system title is hidden), the selected repository as a mono
+/// The mark, the app name, the selected repository as a mono
 /// `owner / repo` path and, in Debug builds, the DEV chip. The native toolbar places it at the
 /// scope column's leading edge (a `.navigation` item on the detail column lands there too), and
 /// the scope/detail divider runs through the toolbar. So the title is `toolbarTitleWidth` wide
@@ -170,12 +142,11 @@ private struct GlasslessMainToolbar: ToolbarContent {
 /// not fit, rather than crossing the divider, and the buttons after it start right of the divider.
 private struct MainToolbarTitle: View {
     let viewModel: MainViewModel
-    let showsAppName: Bool
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            row(showsAppName: showsAppName, showsPath: true)
-            row(showsAppName: showsAppName, showsPath: false)
+            row(showsAppName: true, showsPath: true)
+            row(showsAppName: true, showsPath: false)
             row(showsAppName: false, showsPath: false)
         }
         .frame(width: Theme.Layout.toolbarTitleWidth, alignment: .leading)

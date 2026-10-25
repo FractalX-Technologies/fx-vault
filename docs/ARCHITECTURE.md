@@ -17,7 +17,7 @@ full design is in `tasks/todo.md` §4–§10; related documents:
 
 ## Overview
 
-FX Vault is a native SwiftUI app for macOS 14 and later. A local encrypted vault (GRDB/SQLite)
+FX Vault is a native SwiftUI app for macOS 26 and later (1.0; 0.9 ran on 14). A local encrypted vault (GRDB/SQLite)
 is the source of truth for GitHub Actions secrets and variables; every GitHub operation goes
 through the GitHub CLI (`gh`).
 
@@ -1178,7 +1178,7 @@ AppTests).
     Sync sheet, Create Repository and the drift review report their gh outcomes to
     `GitHubReachability` (decision 50).
   - Toolbar: the FractalX mark, the window title and the selected `owner / repo` in mono (the
-    system title is removed on macOS 15+; macOS 14 keeps it and omits the duplicate name), a DEV
+    system title is removed; the items hide the shared toolbar glass), a DEV
     chip in Debug builds (decision 43), New Repository, Import .env, Share
     (Share Project…), Lock,
     Sync (`SyncToolbarButton`, count in the label, disabled at 0, while locked, while syncing and

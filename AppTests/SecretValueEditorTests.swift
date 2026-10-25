@@ -79,9 +79,7 @@ struct SecretValueEditorTests {
         #expect(!textView.isAutomaticDataDetectionEnabled)
         #expect(!textView.smartInsertDeleteEnabled)
         #expect(textView.inlinePredictionType == .no)
-        if #available(macOS 15.0, *) {
-            #expect(textView.writingToolsBehavior == NSWritingToolsBehavior.none)
-        }
+        #expect(textView.writingToolsBehavior == NSWritingToolsBehavior.none)
         #expect(textView.undoManager == nil || !textView.allowsUndo)
     }
 

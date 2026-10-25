@@ -81,7 +81,7 @@ the secrets your code reads at runtime in Azure Key Vault.
   connection returns.
 ## Requirements
 
-- macOS 14 Sonoma or later
+- macOS 26 Tahoe or later (FX Vault 0.9 is the last version for macOS 14 and 15)
 - [GitHub CLI](https://cli.github.com) (`gh`) 2.97.0 or later, logged in (`gh auth login`)
 - Only for Azure Key Vault destinations: the [Azure CLI](https://learn.microsoft.com/cli/azure/)
   (`az`), signed in (`az login`)

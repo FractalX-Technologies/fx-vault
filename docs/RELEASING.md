@@ -215,9 +215,9 @@ as release notes cite them.
 | 8 | Lock when idle | Set auto-lock to 1 minute, then leave the Mac untouched | Locks within about 1 minute 15 s (checked every 15 s) |
 | 9 | Lock on window close | Close the main window, then reopen it | The vault is locked |
 | 10 | Clipboard clearing | Copy a secret value, then wait 30 s. Also: copy, then lock or quit | The clipboard is cleared, unless something else was copied since |
-| 11 | Layout | macOS 14 and 27, narrowest and widest window, light and dark: Onboarding (every step), Lock, Recovery reset, Preferences (each tab, locked and unlocked), the main window | Nothing clipped or overlapping; one screenshot per screen and OS |
+| 11 | Layout | macOS 26 and 27, narrowest and widest window, light and dark: Onboarding (every step), Lock, Recovery reset, Preferences (each tab, locked and unlocked), the main window | Nothing clipped or overlapping; one screenshot per screen and OS |
 | 13 | Gatekeeper | Download the DMG in Safari and open it | Only the standard "downloaded from the Internet" dialog; `spctl -a -vvv -t install` reports Notarized Developer ID |
-| 14 | Sonoma smoke | macOS 14 VM: install with Homebrew, then onboarding, gh detection, import, sync on the spike repo | Everything works; `depends_on macos: :sonoma` allows the install |
+| 14 | Tahoe smoke | macOS 26 VM: install with Homebrew, then onboarding, gh detection, import, sync on the spike repo; on a macOS 15 Mac, `brew install` | Everything works on 26; on 15, `depends_on macos: :tahoe` refuses the install |
 | 15 | Spike repos | Import, edit, sync and drift review on the spike repos | Matches the M3/M5 verify notes |
 | 16 | Touch ID: status codes | On the signed build, trigger a lockout (5 failed fingers) and an enrollment change while Touch ID is on | Lockout asks for the password and keeps the item; the enrollment change turns Touch ID off and asks to re-enable (confirms the Keychain status mapping in SECURITY-MODEL.md §5) |
 | 17 | Re-authentication | Export .env and File › Share Project… with Touch ID on; cancel once, choose "Use Master Password" once; repeat on an ad-hoc build | Each prompt names its purpose; cancel shows no error; the fallback focuses the password field; the ad-hoc build offers only the password |
