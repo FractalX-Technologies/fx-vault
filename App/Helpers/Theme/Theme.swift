@@ -39,11 +39,11 @@ enum Theme {
         static let segmentHeight: CGFloat = 30
         /// Pending and banner dots.
         static let bannerDotSize: CGFloat = 8
-        /// Rows: tables 52, scopes 36, sidebar repositories 32.
-        static let tableRowHeight: CGFloat = 52
+        /// Rows: tables 34 (boards Main2, Org-Visibility), scopes 36, sidebar repositories 32.
+        static let tableRowHeight: CGFloat = 34
         /// The content height of a native `Table` cell that yields a `tableRowHeight` row
         /// (`.fxTableCell()`; the inset table style adds the rest).
-        static let tableCellMinHeight: CGFloat = 44
+        static let tableCellMinHeight: CGFloat = 26
         static let scopeRowHeight: CGFloat = 36
         static let sidebarRowHeight: CGFloat = 32
         /// Avatars in the sidebar account row.

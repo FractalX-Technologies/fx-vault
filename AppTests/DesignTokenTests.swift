@@ -133,7 +133,7 @@ struct DesignTokenTests {
         #expect(Theme.Radius.row == 10)
         #expect(Theme.Radius.compactRow == 8)
         #expect(Theme.Durations.interaction == 0.14)
-        #expect(Theme.Layout.tableRowHeight == 52)
+        #expect(Theme.Layout.tableRowHeight == 34)
         let spacing = [
             Theme.Spacing.xxSmall, Theme.Spacing.xSmall, Theme.Spacing.smallMinus, Theme.Spacing.small,
             Theme.Spacing.mediumMinus, Theme.Spacing.medium, Theme.Spacing.large, Theme.Spacing.largePlus,
