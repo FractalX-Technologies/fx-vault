@@ -376,6 +376,7 @@ struct RepoImportPromptView: View {
                 }
                 .fxButtonStyle(.primary, size: .large)
                 .disabled(!sidebar.canImport(repo))
+                .accessibilityIdentifier(AccessibilityID.Main.importRepository)
             }
             if !sidebar.isOnline {
                 Text(ConnectivityCopy.offlineHelp)

@@ -11386,6 +11386,17 @@
         }
       }
     },
+    "projectShare.airDrop" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send with AirDrop"
+          }
+        }
+      }
+    },
     "projectShare.back" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11980,24 +11991,24 @@
         }
       }
     },
-    "projectShare.production.blocked" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Can't be shared: the file includes production (%@). Uncheck it to continue."
-          }
-        }
-      }
-    },
     "projectShare.production.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Production is never shared. Teammates get production values from your secret store."
+            "value" : "Unchecked by default. Checking it asks for Touch ID."
+          }
+        }
+      }
+    },
+    "projectShare.production.included" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Includes production (%@). Whoever has the file and the words gets these values."
           }
         }
       }
@@ -12031,6 +12042,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Sharing exports values. Use Touch ID or your master password to continue."
+          }
+        }
+      }
+    },
+    "projectShare.reauth.production" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This file includes production values. Use Touch ID or your master password to continue."
           }
         }
       }
@@ -13999,7 +14021,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "The selection includes a production stage. Uncheck production to share the rest."
+            "value" : "The selection includes production. Create the file again and confirm with Touch ID or your master password."
           }
         }
       }
@@ -14010,7 +14032,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Production is never shared"
+            "value" : "Confirm production first"
           }
         }
       }

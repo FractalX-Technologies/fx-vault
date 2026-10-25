@@ -670,7 +670,8 @@ Since v0.9.0 (`SharingRepository+ProjectShare.swift`, SHARING-PROTOCOL.md §6.1;
 `stageOptions(repositoryIDs:)`, `selection(repositoryIDs:stages:includesRepositoryLevel:folderIDs:
 expiry:) -> ShareBundleSelectionModel`, `previewBundle(_:)`, `exportBundle(_:to:
 senderName:appVersion:authorization:existingFile:)` (passphrase only, returned once, file 0600;
-a production stage throws `.productionNotShared` before the authorization is consumed),
+production needs the `.productionFileExport` authorization, else `.productionNotAuthorized`
+before the authorization is consumed),
 `defaultFileName(…)`, `sentShares()`,
 `observeSentShares()`, `deleteSentShare(_:)`, `inspectFile(at:)`, `openShareFile(_:passphrase:
 checkGitHub:)` → `ShareOpenedShareFileModel` (`.repository`, `.folder` or
@@ -931,8 +932,10 @@ D1–D5). This slice removed every peer-to-peer feature:
   VaultData `Team/`, `Spaces/` and `Chat/` repositories and the app screens and managers.
 - Migration `v15_drop_teammates` drops their tables ([DATABASE.md](DATABASE.md)).
 - Sharing is a passphrase `.fxvault` file only (format 2; v1 still opens), sent with the system
-  share picker (AirDrop included) or Save…; a production stage is refused
-  (`SharingError.productionNotShared`) until B3b allows it behind Touch ID, as the brief says. A 0.9 teammates file reads as `invalidFile`.
+  share picker, Send with AirDrop (`NSSharingService` `.sendViaAirDrop`, B3b) or Save…; production
+  is unchecked by default and needs the `.productionFileExport` authorization (Touch ID when
+  checked, or the password at Create), else `SharingError.productionNotAuthorized` (B3b). A 0.9
+  teammates file reads as `invalidFile`.
 - `FXVAULT_SPACE` stays a reserved name and is still dropped from variable listings, so a 0.9
   marker on GitHub never shows up as a variable.
 - Decisions 51–58, 73–76, 81–98, 104, 121 and 133–134 went with the features; 120, 128 and 132
@@ -1225,9 +1228,10 @@ AppTests).
     any write → 0600 write → git tracked / not ignored / ignored / unknown, with the `.gitignore`
     offer). One authorization per write; a failed write uses it up.
   - `Sharing` (§9, M6): file export (v0.9.0: `ProjectShareScreen`: stages and the tri-state
-    `ShareScopeTreeModel`, production listed but never checked, `ReauthGate.authorizeShare(.fileExport)`
+    `ShareScopeTreeModel`, production unchecked by default and confirmed with its own
+    `.productionFileExport` authorization (`productionReauth`), else `ReauthGate.authorizeShare(.fileExport)`
     → `exportBundle` into `$TMPDIR/io.fractalx.fxvault.shares/<uuid>/` (0700 / 0600) → passphrase
-    shown once → the system share picker (AirDrop included) or Save… (0600); the staged file is
+    shown once → Send with AirDrop, the system share picker or Save… (0600); the staged file is
     removed when the sheet closes), and import (header before passphrase; one message for wrong
     passphrase / damaged file; chips, Keep mine default, widening-policy and replay confirmations;
     one-click import of a missing repository through `ShareRepositoryImporter`).

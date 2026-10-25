@@ -24,6 +24,19 @@ final class FakeShareFileDelivery: ShareFileDelivering {
         pendingCompletion = completion
     }
 
+    /// What "Is AirDrop available" answers.
+    var isAirDropAvailable = true
+    private(set) var airDroppedFiles: [URL] = []
+
+    func canSendWithAirDrop(fileURL: URL) -> Bool {
+        isAirDropAvailable
+    }
+
+    func sendWithAirDrop(fileURL: URL, completion: @escaping (ShareDeliveryOutcome) -> Void) {
+        airDroppedFiles.append(fileURL)
+        pendingCompletion = completion
+    }
+
     /// Finishes the running hand-off as the sharing service would.
     func finishSharing(_ outcome: ShareDeliveryOutcome) {
         let completion = pendingCompletion

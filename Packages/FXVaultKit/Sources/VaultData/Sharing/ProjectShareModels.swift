@@ -83,7 +83,8 @@ public struct ShareBundleRepositorySelectionModel: Sendable, Hashable {
 public struct ShareStageOptionModel: Sendable, Hashable, Identifiable {
     /// The first spelling found (repository order, then environments, then destinations).
     public var name: String
-    /// ``StageRisk/isProduction(_:)``: never shared (Q13).
+    /// ``StageRisk/isProduction(_:)``: unchecked by default and shared only behind its own
+    /// confirmation (``ShareAuthorizationPurpose/productionFileExport``).
     public var isProduction: Bool
     /// The chosen repositories that have this stage.
     public var repositoryIDs: [RepoID]
@@ -108,7 +109,8 @@ public struct ShareBundleExportPreviewModel: Sendable, Hashable {
     /// `Folder · NAME`).
     public var valueMissingNames: [String]
     /// Production places in the selection (environments and destinations, by name): the file
-    /// cannot be written while this is not empty.
+    /// needs a ``ShareAuthorizationPurpose/productionFileExport`` authorization while this is not
+    /// empty.
     public var productionPlaces: [String]
     /// When the file would expire if written now.
     public var expiresAt: Date
@@ -131,7 +133,7 @@ public struct ShareBundleExportPreviewModel: Sendable, Hashable {
         summary.itemCount
     }
 
-    /// True when the selection cannot be shared (Q13).
+    /// True when the file needs the production confirmation.
     public var includesProduction: Bool {
         !productionPlaces.isEmpty
     }

@@ -29,5 +29,23 @@ enum AccessibilityID {
 
     enum Main {
         static let sidebar = "main.sidebar"
+        static let importRepository = "main.import"
+    }
+
+    /// Share Project and its "Confirm it's you" step.
+    enum Share {
+        static let continueToSendTo = "share.continue"
+        static let create = "share.create"
+        static let productionNote = "share.productionNote"
+        static let password = "share.reauth.password"
+        static let passwordContinue = "share.reauth.continue"
+        static let passphrase = "share.passphrase"
+        static let passphraseSaved = "share.passphraseSaved"
+        static let airDrop = "share.airDrop"
+
+        /// The checkbox of the stage named `name` (an environment name such as `production`).
+        static func stage(_ name: String) -> String {
+            "share.stage.\(name)"
+        }
     }
 }

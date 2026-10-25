@@ -17,6 +17,11 @@ protocol ShareFileDelivering: AnyObject {
     func chooseSaveDestination(suggestedName: String) async -> URL?
     /// Offers `fileURL` to the sharing services (AirDrop, Mail, Messages). `completion` runs once.
     func share(fileURL: URL, completion: @escaping (ShareDeliveryOutcome) -> Void)
+    /// Whether this Mac offers AirDrop for `fileURL` (off, or no Wi-Fi or Bluetooth hardware).
+    func canSendWithAirDrop(fileURL: URL) -> Bool
+    /// Opens the system AirDrop window for `fileURL` (Send with AirDrop, 1.0). `completion` runs
+    /// once.
+    func sendWithAirDrop(fileURL: URL, completion: @escaping (ShareDeliveryOutcome) -> Void)
 }
 
 /// `NSSavePanel` and `NSSharingServicePicker`, anchored to the view ``ShareDeliveryAnchor``
@@ -56,6 +61,21 @@ final class SystemShareFileDelivery: NSObject, ShareFileDelivering, NSSharingSer
         self.picker = picker
         self.completion = completion
         picker.show(relativeTo: anchorView.bounds, of: anchorView, preferredEdge: .minY)
+    }
+
+    func canSendWithAirDrop(fileURL: URL) -> Bool {
+        NSSharingService(named: .sendViaAirDrop)?.canPerform(withItems: [fileURL]) == true
+    }
+
+    func sendWithAirDrop(fileURL: URL, completion: @escaping (ShareDeliveryOutcome) -> Void) {
+        guard let service = NSSharingService(named: .sendViaAirDrop), service.canPerform(withItems: [fileURL]) else {
+            completion(.failed)
+            return
+        }
+        finish(.cancelled)
+        self.completion = completion
+        service.delegate = self
+        service.perform(withItems: [fileURL])
     }
 
     private func finish(_ outcome: ShareDeliveryOutcome) {

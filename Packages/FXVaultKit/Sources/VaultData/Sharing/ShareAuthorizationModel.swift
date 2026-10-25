@@ -5,11 +5,19 @@ import VaultCore
 public enum ShareAuthorizationPurpose: String, Sendable, Hashable, CaseIterable {
     /// Writing a `.fxvault` file (``ReauthPurpose/share``).
     case fileExport
+    /// Writing a `.fxvault` file that includes production (1.0, tasks/todo.md B3b): the user
+    /// confirmed production on its own, so a file without it may use it too.
+    case productionFileExport
 
     var reauthPurpose: ReauthPurpose {
         switch self {
-        case .fileExport: .share
+        case .fileExport, .productionFileExport: .share
         }
+    }
+
+    /// Whether this purpose may write `includesProduction`.
+    func allows(includesProduction: Bool) -> Bool {
+        !includesProduction || self == .productionFileExport
     }
 }
 
