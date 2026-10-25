@@ -10,6 +10,10 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **First launch in three phases.** Welcome names them (Secure · Connect · Import); the Secure
   phase counts its steps (01 / 04), the password step has Back, and the recovery key's Continue
   waits until you check "I saved it offline".
+- **Connect and first import.** After Touch ID, Connect GitHub lists each account's
+  organizations (with their access) and personal repositories, the ready ones checked;
+  Continue imports them and shows the totals by source, naming anything that failed. The
+  "Your vault is ready" step is gone.
 - **Black and white.** A white window with black type (black and white in dark mode), system
   greys for secondary text, translucent cards and no brand blue: pending dots and links are ink.
   The interface uses SF Pro and SF Mono; FX Vault no longer ships its own fonts.

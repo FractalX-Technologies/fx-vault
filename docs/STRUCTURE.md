@@ -33,6 +33,8 @@ FXVault/
 │   │   ├── Root/RootScreen.swift    # phase switch, onOpenURL, main-window opener
 │   │   │                            # (+ ShellLayout: centered card, dotted scroll, footer)
 │   │   ├── Onboarding/              # OnboardingScreen/ViewModel, Steps/OnboardingStepViews
+│   │   ├── Connect/                 # ConnectScreen/ViewModel (after onboarding: choose what to
+│   │   │                            # import, first-import summary), ConnectCopy
 │   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel,
 │   │   │                            # TouchIDOfferScreen/ViewModel (one-time offer after a
 │   │   │                            # password unlock), PasswordRequiredReason+Extension

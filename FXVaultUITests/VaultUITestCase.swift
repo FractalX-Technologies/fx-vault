@@ -22,11 +22,19 @@ class VaultUITestCase: XCTestCase {
         return app
     }
 
-    /// Creates the vault (password, recovery key, its confirmation) and opens the main window.
-    /// Returns the sidebar.
+    /// Creates the vault (password, recovery key, its confirmation), skips the Connect phase and
+    /// opens the main window. Returns the sidebar.
     @MainActor
     @discardableResult
     func onboard(_ app: XCUIApplication) throws -> XCUIElement {
+        try createVault(app)
+        click(app.buttons[AccessibilityID.Connect.notNow])
+        return mainSidebar(app)
+    }
+
+    /// Creates the vault and stops on the Connect phase.
+    @MainActor
+    func createVault(_ app: XCUIApplication) throws {
         click(app.buttons[AccessibilityID.Onboarding.createVault])
         type(password, into: app.secureTextFields[AccessibilityID.NewPassword.password])
         type(password, into: app.secureTextFields[AccessibilityID.NewPassword.confirmation])
@@ -49,8 +57,11 @@ class VaultUITestCase: XCTestCase {
             type(try XCTUnwrap(groups[index]), into: field)
         }
         click(app.buttons[AccessibilityID.Onboarding.confirm])
-        click(app.buttons[AccessibilityID.Onboarding.openVault])
+    }
 
+    /// The main window's sidebar, once it shows.
+    @MainActor
+    func mainSidebar(_ app: XCUIApplication) -> XCUIElement {
         let sidebar = app.descendants(matching: .any)[AccessibilityID.Main.sidebar]
         XCTAssertTrue(sidebar.waitForExistence(timeout: timeout))
         return sidebar

@@ -67,6 +67,26 @@ struct VisualSnapshotTests {
         }
     }
 
+    @Test func connect() async throws {
+        let harness = try await ConnectViewModelTests.scripted()
+        let connect = harness.app.makeConnectViewModel()
+        await connect.load()
+        try await SnapshotOutput.write("connect", size: SnapshotOutput.windowSize) {
+            ConnectScreen(viewModel: connect)
+        }
+    }
+
+    @Test func connectSummary() async throws {
+        let harness = try await ConnectViewModelTests.scripted()
+        let connect = harness.app.makeConnectViewModel()
+        await connect.load()
+        await connect.importSelected()
+        #expect(connect.summary != nil)
+        try await SnapshotOutput.write("connect-summary", size: SnapshotOutput.windowSize) {
+            ConnectScreen(viewModel: connect)
+        }
+    }
+
     // MARK: - Main window
 
     @Test func mainWindow() async throws {

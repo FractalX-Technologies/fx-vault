@@ -4,7 +4,7 @@ import VaultCrypto
 import VaultData
 
 /// Onboarding (§10.1): Welcome → Create password → Recovery key → Confirm 2 groups → Touch ID
-/// (signed builds only) → Done.
+/// (signed builds only). The last step opens the Connect phase (``ConnectScreen``).
 ///
 /// The vault is created when the password step completes, so the recovery key can be shown. If
 /// the vault locks before the key is confirmed, the key is wiped and
@@ -18,7 +18,6 @@ final class OnboardingViewModel: LockObserving {
         case recoveryKey
         case confirmRecoveryKey
         case touchID
-        case done
 
         static func < (lhs: Step, rhs: Step) -> Bool {
             lhs.rawValue < rhs.rawValue
@@ -90,10 +89,10 @@ final class OnboardingViewModel: LockObserving {
     /// The Secure phase (1.0, "Secure · Connect · Import"): password, recovery key, confirm and,
     /// when offered, Touch ID.
     var secureSteps: [Step] {
-        visibleSteps.filter { $0 != .welcome && $0 != .done }
+        visibleSteps.filter { $0 != .welcome }
     }
 
-    /// The current step's number in the Secure phase (`01 / 04`), or nil on Welcome and Done.
+    /// The current step's number in the Secure phase (`01 / 04`), or nil on Welcome.
     var secureStepNumber: Int? {
         secureSteps.firstIndex(of: step).map { $0 + 1 }
     }
@@ -217,8 +216,7 @@ final class OnboardingViewModel: LockObserving {
         if includesTouchIDStep {
             step = .touchID
         } else {
-            clearPasswords()
-            step = .done
+            finish()
         }
     }
 
@@ -237,8 +235,7 @@ final class OnboardingViewModel: LockObserving {
         do {
             try await app.container.vaultManager.enableBiometrics(password: password)
             isTouchIDEnabled = true
-            clearPasswords()
-            step = .done
+            finish()
         } catch {
             if !error.isCancellation {
                 self.error = error.presentation
@@ -247,13 +244,11 @@ final class OnboardingViewModel: LockObserving {
     }
 
     func skipTouchID() {
-        clearPasswords()
-        step = .done
+        finish()
     }
 
-    // MARK: - Done
-
-    func finish() {
+    /// Leaves onboarding for the Connect phase; the vault is unlocked.
+    private func finish() {
         clearPasswords()
         app.completeOnboarding()
     }

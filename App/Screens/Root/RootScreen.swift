@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Chooses the screen for the current vault phase (§10). Changing ``AppViewModel/phase`` to
 /// `.locked` removes the onboarding and main screens, and with them every value on screen. After
-/// unlock, ``GHSetupScreen`` replaces the main window while gh needs attention (§10.3).
+/// unlock, ``GHSetupScreen`` replaces the main window while gh needs attention (§10.3); right
+/// after onboarding, ``ConnectScreen`` comes first.
 struct RootScreen: View {
     let viewModel: AppViewModel
     @Environment(\.openWindow) private var openWindow
@@ -42,6 +43,8 @@ struct RootScreen: View {
         case .unlocked:
             if viewModel.showsGHSetup {
                 GHSetupScreen(app: viewModel)
+            } else if viewModel.isFirstConnectPending {
+                ConnectScreen(app: viewModel)
             } else {
                 MainScreen(app: viewModel)
             }
