@@ -15,9 +15,6 @@ public struct DestinationChangeModel: Sendable, Hashable, Identifiable {
     public let remoteName: String
     public let kind: ConfigKind
     public let operation: DestinationPendingOperation
-    /// Vercel: the variable's other environments, which an update changes too and a delete
-    /// leaves in place.
-    public let otherEnvironments: [VercelEnvironment]
 
     public init(
         destinationID: DestinationID,
@@ -25,8 +22,7 @@ public struct DestinationChangeModel: Sendable, Hashable, Identifiable {
         name: String,
         remoteName: String,
         kind: ConfigKind,
-        operation: DestinationPendingOperation,
-        otherEnvironments: [VercelEnvironment] = []
+        operation: DestinationPendingOperation
     ) {
         self.destinationID = destinationID
         self.itemID = itemID
@@ -34,7 +30,6 @@ public struct DestinationChangeModel: Sendable, Hashable, Identifiable {
         self.remoteName = remoteName
         self.kind = kind
         self.operation = operation
-        self.otherEnvironments = otherEnvironments
     }
 
     public var id: String {
@@ -46,17 +41,12 @@ public struct DestinationChangeModel: Sendable, Hashable, Identifiable {
 public enum DestinationBlockReason: Sendable, Hashable {
     /// The value is not in the vault (a write-only remote value that was never filled).
     case valueMissing
-    /// The destination has no connection (Supabase, Vercel): choose or add one.
-    case connectionMissing
     /// The destination could not be listed, so nothing is sent to it.
     case listingFailed(DestinationError)
     /// The item changed or disappeared remotely since the last sync: Refresh and review.
     case remoteChanged
     /// A new item whose name the remote already has: Refresh and review.
     case existsRemotely
-    /// A public name (`NEXT_PUBLIC_…`) whose value looks like a secret token, private key or URL
-    /// with a password (R10): change the value, or Mark as Public.
-    case publicCredential(prefix: String)
     /// The name breaks the provider's rules.
     case invalidName(ValidationError)
 }
@@ -76,24 +66,6 @@ public struct DestinationBlockedChangeModel: Sendable, Hashable, Identifiable {
     }
 }
 
-/// A note for the review that does not block (R10): a public name whose value looks like a token
-/// (a JWT or a long random string), which is fine for keys meant to be public.
-public struct DestinationReviewWarningModel: Sendable, Hashable, Identifiable {
-    public let itemID: ConfigItemID
-    public let name: String
-    public let prefix: String
-
-    public init(itemID: ConfigItemID, name: String, prefix: String) {
-        self.itemID = itemID
-        self.name = name
-        self.prefix = prefix
-    }
-
-    public var id: ConfigItemID {
-        itemID
-    }
-}
-
 /// A change of a row held by a share file (v0.9.0, P8): it runs only when Sync's From Files
 /// review includes its file.
 public struct DestinationHeldChangeModel: Sendable, Hashable, Identifiable {
@@ -101,19 +73,15 @@ public struct DestinationHeldChangeModel: Sendable, Hashable, Identifiable {
     public let packageID: SharePackageID
     /// Why it could not be sent even when included; nil when it is sendable.
     public let reason: DestinationBlockReason?
-    /// A public name whose value looks like a token (R10), shown when the file is included.
-    public let warning: DestinationReviewWarningModel?
 
     public init(
         change: DestinationChangeModel,
         packageID: SharePackageID,
-        reason: DestinationBlockReason? = nil,
-        warning: DestinationReviewWarningModel? = nil
+        reason: DestinationBlockReason? = nil
     ) {
         self.change = change
         self.packageID = packageID
         self.reason = reason
-        self.warning = warning
     }
 
     public var id: String {
@@ -127,7 +95,6 @@ public struct DestinationReviewSectionModel: Sendable, Hashable, Identifiable {
     /// Sendable changes, adds and updates first, then deletions. Held rows are left out.
     public let changes: [DestinationChangeModel]
     public let blocked: [DestinationBlockedChangeModel]
-    public let warnings: [DestinationReviewWarningModel]
     /// Changes of rows held by share files (v0.9.0), by name.
     public let held: [DestinationHeldChangeModel]
 
@@ -135,13 +102,11 @@ public struct DestinationReviewSectionModel: Sendable, Hashable, Identifiable {
         destination: DestinationModel,
         changes: [DestinationChangeModel],
         blocked: [DestinationBlockedChangeModel],
-        warnings: [DestinationReviewWarningModel],
         held: [DestinationHeldChangeModel] = []
     ) {
         self.destination = destination
         self.changes = changes
         self.blocked = blocked
-        self.warnings = warnings
         self.held = held
     }
 
@@ -272,8 +237,8 @@ public struct DestinationDriftModel: Sendable, Hashable, Identifiable {
     public let itemID: ConfigItemID?
     /// The kind the remote has (adds and changes).
     public let remoteKind: ConfigKind?
-    /// Whether "Use Remote" brings the value (false for Supabase and Vercel sensitive values:
-    /// the value becomes missing).
+    /// Whether "Use Remote" brings the value (false for a disabled Key Vault secret: the value
+    /// becomes missing).
     public let isValueReadable: Bool
     /// Whether "Keep Mine" is possible (a remote change of an item whose value the vault
     /// does not have cannot be kept).
@@ -358,8 +323,6 @@ public struct DestinationImportResultModel: Sendable, Hashable {
 public enum DestinationSyncError: Error, Sendable, Hashable {
     case config(ConfigRepositoryError)
     case remote(DestinationError)
-    /// The destination needs a connection it does not have.
-    case connectionMissing
     /// The remote changed while the user was deciding: Refresh again.
     case stale
 }

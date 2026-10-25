@@ -9,10 +9,6 @@ import os
 public enum DestinationConstants {
     /// `User-Agent` of every request.
     public static let userAgent = "FXVault"
-    /// The Supabase Management API host.
-    public static let supabaseHost = "api.supabase.com"
-    /// The Vercel REST API host.
-    public static let vercelHost = "api.vercel.com"
     /// A Key Vault host is `<vault name>` followed by this suffix.
     public static let keyVaultHostSuffix = ".vault.azure.net"
     /// The Key Vault data-plane API version.
@@ -22,8 +18,6 @@ public enum DestinationConstants {
 
     /// `maxresults` of a Key Vault list page (the service's maximum).
     static let keyVaultPageSize = 25
-    /// `limit` of a Vercel list page (projects, teams).
-    static let vercelPageSize = 100
     /// Most pages one listing follows before it stops with ``DestinationError/responseTooLarge``.
     /// Local choice (10,000 Key Vault secrets).
     static let maxListPages = 400

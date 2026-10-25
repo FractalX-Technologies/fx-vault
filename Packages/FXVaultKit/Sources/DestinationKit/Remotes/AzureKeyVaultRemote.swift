@@ -105,7 +105,7 @@ struct AzureKeyVaultRemote: DestinationRemoting {
         defer { response.body.wipe() }
         let document = try SecretJSONDocument(parsing: response.body)
         let updated = document.integer(.key(Self.attributesField), .key(Self.updatedField))
-        return RemoteWriteResultModel(version: updated.map(String.init), remoteRef: nil)
+        return RemoteWriteResultModel(version: updated.map(String.init))
     }
 
     /// Recovers the soft-deleted `remoteName` and waits until it can be read again (404 while

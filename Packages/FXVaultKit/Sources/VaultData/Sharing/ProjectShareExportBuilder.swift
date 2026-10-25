@@ -170,17 +170,7 @@ enum ShareDestinationLabel {
     static func text(_ target: DestinationTargetModel) -> String {
         switch target {
         case .azureKeyVault(let vaultName, _): "Azure Key Vault \(vaultName)"
-        case .supabase(let projectRef): "Supabase \(projectRef)"
-        case .vercel(_, let projectName, _, let environment): "Vercel \(projectName) (\(environment.rawValue))"
         }
-    }
-
-    /// A destination is a production place when its stage is, or, without a stage, when it is a
-    /// Vercel production environment.
-    static func isProduction(_ target: DestinationTargetModel, stage: String?) -> Bool {
-        if let stage { return StageRisk.isProduction(stage) }
-        if case .vercel(_, _, _, .production) = target { return true }
-        return false
     }
 }
 
@@ -463,20 +453,15 @@ private struct ProjectShareRows {
                 }
                 let destinations = try entry.destinations.map { selected in
                     let label = ShareDestinationLabel.text(selected.target)
-                    if ShareDestinationLabel.isProduction(selected.target, stage: selected.record.stage) {
+                    if let stage = selected.record.stage, StageRisk.isProduction(stage) {
                         productionPlaces.append("\(fullName) · \(label)")
                     }
                     note(selected.rows, place: "\(fullName) · \(label)", kind: .destination, repository: fullName, name: label)
-                    let publicNames = selected.rows.compactMap { row -> String? in
-                        guard case .destination(let record) = row, record.isPublicAllowed else { return nil }
-                        return record.name
-                    }
                     return ShareDestinationModel(
                         target: selected.target,
                         stage: selected.record.stage,
                         secrets: try items(selected.rows, kind: .secret),
-                        variables: try items(selected.rows, kind: .variable),
-                        publicNames: publicNames
+                        variables: try items(selected.rows, kind: .variable)
                     )
                 }
                 repositories.append(ShareBundleRepositoryModel(

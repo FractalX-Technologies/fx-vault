@@ -156,6 +156,24 @@ extension ShareBundleModel: Codable {
         stages = try container.decodeIfPresent([String].self, forKey: .stages) ?? []
         repositories = try container.decodeIfPresent([ShareBundleRepositoryModel].self, forKey: .repositories) ?? []
         folders = try container.decodeIfPresent([ShareBundleFolderModel].self, forKey: .folders) ?? []
+        if repositories.contains(where: { !$0.retiredDestinations.isEmpty }) {
+            dropLoneLinkTokens()
+        }
+    }
+
+    /// A dropped destination can leave its linked copy alone with its token, which the validator
+    /// refuses. Only after a drop: a lone token in any other file still fails validation.
+    private mutating func dropLoneLinkTokens() {
+        let lone = Set(linkGroups.filter { $0.value.count < 2 }.keys)
+        guard !lone.isEmpty else { return }
+        let unlink: (ShareItemModel) -> ShareItemModel = { item in
+            guard let token = item.linkToken, lone.contains(token) else { return item }
+            var copy = item
+            copy.linkToken = nil
+            return copy
+        }
+        repositories = repositories.map { $0.mapItems(unlink) }
+        folders = folders.map { $0.mapItems(unlink) }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -183,7 +201,9 @@ extension ShareBundleRepositoryModel: Codable {
     public init(from decoder: any Decoder) throws {
         repository = try ShareRepositoryModel(from: decoder)
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        destinations = try container.decodeIfPresent([ShareDestinationModel].self, forKey: .destinations) ?? []
+        let decoded = try container.decodeIfPresent([ShareDecodedDestination].self, forKey: .destinations) ?? []
+        destinations = decoded.compactMap(\.destination)
+        retiredDestinations = decoded.compactMap(\.retiredLabel)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -200,17 +220,25 @@ extension ShareDestinationModel: Codable {
         case target
         case secrets
         case variables
-        case publicNames
+    }
+
+    /// Decodes a destination whose target is already known (``ShareDecodedDestination`` reads it).
+    init(from decoder: any Decoder, target: DestinationTargetModel) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(ShareEntryID.self, forKey: .id)
+        stage = try container.decodeIfPresent(String.self, forKey: .stage)
+        self.target = target
+        secrets = try container.decodeIfPresent([ShareItemModel].self, forKey: .secrets) ?? []
+        variables = try container.decodeIfPresent([ShareItemModel].self, forKey: .variables) ?? []
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(ShareEntryID.self, forKey: .id)
-        stage = try container.decodeIfPresent(String.self, forKey: .stage)
-        target = try container.decode(ShareDestinationTargetWire.self, forKey: .target).target
-        secrets = try container.decodeIfPresent([ShareItemModel].self, forKey: .secrets) ?? []
-        variables = try container.decodeIfPresent([ShareItemModel].self, forKey: .variables) ?? []
-        publicNames = try container.decodeIfPresent([String].self, forKey: .publicNames) ?? []
+        let wire = try container.decode(ShareDestinationTargetWire.self, forKey: .target)
+        guard let target = wire.target else {
+            throw DecodingError.dataCorruptedError(forKey: .target, in: container, debugDescription: "Retired provider")
+        }
+        try self.init(from: decoder, target: target)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -220,7 +248,28 @@ extension ShareDestinationModel: Codable {
         try container.encode(ShareDestinationTargetWire(target), forKey: .target)
         try container.encode(secrets, forKey: .secrets)
         try container.encode(variables, forKey: .variables)
-        try container.encode(publicNames, forKey: .publicNames)
+    }
+}
+
+/// One `destinations` entry: a Key Vault destination, or the label of a Supabase or Vercel one
+/// that a 0.9 file carried (dropped with its items; `publicNames` is ignored the same way).
+private struct ShareDecodedDestination: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case target
+    }
+
+    let destination: ShareDestinationModel?
+    let retiredLabel: String?
+
+    init(from decoder: any Decoder) throws {
+        let wire = try decoder.container(keyedBy: CodingKeys.self).decode(ShareDestinationTargetWire.self, forKey: .target)
+        if let target = wire.target {
+            destination = try ShareDestinationModel(from: decoder, target: target)
+            retiredLabel = nil
+        } else {
+            destination = nil
+            retiredLabel = wire.retiredLabel
+        }
     }
 }
 
@@ -249,8 +298,9 @@ extension ShareBundleFolderModel: Codable {
     }
 }
 
-/// The wire form of a destination target: `provider` (`azureKeyVault`, `supabase`, `vercel`)
-/// and that provider's identifiers, absent optionals as explicit `null`.
+/// The wire form of a destination target: `provider` and that provider's identifiers, absent
+/// optionals as explicit `null`. 1.0 writes `azureKeyVault` only; `supabase` and `vercel` (0.9)
+/// decode to a nil ``target`` and a ``retiredLabel``.
 struct ShareDestinationTargetWire: Codable {
     enum Provider: String, Codable {
         case azureKeyVault
@@ -263,16 +313,18 @@ struct ShareDestinationTargetWire: Codable {
         case vaultName
         case tenantID = "tenantId"
         case projectRef
-        case projectID = "projectId"
         case projectName
-        case teamID = "teamId"
         case environment
     }
 
-    let target: DestinationTargetModel
+    let target: DestinationTargetModel?
+    /// How the preview names a retired destination, as 0.9 did: `Supabase <ref>`,
+    /// `Vercel <project> (<environment>)`.
+    let retiredLabel: String?
 
     init(_ target: DestinationTargetModel) {
         self.target = target
+        retiredLabel = nil
     }
 
     init(from decoder: any Decoder) throws {
@@ -283,15 +335,15 @@ struct ShareDestinationTargetWire: Codable {
                 vaultName: try container.decode(String.self, forKey: .vaultName),
                 tenantID: try container.decodeIfPresent(String.self, forKey: .tenantID)
             )
+            retiredLabel = nil
         case .supabase:
-            target = .supabase(projectRef: try container.decode(String.self, forKey: .projectRef))
+            target = nil
+            retiredLabel = "Supabase \(try container.decode(String.self, forKey: .projectRef))"
         case .vercel:
-            target = .vercel(
-                projectID: try container.decode(String.self, forKey: .projectID),
-                projectName: try container.decode(String.self, forKey: .projectName),
-                teamID: try container.decodeIfPresent(String.self, forKey: .teamID),
-                environment: try container.decode(VercelEnvironment.self, forKey: .environment)
-            )
+            target = nil
+            let project = try container.decode(String.self, forKey: .projectName)
+            let environment = try container.decode(String.self, forKey: .environment)
+            retiredLabel = "Vercel \(project) (\(environment))"
         }
     }
 
@@ -302,15 +354,8 @@ struct ShareDestinationTargetWire: Codable {
             try container.encode(Provider.azureKeyVault, forKey: .provider)
             try container.encode(vaultName, forKey: .vaultName)
             try container.encode(tenantID, forKey: .tenantID)
-        case .supabase(let projectRef):
-            try container.encode(Provider.supabase, forKey: .provider)
-            try container.encode(projectRef, forKey: .projectRef)
-        case .vercel(let projectID, let projectName, let teamID, let environment):
-            try container.encode(Provider.vercel, forKey: .provider)
-            try container.encode(projectID, forKey: .projectID)
-            try container.encode(projectName, forKey: .projectName)
-            try container.encode(teamID, forKey: .teamID)
-            try container.encode(environment, forKey: .environment)
+        case nil:
+            throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: "Retired provider"))
         }
     }
 }

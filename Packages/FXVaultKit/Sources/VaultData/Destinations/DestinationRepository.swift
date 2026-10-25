@@ -4,8 +4,7 @@ import VaultCore
 import VaultCrypto
 import VaultStore
 
-/// Runtime destinations of repositories and their items (v0.8.0, tasks/todo.md R1–R3), and the
-/// provider connections (Supabase and Vercel tokens) they use.
+/// Runtime destinations of repositories and their items (v0.8.0, tasks/todo.md R1–R3).
 ///
 /// - Every mutation is one `VaultSession.write` transaction and stays local until the next Sync
 ///   (``DestinationSyncRepository``), which is the only path that reaches a provider.
@@ -13,7 +12,7 @@ import VaultStore
 ///   destination, kind and name (`DestinationFieldAAD`) plus a row-bound fingerprint.
 /// - Copies into a destination come from any repository scope, folder or destination and are
 ///   linked to their source.
-/// - Removing a destination or a connection never deletes anything remotely.
+/// - Removing a destination never deletes anything remotely.
 /// - Observation streams need no keys and work while locked.
 public struct DestinationRepository: Sendable {
     public let session: VaultSession
@@ -33,14 +32,12 @@ public struct DestinationRepository: Sendable {
     /// Adds a destination to a repository at the end of its RUNTIME section.
     ///
     /// - Throws: `.validation` for an invalid target or stage, `.repositoryNotFound`,
-    ///   `.connectionNotFound` (missing, or for another provider), `.destinationExists`,
-    ///   `.tooManyDestinations`.
+    ///   `.destinationExists`, `.tooManyDestinations`.
     @discardableResult
     public func createDestination(
         repositoryID: RepoID,
         target: DestinationTargetModel,
-        stage: String?,
-        connectionID: ConnectionID?
+        stage: String?
     ) throws(ConfigRepositoryError) -> DestinationID {
         let validTarget = try performConfig { try DestinationRules.validate(target) }
         let validStage = try Self.validStage(stage)
@@ -48,7 +45,6 @@ public struct DestinationRepository: Sendable {
             guard try RepoStore(database: session.database).fetch(id: repositoryID, in: tx) != nil else {
                 throw ConfigRepositoryError.repositoryNotFound
             }
-            try requireConnection(connectionID, for: validTarget.provider, in: tx)
             guard try store.countDestinations(repositoryID: repositoryID, in: tx) < Limits.maxDestinationsPerRepository else {
                 throw ConfigRepositoryError.tooManyDestinations(limit: Limits.maxDestinationsPerRepository)
             }
@@ -60,7 +56,6 @@ public struct DestinationRepository: Sendable {
                 repositoryID: repositoryID,
                 target: validTarget,
                 stage: validStage,
-                connectionID: validTarget.provider.usesConnection ? connectionID : nil,
                 sortOrder: try store.nextSortOrder(repositoryID: repositoryID, in: tx),
                 createdAt: now,
                 updatedAt: now
@@ -72,15 +67,13 @@ public struct DestinationRepository: Sendable {
         return id
     }
 
-    /// Changes a destination's stage and (Supabase, Vercel) its connection. The target itself
-    /// never changes: add another destination instead.
-    public func updateDestination(_ id: DestinationID, stage: String?, connectionID: ConnectionID?) throws(ConfigRepositoryError) {
+    /// Changes a destination's stage. The target itself never changes: add another destination
+    /// instead.
+    public func updateDestination(_ id: DestinationID, stage: String?) throws(ConfigRepositoryError) {
         let validStage = try Self.validStage(stage)
         try write { _, tx, now in
             guard var record = try store.fetchDestination(id: id, in: tx) else { throw ConfigRepositoryError.destinationNotFound }
-            try requireConnection(connectionID, for: record.provider, in: tx)
             record.setStage(validStage)
-            record.connectionID = record.provider.usesConnection ? connectionID : nil
             record.updatedAt = now
             try store.updateDestination(record, in: tx)
         }
@@ -123,6 +116,17 @@ public struct DestinationRepository: Sendable {
     /// The destinations of a repository with their counts.
     public func destinations(repositoryID: RepoID) throws(ConfigRepositoryError) -> [DestinationModel] {
         try performConfig { try store.fetchDestinations(repositoryID: repositoryID) }
+    }
+
+    /// The Supabase and Vercel destinations migration v16 deleted (1.0), for a notice after
+    /// unlock. Empty once ``dismissRetiredDestinations()`` ran.
+    public func retiredDestinationLabels() throws(ConfigRepositoryError) -> [String] {
+        try performConfig { try store.fetchRetiredDestinationLabels() }
+    }
+
+    /// The notice was read: it never shows again.
+    public func dismissRetiredDestinations() throws(ConfigRepositoryError) {
+        try performConfig { try store.deleteRetiredDestinations() }
     }
 
     /// The stages Add Destination suggests: the destinations' stages, then the GitHub
@@ -245,13 +249,6 @@ public struct DestinationRepository: Sendable {
         }
     }
 
-    /// "Mark as Public" (R10).
-    public func setPublicAllowed(_ id: ConfigItemID, allowed: Bool) throws(ConfigRepositoryError) {
-        try write { keys, tx, now in
-            try writer(keys, tx, now).setPublicAllowed(id, allowed)
-        }
-    }
-
     /// The decrypted value of a destination item. The caller wipes it.
     public func reveal(_ id: ConfigItemID) throws(ConfigRepositoryError) -> SecretBytes {
         try performConfig {
@@ -337,108 +334,13 @@ public struct DestinationRepository: Sendable {
         }
     }
 
-    // MARK: - Connections
-
-    /// Every provider connection, without tokens.
-    public func connections() throws(ConfigRepositoryError) -> [ConnectionModel] {
-        try performConfig { try store.fetchConnections() }
-    }
-
-    public func observeConnections() -> AsyncThrowingStream<[ConnectionModel], any Error> {
-        store.observeConnections()
-    }
-
-    /// Stores a token for Supabase or Vercel, sealed in the vault. `accountHint` is what the
-    /// provider reported when the token was checked (never the token). Does not wipe `token`.
-    @discardableResult
-    public func addConnection(
-        provider: DestinationProvider,
-        label: String,
-        token: SecretBytes,
-        accountHint: String?
-    ) throws(ConfigRepositoryError) -> ConnectionID {
-        guard provider.usesConnection else { throw .connectionNotFound }
-        let validLabel = try performConfig { try FolderNameValidator.validate(label) }
-        guard token.count > 0 else { throw .validation(.emptyValue) }
-        return try write { keys, tx, now in
-            guard try store.countConnections(in: tx) < Limits.maxConnections else {
-                throw ConfigRepositoryError.tooManyConnections(limit: Limits.maxConnections)
-            }
-            let id = ConnectionID()
-            let record = ConnectionRecord(
-                id: id,
-                provider: provider,
-                label: validLabel,
-                tokenCiphertext: try ConnectionTokenCipher.seal(token, for: id, keys: keys),
-                accountHint: Self.sanitizedHint(accountHint),
-                lastValidatedAt: now,
-                createdAt: now,
-                updatedAt: now
-            )
-            try store.insertConnection(record, in: tx)
-            return id
-        }
-    }
-
-    /// Renames a connection.
-    public func renameConnection(_ id: ConnectionID, to label: String) throws(ConfigRepositoryError) {
-        let validLabel = try performConfig { try FolderNameValidator.validate(label) }
-        try write { _, tx, now in
-            guard var record = try store.fetchConnection(id: id, in: tx) else { throw ConfigRepositoryError.connectionNotFound }
-            record.label = validLabel
-            record.updatedAt = now
-            try store.updateConnection(record, in: tx)
-        }
-    }
-
-    /// Replaces a connection's token (a rotated token).
-    public func replaceToken(of id: ConnectionID, with token: SecretBytes, accountHint: String?) throws(ConfigRepositoryError) {
-        guard token.count > 0 else { throw .validation(.emptyValue) }
-        try write { keys, tx, now in
-            guard var record = try store.fetchConnection(id: id, in: tx) else { throw ConfigRepositoryError.connectionNotFound }
-            record.tokenCiphertext = try ConnectionTokenCipher.seal(token, for: id, keys: keys)
-            record.accountHint = Self.sanitizedHint(accountHint)
-            record.lastValidatedAt = now
-            record.updatedAt = now
-            try store.updateConnection(record, in: tx)
-        }
-    }
-
-    /// Removes a connection. Its destinations stay, with no connection, until another is chosen.
-    public func deleteConnection(_ id: ConnectionID) throws(ConfigRepositoryError) {
-        try write { _, tx, _ in
-            guard try store.deleteConnection(id: id, in: tx) else { throw ConfigRepositoryError.connectionNotFound }
-        }
-    }
-
-    /// The decrypted token of a connection, for a request. The caller wipes it.
-    func token(of id: ConnectionID) throws(ConfigRepositoryError) -> SecretBytes {
-        try performConfig {
-            try session.read { keys, tx in
-                guard let record = try store.fetchConnection(id: id, in: tx) else {
-                    throw ConfigRepositoryError.connectionNotFound
-                }
-                return try ConnectionTokenCipher.openToken(of: record, keys: keys)
-            }
-        }
-    }
-
     // MARK: - Private
 
     private static let log = Logger(subsystem: ConfigConstants.logSubsystem, category: "destinations")
-    /// Longest account hint kept, in characters.
-    private static let maxHintLength = 255
 
     static func validStage(_ stage: String?) throws(ConfigRepositoryError) -> String? {
         guard let stage, !stage.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
         return try performConfig { try EnvironmentNameValidator.validate(stage) }
-    }
-
-    private static func sanitizedHint(_ hint: String?) -> String? {
-        guard let hint else { return nil }
-        let clean = String(UnicodeScalarPolicy.removingDisallowedAndInvisible(from: hint).prefix(maxHintLength))
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return clean.isEmpty ? nil : clean
     }
 
     private static func normalize(_ value: SecretBytes) throws(ConfigRepositoryError) -> ValueNormalizer.NormalizedValue {
@@ -446,13 +348,6 @@ public struct DestinationRepository: Sendable {
             return try ValueNormalizer.normalize(value)
         } catch {
             throw .validation(error)
-        }
-    }
-
-    private func requireConnection(_ id: ConnectionID?, for provider: DestinationProvider, in tx: StoreTransaction) throws {
-        guard provider.usesConnection else { return }
-        guard let id, let connection = try store.fetchConnection(id: id, in: tx), connection.provider == provider else {
-            throw ConfigRepositoryError.connectionNotFound
         }
     }
 

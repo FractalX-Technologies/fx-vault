@@ -82,8 +82,6 @@ public enum Limits {
     public static let maxDestinationItems = 1000
     /// Most destinations one repository has. Local choice.
     public static let maxDestinationsPerRepository = 32
-    /// Most provider connections (Supabase and Vercel tokens) in a vault. Local choice.
-    public static let maxConnections = 32
     /// Largest HTTP response body FX Vault reads from a provider.
     public static let maxDestinationResponseBytes = 16 * bytesPerMiB
 

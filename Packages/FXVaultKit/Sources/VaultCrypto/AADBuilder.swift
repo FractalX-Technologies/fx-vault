@@ -45,34 +45,6 @@ public struct AADBuilder: Sendable {
     }
 }
 
-/// The identity of an encrypted column that is not a configuration value (v0.5.0; since 1.0
-/// only provider connection tokens). Sealed under
-/// `K_field` like values, with its own label, so a blob never opens as a value or in another
-/// table, column or row.
-public struct SecretFieldAAD: Sendable, Hashable {
-    public let table: String
-    public let column: String
-    /// The row's key bytes (the row id).
-    public let rowKey: Data
-
-    public init(table: String, column: String, rowKey: Data) {
-        self.table = table
-        self.column = column
-        self.rowKey = rowKey
-    }
-
-    /// `LP("fxvault/v1/secret-field") ‖ LP(table) ‖ LP(column) ‖ LP(rowKey) ‖ u32be(dek_version)`.
-    public func encoded(dekVersion: UInt32) -> Data {
-        var builder = AADBuilder()
-        builder.appendLengthPrefixed(CryptoDomain.secretFieldLabel)
-        builder.appendLengthPrefixed(table)
-        builder.appendLengthPrefixed(column)
-        builder.appendLengthPrefixed(rowKey)
-        builder.append(uint32BigEndian: dekVersion)
-        return builder.data
-    }
-}
-
 /// Which encrypted column a field blob lives in (§5.4). The table and column names are bound
 /// into the AAD, so a blob copied to another column fails to decrypt.
 public enum FieldLocation: Sendable, Hashable, CaseIterable {

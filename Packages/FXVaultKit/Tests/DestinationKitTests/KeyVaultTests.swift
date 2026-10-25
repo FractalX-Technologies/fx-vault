@@ -29,7 +29,6 @@ struct KeyVaultTests {
         #expect(database.version == "1790000000")
         #expect(database.updatedAt == Date(timeIntervalSince1970: 1_790_000_000))
         #expect(database.isValueReadable)
-        #expect(database.remoteRef == nil && database.digest == nil && database.otherTargets.isEmpty)
 
         #expect(byRemote["api-url"]?.name == "API_URL", "lowercase dashes map to an uppercase name")
         #expect(byRemote["OLD-FLAG"]?.unusableReason == .disabled)
@@ -93,7 +92,7 @@ struct KeyVaultTests {
         transport.enqueue(try Fixture.response("keyvault/secret-set.json"), method: .put, pathPrefix: "/secrets/DATABASE-URL")
         let value = "fixture-value-new-\(UUID().uuidString)"
         let result = try await TestValues.keyVault(transport).setValue(TestValues.secret(value), name: "DATABASE_URL", kind: .variable, existing: nil)
-        #expect(result == RemoteWriteResultModel(version: "1790000500", remoteRef: nil))
+        #expect(result == RemoteWriteResultModel(version: "1790000500"))
 
         let request = try #require(transport.requests.first)
         #expect(request.method == .put)

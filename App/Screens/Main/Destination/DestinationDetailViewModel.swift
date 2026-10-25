@@ -68,11 +68,6 @@ final class DestinationDetailViewModel: LockObserving {
         .destination(destinationID)
     }
 
-    /// Key Vault and Supabase hold secrets only: the pill shows Secrets alone.
-    var holdsVariables: Bool {
-        destination?.provider.holdsVariables ?? false
-    }
-
     // MARK: - Table
 
     var rows: [ConfigRowModel] {
@@ -131,9 +126,8 @@ final class DestinationDetailViewModel: LockObserving {
     func apply(_ items: [DestinationItemModel]) {
         self.items = items
         values.follow(liveIDs: Set(items.map(\.id)), variableIDs: items.filter { $0.kind == .variable }.map(\.id))
-        if !holdsVariables, kind == .variable {
-            kind = .secret
-        }
+        // Key Vault holds secrets only (R3): the table never shows variables.
+        kind = .secret
     }
 
     // MARK: - Reveal and copy
@@ -249,27 +243,6 @@ final class DestinationDetailViewModel: LockObserving {
     /// The Held chip's tooltip, naming the share file's sender when it is known.
     func heldHelp(for row: ConfigRowModel) -> String {
         HeldShareCopy.chipHelp(sender: row.heldBy.flatMap { heldSenders.name(of: $0) })
-    }
-
-    // MARK: - Public values (R10)
-
-    /// The public prefix of a Vercel row (`NEXT_PUBLIC_`), or nil.
-    func publicPrefix(of row: ConfigRowModel) -> String? {
-        guard destination?.provider == .vercel else { return nil }
-        return PublicNamePrefixes.prefix(of: row.name)
-    }
-
-    func isMarkedPublic(_ row: ConfigRowModel) -> Bool {
-        item(row.id)?.isPublicAllowed == true
-    }
-
-    /// "Mark as Public" / "Not Meant to Be Public".
-    func togglePublic(_ row: ConfigRowModel) {
-        do {
-            try dependencies.destinations.setPublicAllowed(row.id, allowed: !isMarkedPublic(row))
-        } catch {
-            alert = error.presentation
-        }
     }
 
     // MARK: - Import and paste

@@ -52,8 +52,7 @@ final class ProjectShareWorld {
         destinationID = try sender.data.destinations.createDestination(
             repositoryID: senderRepositoryID,
             target: .azureKeyVault(vaultName: Self.vaultName, tenantID: nil),
-            stage: "staging",
-            connectionID: nil
+            stage: "staging"
         )
         _ = try sender.data.destinations.addItem(
             destinationID: destinationID,

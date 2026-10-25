@@ -14,6 +14,11 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Overview and `fxvault.yml`.** The stage matrix, the manifest check and Share Stage… are
   gone. After you open a project file, FX Vault shows the first repository at the environment of
   the file's first stage.
+- **Supabase and Vercel destinations.** Azure Key Vault is the only runtime destination. Your
+  first unlock lists the Supabase and Vercel destinations removed from the vault, with their
+  saved tokens (migration `v16_drop_runtime_providers`); nothing is deleted in Supabase or Vercel,
+  so revoke those tokens there. Preferences › Destinations and Mark as Public are gone. A 0.9
+  project file imports without its Supabase and Vercel destinations, and the preview names them.
 
 ## 0.9.0
 

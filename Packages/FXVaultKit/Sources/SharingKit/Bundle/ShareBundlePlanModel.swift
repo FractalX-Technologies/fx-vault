@@ -176,8 +176,6 @@ public struct ShareDestinationItemPlanModel: Sendable, Hashable, Identifiable {
     public let defaultAction: ShareItemAction
     public let allowedActions: [ShareItemAction]
     public let warnings: Set<ShareItemWarning>
-    /// The sender marked it as public (R10); an added row keeps the mark.
-    public let isPublic: Bool
     /// The selected action; starts at ``defaultAction``.
     public internal(set) var action: ShareItemAction
 
@@ -189,8 +187,7 @@ public struct ShareDestinationItemPlanModel: Sendable, Hashable, Identifiable {
         chip: ShareItemChip,
         defaultAction: ShareItemAction,
         allowedActions: [ShareItemAction],
-        warnings: Set<ShareItemWarning> = [],
-        isPublic: Bool
+        warnings: Set<ShareItemWarning> = []
     ) {
         self.id = id
         self.kind = kind
@@ -200,7 +197,6 @@ public struct ShareDestinationItemPlanModel: Sendable, Hashable, Identifiable {
         self.defaultAction = defaultAction
         self.allowedActions = allowedActions
         self.warnings = warnings
-        self.isPublic = isPublic
         action = defaultAction
     }
 

@@ -153,7 +153,6 @@ struct HeldShareTests {
             repositoryID: repositoryID,
             target: Self.vault,
             stage: "staging",
-            connectionID: nil,
             sortOrder: 0,
             createdAt: Self.importedAt,
             updatedAt: Self.importedAt
@@ -174,7 +173,6 @@ struct HeldShareTests {
                 destination: destination,
                 changes: [own],
                 blocked: [],
-                warnings: [],
                 held: [
                     DestinationHeldChangeModel(change: change("HELD_KEY", isNew: true), packageID: Self.first),
                     DestinationHeldChangeModel(change: change("NO_VALUE", isNew: true), packageID: Self.first, reason: .valueMissing),
@@ -190,7 +188,7 @@ struct HeldShareTests {
         #expect(section.blocked.map(\.change.name) == ["NO_VALUE"])
         #expect(included.executableCount == 2)
         #expect(HeldSharePresentation.hasContent(DestinationReviewModel(repositoryID: repositoryID, sections: [
-            DestinationReviewSectionModel(destination: destination, changes: [], blocked: [], warnings: [], held: review.sections[0].held),
+            DestinationReviewSectionModel(destination: destination, changes: [], blocked: [], held: review.sections[0].held),
         ])), "a destination with only held rows stays in the Sync")
     }
 

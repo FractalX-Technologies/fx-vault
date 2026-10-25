@@ -5,9 +5,8 @@ import VaultCore
 /// The only places FX Vault sends HTTP requests to (v0.8.0, tasks/todo.md R4).
 ///
 /// A URL is allowed when it is `https`, has no user or password, uses the default port (or an
-/// explicit 443, as Key Vault's `nextLink` does), and its host is exactly `api.supabase.com`,
-/// `api.vercel.com`, or `<vault>.vault.azure.net` where `<vault>` passes
-/// `DestinationRules.isValidKeyVaultName`. Hosts are compared case-insensitively; a trailing dot,
+/// explicit 443, as Key Vault's `nextLink` does), and its host is exactly
+/// `<vault>.vault.azure.net` where `<vault>` passes `DestinationRules.isValidKeyVaultName`. Hosts are compared case-insensitively; a trailing dot,
 /// another subdomain or an IP address is refused.
 enum DestinationHostPolicy {
     /// True when a request may go to `url`.
@@ -24,9 +23,6 @@ enum DestinationHostPolicy {
     /// True when `host` is one of the allowlisted hosts.
     static func isAllowedHost(_ host: String) -> Bool {
         let host = host.lowercased()
-        if host == DestinationConstants.supabaseHost || host == DestinationConstants.vercelHost {
-            return true
-        }
         guard host.hasSuffix(DestinationConstants.keyVaultHostSuffix) else { return false }
         let vaultName = String(host.dropLast(DestinationConstants.keyVaultHostSuffix.count))
         return DestinationRules.isValidKeyVaultName(vaultName)

@@ -61,7 +61,8 @@ FXVault/
 │   │   │   │                        # destination), DestinationCopy,
 │   │   │   │                        # AddDestinationScreen/ViewModel (+ AddDestinationCopy),
 │   │   │   │                        # DestinationSettingsScreen, DestinationDriftScreen (Refresh
-│   │   │   │                        # findings, Keep Mine / Use Remote)
+│   │   │   │                        # findings, Keep Mine / Use Remote), RetiredDestinationsNotice
+│   │   │   │                        # (1.0: the Supabase and Vercel destinations v16 removed)
 │   │   │   └── AddRepository/       # AddRepositorySheet/ViewModel (Add repository by name)
 │   │   ├── CopyToRepository/        # CopyToRepositoryScreen/ViewModel (Copy To › Another
 │   │   │                            # Repository…, v0.4.1)
@@ -99,8 +100,7 @@ FXVault/
 │   │   │                            # ProjectShareTreeModel, ProjectShareImportView/Editor (a
 │   │   │                            # bundle in Import Share), ProjectShareCopy
 │   │   └── Preferences/             # PreferencesScreen/ViewModel, General, Security(+ViewModel),
-│   │                                # Accounts(+ViewModel), Advanced, Destinations(+ViewModel:
-│   │                                # az sign-in, Supabase and Vercel connections; v0.8.0),
+│   │                                # Accounts(+ViewModel), Advanced,
 │   │                                # SharingSettingsScreen/ViewModel (the sent log; v0.9.0)
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
 │   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,
@@ -186,7 +186,7 @@ FXVault/
 │   │   │   ├── Models/              # Account, Repo, RepoCapability, Environment, ConfigItem,
 │   │   │   │                        # ConfigKind, BranchPattern, DeploymentBranchPolicy,
 │   │   │   │                        # Folder/FolderItem, ItemPlace (v0.7.0), Destination
-│   │   │   │                        # (provider, target, destination, item, connection; v0.8.0),
+│   │   │   │                        # (provider, target, destination, item; v0.8.0),
 │   │   │   │                        # SentShare, ShareExpiryChoice (v0.9.0)
 │   │   │   ├── Validation/          # PathSegment, GitHubName, EnvironmentName, FolderName (v0.7.0), RepoName,
 │   │   │   │                        # OwnerLogin, GitHubHost, BranchPattern validators,
@@ -209,7 +209,7 @@ FXVault/
 │   │   │   ├── Records/             # Vault/KeyWrap, Account, Repository, Environment/BranchPattern,
 │   │   │   │                        # ConfigItem/ConfigItemState, SyncJournal/ImportedSharePackage,
 │   │   │   │                        # Folder/FolderItem (v0.7.0), Destination (destinations,
-│   │   │   │                        # settings, items, connections, journal; v0.8.0), SentShare (v0.9.0)
+│   │   │   │                        # settings, items, journal; v0.8.0), SentShare (v0.9.0)
 │   │   │   ├── Stores/              # VaultRecord, Account, Repo, Config, SyncJournal, SharePackage,
 │   │   │   │                        # Folder (+LinkCountQuery, v0.7.0),
 │   │   │   │                        # Destination (v0.8.0), SentShare, ShareHold (held rows of both
@@ -274,8 +274,7 @@ FXVault/
 │   │   │   ├── JSON/                # JSONBodyWriter, SecretJSONDocument (scanner over SecretBytes),
 │   │   │   │                        # SecretByteBuffer, JSONByte
 │   │   │   ├── Remotes/             # DestinationRemoting (+ DestinationRemoteFactory, remote item
-│   │   │   │                        # models), AzureKeyVaultRemote, SupabaseRemote, VercelRemote
-│   │   │   ├── Accounts/            # SupabaseAccountClient, VercelAccountClient (pickers, checks)
+│   │   │   │                        # models), AzureKeyVaultRemote
 │   │   │   ├── Azure/               # AzureCLILocator (trusted az), AzureCLITokenProvider
 │   │   │   │                        # (+ AccessTokenProviding)
 │   │   │   ├── Errors/              # DestinationError
@@ -304,13 +303,12 @@ FXVault/
 │   │       ├── Folders/             # FolderRepository (v0.7.0)
 │   │       │   ├── Models/          # FolderSaveModels (Save as Folder)
 │   │       │   └── Support/         # FolderFieldCipher, FolderItemWriter
-│   │       ├── Destinations/        # v0.8.0: DestinationRepository (CRUD, items, copies,
-│   │       │   │                    # connections), DestinationSyncRepository (review, run,
+│   │       ├── Destinations/        # v0.8.0: DestinationRepository (CRUD, items, copies, the
+│   │       │   │                    # 1.0 retired notice), DestinationSyncRepository (review, run,
 │   │       │   │                    # refresh, resolve, import; live remote provider),
-│   │       │   │                    # DestinationAccessRepository (+ ShellResolvingAzureTokens)
+│   │       │   │                    # ShellResolvingAzureTokens
 │   │       │   ├── Models/          # DestinationSyncModels
-│   │       │   └── Support/         # DestinationFieldCipher (+ ConnectionTokenCipher),
-│   │       │                        # DestinationItemWriter, PublicValuePolicy
+│   │       │   └── Support/         # DestinationFieldCipher, DestinationItemWriter
 │   │       ├── EnvFiles/            # EnvFileRepository, EnvFileError, EnvExportAuthorizationModel,
 │   │       │   │                    # ReauthGate+EnvExport, GitServiceGitignoreChecker
 │   │       │   └── Models/          # EnvExportModels, EnvImportModels
@@ -348,11 +346,11 @@ FXVault/
 │       │                                         # GitHubSimulator dry run that always runs;
 │       │                                         # LiveDestinationTests, opt-in FXV_LIVE_DEST_*)
 │       ├── VaultStoreTests/                      # Store, Constraint, Observation, Migration (seed
-│       │                                         # ladder to v15), SyncJournalStore, DestinationStore,
+│       │                                         # ladder to v16), SyncJournalStore, DestinationStore,
 │       │                                         # ProjectShareStore, HeldShareStore (v0.9.0)
 │       ├── DestinationKitTests/                  # v0.8.0: HTTP policy, retries, JSON writer and
-│       │                                         # scanner, Key Vault, Supabase, Vercel, az, factory;
-│       │                                         # Fixtures/ keyvault/, supabase/, vercel/ (synthetic)
+│       │                                         # scanner, Key Vault, az, factory;
+│       │                                         # Fixtures/ keyvault/ (synthetic)
 │       ├── VaultCryptoTests/Fixtures/kat/        # generate_kat.py + kat_vectors.json
 │       │                                         # (destination_field vectors since v0.8.0)
 │       ├── SharingKitTests/Fixtures/             # file_v1_kat.json and file_v2_kat.json, kat/

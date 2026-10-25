@@ -20,8 +20,6 @@ enum DestinationSyncPresentation {
         for review in reviews where !review.isEmpty {
             let scopes = review.sections.filter { !$0.changes.isEmpty }.map(scope)
             let blocked = review.sections.flatMap { section in section.blocked.map { issue($0, destination: section.destination) } }
-            let notes = review.sections.flatMap { section in section.warnings.map { warning($0, destination: section.destination) } }
-                + review.sections.flatMap(sharedNotes)
             if let index = merged.firstIndex(where: { $0.id == review.repositoryID }) {
                 let current = merged[index]
                 merged[index] = SyncSummaryRepoModel(
@@ -32,7 +30,7 @@ enum DestinationSyncPresentation {
                     blocked: current.blocked + blocked,
                     dependentCount: current.dependentCount,
                     remoteChanged: current.remoteChanged,
-                    notes: current.notes + notes,
+                    notes: current.notes,
                     pendingCount: current.pendingCount + review.executableCount
                 )
             } else {
@@ -44,7 +42,7 @@ enum DestinationSyncPresentation {
                     blocked: blocked,
                     dependentCount: 0,
                     remoteChanged: [],
-                    notes: notes,
+                    notes: [],
                     pendingCount: review.executableCount
                 ))
             }
@@ -80,23 +78,13 @@ enum DestinationSyncPresentation {
         )
     }
 
-    private static func warning(_ warning: DestinationReviewWarningModel, destination: DestinationModel) -> String {
-        DestinationSyncCopy.publicWarning(name: warning.name, prefix: warning.prefix, destination: destination.copyTargetTitle)
-    }
-
-    private static func sharedNotes(_ section: DestinationReviewSectionModel) -> [String] {
-        section.writes.filter { !$0.otherEnvironments.isEmpty }.map { change in
-            DestinationSyncCopy.sharedVariable(name: change.name, others: change.otherEnvironments.map(\.title))
-        }
-    }
-
     static func fix(for reason: DestinationBlockReason, change: DestinationChangeModel) -> SyncFixActionModel? {
         switch reason {
         case .valueMissing:
             .fillValue(ItemEditorContext(destinationID: change.destinationID, mode: .fill(change.itemID)))
-        case .publicCredential, .invalidName:
+        case .invalidName:
             .editItem(ItemEditorContext(destinationID: change.destinationID, mode: .edit(change.itemID)))
-        case .connectionMissing, .remoteChanged, .existsRemotely:
+        case .remoteChanged, .existsRemotely:
             .openDestination(change.destinationID)
         case .listingFailed(let error):
             fix(for: error, destinationID: change.destinationID)
@@ -127,9 +115,7 @@ enum DestinationSyncPresentation {
                     SyncIssueModel(
                         id: "destination|\(change.id)",
                         title: DestinationSyncCopy.deletionTitle(name: change.name, destination: section.destination.copyTargetTitle),
-                        reason: change.otherEnvironments.isEmpty
-                            ? ""
-                            : DestinationSyncCopy.deletionKeepsOthers(change.otherEnvironments.map(\.title))
+                        reason: ""
                     )
                 }
             }

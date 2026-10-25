@@ -26,6 +26,9 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         }
     }
 
+    /// The Supabase and Vercel destinations 1.0 removed (migration v16), shown once after unlock.
+    let retiredDestinations: RetiredDestinationsNotice
+
     @ObservationIgnored let app: AppViewModel
     /// The reload after the connection came back (internal so tests can await it).
     @ObservationIgnored private(set) var reconnectTask: Task<Void, Never>?
@@ -33,6 +36,11 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     init(app: AppViewModel) {
         self.app = app
         sidebar = SidebarViewModel(app: app)
+        let destinations = app.container.data.destinations
+        retiredDestinations = RetiredDestinationsNotice(
+            load: { try destinations.retiredDestinationLabels() },
+            dismiss: { try destinations.dismissRetiredDestinations() }
+        )
         sidebar.onChange = { [weak self] in
             self?.followSelection()
         }

@@ -191,7 +191,7 @@ struct ProjectShareStoreTests {
         let id = DestinationID()
         try seeded.execute("""
             INSERT INTO destinations (id, repository_id, provider, target_key, settings_json, created_at, updated_at)
-            VALUES ('\(id.uuidString)', '\(seeded.repo.id.uuidString)', 'vercel', 'vc|-|prj_sample|preview', '{}', 't', 't')
+            VALUES ('\(id.uuidString)', '\(seeded.repo.id.uuidString)', 'azure_keyvault', 'kv|kv-sample-staging', '{}', 't', 't')
             """)
         return id
     }

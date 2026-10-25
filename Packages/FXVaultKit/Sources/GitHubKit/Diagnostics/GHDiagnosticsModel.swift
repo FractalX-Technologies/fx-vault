@@ -305,8 +305,6 @@ extension NameRule {
         case .leadingDigit: "leadingDigit"
         case .reservedPrefix: "reservedPrefix"
         case .reservedName: "reservedName"
-        case .reservedByProvider: "reservedByProvider"
-        case .notUppercase: "notUppercase"
         case .dotName: "dotName"
         case .gitSuffix: "gitSuffix"
         case .controlCharacter: "controlCharacter"

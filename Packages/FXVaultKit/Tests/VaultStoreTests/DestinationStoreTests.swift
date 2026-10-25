@@ -39,7 +39,7 @@ struct DestinationStoreTests {
         let destination = UUID().uuidString.lowercased()
         try seeded.execute("""
             INSERT INTO destinations (id, repository_id, provider, target_key, settings_json, created_at, updated_at)
-            VALUES ('\(destination)', '\(seeded.repo.id.uuidString)', 'vercel', 'vc|-|prj|production', '{}', 't', 't')
+            VALUES ('\(destination)', '\(seeded.repo.id.uuidString)', 'azure_keyvault', 'kv|kv-sample', '{}', 't', 't')
             """)
         let blob = "x'" + String(repeating: "07", count: 40) + "'"
         func insertItem(
@@ -76,29 +76,13 @@ struct DestinationStoreTests {
         #expect(try seeded.integer("SELECT COUNT(*) FROM destination_items") == 0)
     }
 
-    @Test func connectionsAndJournalCheckTheirColumns() throws {
+    @Test func journalChecksItsColumns() throws {
         let seeded = try SeededDatabase()
-        let blob = "x'" + String(repeating: "05", count: 48) + "'"
-        let connection = UUID().uuidString.lowercased()
-        try seeded.execute("""
-            INSERT INTO provider_connections (id, provider, label, token_ct, created_at, updated_at)
-            VALUES ('\(connection)', 'supabase', 'Sample', \(blob), 't', 't')
-            """)
-        #expect(throws: Self.check) {
-            try seeded.execute("""
-                INSERT INTO provider_connections (id, provider, label, token_ct, created_at, updated_at)
-                VALUES ('\(UUID().uuidString.lowercased())', 'azure_keyvault', 'Sample', \(blob), 't', 't')
-                """)
-        }
         let destination = UUID().uuidString.lowercased()
         try seeded.execute("""
-            INSERT INTO destinations (id, repository_id, provider, target_key, settings_json, connection_id, created_at, updated_at)
-            VALUES ('\(destination)', '\(seeded.repo.id.uuidString)', 'supabase', 'sb|ref', '{}', '\(connection)', 't', 't')
+            INSERT INTO destinations (id, repository_id, provider, target_key, settings_json, created_at, updated_at)
+            VALUES ('\(destination)', '\(seeded.repo.id.uuidString)', 'azure_keyvault', 'kv|kv-sample', '{}', 't', 't')
             """)
-        // Removing a connection keeps its destinations, without a connection.
-        try seeded.execute("DELETE FROM provider_connections")
-        #expect(try seeded.text("SELECT connection_id FROM destinations") == nil)
-        #expect(try seeded.integer("SELECT COUNT(*) FROM destinations") == 1)
         #expect(throws: Self.check) {
             try seeded.execute("""
                 INSERT INTO destination_journal (run_id, destination_id, op, item_name, state, started_at)
@@ -115,20 +99,17 @@ struct DestinationStoreTests {
 
     // MARK: - Store
 
-    @Test func settingsRoundTripEveryProvider() throws {
+    @Test func settingsRoundTripKeyVaultTargets() throws {
         let targets: [DestinationTargetModel] = [
             .azureKeyVault(vaultName: "kv-sample-prod", tenantID: nil),
             .azureKeyVault(vaultName: "kv-sample-prod", tenantID: "contoso.onmicrosoft.com"),
-            .supabase(projectRef: "abcdefghijklmnopqrst"),
-            .vercel(projectID: "prj_sample", projectName: "sample-web", teamID: "team_sample", environment: .preview),
-            .vercel(projectID: "prj_sample", projectName: "sample-web", teamID: nil, environment: .production),
         ]
         for target in targets {
-            let record = DestinationRecord(repositoryID: RepoID(), target: target, stage: nil, connectionID: nil, sortOrder: 0, createdAt: Self.start, updatedAt: Self.start)
+            let record = DestinationRecord(repositoryID: RepoID(), target: target, stage: nil, sortOrder: 0, createdAt: Self.start, updatedAt: Self.start)
             #expect(try record.target() == target)
             #expect(record.targetKey == target.targetKey)
         }
-        var tampered = DestinationRecord(repositoryID: RepoID(), target: targets[0], stage: nil, connectionID: nil, sortOrder: 0, createdAt: Self.start, updatedAt: Self.start)
+        var tampered = DestinationRecord(repositoryID: RepoID(), target: targets[0], stage: nil, sortOrder: 0, createdAt: Self.start, updatedAt: Self.start)
         tampered.settingsJSON = #"{"version":2,"vaultName":"kv"}"#
         #expect(throws: StoreError.invalidStoredValue) { try tampered.target() }
         tampered.settingsJSON = #"{"version":1}"#
@@ -142,7 +123,6 @@ struct DestinationStoreTests {
             repositoryID: seeded.repo.id,
             target: .azureKeyVault(vaultName: "kv-sample-prod", tenantID: nil),
             stage: "production",
-            connectionID: nil,
             sortOrder: 0,
             createdAt: Self.start,
             updatedAt: Self.start

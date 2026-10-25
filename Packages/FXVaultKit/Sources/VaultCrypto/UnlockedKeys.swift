@@ -142,24 +142,6 @@ public struct UnlockedKeys: Sendable {
         }
     }
 
-    /// Encrypts `value` for a secret field (v0.5.0) under `K_field` and this DEK version.
-    public func seal(_ value: SecretBytes, for field: SecretFieldAAD) throws(CryptoError) -> Data {
-        try FieldCipher.seal(value, key: material.fieldKey, aad: field.encoded(dekVersion: dekVersion))
-    }
-
-    /// Decrypts a secret-field blob. The caller wipes the result.
-    ///
-    /// - Throws: `.corrupted(.unsupportedFormatVersion)` or `.corrupted(.fieldDecryptionFailed)`.
-    public func open(_ blob: Data, for field: SecretFieldAAD) throws(VaultError) -> SecretBytes {
-        do {
-            return try FieldCipher.open(blob, key: material.fieldKey, aad: field.encoded(dekVersion: dekVersion))
-        } catch .unsupportedFormat(_) {
-            throw .corrupted(.unsupportedFormatVersion)
-        } catch {
-            throw .corrupted(.fieldDecryptionFailed)
-        }
-    }
-
     /// Encrypts a folder item's value (v0.7.0) under `K_field` and this DEK version.
     public func seal(_ value: SecretBytes, for field: FolderFieldAAD) throws(CryptoError) -> Data {
         try FieldCipher.seal(value, key: material.fieldKey, aad: field.encoded(dekVersion: dekVersion))

@@ -76,7 +76,7 @@ enum SyncFixActionModel: Hashable {
     case learnMore(URL)
     /// Clone a repository the run created (retry, or after a clone folder was chosen).
     case clone(RepoID)
-    /// A destination change needs a Refresh, a connection or its settings (v0.8.0): show the
+    /// A destination change needs a Refresh or its settings (v0.8.0): show the
     /// destination.
     case openDestination(DestinationID)
 }

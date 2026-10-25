@@ -105,14 +105,8 @@ enum TestValues {
     static let vaultName = "kv-sample-prod"
     static let vaultHost = "kv-sample-prod.vault.azure.net"
     static let tenantID = "00000000-0000-0000-0000-000000000001"
-    static let supabaseRef = "abcdefghijklmnopqrst"
-    static let vercelProjectID = "prj_sample"
-    static let vercelProjectName = "sample-web"
-    static let vercelTeamID = "team_sample"
     static let azureToken = syntheticToken("az", filler: "a")
     static let refreshedAzureToken = syntheticToken("az", filler: "b")
-    static let supabaseToken = syntheticToken("sbp", filler: "c")
-    static let vercelToken = syntheticToken("vc", filler: "d")
     /// A value with every kind of character a JSON body must handle.
     static let trickyValue = "fixture \"quoted\" \\ back\nline\ttab\u{01}ctl é 🚀 /end"
 
@@ -139,24 +133,7 @@ enum TestValues {
         tenantID: String? = TestValues.tenantID
     ) throws -> any DestinationRemoting {
         try remoteFactory(transport, tokens: tokens, clock: clock)
-            .remote(for: .azureKeyVault(vaultName: vaultName, tenantID: tenantID), token: nil)
-    }
-
-    static func supabase(_ transport: FakeHTTPTransport, clock: InstantClock = InstantClock()) throws -> any DestinationRemoting {
-        try remoteFactory(transport, clock: clock)
-            .remote(for: .supabase(projectRef: supabaseRef), token: secret(supabaseToken))
-    }
-
-    static func vercel(
-        _ transport: FakeHTTPTransport,
-        environment: VercelEnvironment = .production,
-        teamID: String? = TestValues.vercelTeamID,
-        clock: InstantClock = InstantClock()
-    ) throws -> any DestinationRemoting {
-        try remoteFactory(transport, clock: clock).remote(
-            for: .vercel(projectID: vercelProjectID, projectName: vercelProjectName, teamID: teamID, environment: environment),
-            token: secret(vercelToken)
-        )
+            .remote(for: .azureKeyVault(vaultName: vaultName, tenantID: tenantID))
     }
 
     /// A listed item for write and delete tests.
@@ -164,19 +141,15 @@ enum TestValues {
         remoteName: String,
         name: String?,
         kind: ConfigKind = .secret,
-        remoteRef: String? = nil,
-        isValueReadable: Bool = true,
-        otherTargets: [VercelEnvironment] = []
+        isValueReadable: Bool = true
     ) -> RemoteDestinationItemModel {
         RemoteDestinationItemModel(
             remoteName: remoteName,
             name: name,
             unusableReason: nil,
             kind: kind,
-            remoteRef: remoteRef,
             version: nil,
             isValueReadable: isValueReadable,
-            otherTargets: otherTargets,
             updatedAt: nil
         )
     }

@@ -30,11 +30,6 @@ nonisolated enum DestinationSyncCopy {
                 localized: "sync.destination.blocked.valueMissing",
                 defaultValue: "The value is not in FX Vault (the provider never returned it). Fill it first."
             )
-        case .connectionMissing:
-            String(
-                localized: "sync.destination.blocked.connection",
-                defaultValue: "The destination has no connection. Choose one in its settings."
-            )
         case .listingFailed(let error):
             String(
                 localized: "sync.destination.blocked.listing",
@@ -50,39 +45,13 @@ nonisolated enum DestinationSyncCopy {
                 localized: "sync.destination.blocked.exists",
                 defaultValue: "\(provider.title) already has this name. Refresh the destination to keep yours or use theirs."
             )
-        case .publicCredential(let prefix):
-            String(
-                localized: "sync.destination.blocked.public",
-                defaultValue: "\(prefix) names are public in the browser, and this value looks like a secret. Change the value, or Mark as Public in the destination."
-            )
         case .invalidName(let error):
             error.localizedMessage
         }
     }
 
-    static func publicWarning(name: String, prefix: String, destination: String) -> String {
-        String(
-            localized: "sync.destination.publicWarning",
-            defaultValue: "\(name) in \(destination) is public (\(prefix)) and its value looks like a token. Fine for a key meant to be public."
-        )
-    }
-
-    static func sharedVariable(name: String, others: [String]) -> String {
-        String(
-            localized: "sync.destination.shared",
-            defaultValue: "\(name) is shared with \(others.joined(separator: ", ")) on Vercel: they get the new value too."
-        )
-    }
-
     static func deletionTitle(name: String, destination: String) -> String {
         String(localized: "sync.destination.deletion", defaultValue: "Delete \(name) in \(destination)")
-    }
-
-    static func deletionKeepsOthers(_ others: [String]) -> String {
-        String(
-            localized: "sync.destination.deletion.keeps",
-            defaultValue: "Only this environment: \(others.joined(separator: ", ")) keep it."
-        )
     }
 
     static var confirmed: String {

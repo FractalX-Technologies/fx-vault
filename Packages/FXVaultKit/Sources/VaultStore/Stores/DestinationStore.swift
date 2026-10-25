@@ -2,8 +2,8 @@ import Foundation
 import GRDB
 import VaultCore
 
-/// `destinations`, `destination_items`, `provider_connections` and `destination_journal`
-/// (§6 `v13_destinations`, v0.8.0).
+/// `destinations`, `destination_items` and `destination_journal` (§6 `v13_destinations`,
+/// v0.8.0), and the `retired_destinations` notice (`v16_drop_runtime_providers`, 1.0).
 ///
 /// No GitHub sync path reads these tables: destination items reach their provider only through
 /// VaultData's destination sync. Link groups (`link_id`) span `config_items`, `folder_items` and
@@ -30,7 +30,7 @@ public struct DestinationStore: Sendable {
         try Self.orderedDestinations(repositoryID: repositoryID).fetchAll(tx.db)
     }
 
-    /// Every destination of the vault (connection removal, diagnostics).
+    /// Every destination of the vault (diagnostics).
     public func fetchAllDestinationRecords(in tx: StoreTransaction) throws -> [DestinationRecord] {
         try DestinationRecord.order(DestinationRecord.CodingKeys.repositoryID, DestinationRecord.CodingKeys.sortOrder).fetchAll(tx.db)
     }
@@ -230,60 +230,6 @@ public struct DestinationStore: Sendable {
             .updateAll(tx.db, DestinationItemRecord.CodingKeys.shareHold.set(to: nil))
     }
 
-    // MARK: - Connections
-
-    public func fetchConnection(id: ConnectionID, in tx: StoreTransaction) throws -> ConnectionRecord? {
-        try ConnectionRecord.fetchOne(tx.db, key: id.uuidString)
-    }
-
-    public func fetchConnectionRecords(in tx: StoreTransaction) throws -> [ConnectionRecord] {
-        try ConnectionRecord.order(ConnectionRecord.CodingKeys.provider, ConnectionRecord.CodingKeys.label).fetchAll(tx.db)
-    }
-
-    public func fetchConnections() throws -> [ConnectionModel] {
-        try database.read { try fetchConnectionRecords(in: $0).map(\.model) }
-    }
-
-    public func observeConnections() -> AsyncThrowingStream<[ConnectionModel], any Error> {
-        database.observe { db in
-            try ConnectionRecord.order(ConnectionRecord.CodingKeys.provider, ConnectionRecord.CodingKeys.label)
-                .fetchAll(db)
-                .map(\.model)
-        }
-    }
-
-    public func countConnections(in tx: StoreTransaction) throws -> Int {
-        try ConnectionRecord.fetchCount(tx.db)
-    }
-
-    public func insertConnection(_ connection: ConnectionRecord, in tx: StoreTransaction) throws {
-        try connection.insert(tx.db)
-    }
-
-    public func updateConnection(_ connection: ConnectionRecord, in tx: StoreTransaction) throws {
-        guard try ConnectionRecord.exists(tx.db, key: connection.id.uuidString) else {
-            throw StoreError.notFound
-        }
-        try connection.update(tx.db)
-    }
-
-    /// Removes a connection; its destinations keep their rows with no connection.
-    @discardableResult
-    public func deleteConnection(id: ConnectionID, in tx: StoreTransaction) throws -> Bool {
-        try ConnectionRecord.deleteOne(tx.db, key: id.uuidString)
-    }
-
-    /// Ids of every connection (DEK rotation).
-    public func fetchConnectionIDs() throws -> [ConnectionID] {
-        try database.read { tx in
-            try ConnectionRecord
-                .select(ConnectionRecord.CodingKeys.id, as: String.self)
-                .order(ConnectionRecord.CodingKeys.id)
-                .fetchAll(tx.db)
-                .compactMap { ConnectionID(uuidString: $0) }
-        }
-    }
-
     // MARK: - Journal
 
     /// Records a write before it starts and returns the row with its id.
@@ -334,6 +280,23 @@ public struct DestinationStore: Sendable {
             .filter(DestinationJournalRecord.CodingKeys.startedAt < cutoff)
             .filter(DestinationJournalRecord.CodingKeys.state != DestinationJournalRecord.State.inFlight.rawValue)
             .deleteAll(tx.db)
+    }
+
+    // MARK: - Retired destinations (1.0)
+
+    /// `owner/name · provider place` of each Supabase or Vercel destination v16 deleted, in the
+    /// order the notice lists them. Empty once the notice was dismissed.
+    public func fetchRetiredDestinationLabels() throws -> [String] {
+        try database.read { tx in
+            try String.fetchAll(tx.db, sql: "SELECT label FROM retired_destinations ORDER BY id")
+        }
+    }
+
+    /// Clears the notice: it shows once.
+    public func deleteRetiredDestinations() throws {
+        try database.write { tx in
+            try tx.db.execute(sql: "DELETE FROM retired_destinations")
+        }
     }
 
     // MARK: - Queries

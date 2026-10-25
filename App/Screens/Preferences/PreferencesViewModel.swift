@@ -16,7 +16,6 @@ final class PreferencesViewModel: LockObserving {
         case general
         case security
         case accounts
-        case destinations
         case sharing
         case advanced
 
@@ -36,7 +35,6 @@ final class PreferencesViewModel: LockObserving {
 
     let security: SecuritySettingsViewModel
     let accounts: AccountsSettingsViewModel
-    let destinations: DestinationsSettingsViewModel
     /// The share files this Mac sent (v0.9.0).
     let sharing: SharingSettingsViewModel
 
@@ -46,7 +44,6 @@ final class PreferencesViewModel: LockObserving {
         self.app = app
         security = SecuritySettingsViewModel(app: app)
         accounts = AccountsSettingsViewModel(app: app)
-        destinations = DestinationsSettingsViewModel(app: app)
         sharing = SharingSettingsViewModel(app: app)
         app.addLockObserver(self)
     }

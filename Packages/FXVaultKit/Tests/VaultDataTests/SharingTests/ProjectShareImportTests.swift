@@ -88,7 +88,7 @@ struct ProjectShareImportTests {
                 githubRepoID: "R_web",
                 variables: [Self.item("FXV_WEB", "w1")]
             ),
-            destinations: [ShareDestinationModel(target: ProjectShareWorld.vercel, stage: nil, variables: [Self.item("NEXT_PUBLIC_URL", "u1")])]
+            destinations: [ShareDestinationModel(target: ProjectShareWorld.webVault, stage: nil, secrets: [Self.item("FXV_URL", "u1")])]
         )
         let hidden = ShareBundleRepositoryModel(repository: ShareRepositoryModel(
             owner: SyncFixture.owner,
@@ -116,19 +116,18 @@ struct ProjectShareImportTests {
         #expect(result.repositories.count == 2)
         #expect(result.firstRepositoryID == (try world.receiver.repository().id))
         #expect(result.firstStage == "staging")
-        #expect(result.destinationsCreated == ["Vercel example-web (production)"])
+        #expect(result.destinationsCreated == ["Azure Key Vault kv-example-web"])
         let webID = try #require(try RepoStore(database: world.receiver.database).fetch(ownerLogin: "owner-a", name: "web")).id
         let webItems = try world.receiver.store.fetchItemStates(repositoryID: webID).map(\.name)
         #expect(webItems == ["FXV_WEB"])
         #expect(try RepoStore(database: world.receiver.database).fetch(ownerLogin: "owner-a", name: "hidden") == nil)
-        #expect(try Self.heldNames(world, packageID: bundle.packageID) == ["FXV_NEW", "FXV_WEB", "NEXT_PUBLIC_URL"])
+        #expect(try Self.heldNames(world, packageID: bundle.packageID) == ["FXV_NEW", "FXV_URL", "FXV_WEB"])
         let record = try #require(try SharePackageStore(database: world.receiver.database).fetchAll().first)
         #expect(record.senderDeviceID == nil)
         #expect(record.senderName == "Other Mac")
         #expect(result.heldCount == 3)
-        // A destination created by the import has no connection: Sync leaves it alone.
         let created = try DestinationRepository(session: world.receiver.session).destinations(repositoryID: webID)
-        #expect(created.map(\.connectionID) == [nil])
+        #expect(created.map(\.target) == [ProjectShareWorld.webVault])
     }
 
     // MARK: - GitHub holds and links
@@ -170,12 +169,12 @@ struct ProjectShareImportTests {
 
     // MARK: - Destinations
 
-    @Test func destinationsMergeByTargetAndNewOnesArriveWithoutAConnection() async throws {
+    @Test func destinationsMergeByTargetOrAreCreated() async throws {
         let world = try await ProjectShareWorld.make()
         defer { world.folder.remove() }
         let repositoryID = try world.receiver.repository().id
         let destinations = DestinationRepository(session: world.receiver.session, clock: world.receiver.clock)
-        let keyVault = try destinations.createDestination(repositoryID: repositoryID, target: ProjectShareWorld.keyVault, stage: "staging", connectionID: nil)
+        let keyVault = try destinations.createDestination(repositoryID: repositoryID, target: ProjectShareWorld.keyVault, stage: "staging")
         try destinations.addItem(destinationID: keyVault, kind: .secret, name: "FXV_KV", value: SecretBytes(utf8: "old"))
         try destinations.addItem(destinationID: keyVault, kind: .secret, name: "FXV_SAME", value: SecretBytes(utf8: "same"))
         let bundle = Self.bundle(world, repositories: [try Self.api(world, destinations: [
@@ -185,10 +184,9 @@ struct ProjectShareImportTests {
                 secrets: [Self.item("FXV_KV", "k1"), Self.item("FXV_SAME", "same"), Self.item("FXV_ADD", "a")]
             ),
             ShareDestinationModel(
-                target: ProjectShareWorld.vercel,
+                target: ProjectShareWorld.webVault,
                 stage: nil,
-                variables: [Self.item("NEXT_PUBLIC_URL", "u1"), Self.item("FXV_PLAIN", "p")],
-                publicNames: ["NEXT_PUBLIC_URL"]
+                secrets: [Self.item("FXV_URL", "u1"), Self.item("FXV_PLAIN", "p")]
             ),
         ])])
         let draft = try await Self.open(world, bundle)
@@ -200,65 +198,14 @@ struct ProjectShareImportTests {
         #expect(plan.repositories.first?.destinations.last?.action == .create)
 
         let result = try await world.receiverSharing.applyBundle(draft, plan: plan, confirmReplay: false)
-        #expect(result.destinationsCreated == ["Vercel example-web (production)"])
+        #expect(result.destinationsCreated == ["Azure Key Vault kv-example-web"])
         #expect(result.destinationItemsWritten == 4)
         let keyVaultItems = try Self.destinationItems(world, target: ProjectShareWorld.keyVault)
         let kv = try #require(keyVaultItems.first { $0.name == "FXV_KV" })
         #expect(try String(decoding: destinations.reveal(kv.id).withUnsafeBytes { Data($0) }, as: UTF8.self) == "k1")
         #expect(keyVaultItems.map(\.name).sorted() == ["FXV_ADD", "FXV_KV", "FXV_SAME"])
-        let web = try Self.destinationItems(world, target: ProjectShareWorld.vercel)
-        #expect(web.first { $0.name == "NEXT_PUBLIC_URL" }?.isPublicAllowed == true)
-        #expect(web.first { $0.name == "FXV_PLAIN" }?.isPublicAllowed == false)
-        #expect(try Self.heldNames(world, packageID: bundle.packageID) == ["FXV_ADD", "FXV_KV", "FXV_PLAIN", "NEXT_PUBLIC_URL"])
-    }
-
-    @Test func aSupabaseFillTheLastListingAlreadyShowsIsNotHeld() async throws {
-        let world = try await ProjectShareWorld.make()
-        defer { world.folder.remove() }
-        let repositoryID = try world.receiver.repository().id
-        let target = DestinationTargetModel.supabase(projectRef: "abcdefghijklmnopqrst")
-        let destinationID = try world.receiver.session.write { _, tx in
-            let store = DestinationStore(database: world.receiver.database)
-            let record = DestinationRecord(
-                repositoryID: repositoryID,
-                target: target,
-                stage: nil,
-                connectionID: nil,
-                sortOrder: 0,
-                createdAt: world.receiver.clock.now,
-                updatedAt: world.receiver.clock.now
-            )
-            try store.insertDestination(record, in: tx)
-            return record.id
-        }
-        // Two write-only rows listed by Supabase: one with the digest of "sb1", one of "other".
-        try world.receiver.session.write { keys, tx in
-            let store = DestinationStore(database: world.receiver.database)
-            for (name, listed) in [("FXV_MATCH", "sb1"), ("FXV_OTHER", "other")] {
-                let digest = DestinationFieldCipher.supabaseDigest(of: SecretBytes(utf8: listed))
-                try store.insertItem(DestinationItemRecord(
-                    destinationID: destinationID,
-                    kind: .secret,
-                    name: name,
-                    valueCiphertext: nil,
-                    valueFingerprint: nil,
-                    syncedName: name,
-                    syncedKind: .secret,
-                    remoteVersion: DestinationFieldCipher.keyedMarker(digest: digest, remoteName: name, destinationID: destinationID, keys: keys),
-                    createdAt: world.receiver.clock.now,
-                    updatedAt: world.receiver.clock.now
-                ), in: tx)
-            }
-        }
-        let bundle = Self.bundle(world, repositories: [try Self.api(world, destinations: [
-            ShareDestinationModel(target: target, stage: nil, secrets: [Self.item("FXV_MATCH", "sb1"), Self.item("FXV_OTHER", "sb2")]),
-        ])])
-        let draft = try await Self.open(world, bundle)
-        #expect(draft.plan.repositories.first?.destinations.first?.items.map(\.chip) == [.fillsMissingValue, .fillsMissingValue])
-        try await world.receiverSharing.applyBundle(draft, plan: draft.plan, confirmReplay: false)
-        #expect(try Self.heldNames(world, packageID: bundle.packageID) == ["FXV_OTHER"])
-        let items = try DestinationRepository(session: world.receiver.session).items(destinationID: destinationID)
-        #expect(items.first { $0.name == "FXV_MATCH" }?.syncStatus == .synced)
+        #expect(try Self.destinationItems(world, target: ProjectShareWorld.webVault).map(\.name).sorted() == ["FXV_PLAIN", "FXV_URL"])
+        #expect(try Self.heldNames(world, packageID: bundle.packageID) == ["FXV_ADD", "FXV_KV", "FXV_PLAIN", "FXV_URL"])
     }
 
     // MARK: - Folders

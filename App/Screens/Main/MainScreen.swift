@@ -33,7 +33,24 @@ struct MainScreen: View {
                 Task { await viewModel.sidebar.reload() }
             }
             .onAppear {
+                if viewModel.app.phase == .unlocked {
+                    viewModel.retiredDestinations.load()
+                }
                 viewModel.presentNextPendingImport()
+            }
+            .alert(
+                DestinationCopy.retiredTitle,
+                isPresented: Binding(
+                    get: { !viewModel.retiredDestinations.labels.isEmpty },
+                    set: { if !$0 { viewModel.retiredDestinations.dismiss() } }
+                )
+            ) {
+                Button(String(localized: "common.ok", defaultValue: "OK")) {
+                    viewModel.retiredDestinations.dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            } message: {
+                Text(DestinationCopy.retiredMessage(viewModel.retiredDestinations.labels))
             }
             .onChange(of: viewModel.app.pendingImports) {
                 viewModel.presentNextPendingImport()
