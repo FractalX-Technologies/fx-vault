@@ -16,11 +16,9 @@ struct OnboardingViewModelTests {
         return (harness, viewModel)
     }
 
-    @Test func startsAtWelcomeWithGHStatus() async throws {
+    @Test func startsAtWelcome() async throws {
         let (harness, viewModel) = try await makeViewModel()
-        await harness.app.refreshGHStatus()
         #expect(viewModel.step == .welcome)
-        #expect(viewModel.ghStatus == .notInstalled)
         #expect(harness.app.phase == .onboarding)
         viewModel.start()
         #expect(viewModel.step == .createPassword)
@@ -90,6 +88,10 @@ struct OnboardingViewModelTests {
 
         let groups = viewModel.recoveryKeyGroups
         viewModel.continueToConfirmation()
+        #expect(viewModel.step == .recoveryKey, "Continue waits for \"I saved it offline\"")
+        #expect(!viewModel.canContinueFromRecoveryKey)
+        viewModel.hasSavedRecoveryKey = true
+        viewModel.continueToConfirmation()
         #expect(viewModel.step == .confirmRecoveryKey)
         #expect(viewModel.confirmationIndices == [3, 12])
 
@@ -126,6 +128,7 @@ struct OnboardingViewModelTests {
         viewModel.passwordConfirmation = testPassword
         await viewModel.createVault()
         let groups = viewModel.recoveryKeyGroups
+        viewModel.hasSavedRecoveryKey = true
         viewModel.continueToConfirmation()
         viewModel.confirmationInputs = [groups[3], groups[12]]
         viewModel.confirmRecoveryKey()
@@ -141,12 +144,31 @@ struct OnboardingViewModelTests {
         viewModel.passwordConfirmation = testPassword
         await viewModel.createVault()
         let groups = viewModel.recoveryKeyGroups
+        viewModel.hasSavedRecoveryKey = true
         viewModel.continueToConfirmation()
         viewModel.confirmationInputs = [groups[3], groups[12]]
         viewModel.confirmRecoveryKey()
         viewModel.skipTouchID()
         #expect(viewModel.step == .done)
         #expect(try !harness.vaultManager.isBiometricsEnabled())
+    }
+
+    /// 1.0 (board Password to Touch ID): the Secure phase counts its own steps, and Back on the
+    /// password step returns to Welcome without keeping what was typed.
+    @Test func theSecurePhaseCountsItsStepsAndPasswordGoesBack() async throws {
+        let (_, signed) = try await makeViewModel(signed: true)
+        #expect(signed.secureSteps == [.createPassword, .recoveryKey, .confirmRecoveryKey, .touchID])
+        #expect(signed.secureStepNumber == nil, "Welcome has no counter")
+        signed.start()
+        #expect(signed.secureStepNumber == 1)
+        signed.password = testPassword
+        signed.passwordConfirmation = testPassword
+        signed.backToWelcome()
+        #expect(signed.step == .welcome)
+        #expect(signed.password.isEmpty && signed.passwordConfirmation.isEmpty)
+
+        let (_, unsigned) = try await makeViewModel(signed: false)
+        #expect(unsigned.secureSteps == [.createPassword, .recoveryKey, .confirmRecoveryKey])
     }
 
     @Test func lockDuringRecoveryKeyStepWipesKeyAndKeepsReminder() async throws {

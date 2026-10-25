@@ -10715,13 +10715,13 @@
         }
       }
     },
-    "onboarding.confirm.back" : {
+    "onboarding.back" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Show Key Again"
+            "value" : "Back"
           }
         }
       }
@@ -10759,13 +10759,24 @@
         }
       }
     },
+    "onboarding.confirm.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Back shows the key again."
+          }
+        }
+      }
+    },
     "onboarding.confirm.subtitle" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Enter the requested groups from the key you saved."
+            "value" : "Type groups %@ from the copy you saved."
           }
         }
       }
@@ -10776,7 +10787,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Confirm your recovery key"
+            "value" : "Confirm your recovery key."
           }
         }
       }
@@ -10825,182 +10836,6 @@
         }
       }
     },
-    "onboarding.panel.confirm" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm"
-          }
-        }
-      }
-    },
-    "onboarding.panel.confirm.next" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld groups to re-enter"
-          }
-        }
-      }
-    },
-    "onboarding.panel.current" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "In progress"
-          }
-        }
-      }
-    },
-    "onboarding.panel.done" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Done"
-          }
-        }
-      }
-    },
-    "onboarding.panel.password" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Password"
-          }
-        }
-      }
-    },
-    "onboarding.panel.password.next" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Encrypts the vault"
-          }
-        }
-      }
-    },
-    "onboarding.panel.ready" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Ready"
-          }
-        }
-      }
-    },
-    "onboarding.panel.ready.next" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Open your vault"
-          }
-        }
-      }
-    },
-    "onboarding.panel.recoveryKey" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Recovery key"
-          }
-        }
-      }
-    },
-    "onboarding.panel.recoveryKey.next" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Shown once"
-          }
-        }
-      }
-    },
-    "onboarding.panel.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Setup"
-          }
-        }
-      }
-    },
-    "onboarding.panel.touchID" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Touch ID"
-          }
-        }
-      }
-    },
-    "onboarding.panel.touchID.next" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Optional"
-          }
-        }
-      }
-    },
-    "onboarding.panel.welcome" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Welcome"
-          }
-        }
-      }
-    },
-    "onboarding.panel.welcome.gh" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "gh %@"
-          }
-        }
-      }
-    },
-    "onboarding.panel.welcome.next" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "GitHub CLI check"
-          }
-        }
-      }
-    },
     "onboarding.password.create" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11023,13 +10858,24 @@
         }
       }
     },
+    "onboarding.password.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It can't be recovered. Your recovery key, next, is the only way back in."
+          }
+        }
+      }
+    },
     "onboarding.password.subtitle" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "It encrypts everything in your vault. FX Vault cannot recover it for you; your recovery key is the only way back in."
+            "value" : "It encrypts your vault on this Mac."
           }
         }
       }
@@ -11040,7 +10886,51 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Choose a master password"
+            "value" : "Create a master password."
+          }
+        }
+      }
+    },
+    "onboarding.phase.connect" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connect"
+          }
+        }
+      }
+    },
+    "onboarding.phase.import" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import"
+          }
+        }
+      }
+    },
+    "onboarding.phase.secure" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secure"
+          }
+        }
+      }
+    },
+    "onboarding.recovery.continue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Continue"
           }
         }
       }
@@ -11067,13 +10957,24 @@
         }
       }
     },
-    "onboarding.recovery.saved" : {
+    "onboarding.recovery.note" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "I Saved It"
+            "value" : "Shown once. Not stored on this Mac."
+          }
+        }
+      }
+    },
+    "onboarding.recovery.savedCheck" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "I saved it offline"
           }
         }
       }
@@ -11084,7 +10985,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "If you forget your master password, this key is the only way to open your vault. Store it in a password manager. FX Vault never stores it and will not show it again."
+            "value" : "The only way in if you forget your password."
           }
         }
       }
@@ -11095,18 +10996,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Save your recovery key"
-          }
-        }
-      }
-    },
-    "onboarding.recovery.warning" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Anyone with this key can reset your master password."
+            "value" : "Save your recovery key."
           }
         }
       }
@@ -11118,6 +11008,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Turn On Touch ID"
+          }
+        }
+      }
+    },
+    "onboarding.touchID.fact.password" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Password still asked after a restart and every %lld days"
+          }
+        }
+      }
+    },
+    "onboarding.touchID.fact.unlock" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock and reveal with your fingerprint"
           }
         }
       }
@@ -11139,7 +11051,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Use your fingerprint instead of typing the master password. FX Vault still asks for the password after a restart and at least every %lld days."
+            "value" : "Faster unlocks. You can change this in Settings."
           }
         }
       }
@@ -11150,18 +11062,18 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Unlock with Touch ID"
+            "value" : "Use Touch ID?"
           }
         }
       }
     },
-    "onboarding.welcome.gh.label" : {
+    "onboarding.welcome.local" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "GitHub CLI"
+            "value" : "Encrypted on this Mac"
           }
         }
       }
@@ -11183,18 +11095,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Keep your GitHub Actions secrets and variables in an encrypted vault on this Mac, and sync them to GitHub through the GitHub CLI."
-          }
-        }
-      }
-    },
-    "onboarding.welcome.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Welcome to FX Vault"
+            "value" : "Your GitHub and Azure Key Vault secrets in one place, readable as notes."
           }
         }
       }

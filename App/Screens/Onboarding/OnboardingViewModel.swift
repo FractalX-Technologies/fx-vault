@@ -54,6 +54,8 @@ final class OnboardingViewModel: LockObserving {
     /// The recovery key groups while the key is on screen; empty otherwise.
     private(set) var recoveryKeyGroups: [String] = []
     private(set) var hasCopiedRecoveryKey = false
+    /// "I saved it offline" (1.0): Continue waits for it, so the key is not skipped by habit.
+    var hasSavedRecoveryKey = false
     /// 0-based indices of the groups to confirm.
     private(set) var confirmationIndices: [Int] = []
     var confirmationInputs: [String] = []
@@ -85,8 +87,15 @@ final class OnboardingViewModel: LockObserving {
         Step.allCases.filter { $0 != .touchID || includesTouchIDStep }
     }
 
-    var ghStatus: GHStatusModel {
-        app.ghStatus
+    /// The Secure phase (1.0, "Secure · Connect · Import"): password, recovery key, confirm and,
+    /// when offered, Touch ID.
+    var secureSteps: [Step] {
+        visibleSteps.filter { $0 != .welcome && $0 != .done }
+    }
+
+    /// The current step's number in the Secure phase (`01 / 04`), or nil on Welcome and Done.
+    var secureStepNumber: Int? {
+        secureSteps.firstIndex(of: step).map { $0 + 1 }
     }
 
     // MARK: - Welcome
@@ -96,6 +105,14 @@ final class OnboardingViewModel: LockObserving {
     }
 
     // MARK: - Create password
+
+    /// Back to Welcome; nothing typed is kept.
+    func backToWelcome() {
+        guard step == .createPassword, !isWorking else { return }
+        clearPasswords()
+        error = nil
+        step = .welcome
+    }
 
     var passwordsMatch: Bool {
         !passwordConfirmation.isEmpty && password == passwordConfirmation
@@ -161,9 +178,13 @@ final class OnboardingViewModel: LockObserving {
         hasCopiedRecoveryKey = true
     }
 
-    /// "I saved it": asks for 2 random groups.
+    var canContinueFromRecoveryKey: Bool {
+        recoveryKey != nil && hasSavedRecoveryKey
+    }
+
+    /// Continue after "I saved it offline": asks for 2 random groups.
     func continueToConfirmation() {
-        guard recoveryKey != nil else { return }
+        guard canContinueFromRecoveryKey else { return }
         confirmationIndices = groupPicker(recoveryKeyGroups.count, Limits.recoveryConfirmGroupCount)
         confirmationInputs = Array(repeating: "", count: confirmationIndices.count)
         confirmationFailed = false
@@ -256,6 +277,7 @@ final class OnboardingViewModel: LockObserving {
         recoveryKey = nil
         recoveryKeyGroups = []
         hasCopiedRecoveryKey = false
+        hasSavedRecoveryKey = false
     }
 
     private func clearPasswords() {

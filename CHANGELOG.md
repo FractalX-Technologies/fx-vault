@@ -7,6 +7,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Changed
 
+- **First launch in three phases.** Welcome names them (Secure · Connect · Import); the Secure
+  phase counts its steps (01 / 04), the password step has Back, and the recovery key's Continue
+  waits until you check "I saved it offline".
 - **Black and white.** A white window with black type (black and white in dark mode), system
   greys for secondary text, translucent cards and no brand blue: pending dots and links are ink.
   The interface uses SF Pro and SF Mono; FX Vault no longer ships its own fonts.

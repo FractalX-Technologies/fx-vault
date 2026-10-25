@@ -52,26 +52,33 @@ extension OnboardingStepLayout where Content == EmptyView {
     }
 }
 
-/// Welcome: what FX Vault is, plus the gh status row.
+/// Welcome (board Main): the mark, what FX Vault is, Create Vault, and the three phases ahead.
 struct WelcomeStepView: View {
     let viewModel: OnboardingViewModel
 
     var body: some View {
-        OnboardingStepLayout(
-            title: String(localized: "onboarding.welcome.title", defaultValue: "Welcome to FX Vault"),
-            subtitle: String(
-                localized: "onboarding.welcome.subtitle",
-                defaultValue: "Keep your GitHub Actions secrets and variables in an encrypted vault on this Mac, and sync them to GitHub through the GitHub CLI."
-            ),
-            error: viewModel.error
-        ) {
-            if viewModel.ghStatus != .unknown {
-                VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
-                    SectionLabel(String(localized: "onboarding.welcome.gh.label", defaultValue: "GitHub CLI"))
-                    GHStatusRow(status: viewModel.ghStatus)
-                }
+        VStack(spacing: Theme.Spacing.xLargePlus) {
+            BrandMark(size: Theme.Layout.brandMarkLarge, center: .outlined)
+                .accessibilityHidden(true)
+            VStack(spacing: Theme.Spacing.mediumMinus) {
+                Text(verbatim: "FX Vault")
+                    .fxTextStyle(.display)
+                    .foregroundStyle(Theme.Colors.ink)
+                    .accessibilityAddTraits(.isHeader)
+                Text(String(
+                    localized: "onboarding.welcome.subtitle",
+                    defaultValue: "Your GitHub and Azure Key Vault secrets in one place, readable as notes."
+                ))
+                .fxTextStyle(.lead)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: Theme.Layout.onboardingTextWidth)
             }
-        } footer: {
+            if let error = viewModel.error {
+                InlineErrorView(error: error)
+                    .frame(maxWidth: Theme.Layout.onboardingTextWidth)
+            }
             Button {
                 viewModel.start()
             } label: {
@@ -80,7 +87,15 @@ struct WelcomeStepView: View {
             .fxButtonStyle(.primary, size: .large)
             .accessibilityIdentifier(AccessibilityID.Onboarding.createVault)
             .keyboardShortcut(.defaultAction)
+            VStack(spacing: Theme.Spacing.small) {
+                OnboardingPhaseHeader(current: nil)
+                Text(String(localized: "onboarding.welcome.local", defaultValue: "Encrypted on this Mac"))
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.subtleText)
+            }
         }
+        .padding(Theme.Spacing.xHuge)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -90,10 +105,10 @@ struct CreatePasswordStepView: View {
 
     var body: some View {
         OnboardingStepLayout(
-            title: String(localized: "onboarding.password.title", defaultValue: "Choose a master password"),
+            title: String(localized: "onboarding.password.title", defaultValue: "Create a master password."),
             subtitle: String(
                 localized: "onboarding.password.subtitle",
-                defaultValue: "It encrypts everything in your vault. FX Vault cannot recover it for you; your recovery key is the only way back in."
+                defaultValue: "It encrypts your vault on this Mac."
             ),
             error: viewModel.error,
             isWorking: viewModel.isWorking
@@ -121,7 +136,18 @@ struct CreatePasswordStepView: View {
                     viewModel.copyGeneratedPassphrase()
                 }
             }
+
+            OnboardingNote(String(
+                localized: "onboarding.password.note",
+                defaultValue: "It can't be recovered. Your recovery key, next, is the only way back in."
+            ))
         } footer: {
+            Button(String(localized: "onboarding.back", defaultValue: "Back")) {
+                viewModel.backToWelcome()
+            }
+            .fxButtonStyle(.outline, size: .large)
+            .accessibilityIdentifier(AccessibilityID.Onboarding.back)
+            .disabled(viewModel.isWorking)
             Button {
                 Task { await viewModel.createVault() }
             } label: {
@@ -135,27 +161,21 @@ struct CreatePasswordStepView: View {
     }
 }
 
-/// Recovery key: the grid, Copy, and the warning (§5.3).
+/// Recovery key: the grid, Copy, and "I saved it offline" before Continue (§5.3). No Back: the
+/// vault already exists here, and the key is never shown again after this step.
 struct RecoveryKeyStepView: View {
-    let viewModel: OnboardingViewModel
+    @Bindable var viewModel: OnboardingViewModel
 
     var body: some View {
         OnboardingStepLayout(
-            title: String(localized: "onboarding.recovery.title", defaultValue: "Save your recovery key"),
+            title: String(localized: "onboarding.recovery.title", defaultValue: "Save your recovery key."),
             subtitle: String(
                 localized: "onboarding.recovery.subtitle",
-                defaultValue: "If you forget your master password, this key is the only way to open your vault. Store it in a password manager. FX Vault never stores it and will not show it again."
+                defaultValue: "The only way in if you forget your password."
             ),
             error: viewModel.error
         ) {
             RecoveryKeyGridView(groups: viewModel.recoveryKeyGroups)
-            Banner(
-                .warning,
-                message: String(
-                    localized: "onboarding.recovery.warning",
-                    defaultValue: "Anyone with this key can reset your master password."
-                )
-            )
             HStack(spacing: Theme.Spacing.medium) {
                 Button(String(localized: "onboarding.recovery.copy", defaultValue: "Copy")) {
                     viewModel.copyRecoveryKey()
@@ -170,15 +190,25 @@ struct RecoveryKeyStepView: View {
                     .foregroundStyle(Theme.Colors.mutedText)
                 }
             }
+            FXCheckboxRow(
+                title: String(localized: "onboarding.recovery.savedCheck", defaultValue: "I saved it offline"),
+                isOn: $viewModel.hasSavedRecoveryKey
+            )
+            .accessibilityIdentifier(AccessibilityID.Onboarding.recoveryKeySavedCheck)
+            OnboardingNote(String(
+                localized: "onboarding.recovery.note",
+                defaultValue: "Shown once. Not stored on this Mac."
+            ))
         } footer: {
             Button {
                 viewModel.continueToConfirmation()
             } label: {
-                ShellForwardLabel(title: String(localized: "onboarding.recovery.saved", defaultValue: "I Saved It"))
+                ShellForwardLabel(title: String(localized: "onboarding.recovery.continue", defaultValue: "Continue"))
             }
             .fxButtonStyle(.primary, size: .large)
             .accessibilityIdentifier(AccessibilityID.Onboarding.recoveryKeySaved)
             .keyboardShortcut(.defaultAction)
+            .disabled(!viewModel.canContinueFromRecoveryKey)
         }
     }
 }
@@ -190,11 +220,8 @@ struct ConfirmRecoveryKeyStepView: View {
 
     var body: some View {
         OnboardingStepLayout(
-            title: String(localized: "onboarding.confirm.title", defaultValue: "Confirm your recovery key"),
-            subtitle: String(
-                localized: "onboarding.confirm.subtitle",
-                defaultValue: "Enter the requested groups from the key you saved."
-            ),
+            title: String(localized: "onboarding.confirm.title", defaultValue: "Confirm your recovery key."),
+            subtitle: subtitle,
             error: viewModel.error
         ) {
             HStack(alignment: .top, spacing: Theme.Spacing.large) {
@@ -230,8 +257,9 @@ struct ConfirmRecoveryKeyStepView: View {
                 .foregroundStyle(Theme.Colors.danger)
                 .fixedSize(horizontal: false, vertical: true)
             }
+            OnboardingNote(String(localized: "onboarding.confirm.note", defaultValue: "Back shows the key again."))
         } footer: {
-            Button(String(localized: "onboarding.confirm.back", defaultValue: "Show Key Again")) {
+            Button(String(localized: "onboarding.back", defaultValue: "Back")) {
                 viewModel.backToRecoveryKey()
             }
             .fxButtonStyle(.outline, size: .large)
@@ -249,6 +277,16 @@ struct ConfirmRecoveryKeyStepView: View {
             focusedPosition = 0
         }
     }
+
+    /// "Type groups 04 and 11 from the copy you saved." with the groups this run asks for.
+    private var subtitle: String {
+        let groups = viewModel.confirmationIndices.map { StepCounter.padded($0 + 1) }
+            .formatted(.list(type: .and))
+        return String(
+            localized: "onboarding.confirm.subtitle",
+            defaultValue: "Type groups \(groups) from the copy you saved."
+        )
+    }
 }
 
 /// Touch ID (signed builds only, D14).
@@ -257,14 +295,30 @@ struct TouchIDStepView: View {
 
     var body: some View {
         OnboardingStepLayout(
-            title: String(localized: "onboarding.touchID.title", defaultValue: "Unlock with Touch ID"),
+            title: String(localized: "onboarding.touchID.title", defaultValue: "Use Touch ID?"),
             subtitle: String(
                 localized: "onboarding.touchID.subtitle",
-                defaultValue: "Use your fingerprint instead of typing the master password. FX Vault still asks for the password after a restart and at least every \(Timeouts.passwordMaxAge.wholeDays) days."
+                defaultValue: "Faster unlocks. You can change this in Settings."
             ),
             error: viewModel.error,
             isWorking: viewModel.isWorking
         ) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
+                OnboardingFact(
+                    systemImage: "touchid",
+                    text: String(
+                        localized: "onboarding.touchID.fact.unlock",
+                        defaultValue: "Unlock and reveal with your fingerprint"
+                    )
+                )
+                OnboardingFact(
+                    systemImage: "lock",
+                    text: String(
+                        localized: "onboarding.touchID.fact.password",
+                        defaultValue: "Password still asked after a restart and every \(Timeouts.passwordMaxAge.wholeDays) days"
+                    )
+                )
+            }
             if let reason = viewModel.touchIDUnavailableReason {
                 Banner(.warning, message: reason.localizedMessage, systemImage: "touchid")
             }
@@ -311,6 +365,40 @@ struct DoneStepView: View {
             .fxButtonStyle(.primary, size: .large)
             .accessibilityIdentifier(AccessibilityID.Onboarding.openVault)
             .keyboardShortcut(.defaultAction)
+        }
+    }
+}
+
+/// A short caption under a step's content (board copy such as "Shown once. Not stored on this Mac.").
+private struct OnboardingNote: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .fxTextStyle(.caption)
+            .foregroundStyle(Theme.Colors.subtleText)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// One line of what a choice does: a symbol and a sentence (board Touch ID).
+private struct OnboardingFact: View {
+    let systemImage: String
+    let text: String
+
+    var body: some View {
+        Label {
+            Text(text)
+                .fxTextStyle(.body)
+                .foregroundStyle(Theme.Colors.ink)
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(Theme.Colors.mutedText)
         }
     }
 }

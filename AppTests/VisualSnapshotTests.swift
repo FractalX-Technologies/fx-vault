@@ -45,6 +45,28 @@ struct VisualSnapshotTests {
         }
     }
 
+    @Test func onboardingWelcome() async throws {
+        let harness = try await TestHarness(vault: .none)
+        let viewModel = harness.app.makeOnboardingViewModel()
+        try await SnapshotOutput.write("onboarding-welcome", size: SnapshotOutput.windowSize) {
+            OnboardingScreen(viewModel: viewModel)
+        }
+    }
+
+    @Test func onboardingRecoveryKeyStep() async throws {
+        let harness = try await TestHarness(vault: .none)
+        let viewModel = harness.app.makeOnboardingViewModel()
+        viewModel.start()
+        viewModel.password = testPassword
+        viewModel.passwordConfirmation = testPassword
+        await viewModel.createVault()
+        #expect(viewModel.step == .recoveryKey)
+        viewModel.hasSavedRecoveryKey = true
+        try await SnapshotOutput.write("onboarding-recovery", size: SnapshotOutput.windowSize) {
+            OnboardingScreen(viewModel: viewModel)
+        }
+    }
+
     // MARK: - Main window
 
     @Test func mainWindow() async throws {

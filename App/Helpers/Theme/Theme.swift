@@ -57,7 +57,6 @@ enum Theme {
         /// Widest lock-screen form and onboarding text column.
         static let lockFormWidth: CGFloat = 360
         static let onboardingTextWidth: CGFloat = 460
-        static let onboardingSidePanelWidth: CGFloat = 300
         /// The focus ring drawn by the design components (brand, outside the shape).
         static let focusRingWidth: CGFloat = 2
         static let focusRingOffset: CGFloat = 2

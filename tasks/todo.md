@@ -2120,3 +2120,13 @@ Review B11c — black-and-white tokens and system type (2026-10-25, automatic):
 - Left for later slices: `glassEffect` on floating chrome (progress, footer action bar) lands with the screens that have it (B11d–f, B9).
 - Docs: CHANGELOG, DESIGN (1.0 status, principles, Color, Type), ARCHITECTURE, STRUCTURE.
 - Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 564 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (5 tests); lint OK; check-secrets OK in the worktree.
+
+Review B11d — onboarding Secure phase (2026-10-25, automatic):
+- Welcome (board Main): centered mark, "FX Vault", the 1.0 line, Create Vault, "Secure · Connect · Import", "Encrypted on this Mac". The gh status row and the steps side panel are gone (gh is checked in the Connect phase, B11d2).
+- Secure phase: one column with `OnboardingPhaseHeader` and `StepCounter` over the phase's own steps (01 / 04, 3 without Touch ID); board copy on Password, Recovery key, Confirm (groups named from this run's picks) and Touch ID (two fact lines).
+- Password step has Back (`backToWelcome()`, clears what was typed). Recovery key: Continue waits for the "I saved it offline" checkbox (`hasSavedRecoveryKey`, reset with the key); no Back there, the vault already exists (assumption).
+- Deferred: the board's "Save…" (write the key to a file) is not built; Copy only. The Done step stays, restyled by the column, until the Connect phase replaces it.
+- Removed: `OnboardingStepsPanel`, `Theme.Layout.onboardingSidePanelWidth`, `OnboardingViewModel.ghStatus`, the recovery warning banner.
+- Tests: `OnboardingViewModelTests` (gate seen failing with the old guard; `theSecurePhaseCountsItsStepsAndPasswordGoesBack`); UI `onboard()` asserts Continue is disabled before the checkbox; snapshots `onboarding-welcome`, `onboarding-recovery` added and checked in light and dark.
+- Docs: CHANGELOG, DESIGN (lock and onboarding).
+- Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 567 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (5 tests); lint OK; check-secrets OK in the worktree; strings synced (second run: no change).

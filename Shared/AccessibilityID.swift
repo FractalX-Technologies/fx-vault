@@ -5,6 +5,8 @@ enum AccessibilityID {
         static let createVault = "onboarding.welcome.createVault"
         static let passwordContinue = "onboarding.password.continue"
         static let recoveryKeySaved = "onboarding.recoveryKey.saved"
+        static let recoveryKeySavedCheck = "onboarding.recoveryKey.savedCheck"
+        static let back = "onboarding.back"
         static let confirm = "onboarding.confirm.continue"
         static let openVault = "onboarding.done.open"
 
