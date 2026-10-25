@@ -65,7 +65,7 @@ Each child gets an exact allowlist, never the app's own environment.
 | gh | `HOME USER LOGNAME TMPDIR PATH LANG GH_CONFIG_DIR XDG_CONFIG_HOME XDG_CACHE_HOME XDG_STATE_HOME GH_HOST GH_PROMPT_DISABLED GH_NO_UPDATE_NOTIFIER GH_NO_EXTENSION_UPDATE_NOTIFIER GH_PAGER PAGER NO_COLOR CLICOLOR GH_SPINNER_DISABLED GH_TELEMETRY DO_NOT_TRACK GH_TOKEN` (token only for operations that need it) |
 | git | `HOME USER PATH SSH_AUTH_SOCK LANG GIT_TERMINAL_PROMPT GIT_CONFIG_NOSYSTEM GIT_SSH_COMMAND` (`/usr/bin/ssh -o BatchMode=yes -o ConnectTimeout=15`) |
 | ssh | `HOME USER PATH SSH_AUTH_SOCK LANG` |
-| az (v0.8.0) | `HOME PATH LANG TMPDIR AZURE_CONFIG_DIR AZURE_CORE_COLLECT_TELEMETRY AZURE_CORE_NO_COLOR AZURE_CORE_ONLY_SHOW_ERRORS`, built by `AzureCLITokenProvider.environment`: PATH is the login shell's, `LANG=en_US.UTF-8`, telemetry `no`, color off, only errors shown; TMPDIR when known; `AZURE_CONFIG_DIR` only when one is configured (the app passes none, so `az` uses `~/.azure`) |
+| az (v0.8.0) | `HOME PATH LANG TMPDIR AZURE_CONFIG_DIR AZURE_CORE_COLLECT_TELEMETRY AZURE_CORE_NO_COLOR AZURE_CORE_ONLY_SHOW_ERRORS`, built by `AzureCLIRunner.environment`: PATH is the login shell's, `LANG=en_US.UTF-8`, telemetry `no`, color off, only errors shown; TMPDIR when known; `AZURE_CONFIG_DIR` only when one is configured (the app passes none, so `az` uses `~/.azure`) |
 
 Never passed, even when set in the app's environment: `GH_DEBUG DEBUG GITHUB_TOKEN
 GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN GH_REPO GH_FORCE_TTY CLICOLOR_FORCE GH_EDITOR
@@ -411,9 +411,12 @@ Only the provider's error code is read from an error body, then sanitized to 1�
 
 ### G.1 Azure Key Vault (data plane, api-version 7.4)
 
-**Token.** `AzureCLITokenProvider` runs, through `CommandRunning` (the `ProcessRunner` rules of
-section "Child process rules": absolute path, argv array, empty working directory, no inherited
-descriptors):
+**Running `az`.** Every `az` command goes through `AzureCLIRunner` and `CommandRunning` (the
+`ProcessRunner` rules of section "Child process rules": absolute path, argv array, empty working
+directory, no inherited descriptors), always with `--output json`. A truncated stdout is
+`.responseTooLarge`.
+
+**Token.** `AzureCLITokenProvider` runs:
 
 ```
 <az> account get-access-token --resource https://vault.azure.net [--tenant <tenant>] --output json
@@ -434,8 +437,22 @@ descriptors):
   copies.
 - Failures: the binary missing at launch (ENOENT) → `.azNotInstalled`; another launch failure →
   `.azFailed(exitCode: -1)`; the timeout → `.timeout`; stderr containing `az login` (checked after
-  JWTs and GitHub token patterns are redacted) → `.azNotSignedIn`; anything else →
-  `.azFailed(exitCode:)`. stderr is never logged.
+  JWTs and GitHub token patterns are redacted) → `.azNotSignedIn`; stderr containing ARM's
+  `AuthorizationFailed` → `.forbidden`; anything else → `.azFailed(exitCode:)`
+  (`AzureCLIRunner.classify`, shared by every `az` command). stderr is never logged.
+
+**Discovery (1.0, B8).** `AzureCLIDiscovery` lists the Azure › subscription › vault tree,
+read-only, with `Timeouts.azList` (60 s), the same binary, environment and failure mapping:
+
+| Command | argv | Reads | Notes |
+|---|---|---|---|
+| subscriptions | `<az> account list --output json` | `id`, `name`, `tenantId`, `state`, `isDefault` | `id` and `tenantId` must be UUIDs (the tenant is lowercased); any entry missing a field is `.decoding` for the whole answer. `user` is never read. A subscription listed twice keeps the default entry. `[]` is `.azNotSignedIn`: with nobody signed in `az` exits 0, and `AZURE_CORE_ONLY_SHOW_ERRORS` hides its hint. `state`: Enabled, Warned, PastDue, Disabled, Deleted, else `other`. |
+| vaults | `<az> keyvault list --resource-type vault --subscription <id> --output json` | `name`, `resourceGroup`, `location`, `properties.vaultUri` | The id is a `UUID` value, so it can never become a flag. `--resource-type vault` leaves out Managed HSMs. A name that breaks the vault rules (`DestinationRules.isValidKeyVaultName`) or a missing resource group or location is `.decoding`. `vaultUri` is kept only when it is exactly the vault's own `https://<name>.vault.azure.net` (another cloud's or vault's host gives nil); the data plane never uses it. |
+
+`discover()` lists the subscriptions, then each one's vaults, one `az` at a time (concurrent runs
+race on `az`'s token cache). A subscription whose listing fails keeps its error
+(`.azNotSignedIn` for a tenant that needs its own `az login --tenant`, `.forbidden` without a
+role); only a failed subscription listing or `.cancelled` fails the call.
 
 **Endpoints** (`https://<vault>.vault.azure.net`, every request with `api-version=7.4`):
 
@@ -461,6 +478,7 @@ become a valid FX Vault name is unusable (`DestinationUnusableReason.invalidName
 | `DestinationSyncRepository.resolve` | list, read | Keep Mine / Use Remote; refreshes first and throws `.stale` when a finding no longer holds; values are read only for Use Remote |
 | `DestinationSyncRepository.importRemote` | list, read | Right after Add Destination: every usable remote item the vault does not have, with its value where the provider returns one |
 | `ShellResolvingAzureTokens` | `az` | Creates `AzureCLITokenProvider` once the login-shell probe (A2) is in; `reset()` on lock |
+| `AzureDiscoveryRepository` | `az account list`, `az keyvault list` | `subscriptions()`, `keyVaults(subscriptionID:)`, `discover()` for Connect Azure and the sidebar; the login-shell PATH (A2) as for tokens; stores nothing |
 
 Clients come from `DestinationRemoteFactory(transport:azureTokens:clock:)` through
 `LiveDestinationRemoteProvider`.

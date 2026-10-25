@@ -9,19 +9,19 @@ import VaultCore
 /// `FakeGHFileInspector` (nothing runs, nothing touches the real file system).
 @Suite("Azure CLI")
 struct AzureCLITests {
-    private static let identity = ProcessIdentityModel(
+    static let identity = ProcessIdentityModel(
         home: "/Users/user-a",
         user: "user-a",
         temporaryDirectory: "/private/tmp/fxvault-tests"
     )
-    private static let shell = ShellEnvironmentModel(path: "/Users/user-a/bin:/opt/homebrew/bin:/usr/bin:/bin")
-    private static let workingDirectory = URL(fileURLWithPath: "/private/tmp/fxvault-tests/empty-cwd", isDirectory: true)
-    private static let cellarAZ = "/opt/homebrew/Cellar/azure-cli/2.80.0/bin/az"
-    private static let homebrewAZ = "/opt/homebrew/bin/az"
-    private static let user = FakeGHFileInspector.defaultUserID
+    static let shell = ShellEnvironmentModel(path: "/Users/user-a/bin:/opt/homebrew/bin:/usr/bin:/bin")
+    static let workingDirectory = URL(fileURLWithPath: "/private/tmp/fxvault-tests/empty-cwd", isDirectory: true)
+    static let cellarAZ = "/opt/homebrew/Cellar/azure-cli/2.80.0/bin/az"
+    static let homebrewAZ = "/opt/homebrew/bin/az"
+    static let user = FakeGHFileInspector.defaultUserID
 
     /// Homebrew's layout: `/opt/homebrew/bin/az` → the Cellar script, folder `rwxrwxr-x admin`.
-    private static func homebrewInspector(owner: uid_t = user) -> FakeGHFileInspector {
+    static func homebrewInspector(owner: uid_t = user) -> FakeGHFileInspector {
         let inspector = FakeGHFileInspector()
         inspector.addFolder("/opt/homebrew/bin", owner: owner, mode: FakeGHFileInspector.groupWritableFolderMode)
         inspector.addFolder("/opt/homebrew/Cellar/azure-cli/2.80.0/bin", owner: owner)
@@ -76,7 +76,7 @@ struct AzureCLITests {
             }
         }
 
-        let environment = AzureCLITokenProvider.environment(identity: Self.identity, shell: Self.shell, azureConfigDirectory: nil)
+        let environment = AzureCLIRunner.environment(identity: Self.identity, shell: Self.shell, azureConfigDirectory: nil)
         #expect(environment == [
             "HOME": "/Users/user-a",
             "PATH": "/Users/user-a/bin:/opt/homebrew/bin:/usr/bin:/bin",
@@ -86,7 +86,7 @@ struct AzureCLITests {
             "AZURE_CORE_NO_COLOR": "true",
             "AZURE_CORE_ONLY_SHOW_ERRORS": "true",
         ])
-        let withConfig = AzureCLITokenProvider.environment(
+        let withConfig = AzureCLIRunner.environment(
             identity: ProcessIdentityModel(home: "/Users/user-a", user: "user-a", temporaryDirectory: ""),
             shell: .empty,
             azureConfigDirectory: "/Users/user-a/.azure-work"
@@ -229,14 +229,14 @@ struct AzureCLITests {
         #expect(redacted.contains("az login"))
         #expect(AzureStderrRedactor.redact("eyJshort") == "eyJshort", "short text is not a token")
         let result = CommandResult(exitCode: 1, stdout: SecretBytes(count: 0), stderr: stderr)
-        #expect(AzureCLITokenProvider.classify(result) == .azNotSignedIn)
+        #expect(AzureCLIRunner.classify(result) == .azNotSignedIn)
     }
 
     @Test func timeoutsLaunchFailuresAndCancellation() async {
         let cases: [(FakeCommandRunner.Response, DestinationError)] = [
             (FakeCommandRunner.Response(exitCode: 15, didTimeOut: true), .timeout),
             (FakeCommandRunner.Response(error: .launchFailed(errno: ENOENT)), .azNotInstalled),
-            (FakeCommandRunner.Response(error: .launchFailed(errno: EACCES)), .azFailed(exitCode: AzureCLITokenProvider.launchFailedExitCode)),
+            (FakeCommandRunner.Response(error: .launchFailed(errno: EACCES)), .azFailed(exitCode: AzureCLIRunner.launchFailedExitCode)),
             (FakeCommandRunner.Response(error: .cancelled), .cancelled),
         ]
         for (response, expected) in cases {

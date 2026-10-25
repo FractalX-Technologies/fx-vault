@@ -1,0 +1,60 @@
+[
+  {
+    "cloudName": "AzureCloud",
+    "homeTenantId": "00000000-0000-0000-0000-0000000000a1",
+    "id": "00000000-0000-0000-0000-000000000001",
+    "isDefault": true,
+    "managedByTenants": [],
+    "name": "Example Production",
+    "state": "Enabled",
+    "tenantDefaultDomain": "example.onmicrosoft.com",
+    "tenantDisplayName": "Example",
+    "tenantId": "00000000-0000-0000-0000-0000000000A1",
+    "user": {
+      "name": "user-a@example.com",
+      "type": "user"
+    }
+  },
+  {
+    "cloudName": "AzureCloud",
+    "homeTenantId": "00000000-0000-0000-0000-0000000000a1",
+    "id": "00000000-0000-0000-0000-000000000002",
+    "isDefault": false,
+    "managedByTenants": [],
+    "name": "Example Staging",
+    "state": "Warned",
+    "tenantId": "00000000-0000-0000-0000-0000000000a1",
+    "user": {
+      "name": "user-a@example.com",
+      "type": "user"
+    }
+  },
+  {
+    "cloudName": "AzureCloud",
+    "homeTenantId": "00000000-0000-0000-0000-0000000000a2",
+    "id": "00000000-0000-0000-0000-000000000003",
+    "isDefault": false,
+    "managedByTenants": [],
+    "name": "Example Labs",
+    "state": "PastDue",
+    "tenantId": "00000000-0000-0000-0000-0000000000a2",
+    "user": {
+      "name": "user-a@example.com",
+      "type": "user"
+    }
+  },
+  {
+    "cloudName": "AzureCloud",
+    "homeTenantId": "00000000-0000-0000-0000-0000000000a2",
+    "id": "00000000-0000-0000-0000-000000000004",
+    "isDefault": false,
+    "managedByTenants": [],
+    "name": "Example Archive",
+    "state": "Disabled",
+    "tenantId": "00000000-0000-0000-0000-0000000000a2",
+    "user": {
+      "name": "user-a@example.com",
+      "type": "user"
+    }
+  }
+]

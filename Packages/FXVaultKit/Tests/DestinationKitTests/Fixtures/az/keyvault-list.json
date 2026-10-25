@@ -1,0 +1,46 @@
+[
+  {
+    "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-example-prod/providers/Microsoft.KeyVault/vaults/kv-example-prod",
+    "location": "westeurope",
+    "name": "kv-example-prod",
+    "properties": {
+      "enableRbacAuthorization": true,
+      "enableSoftDelete": true,
+      "provisioningState": "Succeeded",
+      "softDeleteRetentionInDays": 90,
+      "tenantId": "00000000-0000-0000-0000-0000000000a1",
+      "vaultUri": "https://kv-example-prod.vault.azure.net/"
+    },
+    "resourceGroup": "rg-example-prod",
+    "tags": {},
+    "type": "Microsoft.KeyVault/vaults"
+  },
+  {
+    "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-example-shared/providers/Microsoft.KeyVault/vaults/kv-example-shared",
+    "location": "westeurope",
+    "name": "kv-example-shared",
+    "resourceGroup": "rg-example-shared",
+    "tags": {},
+    "type": "Microsoft.KeyVault/vaults"
+  },
+  {
+    "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-example-sovereign/providers/Microsoft.KeyVault/vaults/kv-example-cn",
+    "location": "chinaeast2",
+    "name": "kv-example-cn",
+    "properties": {
+      "vaultUri": "https://kv-example-cn.vault.azure.cn/"
+    },
+    "resourceGroup": "rg-example-sovereign",
+    "type": "Microsoft.KeyVault/vaults"
+  },
+  {
+    "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-example-prod/providers/Microsoft.KeyVault/vaults/kv-example-mismatch",
+    "location": "westeurope",
+    "name": "kv-example-mismatch",
+    "properties": {
+      "vaultUri": "https://kv-example-prod.vault.azure.net/"
+    },
+    "resourceGroup": "rg-example-prod",
+    "type": "Microsoft.KeyVault/vaults"
+  }
+]

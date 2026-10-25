@@ -10,11 +10,7 @@ import VaultStore
 /// ``AzureCLITokenProvider`` is created once the probe is in (or without it, when the probe
 /// failed: `az` is then looked up in the fixed folders).
 public actor ShellResolvingAzureTokens: AccessTokenProviding {
-    private let github: GitHubEnvironmentRepository
-    private let runner: any CommandRunning
-    private let identity: ProcessIdentityModel
-    private let workingDirectory: URL
-    private let fileInspector: any GHFileInspecting
+    private let cli: ShellResolvingAzureCLI
     private let clock: any VaultClock
     private var provider: AzureCLITokenProvider?
 
@@ -26,11 +22,13 @@ public actor ShellResolvingAzureTokens: AccessTokenProviding {
         fileInspector: any GHFileInspecting = SystemGHFileInspector(),
         clock: any VaultClock
     ) {
-        self.github = github
-        self.runner = runner
-        self.identity = identity
-        self.workingDirectory = workingDirectory
-        self.fileInspector = fileInspector
+        cli = ShellResolvingAzureCLI(
+            github: github,
+            runner: runner,
+            identity: identity,
+            workingDirectory: workingDirectory,
+            fileInspector: fileInspector
+        )
         self.clock = clock
     }
 
@@ -49,16 +47,29 @@ public actor ShellResolvingAzureTokens: AccessTokenProviding {
 
     private func resolved() async -> AzureCLITokenProvider {
         if let provider { return provider }
+        let provider = AzureCLITokenProvider(cli: await cli.resolve(), clock: clock)
+        self.provider = provider
+        return provider
+    }
+}
+
+/// The ``AzureCLIRunner`` for the probed login-shell PATH, or for no shell when the probe failed
+/// (`az` is then looked up in the fixed folders). Shared by the token provider and discovery.
+struct ShellResolvingAzureCLI: Sendable {
+    let github: GitHubEnvironmentRepository
+    let runner: any CommandRunning
+    let identity: ProcessIdentityModel
+    let workingDirectory: URL
+    let fileInspector: any GHFileInspecting
+
+    func resolve() async -> AzureCLIRunner {
         let shell = (try? await github.shellEnvironment()) ?? .empty
-        let provider = AzureCLITokenProvider(
+        return AzureCLIRunner(
             runner: runner,
             locator: AzureCLILocator(fileInspector: fileInspector),
             identity: identity,
             shell: shell,
-            workingDirectory: workingDirectory,
-            clock: clock
+            workingDirectory: workingDirectory
         )
-        self.provider = provider
-        return provider
     }
 }
