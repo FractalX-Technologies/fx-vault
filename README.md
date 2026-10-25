@@ -32,9 +32,10 @@ the secrets your code reads at runtime in Azure Key Vault.
   GitHub matches FX Vault.
 - **Environments.** Create, rename (guided recreate on GitHub), duplicate and delete
   environments, and edit their deployment branch and tag rules.
-- **Review, then sync.** Edits stay local until you press Sync. The summary shows names and
-  counts only (your Azure Key Vaults as one more group), explains blocked changes with a fix,
-  and asks before anything is deleted on GitHub or in a vault.
+- **Review, then sync.** Edits stay local until you press Sync. The summary shows names only,
+  one card per place (a repository, each environment, each Azure Key Vault, each organization),
+  explains blocked changes with a fix in their place's card, and asks before anything is deleted
+  on GitHub or in a vault.
 - **Drift detection.** Changes a teammate made on GitHub since your last sync are listed per
   repository; keep yours or accept GitHub's.
 - **New repositories.** Stage a repository with its environments, secrets and variables, create

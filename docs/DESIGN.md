@@ -111,14 +111,16 @@ is required.
 | `.title2` | SF Pro semibold | 17 | 0 | Card and settings section titles |
 | `.headline` | SF Pro semibold | 13 | 0 | The app name with nothing selected, emphasized rows |
 | `.lead` | SF Pro | 15 (22 lines) | 0 | Paragraph under a display or large title |
+| `.leadEmphasized` | SF Pro semibold | 15 | 0 | Compact sheet title ("Review Sync") |
 | `.body` | SF Pro | 13 (18 lines) | 0 | Default; the window default font |
 | `.bodyEmphasized` | SF Pro medium | 13 | 0 | Large primary button labels, links in banners |
 | `.callout` / `.calloutEmphasized` | SF Pro / semibold | 13 | 0 | Sidebar rows, regular buttons, links |
 | `.caption` | SF Pro | 12 | 0 | Chips, captions under fields, secondary text |
+| `.placeName` | SF Pro semibold | 12 | 0 | A place heading a Sync summary card |
 | `.mono` (`Typography.monospaced`) | SF Mono | 13 | 0 | Names inside prose, recovery keys, commands |
 | `.monoName` | SF Mono | 13 | 0 | Names in tables and lists |
 | `.monoValue` | SF Mono | 13 | +0.08em | Masked values `••••••••` |
-| `.monoMeta` | SF Mono | 12 | 0 | Timestamps, counts, repository paths |
+| `.monoMeta` | SF Mono | 12 | 0 | Timestamps, counts, repository paths, Sync summary names |
 | `.monoCounter` | SF Mono | 12 | +0.06em | `02 / 05` |
 | `.sectionLabel` | SF Mono | 11, UPPERCASE | +0.08em | `ENVIRONMENT`, `MASTER PASSWORD`, column headers |
 | `.statusLine` | SF Mono | 11, UPPERCASE | +0.06em | `PASSWORD REQUIRED AFTER RESTART`, `WRITE LIMIT …` |
@@ -426,6 +428,19 @@ foreground color, so `.primary` text still turns white on selected rows.
 
 ### Sheets (board SyncReview)
 
+- The Sync summary (1.0, D6b, board Sync-Review): no eyebrow, `.leadEmphasized` (15 pt semibold)
+  "Review Sync", `.callout` subtitle "Names only · values go through gh and az, never shown".
+- One hairline card per place: a repository, each of its environments, a Key Vault, an
+  organization. The header is the place's `Theme.Symbols` symbol (a Key Vault's provider symbol),
+  its name in `.placeName` (12 pt semibold: `api-service › production`) and its kind in muted
+  `.caption`. An environment created, renamed or deleted adds its sentence.
+- Lines: `+ ~ −` in a `syncSymbolWidth` column, the name in `.monoMeta`, the detail in muted
+  `.caption` (`variable · renamed from OLD_NAME`); a deletion is red; a deployment-branches line has
+  no symbol and reads muted. Blocked lines: `!` in ink, `↯` in warning when GitHub changed it,
+  the reason below and the fix as an inline link. A blocked change sits in its place's card.
+- Footer: "N changes in M places · D deletions · B blocked" in muted `.caption` (N counts what
+  runs and what is blocked; an offline notice takes its place); the button says
+  "Sync N Changes" with what runs. The write limit sits under the cards.
 - New Folder… and Rename… (v0.7.0) are a `ConfigEditorSheet` with one rounded name field and its
   live note (invalid, or "Another folder already has this name").
 - A received folder (v0.7.0), in Import Share: a `container` card with
@@ -624,7 +639,7 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 | Main / MainDark | `.fxWindowBackground`, `SectionLabel`, `.fxRowBackground`, `StatusChip`, `SegmentedPill`, `Banner`, `.fxTable`, `TableNameText`, `SyncToolbarButton`, `FXIconButtonStyle` |
 | Lock | `DotGridBackground`, `BrandMark`, `.display`, `FXTextField(.pill)`, `FXButtonStyle` |
 | Onboarding | `StepCounter`, `.largeTitle`, `.lead`, `FXTextField(.rounded)`, `SectionLabel` |
-| SyncReview | `.fxSheetBackground`, `Card(.container)`, `.title`, `.statusLine`, `FXButtonStyle(.large)` |
+| Sync-Review | `.fxSheetBackground`, `SyncSummaryCardView` (`.fxCardBackground(.container)`), `.leadEmphasized`, `.placeName`, `.monoMeta`, `FXLinkButtonStyle`, `FXButtonStyle(.large)` |
 | FX Vault Destinations 3: Key Vault destination | `DestinationDetailScreen`, the RUNTIME rows of `ScopeListView` |
 | FX Vault Destinations 4: multi-provider Sync review | `DestinationSyncPresentation` sections in the Sync sheet |
 

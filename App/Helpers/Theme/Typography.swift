@@ -23,6 +23,8 @@ extension Theme {
         static let headline = Font.system(size: Size.headline, weight: .semibold)
         /// 15 pt. The paragraph under a display or large title.
         static let lead = Font.system(size: Size.lead)
+        /// 15 pt, semibold. Compact sheet titles ("Review Sync").
+        static let leadEmphasized = Font.system(size: Size.lead, weight: .semibold)
         /// 13 pt. Default text; the window default font.
         static let body = Font.system(size: Size.body)
         /// 13 pt, medium. Primary button labels and emphasized body text.
@@ -33,6 +35,8 @@ extension Theme {
         static let calloutEmphasized = Font.system(size: Size.callout, weight: .semibold)
         /// 12 pt. Chips, captions under fields, secondary text.
         static let caption = Font.system(size: Size.caption)
+        /// 12 pt, semibold. A place's name heading a Sync summary card.
+        static let placeName = Font.system(size: Size.caption, weight: .semibold)
 
         // MARK: SF Mono
 
@@ -134,6 +138,8 @@ extension Theme.TextStyle {
     static let headline = Self(font: Typography.headline, size: Typography.Size.headline)
     /// 15 pt, 22 pt lines. The paragraph under a display or large title.
     static let lead = Self(font: Typography.lead, size: Typography.Size.lead, lineSpacing: Typography.LineSpacing.lead)
+    /// 15 pt, semibold. Compact sheet titles ("Review Sync").
+    static let leadEmphasized = Self(font: Typography.leadEmphasized, size: Typography.Size.lead)
     /// 13 pt, 18 pt lines.
     static let body = Self(font: Typography.body, size: Typography.Size.body, lineSpacing: Typography.LineSpacing.body)
     /// 13 pt, medium.
@@ -144,6 +150,8 @@ extension Theme.TextStyle {
     static let calloutEmphasized = Self(font: Typography.calloutEmphasized, size: Typography.Size.callout)
     /// 12 pt.
     static let caption = Self(font: Typography.caption, size: Typography.Size.caption)
+    /// 12 pt, semibold. A place's name heading a Sync summary card (`api-service › production`).
+    static let placeName = Self(font: Typography.placeName, size: Typography.Size.caption)
 
     /// 13 pt mono. Names inside body text, recovery keys, commands.
     static let mono = Self(font: Typography.monospaced, size: Typography.Size.body)

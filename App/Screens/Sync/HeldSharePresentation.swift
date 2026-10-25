@@ -63,9 +63,9 @@ enum HeldSharePresentation {
         }
     }
 
-    /// "+ NEW_KEY   ↑ CHANGED_KEY" (the Sync summary's symbols).
+    /// "+ NEW_KEY   ~ CHANGED_KEY" (the Sync summary's symbols).
     static func line(_ items: [HeldShareItemModel]) -> String {
-        items.map { "\($0.isNew ? "+" : "↑") \($0.name)" }.joined(separator: "   ")
+        items.map { "\($0.isNew ? "+" : "~") \($0.name)" }.joined(separator: "   ")
     }
 
     /// `review` as the run would be with `included` files: their held changes back in the

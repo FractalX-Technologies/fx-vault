@@ -31,17 +31,6 @@ nonisolated enum SyncCopy {
         }
     }
 
-    /// `staging → stage` for a guided rename, otherwise the scope label.
-    static func scopeTitle(_ scope: ScopeChangeSummaryModel) -> String {
-        if case .renamed(let from) = scope.environmentChange {
-            return String(
-                localized: "sync.summary.scope.renamed.title",
-                defaultValue: "\(from) → \(scopeLabel(scope.label))"
-            )
-        }
-        return scopeLabel(scope.label)
-    }
-
     /// "2 added, 1 modified, 1 deleted in production" (§7.2), or the environment-level change.
     static func scopeSentence(_ scope: ScopeChangeSummaryModel) -> String {
         let label = scopeLabel(scope.label)
@@ -88,33 +77,67 @@ nonisolated enum SyncCopy {
         }
     }
 
-    /// `+ SENTRY_DSN (secret)`, `~ STRIPE_KEY (secret)`, `− OLD_NAME (variable)`,
-    /// `OLD → NEW (variable)`.
-    static func itemLine(_ item: ItemChangeSummaryModel) -> String {
+    /// The card shows `~ NEW_NAME  variable · renamed from OLD_NAME`; the text keeps
+    /// `+ SENTRY_DSN (secret)`, `~ STRIPE_KEY (secret)`, `− OLD_NAME (variable)`, `OLD → NEW (variable)`.
+    static func itemLine(_ item: ItemChangeSummaryModel) -> SyncChangeLineModel {
         let kind = kindTitle(item.kind)
         switch item.change {
         case .added:
-            return String(localized: "sync.summary.item.added", defaultValue: "+ \(item.name) (\(kind))")
+            return SyncChangeLineModel(
+                symbol: .added,
+                name: item.name,
+                detail: kind,
+                text: String(localized: "sync.summary.item.added", defaultValue: "+ \(item.name) (\(kind))")
+            )
         case .modified:
-            return String(localized: "sync.summary.item.modified", defaultValue: "~ \(item.name) (\(kind))")
+            return SyncChangeLineModel(
+                symbol: .modified,
+                name: item.name,
+                detail: kind,
+                text: String(localized: "sync.summary.item.modified", defaultValue: "~ \(item.name) (\(kind))")
+            )
         case .deleted:
-            return String(localized: "sync.summary.item.deleted", defaultValue: "− \(item.name) (\(kind))")
+            return SyncChangeLineModel(
+                symbol: .deleted,
+                name: item.name,
+                detail: lineDetail(kind, deletedOnGitHub),
+                text: String(localized: "sync.summary.item.deleted", defaultValue: "− \(item.name) (\(kind))")
+            )
         case .renamed(let from):
-            return String(localized: "sync.summary.item.renamed", defaultValue: "\(from) → \(item.name) (\(kind))")
+            return SyncChangeLineModel(
+                symbol: .modified,
+                name: item.name,
+                detail: lineDetail(kind, String(localized: "sync.summary.item.renamedFrom", defaultValue: "renamed from \(from)")),
+                text: String(localized: "sync.summary.item.renamed", defaultValue: "\(from) → \(item.name) (\(kind))")
+            )
         }
     }
 
-    /// `policy: custom (release/*)`.
-    static func policyLine(_ policy: PolicySummaryModel) -> String {
+    /// A line about the place itself, without a symbol or a name: it reads muted.
+    static func placeLine(_ text: String) -> SyncChangeLineModel {
+        SyncChangeLineModel(symbol: nil, name: nil, detail: text, text: text)
+    }
+
+    /// `Deployment branches: selected (release/*)`.
+    static func policyLine(_ policy: PolicySummaryModel) -> SyncChangeLineModel {
         switch policy.kind {
         case .all:
-            return String(localized: "sync.summary.policy.all", defaultValue: "Deployment branches: all")
+            return placeLine(String(localized: "sync.summary.policy.all", defaultValue: "Deployment branches: all"))
         case .protected:
-            return String(localized: "sync.summary.policy.protected", defaultValue: "Deployment branches: protected only")
+            return placeLine(String(localized: "sync.summary.policy.protected", defaultValue: "Deployment branches: protected only"))
         case .custom:
             let patterns = policy.patterns.joined(separator: String(localized: "sync.list.separator", defaultValue: ", "))
-            return String(localized: "sync.summary.policy.custom", defaultValue: "Deployment branches: selected (\(patterns))")
+            return placeLine(String(localized: "sync.summary.policy.custom", defaultValue: "Deployment branches: selected (\(patterns))"))
         }
+    }
+
+    /// The muted detail of a line: `secret · deleted on GitHub`.
+    static func lineDetail(_ parts: String?...) -> String {
+        parts.compactMap { $0 }.joined(separator: " · ")
+    }
+
+    static var deletedOnGitHub: String {
+        String(localized: "sync.summary.item.deletedOnGitHub", defaultValue: "deleted on GitHub")
     }
 
     /// `(new repository · private · README · Swift .gitignore · MIT)`.
@@ -410,6 +433,58 @@ nonisolated enum SyncCopy {
         case .highEntropy:
             String(localized: "sync.credential.entropy", defaultValue: "the value looks like a random key")
         }
+    }
+
+    // MARK: - Summary places (board Sync-Review)
+
+    /// The muted kinds after a place's name (a Key Vault's is its provider's short title).
+    static var repositoryKind: String {
+        String(localized: "sync.place.repository", defaultValue: "repository")
+    }
+
+    static var environmentKind: String {
+        String(localized: "sync.place.environment", defaultValue: "environment")
+    }
+
+    static var organizationKind: String {
+        String(localized: "sync.place.organization", defaultValue: "organization")
+    }
+
+    /// "api-service › production".
+    static func environmentPlace(repository: String, environment: String) -> String {
+        String(localized: "sync.place.environmentName", defaultValue: "\(repository) › \(environment)")
+    }
+
+    /// The summary footer: "9 changes in 3 places · 1 deletion · 1 blocked".
+    static func summaryCounts(changes: Int, places: Int, deletions: Int, blocked: Int) -> String {
+        // Automatic grammar agreement: "1 change in 1 place", "9 changes in 3 places".
+        var parts = [inflected(AttributedString(
+            localized: "sync.footer.changes",
+            defaultValue: "^[\(changes) change](inflect: true) in ^[\(places) place](inflect: true)"
+        ))]
+        if deletions > 0 {
+            parts.append(inflected(AttributedString(
+                localized: "sync.footer.deletions",
+                defaultValue: "^[\(deletions) deletion](inflect: true)"
+            )))
+        }
+        if blocked > 0 {
+            parts.append(String(localized: "sync.footer.blocked", defaultValue: "\(blocked) blocked"))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// "Sync 1 Change", "Sync 8 Changes": what will run.
+    static func syncButtonTitle(changes: Int) -> String {
+        guard changes > 0 else { return String(localized: "sync.button.sync", defaultValue: "Sync") }
+        return inflected(AttributedString(
+            localized: "sync.button.syncChanges",
+            defaultValue: "Sync ^[\(changes) Change](inflect: true)"
+        ))
+    }
+
+    private static func inflected(_ text: AttributedString) -> String {
+        String(text.characters)
     }
 
     // MARK: - Fix actions

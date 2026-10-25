@@ -16292,13 +16292,13 @@
         }
       }
     },
-    "sync.button.syncCount" : {
+    "sync.button.syncChanges" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Sync %lld"
+            "value" : "Sync ^[%lld Change](inflect: true)"
           }
         }
       }
@@ -16831,6 +16831,17 @@
         }
       }
     },
+    "sync.destination.deletedIn" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "deleted in %@"
+          }
+        }
+      }
+    },
     "sync.destination.deletion" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -17102,6 +17113,39 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Review Drift…"
+          }
+        }
+      }
+    },
+    "sync.footer.blocked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld blocked"
+          }
+        }
+      }
+    },
+    "sync.footer.changes" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%1$lld change](inflect: true) in ^[%2$lld place](inflect: true)"
+          }
+        }
+      }
+    },
+    "sync.footer.deletions" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld deletion](inflect: true)"
           }
         }
       }
@@ -17447,17 +17491,6 @@
         }
       }
     },
-    "sync.organization.scope" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Organization secrets and variables"
-          }
-        }
-      }
-    },
     "sync.organization.unconfirmed" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -17465,6 +17498,50 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Sent, but GitHub did not list it yet. The next Sync sends it again."
+          }
+        }
+      }
+    },
+    "sync.place.environment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "environment"
+          }
+        }
+      }
+    },
+    "sync.place.environmentName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ › %2$@"
+          }
+        }
+      }
+    },
+    "sync.place.organization" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "organization"
+          }
+        }
+      }
+    },
+    "sync.place.repository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "repository"
           }
         }
       }
@@ -17838,7 +17915,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "What changes on GitHub. Names only: values are never shown here."
+            "value" : "Names only · values go through gh and az, never shown"
           }
         }
       }
@@ -17964,6 +18041,17 @@
         }
       }
     },
+    "sync.summary.item.deletedOnGitHub" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "deleted on GitHub"
+          }
+        }
+      }
+    },
     "sync.summary.item.modified" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -17982,6 +18070,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ → %2$@ (%3$@)"
+          }
+        }
+      }
+    },
+    "sync.summary.item.renamedFrom" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "renamed from %@"
           }
         }
       }
@@ -18162,17 +18261,6 @@
         }
       }
     },
-    "sync.summary.scope.renamed.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ → %2$@"
-          }
-        }
-      }
-    },
     "sync.summary.writeBudget" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -18217,13 +18305,13 @@
         }
       }
     },
-    "sync.title.repository" : {
+    "sync.title.summary" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Sync to %@"
+            "value" : "Review Sync"
           }
         }
       }
