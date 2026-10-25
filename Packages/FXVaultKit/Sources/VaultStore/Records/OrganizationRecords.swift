@@ -65,7 +65,7 @@ public struct OrganizationRecord: Codable, Sendable, Hashable, FetchableRecord, 
     }
 }
 
-/// One `org_items` row (§6 `v17_organizations`, 1.0), ciphertext included. A value is sealed
+/// One `org_items` row (§6 `v17_organizations`, `v19_org_item_changes`, 1.0), ciphertext included. A value is sealed
 /// with `OrgFieldAAD` (row, organization, kind, name) and fingerprinted for its row.
 public struct OrgItemRecord: Codable, Sendable, Hashable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "org_items"
@@ -85,6 +85,12 @@ public struct OrgItemRecord: Codable, Sendable, Hashable, FetchableRecord, Persi
     /// `synced_fp`: the fingerprint of the value last read from GitHub (variables).
     public var syncedFingerprint: Data?
     public var remoteUpdatedAt: Date?
+    /// `is_deleted`: a deletion waiting for Sync.
+    public var isDeleted: Bool
+    /// `synced_visibility`: the visibility GitHub has; nil until the item was synced (an add).
+    public var syncedVisibility: OrgVisibility?
+    /// `repositories_edited`: the `org_item_repositories` rows are the list to send.
+    public var repositoriesEdited: Bool
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -99,6 +105,9 @@ public struct OrgItemRecord: Codable, Sendable, Hashable, FetchableRecord, Persi
         selectedCount: Int? = nil,
         syncedFingerprint: Data? = nil,
         remoteUpdatedAt: Date? = nil,
+        isDeleted: Bool = false,
+        syncedVisibility: OrgVisibility? = nil,
+        repositoriesEdited: Bool = false,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -112,8 +121,20 @@ public struct OrgItemRecord: Codable, Sendable, Hashable, FetchableRecord, Persi
         self.selectedCount = selectedCount
         self.syncedFingerprint = syncedFingerprint
         self.remoteUpdatedAt = remoteUpdatedAt
+        self.isDeleted = isDeleted
+        self.syncedVisibility = syncedVisibility
+        self.repositoriesEdited = repositoriesEdited
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+
+    /// Pending when deleted, never synced, or its value, visibility or repository list changed.
+    /// A secret without a value (GitHub never returns one) is synced.
+    public var syncStatus: ConfigSyncStatus {
+        if isDeleted { return .deleted }
+        guard let syncedVisibility else { return .added }
+        let valueChanged = valueFingerprint != nil && valueFingerprint != syncedFingerprint
+        return valueChanged || visibility != syncedVisibility || repositoriesEdited ? .modified : .synced
     }
 
     /// The domain model (no ciphertext).
@@ -126,7 +147,8 @@ public struct OrgItemRecord: Codable, Sendable, Hashable, FetchableRecord, Persi
             hasValue: valueCiphertext != nil,
             visibility: visibility,
             selectedRepositoryCount: visibility == .selected ? selectedCount : nil,
-            remoteUpdatedAt: remoteUpdatedAt
+            remoteUpdatedAt: remoteUpdatedAt,
+            syncStatus: syncStatus
         )
     }
 
@@ -141,6 +163,9 @@ public struct OrgItemRecord: Codable, Sendable, Hashable, FetchableRecord, Persi
         case selectedCount = "selected_count"
         case syncedFingerprint = "synced_fp"
         case remoteUpdatedAt = "remote_updated_at"
+        case isDeleted = "is_deleted"
+        case syncedVisibility = "synced_visibility"
+        case repositoriesEdited = "repositories_edited"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }

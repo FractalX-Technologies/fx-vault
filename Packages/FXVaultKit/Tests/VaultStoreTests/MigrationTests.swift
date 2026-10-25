@@ -14,7 +14,7 @@ struct MigrationTests {
         "vaults", "key_wraps", "accounts", "repositories", "environments", "config_items",
         "sync_journal", "deployment_branch_patterns", "imported_share_packages", "folders", "folder_items",
         "provider_connections", "destinations", "destination_items", "destination_journal", "sent_shares",
-        "retired_destinations", "organizations", "org_items",
+        "retired_destinations", "organizations", "org_items", "org_item_repositories",
     ]
 
     // v15 drops these, with the teammate and space key material in them.
@@ -28,8 +28,9 @@ struct MigrationTests {
             "v7_journal_fingerprints", "v8_force_push_requested_at", "v9_item_links", "v10_teammates",
             "v11_spaces", "v12_folders", "v13_destinations", "v14_project_shares",
             "v15_drop_teammates", "v16_drop_runtime_providers", "v17_organizations", "v18_standalone_key_vaults",
+            "v19_org_item_changes",
         ])
-        #expect(Migration.latest == .v18StandaloneKeyVaults)
+        #expect(Migration.latest == .v19OrgItemChanges)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -122,6 +123,30 @@ struct MigrationTests {
         try store.deleteRetiredDestinations()
 
         #expect(try store.fetchRetiredDestinationLabels().isEmpty)
+    }
+
+    /// v19: organization items imported before it are synced (their visibility is GitHub's),
+    /// with no pending deletion or edited repository list.
+    @Test func organizationItemsKeepTheirVisibilityAsSynced() throws {
+        let database = try DatabaseFactory.unmigratedInMemory()
+        try VaultMigrator.migrate(database, upTo: .v18StandaloneKeyVaults)
+        let organization = UUID().uuidString.lowercased()
+        try database.write { tx in
+            try tx.db.execute(sql: """
+                INSERT INTO organizations (id, login, login_key, account_login, created_at, updated_at)
+                VALUES (?, 'example-org', 'example-org', 'user-a', 't', 't')
+                """, arguments: [organization])
+            try tx.db.execute(sql: """
+                INSERT INTO org_items (id, organization_id, kind, name, visibility, selected_count, created_at, updated_at)
+                VALUES (?, ?, 'secret', 'STRIPE_KEY', 'selected', 3, 't', 't')
+                """, arguments: [UUID().uuidString.lowercased(), organization])
+        }
+        try VaultMigrator.migrate(database)
+        let row = try database.read { tx in
+            try #require(try Row.fetchOne(tx.db, sql: "SELECT synced_visibility, is_deleted, repositories_edited FROM org_items"))
+        }
+        #expect(row[0] as String? == "selected")
+        #expect(row[1] as Int == 0 && row[2] as Int == 0)
     }
 
     @Test func migratingTwiceIsANoOp() throws {

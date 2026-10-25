@@ -172,6 +172,7 @@ public actor OrganizationRepository {
             visibility: visibility,
             selectedCount: visibility == .selected ? selectedCount : nil,
             remoteUpdatedAt: remoteUpdatedAt,
+            syncedVisibility: visibility,
             createdAt: now,
             updatedAt: now
         )

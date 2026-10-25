@@ -454,6 +454,24 @@ enum MigrationSQL {
         CREATE UNIQUE INDEX org_items_name ON org_items(organization_id, kind, name);
         """
 
+    // MARK: v19_org_item_changes (1.0, tasks/todo.md B6b). Additive.
+
+    /// Local changes to organization items, sent by Sync: a tombstone (`is_deleted`), the
+    /// visibility last synced (NULL: never synced, an add; imported rows get theirs), and the
+    /// repository list to send when the user edited it (`repositories_edited`; otherwise Sync
+    /// reads GitHub's list before a write, so it always sends the complete list).
+    static let v19OrgItemChanges = """
+        ALTER TABLE org_items ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1));
+        ALTER TABLE org_items ADD COLUMN synced_visibility TEXT
+          CHECK (synced_visibility IS NULL OR synced_visibility IN ('all','private','selected'));
+        ALTER TABLE org_items ADD COLUMN repositories_edited INTEGER NOT NULL DEFAULT 0 CHECK (repositories_edited IN (0, 1));
+        UPDATE org_items SET synced_visibility = visibility;
+        CREATE TABLE org_item_repositories (
+          item_id TEXT NOT NULL REFERENCES org_items(id) ON DELETE CASCADE,
+          name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 100),
+          PRIMARY KEY (item_id, name)) WITHOUT ROWID;
+        """
+
     // MARK: v18_standalone_key_vaults (1.0, tasks/todo.md B8b)
 
     /// A Key Vault is a source of its own (1.0 brief): `destinations.repository_id` becomes

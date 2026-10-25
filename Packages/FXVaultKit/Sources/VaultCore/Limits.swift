@@ -33,6 +33,10 @@ public enum Limits {
     public static let maxVariablesPerRepository = 500
     /// Variables per environment.
     public static let maxVariablesPerEnvironment = 100
+    /// Secrets per organization.
+    public static let maxSecretsPerOrganization = 1000
+    /// Variables per organization.
+    public static let maxVariablesPerOrganization = 1000
 
     /// The GitHub item limit for one kind at one scope level.
     public static func maxItems(kind: ConfigKind, level: ConfigScopeLevel) -> Int {
