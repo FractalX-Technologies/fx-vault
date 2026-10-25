@@ -45,6 +45,12 @@ public struct AADBuilder: Sendable {
     }
 }
 
+/// The identity an encrypted column's blob is bound to: its AAD for one DEK version (§5.4).
+/// ``UnlockedKeys`` seals and opens every field through it.
+public protocol FieldContext: Sendable {
+    func encoded(dekVersion: UInt32) -> Data
+}
+
 /// Which encrypted column a field blob lives in (§5.4). The table and column names are bound
 /// into the AAD, so a blob copied to another column fails to decrypt.
 public enum FieldLocation: Sendable, Hashable, CaseIterable {
@@ -71,7 +77,7 @@ public enum FieldLocation: Sendable, Hashable, CaseIterable {
 
 /// The identity a field blob is bound to (§5.4, D11): row, repository, environment, kind and the
 /// name for its column. Changing any of them (or the DEK version) makes decryption fail.
-public struct FieldAAD: Sendable, Hashable {
+public struct FieldAAD: FieldContext, Hashable {
     public let location: FieldLocation
     public let rowID: ConfigItemID
     public let repositoryID: RepoID
@@ -169,7 +175,7 @@ public struct FieldAAD: Sendable, Hashable {
 /// folder, kind and name. The layout is ``FieldAAD``'s with the folder in the repository's place
 /// and no environment; the table name `folder_items` keeps a folder blob from opening as a
 /// repository item. Renaming the item or changing its kind re-seals the value.
-public struct FolderFieldAAD: Sendable, Hashable {
+public struct FolderFieldAAD: FieldContext, Hashable {
     /// Table name as written into the AAD.
     public static let table = "folder_items"
     /// Column name as written into the AAD.
@@ -208,7 +214,7 @@ public struct FolderFieldAAD: Sendable, Hashable {
 /// repository's place and no environment; the table name `destination_items` keeps a destination
 /// blob from opening as a repository or folder item. Renaming the item or changing its kind
 /// re-seals the value.
-public struct DestinationFieldAAD: Sendable, Hashable {
+public struct DestinationFieldAAD: FieldContext, Hashable {
     /// Table name as written into the AAD.
     public static let table = "destination_items"
     /// Column name as written into the AAD.
