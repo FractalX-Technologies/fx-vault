@@ -2071,3 +2071,11 @@ Review B5c — the read-only organization node (2026-10-25, automatic):
 - e2e: `OrganizationUITests` (example-org row → Import → NPM_TOKEN, STRIPE_KEY, REGION with All repositories, Selected · 3 repositories, Private and internal repositories); the scripted gh gained B12/B13 for example-org.
 - Docs: README, CHANGELOG, DESIGN (Organizations), ARCHITECTURE (sidebar), RELEASING #51.
 - Gates: XcodeGen drift OK; `swift test` 1,316 green; `xcodebuild test` 567 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (onboarding, share, accounts, organization); lint OK; check-secrets OK in the worktree (964 files); strings synced (second run: no change).
+
+Review B11a — macOS 26 minimum (2026-10-25, automatic):
+- `project.yml` deployment target 26.0, `Package.swift` `.macOS("26.0")`, the cask `depends_on macos: :tahoe`.
+- Availability branches gone: `SecretValueEditor` (Writing Tools off), `BuildCapabilities` (biometry state hash), `SheetChrome.linkPointer`, the main toolbar (one `MainToolbar`, shared glass hidden); `ProcessRunner` uses `posix_spawn_file_actions_addchdir` (the `_np` form is deprecated in 26).
+- No new test: the change removes code paths for older systems; the existing suites cover the kept paths (`SecretValueEditorTests` lost its availability guard).
+- B11 split: B11a macOS 26; B11b two-column main window with the GitHub › owner › repo › environment tree in a glass sidebar; B11c black-and-white tokens and Liquid Glass; B11d onboarding and start (D1); B11e notch unlock island; B11f allowlisted setup-command runner.
+- Docs: README (requirements; 0.9 is the last for macOS 14 and 15), CHANGELOG (Removed), ARCHITECTURE, DESIGN, RELEASING (rows 11 and 14).
+- Gates: `swift test` 1,316 green; `xcodebuild test` 567 app tests green; Release build OK; no UI-testing code; UI tests ×2 green; lint OK; check-secrets OK in the worktree (964 files).

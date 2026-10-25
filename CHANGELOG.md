@@ -23,6 +23,7 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Removed
 
+- **macOS 14 and 15.** FX Vault 1.0 needs macOS 26 Tahoe; 0.9 stays the version for older Macs.
 - **Nearby, chat, teammates and shared spaces.** Pairing, presence, Nearby Chat, sending to a
   nearby Mac and shared spaces are gone, with their tables (migration `v15_drop_teammates`).
   Share a project as a passphrase `.fxvault` file instead; Share… still offers AirDrop. A 0.9

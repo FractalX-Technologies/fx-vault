@@ -13,7 +13,7 @@ cask "fx-vault" do
   end
 
   depends_on formula: "gh"
-  depends_on macos: :sonoma
+  depends_on macos: :tahoe
 
   app "FX Vault.app"
 

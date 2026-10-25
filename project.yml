@@ -6,7 +6,7 @@ name: FXVault
 options:
   bundleIdPrefix: io.fractalx
   deploymentTarget:
-    macOS: "14.0"
+    macOS: "26.0"                            # 1.0: one code path with native Liquid Glass
   developmentLanguage: en
   projectFormat: xcode16_0                   # objectVersion 77: opens in Xcode 26.6 (blocking CI) and 27
   xcodeVersion: "26.0"                       # pinned so a newer XcodeGen does not change the output
