@@ -366,6 +366,21 @@ struct DestinationSyncRepositoryTests {
         #expect(remote.value(of: "STRIPE_SECRET_KEY") == "sk_test_new")
     }
 
+    @Test func aKeyVaultOfItsOwnImportsLikeARepositoryDestination() async throws {
+        let fixture = try await Fixture.make()
+        let vault = try fixture.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-sample-shared", tenantID: nil),
+            stage: nil
+        )
+        let remote = fixture.remotes.fake(for: vault, provider: .azureKeyVault)
+        remote.put("DATABASE_URL", value: "postgres://a")
+        let result = try await fixture.sync.importRemote(destinationID: vault)
+        #expect(result.imported == ["DATABASE_URL"])
+        #expect(try fixture.reveal(try fixture.item(vault, "DATABASE_URL").id) == "postgres://a")
+        #expect(try fixture.destinations.destinations(repositoryID: nil).first?.lastRefreshedAt != nil)
+    }
+
     @Test func aRemovedTombstoneTargetIsClearedByRefresh() async throws {
         let fixture = try await Fixture.make()
         let (vault, remote) = try fixture.keyVault()

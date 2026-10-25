@@ -592,6 +592,28 @@ CREATE UNIQUE INDEX org_items_name ON org_items(organization_id, kind, name);
 - DEK rotation re-seals `org_items.value_ct` and recomputes `value_fp` and `synced_fp` (a
   `synced_fp` that no longer matches is cleared).
 
+### v18_standalone_key_vaults (1.0)
+
+```sql
+CREATE TABLE destinations_v18 (… as v13, but repository_id TEXT REFERENCES repositories(id) ON DELETE CASCADE,
+  CHECK (repository_id IS NOT NULL OR provider = 'azure_keyvault'));
+INSERT INTO destinations_v18 SELECT … FROM destinations;
+DROP TABLE destinations;
+ALTER TABLE destinations_v18 RENAME TO destinations;
+CREATE UNIQUE INDEX destinations_repo_target ON destinations(repository_id, target_key);
+CREATE UNIQUE INDEX destinations_standalone_target ON destinations(target_key) WHERE repository_id IS NULL;
+```
+
+- A Key Vault becomes a source of its own (1.0 brief): a `destinations` row with a NULL
+  `repository_id`, listed beside GitHub. Only Key Vault rows may have no repository.
+- The table is rebuilt because SQLite cannot drop a NOT NULL. Migrations run with foreign keys
+  off, so `destination_items` and `destination_journal` keep their rows and ids.
+- A vault of its own is unique by `target_key`; the same vault may also stay under a repository
+  (a separate row with its own items).
+- Removing a repository never touches the vaults of their own. Their pending changes are not in
+  the repository Sync badge yet (`DestinationStore.pendingCounts`), and share imports only place
+  destinations under repositories, so they hold no share rows.
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -608,7 +630,7 @@ CREATE UNIQUE INDEX org_items_name ON org_items(organization_id, kind, name);
 | `folders` | `FolderRecord` | `FolderStore` | Unique by `name_key`, sidebar order, v0.7.0 |
 | `folder_items` | `FolderItemRecord` (with ciphertext; `FolderItemModel` without) | `FolderStore` | Always with a value; `link_id` groups span `config_items`, v0.7.0 |
 | `provider_connections` | — | — | Empty and unused since v16 (Supabase and Vercel tokens, v0.8.0) |
-| `destinations` | `DestinationRecord` (`DestinationSettings` in `settings_json`) | `DestinationStore` | Unique per repository by `target_key`, v0.8.0 |
+| `destinations` | `DestinationRecord` (`DestinationSettings` in `settings_json`) | `DestinationStore` | Unique per repository by `target_key`, v0.8.0; a NULL `repository_id` is a Key Vault of its own, unique by `target_key` (v18, 1.0) |
 | `destination_items` | `DestinationItemRecord` (with ciphertext), `DestinationItemState` (without) | `DestinationStore` | Value optional for secrets; `link_id` groups span all three item tables, v0.8.0; `share_hold` (v0.9.0) |
 | `destination_journal` | `DestinationJournalRecord` | `DestinationStore` | Destination writes, names and push fingerprints only, v0.8.0 |
 | `retired_destinations` | — (labels as `String`) | `DestinationStore` | The one-time notice after v16, names only, 1.0 |

@@ -170,7 +170,7 @@ struct FeatureDependencies {
     }
 
     /// Copy To › Destination targets (v0.8.0): the destinations of `repositoryID` but `excluded`.
-    func destinationCopyTargets(repositoryID: RepoID, excluding excluded: DestinationID? = nil) -> [ItemCopyTargetModel] {
+    func destinationCopyTargets(repositoryID: RepoID?, excluding excluded: DestinationID? = nil) -> [ItemCopyTargetModel] {
         ((try? destinations.destinations(repositoryID: repositoryID)) ?? [])
             .filter { $0.id != excluded }
             .map { ItemCopyTargetModel(place: .destination($0.id), title: $0.copyTargetTitle, isEditable: true) }

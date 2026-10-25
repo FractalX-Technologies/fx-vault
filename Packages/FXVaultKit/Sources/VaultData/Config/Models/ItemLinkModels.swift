@@ -13,7 +13,7 @@ public enum LinkedValueComparison: Sendable, Hashable {
 }
 
 /// Where a linked copy is (v0.7.0): a scope of a vault repository, a folder, or (v0.8.0) a
-/// destination of a repository.
+/// destination of a repository; a Key Vault of its own (1.0) has no repository.
 public enum LinkedCopyPlaceModel: Sendable, Hashable {
     case scope(
         repositoryID: RepoID,
@@ -25,8 +25,8 @@ public enum LinkedCopyPlaceModel: Sendable, Hashable {
     case folder(FolderID, name: String)
     case destination(
         DestinationID,
-        repositoryID: RepoID,
-        repositoryFullName: String,
+        repositoryID: RepoID?,
+        repositoryFullName: String?,
         provider: DestinationProvider,
         displayName: String,
         stage: String?

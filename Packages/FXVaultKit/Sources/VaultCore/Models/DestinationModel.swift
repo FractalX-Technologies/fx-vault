@@ -45,12 +45,13 @@ public enum DestinationTargetModel: Sendable, Hashable {
 }
 
 /// A place outside GitHub that one vault repository's code reads at runtime (v0.8.0,
-/// `destinations` row, tasks/todo.md R1).
+/// `destinations` row, tasks/todo.md R1), or a Key Vault source of its own (1.0, B8b).
 ///
 /// Removing a destination from FX Vault never deletes anything remotely.
 public struct DestinationModel: Sendable, Hashable, Identifiable {
     public var id: DestinationID
-    public var repositoryID: RepoID
+    /// nil: a Key Vault source of its own, listed beside GitHub rather than under a repository.
+    public var repositoryID: RepoID?
     public var target: DestinationTargetModel
     /// The stage this destination serves (`production`, `staging`, …;
     /// ``EnvironmentNameValidator`` rules), or nil.
@@ -69,7 +70,7 @@ public struct DestinationModel: Sendable, Hashable, Identifiable {
 
     public init(
         id: DestinationID = DestinationID(),
-        repositoryID: RepoID,
+        repositoryID: RepoID?,
         target: DestinationTargetModel,
         stage: String?,
         sortOrder: Int,

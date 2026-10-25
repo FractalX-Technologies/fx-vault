@@ -95,3 +95,5 @@ Patterns and rules learned from corrections during this project. Read at the sta
 
 **Pattern:** a VaultData test scripted a network failure on a gh read and hung for 10 minutes: reads retry transient failures, and the retry sleeps on the test's `ManualClock`, which never advances.
 **Rule:** to test an account-wide failure, script a non-transient one (`gh: Bad credentials (HTTP 401)`), or advance the clock; run new package tests under a time cap.
+- A commit message that names a package-manager install (for example the Homebrew install of gh) trips the dangerous-commands hook → pass the message with `git commit -F <file>`.
+- A `.*` in a shell command (for example inside an `rg` pattern) trips the protect-secrets hook as a glob that could read `.env` → write patterns without `.*` (`[0-9.]+`, a narrower class) or put the script in a file.

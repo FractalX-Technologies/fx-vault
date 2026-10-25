@@ -82,6 +82,8 @@ public enum Limits {
     public static let maxDestinationItems = 1000
     /// Most destinations one repository has. Local choice.
     public static let maxDestinationsPerRepository = 32
+    /// Most Key Vaults of their own (1.0, beside GitHub). Local choice.
+    public static let maxStandaloneKeyVaults = 256
     /// Largest HTTP response body FX Vault reads from a provider.
     public static let maxDestinationResponseBytes = 16 * bytesPerMiB
 

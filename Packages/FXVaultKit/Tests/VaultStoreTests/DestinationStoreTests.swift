@@ -34,6 +34,24 @@ struct DestinationStoreTests {
         #expect(try seeded.integer("SELECT COUNT(*) FROM destinations") == 0)
     }
 
+    /// v18 (1.0): a Key Vault of its own has no repository, is unique by target among the
+    /// standalone ones, and outlives any repository.
+    @Test func standaloneKeyVaultsAreUniqueAndKeyVaultOnly() throws {
+        let seeded = try SeededDatabase()
+        func insert(provider: String = "azure_keyvault", key: String, repository: String = "NULL") throws {
+            try seeded.execute("""
+                INSERT INTO destinations (id, repository_id, provider, target_key, settings_json, created_at, updated_at)
+                VALUES ('\(UUID().uuidString.lowercased())', \(repository), '\(provider)', '\(key)', '{}', 't', 't')
+                """)
+        }
+        try insert(key: "kv|a")
+        #expect(throws: Self.unique) { try insert(key: "kv|a") }
+        try insert(key: "kv|a", repository: "'\(seeded.repo.id.uuidString)'")
+        #expect(throws: Self.check) { try insert(provider: "vercel", key: "vercel|p") }
+        try seeded.execute("DELETE FROM repositories")
+        #expect(try seeded.integer("SELECT COUNT(*) FROM destinations") == 1)
+    }
+
     @Test func destinationItemsCheckNamesValuesStateAndCascade() throws {
         let seeded = try SeededDatabase()
         let destination = UUID().uuidString.lowercased()

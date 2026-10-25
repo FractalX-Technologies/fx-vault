@@ -386,7 +386,7 @@ final class EnvExportViewModel: LockObserving {
                 scopeTitle = ""
             case .destination(let destinationID):
                 let destination = try destinations.destination(destinationID)
-                let repository = try destination.flatMap { try config.changeSet(repositoryID: $0.repositoryID)?.repository }
+                let repository = try destination?.repositoryID.flatMap { try config.changeSet(repositoryID: $0)?.repository }
                 repositoryName = repository?.fullName ?? ""
                 suggestedDirectory = repository?.clonePath.map { URL(filePath: $0, directoryHint: .isDirectory) }
                 scopeTitle = destination?.copyTargetTitle ?? ""

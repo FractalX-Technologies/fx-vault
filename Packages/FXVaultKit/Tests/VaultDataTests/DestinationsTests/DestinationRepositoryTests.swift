@@ -111,6 +111,42 @@ struct DestinationRepositoryTests {
         #expect(configError { try fixture.destinations.deleteDestination(web) } == .destinationNotFound)
     }
 
+    // MARK: - Key Vaults of their own (1.0, B8b)
+
+    @Test func keyVaultsOfTheirOwnStandBesideRepositoryDestinations() async throws {
+        let fixture = try await Fixture.make()
+        let standalone = try fixture.destinations.createDestination(repositoryID: nil, target: Self.keyVault, stage: nil)
+        #expect(configError {
+            try fixture.destinations.createDestination(repositoryID: nil, target: Self.keyVault, stage: nil)
+        } == .destinationExists)
+        // The same vault can still serve a repository: the two rows are separate places.
+        let underRepository = try fixture.keyVault()
+
+        #expect(try fixture.destinations.destinations(repositoryID: nil).map(\.id) == [standalone])
+        #expect(try fixture.destinations.destinations(repositoryID: fixture.repo.id).map(\.id) == [underRepository])
+        let model = try #require(try fixture.destinations.destination(standalone))
+        #expect(model.repositoryID == nil)
+        #expect(model.target == Self.keyVault)
+
+        // A copy into it is linked, and its place names no repository.
+        let source = try fixture.harness.add(fixture.repo, "DATABASE_URL", value: ConfigFixture.valueA)
+        #expect(try fixture.destinations.copyItems([source], to: standalone, conflicts: .keep).added == 1)
+        let place = try #require(try fixture.harness.config.linkedCopies(of: source).first?.place)
+        guard case .destination(let id, let repositoryID, let fullName, _, let displayName, _) = place else {
+            Issue.record("expected a destination place, got \(place)")
+            return
+        }
+        #expect(id == standalone && repositoryID == nil && fullName == nil)
+        #expect(displayName == "kv-sample-prod")
+        // Its pending add waits for the Key Vault Sync (B8c), not the repository's badge.
+        #expect(try fixture.destinations.pendingCounts().isEmpty)
+
+        // Removing the repository removes its destination only.
+        #expect(try RepoStore(database: fixture.harness.database).delete(id: fixture.repo.id))
+        #expect(try fixture.destinations.destination(underRepository) == nil)
+        #expect(try fixture.destinations.destinations(repositoryID: nil).map(\.secretCount) == [1])
+    }
+
     // MARK: - Items (R3)
 
     @Test func stageSuggestionsListDestinationStagesThenEnvironmentsOnce() async throws {

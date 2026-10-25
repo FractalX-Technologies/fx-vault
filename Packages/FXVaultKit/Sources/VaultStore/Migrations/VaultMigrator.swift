@@ -26,6 +26,7 @@ public enum VaultMigrator {
         case v15DropTeammates = "v15_drop_teammates"
         case v16DropRuntimeProviders = "v16_drop_runtime_providers"
         case v17Organizations = "v17_organizations"
+        case v18StandaloneKeyVaults = "v18_standalone_key_vaults"
 
         /// The newest migration this build knows.
         public static var latest: Migration {
@@ -60,6 +61,7 @@ public enum VaultMigrator {
             case .v15DropTeammates: MigrationSQL.v15DropTeammates
             case .v16DropRuntimeProviders: MigrationSQL.v16DropRuntimeProviders
             case .v17Organizations: MigrationSQL.v17Organizations
+            case .v18StandaloneKeyVaults: MigrationSQL.v18StandaloneKeyVaults
             }
         }
     }
