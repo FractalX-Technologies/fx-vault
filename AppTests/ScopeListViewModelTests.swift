@@ -60,14 +60,12 @@ struct ScopeListViewModelTests {
         let environmentID = try #require(staging.environment?.id)
         let context = EnvironmentContext(repositoryID: fixture.repositoryID, environmentID: environmentID)
 
-        model.newEnvironment()
         model.rename(staging)
         model.duplicate(staging)
         model.openSettings(staging)
         model.exportEnv(staging)
         model.share(staging)
         #expect(fixture.recorder.presented == [
-            .newEnvironment(NewEnvironmentContext(repositoryID: fixture.repositoryID)),
             .renameEnvironment(context),
             .duplicateEnvironment(context),
             .environmentSettings(context),
@@ -109,10 +107,9 @@ struct ScopeListViewModelTests {
         #expect(viewModel.canEdit(production) == isAdmin)
         #expect(viewModel.canExport(production), "values can be exported whatever the permission")
 
-        viewModel.newEnvironment()
         viewModel.requestDeletion(production)
         viewModel.rename(production)
-        #expect(recorder.presented.count == (isAdmin ? 2 : 0))
+        #expect(recorder.presented.count == (isAdmin ? 1 : 0))
         #expect((viewModel.pendingDeletion != nil) == isAdmin)
     }
 }

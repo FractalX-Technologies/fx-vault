@@ -94,9 +94,23 @@ enum AccessibilityID {
             "main.keyVault.\(name)"
         }
 
-        /// The organization row of a sidebar owner group (its secrets and variables, 1.0).
+        /// An organization's owner node in the sidebar: selecting it opens its secrets and
+        /// variables (1.0).
         static func organization(_ login: String) -> String {
             "main.organization.\(login)"
+        }
+
+        /// The search field at the top of the sidebar (⌘F, 1.0).
+        static let sidebarSearch = "main.sidebarSearch"
+
+        /// "Show N more" under an owner node: its repositories not in the vault (1.0).
+        static func showMore(_ login: String) -> String {
+            "main.showMore.\(login)"
+        }
+
+        /// The chevron that opens or closes an owner node (1.0).
+        static func ownerToggle(_ login: String) -> String {
+            "main.ownerToggle.\(login)"
         }
     }
 

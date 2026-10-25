@@ -35,6 +35,24 @@ struct PreferencesViewModelTests {
         #expect(viewModel.canStartReset)
     }
 
+    /// 1.0 (D6c1): an owner's "Approve" in the sidebar opens Settings on Accounts, once.
+    @Test func approveInTheSidebarOpensTheAccountsTab() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let viewModel = PreferencesViewModel(app: harness.app)
+        let main = harness.app.makeMainViewModel()
+        #expect(viewModel.selectedTab == .general)
+
+        main.requestAccountsSettings()
+        #expect(viewModel.requestedTab == .accounts)
+        viewModel.showRequestedTab()
+        #expect(viewModel.selectedTab == .accounts)
+        #expect(viewModel.requestedTab == nil)
+
+        viewModel.selectedTab = .general
+        viewModel.showRequestedTab()
+        #expect(viewModel.selectedTab == .general, "a request is shown once")
+    }
+
     @Test func unlockedPhaseEnablesSecurity() async throws {
         let harness = try await TestHarness(vault: .unlocked)
         let viewModel = PreferencesViewModel(app: harness.app)

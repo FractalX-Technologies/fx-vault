@@ -1,27 +1,35 @@
 import SwiftUI
 import VaultCore
 
-/// AZURE KEY VAULT in the sidebar (1.0): the Key Vaults of their own (Connect Azure imports
-/// them), one ``DestinationRow`` each with ``KeyVaultContextMenu``; hidden when there is none or
-/// the search matches none.
+/// Azure in the sidebar (1.0; flat until the subscriptions of 1g): the Key Vaults of their own
+/// (Connect Azure imports them) with ``KeyVaultContextMenu``; hidden when there is none or the
+/// search matches none.
 struct SidebarKeyVaultsSection: View {
     let sidebar: SidebarViewModel
 
     var body: some View {
         let vaults = sidebar.visibleKeyVaults
         if !vaults.isEmpty {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-                SectionLabel(MainCopy.azureSection)
-                    .padding(.horizontal, Theme.Spacing.small)
-                    .padding(.bottom, Theme.Spacing.xSmall)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+                SidebarSectionHeader(SidebarCopy.azureSection)
                 ForEach(vaults) { vault in
-                    Button {
+                    SidebarTreeRow(
+                        level: 0,
+                        systemImage: vault.provider.symbolName,
+                        title: vault.title,
+                        isSelected: sidebar.selectedKeyVaultID == vault.id,
+                        accessibilityID: AccessibilityID.Main.keyVault(vault.title)
+                    ) {
                         sidebar.selectedKeyVaultID = vault.id
-                    } label: {
-                        DestinationRow(destination: vault, isSelected: sidebar.selectedKeyVaultID == vault.id)
+                    } trailing: {
+                        if vault.valueMissingCount > 0 {
+                            SidebarCount(value: vault.valueMissingCount, help: DestinationCopy.valueMissingHelp(vault.valueMissingCount))
+                        }
+                        if vault.pendingCount > 0 {
+                            SidebarPendingDot()
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier(AccessibilityID.Main.keyVault(vault.title))
+                    .help(vault.subtitle)
                     .contextMenu {
                         KeyVaultContextMenu(vault: vault, sidebar: sidebar)
                     }

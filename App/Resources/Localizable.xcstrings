@@ -10286,17 +10286,6 @@
         }
       }
     },
-    "main.scopes.newEnvironment" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "New Environment"
-          }
-        }
-      }
-    },
     "main.scopes.newEnvironment.adminRequired" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10315,6 +10304,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Add an environment to this repository"
+          }
+        }
+      }
+    },
+    "main.scopes.newEnvironment.menu" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Environment…"
           }
         }
       }
@@ -10407,28 +10407,6 @@
         }
       }
     },
-    "main.search.prompt" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Search repositories"
-          }
-        }
-      }
-    },
-    "main.sidebar.addByName" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Add repository by name…"
-          }
-        }
-      }
-    },
     "main.sidebar.addByName.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10436,6 +10414,50 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Find a repository this account reaches as a collaborator"
+          }
+        }
+      }
+    },
+    "main.sidebar.addByName.menu" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Repository by Name…"
+          }
+        }
+      }
+    },
+    "main.sidebar.approve" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Approve"
+          }
+        }
+      }
+    },
+    "main.sidebar.authorizeSSO" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Authorize SSO"
+          }
+        }
+      }
+    },
+    "main.sidebar.azure" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Azure"
           }
         }
       }
@@ -10458,6 +10480,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Cloned %1$@ to %2$@"
+          }
+        }
+      }
+    },
+    "main.sidebar.collapse" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide what is in %@"
           }
         }
       }
@@ -10491,6 +10524,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "No repositories yet"
+          }
+        }
+      }
+    },
+    "main.sidebar.expand" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show what is in %@"
           }
         }
       }
@@ -10561,6 +10605,28 @@
         }
       }
     },
+    "main.sidebar.lock" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Lock FX Vault (⌃⌘L)"
+          }
+        }
+      }
+    },
+    "main.sidebar.needsScopes" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Needs %@"
+          }
+        }
+      }
+    },
     "main.sidebar.noResults.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10579,6 +10645,39 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Not logged in"
+          }
+        }
+      }
+    },
+    "main.sidebar.open" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open"
+          }
+        }
+      }
+    },
+    "main.sidebar.openRepository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open %@"
+          }
+        }
+      }
+    },
+    "main.sidebar.openSettings" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Settings"
           }
         }
       }
@@ -10627,17 +10726,6 @@
         }
       }
     },
-    "main.sidebar.personal" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Personal"
-          }
-        }
-      }
-    },
     "main.sidebar.remove" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10682,46 +10770,46 @@
         }
       }
     },
-    "main.sidebar.saml" : {
+    "main.sidebar.search.label" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "SAML single sign-on required"
+            "value" : "Search the sidebar"
           }
         }
       }
     },
-    "main.sidebar.saml.authorize" : {
+    "main.sidebar.search.prompt" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Authorize in the browser"
+            "value" : "Search"
           }
         }
       }
     },
-    "main.sidebar.scopeWarning" : {
+    "main.sidebar.search.shortcut" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This account's token lacks: %@. See Settings › Accounts."
+            "value" : "Search the sidebar (⌘F)"
           }
         }
       }
     },
-    "main.sidebar.scopeWarning.short" : {
+    "main.sidebar.settings" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Missing scopes"
+            "value" : "Settings"
           }
         }
       }
@@ -10737,13 +10825,13 @@
         }
       }
     },
-    "main.sidebar.status" : {
+    "main.sidebar.showMore" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Unlocked · Auto-lock %lld min"
+            "value" : "Show %lld more"
           }
         }
       }
@@ -11140,6 +11228,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Value"
+          }
+        }
+      }
+    },
+    "menu.edit.find" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find"
           }
         }
       }
@@ -11767,17 +11866,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Remove this organization from FX Vault?"
-          }
-        }
-      }
-    },
-    "organization.row" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Secrets and variables"
           }
         }
       }
@@ -18400,28 +18488,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Import a .env file into the selected scope (⇧⌘I)"
-          }
-        }
-      }
-    },
-    "toolbar.lock" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Lock"
-          }
-        }
-      }
-    },
-    "toolbar.lock.help" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Lock FX Vault (⌃⌘L)"
           }
         }
       }

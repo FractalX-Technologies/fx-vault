@@ -1,84 +1,64 @@
 import SwiftUI
 import VaultCore
 
-/// The FOLDERS section at the top of the sidebar (v0.7.0, tasks/todo.md F3): the label with
-/// New Folder (+), one row per folder (symbol, name, item count; `surface2` when selected) with
-/// its context menu, or "New Folder…" when there is none. The search field filters folders by
-/// name too.
+/// Folders in the sidebar (v0.7.0; board Main2-Home): the header with New Folder (+), one row
+/// per folder with its item count and context menu, or "New Folder…" when there is none. The
+/// search filters folders by name too.
 struct SidebarFoldersSection: View {
     let main: MainViewModel
 
     var body: some View {
         let sidebar = main.sidebar
         let folders = sidebar.visibleFolders
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-            HStack(spacing: Theme.Spacing.small) {
-                SectionLabel(FolderCopy.sectionTitle)
-                Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+            SidebarSectionHeader(title: FolderCopy.sectionTitle) {
                 Button {
                     main.newFolder()
                 } label: {
                     Image(systemName: "plus")
                         .font(Theme.Typography.monoLabel)
                         .foregroundStyle(Theme.Colors.mutedText)
-                        .frame(width: Theme.Layout.avatarSize, height: Theme.Layout.avatarSize)
+                        .frame(
+                            width: Theme.Layout.sidebarSectionHeaderHeight,
+                            height: Theme.Layout.sidebarSectionHeaderHeight
+                        )
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help(FolderCopy.newFolder)
                 .accessibilityLabel(FolderCopy.newFolder)
             }
-            .padding(.horizontal, Theme.Spacing.small)
-            .padding(.bottom, Theme.Spacing.xSmall)
             if folders.isEmpty, sidebar.searchText.isEmpty {
-                Button {
+                SidebarTreeRow(
+                    level: 0,
+                    systemImage: "folder.badge.plus",
+                    title: FolderCopy.newFolder,
+                    titleStyle: .sans,
+                    isSelected: false,
+                    isDimmed: true
+                ) {
                     main.newFolder()
-                } label: {
-                    Label(FolderCopy.newFolder, systemImage: "folder.badge.plus")
-                        .font(Theme.Typography.callout)
-                        .foregroundStyle(Theme.Colors.mutedText)
-                        .fxRowBackground(isSelected: false, style: .sidebar)
                 }
-                .buttonStyle(.plain)
             }
             ForEach(folders) { folder in
-                Button {
+                let isSelected = sidebar.selectedFolderID == folder.id
+                let counts = FolderCopy.counts(secrets: folder.secretCount, variables: folder.variableCount)
+                SidebarTreeRow(
+                    level: 0,
+                    systemImage: isSelected ? "folder.fill" : "folder",
+                    title: folder.name,
+                    titleStyle: .sans,
+                    isSelected: isSelected
+                ) {
                     sidebar.selectedFolderID = folder.id
-                } label: {
-                    SidebarFolderRow(folder: folder, isSelected: sidebar.selectedFolderID == folder.id)
+                } trailing: {
+                    SidebarCount(value: folder.itemCount, help: counts)
                 }
-                .buttonStyle(.plain)
+                .help(counts)
                 .contextMenu {
                     FolderContextMenu(folderID: folder.id, main: main)
                 }
             }
         }
-    }
-}
-
-/// One folder (32 pt): the folder symbol, its name and the number of items in mono.
-private struct SidebarFolderRow: View {
-    let folder: FolderModel
-    let isSelected: Bool
-
-    var body: some View {
-        HStack(spacing: Theme.Spacing.mediumMinus) {
-            Image(systemName: isSelected ? "folder.fill" : "folder")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.ink)
-                .accessibilityHidden(true)
-            Text(verbatim: folder.name)
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.ink)
-                .lineLimit(1)
-                .truncationMode(.middle)
-            Spacer(minLength: 0)
-            Text(verbatim: "\(folder.itemCount)")
-                .font(Theme.Typography.monoLabel)
-                .foregroundStyle(Theme.Colors.subtleText)
-                .accessibilityLabel(FolderCopy.counts(secrets: folder.secretCount, variables: folder.variableCount))
-        }
-        .fxRowBackground(isSelected: isSelected, style: .sidebar)
-        .help(FolderCopy.counts(secrets: folder.secretCount, variables: folder.variableCount))
     }
 }

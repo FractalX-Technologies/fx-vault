@@ -289,7 +289,7 @@ struct MainConnectivityTests {
     /// Selects the imported repository and waits for its drift check on open.
     static func open(_ id: RepoID, in main: MainViewModel) async throws -> RepoDetailViewModel {
         #expect(await TestFixtures.eventually {
-            main.sidebar.sections.flatMap(\.owners).flatMap(\.repos).contains { $0.importedRepoID == id }
+            main.sidebar.owners.flatMap(\.repos).contains { $0.importedRepoID == id }
         })
         main.sidebar.select(repositoryID: id)
         let detail = try #require(main.detail)
@@ -364,8 +364,8 @@ struct MainConnectivityTests {
         let detail = try await Self.open(id, in: main)
         let imported = try #require(main.selectedRepo)
         let listed = try #require(
-            SidebarGrouping.sections(try SidebarViewModelTests.input(), query: "")
-                .flatMap(\.owners).flatMap(\.repos).first { !$0.isImported }
+            SidebarGrouping.owners(try SidebarViewModelTests.input(), query: "")
+                .flatMap(\.repos).first { !$0.isImported }
         )
         #expect(await TestFixtures.eventually { main.scopeList?.selectedScope != nil })
 

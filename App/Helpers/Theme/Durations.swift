@@ -22,6 +22,12 @@ extension Theme {
         /// the offline gating follow it (a flapping path never reaches the UI).
         static let connectivityDebounce: Duration = .seconds(2)
 
+        /// Between two tries to focus a field that is still appearing (the sidebar search after
+        /// Edit › Find on a hidden sidebar), and how long it keeps trying: longer than the
+        /// sidebar's slide.
+        static let focusRetry: Duration = .milliseconds(100)
+        static let focusTimeout: Duration = .seconds(1)
+
         /// How long the notch island says "Unlocked" before it goes away.
         static let islandUnlocked: Duration = .milliseconds(900)
     }

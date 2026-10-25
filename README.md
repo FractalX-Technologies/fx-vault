@@ -9,13 +9,15 @@ the secrets your code reads at runtime in Azure Key Vault.
 ## Features
 
 - **One vault for every account.** Every `gh` account you are logged in to, its organizations
-  and their repositories in one sidebar tree, with each repository's environments under it,
-  search, badges and scope warnings, and the Azure Key Vaults you connected under **Azure Key
-  Vault**; the toolbar shows where you are. Settings ›
+  and their repositories in one sidebar tree, one node per organization or person whichever
+  accounts see it, with each repository's environments under it, search (⌘F), and what an
+  owner needs under its name (Needs admin:org · Approve, Authorize SSO · Open); the Azure Key
+  Vaults you connected are under **Azure**, and Lock and Settings at the bottom of the sidebar.
+  The toolbar shows where you are. Settings ›
   Accounts shows, per organization, whether you can manage its secrets: **Ready**, **Needs
   admin:org** (with the `gh auth refresh -s admin:org` commands to copy, then Re-check), **Org
   secrets need an org admin**, or **Needs SSO authorization** (with GitHub's SSO page).
-- **Organization secrets and variables.** Each organization's Secrets and variables row imports
+- **Organization secrets and variables.** Selecting an organization in the sidebar imports
   its own secrets (names only: GitHub never returns values) and variables with their visibility:
   all repositories, private and internal, or the selected ones. **Add Secret** and **Add
   Variable** open an editor with the value and Access (All, Private, or Selected with the

@@ -2,13 +2,9 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// The selected repository's branch of the sidebar tree (1.0; mockup Main2-Repository): each
-/// environment with its pending dot, item count and value-missing warning, the row context menu
-/// and the dashed "+ New environment" row, then the RUNTIME destinations with "+ Add
-/// Destination" (experimental). The repository scope is the repository's own row.
-///
-/// The rows are drawn with `.fxRowBackground(style: .sidebar)` instead of a native `List`
-/// selection; ``MainColumnSelection`` keeps Up and Down once a row here was clicked.
+/// The selected repository's branch of the sidebar tree (1.0; board Main2-Expanded): its
+/// environments, then the RUNTIME destinations (experimental). New Environment… is on the
+/// repository's context menu; the repository scope is the repository's own row.
 struct ScopeListView: View {
     @Bindable var viewModel: ScopeListViewModel
     @FocusState private var isListFocused: Bool
@@ -16,29 +12,19 @@ struct ScopeListView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
             ForEach(viewModel.environmentScopes) { scope in
-                Button {
+                ScopeRow(scope: scope, isSelected: viewModel.selectedScopeID == scope.id) {
                     viewModel.selectedScopeID = scope.id
                     isListFocused = true
-                } label: {
-                    ScopeRow(
-                        scope: scope,
-                        isSelected: viewModel.selectedScopeID == scope.id
-                    )
                 }
-                .buttonStyle(.plain)
                 .id(scope.id)
-                .accessibilityIdentifier(AccessibilityID.Main.environment(scope.title))
                 .contextMenu {
                     ScopeContextMenu(scope: scope, viewModel: viewModel)
                 }
             }
-            NewEnvironmentButton(viewModel: viewModel)
-                .padding(.top, Theme.Spacing.xxSmall)
             DestinationsSection(viewModel: viewModel, isListFocused: $isListFocused)
+                .padding(.leading, Theme.Layout.sidebarTreeIndent * 2)
                 .padding(.top, Theme.Spacing.small)
         }
-        .padding(.leading, Theme.Layout.sidebarTreeIndent)
-        .padding(.bottom, Theme.Spacing.small)
         .mainColumnKeyboardSelection(
             ids: viewModel.rowIDs,
             selection: $viewModel.selectedScopeID,
@@ -124,8 +110,8 @@ private struct DestinationsSection: View {
 }
 
 /// One destination row: provider symbol, name, stage, value-missing warning, pending dot and the
-/// mono item count. The sidebar's Key Vaults of their own use it too.
-struct DestinationRow: View {
+/// mono item count.
+private struct DestinationRow: View {
     let destination: DestinationModel
     let isSelected: Bool
 
@@ -157,17 +143,12 @@ struct DestinationRow: View {
                     .accessibilityLabel(help)
             }
             if destination.pendingCount > 0 {
-                Circle()
-                    .fill(Theme.Colors.brand)
-                    .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
-                    .help(String(localized: "main.scopes.pending.help", defaultValue: "Pending changes"))
-                    .accessibilityLabel(String(localized: "main.scopes.pending.help", defaultValue: "Pending changes"))
+                SidebarPendingDot()
             }
-            Text(destination.itemCount, format: .number)
-                .font(Theme.Typography.monoLabel)
-                .monospacedDigit()
-                .foregroundStyle(Theme.Colors.subtleText)
-                .accessibilityLabel(String(localized: "main.scopes.itemCount", defaultValue: "\(destination.itemCount) items"))
+            SidebarCount(
+                value: destination.itemCount,
+                help: String(localized: "main.scopes.itemCount", defaultValue: "\(destination.itemCount) items")
+            )
         }
         .fxRowBackground(isSelected: isSelected, style: .sidebar)
     }
@@ -221,86 +202,49 @@ struct DestinationContextMenu: View {
     }
 }
 
-/// One scope row: title (500 when selected, struck through when deleted), the rename note, the
-/// value-missing warning, the brand pending dot and the mono item count.
+/// One environment under the selected repository (level 2): struck through when deleted, the
+/// rename note under it, and on the right the secrets without a value and the pending dot.
 private struct ScopeRow: View {
     let scope: ConfigScopeSummaryModel
     let isSelected: Bool
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.mediumMinus) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                Text(verbatim: scope.title)
-                    .font(isSelected ? Theme.Typography.calloutEmphasized : Theme.Typography.callout)
-                    .strikethrough(scope.isDeleted)
-                    .foregroundStyle(scope.isDeleted ? Theme.Colors.subtleText : Theme.Colors.ink)
-                    .lineLimit(1)
-                if let renamedFrom = scope.renamedFrom {
-                    Text(String(localized: "main.scopes.renamedFrom", defaultValue: "Renamed from \(renamedFrom)"))
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.mutedText)
-                        .lineLimit(1)
-                }
-            }
-            .padding(.vertical, Theme.Spacing.xSmall)
-            Spacer(minLength: 0)
-            if scope.valueMissingCount > 0 {
-                let help = String(
-                    localized: "main.scopes.valueMissing.help",
-                    defaultValue: "\(scope.valueMissingCount) secrets have no value in FX Vault"
+        VStack(alignment: .leading, spacing: 0) {
+            row
+            if let renamedFrom = scope.renamedFrom {
+                SidebarSubline(
+                    level: 2,
+                    text: String(localized: "main.scopes.renamedFrom", defaultValue: "Renamed from \(renamedFrom)")
                 )
-                Image(systemName: "exclamationmark.triangle")
-                    .font(Theme.Typography.monoLabel)
-                    .foregroundStyle(Theme.Colors.warning)
-                    .help(help)
-                    .accessibilityLabel(help)
             }
-            if scope.hasPendingChanges {
-                Circle()
-                    .fill(Theme.Colors.brand)
-                    .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
-                    .help(String(localized: "main.scopes.pending.help", defaultValue: "Pending changes"))
-                    .accessibilityLabel(String(localized: "main.scopes.pending.help", defaultValue: "Pending changes"))
-            }
-            Text(scope.itemCount, format: .number)
-                .font(Theme.Typography.monoLabel)
-                .monospacedDigit()
-                .foregroundStyle(Theme.Colors.subtleText)
-                .accessibilityLabel(String(localized: "main.scopes.itemCount", defaultValue: "\(scope.itemCount) items"))
         }
-        .fxRowBackground(isSelected: isSelected, style: .sidebar)
     }
-}
 
-/// "+ New environment" as a dashed hairline-strong row (mockup Main).
-private struct NewEnvironmentButton: View {
-    let viewModel: ScopeListViewModel
-
-    var body: some View {
-        let isEnabled = viewModel.canCreateEnvironment
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-        Button {
-            viewModel.newEnvironment()
-        } label: {
-            Label(String(localized: "main.scopes.newEnvironment", defaultValue: "New Environment"), systemImage: "plus")
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.mutedText)
-                .padding(.horizontal, Theme.Spacing.mediumMinus)
-                .frame(maxWidth: .infinity, minHeight: Theme.Layout.sidebarRowHeight, alignment: .leading)
-                .overlay(
-                    shape.strokeBorder(
-                        Theme.Colors.hairlineStrong,
-                        style: StrokeStyle(lineWidth: Theme.Stroke.hairline, dash: Theme.Stroke.dashPattern)
+    private var row: some View {
+        SidebarTreeRow(
+            level: 2,
+            systemImage: Theme.Symbols.environment,
+            title: scope.title,
+            isSelected: isSelected,
+            isDimmed: scope.isDeleted,
+            isStruckThrough: scope.isDeleted,
+            accessibilityID: AccessibilityID.Main.environment(scope.title),
+            action: action
+        ) {
+            if scope.valueMissingCount > 0 {
+                SidebarCount(
+                    value: scope.valueMissingCount,
+                    help: String(
+                        localized: "main.scopes.valueMissing.help",
+                        defaultValue: "\(scope.valueMissingCount) secrets have no value in FX Vault"
                     )
                 )
-                .contentShape(shape)
+            }
+            if scope.hasPendingChanges {
+                SidebarPendingDot()
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
-        .help(isEnabled
-            ? String(localized: "main.scopes.newEnvironment.help", defaultValue: "Add an environment to this repository")
-            : String(localized: "main.scopes.newEnvironment.adminRequired", defaultValue: "Environments need admin rights on the repository"))
     }
 }
 

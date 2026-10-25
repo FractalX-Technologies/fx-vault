@@ -174,7 +174,7 @@ struct OrganizationImportPromptView: View {
     let sidebar: SidebarViewModel
 
     var body: some View {
-        EmptyStateView(systemImage: "building.2", title: owner.login, message: OrganizationCopy.importMessage) {
+        EmptyStateView(systemImage: Theme.Symbols.organization, title: owner.login, message: OrganizationCopy.importMessage) {
             if sidebar.isBusy(owner) {
                 ProgressView()
                     .controlSize(.small)

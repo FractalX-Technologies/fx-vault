@@ -1,55 +1,47 @@
 import SwiftUI
 import VaultCore
 
-/// The sidebar tree (§10; mockups Main2-Home and Main2-Repository): GITHUB with each account and
-/// its scope warning, owner groups (Personal, then organizations, with a SAML notice where needed
-/// and the organization's own row first), repositories with badges, the selected repository's
-/// environments and destinations nested under it, and "Add repository by name…" per account;
-/// then AZURE KEY VAULT (when there is one), FOLDERS, and a mono status line at the bottom. It sits on the window's native sidebar
-/// glass (1.0).
-///
-/// The rows are drawn with `.fxRowBackground(style: .sidebar)` instead of a native `List`
-/// selection; ``MainColumnSelection`` keeps Up and Down.
+/// The sidebar (§10; boards Main2-Home, Main2-Expanded, Main2-Repository): search (⌘F), GitHub
+/// owners › repositories › environments, Azure, Folders, then Lock and Settings. It sits in the
+/// window's floating glass sidebar; ``MainColumnSelection`` keeps Up and Down on custom rows.
 struct SidebarView: View {
     let main: MainViewModel
-    @State private var collapsedOwnerIDs: Set<SidebarOwnerModel.ID> = []
     @FocusState private var isListFocused: Bool
 
     var body: some View {
         @Bindable var sidebar = main.sidebar
-        let sections = sidebar.sections
-        VStack(spacing: 0) {
+        let owners = sidebar.owners
+        VStack(spacing: Theme.Spacing.small) {
             if main.showsRecoveryKeyReminder {
                 RecoveryKeyReminderView()
                     .padding([.horizontal, .top], Theme.Spacing.medium)
             }
+            SidebarSearchField(sidebar: sidebar)
+                .padding(.horizontal, Theme.Spacing.medium)
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-                    if sections.isEmpty {
+                LazyVStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+                    SidebarSectionHeader(MainCopy.gitHubSection)
+                    if owners.isEmpty {
                         emptyState
-                            .padding(.vertical, Theme.Spacing.xLarge)
-                    } else {
-                        SectionLabel(MainCopy.gitHubSection)
-                            .padding(.horizontal, Theme.Spacing.small)
-                            .padding(.bottom, Theme.Spacing.small)
-                        ForEach(sections) { account in
-                            accountSection(account)
-                        }
+                            .padding(.vertical, Theme.Spacing.large)
+                    }
+                    ForEach(owners) { owner in
+                        OwnerNodeView(owner: owner, main: main, isListFocused: $isListFocused)
                     }
                     SidebarKeyVaultsSection(sidebar: sidebar)
-                        .padding(.top, Theme.Spacing.large)
+                        .padding(.top, Theme.Spacing.smallMinus)
                     SidebarFoldersSection(main: main)
-                        .padding(.top, Theme.Spacing.large)
+                        .padding(.top, Theme.Spacing.smallMinus)
                 }
-                .padding(.horizontal, Theme.Spacing.medium)
-                .padding(.vertical, Theme.Spacing.largePlus)
+                .padding(.horizontal, Theme.Spacing.small)
+                .padding(.bottom, Theme.Spacing.small)
             }
             .mainColumnKeyboardSelection(
-                ids: visibleRepoIDs(in: sections),
+                ids: visibleRepoIDs(in: owners),
                 selection: $sidebar.selectedRowID,
                 isFocused: $isListFocused
             )
-            SidebarFooter(sidebar: sidebar, autoLockMinutes: main.app.container.preferences.autoLockMinutes)
+            SidebarFooter(main: main)
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(AccessibilityID.Main.sidebar)
@@ -107,6 +99,13 @@ struct SidebarView: View {
         }
     }
 
+    private var removalBinding: Binding<Bool> {
+        Binding(
+            get: { main.sidebar.pendingRemoval != nil },
+            set: { if !$0 { main.sidebar.pendingRemoval = nil } }
+        )
+    }
+
     private var organizationRemovalBinding: Binding<Bool> {
         Binding(
             get: { main.sidebar.pendingOrganizationRemoval != nil },
@@ -128,35 +127,6 @@ struct SidebarView: View {
         )
     }
 
-    /// One account: its row, the catalog error, the owner groups and "Add repository by name…".
-    @ViewBuilder
-    private func accountSection(_ account: SidebarAccountModel) -> some View {
-        let sidebar = main.sidebar
-        SidebarAccountRow(account: account)
-        if let error = sidebar.catalogError(for: account.id) {
-            SidebarNoticeRow(systemImage: "exclamationmark.triangle", text: error.message)
-        }
-        ForEach(account.owners) { owner in
-            let isExpanded = !collapsedOwnerIDs.contains(owner.id)
-            OwnerHeader(owner: owner, isExpanded: isExpanded) {
-                toggle(owner.id)
-            }
-            if isExpanded {
-                OwnerContentView(owner: owner, main: main) { repo in
-                    main.select(repository: repo)
-                    isListFocused = true
-                } onSelectOrganization: {
-                    sidebar.select(organization: owner)
-                    isListFocused = true
-                }
-            }
-        }
-        if account.isLoggedIn {
-            AddByNameButton(main: main, accountLogin: account.login)
-                .padding(.top, Theme.Spacing.small)
-        }
-    }
-
     private var emptyState: some View {
         EmptyStateView(
             systemImage: "person.crop.circle.badge.questionmark",
@@ -175,316 +145,273 @@ struct SidebarView: View {
         )
     }
 
-    /// The repositories the arrow keys walk through: those of expanded owner groups, in order.
-    private func visibleRepoIDs(in sections: [SidebarAccountModel]) -> [SidebarRepoModel.ID] {
-        sections.flatMap { account in
-            account.owners
-                .filter { !collapsedOwnerIDs.contains($0.id) }
-                .flatMap { $0.repos.map(\.id) }
-        }
-    }
-
-    private func toggle(_ id: SidebarOwnerModel.ID) {
-        withAnimation(Theme.Durations.interactionAnimation) {
-            if collapsedOwnerIDs.contains(id) {
-                collapsedOwnerIDs.remove(id)
-            } else {
-                collapsedOwnerIDs.insert(id)
-            }
-        }
-    }
-
-    private var removalBinding: Binding<Bool> {
-        Binding(
-            get: { main.sidebar.pendingRemoval != nil },
-            set: { if !$0 { main.sidebar.pendingRemoval = nil } }
-        )
+    /// The repositories the arrow keys walk through: those on screen, in order.
+    private func visibleRepoIDs(in owners: [SidebarOwnerModel]) -> [SidebarRepoModel.ID] {
+        let sidebar = main.sidebar
+        return owners
+            .filter { sidebar.isExpanded($0) }
+            .flatMap { sidebar.repoList(of: $0).shown.map(\.id) }
     }
 }
 
-/// The account row (mockup ACCOUNTS): an ink initials circle, the login and, when relevant, the
-/// scope warning or "Not logged in" on a mono line.
-private struct SidebarAccountRow: View {
-    let account: SidebarAccountModel
+/// The search field at the top (board Main2-Home): it filters the whole tree. Edit › Find (⌘F)
+/// focuses it; its ⌘F key does too when clicked.
+private struct SidebarSearchField: View {
+    @Bindable var sidebar: SidebarViewModel
+    @FocusState private var isFocused: Bool
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.mediumMinus) {
-            Text(verbatim: account.initials)
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.compactRow, style: .continuous)
+        HStack(spacing: Theme.Spacing.smallMinus) {
+            Image(systemName: "magnifyingglass")
                 .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.onInk)
-                .frame(width: Theme.Layout.avatarSize, height: Theme.Layout.avatarSize)
-                .background(Theme.Colors.ink, in: Circle())
+                .foregroundStyle(Theme.Colors.subtleText)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                Text(verbatim: account.login)
-                    .font(Theme.Typography.calloutEmphasized)
-                    .foregroundStyle(Theme.Colors.ink)
-                    .lineLimit(1)
-                if !account.isLoggedIn {
-                    Text(String(localized: "main.sidebar.notLoggedIn", defaultValue: "Not logged in"))
-                        .font(Theme.Typography.monoLabel)
-                        .foregroundStyle(Theme.Colors.subtleText)
-                } else if account.hasScopeWarning {
-                    Label {
-                        Text(String(localized: "main.sidebar.scopeWarning.short", defaultValue: "Missing scopes"))
-                            .font(Theme.Typography.monoLabel)
-                            .foregroundStyle(Theme.Colors.subtleText)
-                    } icon: {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(Theme.Typography.monoLabel)
-                            .foregroundStyle(Theme.Colors.warning)
-                    }
-                    .help(String(
-                        localized: "main.sidebar.scopeWarning",
-                        defaultValue: "This account's token lacks: \(account.missingScopes.joined(separator: ", ")). See Settings › Accounts."
-                    ))
+            TextField(SidebarCopy.searchPrompt, text: $sidebar.searchText)
+                .textFieldStyle(.plain)
+                .font(Theme.Typography.caption)
+                .focused($isFocused)
+                .accessibilityLabel(SidebarCopy.searchLabel)
+                .accessibilityIdentifier(AccessibilityID.Main.sidebarSearch)
+                .onExitCommand {
+                    sidebar.searchText = ""
                 }
+            Button {
+                sidebar.focusSearch()
+            } label: {
+                KeyHint("⌘F")
             }
-            Spacer(minLength: 0)
+            .buttonStyle(.plain)
+            .help(SidebarCopy.searchShortcut)
+            .accessibilityLabel(SidebarCopy.searchShortcut)
         }
-        .padding(Theme.Spacing.small)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
+        .padding(.horizontal, Theme.Spacing.small)
+        .frame(height: Theme.Layout.sidebarControlHeight)
+        .background(Theme.Colors.surface2, in: shape)
+        .task(id: sidebar.searchFocusRequest) {
+            await takeFocus()
+        }
+        .onChange(of: isFocused) { _, isFocused in
+            if isFocused {
+                sidebar.didFocusSearch()
+            }
+        }
+    }
+
+    /// Edit › Find on a hidden sidebar asks while the column is still hidden, where the focus
+    /// cannot land and SwiftUI drops it: the request is retried while the column slides back,
+    /// until the field has the focus, then dropped (a newer request cancels this loop).
+    private func takeFocus() async {
+        let attempts = Int(Theme.Durations.focusTimeout / Theme.Durations.focusRetry)
+        for _ in 0..<attempts {
+            guard sidebar.isSearchFocusPending else { return }
+            if isFocused {
+                sidebar.didFocusSearch()
+                return
+            }
+            isFocused = true
+            do {
+                try await Task.sleep(for: Theme.Durations.focusRetry)
+            } catch {
+                return
+            }
+        }
+        if !isFocused {
+            sidebar.cancelSearchFocus()
+        }
     }
 }
 
-/// "Personal" or the organization's login as a mono label, with a warning when it could not be
-/// listed; clicking it collapses or expands the group.
-private struct OwnerHeader: View {
-    let owner: SidebarOwnerModel
-    let isExpanded: Bool
-    let onToggle: () -> Void
-
-    var body: some View {
-        Button(action: onToggle) {
-            HStack(spacing: Theme.Spacing.smallMinus) {
-                SectionLabel(title)
-                if owner.failure != nil {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(Theme.Typography.monoLabel)
-                        .foregroundStyle(Theme.Colors.warning)
-                        .accessibilityLabel(String(localized: "main.sidebar.ownerUnavailable", defaultValue: "Could not be listed"))
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.down")
-                    .font(Theme.Typography.monoLabel)
-                    .foregroundStyle(Theme.Colors.subtleText)
-                    .rotationEffect(isExpanded ? .zero : .degrees(-90))
-                    .accessibilityHidden(true)
-            }
-            .padding(.horizontal, Theme.Spacing.small)
-            .padding(.top, Theme.Spacing.large)
-            .padding(.bottom, Theme.Spacing.smallMinus)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityValue(isExpanded
-            ? String(localized: "main.sidebar.owner.expanded", defaultValue: "Expanded")
-            : String(localized: "main.sidebar.owner.collapsed", defaultValue: "Collapsed"))
-    }
-
-    private var title: String {
-        owner.isAccount
-            ? String(localized: "main.sidebar.personal", defaultValue: "Personal")
-            : owner.login
-    }
-}
-
-/// The rows of one owner group: the SAML or failure notice, the organization's own row (1.0),
-/// the truncation note, then the repositories.
-private struct OwnerContentView: View {
+/// One owner under GitHub: its node, the subline when it needs attention, then (expanded) its
+/// repositories, "Show N more" and the selected repository's environments.
+private struct OwnerNodeView: View {
     let owner: SidebarOwnerModel
     let main: MainViewModel
-    let onSelect: (SidebarRepoModel) -> Void
-    let onSelectOrganization: () -> Void
+    var isListFocused: FocusState<Bool>.Binding
+    @Environment(\.openSettings) private var openSettings
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
-        if owner.isOrganization {
-            Button(action: onSelectOrganization) {
-                SidebarOrganizationRow(
-                    owner: owner,
-                    isBusy: main.sidebar.isBusy(owner),
-                    isSelected: main.sidebar.selectedOrganizationOwnerID == owner.id
-                )
+        let sidebar = main.sidebar
+        let isExpanded = sidebar.isExpanded(owner)
+        SidebarTreeRow(
+            level: 0,
+            isExpanded: isExpanded,
+            systemImage: owner.isOrganization ? Theme.Symbols.organization : Theme.Symbols.person,
+            title: owner.login,
+            isSelected: sidebar.selectedOrganizationOwnerID == owner.id,
+            accessibilityID: owner.isOrganization ? AccessibilityID.Main.organization(owner.login) : nil,
+            toggleAccessibilityID: AccessibilityID.Main.ownerToggle(owner.login),
+            onToggle: toggle
+        ) {
+            if owner.isOrganization {
+                sidebar.select(organization: owner)
+                isListFocused.wrappedValue = true
+            } else {
+                toggle()
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier(AccessibilityID.Main.organization(owner.login))
-            .contextMenu {
-                if let organization = owner.organization {
-                    Button(OrganizationCopy.remove, role: .destructive) {
-                        main.sidebar.requestRemoval(organization)
-                    }
-                } else {
-                    Button(OrganizationCopy.importButton) {
-                        Task { await main.sidebar.importOrganization(owner) }
-                    }
-                    .disabled(!main.sidebar.canImportOrganization(owner))
-                }
-            }
-        }
-        if owner.requiresSAML {
-            SAMLNoticeRow(owner: owner)
-        } else if let failure = owner.failure {
-            SidebarNoticeRow(systemImage: "exclamationmark.triangle", text: failure.presentation.message)
-        }
-        if owner.isTruncated {
-            SidebarNoticeRow(
-                systemImage: "ellipsis",
-                text: String(
-                    localized: "main.sidebar.truncated",
-                    defaultValue: "List truncated. Use Add repository by name… for the rest."
-                )
-            )
-        }
-        ForEach(owner.repos) { repo in
-            Button {
-                onSelect(repo)
-            } label: {
-                SidebarRepoRow(
-                    repo: repo,
-                    isBusy: main.sidebar.isBusy(repo),
-                    isSelected: main.isRowSelected(repo)
-                )
-            }
-            .buttonStyle(.plain)
-            .id(repo.id)
-            .contextMenu {
-                RepoContextMenu(repo: repo, main: main)
-            }
-            if main.sidebar.selectedRowID == repo.id, let scopeList = main.scopeList {
-                ScopeListView(viewModel: scopeList)
-            }
-        }
-    }
-}
-
-/// "SAML single sign-on required · Authorize in the browser" for an organization that enforces
-/// SAML.
-private struct SAMLNoticeRow: View {
-    let owner: SidebarOwnerModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-            Label {
-                Text(String(localized: "main.sidebar.saml", defaultValue: "SAML single sign-on required"))
-                    .foregroundStyle(Theme.Colors.mutedText)
-            } icon: {
-                Image(systemName: "lock.shield")
-                    .foregroundStyle(Theme.Colors.warning)
-            }
-            if let url = owner.samlAuthorizationURL {
-                Link(String(localized: "main.sidebar.saml.authorize", defaultValue: "Authorize in the browser"), destination: url)
-                    .foregroundStyle(Theme.Colors.brand)
-            }
-        }
-        .font(Theme.Typography.caption)
-        .padding(.horizontal, Theme.Spacing.small)
-        .padding(.vertical, Theme.Spacing.xSmall)
-    }
-}
-
-/// A small note inside the column.
-private struct SidebarNoticeRow: View {
-    let systemImage: String
-    let text: String
-
-    var body: some View {
-        Label(text, systemImage: systemImage)
-            .font(Theme.Typography.caption)
-            .foregroundStyle(Theme.Colors.mutedText)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, Theme.Spacing.small)
-            .padding(.vertical, Theme.Spacing.xSmall)
-    }
-}
-
-/// One repository (32 pt, `surface2` when selected): name in ink when imported and subtle when
-/// not, badges, and "Import" in brand for a repository that is not in the vault yet.
-private struct SidebarRepoRow: View {
-    let repo: SidebarRepoModel
-    let isBusy: Bool
-    let isSelected: Bool
-
-    var body: some View {
-        HStack(spacing: Theme.Spacing.mediumMinus) {
-            Image(systemName: "book.closed")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(nameColor)
-                .accessibilityHidden(true)
-            Text(verbatim: repo.name)
-                .font(Theme.Typography.callout)
-                .foregroundStyle(nameColor)
-                .lineLimit(1)
-                .truncationMode(.middle)
-            Spacer(minLength: 0)
-            if isBusy {
+        } trailing: {
+            if sidebar.isBusy(owner) {
                 ProgressView()
                     .controlSize(.mini)
             }
-            ForEach(repo.badges, id: \.self) { badge in
+            if hasPendingChanges {
+                SidebarPendingDot()
+            }
+        }
+        .contextMenu {
+            OwnerContextMenu(owner: owner, main: main)
+        }
+        if let problem = SidebarGrouping.shownProblem(of: owner, isSelected: sidebar.selectedOrganizationOwnerID == owner.id) {
+            subline(problem)
+        }
+        if isExpanded {
+            let list = sidebar.repoList(of: owner)
+            ForEach(list.shown) { repo in
+                RepoNodeView(repo: repo, main: main, isListFocused: isListFocused)
+            }
+            if list.hiddenCount > 0 {
+                Button(SidebarCopy.showMore(list.hiddenCount)) {
+                    withAnimation(Theme.Durations.interactionAnimation) {
+                        sidebar.showAllRepositories(of: owner)
+                    }
+                }
+                .buttonStyle(.plain)
+                .font(Theme.Typography.label)
+                .foregroundStyle(Theme.Colors.subtleText)
+                .frame(height: Theme.Layout.sidebarRowHeight)
+                .padding(.leading, SidebarSubline.nameInset(level: 0))
+                .accessibilityIdentifier(AccessibilityID.Main.showMore(owner.login))
+            } else if owner.isTruncated {
+                SidebarSubline(
+                    level: 1,
+                    text: String(
+                        localized: "main.sidebar.truncated",
+                        defaultValue: "List truncated. Use Add repository by name… for the rest."
+                    )
+                )
+            }
+        }
+    }
+
+    private func toggle() {
+        withAnimation(Theme.Durations.interactionAnimation) {
+            main.sidebar.toggle(owner)
+        }
+    }
+
+    /// The organization's own changes or a repository's, so a collapsed node still shows them.
+    private var hasPendingChanges: Bool {
+        let app = main.app
+        if let id = owner.organization?.id, app.organizationPendingCounts[id, default: 0] > 0 { return true }
+        return owner.repos.contains { repo in
+            repo.importedRepoID.map { app.pendingChangeCount(of: $0) > 0 } ?? false
+        }
+    }
+
+    private func subline(_ problem: SidebarOwnerProblem) -> some View {
+        let copy = SidebarCopy.subline(problem)
+        var help: String?
+        if case .unavailable(let error) = problem {
+            help = error.presentation.message
+        }
+        return SidebarSubline(level: 0, text: copy.text, actionTitle: copy.action, help: help) {
+            if case .ssoRequired(let url?) = problem {
+                openURL(url)
+            } else {
+                // In-app approval is B4b; until then Approve opens Settings › Accounts.
+                main.requestAccountsSettings()
+                openSettings()
+            }
+        }
+    }
+}
+
+/// One repository under its owner: dimmed until imported; the selected one shows its
+/// environments under it.
+private struct RepoNodeView: View {
+    let repo: SidebarRepoModel
+    let main: MainViewModel
+    var isListFocused: FocusState<Bool>.Binding
+
+    var body: some View {
+        let sidebar = main.sidebar
+        let isOpen = sidebar.selectedRowID == repo.id
+        SidebarTreeRow(
+            level: 1,
+            isExpanded: repo.isImported ? isOpen : nil,
+            systemImage: Theme.Symbols.repository,
+            title: repo.name,
+            isSelected: main.isRowSelected(repo),
+            isDimmed: !repo.isImported,
+            toggleLabel: SidebarCopy.openRepository(repo.name),
+            onToggle: select
+        ) {
+            select()
+        } trailing: {
+            if sidebar.isBusy(repo) {
+                ProgressView()
+                    .controlSize(.mini)
+            }
+            ForEach(repo.badges.filter(\.needsAttention), id: \.self) { badge in
                 Image(systemName: badge.systemImage)
                     .font(Theme.Typography.monoLabel)
                     .foregroundStyle(badge.tint)
                     .help(badge.title)
                     .accessibilityLabel(badge.title)
             }
-            if !repo.isImported {
-                Text(String(localized: "main.sidebar.import", defaultValue: "Import"))
-                    .font(Theme.Typography.monoLabel)
-                    .foregroundStyle(Theme.Colors.brand)
+            if let id = repo.importedRepoID, main.app.pendingChangeCount(of: id) > 0 {
+                SidebarPendingDot()
             }
         }
-        .fxRowBackground(isSelected: isSelected, style: .sidebar)
-        .help(repo.fullName)
+        .id(repo.id)
+        .help(([repo.fullName] + repo.badges.map(\.title)).joined(separator: " · "))
+        .contextMenu {
+            RepoContextMenu(repo: repo, main: main)
+        }
+        if isOpen, let scopeList = main.scopeList {
+            ScopeListView(viewModel: scopeList)
+        }
     }
 
-    private var nameColor: Color {
-        repo.isImported ? Theme.Colors.ink : Theme.Colors.subtleText
+    private func select() {
+        main.select(repository: repo)
+        isListFocused.wrappedValue = true
     }
 }
 
-/// An organization's own secrets and variables (1.0): the counts once imported, "Import" in
-/// brand before.
-private struct SidebarOrganizationRow: View {
+/// Import or Remove from Vault for an organization, and Add Repository by Name… through the
+/// account the owner goes through.
+private struct OwnerContextMenu: View {
     let owner: SidebarOwnerModel
-    let isBusy: Bool
-    let isSelected: Bool
+    let main: MainViewModel
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.mediumMinus) {
-            Image(systemName: "building.2")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(nameColor)
-                .accessibilityHidden(true)
-            Text(OrganizationCopy.rowTitle)
-                .font(Theme.Typography.callout)
-                .foregroundStyle(nameColor)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            if isBusy {
-                ProgressView()
-                    .controlSize(.mini)
+        let sidebar = main.sidebar
+        if let organization = owner.organization {
+            Button(OrganizationCopy.remove, role: .destructive) {
+                sidebar.requestRemoval(organization)
             }
-            if let organization = owner.organization {
-                Text(organization.secretCount + organization.variableCount, format: .number)
-                    .font(Theme.Typography.monoLabel)
-                    .foregroundStyle(Theme.Colors.subtleText)
-            } else {
-                Text(String(localized: "main.sidebar.import", defaultValue: "Import"))
-                    .font(Theme.Typography.monoLabel)
-                    .foregroundStyle(Theme.Colors.brand)
+            Divider()
+        } else if owner.isOrganization {
+            Button(OrganizationCopy.importButton) {
+                Task { await sidebar.importOrganization(owner) }
             }
+            .disabled(!sidebar.canImportOrganization(owner))
+            Divider()
         }
-        .fxRowBackground(isSelected: isSelected, style: .sidebar)
-        .help(owner.login)
-    }
-
-    private var nameColor: Color {
-        owner.organization != nil ? Theme.Colors.ink : Theme.Colors.subtleText
+        Button(SidebarCopy.addByName) {
+            main.addRepositoryByName(accountLogin: owner.accountLogin)
+        }
+        .disabled(!sidebar.canAddByName)
+        .help(main.networkHelp(String(
+            localized: "main.sidebar.addByName.help",
+            defaultValue: "Find a repository this account reaches as a collaborator"
+        )))
     }
 }
 
-/// Import / Clone / Share… / Remove from vault.
+/// Import, or New Environment… / Clone… / Share… / Remove from Vault….
 private struct RepoContextMenu: View {
     let repo: SidebarRepoModel
     let main: MainViewModel
@@ -501,6 +428,18 @@ private struct RepoContextMenu: View {
                 defaultValue: "Read this repository's environments, secrets and variables from GitHub"
             )))
         } else {
+            let canCreateEnvironment = main.canCreateEnvironment(in: repo)
+            Button(SidebarCopy.newEnvironment) {
+                main.newEnvironment(in: repo)
+            }
+            .disabled(!canCreateEnvironment)
+            .help(canCreateEnvironment
+                ? String(localized: "main.scopes.newEnvironment.help", defaultValue: "Add an environment to this repository")
+                : String(
+                    localized: "main.scopes.newEnvironment.adminRequired",
+                    defaultValue: "Environments need admin rights on the repository"
+                ))
+            Divider()
             Button(String(localized: "main.sidebar.clone", defaultValue: "Clone…")) {
                 guard let folder = ClonePanel.folder(for: main) else { return }
                 Task { await sidebar.clone(repo, into: folder) }
@@ -524,43 +463,14 @@ private struct RepoContextMenu: View {
     }
 }
 
-/// "+ Add repository by name…" for one account, as a quiet 32 pt row.
-private struct AddByNameButton: View {
-    let main: MainViewModel
-    let accountLogin: String
-
-    var body: some View {
-        let isEnabled = main.sidebar.canAddByName
-        Button {
-            main.addRepositoryByName(accountLogin: accountLogin)
-        } label: {
-            Label(
-                String(localized: "main.sidebar.addByName", defaultValue: "Add repository by name…"),
-                systemImage: "plus"
-            )
-            .font(Theme.Typography.callout)
-            .foregroundStyle(Theme.Colors.mutedText)
-            .fxRowBackground(isSelected: false, style: .sidebar)
-        }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
-        .help(main.networkHelp(String(
-            localized: "main.sidebar.addByName.help",
-            defaultValue: "Find a repository this account reaches as a collaborator"
-        )))
-    }
-}
-
-/// The bottom of the column: loading state, errors and the last confirmation, then the mono
-/// status line ("UNLOCKED · AUTO-LOCK 5 MIN").
+/// The bottom of the sidebar: the listing state, an error or the last confirmation, then Lock
+/// and Settings (board Main2-Home).
 private struct SidebarFooter: View {
-    let sidebar: SidebarViewModel
-    let autoLockMinutes: Int
+    let main: MainViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            HairlineDivider()
+        let sidebar = main.sidebar
+        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
             Group {
                 if sidebar.isLoadingCatalog {
                     HStack(spacing: Theme.Spacing.small) {
@@ -568,7 +478,7 @@ private struct SidebarFooter: View {
                             .controlSize(.small)
                         Text(String(localized: "main.sidebar.loading", defaultValue: "Listing repositories…"))
                     }
-                } else if let error = sidebar.accountsError {
+                } else if let error = sidebar.accountsError ?? sidebar.catalogError {
                     Label {
                         Text(error.message)
                     } icon: {
@@ -579,21 +489,38 @@ private struct SidebarFooter: View {
                     Text(notice)
                 }
             }
-            .font(Theme.Typography.caption)
-            .foregroundStyle(Theme.Colors.mutedText)
+            .font(Theme.Typography.label)
+            .foregroundStyle(Theme.Colors.subtleText)
             .lineLimit(2)
             .padding(.horizontal, Theme.Spacing.small)
-            Text(String(
-                localized: "main.sidebar.status",
-                defaultValue: "Unlocked · Auto-lock \(autoLockMinutes) min"
-            ))
-            .fxTextStyle(.statusLine)
-            .foregroundStyle(Theme.Colors.subtleText)
-            .lineLimit(1)
-            .padding(.horizontal, Theme.Spacing.small)
+            HStack(spacing: Theme.Spacing.xSmall) {
+                Button {
+                    main.lock()
+                } label: {
+                    footerIcon("lock")
+                }
+                .buttonStyle(.plain)
+                .help(SidebarCopy.lock)
+                .accessibilityLabel(SidebarCopy.lock)
+                SettingsLink {
+                    footerIcon("gearshape")
+                }
+                .buttonStyle(.plain)
+                .help(SidebarCopy.settings)
+                .accessibilityLabel(SidebarCopy.settings)
+                Spacer(minLength: 0)
+            }
         }
-        .padding(.horizontal, Theme.Spacing.medium)
-        .padding(.bottom, Theme.Spacing.largePlus)
+        .padding(.horizontal, Theme.Spacing.small)
+        .padding(.bottom, Theme.Spacing.small)
+    }
+
+    private func footerIcon(_ systemImage: String) -> some View {
+        Image(systemName: systemImage)
+            .font(Theme.Typography.caption)
+            .foregroundStyle(Theme.Colors.mutedText)
+            .frame(width: Theme.Layout.sidebarControlHeight, height: Theme.Layout.sidebarControlHeight)
+            .contentShape(Rectangle())
     }
 }
 
@@ -607,25 +534,6 @@ private struct RecoveryKeyReminderView: View {
                 defaultValue: "Your recovery key was not saved. Create a new one in Settings › Security."
             )
         )
-    }
-}
-
-extension SidebarAccountModel {
-    /// Two letters for the sidebar avatar (``initials(of:)``).
-    var initials: String {
-        Self.initials(of: login)
-    }
-
-    /// Two letters for the avatar: the first letters of the first two words of the login
-    /// ("admin-fractalx" → "AF"), or its first two letters ("octocat" → "OC").
-    static func initials(of login: String) -> String {
-        let words = login.split { !$0.isLetter && !$0.isNumber }
-        let letters: [Character] = if words.count >= 2 {
-            words.prefix(2).compactMap(\.first)
-        } else {
-            Array((words.first ?? Substring(login)).prefix(2))
-        }
-        return String(letters).uppercased()
     }
 }
 
@@ -655,6 +563,15 @@ extension SidebarRepoBadge {
         case .fork: String(localized: "main.badge.fork", defaultValue: "Fork")
         case .unavailable: String(localized: "main.badge.unavailable", defaultValue: "Unavailable")
         case .notOnGitHub: String(localized: "main.badge.notOnGitHub", defaultValue: "Created by the next Sync")
+        }
+    }
+
+    /// The badges a row shows; the quiet ones (private, archived, fork) are in its help only, so
+    /// the tree stays as calm as board Main2.
+    var needsAttention: Bool {
+        switch self {
+        case .unavailable, .notOnGitHub: true
+        case .private, .archived, .fork: false
         }
     }
 }

@@ -24,18 +24,18 @@ struct OrganizationViewModelTests {
         OrganizationModel(login: login, accountLogin: account, secretCount: 2, variableCount: 1, createdAt: ManualClock.defaultStart, updatedAt: ManualClock.defaultStart)
     }
 
-    /// The Example-Org group of user-a, before or after its import.
+    /// The Example-Org node (through user-a), before or after its import.
     static func owner(organization: OrganizationModel? = nil) -> SidebarOwnerModel {
         SidebarOwnerModel(
-            id: "user-a/example-org",
+            id: "example-org",
             login: "Example-Org",
             accountLogin: "user-a",
             ownerType: .organization,
-            isAccount: false,
-            failure: nil,
+            isPersonal: false,
             isTruncated: false,
             repos: [],
-            organization: organization
+            organization: organization,
+            problem: nil
         )
     }
 
@@ -56,7 +56,7 @@ struct OrganizationViewModelTests {
         let example = Self.organization("example-org")
         input.vaultOrganizations = [example, Self.organization("Gone-Org")]
 
-        let owners = try #require(SidebarGrouping.sections(input, query: "").first).owners
+        let owners = SidebarGrouping.owners(input, query: "")
         let exampleGroup = try #require(owners.first { $0.login == "Example-Org" })
         #expect(exampleGroup.organization == example)
         #expect(exampleGroup.isOrganization)
@@ -66,10 +66,10 @@ struct OrganizationViewModelTests {
         #expect(gone.repos.isEmpty)
         #expect(gone.organization != nil)
         #expect(owners.first { $0.login == "Locked-Org" }?.organization == nil)
-        #expect(owners.first?.isOrganization == false)
+        #expect(owners.first { $0.login == "user-a" }?.isOrganization == false)
 
         // Searching its login keeps an imported organization even without matching repositories.
-        let found = SidebarGrouping.sections(input, query: "gone").flatMap(\.owners)
+        let found = SidebarGrouping.owners(input, query: "gone")
         #expect(found.map(\.login) == ["Gone-Org"])
     }
 
@@ -87,17 +87,17 @@ struct OrganizationViewModelTests {
     @Test func oneSelectionAtATime() async throws {
         let harness = try await TestHarness(vault: .unlocked)
         let sidebar = SidebarViewModel(app: harness.app)
-        sidebar.selectedRowID = "user-a|example-org/service"
+        sidebar.selectedRowID = "example-org/service"
 
         sidebar.select(organization: Self.owner())
-        #expect(sidebar.selectedOrganizationOwnerID == "user-a/example-org")
+        #expect(sidebar.selectedOrganizationOwnerID == "example-org")
         #expect(sidebar.selectedRowID == nil)
 
         sidebar.selectedFolderID = FolderID()
         #expect(sidebar.selectedOrganizationOwnerID == nil)
         sidebar.select(organization: Self.owner())
         #expect(sidebar.selectedFolderID == nil)
-        sidebar.selectedRowID = "user-a|example-org/service"
+        sidebar.selectedRowID = "example-org/service"
         #expect(sidebar.selectedOrganizationOwnerID == nil)
     }
 

@@ -114,13 +114,14 @@ is required.
 | `.leadEmphasized` | SF Pro semibold | 15 | 0 | Compact sheet title ("Review Sync") |
 | `.body` | SF Pro | 13 (18 lines) | 0 | Default; the window default font |
 | `.bodyEmphasized` | SF Pro medium | 13 | 0 | Large primary button labels, links in banners |
-| `.callout` / `.calloutEmphasized` | SF Pro / semibold | 13 | 0 | Sidebar rows, regular buttons, links |
-| `.caption` | SF Pro | 12 | 0 | Chips, captions under fields, secondary text |
+| `.callout` / `.calloutEmphasized` | SF Pro / semibold | 13 | 0 | Regular buttons, links |
+| `.caption` / `.captionEmphasized` | SF Pro / medium | 12 | 0 | Chips, captions under fields, secondary text, folder names in the sidebar |
 | `.placeName` | SF Pro semibold | 12 | 0 | A place heading a Sync summary card |
+| `.label` / `.labelEmphasized` (`.sidebarSection`) | SF Pro / medium | 11 | 0 | Sidebar sublines and "Show N more"; section headers ("GitHub") |
 | `.mono` (`Typography.monospaced`) | SF Mono | 13 | 0 | Names inside prose, recovery keys, commands |
 | `.monoName` | SF Mono | 13 | 0 | Names in tables and lists |
 | `.monoValue` | SF Mono | 13 | +0.08em | Masked values `••••••••` |
-| `.monoMeta` | SF Mono | 12 | 0 | Timestamps, counts, repository paths, Sync summary names |
+| `.monoMeta` / `.monoMetaEmphasized` | SF Mono / medium | 12 | 0 | Timestamps, counts, repository paths; names in the sidebar tree and the Sync summary |
 | `.monoCounter` | SF Mono | 12 | +0.06em | `02 / 05` |
 | `.sectionLabel` | SF Mono | 11, UPPERCASE | +0.08em | `ENVIRONMENT`, `MASTER PASSWORD`, column headers |
 | `.statusLine` | SF Mono | 11, UPPERCASE | +0.06em | `PASSWORD REQUIRED AFTER RESTART`, `WRITE LIMIT …` |
@@ -142,7 +143,7 @@ keep their own case rules.
   `.continuous` corners, whose flatter ends read as short straight edges at pill sizes;
   `scripts/lint.sh` rejects `Capsule()`.
 - **Lines** (`Theme.Stroke.hairline` = 1 pt): `hairline` by default, `hairlineStrong` for
-  controls. Dashed rows ("New Environment") use `Theme.Stroke.dashPattern` (4 / 4). Focus rings are 2 pt `brand`, 2 pt outside the shape (`Theme.Layout.focusRing*`).
+  controls. Dashed rows ("Add Destination") use `Theme.Stroke.dashPattern` (4 / 4). Focus rings are 2 pt `brand`, 2 pt outside the shape (`Theme.Layout.focusRing*`).
 - **Shadow** (`Theme.Shadow`): only `Card(.sheet)`: `shadow` color, radius 32, y 24.
 - **Motion** (`Theme.Durations`): `interaction` 0.14 s / `interactionAnimation` (ease-out) for
   hover, press, focus, selection, chips; `spring` (0.28 s, no bounce) for the selected segment,
@@ -287,7 +288,8 @@ Table(rows, selection: $selection) {
 .fxTable()                                         // card container, 16 pt, hairline, no stripes
 
 ScopeRow(scope).fxRowBackground(isSelected: isSelected, style: .scope)    // 36 pt, card + hairline
-RepoRow(repo).fxRowBackground(isSelected: isSelected, style: .sidebar)    // 32 pt, surface2
+SidebarTreeRow(level: 1, systemImage: Theme.Symbols.repository, title: repo.name, isSelected: isSelected) { select() }
+                                                   // 28 pt, surface2 when selected (.fxRowBackground(style: .sidebar))
 ```
 
 `.fxTableCell()` gives 34 pt rows (boards Main2, Org-Visibility; cell content 26 + the inset table's padding; measured on a real
@@ -334,18 +336,32 @@ foreground color, so `.primary` text still turns white on selected rows.
   detail column's leading edge; a long path drops its first steps down to the last one, then
   shows only the mark. Icon
   actions as `.fxIconButtonStyle()`; `SyncToolbarButton` last.
-- Sidebar tree (the window's native sidebar glass, no fill of its own): GITHUB, then each account
-  and its owner groups (PERSONAL, org names), 32 pt rows with `.fxRowBackground(style: .sidebar)`,
-  counts in `.monoMeta`, "Import" in `brand`; AZURE KEY VAULT after GitHub when a Key Vault of
-  its own exists (`DestinationRow`s, as under a repository; context menu and the detail's
-  Actions: Remove from FX Vault…), then FOLDERS; footer status in
-  `.statusLine`.
+- Sidebar (1.0, D6c1; boards Main2-Home, Main2-Expanded, Main2-Repository, Main2-Dark): the
+  window's floating glass sidebar (macOS 26), no fill of its own. On top the search field
+  (`surface2`, `compactRow` radius, `sidebarControlHeight`, a `KeyHint("⌘F")`; Edit › Find
+  focuses it and brings a hidden sidebar back). Then sections with a `SidebarSectionHeader` (11 pt medium, sentence case,
+  `subtleText`): GitHub, Azure, Folders (a quiet `plus` for New Folder…). Every node is a
+  `SidebarTreeRow`: 28 pt, a chevron column and a symbol column so names line up,
+  `sidebarTreeIndent` (14) per level, names in `.monoMeta` (`.monoMetaEmphasized` selected; the
+  user's own names, folders, in `.caption`), `subtleText` for a repository not in the vault and
+  for a deleted environment (struck through), marks on the right (a `SidebarCount` in
+  `monoLabel` subtle, the 6 pt `brand` `SidebarPendingDot`), `.fxRowBackground(style: .sidebar)` when selected.
+- GitHub has no account level: one node per owner (`Theme.Symbols`: `building.2` or `person`) across every gh
+  account, organizations first, then people. An organization's node is its place (selecting it opens its secrets and variables, or
+  Import); its chevron opens its repositories (`book.closed`), which list the ones in the vault
+  and the selected one, the rest behind "Show N more" (`.label` subtle). A `SidebarSubline`
+  (`.label` subtle, its action in `.labelEmphasized` ink) says what an owner needs: "Needs
+  admin:org · Approve", "Authorize SSO · Open", "Not logged in · Settings". Owners start
+  collapsed; a selection opens its owner and a search opens all. Add Repository by Name… is on
+  the owner's context menu, New Environment… on the repository's.
 - The selected imported repository's row stands for its repository scope; its environments
-  (`ScopeListView`) nest under it, `Theme.Layout.sidebarTreeIndent` in, as 32 pt sidebar rows with
-  a 6 pt `brand` dot for pending scopes and counts in `.monoMeta`, then "New environment" as a
-  dashed `hairlineStrong` row and the runtime destinations. Clicking the repository row again
+  (`ScopeListView`, `smallcircle.filled.circle`, level 2) nest under it with the secrets without
+  a value and the pending dot, then the runtime destinations. Clicking the repository row again
   goes back to the repository scope; Up and Down walk the branch once one of its rows was
   clicked.
+- Azure lists the Key Vaults of their own flat (`key`, level 0; context menu and the detail's
+  Actions: Remove from FX Vault…) until the subscriptions of 1g. The bottom of the sidebar holds
+  the listing state or the last notice in `.label`, then Lock and Settings as quiet icons.
 - Detail (`ground`, insets 28 top / 36 sides, 20 between blocks): `Banner`s first; then
   `SectionLabel("Environment")` + `.largeTitle` name + `StatusChip.tag`s + branch patterns in
   `.monoMeta`, with outline/secondary actions on the right (Clone, Refresh, and since v0.4.0
@@ -378,16 +394,14 @@ foreground color, so `.primary` text still turns white on selected rows.
 - On macOS 26+ the sidebar's rows scroll under the traffic lights and the sidebar button with the
   system's soft scroll-edge effect, as in Finder; at rest they start below the title bar.
 
-- Folders (v0.7.0): the sidebar starts with FOLDERS (`SectionLabel` and a quiet `plus` for New
-  Folder…), one 32 pt row per folder (`folder` / `folder.fill` when selected, the name in
-  `.callout` ink, the item count in `monoLabel` subtle, `.fxRowBackground(style: .sidebar)`), or
-  a quiet "New Folder…" row when there is none. A selected folder fills the detail with the folder
+- Folders (v0.7.0): one sidebar row per folder (`folder` / `folder.fill` when selected, the
+  name in `.caption`, the item count in `monoLabel` subtle), or a quiet "New Folder…" row when
+  there is none. A selected folder fills the detail with the folder
   header (FOLDER, the name in `.largeTitle`, a "Never on GitHub" tag, how its items reach
   repositories as a caption once it has some, Share as File… outline and a ••• menu) above the same Secrets / Variables pill, add actions and table as a repository, without
   the Status column.
-- Organizations (1.0, B5c; mockup Org-Visibility): each organization group starts with a 32 pt
-  "Secrets and variables" row (`building.2`, `.callout`, ink once imported and subtle before;
-  the item count in `monoLabel` subtle, or "Import" in brand). Selected, the detail shows the Import prompt (`EmptyStateView`, primary Import) or
+- Organizations (1.0, B5c; mockup Org-Visibility): the organization's own sidebar node.
+  Selected, the detail shows the Import prompt (`EmptyStateView`, primary Import) or
   the organization header (ORGANIZATION, the login in `.largeTitle`, counts in `.monoMeta` with
   "· N without value"; `.primary` Add Secret, `.secondary` Add Variable, Remove from Vault…
   outline) above a `.fxTable()`: Name (struck through when deleted), Kind, Value
@@ -398,13 +412,13 @@ foreground color, so `.primary` text still turns white on selected rows.
   secret without a value, and ACCESS: a `SegmentedPill` All / Private / Selected, the
   visibility's caption, and for Selected one `FXCheckboxRow` per repository.
 - Runtime destinations under the selected repository (v0.8.0, canvas "FX Vault Destinations"):
-  after "New Environment", `SectionLabel` RUNTIME with an Experimental `StatusChip.tag`, then one 2-line
+  after the environments, `SectionLabel` RUNTIME with an Experimental `StatusChip.tag`, then one 2-line
   row per destination: the provider symbol in `monoLabel` `mutedText`
   (`destinationSymbolWidth`, so names line up), the name in `.callout` (`.calloutEmphasized`
   when selected; tail-truncated) over "provider · stage" in `.caption` `mutedText`, then the
   value-missing `exclamationmark.triangle` in `warning`, the 6 pt `brand` pending dot and the
   count in `monoLabel` subtle, on `.fxRowBackground(style: .sidebar)`. "Add Destination" is a dashed
-  `hairlineStrong` row like "New Environment". A destination's context menu (and the detail's
+  `hairlineStrong` row. A destination's context menu (and the detail's
   ••• menu): Settings…, Export .env…, Remove from FX Vault… (destructive confirmation).
 - Destination detail (v0.8.0, canvas board 3): `SectionLabel` DESTINATION · RUNTIME, the name in
   `.largeTitle` (middle-truncated), `StatusChip.tag`s for the provider, the stage (or "No stage")
@@ -480,7 +494,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   Share as File sheet for every entry point: File › Share Project… (⌥⌘S; ⇧⌘S is Sync), Share ›
   File… (toolbar and Vault menu), a repository's or scope's Share…, and a folder's Share as File….
   Step 1, what to share: REPOSITORIES as removable chips in a
-  `FlowLayout` (`shippingbox`, `.monoName`, an `xmark.circle.fill`) with an Add Repository
+  `FlowLayout` (`Theme.Symbols.repository`, `.monoName`, an `xmark.circle.fill`) with an Add Repository
   borderless menu; STAGES as checkboxes across those repositories, a production stage with a
   `.warning` "Production" chip and its checkbox unchecked (help: "Unchecked by default. Checking it asks for Touch ID."); "Repository-level secrets and variables" as a
   checkbox beside ADJUST WHAT'S INCLUDED; then the scope tree with one root per repository (and

@@ -35,8 +35,14 @@ extension Theme {
         static let calloutEmphasized = Font.system(size: Size.callout, weight: .semibold)
         /// 12 pt. Chips, captions under fields, secondary text.
         static let caption = Font.system(size: Size.caption)
+        /// 12 pt, medium. The selected folder in the sidebar tree.
+        static let captionEmphasized = Font.system(size: Size.caption, weight: .medium)
         /// 12 pt, semibold. A place's name heading a Sync summary card.
         static let placeName = Font.system(size: Size.caption, weight: .semibold)
+        /// 11 pt. Sublines under sidebar nodes.
+        static let label = Font.system(size: Size.label)
+        /// 11 pt, medium. Sidebar section headers and the action of a subline.
+        static let labelEmphasized = Font.system(size: Size.label, weight: .medium)
 
         // MARK: SF Mono
 
@@ -44,8 +50,10 @@ extension Theme {
         static let monospaced = Font.system(size: Size.body, design: .monospaced)
         /// 13 pt mono. Names in tables and lists.
         static let monoName = Font.system(size: Size.callout, design: .monospaced)
-        /// 12 pt mono. Timestamps, counts, repository paths, metadata.
+        /// 12 pt mono. Timestamps, counts, repository paths, metadata; names in the sidebar tree.
         static let monoMeta = Font.system(size: Size.caption, design: .monospaced)
+        /// 12 pt mono, medium. The selected name in the sidebar tree.
+        static let monoMetaEmphasized = Font.system(size: Size.caption, weight: .medium, design: .monospaced)
         /// 11 pt mono. Uppercase section labels (with tracking: ``Theme/TextStyle/sectionLabel``).
         static let monoLabel = Font.system(size: Size.label, design: .monospaced)
         /// 17 pt mono, medium. Passphrase words (``Theme/TextStyle/passphraseWord``).
@@ -163,6 +171,8 @@ extension Theme.TextStyle {
     static let monoMeta = Self(font: Typography.monoMeta, size: Typography.Size.caption)
     /// 12 pt mono, +0.06em. The onboarding step counter (`02 / 05`).
     static let monoCounter = Self(font: Typography.monoMeta, size: Typography.Size.caption, trackingEm: Typography.Tracking.counter)
+    /// 11 pt, medium, sentence case. The sidebar's sections ("GitHub", "Azure", "Folders").
+    static let sidebarSection = Self(font: Typography.labelEmphasized, size: Typography.Size.label)
     /// 11 pt mono, uppercase, +0.08em. Section labels (`ENVIRONMENT`, `MASTER PASSWORD`).
     static let sectionLabel = Self(font: Typography.monoLabel, size: Typography.Size.label, trackingEm: Typography.Tracking.label, isUppercase: true)
     /// 11 pt mono, uppercase, +0.06em. Status lines (`PASSWORD REQUIRED AFTER RESTART`).

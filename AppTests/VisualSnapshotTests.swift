@@ -307,6 +307,40 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
+    /// Boards Main2-Home and Main2-Expanded: owners collapsed with nothing selected, then the
+    /// organization selected with its "Needs admin:org · Approve" subline (user-a lacks the scope).
+    @Test func mainSidebarOwners() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let membership = "user/memberships/orgs/\(MainSnapshotFixture.owner)"
+        harness.runner.respond(argumentsPrefix: ["api"]) { invocation in
+            invocation.arguments.last == membership
+                ? .success(#"{"state":"active","role":"admin"}"#)
+                : .failure(exitCode: FakeCommandRunner.unmatchedExitCode, stderr: FakeCommandRunner.unmatchedStderr)
+        }
+        await main.sidebar.reload()
+        #expect(await TestFixtures.eventually {
+            main.sidebar.owners.contains { $0.problem == .needsAdminOrg }
+        })
+        let organization = try #require(main.sidebar.owners.first { $0.isOrganization })
+        let size = CGSize(width: Theme.Layout.sidebarIdealWidth, height: Theme.Layout.windowDefaultHeight)
+
+        main.sidebar.selectedRowID = nil
+        main.sidebar.toggle(organization)
+        #expect(!main.sidebar.isExpanded(organization))
+        try await SnapshotOutput.write("main-sidebar-home", size: size) {
+            SidebarView(main: main)
+                .background(Theme.Colors.surface)
+        }
+
+        main.sidebar.select(organization: organization)
+        #expect(main.sidebar.isExpanded(organization))
+        try await SnapshotOutput.write("main-sidebar-expanded", size: size) {
+            SidebarView(main: main)
+                .background(Theme.Colors.surface)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
     @Test func mainWindowOffline() async throws {
         let (harness, main) = try await MainSnapshotFixture.make()
         harness.container.connectivity.start()
@@ -494,9 +528,9 @@ enum MainSnapshotFixture {
         let main = harness.app.makeMainViewModel()
         await main.sidebar.reload()
         #expect(await TestFixtures.eventually {
-            main.sidebar.sections.flatMap(\.owners).flatMap(\.repos).contains { $0.importedRepoID == id }
+            main.sidebar.owners.flatMap(\.repos).contains { $0.importedRepoID == id }
         })
-        let row = try #require(main.sidebar.sections.flatMap(\.owners).flatMap(\.repos).first { $0.importedRepoID == id })
+        let row = try #require(main.sidebar.owners.flatMap(\.repos).first { $0.importedRepoID == id })
         main.sidebar.selectedRowID = row.id
         let scopes = try #require(main.scopeList)
         #expect(await TestFixtures.eventually { scopes.scopes.contains { $0.environment?.name == production } })

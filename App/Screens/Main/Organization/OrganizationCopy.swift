@@ -3,7 +3,6 @@ import Foundation
 /// The organization view's texts (1.0, mockups Org-Visibility and Org-UsedBy).
 enum OrganizationCopy {
     static let eyebrow = String(localized: "organization.eyebrow", defaultValue: "Organization")
-    static let rowTitle = String(localized: "organization.row", defaultValue: "Secrets and variables")
     static let importMessage = String(
         localized: "organization.import.message",
         defaultValue: "Import this organization's own secrets and variables. Secrets arrive without values: GitHub never returns them. Reading them needs admin:org and the organization's admin role."

@@ -32,6 +32,8 @@ struct FXVaultApp: App {
         }
         .defaultSize(width: Theme.Layout.windowDefaultWidth, height: Theme.Layout.windowDefaultHeight)
         .commands {
+            // View › Show/Hide Sidebar (⌃⌘S); Edit › Find brings a hidden sidebar back.
+            SidebarCommands()
             if let viewModel = appDelegate.bootstrap.viewModel {
                 VaultCommands(viewModel: viewModel)
             }
@@ -52,8 +54,9 @@ struct FXVaultApp: App {
 }
 
 /// The menu commands (§10 Toolbar): File › New Repository (⌘N), Import .env (⇧⌘I) and Share
-/// Project… (⌥⌘S), and the Vault menu with Lock (⌃⌘L) and Sync (⇧⌘S). Commands that act on the
-/// main window reach it through the focused scene value (``FocusedValues/mainViewModel``).
+/// Project… (⌥⌘S), Edit › Find (⌘F), and the Vault menu with Lock (⌃⌘L) and Sync (⇧⌘S). Commands
+/// that act on the main window reach it through the focused scene value
+/// (``FocusedValues/mainViewModel``).
 struct VaultCommands: Commands {
     let viewModel: AppViewModel
     @FocusedValue(\.mainViewModel) private var main
@@ -85,6 +88,15 @@ struct VaultCommands: Commands {
             }
             .keyboardShortcut("s", modifiers: [.option, .command])
             .disabled(main?.canShareProject != true)
+        }
+
+        // SwiftUI adds no Find items of its own (TextEditingCommands is opt-in), so ⌘F is free.
+        CommandGroup(replacing: .textEditing) {
+            Button(String(localized: "menu.edit.find", defaultValue: "Find")) {
+                main?.findInSidebar()
+            }
+            .keyboardShortcut("f", modifiers: .command)
+            .disabled(viewModel.phase != .unlocked || main == nil)
         }
 
         CommandMenu(String(localized: "menu.vault", defaultValue: "Vault")) {

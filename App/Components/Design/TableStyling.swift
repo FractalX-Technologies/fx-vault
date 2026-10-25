@@ -45,7 +45,7 @@ extension View {
 
 /// Row treatments of the main window's columns.
 enum FXRowStyle: Sendable {
-    /// Sidebar repositories: 32 pt, 8 pt corners, selected = `surface2` fill.
+    /// Sidebar tree rows: 28 pt, 8 pt corners, selected = `surface2` fill.
     case sidebar
     /// Scopes: 36 pt, 10 pt corners, selected = `card` fill with a hairline.
     case scope

@@ -1,13 +1,14 @@
 import XCTest
 
-/// The two-column main window (tasks/todo.md B11b): an imported repository's environments sit
-/// under its sidebar row, selecting one puts it in the toolbar path, and the repository row goes
-/// back to the repository scope.
+/// The two-column main window (tasks/todo.md B11b, 1.0 D6c1): an organization's node opens to its
+/// repositories, an imported repository's environments sit under its row, selecting one puts it
+/// in the toolbar path, and the repository row goes back to the repository scope.
 final class MainTreeUITests: VaultUITestCase {
     @MainActor
     func testEnvironmentsNestUnderTheRepositoryAndFollowTheToolbarPath() throws {
         let app = launch()
         let sidebar = try onboard(app)
+        revealRepositories(of: "example-org", in: sidebar)
         let repository = sidebarRow("api-service", in: sidebar)
         click(repository)
         click(app.buttons[AccessibilityID.Main.importRepository])
@@ -23,5 +24,11 @@ final class MainTreeUITests: VaultUITestCase {
 
         click(repository)
         expect(path, toEndWith: "api-service")
+
+        // The window as drawn, to compare with board Main2-Repository (the floating sidebar).
+        let screenshot = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
+        screenshot.name = "main-window-tree"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
     }
 }

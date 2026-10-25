@@ -52,6 +52,17 @@ struct MainViewModelTests {
         #expect(!main.canCreateRepository)
     }
 
+    /// Edit › Find (⌘F) brings a hidden sidebar back before it focuses the search field, so the
+    /// command works whatever the window shows.
+    @Test func findShowsTheSidebarAndFocusesItsSearch() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
+        let main = harness.app.makeMainViewModel()
+        main.isSidebarHidden = true
+        main.findInSidebar()
+        #expect(!main.isSidebarHidden)
+        #expect(main.sidebar.searchFocusRequest == 1)
+    }
+
     @Test func newRepositoryAndNothingToShareYet() async throws {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
         let main = harness.app.makeMainViewModel()
@@ -67,8 +78,8 @@ struct MainViewModelTests {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
         let main = harness.app.makeMainViewModel()
         let id = try await harness.stageRepository(items: [TestFixtures.item(.secret, "API_TOKEN", "FXV_FIXTURE_SECRET")])
-        #expect(await TestFixtures.eventually { !main.sidebar.sections.isEmpty })
-        let row = try #require(main.sidebar.sections.first?.owners.flatMap(\.repos).first)
+        #expect(await TestFixtures.eventually { !main.sidebar.owners.isEmpty })
+        let row = try #require(main.sidebar.owners.flatMap(\.repos).first)
         main.sidebar.selectedRowID = row.id
 
         let scopes = try #require(main.scopeList)
@@ -96,6 +107,21 @@ struct MainViewModelTests {
         #expect(main.activeSheet == nil)
     }
 
+    /// 1.0 (D6c1): New Environment… moved from the dashed row to the repository's context menu,
+    /// on any imported repository; environments still need admin (v0.4.0).
+    @Test(arguments: [("ADMIN", true), ("WRITE", false)])
+    func newEnvironmentFromTheRepositoryMenuNeedsAdmin(permission: String, isAdmin: Bool) async throws {
+        let (harness, id) = try await EditorFixtures.importedHarness(permission: permission)
+        let main = harness.app.makeMainViewModel()
+        #expect(await TestFixtures.eventually { main.sidebar.owners.flatMap(\.repos).contains { $0.importedRepoID == id } })
+        let row = try #require(main.sidebar.owners.flatMap(\.repos).first { $0.importedRepoID == id })
+        #expect(main.sidebar.selectedRowID == nil, "the menu works without opening the repository")
+
+        #expect(main.canCreateEnvironment(in: row) == isAdmin)
+        main.newEnvironment(in: row)
+        #expect(main.activeSheet == (isAdmin ? .newEnvironment(NewEnvironmentContext(repositoryID: id)) : nil))
+    }
+
     /// The sidebar tree (B11b): the repository row stands for the repository scope, its
     /// environments nest under it, and the toolbar path follows the selection.
     @Test func theRepositoryRowIsItsRepositoryScopeAndThePathFollowsTheSelection() async throws {
@@ -104,8 +130,8 @@ struct MainViewModelTests {
         #expect(main.breadcrumb.isEmpty)
         let id = try await harness.stageRepository(items: [])
         try harness.data.config.createEnvironment(in: id, name: "staging")
-        #expect(await TestFixtures.eventually { !main.sidebar.sections.isEmpty })
-        let row = try #require(main.sidebar.sections.first?.owners.flatMap(\.repos).first)
+        #expect(await TestFixtures.eventually { !main.sidebar.owners.isEmpty })
+        let row = try #require(main.sidebar.owners.flatMap(\.repos).first)
 
         main.select(repository: row)
         let scopes = try #require(main.scopeList)
@@ -137,7 +163,7 @@ struct MainViewModelTests {
             stage: nil
         )
         #expect(await TestFixtures.eventually { main.sidebar.keyVaults.map(\.id) == [vaultID] })
-        #expect(await TestFixtures.eventually { !main.sidebar.sections.isEmpty })
+        #expect(await TestFixtures.eventually { !main.sidebar.owners.isEmpty })
 
         main.sidebar.selectedKeyVaultID = vaultID
         let detail = try #require(main.destinationDetail)
@@ -157,7 +183,7 @@ struct MainViewModelTests {
         #expect(main.sidebar.visibleKeyVaults.isEmpty)
         main.sidebar.searchText = ""
 
-        let row = try #require(main.sidebar.sections.first?.owners.flatMap(\.repos).first)
+        let row = try #require(main.sidebar.owners.flatMap(\.repos).first)
         main.select(repository: row)
         #expect(main.sidebar.selectedKeyVaultID == nil)
         #expect(main.scopeList?.repositoryID == repoID)
@@ -189,7 +215,7 @@ struct MainViewModelTests {
         try harness.data.config.createEnvironment(in: id, name: "staging")
         let staging = try EditorFixtures.environment(harness, id, named: "staging")
         let main = harness.app.makeMainViewModel()
-        try #require(main.sidebar.sections.isEmpty, "the sidebar must not list the repository yet")
+        try #require(main.sidebar.owners.isEmpty, "the sidebar must not list the repository yet")
 
         main.open(repositoryID: id, scope: .environment(staging.id))
         #expect(main.scopeList == nil)
