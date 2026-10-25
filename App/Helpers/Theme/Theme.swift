@@ -59,6 +59,8 @@ enum Theme {
         static let islandWidth: CGFloat = 340
         static let islandCornerRadius: CGFloat = 20
         static let islandMenuBarGap: CGFloat = 6
+        /// The setup command output box: about eight lines before it scrolls.
+        static let commandOutputMaxHeight: CGFloat = 140
         /// Widest lock-screen form and onboarding text column.
         static let lockFormWidth: CGFloat = 360
         static let onboardingTextWidth: CGFloat = 460

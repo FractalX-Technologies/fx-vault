@@ -73,6 +73,9 @@ public enum ProcessEnvironmentBuilder {
         public static let gitSSHCommand = "GIT_SSH_COMMAND"
         public static let resolvingEnvironment = "FXVAULT_RESOLVING_ENV"
         public static let term = "TERM"
+        public static let homebrewNoEnvHints = "HOMEBREW_NO_ENV_HINTS"
+        public static let homebrewNoEmoji = "HOMEBREW_NO_EMOJI"
+        public static let nonInteractive = "NONINTERACTIVE"
     }
 
     /// Keys that must never reach a child (§5.10). Asserted by tests.
@@ -94,6 +97,12 @@ public enum ProcessEnvironmentBuilder {
     public static let gitAllowedKeys: Set<String> = [
         Key.home, Key.user, Key.path, Key.sshAuthSock, Key.lang,
         Key.gitTerminalPrompt, Key.gitConfigNoSystem, Key.gitSSHCommand,
+    ]
+
+    /// Every key a Homebrew setup command may receive (1.0).
+    public static let homebrewAllowedKeys: Set<String> = [
+        Key.home, Key.user, Key.logname, Key.tmpdir, Key.path, Key.lang, Key.term, Key.noColor,
+        Key.homebrewNoEnvHints, Key.homebrewNoEmoji, Key.nonInteractive,
     ]
 
     /// Every key an ssh child may receive.
@@ -162,6 +171,24 @@ public enum ProcessEnvironmentBuilder {
         ]
         environment[Key.sshAuthSock] = shell.sshAuthSock ?? identity.sshAuthSocket
         return environment
+    }
+
+    /// The environment of an allowlisted Homebrew command: identity, Homebrew's own `bin` and
+    /// `sbin` before the system PATH, no prompts, no color. Nothing from the user's shell.
+    public static func homebrew(identity: ProcessIdentityModel, prefix: String) -> [String: String] {
+        [
+            Key.home: identity.home,
+            Key.user: identity.user,
+            Key.logname: identity.user,
+            Key.tmpdir: identity.temporaryDirectory,
+            Key.path: "\(prefix)/bin:\(prefix)/sbin:\(GHConstants.systemPATH)",
+            Key.lang: GHConstants.processLanguage,
+            Key.term: dumbTerminal,
+            Key.noColor: enabled,
+            Key.homebrewNoEnvHints: enabled,
+            Key.homebrewNoEmoji: enabled,
+            Key.nonInteractive: enabled,
+        ]
     }
 
     /// The environment of the login-shell probe (§8 A2): identity, the system PATH and the

@@ -508,6 +508,10 @@ foreground color, so `.primary` text still turns white on selected rows.
   corners 20 pt (all four without a notch, 6 pt under the menu bar). Touch ID row (symbol 24 pt,
   `.headline` "FX Vault is locked", `.caption` "Touch ID to unlock", "Use Password"), password
   pill with the reason or error line and "Recovery Key…", or "Unlocked" for 0.9 s.
+- Setup commands (board GitHubSetup): a `CommandRow` for an allowlisted brew command adds an
+  `.outline` Run before Copy; under the rows, `CommandOutputView` (`.monoMeta` `mutedText` lines on
+  `surface`, 140 pt before it scrolls, newest at the bottom) and a `.caption` line ("Done · brew
+  install gh · checked again", or the failure in `danger`).
 - Lock window (recovery and the one-time Touch ID offer only; also the lock screen in tests):
   `DotGridBackground` full window; centered column with `BrandMark(size: .brandMarkLarge)`,
   `.display` headline, `.lead` `mutedText` paragraph, a 360 pt form: `SectionLabel` + pill

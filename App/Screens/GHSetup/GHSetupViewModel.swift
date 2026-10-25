@@ -37,13 +37,18 @@ final class GHSetupViewModel {
     private(set) var copiedCommand: String?
     /// True after **Copy Diagnostics** put the report on the clipboard.
     private(set) var hasCopiedDiagnostics = false
+    /// A trusted Homebrew can run the allowlisted commands (1.0): their rows offer **Run**.
+    private(set) var canRunCommands = false
+    private(set) var runningCommand: SetupCommand?
+    /// The last **Run**: its output, and whether it succeeded.
+    private(set) var lastRun: SetupRunModel?
 
     @ObservationIgnored private let app: AppViewModel
 
     /// `brew install gh` (§10.3).
-    static let installCommand = "brew install gh"
+    static let installCommand = SetupCommand.installGH.displayText
     /// `brew upgrade gh` (§10.3).
-    static let upgradeCommand = "brew upgrade gh"
+    static let upgradeCommand = SetupCommand.upgradeGH.displayText
     /// `gh auth login` (§10.3).
     static let loginCommand = "gh auth login"
     /// `gh auth login` with `GH_TOKEN` and `GITHUB_TOKEN` removed for that one command (BSD
@@ -88,7 +93,34 @@ final class GHSetupViewModel {
 
     /// True while any action runs (the footer spinner).
     var isWorking: Bool {
-        isChecking || isTrusting || isCollectingDiagnostics
+        isChecking || isTrusting || isCollectingDiagnostics || runningCommand != nil
+    }
+
+    // MARK: - Run
+
+    /// The allowlisted command behind a row, when this Mac can run it.
+    func runnable(_ command: String) -> SetupCommand? {
+        canRunCommands ? SetupCommand(displayText: command) : nil
+    }
+
+    func loadRunAvailability() async {
+        canRunCommands = await app.container.data.github.canRunSetupCommands()
+    }
+
+    /// **Run**: runs the command with Homebrew, shows its output, then checks gh again.
+    func run(_ command: SetupCommand) async {
+        guard runningCommand == nil, runnable(command.displayText) != nil else { return }
+        runningCommand = command
+        copiedCommand = nil
+        lastRun = nil
+        defer { runningCommand = nil }
+        do {
+            let output = try await app.container.data.github.runSetupCommand(command)
+            lastRun = SetupRunModel(command: command, lines: output.lines, failure: nil)
+            await checkAgain()
+        } catch {
+            lastRun = SetupRunModel(command: command, lines: error.outputLines, failure: error.localizedMessage)
+        }
     }
 
     func copy(_ command: String) {
@@ -138,5 +170,34 @@ final class GHSetupViewModel {
     /// **Not Now**: open the vault without gh (no listing, import, sync or drift).
     func notNow() {
         app.deferGHSetup()
+    }
+}
+
+/// One **Run** of a setup command: the last lines it printed, and why it failed (nil on success).
+struct SetupRunModel: Equatable {
+    let command: SetupCommand
+    let lines: [String]
+    let failure: String?
+}
+
+extension SetupCommandError {
+    var outputLines: [String] {
+        if case .failed(let output) = self { return output.lines }
+        return []
+    }
+
+    var localizedMessage: String {
+        switch self {
+        case .homebrewNotFound:
+            String(localized: "setupCommand.homebrewNotFound", defaultValue: "Homebrew was not found, or someone else can change it. Copy the command and run it in Terminal.")
+        case .failed(let output):
+            String(localized: "setupCommand.failed", defaultValue: "The command failed (exit \(output.exitCode)).")
+        case .timedOut:
+            String(localized: "setupCommand.timedOut", defaultValue: "The command took too long and was stopped.")
+        case .launchFailed:
+            String(localized: "setupCommand.launchFailed", defaultValue: "Homebrew could not be started.")
+        case .cancelled:
+            String(localized: "setupCommand.cancelled", defaultValue: "The command was stopped.")
+        }
     }
 }

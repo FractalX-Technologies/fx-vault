@@ -2150,3 +2150,11 @@ Review B11e — notch unlock island (2026-10-25, automatic):
 - Tests: `NotchIslandTests` (geometry with and without a notch, states, shared model, no island without side effects); `DesignTokenTests` (Island color sets); UI `NotchIslandUITests` (⌃⌘L closes the window, the island's password unlocks); snapshots `island-touchid`, `island-password` checked. Waiver for the notch hardware and Touch ID checks (tasks/waivers.md).
 - Docs: README (Unlocking), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
 - Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 580 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (7 tests); lint OK (first run flagged a literal symbol size, now `Theme.Typography.title`); check-secrets OK in the worktree; strings synced.
+
+Review B11f — allowlisted setup commands (2026-10-25, automatic):
+- GitHubKit `SetupCommand` (`brew install gh`, `brew upgrade gh`, `brew install azure-cli`) and `SetupCommandRunner`: fixed argv, `brew` from `/opt/homebrew/bin` then `/usr/local/bin` only when it passes `GHLocator.evaluate`, `ProcessEnvironmentBuilder.homebrew` (identity, Homebrew PATH, NONINTERACTIVE), 600 s, redacted last 40 lines.
+- App: the gh setup screen offers Run on allowlisted rows when a trusted Homebrew exists, shows `CommandOutputView` and "Done · … · checked again" or the failure; a success runs Check Again.
+- Kept Copy-only: `gh auth login` (interactive; the device flow is B4b, reserved), the `GH_TOKEN` login, `az login` (with Connect Azure). Azure's `brew install azure-cli` row arrives with Connect Azure (B8b).
+- Tests: GitHubKit `SetupCommandTests` (allowlist, environment, trusted brew argv, untrusted brew never runs — seen failing with the trust check removed, redacted last lines); app `SetupCommandRunTests` (run and output, failure message, no Run without Homebrew); snapshot `gh-setup-run` checked. No UI test: the UI-testing gh is always ready, so the setup screen never shows there (unit and snapshot cover it).
+- Docs: API.md H, README (first launch), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
+- Gates: XcodeGen drift OK; `swift test` 1,345 green; `xcodebuild test` 584 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (7 tests); lint OK; check-secrets OK in the worktree; strings synced.

@@ -147,6 +147,23 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
         return await collector.collect(shell: shell, overridePath: overridePath, trustedBinary: trustedBinary)
     }
 
+    // MARK: - Setup commands
+
+    /// True when a trusted Homebrew can run the allowlisted setup commands (1.0).
+    public func canRunSetupCommands() -> Bool {
+        setupCommandRunner.homebrewPath() != nil
+    }
+
+    /// Runs an allowlisted setup command (`brew install gh`, `brew upgrade gh`). Detect gh again
+    /// afterwards.
+    public func runSetupCommand(_ command: SetupCommand) async throws(SetupCommandError) -> SetupCommandOutputModel {
+        try await setupCommandRunner.run(command)
+    }
+
+    private var setupCommandRunner: SetupCommandRunner {
+        SetupCommandRunner(runner: runner, inspector: fileInspector, identity: identity, workingDirectory: workingDirectory)
+    }
+
     // MARK: - Accounts
 
     /// The github.com accounts gh knows, merged with the stored rows (A3). New logins are

@@ -247,6 +247,10 @@ See [API.md](API.md) for the command catalog.
   `waitid(WNOWAIT)` before signalling; `GHCommand` can only be built inside GitHubKit.
 - Deviation to confirm: `GHLocator` accepts a group-writable gh directory only for the `wheel`
   and `admin` groups (Homebrew's default on Apple Silicon); world-writable is always rejected.
+- Setup commands (1.0): `SetupCommandRunner` runs only `SetupCommand`'s fixed brew argv with a
+  `brew` that passes the gh trust check, in `ProcessEnvironmentBuilder.homebrew`;
+  `GitHubEnvironmentRepository.runSetupCommand(_:)` exposes it and `GHSetupViewModel.run(_:)`
+  shows the output and checks gh again (docs/API.md H).
 
 ### EnvTools
 

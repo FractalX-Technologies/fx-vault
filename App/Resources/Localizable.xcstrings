@@ -837,6 +837,28 @@
         }
       }
     },
+    "command.run" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Run"
+          }
+        }
+      }
+    },
+    "command.run.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault runs only this command, here on this Mac"
+          }
+        }
+      }
+    },
     "common.cancel" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -14022,6 +14044,83 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Security"
+          }
+        }
+      }
+    },
+    "setupCommand.cancelled" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The command was stopped."
+          }
+        }
+      }
+    },
+    "setupCommand.done" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Done · %@ · checked again"
+          }
+        }
+      }
+    },
+    "setupCommand.failed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The command failed (exit %d)."
+          }
+        }
+      }
+    },
+    "setupCommand.homebrewNotFound" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Homebrew was not found, or someone else can change it. Copy the command and run it in Terminal."
+          }
+        }
+      }
+    },
+    "setupCommand.launchFailed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Homebrew could not be started."
+          }
+        }
+      }
+    },
+    "setupCommand.running" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Running… FX Vault runs only this command."
+          }
+        }
+      }
+    },
+    "setupCommand.timedOut" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The command took too long and was stopped."
           }
         }
       }

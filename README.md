@@ -116,8 +116,10 @@ After installing, run `gh auth login` once if you have not used the GitHub CLI b
    is the only way back in if you forget the password. Losing both means losing the vault.
    Check **I saved it offline**, then type the two groups FX Vault asks for.
 3. **Optional: turn on Touch ID** (see [Touch ID](#touch-id)).
-4. **Connect gh.** FX Vault looks for `gh` and its logged-in accounts. If it asks, run
-   `gh auth login`, or `brew upgrade gh`, then choose **Check Again**.
+4. **Connect gh.** FX Vault looks for `gh` and its logged-in accounts. When gh is missing or
+   too old and Homebrew is installed, **Run** next to `brew install gh` or `brew upgrade gh` runs
+   it here and checks again (FX Vault runs only these fixed commands). Run `gh auth login` in
+   Terminal, then choose **Check Again**.
 5. **Choose what to import.** Each account lists its organizations (checked when the account
    can read their secrets) and its personal repositories. **Continue** imports the checked ones
    (secret names, variable values) and shows what was found; **Not Now** imports nothing.

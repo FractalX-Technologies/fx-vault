@@ -12,6 +12,11 @@ struct GHSetupScreen: View {
         _viewModel = State(initialValue: app.makeGHSetupViewModel())
     }
 
+    /// Shows an existing view model (the visual snapshot tests).
+    init(viewModel: GHSetupViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
+
     var body: some View {
         ShellCardLayout {
             SheetHeader(
@@ -28,7 +33,26 @@ struct GHSetupScreen: View {
             if !viewModel.commands.isEmpty || viewModel.copiedCommand != nil {
                 VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                     ForEach(viewModel.commands, id: \.self) { command in
-                        CommandRow(command: command) { viewModel.copy($0) }
+                        CommandRow(
+                            command: command,
+                            onRun: viewModel.runnable(command).map { runnable in
+                                { Task { await viewModel.run(runnable) } }
+                            },
+                            isRunning: viewModel.runningCommand != nil
+                        ) { viewModel.copy($0) }
+                    }
+                    if let run = viewModel.lastRun {
+                        if !run.lines.isEmpty {
+                            CommandOutputView(lines: run.lines)
+                        }
+                        Text(runStatus(run))
+                            .fxTextStyle(.caption)
+                            .foregroundStyle(run.failure == nil ? Theme.Colors.mutedText : Theme.Colors.danger)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else if viewModel.runningCommand != nil {
+                        Text(String(localized: "setupCommand.running", defaultValue: "Running… FX Vault runs only this command."))
+                            .fxTextStyle(.caption)
+                            .foregroundStyle(Theme.Colors.mutedText)
                     }
                     if let copied = viewModel.copiedCommand {
                         Text(String(localized: "ghSetup.copied", defaultValue: "Copied \(copied). Run it in Terminal, then check again."))
@@ -47,6 +71,9 @@ struct GHSetupScreen: View {
                 .fixedSize(horizontal: false, vertical: true)
             }
             GHStatusRow(status: viewModel.status)
+                .task {
+                    await viewModel.loadRunAvailability()
+                }
             ShellFooter(isWorking: viewModel.isWorking) {
                 Button(String(localized: "ghSetup.copyDiagnostics", defaultValue: "Copy Diagnostics")) {
                     Task { await viewModel.copyDiagnostics() }
@@ -74,6 +101,12 @@ struct GHSetupScreen: View {
                 .disabled(viewModel.isChecking || viewModel.isTrusting)
             }
         }
+    }
+
+    /// "Done · checked again", or why the run failed.
+    private func runStatus(_ run: SetupRunModel) -> String {
+        if let failure = run.failure { return failure }
+        return String(localized: "setupCommand.done", defaultValue: "Done · \(run.command.displayText) · checked again")
     }
 
     /// The path, what trusting means, and **Trust This gh** (deliberately not the default

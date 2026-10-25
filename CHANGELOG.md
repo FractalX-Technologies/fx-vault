@@ -14,6 +14,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   organizations (with their access) and personal repositories, the ready ones checked;
   Continue imports them and shows the totals by source, naming anything that failed. The
   "Your vault is ready" step is gone.
+- **Run setup commands.** The gh setup screen runs `brew install gh` and `brew upgrade gh` with
+  Run, shows their output, and checks again. Only these fixed commands run, and only with a
+  Homebrew nobody else can change; `gh auth login` stays Copy.
 - **Unlock from the notch.** A locked FX Vault has no window: a black island grows out of the
   notch (or floats under the menu bar) with Touch ID and the master password, says Unlocked,
   and the main window opens. Locking closes the window; Recovery Key… opens the recovery window.
