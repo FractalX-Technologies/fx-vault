@@ -237,7 +237,7 @@ struct AccountsSettingsViewModelTests {
         await harness.app.refreshGHStatus()
         let main = harness.app.makeMainViewModel()
         await main.sidebar.reload()
-        #expect(main.sidebar.sections.map(\.login) == ["user-a"])
+        #expect(main.sidebar.owners.map(\.login) == ["user-a"])
         let window = NSWindow(contentViewController: NSHostingController(rootView: MainScreen(viewModel: main)))
         window.isReleasedWhenClosed = false
         defer { window.close() }
@@ -252,6 +252,6 @@ struct AccountsSettingsViewModelTests {
         await accounts.checkAgain()
         #expect(accounts.accounts.map(\.account.login) == ["user-a", "user-b"])
         #expect(harness.app.accountsRevision == revision + 1)
-        #expect(await TestFixtures.eventually { main.sidebar.sections.map(\.login) == ["user-a", "user-b"] })
+        #expect(await TestFixtures.eventually { main.sidebar.owners.map(\.login) == ["user-a", "user-b"] })
     }
 }

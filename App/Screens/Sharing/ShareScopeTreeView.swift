@@ -176,7 +176,7 @@ private struct ShareScopeTreeRow: View {
 
     private var icon: String {
         switch node.kind {
-        case .repository: "shippingbox"
+        case .repository: Theme.Symbols.repository
         case .repositoryLevel: "folder"
         case .environment: "square.stack.3d.up"
         case .destination(let symbolName): symbolName

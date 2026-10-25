@@ -96,63 +96,169 @@ struct SidebarViewModelTests {
 
     // MARK: - Grouping
 
-    @Test func groupsAccountsOwnersAndRepositories() throws {
-        let sections = SidebarGrouping.sections(try Self.input(), query: "")
-        #expect(sections.map(\.login) == ["user-a", "user-b", "user-z"])
+    static func owner(_ login: String, in owners: [SidebarOwnerModel]) throws -> SidebarOwnerModel {
+        try #require(owners.first { $0.login == login })
+    }
 
-        let userA = try #require(sections.first)
-        #expect(userA.owners.map(\.login) == ["user-a", "Example-Org", "Locked-Org", "Other-Owner"])
-        #expect(userA.owners[0].isAccount)
-        #expect(userA.owners[0].repos.map(\.name) == ["Alpha", "zeta"])
-        #expect(userA.owners[1].isTruncated)
-        #expect(userA.owners[2].requiresSAML)
-        #expect(userA.owners[3].repos.map(\.fullName) == ["Other-Owner/shared"])
+    @Test func groupsOwnersAcrossAccounts() throws {
+        let owners = SidebarGrouping.owners(try Self.input(), query: "")
+        #expect(owners.map(\.login) == ["Example-Org", "Locked-Org", "Other-Owner", "user-a", "user-b", "user-z"])
 
-        let service = try #require(userA.owners[1].repos.first)
+        let userA = try Self.owner("user-a", in: owners)
+        #expect(userA.isPersonal)
+        #expect(!userA.isOrganization)
+        #expect(userA.repos.map(\.name) == ["Alpha", "zeta"])
+        #expect(userA.problem == nil)
+
+        let example = try Self.owner("Example-Org", in: owners)
+        #expect(example.isOrganization)
+        #expect(example.isTruncated)
+        #expect(example.accountLogin == "user-a")
+        let service = try #require(example.repos.first)
         #expect(service.isImported)
         #expect(service.isArchived)
         #expect(service.badges == [.archived])
-        #expect(!userA.owners[0].repos[0].isImported)
-        #expect(userA.owners[0].repos[0].badges == [.private])
+        #expect(!userA.repos[0].isImported)
+        #expect(userA.repos[0].badges == [.private])
 
-        let userB = sections[1]
-        #expect(userB.hasScopeWarning)
-        #expect(userB.missingScopes == ["repo", "read:org"])
-        #expect(userB.isLoggedIn)
+        let other = try Self.owner("Other-Owner", in: owners)
+        #expect(!other.isOrganization, "a person whose repository was added by name")
+        #expect(other.repos.map(\.fullName) == ["Other-Owner/shared"])
 
-        let userZ = sections[2]
-        #expect(!userZ.isLoggedIn)
-        #expect(userZ.owners.flatMap(\.repos).map(\.fullName) == ["user-z/legacy"])
+        #expect(try Self.owner("Locked-Org", in: owners).problem == .ssoRequired(nil))
+        #expect(try Self.owner("user-b", in: owners).problem == .missingScopes(["repo", "read:org"]))
+        let userZ = try Self.owner("user-z", in: owners)
+        #expect(userZ.problem == .signedOut)
+        #expect(userZ.repos.map(\.fullName) == ["user-z/legacy"])
     }
 
-    @Test func rowIDsAreUniquePerAccount() throws {
+    @Test func organizationsComeBeforePeople() throws {
         var input = try Self.input()
-        // user-b lists the same repository as user-a.
-        input.catalogs["user-b"] = AccountCatalogModel(
-            accountLogin: "user-b",
-            owners: [OwnerCatalogModel(
-                login: "Example-Org",
+        let catalog = try #require(input.catalogs["user-a"])
+        input.catalogs["user-a"] = AccountCatalogModel(
+            accountLogin: "user-a",
+            owners: catalog.owners + [OwnerCatalogModel(
+                login: "Zulu-Org",
                 ownerType: .organization,
-                repositories: [try Self.listed("Example-Org", "service")],
+                repositories: [try Self.listed("Zulu-Org", "api")],
                 failure: nil,
                 isTruncated: false
             )],
             organizationsFailure: nil
         )
-        let ids = SidebarGrouping.sections(input, query: "").flatMap(\.owners).flatMap(\.repos).map(\.id)
+        let owners = SidebarGrouping.owners(input, query: "")
+        #expect(owners.map(\.login) == ["Example-Org", "Locked-Org", "Zulu-Org", "Other-Owner", "user-a", "user-b", "user-z"])
+    }
+
+    /// 1.0 (D6c1): no account level. An owner two accounts list shows once, through the account
+    /// that imported it; a repository only the other account lists goes through that one.
+    @Test func ownerTwoAccountsSeeShowsOnceThroughItsImporter() throws {
+        var input = try Self.input()
+        input.accounts = [Self.summary("user-b"), Self.summary("user-a")]
+        input.catalogs["user-b"] = AccountCatalogModel(
+            accountLogin: "user-b",
+            owners: [OwnerCatalogModel(
+                login: "Example-Org",
+                ownerType: .organization,
+                repositories: [try Self.listed("Example-Org", "service"), try Self.listed("Example-Org", "web")],
+                failure: nil,
+                isTruncated: false
+            )],
+            organizationsFailure: nil
+        )
+        let owners = SidebarGrouping.owners(input, query: "")
+        #expect(owners.filter { $0.login == "Example-Org" }.count == 1)
+        let example = try Self.owner("Example-Org", in: owners)
+        #expect(example.accountLogin == "user-a", "user-a imported Service")
+        #expect(example.repos.map(\.name) == ["Service", "web"])
+        #expect(example.repos.map(\.accountLogin) == ["user-a", "user-b"])
+        let ids = owners.flatMap(\.repos).map(\.id)
         #expect(Set(ids).count == ids.count)
     }
 
-    @Test func searchKeepsMatchingRepositoriesOnly() throws {
-        let sections = SidebarGrouping.sections(try Self.input(), query: "SERV")
-        #expect(sections.map(\.login) == ["user-a"])
-        #expect(sections[0].owners.map(\.login) == ["Example-Org"])
-        #expect(sections[0].owners[0].repos.map(\.name) == ["Service"])
+    @Test func ownerNotInTheVaultGoesThroughTheFirstSignedInAccountThatListsIt() throws {
+        var input = try Self.input()
+        input.vaultRepos = []
+        input.accounts = [Self.summary("user-b", loggedIn: false), Self.summary("user-c"), Self.summary("user-a")]
+        let shared = OwnerCatalogModel(
+            login: "Example-Org",
+            ownerType: .organization,
+            repositories: [try Self.listed("Example-Org", "service")],
+            failure: nil,
+            isTruncated: false
+        )
+        for login in ["user-b", "user-c"] {
+            input.catalogs[login] = AccountCatalogModel(accountLogin: login, owners: [shared], organizationsFailure: nil)
+        }
+        let example = try Self.owner("Example-Org", in: SidebarGrouping.owners(input, query: ""))
+        #expect(example.accountLogin == "user-c", "user-b is not logged in")
+        #expect(example.problem == nil)
+    }
 
-        #expect(SidebarGrouping.sections(try Self.input(), query: "nothing-matches").isEmpty)
+    @Test func organizationAccessBecomesTheOwnersSubline() throws {
+        var input = try Self.input()
+        let url = try #require(URL(string: "https://github.com/orgs/Example-Org/sso"))
+        input.organizationAccess["user-a"] = [OrgAccessModel(login: "example-org", status: .needsAdminOrgScope)]
+        #expect(try Self.owner("Example-Org", in: SidebarGrouping.owners(input, query: "")).problem == .needsAdminOrg)
+        input.organizationAccess["user-a"] = [OrgAccessModel(login: "example-org", status: .needsOrgAdmin)]
+        #expect(try Self.owner("Example-Org", in: SidebarGrouping.owners(input, query: "")).problem == .needsOrgAdmin)
+        input.organizationAccess["user-a"] = [OrgAccessModel(login: "example-org", status: .ssoRequired(url))]
+        #expect(try Self.owner("Example-Org", in: SidebarGrouping.owners(input, query: "")).problem == .ssoRequired(url))
+        input.organizationAccess["user-a"] = [OrgAccessModel(login: "example-org", status: .ready)]
+        #expect(try Self.owner("Example-Org", in: SidebarGrouping.owners(input, query: "")).problem == nil)
+    }
+
+    /// "Org secrets need an org admin" only where those secrets would be read: an imported or a
+    /// selected organization, not under every organization the account is a member of.
+    @Test func memberOnlySublineShowsOnAnImportedOrSelectedOrganization() throws {
+        var input = try Self.input()
+        input.organizationAccess["user-a"] = [OrgAccessModel(login: "example-org", status: .needsOrgAdmin)]
+        let listed = try Self.owner("Example-Org", in: SidebarGrouping.owners(input, query: ""))
+        #expect(SidebarGrouping.shownProblem(of: listed, isSelected: false) == nil)
+        #expect(SidebarGrouping.shownProblem(of: listed, isSelected: true) == .needsOrgAdmin)
+
+        input.vaultOrganizations = [OrganizationModel(
+            login: "Example-Org",
+            accountLogin: "user-a",
+            createdAt: ManualClock.defaultStart,
+            updatedAt: ManualClock.defaultStart
+        )]
+        let imported = try Self.owner("Example-Org", in: SidebarGrouping.owners(input, query: ""))
+        #expect(SidebarGrouping.shownProblem(of: imported, isSelected: false) == .needsOrgAdmin)
+
+        // A problem the user can fix shows wherever it is.
+        input.vaultOrganizations = []
+        input.organizationAccess["user-a"] = [OrgAccessModel(login: "example-org", status: .needsAdminOrgScope)]
+        let needsScope = try Self.owner("Example-Org", in: SidebarGrouping.owners(input, query: ""))
+        #expect(SidebarGrouping.shownProblem(of: needsScope, isSelected: false) == .needsAdminOrg)
+    }
+
+    @Test func showMoreHoldsTheRepositoriesNotInTheVault() throws {
+        var input = try Self.input()
+        input.vaultRepos.append(Self.vaultRepo(account: "user-a", owner: "user-a", name: "zeta"))
+        let userA = try Self.owner("user-a", in: SidebarGrouping.owners(input, query: ""))
+        let alpha = try #require(userA.repos.first { $0.name == "Alpha" })
+
+        let collapsed = SidebarGrouping.repoList(of: userA, selectedRowID: nil, showsAll: false)
+        #expect(collapsed.shown.map(\.name) == ["zeta"])
+        #expect(collapsed.hiddenCount == 1)
+        let selected = SidebarGrouping.repoList(of: userA, selectedRowID: alpha.id, showsAll: false)
+        #expect(selected.shown.map(\.name) == ["Alpha", "zeta"], "the selected repository always shows")
+        #expect(selected.hiddenCount == 0)
+        let all = SidebarGrouping.repoList(of: userA, selectedRowID: nil, showsAll: true)
+        #expect(all.shown.map(\.name) == ["Alpha", "zeta"])
+        #expect(all.hiddenCount == 0)
+    }
+
+    @Test func searchKeepsMatchingRepositoriesOnly() throws {
+        let owners = SidebarGrouping.owners(try Self.input(), query: "SERV")
+        #expect(owners.map(\.login) == ["Example-Org"])
+        #expect(owners[0].repos.map(\.name) == ["Service"])
+
+        #expect(SidebarGrouping.owners(try Self.input(), query: "nothing-matches").isEmpty)
         // Search matches the owner too.
-        let byOwner = SidebarGrouping.sections(try Self.input(), query: "other-owner/")
-        #expect(byOwner.flatMap(\.owners).flatMap(\.repos).map(\.name) == ["shared"])
+        let byOwner = SidebarGrouping.owners(try Self.input(), query: "other-owner/")
+        #expect(byOwner.flatMap(\.repos).map(\.name) == ["shared"])
     }
 
     // MARK: - View model over the vault
@@ -163,7 +269,7 @@ struct SidebarViewModelTests {
         let id = try await harness.stageRepository()
         let appeared = await TestFixtures.eventually { sidebar.input.vaultRepos.contains { $0.id == id } }
         #expect(appeared)
-        let row = try #require(sidebar.sections.first?.owners.flatMap(\.repos).first)
+        let row = try #require(sidebar.owners.flatMap(\.repos).first)
         #expect(row.importedRepoID == id)
         #expect(row.badges == [.notOnGitHub, .private])
         #expect(!sidebar.canClone(row))
@@ -195,8 +301,8 @@ struct SidebarViewModelTests {
         let harness = try await TestHarness(vault: .unlocked)
         let sidebar = SidebarViewModel(app: harness.app)
         try await harness.stageRepository()
-        #expect(await TestFixtures.eventually { !sidebar.sections.isEmpty })
-        let row = try #require(sidebar.sections.first?.owners.flatMap(\.repos).first)
+        #expect(await TestFixtures.eventually { !sidebar.owners.isEmpty })
+        let row = try #require(sidebar.owners.flatMap(\.repos).first)
 
         sidebar.requestRemoval(row)
         #expect(sidebar.pendingRemoval == row)
@@ -214,11 +320,58 @@ struct SidebarViewModelTests {
         harness.runner.stub(argumentsPrefix: ["org", "list"], with: .success("Example-Org\n"))
         harness.runner.stub(argumentsPrefix: ["repo", "list"], with: .success("[]"))
         await harness.app.refreshGHStatus()
+        harness.runner.respond(argumentsPrefix: ["api"]) { invocation in
+            invocation.arguments.last == "user/memberships/orgs/Example-Org"
+                ? .success(#"{"state":"active","role":"admin"}"#)
+                : .failure(stderr: "HTTP 404: Not Found")
+        }
         let sidebar = SidebarViewModel(app: harness.app)
         await sidebar.reload()
         #expect(sidebar.accountsError == nil)
-        #expect(sidebar.sections.map(\.login) == ["user-a", "user-b"])
-        #expect(sidebar.sections[0].owners.map(\.login) == ["user-a", "Example-Org"])
-        #expect(sidebar.sections[1].hasScopeWarning)
+        #expect(sidebar.owners.map(\.login) == ["Example-Org", "user-a", "user-b"])
+        #expect(sidebar.owners[0].accountLogin == "user-a")
+        #expect(sidebar.owners[2].problem == .missingScopes(["repo", "read:org"]))
+        // The organization access arrives after the tree (user-a lacks admin:org).
+        #expect(await TestFixtures.eventually { sidebar.owners.first?.problem == .needsAdminOrg })
+    }
+
+    /// 1.0 (D6c1): owners start collapsed; a selection opens the owner above it, a search opens
+    /// every owner, and ⌘F asks the search field for the focus.
+    @Test func ownersExpandForTheSelectionAndTheSearch() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let sidebar = SidebarViewModel(app: harness.app)
+        let id = try await harness.stageRepository()
+        #expect(await TestFixtures.eventually { sidebar.input.vaultRepos.contains { $0.id == id } })
+        let owner = try #require(sidebar.owners.first)
+        #expect(!sidebar.isExpanded(owner))
+
+        sidebar.searchText = "repo"
+        #expect(sidebar.isExpanded(owner))
+        sidebar.searchText = ""
+        #expect(!sidebar.isExpanded(owner))
+
+        sidebar.toggle(owner)
+        #expect(sidebar.isExpanded(owner))
+        sidebar.toggle(owner)
+        #expect(!sidebar.isExpanded(owner))
+
+        sidebar.selectedRowID = try #require(owner.repos.first).id
+        #expect(sidebar.isExpanded(owner))
+
+        let request = sidebar.searchFocusRequest
+        sidebar.focusSearch()
+        #expect(sidebar.searchFocusRequest == request + 1)
+    }
+
+    /// A ⌘F the field could not take in time is dropped: it must not grab the focus the next
+    /// time the sidebar shows, maybe minutes later.
+    @Test func aFocusRequestTheFieldCouldNotTakeIsDropped() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let sidebar = SidebarViewModel(app: harness.app)
+        sidebar.focusSearch()
+        #expect(sidebar.isSearchFocusPending)
+
+        sidebar.cancelSearchFocus()
+        #expect(!sidebar.isSearchFocusPending)
     }
 }

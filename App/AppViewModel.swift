@@ -63,6 +63,9 @@ final class AppViewModel {
     private(set) var ghStatus: GHStatusModel = .checking
     /// Bumped by ``accountsDidChange()``; the main window reloads its accounts when it changes.
     private(set) var accountsRevision = 0
+    /// The Settings tab the main window asked for (the sidebar's "Approve" asks for Accounts);
+    /// the Settings window switches to it and clears it.
+    private(set) var requestedSettingsTab: PreferencesViewModel.Tab?
     /// True while a gh probe runs (the first one also shows ``GHStatusModel/checking``).
     private(set) var isCheckingGH = false
     /// Pending changes across all repositories (Sync button label and Dock badge).
@@ -433,6 +436,14 @@ final class AppViewModel {
     /// again too, so an account logged in from Terminal appears without a relaunch.
     func accountsDidChange() {
         accountsRevision += 1
+    }
+
+    func requestSettingsTab(_ tab: PreferencesViewModel.Tab) {
+        requestedSettingsTab = tab
+    }
+
+    func clearSettingsTabRequest() {
+        requestedSettingsTab = nil
     }
 
     // MARK: - Share files (§10 Scenes)

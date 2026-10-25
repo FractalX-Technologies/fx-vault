@@ -244,7 +244,7 @@ private struct ProjectShareRepositoryChip: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xSmall) {
-            Image(systemName: "shippingbox")
+            Image(systemName: Theme.Symbols.repository)
                 .foregroundStyle(Theme.Colors.subtleText)
                 .accessibilityHidden(true)
             Text(verbatim: title)

@@ -54,7 +54,8 @@ FXVault/
 │   │   │   │                        # scope rows (pure helper + modifier)
 │   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel,
 │   │   │   │                        # SidebarFoldersSection (v0.7.0),
-│   │   │   │                        # SidebarKeyVaultsSection (1.0)
+│   │   │   │                        # SidebarKeyVaultsSection (1.0), SidebarTreeRow and
+│   │   │   │                        # SidebarCopy (D6c1)
 │   │   │   ├── ScopeList/           # ScopeListView/ViewModel ("Build · GitHub Actions":
 │   │   │   │                        # Repository + environments, "Runtime": destination rows,
 │   │   │   │                        # Add Destination, DestinationContextMenu; v0.8.0)
@@ -130,7 +131,8 @@ FXVault/
 │   │                                # StepCounter, SyncToolbarButton, TableStyling,
 │   │                                # WindowBackground, SheetChrome (SheetHeader,
 │   │                                # SheetCallout, FXCheckboxRow, InlineErrorView,
-│   │                                # FXLinkButtonStyle, fxSheetContent), FlowLayout (v0.6.0)
+│   │                                # FXLinkButtonStyle, fxSheetContent), FlowLayout (v0.6.0),
+│   │                                # KeyHint (1.0)
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
 │   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe,
 │   │                                # ConnectivityMonitor (NWPathMonitor, path sources),

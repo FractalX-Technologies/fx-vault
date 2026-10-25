@@ -15,11 +15,9 @@ enum SidebarRepoBadge: Hashable, CaseIterable {
 
 /// One repository row: listed by gh, added by name, or only in the vault.
 struct SidebarRepoModel: Identifiable, Hashable {
-    /// `<account fold key>|<owner/name fold key>`: unique even when two accounts list the same
-    /// repository.
-    let id: String
-    /// The case-folded `owner/name`.
+    /// The case-folded `owner/name`: one row per repository, whichever accounts list it.
     let repoKey: String
+    /// The gh account its reads go through (the vault row's account once imported).
     let accountLogin: String
     let ownerLogin: String
     let name: String
@@ -31,6 +29,10 @@ struct SidebarRepoModel: Identifiable, Hashable {
     let importedRepoID: RepoID?
     /// False for a repository FX Vault created that the next Sync will create on GitHub.
     let existsOnGitHub: Bool
+
+    var id: String {
+        repoKey
+    }
 
     var fullName: String {
         "\(ownerLogin)/\(name)"
@@ -60,57 +62,51 @@ struct SidebarRepoModel: Identifiable, Hashable {
     }
 }
 
-/// An owner group under an account: the account itself ("Personal") or an organization.
+/// Why an owner needs attention: the subline under its node (board Main2-Expanded). Settings ›
+/// Accounts keeps the details and the commands.
+enum SidebarOwnerProblem: Hashable {
+    /// gh no longer lists the account the owner goes through.
+    case signedOut
+    /// The account's token lacks `repo` or `read:org` (on the account's own node).
+    case missingScopes([String])
+    /// The token lacks `admin:org`, which the organization's secrets need.
+    case needsAdminOrg
+    /// The account is a member: only an org admin can manage the organization's secrets.
+    case needsOrgAdmin
+    /// SAML SSO; GitHub's authorization page when gh printed one.
+    case ssoRequired(URL?)
+    /// gh could not list the owner.
+    case unavailable(GHError)
+}
+
+/// One owner node under GitHub: an organization or a person, once across every gh account.
 struct SidebarOwnerModel: Identifiable, Hashable {
-    /// `<account fold key>/<owner fold key>`.
+    /// The owner's fold key.
     let id: String
     let login: String
-    /// The gh account the group is listed under (organization reads go through it).
+    /// The gh account the owner's reads go through: the one that imported it, else the first
+    /// signed-in account that lists it.
     let accountLogin: String
     let ownerType: OwnerType
-    /// True for the account's own repositories (shown as "Personal").
-    let isAccount: Bool
-    /// Why gh could not list this owner (SAML banner, not found); nil when listed.
-    let failure: GHError?
+    /// A gh account's own repositories: the node has no place of its own.
+    let isPersonal: Bool
     /// gh returned the listing maximum; the list may be cut.
     let isTruncated: Bool
     let repos: [SidebarRepoModel]
     /// The organization's own secrets and variables in the vault (1.0); nil until imported.
     let organization: OrganizationModel?
+    let problem: SidebarOwnerProblem?
 
-    /// An organization group (not the account's own repositories): it has the organization row.
+    /// An organization node: selecting it opens the organization's place.
     var isOrganization: Bool {
-        !isAccount && ownerType == .organization
-    }
-
-    /// The SAML authorization link gh printed, when the owner needs SAML SSO.
-    var samlAuthorizationURL: URL? {
-        if case .samlRequired(let url) = failure { return url }
-        return nil
-    }
-
-    var requiresSAML: Bool {
-        if case .samlRequired = failure { return true }
-        return false
+        !isPersonal && ownerType == .organization
     }
 }
 
-/// One gh account with its owner groups.
-struct SidebarAccountModel: Identifiable, Hashable {
-    /// The lowercase login.
-    let id: String
-    let login: String
-    /// gh lists the account (false: only its vault repositories remain).
-    let isLoggedIn: Bool
-    /// The scopes the account's token lacks (`repo`, `read:org`); empty when OK or unknown.
-    let missingScopes: [String]
-    /// Why the organizations could not be listed (A5); nil on success.
-    let organizationsFailure: GHError?
-    let owners: [SidebarOwnerModel]
-
-    var hasScopeWarning: Bool {
-        !missingScopes.isEmpty
-    }
+/// The repositories an owner node shows, and how many wait behind "Show N more".
+struct SidebarRepoListModel: Hashable {
+    let shown: [SidebarRepoModel]
+    let hiddenCount: Int
 }
 
 /// Everything the sidebar is built from.
@@ -124,162 +120,217 @@ struct SidebarInputModel {
     var vaultRepos: [RepoModel] = []
     /// Every organization in the vault (1.0).
     var vaultOrganizations: [OrganizationModel] = []
+    /// Each signed-in account's organizations with their access, by account fold key (it may
+    /// arrive after the catalogs, or never offline).
+    var organizationAccess: [String: [OrgAccessModel]] = [:]
 }
 
-/// Groups accounts, owners and repositories for the sidebar and applies the search (§10
-/// Column 1). Pure, so it is tested without gh.
+/// Builds the GitHub tree and applies the search (§10 Column 1; boards Main2-Home,
+/// Main2-Expanded). Pure, so it is tested without gh.
 enum SidebarGrouping {
-    /// Accounts in gh's order (then vault-only accounts by name); in each, the account's own
-    /// repositories, then its organizations in gh's order, then other owners by name; repositories
-    /// by name. The vault row wins over the listing for imported repositories (refreshed flags).
-    /// A non-empty `query` keeps repositories whose `owner/name` contains it (any case) and drops
-    /// empty groups.
-    static func sections(_ input: SidebarInputModel, query: String) -> [SidebarAccountModel] {
-        let vaultByKey = Dictionary(
-            input.vaultRepos.map { (SidebarRepoModel.foldKey(owner: $0.ownerLogin, name: $0.name), $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
-        var accountLogins: [(key: String, login: String)] = input.accounts.map { ($0.id, $0.account.login) }
-        let known = Set(accountLogins.map(\.key))
-        // Accounts gh does not list (any more) but the vault, a catalog or an added repository
-        // still refers to.
-        let otherAccounts = input.vaultRepos.map { (OwnerLoginValidator.foldKey($0.accountLogin), $0.accountLogin) }
-            + input.vaultOrganizations.map { (OwnerLoginValidator.foldKey($0.accountLogin), $0.accountLogin) }
-            + input.catalogs.values.map { (OwnerLoginValidator.foldKey($0.accountLogin), $0.accountLogin) }
-            + input.addedByName.keys.map { ($0, $0) }
-        let vaultOnlyAccounts = Dictionary(otherAccounts, uniquingKeysWith: { first, _ in first })
-            .filter { !known.contains($0.key) }
-        .sorted { $0.value.localizedCaseInsensitiveCompare($1.value) == .orderedAscending }
-        accountLogins += vaultOnlyAccounts.map { ($0.key, $0.value) }
-
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        return accountLogins.compactMap { account in
-            let summary = input.accounts.first { $0.id == account.key }
-            let owners = owners(
-                accountKey: account.key,
-                accountLogin: account.login,
-                catalog: input.catalogs[account.key],
-                addedByName: input.addedByName[account.key] ?? [],
-                vaultRepos: input.vaultRepos.filter { OwnerLoginValidator.foldKey($0.accountLogin) == account.key },
-                vaultOrganizations: input.vaultOrganizations.filter { OwnerLoginValidator.foldKey($0.accountLogin) == account.key },
-                vaultByKey: vaultByKey
-            )
-            let filtered = filter(owners, query: trimmed)
-            if !trimmed.isEmpty, filtered.isEmpty { return nil }
-            return SidebarAccountModel(
-                id: account.key,
-                login: account.login,
-                isLoggedIn: summary?.isLoggedIn ?? false,
-                missingScopes: missingScopes(summary),
-                organizationsFailure: input.catalogs[account.key]?.organizationsFailure,
-                owners: filtered
-            )
-        }
-    }
-
-    private static func missingScopes(_ summary: GHAccountSummaryModel?) -> [String] {
-        if case .missing(let scopes) = summary?.status?.scopes { return scopes }
-        return []
-    }
-
-    private struct OwnerGroup {
-        var login: String
-        var ownerType: OwnerType
-        var failure: GHError?
-        var isTruncated: Bool
-        var repos: [String: SidebarRepoModel] = [:]
-    }
-
-    private static func owners(
-        accountKey: String,
-        accountLogin: String,
-        catalog: AccountCatalogModel?,
-        addedByName: [CatalogRepoModel],
-        vaultRepos: [RepoModel],
-        vaultOrganizations: [OrganizationModel],
-        vaultByKey: [String: RepoModel]
-    ) -> [SidebarOwnerModel] {
-        var order: [String] = []
+    /// One node per owner across every gh account. The vault row wins over a listing
+    /// (refreshed flags). A non-empty `query` keeps repositories whose `owner/name` contains it
+    /// (any case), an imported organization whose login contains it, and drops the other owners.
+    static func owners(_ input: SidebarInputModel, query: String) -> [SidebarOwnerModel] {
+        let accounts = accountOrder(input)
         var groups: [String: OwnerGroup] = [:]
 
         func group(_ login: String, _ type: OwnerType) -> String {
             let key = OwnerLoginValidator.foldKey(login)
             if groups[key] == nil {
-                groups[key] = OwnerGroup(login: login, ownerType: type, failure: nil, isTruncated: false)
-                order.append(key)
+                groups[key] = OwnerGroup(login: login, ownerType: type)
             }
             return key
         }
 
-        let accountOwnerKey = group(accountLogin, .user)
-        for owner in catalog?.owners ?? [] {
-            let key = group(owner.login, owner.ownerType)
-            groups[key]?.failure = owner.failure
-            groups[key]?.isTruncated = owner.isTruncated
-            for repo in owner.repositories {
-                insert(row(repo, accountKey: accountKey, accountLogin: accountLogin, vaultByKey: vaultByKey), into: &groups[key])
+        // Each gh account has its own node, where its problems show before any listing.
+        for account in accounts where account.summary != nil {
+            _ = group(account.login, .user)
+        }
+        for account in accounts {
+            for owner in input.catalogs[account.key]?.owners ?? [] {
+                let key = group(owner.login, owner.ownerType)
+                groups[key]?.listings.append(Listing(account: account, owner: owner))
+            }
+            for repo in input.addedByName[account.key] ?? [] {
+                let key = group(repo.ref.owner, repo.ownerType)
+                groups[key]?.addedByName.append((account, repo))
             }
         }
-        for repo in addedByName {
-            let key = group(repo.ref.owner, repo.ownerType)
-            insert(row(repo, accountKey: accountKey, accountLogin: accountLogin, vaultByKey: vaultByKey), into: &groups[key])
+        for repo in input.vaultRepos {
+            groups[group(repo.ownerLogin, repo.ownerType)]?.vaultRepos.append(repo)
         }
-        for repo in vaultRepos {
-            let key = group(repo.ownerLogin, repo.ownerType)
-            let repoKey = SidebarRepoModel.foldKey(owner: repo.ownerLogin, name: repo.name)
-            if groups[key]?.repos[repoKey] == nil {
-                insert(row(repo, accountKey: accountKey), into: &groups[key])
-            }
-        }
-        var organizations: [String: OrganizationModel] = [:]
-        for organization in vaultOrganizations {
-            organizations[group(organization.login, .organization)] = organization
+        for organization in input.vaultOrganizations {
+            groups[group(organization.login, .organization)]?.organization = organization
         }
 
-        // The account first, then gh's organization order, then other owners by name.
-        let listedKeys = order.filter { key in
-            key == accountOwnerKey || catalog?.owners.contains { OwnerLoginValidator.foldKey($0.login) == key } == true
+        let accountKeys = Set(accounts.map(\.key))
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Organizations first, then people (board Main2-Home), each by login.
+        let owners = groups.compactMap { key, group in
+            owner(key: key, group: group, isPersonal: accountKeys.contains(key), accounts: accounts, input: input)
         }
-        let otherKeys = order.filter { !listedKeys.contains($0) }.sorted {
-            (groups[$0]?.login ?? $0).localizedCaseInsensitiveCompare(groups[$1]?.login ?? $1) == .orderedAscending
+        .sorted { lhs, rhs in
+            guard lhs.isOrganization == rhs.isOrganization else { return lhs.isOrganization }
+            return lhs.login.localizedCaseInsensitiveCompare(rhs.login) == .orderedAscending
         }
-        return (listedKeys + otherKeys).compactMap { key in
-            guard let group = groups[key] else { return nil }
-            // Without a listing, an empty "Personal" group says nothing: leave it out.
-            if catalog == nil, group.repos.isEmpty, group.failure == nil, organizations[key] == nil { return nil }
-            let repos = group.repos.values.sorted {
-                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-            }
-            return SidebarOwnerModel(
-                id: "\(accountKey)/\(key)",
-                login: group.login,
-                accountLogin: accountLogin,
-                ownerType: group.ownerType,
-                isAccount: key == accountOwnerKey,
-                failure: group.failure,
-                isTruncated: group.isTruncated,
-                repos: repos,
-                organization: organizations[key]
-            )
+        return filter(owners, query: trimmed)
+    }
+
+    /// What an owner node shows: every repository in the vault and the selected one, and the rest
+    /// only when `showsAll` (its "Show N more", or a search).
+    static func repoList(of owner: SidebarOwnerModel, selectedRowID: SidebarRepoModel.ID?, showsAll: Bool) -> SidebarRepoListModel {
+        guard !showsAll else { return SidebarRepoListModel(shown: owner.repos, hiddenCount: 0) }
+        let shown = owner.repos.filter { $0.isImported || $0.id == selectedRowID }
+        return SidebarRepoListModel(shown: shown, hiddenCount: owner.repos.count - shown.count)
+    }
+
+    /// The subline an owner node shows. A member's organization says "Org secrets need an org
+    /// admin" only once imported or selected: nothing fixes it, and under every listed
+    /// organization it would be noise.
+    static func shownProblem(of owner: SidebarOwnerModel, isSelected: Bool) -> SidebarOwnerProblem? {
+        guard owner.problem == .needsOrgAdmin else { return owner.problem }
+        return owner.organization != nil || isSelected ? owner.problem : nil
+    }
+
+    // MARK: - Accounts
+
+    private struct Account {
+        let key: String
+        let login: String
+        let summary: GHAccountSummaryModel?
+
+        var isLoggedIn: Bool {
+            summary?.isLoggedIn ?? false
         }
     }
 
-    private static func insert(_ row: SidebarRepoModel, into group: inout OwnerGroup?) {
-        group?.repos[row.repoKey] = row
+    /// gh's accounts in its order, then the accounts only the vault or a catalog still refers to,
+    /// by login.
+    private static func accountOrder(_ input: SidebarInputModel) -> [Account] {
+        var accounts = input.accounts.map { Account(key: $0.id, login: $0.account.login, summary: $0) }
+        let known = Set(accounts.map(\.key))
+        let others = input.vaultRepos.map { (OwnerLoginValidator.foldKey($0.accountLogin), $0.accountLogin) }
+            + input.vaultOrganizations.map { (OwnerLoginValidator.foldKey($0.accountLogin), $0.accountLogin) }
+            + input.catalogs.values.map { (OwnerLoginValidator.foldKey($0.accountLogin), $0.accountLogin) }
+            + input.addedByName.keys.map { ($0, $0) }
+        accounts += Dictionary(others, uniquingKeysWith: { first, _ in first })
+            .filter { !known.contains($0.key) }
+            .sorted { $0.value.localizedCaseInsensitiveCompare($1.value) == .orderedAscending }
+            .map { Account(key: $0.key, login: $0.value, summary: nil) }
+        return accounts
     }
+
+    // MARK: - Owners
+
+    private struct Listing {
+        let account: Account
+        let owner: OwnerCatalogModel
+    }
+
+    private struct OwnerGroup {
+        var login: String
+        var ownerType: OwnerType
+        var listings: [Listing] = []
+        var addedByName: [(Account, CatalogRepoModel)] = []
+        var vaultRepos: [RepoModel] = []
+        var organization: OrganizationModel?
+    }
+
+    private static func owner(
+        key: String,
+        group: OwnerGroup,
+        isPersonal: Bool,
+        accounts: [Account],
+        input: SidebarInputModel
+    ) -> SidebarOwnerModel? {
+        guard let account = account(of: key, group: group, isPersonal: isPersonal, accounts: accounts) else { return nil }
+        let listing = group.listings.first { $0.account.key == account.key } ?? group.listings.first
+        // The chosen account's listing first, so a repository two accounts list goes through it.
+        let listings = group.listings.filter { $0.account.key == account.key }
+            + group.listings.filter { $0.account.key != account.key }
+
+        var rows: [String: SidebarRepoModel] = [:]
+        for listing in listings {
+            for repo in listing.owner.repositories where rows[repo.id] == nil {
+                rows[repo.id] = row(repo, accountLogin: listing.account.login)
+            }
+        }
+        for (account, repo) in group.addedByName where rows[repo.id] == nil {
+            rows[repo.id] = row(repo, accountLogin: account.login)
+        }
+        for repo in group.vaultRepos {
+            let row = row(repo)
+            rows[row.repoKey] = row
+        }
+
+        let problem = problem(
+            of: group,
+            key: key,
+            listing: listing?.owner,
+            account: account,
+            isPersonal: isPersonal,
+            input: input
+        )
+        // An empty node stays when it is a place (an organization gh lists, an imported one), the
+        // account's own listing, or where a problem shows.
+        let keepsEmpty = group.organization != nil || problem != nil
+            || (isPersonal ? input.catalogs[account.key] != nil : !group.listings.isEmpty)
+        guard !rows.isEmpty || keepsEmpty else { return nil }
+        return SidebarOwnerModel(
+            id: key,
+            login: listing?.owner.login ?? group.login,
+            accountLogin: account.login,
+            ownerType: listing?.owner.ownerType ?? group.ownerType,
+            isPersonal: isPersonal,
+            isTruncated: listing?.owner.isTruncated ?? false,
+            repos: rows.values.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+            organization: group.organization,
+            problem: problem
+        )
+    }
+
+    /// The account an owner goes through: the account itself for its own repositories; the one
+    /// that imported the organization or a repository of it; else the first signed-in account
+    /// that lists it, then any account that does.
+    private static func account(of key: String, group: OwnerGroup, isPersonal: Bool, accounts: [Account]) -> Account? {
+        func named(_ login: String) -> Account? {
+            let fold = OwnerLoginValidator.foldKey(login)
+            return accounts.first { $0.key == fold }
+        }
+        if isPersonal { return accounts.first { $0.key == key } }
+        if let organization = group.organization, let account = named(organization.accountLogin) { return account }
+        if let repo = group.vaultRepos.first, let account = named(repo.accountLogin) { return account }
+        let listing = group.listings.map(\.account) + group.addedByName.map { $0.0 }
+        return listing.first(where: \.isLoggedIn) ?? listing.first
+    }
+
+    private static func problem(
+        of group: OwnerGroup,
+        key: String,
+        listing: OwnerCatalogModel?,
+        account: Account,
+        isPersonal: Bool,
+        input: SidebarInputModel
+    ) -> SidebarOwnerProblem? {
+        if case .samlRequired(let url) = listing?.failure { return .ssoRequired(url) }
+        if let failure = listing?.failure { return .unavailable(failure) }
+        guard account.isLoggedIn else { return .signedOut }
+        if isPersonal, case .missing(let scopes) = account.summary?.status?.scopes { return .missingScopes(scopes) }
+        let access = input.organizationAccess[account.key]?.first { $0.id == key }
+        switch access?.status {
+        case .needsAdminOrgScope: return .needsAdminOrg
+        case .needsOrgAdmin: return .needsOrgAdmin
+        case .ssoRequired(let url): return .ssoRequired(url)
+        case .ready, .unknown, nil: return nil
+        }
+    }
+
+    // MARK: - Rows
 
     /// A catalog row, overlaid with the vault row when the repository is imported.
-    private static func row(
-        _ repo: CatalogRepoModel,
-        accountKey: String,
-        accountLogin: String,
-        vaultByKey: [String: RepoModel]
-    ) -> SidebarRepoModel {
-        if let stored = vaultByKey[repo.id] {
-            return row(stored, accountKey: accountKey)
-        }
-        return SidebarRepoModel(
-            id: rowID(accountKey: accountKey, repoKey: repo.id),
+    private static func row(_ repo: CatalogRepoModel, accountLogin: String) -> SidebarRepoModel {
+        SidebarRepoModel(
             repoKey: repo.id,
             accountLogin: accountLogin,
             ownerLogin: repo.ref.owner,
@@ -293,11 +344,9 @@ enum SidebarGrouping {
         )
     }
 
-    private static func row(_ repo: RepoModel, accountKey: String) -> SidebarRepoModel {
-        let repoKey = SidebarRepoModel.foldKey(owner: repo.ownerLogin, name: repo.name)
-        return SidebarRepoModel(
-            id: rowID(accountKey: accountKey, repoKey: repoKey),
-            repoKey: repoKey,
+    private static func row(_ repo: RepoModel) -> SidebarRepoModel {
+        SidebarRepoModel(
+            repoKey: SidebarRepoModel.foldKey(owner: repo.ownerLogin, name: repo.name),
             accountLogin: repo.accountLogin,
             ownerLogin: repo.ownerLogin,
             name: repo.name,
@@ -310,15 +359,11 @@ enum SidebarGrouping {
         )
     }
 
-    static func rowID(accountKey: String, repoKey: String) -> String {
-        "\(accountKey)|\(repoKey)"
-    }
-
     private static func filter(_ owners: [SidebarOwnerModel], query: String) -> [SidebarOwnerModel] {
         guard !query.isEmpty else { return owners }
         return owners.compactMap { owner in
             let repos = owner.repos.filter { $0.fullName.localizedCaseInsensitiveContains(query) }
-            // An imported organization stays findable by its login, for its own row.
+            // An imported organization stays findable by its login, for its own place.
             let keepsOrganization = owner.organization != nil && owner.login.localizedCaseInsensitiveContains(query)
             guard !repos.isEmpty || keepsOrganization else { return nil }
             return SidebarOwnerModel(
@@ -326,11 +371,11 @@ enum SidebarGrouping {
                 login: owner.login,
                 accountLogin: owner.accountLogin,
                 ownerType: owner.ownerType,
-                isAccount: owner.isAccount,
-                failure: owner.failure,
+                isPersonal: owner.isPersonal,
                 isTruncated: owner.isTruncated,
                 repos: repos,
-                organization: owner.organization
+                organization: owner.organization,
+                problem: owner.problem
             )
         }
     }

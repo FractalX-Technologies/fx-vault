@@ -1114,13 +1114,22 @@ AppTests).
   Advanced (v0.3.1: the trusted gh with its owner and **Revoke**).
 - `Main` (§10.4), `MainViewModel` owns:
   - `SidebarViewModel` (`Main/Sidebar`): vault repositories observed (work without gh), gh
-    accounts and catalogs loaded when gh is ready; `SidebarGrouping.sections(_:query:)` (pure)
-    groups account → owner (Personal, organizations in gh's order, others by name) → repositories,
-    with badges (private, archived, fork, unavailable, not on GitHub), scope warnings, SAML and
-    truncation notes and search (the toolbar search field); Import, Clone, Share…, Remove from
-    vault (confirmed); Add repository by name (`Main/AddRepository`). 1.0: vault organizations
+    accounts and catalogs loaded when gh is ready; `SidebarGrouping.owners(_:query:)` (pure,
+    D6c1) builds one node per owner across the accounts (organizations first, then people),
+    through the account that imported it or else the first signed-in one that lists it, with
+    badges (private, archived, fork, unavailable, not on GitHub), a `SidebarOwnerProblem`
+    subline (not logged in, missing scopes, `admin:org`, org admin, SSO, not listed; the
+    organization access is read per signed-in account after each reload, without blocking the
+    tree; a member's "org admin" subline only on an imported or selected organization,
+    `SidebarGrouping.shownProblem`), truncation notes and the search (Edit › Find, ⌘F:
+    `MainViewModel.findInSidebar()` unhides the sidebar, then focuses its field); owners start collapsed
+    (`expandedOwnerIDs`; a selection opens its owner, a search opens all) and list the vault's
+    repositories, the rest behind "Show N more" (`SidebarGrouping.repoList`). Import, Clone,
+    Share…, Remove from vault (confirmed); Add repository by name on the owner's menu
+    (`Main/AddRepository`); "Approve" asks `AppViewModel.requestedSettingsTab` for Settings ›
+    Accounts. 1.0: vault organizations
     are observed too (`SidebarInputModel.vaultOrganizations`); an organization group carries its
-    `OrganizationModel` and its own row (`selectedOrganizationOwnerID`; a repository, a folder
+    `OrganizationModel` and is its own place (`selectedOrganizationOwnerID`; a repository, a folder
     and an organization are selected one at a time), with Import and Remove from Vault;
     `MainViewModel` builds `OrganizationDetailViewModel` (`Main/Organization`, items observed
     from `OrganizationRepository`) for an imported one. B6b3a: the detail adds, edits, deletes
@@ -1138,12 +1147,13 @@ AppTests).
     row and the detail's Actions button) asks for Remove from FX Vault, confirmed in the sidebar
     (`pendingKeyVaultRemoval`, `confirmKeyVaultRemoval()`, `deleteDestination`). v0.3.0 draws the sidebar
     and scope rows itself (`.fxRowBackground`, docs/DESIGN.md) instead of a native `List`
-    selection; `MainColumnSelection` (pure) keeps Up/Down keyboard selection and owner groups
-    collapse from their mono label.
+    selection; `MainColumnSelection` (pure) keeps Up/Down keyboard selection; since D6c1 every
+    node is a `SidebarTreeRow` whose chevron opens or closes it.
   - `ScopeListViewModel` (`Main/ScopeList`): the repository scope (its sidebar row since 1.0)
     plus environments nested under it (`observeScopes`, `environmentScopes`), pending dot,
     value-missing count, context menu Settings / Rename / Duplicate / Export .env / Share /
-    Revert / Delete (confirmed), "+ New Environment" (admin). v0.8.0 (R7): then RUNTIME
+    Revert / Delete (confirmed); New Environment… (admin) is on the repository's context menu
+    since D6c1 (`MainViewModel.newEnvironment(in:)`). v0.8.0 (R7): then RUNTIME
     with the Experimental tag: one row per destination (`observeDestinations`; provider symbol,
     name, provider · stage, value-missing warning, pending dot, count) with the
     `DestinationContextMenu` (Settings…, Export .env…, Remove from FX Vault…, confirmed) and
@@ -1226,7 +1236,8 @@ AppTests).
     (Share Project…), Lock,
     Sync (`SyncToolbarButton`, count in the label, disabled at 0, while locked, while syncing and
     without gh). Menu commands (`VaultCommands`): File › New Repository… (⌘N), Import .env… (⇧⌘I);
-    File › Share Project… (⌥⌘S); Vault › Lock (⌃⌘L), Sync (⇧⌘S). Commands reach the window through
+    File › Share Project… (⌥⌘S); Edit › Find (⌘F, the sidebar search); View › Hide Sidebar
+    (⌃⌘S, `SidebarCommands`); Vault › Lock (⌃⌘L), Sync (⇧⌘S). Commands reach the window through
     `FocusedValues.mainViewModel`.
 - Feature sheets (all presented by the router below; each `XScreen` + `@Observable XViewModel`):
   - `ItemEditor` (§7.1, M3): `ItemEditorViewModel` (`LockObserving`) adds, edits, fills and

@@ -45,18 +45,28 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Black and white.** A white window with black type (black and white in dark mode), system
   greys for secondary text, translucent cards and no brand blue: pending dots and links are ink.
   The interface uses SF Pro and SF Mono; FX Vault no longer ships its own fonts.
-- **Two-column main window.** The sidebar is one tree: GitHub, each account and owner, the
-  repositories, and the selected repository's environments and destinations under it; Folders
+- **Two-column main window.** The sidebar is one tree: GitHub, each owner, the repositories,
+  and the selected repository's environments and destinations under it; Azure and Folders
   follow GitHub. The middle scopes column is gone: the repository row stands for the repository
   itself, and the toolbar shows where you are (GitHub › owner › repository › environment).
+- **One node per owner.** The sidebar has no account level: each organization or person shows
+  once, whichever accounts see it, and goes through the account that imported it (else the
+  first signed-in one). Owners start collapsed and list the repositories in your vault; the
+  rest wait behind **Show N more**. An owner that needs something says so under its name
+  (Needs admin:org · Approve, Authorize SSO · Open, Not logged in · Settings); Approve opens
+  Settings › Accounts. Search moved into the sidebar: Edit › Find (⌘F) focuses it, and brings
+  the sidebar back when it is hidden. "Org secrets need an org admin" shows only on an
+  organization you imported or selected. Lock and Settings sit at the bottom
+  of the sidebar; Add Repository by Name… is on an owner's menu and New Environment… on a
+  repository's.
 - **Sharing production.** Share Project lists production stages unchecked; checking one asks
   for Touch ID (or, without Touch ID, your master password at Create), and the send step names
   the production places. The file is refused unless that confirmation was given.
 - **Organization access.** Settings › Accounts lists each account's organizations with whether
   it can manage their secrets: Ready, Needs admin:org (copy the commands, approve in the browser,
   Re-check), Org secrets need an org admin, or Needs SSO authorization.
-- **Organization secrets and variables.** Each organization in the sidebar starts
-  with a Secrets and variables row: Import reads its own secrets (names only) and variables, and
+- **Organization secrets and variables.** Selecting an organization in the sidebar opens its
+  own secrets and variables: Import reads its secrets (names only) and variables, and
   the organization view lists them with who can use each one (all repositories, private and
   internal, or the selected ones) and when GitHub last changed it. Remove from Vault deletes
   them from this Mac only.

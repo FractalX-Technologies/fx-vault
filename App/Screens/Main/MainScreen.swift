@@ -64,8 +64,7 @@ struct MainScreen: View {
     /// The two columns (sidebar tree, detail), each as tall as the window
     /// (`mainColumnHeight()`).
     private var splitView: some View {
-        @Bindable var sidebar = viewModel.sidebar
-        return NavigationSplitView {
+        NavigationSplitView(columnVisibility: sidebarVisibility) {
             SidebarView(main: viewModel)
                 .mainColumnHeight()
                 .navigationSplitViewColumnWidth(min: Theme.Layout.sidebarMinWidth, ideal: Theme.Layout.sidebarIdealWidth)
@@ -74,10 +73,14 @@ struct MainScreen: View {
                 .frame(minWidth: Theme.Layout.detailMinWidth)
                 .mainColumnHeight()
         }
-        .searchable(
-            text: $sidebar.searchText,
-            placement: .toolbar,
-            prompt: Text(String(localized: "main.search.prompt", defaultValue: "Search repositories"))
+    }
+
+    /// View › Hide Sidebar and Edit › Find (which brings the sidebar back) meet in
+    /// ``MainViewModel/isSidebarHidden``.
+    private var sidebarVisibility: Binding<NavigationSplitViewVisibility> {
+        Binding(
+            get: { viewModel.isSidebarHidden ? .detailOnly : .all },
+            set: { viewModel.isSidebarHidden = $0 == .detailOnly }
         )
     }
 }
@@ -180,7 +183,8 @@ struct MainToolbarTitle: View {
     }
 }
 
-/// New repository, Import .env, Share and Lock as 32 pt outline circles.
+/// New repository, Import .env and Share as 32 pt outline circles (Lock is at the bottom of the
+/// sidebar, 1.0).
 private struct MainToolbarActions: View {
     let viewModel: MainViewModel
 
@@ -204,14 +208,6 @@ private struct MainToolbarActions: View {
         .disabled(!viewModel.canImportEnv)
 
         ShareMenu(viewModel: viewModel)
-
-        Button {
-            viewModel.lock()
-        } label: {
-            Label(String(localized: "toolbar.lock", defaultValue: "Lock"), systemImage: "lock")
-        }
-        .fxIconButtonStyle()
-        .help(String(localized: "toolbar.lock.help", defaultValue: "Lock FX Vault (⌃⌘L)"))
     }
 }
 

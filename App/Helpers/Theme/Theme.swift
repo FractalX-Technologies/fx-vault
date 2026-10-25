@@ -12,7 +12,7 @@ import VaultCore
 /// - `Theme.Durations`: motion (140 ms, spring)
 /// - `Theme.Layout`: window and component sizes
 /// - `Theme.Opacity`, `Theme.Stroke`, `Theme.Shadow`: states, lines and the one sheet shadow
-/// - `Theme.Symbols`: the SF Symbols of places (organization, repository, environment)
+/// - `Theme.Symbols`: the SF Symbols of places (organization, person, repository, environment)
 enum Theme {
     enum Layout {
         // MARK: Design components (App/Components/Design)
@@ -40,15 +40,15 @@ enum Theme {
         static let segmentHeight: CGFloat = 30
         /// Pending and banner dots.
         static let bannerDotSize: CGFloat = 8
-        /// Rows: tables 34 (boards Main2, Org-Visibility), scopes 36, sidebar repositories 32.
+        /// Rows: tables 34 (boards Main2, Org-Visibility), scopes 36, the sidebar tree 28.
         static let tableRowHeight: CGFloat = 34
         /// The content height of a native `Table` cell that yields a `tableRowHeight` row
         /// (`.fxTableCell()`; the inset table style adds the rest).
         static let tableCellMinHeight: CGFloat = 26
         static let scopeRowHeight: CGFloat = 36
-        static let sidebarRowHeight: CGFloat = 32
-        /// Avatars in the sidebar account row.
-        static let avatarSize: CGFloat = 26
+        static let sidebarRowHeight: CGFloat = 28
+        /// A shortcut chip (`⌘F`, ``KeyHint``).
+        static let keyHintHeight: CGFloat = 18
         /// The FractalX mark: toolbar 18, lock 44, onboarding 44, About 84.
         static let brandMarkSmall: CGFloat = 18
         static let brandMarkLarge: CGFloat = 44
@@ -95,8 +95,17 @@ enum Theme {
         /// The sidebar holds the whole tree (1.0): owner › repository › environment.
         static let sidebarMinWidth: CGFloat = 240
         static let sidebarIdealWidth: CGFloat = 280
-        /// How far a repository's environments sit right of its row in the sidebar tree.
-        static let sidebarTreeIndent: CGFloat = 16
+        /// One level of the sidebar tree: owner › repository › environment (board Main2-Expanded).
+        static let sidebarTreeIndent: CGFloat = 14
+        /// The disclosure chevron's column and the symbol's, so names line up at every level.
+        static let sidebarChevronWidth: CGFloat = 10
+        static let sidebarSymbolWidth: CGFloat = 14
+        /// The subline under a node ("Needs admin:org · Approve").
+        static let sidebarSublineHeight: CGFloat = 18
+        /// "GitHub", "Azure", "Folders"; also the size of a header's + button.
+        static let sidebarSectionHeaderHeight: CGFloat = 22
+        /// The search field at the top of the sidebar and the footer's icon buttons.
+        static let sidebarControlHeight: CGFloat = 28
         /// The toolbar title item (mark and path) at the detail column's leading edge. A fixed
         /// width: the toolbar proposes no width, so the title picks the longest path that fits
         /// it, and the toolbar buttons still fit beside it in the narrowest window.
@@ -237,6 +246,7 @@ enum Theme {
     /// place the same way (boards Main2, Sync-Review). A Key Vault's is its provider's.
     enum Symbols {
         static let organization = "building.2"
+        static let person = "person"
         static let repository = "book.closed"
         static let environment = "smallcircle.filled.circle"
     }

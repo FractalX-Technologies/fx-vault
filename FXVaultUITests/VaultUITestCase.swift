@@ -67,11 +67,50 @@ class VaultUITestCase: XCTestCase {
         return sidebar
     }
 
-    /// A sidebar row whose label contains `name`. Owner headers and repository rows are buttons,
-    /// and section labels are uppercased.
+    /// A sidebar row whose label contains `name`: an owner node, a repository or an environment.
     @MainActor
     func sidebarRow(_ name: String, in sidebar: XCUIElement) -> XCUIElement {
         sidebar.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", name)).firstMatch
+    }
+
+    /// Opens an owner node and its "Show N more": owners start collapsed and list only the
+    /// repositories in the vault (1.0), so a repository to import needs both.
+    @MainActor
+    func revealRepositories(of owner: String, in sidebar: XCUIElement) {
+        click(sidebar.buttons[AccessibilityID.Main.ownerToggle(owner)])
+        click(sidebar.buttons[AccessibilityID.Main.showMore(owner)])
+    }
+
+    /// ⌘F, then types into whatever has the focus: the text lands in the sidebar's search field
+    /// only if ⌘F focused it.
+    @MainActor
+    func searchSidebar(for text: String, in app: XCUIApplication) {
+        let field = app.textFields[AccessibilityID.Main.sidebarSearch]
+        XCTAssertTrue(field.waitForExistence(timeout: timeout), "The sidebar has no search field")
+        app.typeKey("f", modifierFlags: .command)
+        type(text, intoFocused: field, in: app)
+    }
+
+    /// ⌘F with the sidebar hidden (View › Hide Sidebar, ⌃⌘S): Edit › Find must bring it back.
+    /// A hidden column leaves the accessibility tree, so the field is looked for after ⌘F.
+    @MainActor
+    func searchHiddenSidebar(for text: String, in app: XCUIApplication) {
+        let field = app.textFields[AccessibilityID.Main.sidebarSearch]
+        let hidden = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false OR isHittable == false"), object: field)
+        XCTAssertEqual(XCTWaiter().wait(for: [hidden], timeout: timeout), .completed, "The sidebar is not hidden")
+        app.typeKey("f", modifierFlags: .command)
+        XCTAssertTrue(field.waitForExistence(timeout: timeout), "⌘F did not bring the sidebar back")
+        let shown = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: field)
+        XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: timeout), .completed, "⌘F did not bring the sidebar back")
+        type(text, intoFocused: field, in: app)
+    }
+
+    /// Types into whatever has the focus: the text lands in `field` only if it has the focus.
+    @MainActor
+    private func type(_ text: String, intoFocused field: XCUIElement, in app: XCUIApplication) {
+        app.typeText(text)
+        let typed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", text), object: field)
+        XCTAssertEqual(XCTWaiter().wait(for: [typed], timeout: timeout), .completed, "⌘F did not focus the search field")
     }
 
     /// A confirmation dialog's button. The Touch Bar repeats it, disabled, under the same title,

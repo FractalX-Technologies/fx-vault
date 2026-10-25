@@ -52,6 +52,18 @@ final class PreferencesViewModel: LockObserving {
         app.phase
     }
 
+    /// The tab the main window asked for (``AppViewModel/requestedSettingsTab``).
+    var requestedTab: Tab? {
+        app.requestedSettingsTab
+    }
+
+    /// Switches to the requested tab, once.
+    func showRequestedTab() {
+        guard let tab = app.requestedSettingsTab else { return }
+        selectedTab = tab
+        app.clearSettingsTabRequest()
+    }
+
     /// True when the Security and Accounts tabs can be used.
     var isVaultSettingsAvailable: Bool {
         app.phase == .unlocked

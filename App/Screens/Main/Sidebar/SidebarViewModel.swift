@@ -4,9 +4,9 @@ import Observation
 import VaultCore
 import VaultData
 
-/// Column 1 (§10): the folders (v0.7.0), then accounts, owner groups (each organization with
-/// its own row, 1.0) and repositories, with search, Import, Clone, Remove from vault and Add
-/// repository by name.
+/// Column 1 (§10; boards Main2-Home, Main2-Expanded): one node per owner across the gh accounts
+/// (an organization node is its place), repositories, Key Vaults and folders, with search (⌘F),
+/// Import, Clone, Remove from vault and Add repository by name.
 ///
 /// - Vault repositories and organizations are observed (`ConfigRepository.observeRepositories()`,
 ///   `OrganizationRepository.observeOrganizations()`), so imports, removals and created
@@ -18,15 +18,26 @@ import VaultData
 @Observable
 final class SidebarViewModel {
     var searchText = ""
+    /// Bumped by ⌘F; the search field takes the focus when it changes.
+    private(set) var searchFocusRequest = 0
+    /// A ⌘F the search field has not taken yet: the sidebar was hidden, so the field takes the
+    /// focus when it appears.
+    private(set) var isSearchFocusPending = false
     var selectedRowID: SidebarRepoModel.ID? {
         didSet {
             guard selectedRowID != oldValue else { return }
-            if selectedRowID != nil {
+            if let selectedRowID {
                 clearSelection(except: .repository)
+                expandOwner(ofRow: selectedRowID)
             }
             onChange?()
         }
     }
+    /// The owner nodes showing their repositories; collapsed by default, and a selection
+    /// expands the nodes above it.
+    private(set) var expandedOwnerIDs: Set<SidebarOwnerModel.ID> = []
+    /// The owner nodes whose "Show N more" was clicked.
+    private(set) var fullyShownOwnerIDs: Set<SidebarOwnerModel.ID> = []
     /// The folders (v0.7.0), in the user's order.
     private(set) var folders: [FolderModel] = []
     /// The selected folder: selecting one clears the repository selection, and back.
@@ -43,8 +54,9 @@ final class SidebarViewModel {
     var selectedOrganizationOwnerID: SidebarOwnerModel.ID? {
         didSet {
             guard selectedOrganizationOwnerID != oldValue else { return }
-            if selectedOrganizationOwnerID != nil {
+            if let selectedOrganizationOwnerID {
                 clearSelection(except: .organization)
+                expandedOwnerIDs.insert(selectedOrganizationOwnerID)
             }
             onChange?()
         }
@@ -73,6 +85,9 @@ final class SidebarViewModel {
     private(set) var accountsError: ErrorPresentationModel?
     /// Per-account catalog failures, by account fold key.
     private(set) var catalogErrors: [String: ErrorPresentationModel] = [:]
+    /// The organization access read after the catalogs (``reload()``), so ``needsReload`` is not
+    /// held up by it.
+    @ObservationIgnored private(set) var accessTask: Task<Void, Never>?
     /// Rows with an import, removal or clone in flight (by repo fold key).
     private(set) var busyRepoKeys: Set<String> = []
     var alert: ErrorPresentationModel?
@@ -103,18 +118,73 @@ final class SidebarViewModel {
 
     // MARK: - Content
 
-    var sections: [SidebarAccountModel] {
-        SidebarGrouping.sections(input, query: searchText)
+    /// The owner nodes under GitHub, filtered by the search.
+    var owners: [SidebarOwnerModel] {
+        SidebarGrouping.owners(input, query: searchText)
+    }
+
+    /// Every owner node, whatever the search.
+    private var allOwners: [SidebarOwnerModel] {
+        SidebarGrouping.owners(input, query: "")
     }
 
     /// The selected row (searched in the unfiltered tree, so a search never loses it).
     var selectedRepo: SidebarRepoModel? {
         guard let selectedRowID else { return nil }
-        return SidebarGrouping.sections(input, query: "")
-            .lazy
-            .flatMap(\.owners)
-            .flatMap(\.repos)
-            .first { $0.id == selectedRowID }
+        return allOwners.lazy.flatMap(\.repos).first { $0.id == selectedRowID }
+    }
+
+    private var isSearching: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// A search shows every owner open.
+    func isExpanded(_ owner: SidebarOwnerModel) -> Bool {
+        isSearching || expandedOwnerIDs.contains(owner.id)
+    }
+
+    func toggle(_ owner: SidebarOwnerModel) {
+        if expandedOwnerIDs.contains(owner.id) {
+            expandedOwnerIDs.remove(owner.id)
+        } else {
+            expandedOwnerIDs.insert(owner.id)
+        }
+    }
+
+    /// The owner's repositories on screen, and how many "Show N more" holds.
+    func repoList(of owner: SidebarOwnerModel) -> SidebarRepoListModel {
+        SidebarGrouping.repoList(
+            of: owner,
+            selectedRowID: selectedRowID,
+            showsAll: isSearching || fullyShownOwnerIDs.contains(owner.id)
+        )
+    }
+
+    func showAllRepositories(of owner: SidebarOwnerModel) {
+        fullyShownOwnerIDs.insert(owner.id)
+    }
+
+    /// ⌘F: puts the focus in the search field.
+    func focusSearch() {
+        isSearchFocusPending = true
+        searchFocusRequest += 1
+    }
+
+    /// The search field took the focus.
+    func didFocusSearch() {
+        isSearchFocusPending = false
+    }
+
+    /// The search field could not take the focus in time (the window not key, a slow slide): the
+    /// request is dropped so it does not grab the focus the next time the sidebar shows.
+    func cancelSearchFocus() {
+        isSearchFocusPending = false
+    }
+
+    private func expandOwner(ofRow id: SidebarRepoModel.ID) {
+        // A row id is `owner/name` folded; the owner node's id is the folded owner.
+        guard let owner = id.split(separator: "/").first else { return }
+        expandedOwnerIDs.insert(String(owner))
     }
 
     /// The vault row of an imported repository.
@@ -122,13 +192,10 @@ final class SidebarViewModel {
         input.vaultRepos.first { $0.id == id }
     }
 
-    /// The owner group of the selected organization row (searched in the unfiltered tree).
+    /// The selected organization node (searched in the unfiltered tree).
     var selectedOrganizationOwner: SidebarOwnerModel? {
         guard let selectedOrganizationOwnerID else { return nil }
-        return SidebarGrouping.sections(input, query: "")
-            .lazy
-            .flatMap(\.owners)
-            .first { $0.id == selectedOrganizationOwnerID }
+        return allOwners.first { $0.id == selectedOrganizationOwnerID }
     }
 
     /// The vault row of an imported organization.
@@ -139,11 +206,7 @@ final class SidebarViewModel {
     /// The names of the repositories listed under an imported organization (Selected access
     /// offers them).
     func organizationRepositoryNames(_ id: OrganizationID) -> [String] {
-        SidebarGrouping.sections(input, query: "")
-            .lazy
-            .flatMap(\.owners)
-            .first { $0.organization?.id == id }?
-            .repos.map(\.name) ?? []
+        allOwners.first { $0.organization?.id == id }?.repos.map(\.name) ?? []
     }
 
     private enum SelectionKind {
@@ -187,8 +250,9 @@ final class SidebarViewModel {
         input.accounts.isEmpty || accountsError != nil || !catalogErrors.isEmpty
     }
 
-    func catalogError(for accountID: SidebarAccountModel.ID) -> ErrorPresentationModel? {
-        catalogErrors[accountID]
+    /// The first account whose repositories could not be listed (the footer shows it).
+    var catalogError: ErrorPresentationModel? {
+        catalogErrors.sorted { $0.key < $1.key }.first?.value
     }
 
     func isBusy(_ repo: SidebarRepoModel) -> Bool {
@@ -398,8 +462,9 @@ final class SidebarViewModel {
         })
     }
 
-    /// Lists the gh accounts and each logged-in account's catalog. Does nothing until gh is ready
-    /// or while offline. Catalog results feed `GitHubReachability`.
+    /// Lists the gh accounts and each logged-in account's catalog, then reads their organization
+    /// access in the background (``accessTask``). Does nothing until gh is ready or while
+    /// offline. Catalog results feed `GitHubReachability`.
     func reload() async {
         guard isGitHubReady, isOnline, !isLoadingCatalog else { return }
         isLoadingCatalog = true
@@ -424,6 +489,21 @@ final class SidebarViewModel {
                 gitHubReachability.record(error)
             }
         }
+        loadOrganizationAccess(accounts.filter(\.isLoggedIn).map(\.account.login))
+    }
+
+    /// Which organizations need `admin:org` or SSO (the owner sublines). The tree does not wait for
+    /// it; a failure leaves the sublines out (Settings › Accounts explains it).
+    private func loadOrganizationAccess(_ logins: [String]) {
+        let github = data.github
+        accessTask?.cancel()
+        accessTask = Task { [weak self] in
+            for login in logins {
+                guard let access = try? await github.organizationAccess(accountLogin: login) else { continue }
+                guard let self, !Task.isCancelled else { return }
+                input.organizationAccess[OwnerLoginValidator.foldKey(login)] = access
+            }
+        }
     }
 
     /// Adds a repository found by **Add repository by name…** and selects it.
@@ -434,7 +514,7 @@ final class SidebarViewModel {
         added.append(repo)
         input.addedByName[key] = added
         searchText = ""
-        selectedRowID = SidebarGrouping.rowID(accountKey: key, repoKey: repo.id)
+        selectedRowID = repo.id
     }
 
     /// Selects the row of a vault repository, now or as soon as the vault observation lists it
@@ -447,11 +527,7 @@ final class SidebarViewModel {
 
     private func applyPendingSelection() {
         guard let id = pendingSelection else { return }
-        let row = SidebarGrouping.sections(input, query: "")
-            .lazy
-            .flatMap(\.owners)
-            .flatMap(\.repos)
-            .first { $0.importedRepoID == id }
+        let row = allOwners.lazy.flatMap(\.repos).first { $0.importedRepoID == id }
         guard let row else { return }
         pendingSelection = nil
         selectedRowID = row.id

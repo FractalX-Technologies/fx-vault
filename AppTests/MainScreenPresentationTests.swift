@@ -1,10 +1,12 @@
 import Foundation
+import GitHubKit
 import SwiftUI
 import Testing
 @testable import FXVault
 
 /// Presentation helpers of the main window (v0.3.0 FractalX restyle): keyboard selection in the
-/// custom-drawn sidebar and scope columns, sidebar avatars, the table's timestamp and titles.
+/// custom-drawn sidebar and scope columns, the sidebar's owner sublines, the table's timestamp
+/// and titles.
 @MainActor
 @Suite("Main screen presentation")
 struct MainScreenPresentationTests {
@@ -38,14 +40,24 @@ struct MainScreenPresentationTests {
         #expect(MainColumnSelection.id(after: nil, in: [String](), direction: .down) == nil)
     }
 
-    // MARK: - Sidebar avatar
+    // MARK: - Sidebar sublines
 
-    @Test func avatarInitialsUseTheFirstTwoWords() {
-        #expect(SidebarAccountModel.initials(of: "user-a") == "UA")
-        #expect(SidebarAccountModel.initials(of: "example_org.dev") == "EO")
-        #expect(SidebarAccountModel.initials(of: "octocat") == "OC")
-        #expect(SidebarAccountModel.initials(of: "x") == "X")
-        #expect(SidebarAccountModel.initials(of: "") == "")
+    /// Board Main2-Expanded: "Needs admin:org · Approve", "Authorize SSO · Open"; a member's
+    /// node only says why (no scope fixes it).
+    @Test func ownerSublinesSayWhatToDo() {
+        #expect(SidebarCopy.subline(.needsAdminOrg) == ("Needs admin:org", "Approve"))
+        #expect(SidebarCopy.subline(.missingScopes(["repo", "read:org"])) == ("Needs repo, read:org", "Approve"))
+        #expect(SidebarCopy.subline(.ssoRequired(nil)) == ("Authorize SSO", "Open"))
+        #expect(SidebarCopy.subline(.signedOut) == ("Not logged in", "Settings"))
+        #expect(SidebarCopy.subline(.needsOrgAdmin) == ("Org secrets need an org admin", nil))
+        #expect(SidebarCopy.subline(.unavailable(.notFound)) == ("Could not be listed", nil))
+    }
+
+    /// A repository's chevron opens the repository (its environments show under it) and never
+    /// hides them, so VoiceOver names what it does.
+    @Test func repositoryChevronSaysItOpens() {
+        #expect(SidebarCopy.openRepository("api-service") == "Open api-service")
+        #expect(SidebarCopy.expand("example-org") == "Show what is in example-org")
     }
 
     // MARK: - Table

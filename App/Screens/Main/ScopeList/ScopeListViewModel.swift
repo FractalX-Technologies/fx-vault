@@ -177,9 +177,14 @@ final class ScopeListViewModel {
         repository()?.capability
     }
 
-    /// "+ New Environment" needs admin (environments always do, §2).
+    /// Environments need admin (§2): creating, editing and deleting them.
     var canCreateEnvironment: Bool {
-        capability?.canEditEnvironments == true
+        Self.canCreateEnvironment(in: repository())
+    }
+
+    /// The rule for `repository`'s environments, also behind the sidebar's New Environment….
+    static func canCreateEnvironment(in repository: RepoModel?) -> Bool {
+        repository?.capability.canEditEnvironments == true
     }
 
     /// Rename, duplicate, settings and delete need admin and a live (not deleted) environment.
@@ -193,11 +198,6 @@ final class ScopeListViewModel {
     }
 
     // MARK: - Actions
-
-    func newEnvironment() {
-        guard canCreateEnvironment else { return }
-        dependencies.actions.present(.newEnvironment(NewEnvironmentContext(repositoryID: repositoryID)))
-    }
 
     func openSettings(_ scope: ConfigScopeSummaryModel) {
         guard canEdit(scope), let context = environmentContext(scope) else { return }

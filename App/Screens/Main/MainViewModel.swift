@@ -385,8 +385,33 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         present(.addRepositoryByName(AddRepositoryContext(accountLogin: accountLogin)))
     }
 
+    /// New Environment… on a repository's context menu (1.0), by the scopes column's rule.
+    func canCreateEnvironment(in repo: SidebarRepoModel) -> Bool {
+        ScopeListViewModel.canCreateEnvironment(in: repo.importedRepoID.flatMap(sidebar.vaultRepository))
+    }
+
+    func newEnvironment(in repo: SidebarRepoModel) {
+        guard canCreateEnvironment(in: repo), let id = repo.importedRepoID else { return }
+        present(.newEnvironment(NewEnvironmentContext(repositoryID: id)))
+    }
+
+    /// The sidebar column is hidden (View › Hide Sidebar, ⌃⌘S); Edit › Find brings it back.
+    var isSidebarHidden = false
+
+    /// Edit › Find (⌘F): shows the sidebar if it was hidden, then focuses its search field.
+    func findInSidebar() {
+        isSidebarHidden = false
+        sidebar.focusSearch()
+    }
+
     func lock() {
         app.lock(trigger: .manual)
+    }
+
+    /// An owner's "Approve" or "Settings": Settings › Accounts has the commands that fix it. The
+    /// view then opens the Settings window.
+    func requestAccountsSettings() {
+        app.requestSettingsTab(.accounts)
     }
 
     /// Shows the "recovery key not confirmed" banner (the vault locked during onboarding or a

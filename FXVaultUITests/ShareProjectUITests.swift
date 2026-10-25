@@ -9,6 +9,7 @@ final class ShareProjectUITests: VaultUITestCase {
     func testSharingProductionIsConfirmedAndMakesThePassphraseFile() throws {
         let app = launch()
         let sidebar = try onboard(app)
+        revealRepositories(of: "example-org", in: sidebar)
         click(sidebarRow("api-service", in: sidebar))
         click(app.buttons[AccessibilityID.Main.importRepository])
         let imported = XCTNSPredicateExpectation(
