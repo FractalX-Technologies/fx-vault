@@ -161,15 +161,15 @@ extension ConfigRepository {
         }
         if let record = other.destinationRecord {
             let destinations = DestinationStore(database: session.database)
-            guard let destination = try destinations.fetchDestination(id: record.destinationID, in: tx),
-                  let repository = try RepoStore(database: session.database).fetch(id: destination.repositoryID, in: tx)
-            else { return nil }
+            guard let destination = try destinations.fetchDestination(id: record.destinationID, in: tx) else { return nil }
+            let repository = try destination.repositoryID.map { id in try RepoStore(database: session.database).fetch(id: id, in: tx) }
+            if destination.repositoryID != nil, repository == nil { return nil }
             return LinkedCopyModel(
                 itemID: record.id,
                 place: .destination(
                     destination.id,
-                    repositoryID: repository.id,
-                    repositoryFullName: repository.fullName,
+                    repositoryID: repository??.id,
+                    repositoryFullName: repository??.fullName,
                     provider: destination.provider,
                     displayName: try destination.target().displayName,
                     stage: destination.stage
@@ -222,7 +222,7 @@ extension ConfigRepository {
     }
 
     /// Folders first (by name), then repositories by account, repository, scope and name, then
-    /// destinations by repository, name and item name.
+    /// destinations by repository (Key Vaults of their own first), name and item name.
     private static func placeOrder(_ lhs: LinkedCopyModel, _ rhs: LinkedCopyModel) -> Bool {
         sortKey(lhs) < sortKey(rhs)
     }
@@ -234,7 +234,7 @@ extension ConfigRepository {
         case .scope(_, let account, let fullName, _, let environment):
             (1, account.lowercased(), fullName.lowercased(), environment ?? "", copy.name)
         case .destination(_, _, let fullName, _, let displayName, _):
-            (2, fullName.lowercased(), displayName.lowercased(), "", copy.name)
+            (2, fullName?.lowercased() ?? "", displayName.lowercased(), "", copy.name)
         }
     }
 }

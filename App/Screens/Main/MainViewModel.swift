@@ -90,9 +90,12 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// Shows a destination (v0.8.0, a linked copy's place): selects its repository, then the
     /// destination once its column has it.
     func open(destinationID id: DestinationID) {
-        guard let destination = try? app.container.data.destinations.destination(id) else { return }
-        sidebar.select(repositoryID: destination.repositoryID)
-        if scopeList?.repositoryID == destination.repositoryID {
+        // A Key Vault of its own has no repository column; its sidebar node arrives with B8b2.
+        guard let destination = try? app.container.data.destinations.destination(id),
+              let repositoryID = destination.repositoryID
+        else { return }
+        sidebar.select(repositoryID: repositoryID)
+        if scopeList?.repositoryID == repositoryID {
             scopeList?.select(destination: id)
         } else {
             pendingDestination = id

@@ -88,7 +88,8 @@ public struct ShareHoldRepository: Sendable {
             guard let packageID = state.shareHold,
                   let operation = state.pendingOperation, operation != .delete,
                   let destination = destinations[state.destinationID],
-                  let repository = repositories[destination.repositoryID]
+                  let repositoryID = destination.repositoryID,
+                  let repository = repositories[repositoryID]
             else { continue }
             let held = HeldShareItemModel(id: state.id, kind: state.kind, name: state.name, isNew: operation == .add)
             builders[packageID, default: Builder()].addDestinationItem(held, repository: repository, destination: destination)

@@ -14,7 +14,8 @@ import VaultData
 @Observable
 final class DestinationDetailViewModel: LockObserving {
     let destinationID: DestinationID
-    let repositoryID: RepoID
+    /// nil: a Key Vault of its own (1.0).
+    let repositoryID: RepoID?
     var kind: ConfigKind = .secret {
         didSet {
             if kind != oldValue {
@@ -280,9 +281,10 @@ final class DestinationDetailViewModel: LockObserving {
 
     // MARK: - Copy and paste between places
 
-    /// Copy To: the repository's scopes.
+    /// Copy To: the repository's scopes (none for a Key Vault of its own).
     var scopeCopyTargets: [ItemCopyTargetModel] {
-        ((try? dependencies.config.scopes(repositoryID: repositoryID)) ?? [])
+        guard let repositoryID else { return [] }
+        return ((try? dependencies.config.scopes(repositoryID: repositoryID)) ?? [])
             .filter { !$0.isDeleted }
             .map { ItemCopyTargetModel(place: .scope(repositoryID: repositoryID, scope: $0.scope), title: $0.title, isEditable: true) }
     }
@@ -291,7 +293,8 @@ final class DestinationDetailViewModel: LockObserving {
         dependencies.folderCopyTargets()
     }
 
-    /// Copy To › Destinations: the repository's other destinations.
+    /// Copy To › Destinations: the repository's other destinations, or the other Key Vaults of
+    /// their own.
     var destinationCopyTargets: [ItemCopyTargetModel] {
         dependencies.destinationCopyTargets(repositoryID: repositoryID, excluding: destinationID)
     }

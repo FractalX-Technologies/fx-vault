@@ -4,7 +4,8 @@ import VaultCore
 import VaultCrypto
 import VaultStore
 
-/// Runtime destinations of repositories and their items (v0.8.0, tasks/todo.md R1–R3).
+/// Runtime destinations of repositories and their items (v0.8.0, tasks/todo.md R1–R3), and the
+/// Key Vaults of their own (1.0, B8b).
 ///
 /// - Every mutation is one `VaultSession.write` transaction and stays local until the next Sync
 ///   (``DestinationSyncRepository``), which is the only path that reaches a provider.
@@ -29,24 +30,26 @@ public struct DestinationRepository: Sendable {
 
     // MARK: - Destinations
 
-    /// Adds a destination to a repository at the end of its RUNTIME section.
+    /// Adds a destination to a repository at the end of its RUNTIME section, or with a nil
+    /// `repositoryID` a Key Vault of its own (1.0), listed beside GitHub.
     ///
     /// - Throws: `.validation` for an invalid target or stage, `.repositoryNotFound`,
     ///   `.destinationExists`, `.tooManyDestinations`.
     @discardableResult
     public func createDestination(
-        repositoryID: RepoID,
+        repositoryID: RepoID?,
         target: DestinationTargetModel,
         stage: String?
     ) throws(ConfigRepositoryError) -> DestinationID {
         let validTarget = try performConfig { try DestinationRules.validate(target) }
         let validStage = try Self.validStage(stage)
+        let limit = repositoryID == nil ? Limits.maxStandaloneKeyVaults : Limits.maxDestinationsPerRepository
         let id = try write { _, tx, now in
-            guard try RepoStore(database: session.database).fetch(id: repositoryID, in: tx) != nil else {
+            if let repositoryID, try RepoStore(database: session.database).fetch(id: repositoryID, in: tx) == nil {
                 throw ConfigRepositoryError.repositoryNotFound
             }
-            guard try store.countDestinations(repositoryID: repositoryID, in: tx) < Limits.maxDestinationsPerRepository else {
-                throw ConfigRepositoryError.tooManyDestinations(limit: Limits.maxDestinationsPerRepository)
+            guard try store.countDestinations(repositoryID: repositoryID, in: tx) < limit else {
+                throw ConfigRepositoryError.tooManyDestinations(limit: limit)
             }
             let existing = try store.fetchDestinationRecords(repositoryID: repositoryID, in: tx)
             guard !existing.contains(where: { $0.targetKey == validTarget.targetKey }) else {
@@ -113,8 +116,8 @@ public struct DestinationRepository: Sendable {
         }
     }
 
-    /// The destinations of a repository with their counts.
-    public func destinations(repositoryID: RepoID) throws(ConfigRepositoryError) -> [DestinationModel] {
+    /// The destinations of a repository with their counts; nil: the Key Vaults of their own.
+    public func destinations(repositoryID: RepoID?) throws(ConfigRepositoryError) -> [DestinationModel] {
         try performConfig { try store.fetchDestinations(repositoryID: repositoryID) }
     }
 
@@ -141,8 +144,8 @@ public struct DestinationRepository: Sendable {
         }
     }
 
-    /// The destinations of a repository, now and after each change.
-    public func observeDestinations(repositoryID: RepoID) -> AsyncThrowingStream<[DestinationModel], any Error> {
+    /// The destinations of a repository, now and after each change; nil: the Key Vaults of their own.
+    public func observeDestinations(repositoryID: RepoID?) -> AsyncThrowingStream<[DestinationModel], any Error> {
         store.observeDestinations(repositoryID: repositoryID)
     }
 

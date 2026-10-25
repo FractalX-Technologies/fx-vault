@@ -453,4 +453,34 @@ enum MigrationSQL {
           CHECK ((value_ct IS NULL) = (value_fp IS NULL)));
         CREATE UNIQUE INDEX org_items_name ON org_items(organization_id, kind, name);
         """
+
+    // MARK: v18_standalone_key_vaults (1.0, tasks/todo.md B8b)
+
+    /// A Key Vault is a source of its own (1.0 brief): `destinations.repository_id` becomes
+    /// optional, and a vault without a repository is unique by `target_key`. SQLite cannot drop a
+    /// NOT NULL, so the table is rebuilt; migrations run with foreign keys off, so the items and
+    /// journal rows keep pointing at the same ids and nothing cascades.
+    static let v18StandaloneKeyVaults = """
+        CREATE TABLE destinations_v18 (
+          id TEXT PRIMARY KEY CHECK (length(id) = 36),
+          repository_id TEXT REFERENCES repositories(id) ON DELETE CASCADE,
+          provider TEXT NOT NULL CHECK (provider IN ('azure_keyvault','supabase','vercel')),
+          target_key TEXT NOT NULL CHECK (length(target_key) BETWEEN 1 AND 255),
+          settings_json TEXT NOT NULL,
+          stage TEXT CHECK (stage IS NULL OR length(stage) BETWEEN 1 AND 255),
+          stage_key TEXT,
+          connection_id TEXT REFERENCES provider_connections(id) ON DELETE SET NULL,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          last_refreshed_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          CHECK ((stage IS NULL) = (stage_key IS NULL)),
+          CHECK (repository_id IS NOT NULL OR provider = 'azure_keyvault'));
+        INSERT INTO destinations_v18 SELECT id, repository_id, provider, target_key, settings_json, stage, stage_key,
+          connection_id, sort_order, last_refreshed_at, created_at, updated_at FROM destinations;
+        DROP TABLE destinations;
+        ALTER TABLE destinations_v18 RENAME TO destinations;
+        CREATE UNIQUE INDEX destinations_repo_target ON destinations(repository_id, target_key);
+        CREATE UNIQUE INDEX destinations_standalone_target ON destinations(target_key) WHERE repository_id IS NULL;
+        """
 }

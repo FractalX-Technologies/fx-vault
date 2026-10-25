@@ -5,12 +5,13 @@ import VaultCore
 /// One `destinations` row (§6 `v13_destinations`, v0.8.0).
 ///
 /// The provider's identifiers live in `settings_json` (``DestinationSettings``) and its identity
-/// in `target_key`, unique per repository.
+/// in `target_key`, unique per repository, or among the Key Vaults without one (v18, 1.0).
 public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "destinations"
 
     public var id: DestinationID
-    public var repositoryID: RepoID
+    /// nil: a Key Vault source of its own (v18).
+    public var repositoryID: RepoID?
     public var provider: DestinationProvider
     /// ``DestinationTargetModel/targetKey``.
     public var targetKey: String
@@ -26,7 +27,7 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
 
     public init(
         id: DestinationID = DestinationID(),
-        repositoryID: RepoID,
+        repositoryID: RepoID?,
         target: DestinationTargetModel,
         stage: String?,
         sortOrder: Int,

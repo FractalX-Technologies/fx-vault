@@ -27,9 +27,9 @@ struct MigrationTests {
             "v1_vault", "v2_accounts_repos", "v3_config", "v4_sync_journal", "v5_create_policies", "v6_sharing",
             "v7_journal_fingerprints", "v8_force_push_requested_at", "v9_item_links", "v10_teammates",
             "v11_spaces", "v12_folders", "v13_destinations", "v14_project_shares",
-            "v15_drop_teammates", "v16_drop_runtime_providers", "v17_organizations",
+            "v15_drop_teammates", "v16_drop_runtime_providers", "v17_organizations", "v18_standalone_key_vaults",
         ])
-        #expect(Migration.latest == .v17Organizations)
+        #expect(Migration.latest == .v18StandaloneKeyVaults)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }

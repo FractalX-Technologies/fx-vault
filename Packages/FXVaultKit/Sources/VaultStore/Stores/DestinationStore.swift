@@ -25,8 +25,8 @@ public struct DestinationStore: Sendable {
         try database.read { try fetchDestination(id: id, in: $0) }
     }
 
-    /// The destinations of one repository in the sidebar order.
-    public func fetchDestinationRecords(repositoryID: RepoID, in tx: StoreTransaction) throws -> [DestinationRecord] {
+    /// The destinations of one repository in the sidebar order; nil: the Key Vaults of their own.
+    public func fetchDestinationRecords(repositoryID: RepoID?, in tx: StoreTransaction) throws -> [DestinationRecord] {
         try Self.orderedDestinations(repositoryID: repositoryID).fetchAll(tx.db)
     }
 
@@ -35,13 +35,13 @@ public struct DestinationStore: Sendable {
         try DestinationRecord.order(DestinationRecord.CodingKeys.repositoryID, DestinationRecord.CodingKeys.sortOrder).fetchAll(tx.db)
     }
 
-    /// The destinations of one repository with their counts.
-    public func fetchDestinations(repositoryID: RepoID) throws -> [DestinationModel] {
+    /// The destinations of one repository with their counts; nil: the Key Vaults of their own.
+    public func fetchDestinations(repositoryID: RepoID?) throws -> [DestinationModel] {
         try database.read { try Self.destinationModels(repositoryID: repositoryID, db: $0.db) }
     }
 
     /// The destinations of one repository with their counts, now and after each change.
-    public func observeDestinations(repositoryID: RepoID) -> AsyncThrowingStream<[DestinationModel], any Error> {
+    public func observeDestinations(repositoryID: RepoID?) -> AsyncThrowingStream<[DestinationModel], any Error> {
         database.observe { db in
             try Self.destinationModels(repositoryID: repositoryID, db: db)
         }
@@ -60,16 +60,16 @@ public struct DestinationStore: Sendable {
     }
 
     /// One past the largest `sort_order` of the repository's destinations.
-    public func nextSortOrder(repositoryID: RepoID, in tx: StoreTransaction) throws -> Int {
+    public func nextSortOrder(repositoryID: RepoID?, in tx: StoreTransaction) throws -> Int {
         let largest = try DestinationRecord
-            .filter(DestinationRecord.CodingKeys.repositoryID == repositoryID.uuidString)
+            .filter(DestinationRecord.CodingKeys.repositoryID == repositoryID?.uuidString)
             .select(max(DestinationRecord.CodingKeys.sortOrder), as: Int?.self)
             .fetchOne(tx.db)
         return (largest ?? nil).map { $0 + 1 } ?? 0
     }
 
-    public func countDestinations(repositoryID: RepoID, in tx: StoreTransaction) throws -> Int {
-        try DestinationRecord.filter(DestinationRecord.CodingKeys.repositoryID == repositoryID.uuidString).fetchCount(tx.db)
+    public func countDestinations(repositoryID: RepoID?, in tx: StoreTransaction) throws -> Int {
+        try DestinationRecord.filter(DestinationRecord.CodingKeys.repositoryID == repositoryID?.uuidString).fetchCount(tx.db)
     }
 
     /// Inserts a destination. Throws `.constraintViolation(.unique)` when the repository already
@@ -301,9 +301,10 @@ public struct DestinationStore: Sendable {
 
     // MARK: - Queries
 
-    private static func orderedDestinations(repositoryID: RepoID) -> QueryInterfaceRequest<DestinationRecord> {
+    // `== nil` becomes `IS NULL` in GRDB, so nil selects the Key Vaults of their own.
+    private static func orderedDestinations(repositoryID: RepoID?) -> QueryInterfaceRequest<DestinationRecord> {
         DestinationRecord
-            .filter(DestinationRecord.CodingKeys.repositoryID == repositoryID.uuidString)
+            .filter(DestinationRecord.CodingKeys.repositoryID == repositoryID?.uuidString)
             .order(DestinationRecord.CodingKeys.sortOrder, DestinationRecord.CodingKeys.targetKey)
     }
 
@@ -316,7 +317,7 @@ public struct DestinationStore: Sendable {
             """))
     }
 
-    static func destinationModels(repositoryID: RepoID, db: Database) throws -> [DestinationModel] {
+    static func destinationModels(repositoryID: RepoID?, db: Database) throws -> [DestinationModel] {
         let destinations = try orderedDestinations(repositoryID: repositoryID).fetchAll(db)
         let states = try itemStates(destinationIDs: destinations.map(\.id), db: db)
         let byDestination = Dictionary(grouping: states, by: \.destinationID)
@@ -339,7 +340,8 @@ public struct DestinationStore: Sendable {
         let states = try itemStates(destinationIDs: destinations.map(\.id), db: db)
         var counts: [RepoID: Int] = [:]
         for state in states where state.pendingOperation != nil {
-            guard let repositoryID = repositoryOf[state.destinationID] else { continue }
+            // A Key Vault of its own has no repository Sync yet (B8c); its changes are not counted here.
+            guard let repositoryID = repositoryOf[state.destinationID] ?? nil else { continue }
             counts[repositoryID, default: 0] += 1
         }
         return counts

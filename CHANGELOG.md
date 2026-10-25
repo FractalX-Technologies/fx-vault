@@ -7,6 +7,10 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Changed
 
+- **Key Vaults of their own (groundwork).** The vault can now hold an Azure Key Vault that
+  belongs to no repository, to be listed beside GitHub. Existing Key Vault destinations stay
+  where they are.
+
 - **First launch in three phases.** Welcome names them (Secure · Connect · Import); the Secure
   phase counts its steps (01 / 04), the password step has Back, and the recovery key's Continue
   waits until you check "I saved it offline".

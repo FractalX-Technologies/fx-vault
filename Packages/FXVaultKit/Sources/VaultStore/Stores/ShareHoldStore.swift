@@ -96,13 +96,15 @@ public struct ShareHoldStore: Sendable {
             """))
         let destinationIDs = Set(destinationItems.map(\.destinationID.uuidString))
         let destinationRecords = try DestinationRecord.fetchAll(db, keys: Array(destinationIDs).sorted())
-        let repositoryIDs = heldConfigRepositories.union(destinationRecords.map(\.repositoryID.uuidString))
+        // A share import only places destinations under repositories, so a Key Vault of its own holds nothing.
+        let heldDestinationRepositories = Set(destinationRecords.compactMap(\.repositoryID))
+        let repositoryIDs = heldConfigRepositories.union(heldDestinationRepositories.map(\.uuidString))
         guard !repositoryIDs.isEmpty else { return HeldShareInputsModel() }
 
         let repositories = try ConfigStore.allPendingInputs(db: db)
             .filter { repositoryIDs.contains($0.repository.id.uuidString) }
         var destinations: [DestinationModel] = []
-        for repositoryID in Set(destinationRecords.map(\.repositoryID)).sorted(by: { $0.uuidString < $1.uuidString }) {
+        for repositoryID in heldDestinationRepositories.sorted(by: { $0.uuidString < $1.uuidString }) {
             destinations += try DestinationStore.destinationModels(repositoryID: repositoryID, db: db)
                 .filter { destinationIDs.contains($0.id.uuidString) }
         }
