@@ -1934,7 +1934,7 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B4 `admin:org` scope check per organization and the refresh flow (copyable commands and Re-check).
 - [ ] B4b In-app Approve (D1's device code) through `gh auth refresh`: needs a check against a real gh login first (non-TTY behaviour, the browser step); reserved for Bryan's real account.
 - [x] B5 Organization list commands and store (additive migration); read-only organization node. Split: B5a GitHubKit listings [x]; B5b store and import [x]; B5c the read-only node and its e2e [x].
-- [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list. Split: B6a GitHubKit commands [x]; B6b1 local changes in the store (`v19`) [x]; B6b2 organization Sync in VaultData (review, run, confirm); B6b3 the editable organization detail, access picker and the Sync group.
+- [ ] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list. Split: B6a GitHubKit commands [x]; B6b1 local changes in the store (`v19`) [x]; B6b2 organization Sync in VaultData (review, run, confirm) [x]; B6b3 the editable organization detail, access picker and the Sync group.
 - [ ] B7 Organization drift and verify; inherited and shadowed names on a repository.
 - [x] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source. Split: B8a discovery, package layer [x]; B8b1 Key Vaults of their own in the store (`v18`) [x]; B8b2 Connect Azure (requirements, subscriptions and vaults, import), the vaults in the first-import summary [x]; B8b3 the sidebar Azure node opening the vault (and Show in Sidebar for a linked copy there) [x]; B8c1 Sync of the vaults of their own (review, run, badge) [x]; B8c2a Remove from FX Vault for a vault of its own [x]; B8c2b dropped (2026-10-25, Bryan: 0.9's repository Key Vaults stay under their repositories; no migration).
 - [ ] B9 Notes view read-only, then editable with the change review.
@@ -2150,6 +2150,14 @@ Review B11e — notch unlock island (2026-10-25, automatic):
 - Tests: `NotchIslandTests` (geometry with and without a notch, states, shared model, no island without side effects); `DesignTokenTests` (Island color sets); UI `NotchIslandUITests` (⌃⌘L closes the window, the island's password unlocks); snapshots `island-touchid`, `island-password` checked. Waiver for the notch hardware and Touch ID checks (tasks/waivers.md).
 - Docs: README (Unlocking), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
 - Gates: XcodeGen drift OK; `swift test` 1,340 green; `xcodebuild test` 580 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (7 tests); lint OK (first run flagged a literal symbol size, now `Theme.Typography.title`); check-secrets OK in the worktree; strings synced.
+
+Review B6b2 — organization Sync in VaultData (2026-10-25, automatic):
+- `OrganizationSyncRepository` (actor, through the importing account): `review(organizationID:)` lists B12/B13 and blocks `existsRemotely` (an add), `remoteChanged` (`updatedAt` differs, or gone, for an update or deletion), `valueMissing` (a secret write without its value), `listingFailed`; `run(_:includeDeletions:)` sends writes first, deletions last (only when included), each write with the complete access (edited list, or B14/B15 read just before; `noRepositories` for an empty list); a deletion GitHub no longer has finishes locally; one confirming re-list records `synced_visibility`, `synced_fp`, `remote_updated_at` and the repository count and clears the edited list.
+- Models: `OrgChangeModel`, `OrgBlockReason`, `OrgBlockedChangeModel`, `OrgReviewModel`, `OrgChangeOutcome`, `OrgRunResultModel` (names only).
+- Assumptions: no journal (an interrupted write is blocked as changed until a refresh); still unconfirmed against real gh: bare `--repos` names and org `variable set` upserting (B6a), checked with Bryan's gh before B6 ships.
+- Tests: `OrganizationSyncRepositoryTests` (3). Mutations caught: list never fetched, no remote-change block, no value-missing block, adds not blocked, deletions always run, confirm not recording, empty list written, deletion keeping the row.
+- Docs: ARCHITECTURE (decision 140).
+- Gates: the full CI run passed (package suites, app tests, Debug and Release builds, 7 UI tests twice, lint); check-secrets OK in the worktree.
 
 Review B6b1 — organization changes in the store (2026-10-25, automatic):
 - Migration `v19_org_item_changes` (additive): `org_items.is_deleted`, `synced_visibility` (backfilled from `visibility`), `repositories_edited`; table `org_item_repositories`. Imports set `syncedVisibility`.
