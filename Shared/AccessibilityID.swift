@@ -22,6 +22,16 @@ enum AccessibilityID {
         static let confirmGroupPrefix = "onboarding.confirm.group."
     }
 
+    /// The notch island that unlocks a locked vault (1.0).
+    enum Island {
+        static let panel = "island"
+        static let touchID = "island.touchID"
+        static let usePassword = "island.usePassword"
+        static let password = "island.password"
+        static let recoveryKey = "island.recoveryKey"
+        static let unlocked = "island.unlocked"
+    }
+
     /// The Connect phase after onboarding (1.0).
     enum Connect {
         static let importSelected = "connect.continue"

@@ -1070,6 +1070,11 @@ AppTests).
   `trustGHBinary(_:)`, `revokeTrustedGHBinary()`.
 
 **Screens** (`App/Screens`, each `[Name]Screen` + `@Observable [Name]ViewModel`).
+- While locked, the notch island (`AppViewModel.island`, `NotchIslandController`) is the unlock
+  UI over the one shared `AppViewModel.lockScreen`: `lock(trigger:)` presents it and closes the
+  main window; it appears whenever FX Vault is active; `didUnlock()` shows "Unlocked" and opens
+  the window. Recovery and the Touch ID offer call `showLockWindow()`; cancelling recovery
+  presents the island again. Without side effects (tests, previews) there is no island.
 - `Onboarding`, then `Connect` (`AppViewModel.isFirstConnectPending`, in memory only: a lock
   or relaunch goes to the main window), `Lock` / `RecoveryReset` (both with `GHStatusRow`). The lock screen shows
   "Unlock with Touch ID" (SF Symbol `touchid`) when Touch ID can run, and otherwise names why the

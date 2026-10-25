@@ -61,6 +61,11 @@ extension Theme {
         static let dotGrid = Color(.dotGrid)
         /// The one soft shadow, under sheets drawn in the window (``Card`` with `.sheet`).
         static let shadow = Color(.shadow)
+        /// The notch island (``NotchIslandView``): black, white and dimmed white in both
+        /// appearances, so it reads as part of the hardware notch.
+        static let island = Color(.island)
+        static let islandInk = Color(.islandInk)
+        static let islandMuted = Color(.islandMuted)
 
         /// Secondary text and symbols in a native `List` row that can be selected: the
         /// hierarchical secondary style, so the text stays legible on the system selection

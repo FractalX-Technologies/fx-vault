@@ -54,6 +54,11 @@ enum Theme {
         /// The dot grid behind the lock screen: one dot every 22 pt.
         static let dotGridSpacing: CGFloat = 22
         static let dotGridDotDiameter: CGFloat = 2
+        /// The notch island: its width, the radius of its lower corners, and the gap under the
+        /// menu bar on a screen without a notch.
+        static let islandWidth: CGFloat = 340
+        static let islandCornerRadius: CGFloat = 20
+        static let islandMenuBarGap: CGFloat = 6
         /// Widest lock-screen form and onboarding text column.
         static let lockFormWidth: CGFloat = 360
         static let onboardingTextWidth: CGFloat = 460

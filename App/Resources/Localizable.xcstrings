@@ -8174,6 +8174,72 @@
         }
       }
     },
+    "island.locked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault is locked"
+          }
+        }
+      }
+    },
+    "island.password" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Master password"
+          }
+        }
+      }
+    },
+    "island.recoveryKey" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Recovery Key…"
+          }
+        }
+      }
+    },
+    "island.touchID" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID to unlock"
+          }
+        }
+      }
+    },
+    "island.unlocked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlocked"
+          }
+        }
+      }
+    },
+    "island.usePassword" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use Password"
+          }
+        }
+      }
+    },
     "itemEditor.convert.confirm.button" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

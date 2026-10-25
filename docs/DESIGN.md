@@ -502,7 +502,14 @@ foreground color, so `.primary` text still turns white on selected rows.
 
 ### Lock and onboarding (boards Lock, Onboarding)
 
-- Lock: `DotGridBackground` full window; centered column with `BrandMark(size: .brandMarkLarge)`,
+- Notch island (1.0 boards NotchUnlock, NotchPassword, NotchNoNotch, NotchUnlocked): the unlock UI
+  while locked, a borderless panel above the menu bar (`NotchIslandPanel`), 340 pt wide,
+  `island` black with `islandInk` / `islandMuted` text in both appearances, no shadow, lower
+  corners 20 pt (all four without a notch, 6 pt under the menu bar). Touch ID row (symbol 24 pt,
+  `.headline` "FX Vault is locked", `.caption` "Touch ID to unlock", "Use Password"), password
+  pill with the reason or error line and "Recovery Key…", or "Unlocked" for 0.9 s.
+- Lock window (recovery and the one-time Touch ID offer only; also the lock screen in tests):
+  `DotGridBackground` full window; centered column with `BrandMark(size: .brandMarkLarge)`,
   `.display` headline, `.lead` `mutedText` paragraph, a 360 pt form: `SectionLabel` + pill
   `FXTextField` and `.primary` Unlock on one line, `.secondary` full-width Touch ID, then a
   `.statusLine` and a `brand` link.
