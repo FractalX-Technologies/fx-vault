@@ -1126,7 +1126,11 @@ AppTests).
     from `OrganizationRepository`) for an imported one. B6b3a: the detail adds, edits, deletes
     and reverts through `OrganizationItemRepository` (`VaultDataComponents.organizationItems`);
     `MainSheet.orgItemEditor(OrgItemEditorContext)` carries the organization's repository names
-    from the sidebar (`organizationRepositoryNames`) for Selected access. B8b3: the Key Vaults of their
+    from the sidebar (`organizationRepositoryNames`) for Selected access. B6b3b: the toolbar Sync
+    (`SyncContext.repositoryIDs == nil`) reviews every organization with pending changes through
+    `OrganizationSyncRepository` and runs them last (`OrgSyncPresentation`); summary and deletion
+    groups are keyed by `SyncGroupID` (repository, Key Vaults, organization); the badge adds
+    `AppViewModel.organizationPendingCounts`. B8b3: the Key Vaults of their
     own are observed (`observeDestinations(repositoryID: nil)`, `SidebarViewModel.keyVaults`) and
     listed by `SidebarKeyVaultsSection`; `selectedKeyVaultID` is a fourth exclusive selection, and
     `MainViewModel` builds a `DestinationDetailViewModel` for it (no scope column, path `Azure Key

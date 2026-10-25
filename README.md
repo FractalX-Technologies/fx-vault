@@ -20,7 +20,9 @@ the secrets your code reads at runtime in Azure Key Vault.
   all repositories, private and internal, or the selected ones. **Add Secret** and **Add
   Variable** open an editor with the value and Access (All, Private, or Selected with the
   organization's repositories); the row menu edits, deletes, reverts and copies a value. Changes
-  wait in the vault with their status; sending them with Sync comes in a later change. Needs
+  wait in the vault with their status and count on the Sync button; the toolbar Sync sends them
+  after the repositories (deletions only after the deletion review). A repository's own Sync
+  leaves them for later. Needs
   `admin:org` and the organization's admin role (see Settings › Accounts).
 - **Secrets and variables, repository and environment level.** Add, edit, rename, convert
   between secret and variable, move between scopes, fill values GitHub does not return, revert

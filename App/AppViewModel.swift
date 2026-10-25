@@ -71,6 +71,8 @@ final class AppViewModel {
     private(set) var pendingCounts: PendingCountsModel = .empty
     /// Pending destination changes per repository (live, from `DestinationRepository`, v0.8.0).
     private(set) var destinationPendingCounts: [RepoID?: Int] = [:]
+    /// Pending organization changes per organization (live, from `OrganizationItemRepository`, 1.0).
+    private(set) var organizationPendingCounts: [OrganizationID: Int] = [:]
     /// True while at least one ``SyncActivity`` is active (the Sync button shows progress).
     private(set) var isSyncing = false
     /// Incremented by every lock that dropped keys or left a phase.
@@ -94,6 +96,7 @@ final class AppViewModel {
     @ObservationIgnored private(set) var reconciliationTask: Task<Void, Never>?
     @ObservationIgnored private var pendingCountsTask: Task<Void, Never>?
     @ObservationIgnored private var destinationCountsTask: Task<Void, Never>?
+    @ObservationIgnored private var organizationCountsTask: Task<Void, Never>?
     /// Opens (or brings back) the main window; set by the main window's root view, which has the
     /// SwiftUI `openWindow` action.
     @ObservationIgnored private var mainWindowOpener: (() -> Void)?
@@ -335,10 +338,24 @@ final class AppViewModel {
                 AppLog.vault.error("Destination pending count observation ended")
             }
         }
+        let organizationItems = container.data.organizationItems
+        organizationCountsTask = Task { [weak self] in
+            do {
+                for try await counts in organizationItems.observePendingCounts() {
+                    guard let self else { return }
+                    organizationPendingCounts = counts
+                    updatePendingChangeCount()
+                }
+            } catch {
+                AppLog.vault.error("Organization pending count observation ended")
+            }
+        }
     }
 
     private func updatePendingChangeCount() {
-        setPendingChangeCount(pendingCounts.total + destinationPendingCounts.values.reduce(0, +))
+        setPendingChangeCount(
+            pendingCounts.total + destinationPendingCounts.values.reduce(0, +) + organizationPendingCounts.values.reduce(0, +)
+        )
     }
 
     /// GitHub and destination changes waiting in one repository (the sidebar).
@@ -469,6 +486,7 @@ final class AppViewModel {
         container.connectivity.stop()
         pendingCountsTask?.cancel()
         destinationCountsTask?.cancel()
+        organizationCountsTask?.cancel()
         guard container.vaultManager.state != .noVault else { return }
         container.vaultManager.lock()
         do {

@@ -418,7 +418,7 @@ nonisolated enum SyncCopy {
         switch fix {
         case .fillValue:
             String(localized: "sync.fix.fillValue", defaultValue: "Fill Value…")
-        case .editItem:
+        case .editItem, .editOrganizationItem:
             String(localized: "sync.fix.edit", defaultValue: "Edit…")
         case .convertToSecret:
             String(localized: "sync.fix.convertToSecret", defaultValue: "Convert to Secret…")

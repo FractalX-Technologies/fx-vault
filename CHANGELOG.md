@@ -11,7 +11,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
   with the organization's repositories). A Selected item keeps GitHub's repository list until
   you pick repositories. The row menu offers Copy Value, Edit…, Revert (Revert Access for a
-  changed item) and Delete…. Changes wait in the vault for Sync (sending them comes next).
+  changed item) and Delete…. The changes count on the Sync button, and the toolbar Sync
+  sends them as one group per organization, after the repositories; deletions go through the
+  deletion review.
 - **Connect Azure.** After GitHub, the first launch lists your Azure subscriptions and their Key
   Vaults through `az`, every vault checked; Continue imports each vault with its secret values
   as a Key Vault of its own (no repository), and the summary counts them. Without `az`, Run

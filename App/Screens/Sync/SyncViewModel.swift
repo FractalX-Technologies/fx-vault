@@ -28,6 +28,8 @@ final class SyncViewModel: LockObserving {
     private(set) var review: SyncReviewModel?
     /// The destination changes of the repositories in this sync (v0.8.0), reviewed after GitHub's.
     private(set) var destinationReviews: [DestinationReviewModel] = []
+    /// The organizations with changes (1.0), reviewed when the sync covers every repository.
+    private(set) var organizationReviews: [OrgReviewModel] = []
     /// Share files whose imported rows wait for the From Files review (v0.9.0), newest import
     /// first, limited to the repositories of this sync.
     private(set) var heldShares: [HeldShareModel] = []
@@ -106,6 +108,7 @@ final class SyncViewModel: LockObserving {
             let review = try await service.preflight(repositoryIDs: context.repositoryIDs.map { Array($0) })
             dependencies.gitHubReachability.recordSuccess()
             destinationReviews = await reviewDestinations(review)
+            organizationReviews = await reviewOrganizations()
             apply(review)
             step = .summary
         } catch {
@@ -127,6 +130,20 @@ final class SyncViewModel: LockObserving {
             }
         }
         return reviews
+    }
+
+    /// The organization reviews: only the toolbar Sync (every repository) sends organizations.
+    private func reviewOrganizations() async -> [OrgReviewModel] {
+        guard context.repositoryIDs == nil else { return [] }
+        let counts = (try? dependencies.organizationItems.pendingCounts()) ?? [:]
+        var reviews: [OrgReviewModel] = []
+        for id in counts.keys.sorted(by: { $0.uuidString < $1.uuidString }) where (counts[id] ?? 0) > 0 {
+            let review = await dependencies.organizationSync.review(organizationID: id)
+            if !review.isEmpty {
+                reviews.append(review)
+            }
+        }
+        return reviews.sorted { $0.login.localizedStandardCompare($1.login) == .orderedAscending }
     }
 
     private func apply(_ review: SyncReviewModel) {
@@ -185,7 +202,7 @@ final class SyncViewModel: LockObserving {
             SyncPresentationBuilder.summary(review),
             with: effectiveDestinationReviews,
             fullName: fullName(of:)
-        )
+        ) + OrgSyncPresentation.summary(organizationReviews)
         let rows = SyncPresentationBuilder.credentialRows(review)
         if rows != credentialRows {
             credentialRows = rows
@@ -206,7 +223,11 @@ final class SyncViewModel: LockObserving {
 
     /// Executable changes across repositories and their destinations.
     var executableCount: Int {
-        gitHubExecutableCount + destinationExecutableCount
+        gitHubExecutableCount + destinationExecutableCount + organizationExecutableCount
+    }
+
+    private var organizationExecutableCount: Int {
+        organizationReviews.reduce(0) { $0 + $1.changes.count }
     }
 
     private var gitHubExecutableCount: Int {
@@ -222,8 +243,9 @@ final class SyncViewModel: LockObserving {
         executableCount == 0 && !heldShares.isEmpty
     }
 
+    /// Destination and (1.0) organization deletions: they are not in GitHub's live fetch.
     private var destinationDeletionCount: Int {
-        destinationReviews.reduce(0) { $0 + $1.deletions.count }
+        destinationReviews.reduce(0) { $0 + $1.deletions.count } + organizationReviews.reduce(0) { $0 + $1.deletions.count }
     }
 
     /// The "Sync N" count of the sheet (§7.1 pending count of what will run).
@@ -313,7 +335,7 @@ final class SyncViewModel: LockObserving {
             SyncPresentationBuilder.deletions(deletionPreviews),
             with: destinationReviews,
             fullName: fullName(of:)
-        )
+        ) + OrgSyncPresentation.deletions(organizationReviews)
     }
 
     /// "Delete N items".
@@ -380,7 +402,22 @@ final class SyncViewModel: LockObserving {
             includeHeld: included,
             after: progress.completed
         )
-        show(outcome, destinationResults: destinationResults)
+        let organizationResults = await runOrganizations(includeDeletions: includeDeletions)
+        show(outcome, destinationResults: destinationResults, organizationResults: organizationResults)
+    }
+
+    /// The organization changes, last (1.0). A cancelled run skips them.
+    private func runOrganizations(includeDeletions: Bool) async -> [OrganizationID: OrgRunResultModel] {
+        guard !progress.isCancelling else { return [:] }
+        var results: [OrganizationID: OrgRunResultModel] = [:]
+        for review in organizationReviews where !review.changes.isEmpty {
+            progress.phase = .writing
+            progress.currentName = review.login
+            results[review.organizationID] = await dependencies.organizationSync.run(review, includeDeletions: includeDeletions)
+        }
+        progress.currentName = nil
+        progress.completed = progress.total
+        return results
     }
 
     /// The destination changes, after GitHub's (v0.8.0). A cancelled run skips them. The held
@@ -454,16 +491,25 @@ final class SyncViewModel: LockObserving {
         run.cancel()
     }
 
-    private func show(_ outcome: SyncRunOutcomeModel?, destinationResults: [DestinationRunResultModel]) {
+    private func show(
+        _ outcome: SyncRunOutcomeModel?,
+        destinationResults: [DestinationRunResultModel],
+        organizationResults: [OrganizationID: OrgRunResultModel]
+    ) {
         self.outcome = outcome
         var sections = outcome.map { SyncPresentationBuilder.resultSections($0.result, repositories: repositoryModels) } ?? []
-        let destinationRows = DestinationSyncPresentation.resultRows(destinationResults, reviews: effectiveDestinationReviews)
-        for kind in SyncResultSectionModel.Kind.allCases {
-            guard let rows = destinationRows[kind], !rows.isEmpty else { continue }
-            if let index = sections.firstIndex(where: { $0.kind == kind }) {
-                sections[index] = SyncResultSectionModel(kind: kind, rows: sections[index].rows + rows)
-            } else {
-                sections.append(SyncResultSectionModel(kind: kind, rows: rows))
+        let extraRows = [
+            DestinationSyncPresentation.resultRows(destinationResults, reviews: effectiveDestinationReviews),
+            OrgSyncPresentation.resultRows(organizationResults, reviews: organizationReviews),
+        ]
+        for rowsByKind in extraRows {
+            for kind in SyncResultSectionModel.Kind.allCases {
+                guard let rows = rowsByKind[kind], !rows.isEmpty else { continue }
+                if let index = sections.firstIndex(where: { $0.kind == kind }) {
+                    sections[index] = SyncResultSectionModel(kind: kind, rows: sections[index].rows + rows)
+                } else {
+                    sections.append(SyncResultSectionModel(kind: kind, rows: rows))
+                }
             }
         }
         resultSections = sections.sorted { lhs, rhs in
@@ -598,6 +644,8 @@ final class SyncViewModel: LockObserving {
             Task { await clone(repositoryID) }
         case .openDestination(let destinationID):
             dependencies.actions.openPlace(.destination(destinationID))
+        case .editOrganizationItem(let context):
+            dependencies.actions.present(.orgItemEditor(context))
         }
     }
 

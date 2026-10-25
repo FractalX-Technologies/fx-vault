@@ -74,6 +74,8 @@ struct FeatureDependencies {
     let organizations: OrganizationRepository
     /// Local changes to organization items (1.0).
     let organizationItems: OrganizationItemRepository
+    /// Organization Sync (1.0).
+    let organizationSync: OrganizationSyncRepository
     /// Runtime destinations (v0.8.0).
     let destinations: DestinationRepository
     /// Destination Sync, Refresh and import (v0.8.0).
@@ -117,6 +119,7 @@ struct FeatureDependencies {
         folders = data.folders
         organizations = data.organizations
         organizationItems = data.organizationItems
+        organizationSync = data.organizationSync
         destinations = data.destinations
         destinationSync = data.destinationSync
         creation = data.creation

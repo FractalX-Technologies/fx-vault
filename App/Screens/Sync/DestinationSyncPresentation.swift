@@ -20,7 +20,7 @@ enum DestinationSyncPresentation {
         for review in reviews where !review.isEmpty {
             let scopes = review.sections.filter { !$0.changes.isEmpty }.map(scope)
             let blocked = review.sections.flatMap { section in section.blocked.map { issue($0, destination: section.destination) } }
-            if let index = merged.firstIndex(where: { $0.id == review.repositoryID }) {
+            if let index = merged.firstIndex(where: { $0.id == SyncGroupID(repositoryID: review.repositoryID) }) {
                 let current = merged[index]
                 merged[index] = SyncSummaryRepoModel(
                     id: current.id,
@@ -35,7 +35,7 @@ enum DestinationSyncPresentation {
                 )
             } else {
                 merged.append(SyncSummaryRepoModel(
-                    id: review.repositoryID,
+                    id: SyncGroupID(repositoryID: review.repositoryID),
                     fullName: fullName(review.repositoryID),
                     newRepository: nil,
                     scopes: scopes,
@@ -120,7 +120,7 @@ enum DestinationSyncPresentation {
                 }
             }
             guard !items.isEmpty else { continue }
-            if let index = merged.firstIndex(where: { $0.id == review.repositoryID }) {
+            if let index = merged.firstIndex(where: { $0.id == SyncGroupID(repositoryID: review.repositoryID) }) {
                 let current = merged[index]
                 merged[index] = SyncDeletionRepoModel(
                     id: current.id,
@@ -129,7 +129,7 @@ enum DestinationSyncPresentation {
                     environments: current.environments
                 )
             } else {
-                merged.append(SyncDeletionRepoModel(id: review.repositoryID, fullName: fullName(review.repositoryID), items: items, environments: []))
+                merged.append(SyncDeletionRepoModel(id: SyncGroupID(repositoryID: review.repositoryID), fullName: fullName(review.repositoryID), items: items, environments: []))
             }
         }
         return merged
