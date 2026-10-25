@@ -45,7 +45,7 @@ enum MainSheet: Hashable, Identifiable {
     case folderName(FolderNameContext)
 
     // Main/Destination/ (v0.8.0)
-    /// "+ Add Destination" for a repository (optionally from a manifest suggestion).
+    /// "+ Add Destination" for a repository.
     case addDestination(AddDestinationContext)
     /// A destination's Settings…: its stage and connection.
     case destinationSettings(DestinationSettingsContext)
@@ -77,8 +77,6 @@ enum MainSheet: Hashable, Identifiable {
 /// "+ Add Destination" (v0.8.0).
 struct AddDestinationContext: Hashable {
     let repositoryID: RepoID
-    /// A manifest target the repository has no destination for yet, to start from.
-    var suggestion: AddDestinationSuggestion?
 }
 
 /// A destination's Settings… (v0.8.0).
@@ -288,8 +286,6 @@ struct EnvExportContext: Hashable {
 /// Share › File… (`.fxvault` export; the project share sheet since v0.9.0).
 struct ShareExportContext: Hashable {
     let selection: ShareSelectionModel
-    /// The Overview's "Share Stage…": that stage starts checked (v0.9.0).
-    var stage: String?
 }
 
 /// A `.fxvault` file to import (opened from Finder or AirDrop, or chosen in the sheet).

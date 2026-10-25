@@ -132,6 +132,20 @@ struct DestinationRepositoryTests {
 
     // MARK: - Items (R3)
 
+    @Test func stageSuggestionsListDestinationStagesThenEnvironmentsOnce() async throws {
+        let fixture = try await Fixture.make()
+        try fixture.destinations.createDestination(
+            repositoryID: fixture.repo.id,
+            target: .azureKeyVault(vaultName: "kv-sample-qa", tenantID: nil),
+            stage: "qa",
+            connectionID: nil
+        )
+        try fixture.harness.config.createEnvironment(in: fixture.repo.id, name: "preview")
+        try fixture.harness.config.createEnvironment(in: fixture.repo.id, name: "QA")
+
+        #expect(try fixture.destinations.stageSuggestions(repositoryID: fixture.repo.id) == ["qa", "preview"])
+    }
+
     @Test func keyVaultAndSupabaseHoldSecretsOnly() async throws {
         let fixture = try await Fixture.make()
         let vault = try fixture.keyVault()

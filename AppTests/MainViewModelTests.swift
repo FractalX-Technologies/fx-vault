@@ -96,6 +96,23 @@ struct MainViewModelTests {
         #expect(main.activeSheet == nil)
     }
 
+    /// A repository just imported from a project file is not in the sidebar yet: the scope asked
+    /// for is selected once the sidebar row and the scope column exist.
+    @Test func openingAScopeBeforeItsSidebarRowExistsSelectsItWhenTheRowAppears() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
+        let id = try await harness.stageRepository(items: [])
+        try harness.data.config.createEnvironment(in: id, name: "staging")
+        let staging = try EditorFixtures.environment(harness, id, named: "staging")
+        let main = harness.app.makeMainViewModel()
+        try #require(main.sidebar.sections.isEmpty, "the sidebar must not list the repository yet")
+
+        main.open(repositoryID: id, scope: .environment(staging.id))
+        #expect(main.scopeList == nil)
+
+        #expect(await TestFixtures.eventually { main.scopeList?.selectedScope?.scope == .environment(staging.id) })
+        #expect(main.scopeList?.repositoryID == id)
+    }
+
     @Test func addRepositoryByNameSelectsTheResult() async throws {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: nil)
         try harness.installFakeGH()

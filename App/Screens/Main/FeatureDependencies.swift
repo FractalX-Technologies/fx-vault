@@ -27,9 +27,6 @@ struct MainActions {
     var openFolder: (FolderID) -> Void = { _ in }
     /// Selects a repository and one of its destinations (a linked copy's place, v0.8.0).
     var openDestination: (DestinationID) -> Void = { _ in }
-    /// Selects a repository's Overview at a stage (nil: the Overview's default), after a project
-    /// share import (v0.9.0).
-    var openOverview: (RepoID, String?) -> Void = { _, _ in }
 
     /// Shows a scope of a repository, a folder or a destination.
     func openPlace(_ place: ItemPlaceModel) {
@@ -75,8 +72,6 @@ struct FeatureDependencies {
     let folders: FolderRepository
     /// Runtime destinations and provider connections (v0.8.0).
     let destinations: DestinationRepository
-    /// The stage Overview and `fxvault.yml` (v0.8.0).
-    let overview: StageOverviewRepository
     /// Destination Sync, Refresh and import (v0.8.0).
     let destinationSync: DestinationSyncRepository
     /// Token checks and the Add Destination pickers (v0.8.0).
@@ -119,7 +114,6 @@ struct FeatureDependencies {
         sharing = data.sharing
         folders = data.folders
         destinations = data.destinations
-        overview = data.overview
         destinationSync = data.destinationSync
         destinationAccess = data.destinationAccess
         creation = data.creation

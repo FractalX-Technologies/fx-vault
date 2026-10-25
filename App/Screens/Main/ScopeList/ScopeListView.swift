@@ -4,8 +4,8 @@ import VaultData
 
 /// Column 2 (§10; mockup Main): the mono SCOPES label, "Repository" then each environment with
 /// its pending dot, item count and value-missing warning, the row context menu and the dashed
-/// "+ New environment" row. Since v0.8.0: Overview first, the GitHub scopes under BUILD · GITHUB
-/// ACTIONS, and the RUNTIME destinations with "+ Add Destination" (experimental).
+/// "+ New environment" row. Since v0.8.0: the GitHub scopes under BUILD · GITHUB ACTIONS, and the
+/// RUNTIME destinations with "+ Add Destination" (experimental).
 ///
 /// The rows are drawn with `.fxRowBackground(style: .scope)` (36 pt, `card` with a hairline when
 /// selected) instead of a native `List` selection; ``MainColumnSelection`` keeps Up and Down.
@@ -19,17 +19,8 @@ struct ScopeListView: View {
                 SectionLabel(String(localized: "main.scopes.title", defaultValue: "Scopes"))
                     .padding(.horizontal, Theme.Spacing.small)
                     .padding(.bottom, Theme.Spacing.small)
-                Button {
-                    viewModel.selectOverview()
-                    isListFocused = true
-                } label: {
-                    OverviewRow(isSelected: viewModel.isOverviewSelected)
-                }
-                .buttonStyle(.plain)
-                .id(ScopeListViewModel.overviewID)
                 SectionLabel(String(localized: "main.scopes.build", defaultValue: "Build · GitHub Actions"))
                     .padding(.horizontal, Theme.Spacing.small)
-                    .padding(.top, Theme.Spacing.medium)
                     .padding(.bottom, Theme.Spacing.xSmall)
                 ForEach(viewModel.scopes) { scope in
                     Button {
@@ -84,28 +75,6 @@ struct ScopeListView: View {
             get: { viewModel.pendingDeletion != nil },
             set: { if !$0 { viewModel.pendingDeletion = nil } }
         )
-    }
-}
-
-/// "Overview": every name of a stage across GitHub and the destinations (v0.8.0, R8).
-private struct OverviewRow: View {
-    let isSelected: Bool
-
-    var body: some View {
-        HStack(spacing: Theme.Spacing.mediumMinus) {
-            Image(systemName: "square.grid.2x2")
-                .font(Theme.Typography.monoLabel)
-                .foregroundStyle(Theme.Colors.mutedText)
-                .accessibilityHidden(true)
-            Text(DestinationCopy.overviewTitle)
-                .font(isSelected ? Theme.Typography.calloutEmphasized : Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.ink)
-                .lineLimit(1)
-                .padding(.vertical, Theme.Spacing.xSmall)
-            Spacer(minLength: 0)
-        }
-        .fxRowBackground(isSelected: isSelected, style: .scope)
-        .help(DestinationCopy.overviewHelp)
     }
 }
 

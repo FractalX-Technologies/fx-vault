@@ -374,9 +374,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   header (FOLDER, the name in `.largeTitle`, a "Never on GitHub" tag, Share as File… outline and a
   ••• menu) above the same Secrets / Variables pill, add actions and table as a repository, without
   the Status column.
-- Runtime destinations in the scope column (v0.8.0, canvas "FX Vault Destinations"): an
-  **Overview** row first (`square.grid.2x2` in `mutedText`, `.callout`, the scope row
-  background); `SectionLabel` BUILD · GITHUB ACTIONS over the GitHub scopes; after "New
+- Runtime destinations in the scope column (v0.8.0, canvas "FX Vault Destinations"):
+  `SectionLabel` BUILD · GITHUB ACTIONS over the GitHub scopes; after "New
   Environment", `SectionLabel` RUNTIME with an Experimental `StatusChip.tag`, then one 2-line
   row per destination: the provider symbol in `monoLabel` `mutedText`
   (`destinationSymbolWidth`, so names line up), the name in `.callout` (`.calloutEmphasized`
@@ -397,31 +396,10 @@ foreground color, so `.primary` text still turns white on selected rows.
   Then the same table as a repository with the Status column: Vercel keeps the Secrets /
   Variables `SegmentedPill`; Key Vault and Supabase hold secrets only, so the pill gives way to a
   `SectionLabel` "SECRETS · 4". Add actions, multi-selection and the linked chip are unchanged.
-- Stage Overview (v0.8.0, canvas boards 1, 2 and 5): `SectionLabel` STAGE · ALL DESTINATIONS
-  with an Experimental tag, the stage in `.largeTitle`, tags for "2 destinations" and the
-  `fxvault.yml` state ("No fxvault.yml in the repository", "fxvault.yml could not be read", …).
-  The header's actions hold the stage picker (a native menu `Picker`, only with two or more
-  stages; it replaced the canvas' stage switcher), Show Check / Hide Check (outline) and Read
-  Again (secondary). The findings banner is `.warning` ("1 thing to fix in production", "…, by
-  fxvault.yml" when a manifest was applied) or `.info` "This stage matches fxvault.yml." and has
-  no action of its own: Show Check sits in the header. The matrix is a `Grid` in a `container`
-  card: NAME (`.monoName`, linked count as a neutral chip), CYCLE (a `StatusChip.tag`: Build,
-  Runtime, Public; the canvas' "who reads what"), then one column per place with a
-  `SectionLabel` title and the environment or destination in `.monoMeta`; each cell is a
-  `StatusChip` (Synced `.neutral`, Will push `.brand`, Missing / Extra / Differs / Value
-  missing `.warning`, Blocked / Will delete `.danger`) that opens the place, or "—" in
-  `subtleText` where the place does not use the name. The matrix scrolls sideways inside its
-  card when the stage has more places than fit. A legend in `.caption` `subtleText` follows; Show
-  Check opens the manifest panel (a `container` card: parse issues with their line as a chip,
-  findings with Add Destination where a destination is missing, Copy .env.example (a menu per
-  target) and Copy fxvault.yml for This Repository, both outline).
 - Held rows (v0.9.0, tasks/todo.md P8): a row imported from a share file and not yet included
   in a Sync shows a `.warning` `StatusChip` "Held" in the Status column instead of Will push /
   Added, in repository scopes and destinations alike; its help names the sender's file and says
   how it gets out (Sync's From Files review, or Push on Next Sync, which releases only the hold).
-  The Overview has the same "Held" cell (`.warning`, legend included), and its header gains
-  "Share Stage…" (secondary) after Read Again: the Share Project sheet with this repository and
-  stage checked.
 
 ### Sheets (board SyncReview)
 
@@ -466,8 +444,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   destination", "Sent, but the destination did not list it yet…" or "Not sent" per item.
 - Share Project (v0.9.0, `ProjectShareScreen`, `shareSheetWidth`, eyebrow SHARE) replaces the
   Share as File sheet for every entry point: File › Share Project… (⌥⌘S; ⇧⌘S is Sync), Share ›
-  File… (toolbar and Vault menu), a repository's or scope's Share…, a folder's Share as File… and
-  the Overview's Share Stage…. Step 1, what to share: REPOSITORIES as removable chips in a
+  File… (toolbar and Vault menu), a repository's or scope's Share…, and a folder's Share as File….
+  Step 1, what to share: REPOSITORIES as removable chips in a
   `FlowLayout` (`shippingbox`, `.monoName`, an `xmark.circle.fill`) with an Add Repository
   borderless menu; STAGES as checkboxes across those repositories, a production stage with a
   `.warning` "Production" chip and its checkbox disabled (help: "Production is never shared…"); "Repository-level secrets and variables" as a
@@ -494,7 +472,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   replace mine, Don't import). A note closes it: "Nothing reaches GitHub or a provider until you
   include it in Sync." The content scrolls past `projectShareContentMaxHeight`. After Import,
   `SheetCallout`s list what changed ("1 change waits for you in Sync › From Files" in `brand`),
-  and the main window has already moved to the first repository's Overview at the first stage.
+  and the main window has already moved to the first repository, at the environment of the
+  first stage.
 - Sync's From Files (v0.9.0, `SyncHeldSharesView`): a `ConfigSheetField` after the summary, its
   explanation as a caption, then one `ConfigSheetList` row per held file: `doc.badge.ellipsis` in
   `warning`, "From Ana's file" in `.bodyEmphasized` with an "Unverified" tag (a file imported under 0.9
@@ -601,11 +580,8 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 | Lock | `DotGridBackground`, `BrandMark`, `.display`, `FXTextField(.pill)`, `FXButtonStyle` |
 | Onboarding | `StepCounter`, `.largeTitle`, `.lead`, `FXTextField(.rounded)`, `SectionLabel` |
 | SyncReview | `.fxSheetBackground`, `Card(.container)`, `.title`, `.statusLine`, `FXButtonStyle(.large)` |
-| FX Vault Destinations 1: stage matrix (v0.8.0) | `StageOverviewScreen` (`OverviewHeader`, `OverviewMatrix`, `OverviewCell`); the stage switcher moved into the header's picker |
-| FX Vault Destinations 2: who reads what | The CYCLE column (`StageOverviewCycle`: Build, Runtime, Public) and the legend |
 | FX Vault Destinations 3: Key Vault destination | `DestinationDetailScreen`, the RUNTIME rows of `ScopeListView` |
 | FX Vault Destinations 4: multi-provider Sync review | `DestinationSyncPresentation` sections in the Sync sheet |
-| FX Vault Destinations 5: manifest | `OverviewManifestPanel`, the findings banner |
 
 ## Known limits
 
@@ -627,10 +603,6 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
   dividers). With the sidebar collapsed, or the scope column narrowed below its default, a long
   title can still reach the divider.
 - Tracking is not part of `Font`; text styled with a bare `Theme.Typography` font has no tracking.
-- The Overview matrix (v0.8.0) takes each column's ideal width inside a horizontal `ScrollView`,
-  so at the default window width (1,120 pt, sidebar shown) a stage with three or more places
-  scrolls sideways and the last column starts clipped at the card's edge. Collapsing the sidebar
-  or widening the window shows it whole.
 - Import Share for a project file (v0.9.0) previews one repository at a time: the list chooses
   which; the others are not expanded together.
 - In Share Project (v0.9.0), changing the stages rebuilds the tree, so boxes adjusted by hand in
@@ -652,7 +624,7 @@ Each screen gives `<name>-<light|dark>.window.png` (an offscreen window): the re
 window captures (9 screens × 2 appearances = 18 files; v0.7.0 adds `main-folder`,
 `main-folder-variables`, `main-sidebar-folders`, `folder-destination` and
 `folder-destination-new`; v0.8.0 adds `main-destination-keyvault`, `main-destination-vercel`,
-`main-overview`, `add-destination` and `settings-destinations`, over
+`add-destination` and `settings-destinations`, over
 `MainSnapshotFixture.destinations` (`kv-example-prod` and `example-web · Production`)).
 v0.9.0 adds two suites gated the same way (pass `-only-testing:AppTests/ProjectShareSnapshotTests`
 and `-only-testing:AppTests/HeldShareSnapshotTests`): `project-share-contents`,

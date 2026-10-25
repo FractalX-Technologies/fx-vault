@@ -135,25 +135,4 @@ struct HeldDestinationTests {
         #expect(repository.destinations.map(\.destination.id) == [vault])
         #expect(repository.destinations.first?.items.map(\.name) == ["DATABASE_URL"])
     }
-
-    @Test func theOverviewShowsHeldRowsAsHeld() async throws {
-        let fixture = try await StageOverviewTests.Fixture.make()
-        let vault = try fixture.vault()
-        let heldDestination = try fixture.add(vault, "DATABASE_URL", value: "postgres://held")
-        try fixture.add(vault, "MINE_KEY", value: "mine")
-        let heldConfig = try fixture.harness.add(fixture.repo, "VERCEL_TOKEN", value: "vercel-token-held")
-        try hold([heldDestination], under: Self.first, in: fixture.harness)
-        try holdConfig([heldConfig], under: Self.first, in: fixture.harness)
-
-        let model = try fixture.overview.overview(repositoryID: fixture.repo.id, stage: "production", manifest: nil)
-        #expect(try fixture.row(model, "DATABASE_URL").cells == [.notUsed, .held])
-        #expect(try fixture.row(model, "VERCEL_TOKEN").cells == [.held, .notUsed])
-        #expect(try fixture.row(model, "MINE_KEY").cells == [.notUsed, .willPush])
-        #expect(!StageOverviewCellModel.held.needsAttention)
-
-        let manifest = try fixture.manifest()
-        let checked = try fixture.overview.overview(repositoryID: fixture.repo.id, stage: "production", manifest: manifest)
-        #expect(try fixture.row(checked, "DATABASE_URL").cells.contains(.held))
-        #expect(!checked.findings.contains(.missing(name: "DATABASE_URL", column: vault.uuidString)))
-    }
 }

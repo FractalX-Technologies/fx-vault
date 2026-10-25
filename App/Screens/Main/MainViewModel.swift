@@ -17,8 +17,6 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     private(set) var folderDetail: FolderDetailViewModel?
     /// The detail column of the selected destination (v0.8.0).
     private(set) var destinationDetail: DestinationDetailViewModel?
-    /// The detail column while Overview is selected (v0.8.0).
-    private(set) var overview: StageOverviewViewModel?
     /// The sheet on screen (``MainSheet``). Setting another route replaces it.
     var activeSheet: MainSheet? {
         didSet {
@@ -57,19 +55,25 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             select: { [weak self] id in self?.sidebar.select(repositoryID: id) },
             open: { [weak self] id, scope in self?.open(repositoryID: id, scope: scope) },
             openFolder: { [weak self] id in self?.sidebar.select(folderID: id) },
-            openDestination: { [weak self] id in self?.open(destinationID: id) },
-            openOverview: { [weak self] id, stage in self?.openOverview(repositoryID: id, stage: stage) }
+            openDestination: { [weak self] id in self?.open(destinationID: id) }
         )
     }
 
-    /// Shows `scope` of a vault repository (v0.4.1, a linked copy's place): selects the
-    /// repository in the sidebar, then the scope once its column has the scopes.
+    /// Shows `scope` of a vault repository (v0.4.1, a linked copy's place; an imported file's
+    /// first stage): selects the repository in the sidebar, then the scope once its column has
+    /// the scopes.
     func open(repositoryID id: RepoID, scope: ConfigScope) {
         sidebar.select(repositoryID: id)
         if scopeList?.repositoryID == id {
             scopeList?.select(scope: scope)
+        } else {
+            pendingScope = (id, scope)
         }
     }
+
+    /// A scope to select once its repository's column exists (a repository just imported from a
+    /// file has no column yet).
+    @ObservationIgnored private var pendingScope: (repositoryID: RepoID, scope: ConfigScope)?
 
     /// Shows a destination (v0.8.0, a linked copy's place): selects its repository, then the
     /// destination once its column has it.
@@ -85,24 +89,6 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
 
     /// A destination to select once the repository's column exists.
     @ObservationIgnored private var pendingDestination: DestinationID?
-
-    /// Shows a repository's Overview at `stage` (v0.9.0, after a project share import): selects
-    /// the repository, then the Overview once its column exists.
-    func openOverview(repositoryID id: RepoID, stage: String?) {
-        sidebar.select(repositoryID: id)
-        if let scopeList, scopeList.repositoryID == id {
-            pendingOverviewStage = stage
-            overview = nil
-            scopeList.selectOverview()
-            followScopeSelection(scopeList)
-        } else {
-            pendingOverview = (id, stage)
-        }
-    }
-
-    /// The Overview to select once the repository's column exists, and the stage to open it at.
-    @ObservationIgnored private var pendingOverview: (repositoryID: RepoID, stage: String?)?
-    @ObservationIgnored private var pendingOverviewStage: String?
 
     // MARK: - Selection
 
@@ -133,7 +119,6 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         detail = nil
         scopeList = nil
         destinationDetail = nil
-        overview = nil
         guard let repoID else { return }
         let dependencies = featureDependencies
         let sidebar = sidebar
@@ -159,18 +144,16 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             self.pendingDestination = nil
             scopes.select(destination: pendingDestination)
         }
-        if let pendingOverview, pendingOverview.repositoryID == repoID {
-            self.pendingOverview = nil
-            pendingOverviewStage = pendingOverview.stage
-            scopes.selectOverview()
+        if let pendingScope, pendingScope.repositoryID == repoID {
+            self.pendingScope = nil
+            scopes.select(scope: pendingScope.scope)
         }
     }
 
-    /// Column 3 follows column 2's selection: a destination's detail, the Overview, or the
-    /// repository detail of the selected scope (v0.8.0).
+    /// Column 3 follows column 2's selection: a destination's detail or the repository detail of
+    /// the selected scope (v0.8.0).
     private func followScopeSelection(_ scopes: ScopeListViewModel) {
         if let destination = scopes.selectedDestination {
-            overview = nil
             guard destinationDetail?.destinationID != destination.id else { return }
             let id = destination.id
             destinationDetail = DestinationDetailViewModel(destination: destination, dependencies: featureDependencies) { [weak scopes] in
@@ -179,23 +162,6 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             return
         }
         destinationDetail = nil
-        if scopes.isOverviewSelected {
-            guard overview?.repositoryID != scopes.repositoryID else { return }
-            let sidebar = sidebar
-            let repositoryID = scopes.repositoryID
-            let overview = StageOverviewViewModel(
-                repositoryID: repositoryID,
-                dependencies: featureDependencies,
-                repository: { sidebar.vaultRepository(repositoryID) }
-            )
-            if let stage = pendingOverviewStage {
-                pendingOverviewStage = nil
-                overview.stage = stage
-            }
-            self.overview = overview
-            return
-        }
-        overview = nil
     }
 
     // MARK: - Sheets

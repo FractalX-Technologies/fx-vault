@@ -86,8 +86,6 @@ public enum Limits {
     public static let maxConnections = 32
     /// Largest HTTP response body FX Vault reads from a provider.
     public static let maxDestinationResponseBytes = 16 * bytesPerMiB
-    /// Largest `fxvault.yml` FX Vault reads.
-    public static let maxManifestBytes = 64 * bytesPerKiB
 
     // MARK: - Write throttle and retries (D12, §7.3)
 

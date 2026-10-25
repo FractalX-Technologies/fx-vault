@@ -49,7 +49,7 @@ FXVault/
 │   │   │   │                        # scope rows (pure helper + modifier)
 │   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel,
 │   │   │   │                        # SidebarFoldersSection (v0.7.0)
-│   │   │   ├── ScopeList/           # ScopeListView/ViewModel (Overview, "Build · GitHub Actions":
+│   │   │   ├── ScopeList/           # ScopeListView/ViewModel ("Build · GitHub Actions":
 │   │   │   │                        # Repository + environments, "Runtime": destination rows,
 │   │   │   │                        # Add Destination, DestinationContextMenu; v0.8.0)
 │   │   │   ├── RepoDetail/          # RepoDetailScreen/ViewModel, ConfigTableView (generic over
@@ -58,8 +58,7 @@ FXVault/
 │   │   │   │                        # chip and popover, v0.4.1)
 │   │   │   ├── Folder/              # FolderDetailScreen/ViewModel (column 3 of a folder, v0.7.0)
 │   │   │   ├── Destination/         # v0.8.0: DestinationDetailScreen/ViewModel (column 3 of a
-│   │   │   │                        # destination), DestinationCopy, StageOverviewScreen/ViewModel/
-│   │   │   │                        # Copy (the stage matrix and fxvault.yml check),
+│   │   │   │                        # destination), DestinationCopy,
 │   │   │   │                        # AddDestinationScreen/ViewModel (+ AddDestinationCopy),
 │   │   │   │                        # DestinationSettingsScreen, DestinationDriftScreen (Refresh
 │   │   │   │                        # findings, Keep Mine / Use Remote)
@@ -160,7 +159,7 @@ FXVault/
 │   │                                # SyncConnectivity (Sync and drift review reporting, offline
 │   │                                # Sync sheet), SharingScopeTreeModel (tri-state tree),
 │   │                                # DestinationViewModel (scope column, detail, Add
-│   │                                # Destination, Overview, Preferences; v0.8.0)
+│   │                                # Destination, Preferences; v0.8.0)
 │   ├── DesignTokenTests.swift       # v0.3.0: every color set's light/dark values, Geist
 │   │                                # registration and fallback, OFL credits, AppIcon set
 │   ├── DesignComponentTests.swift   # v0.3.0: component resolution rules, light/dark render
@@ -225,8 +224,7 @@ FXVault/
 │   │   │   │                        # (account listing, unusable accounts), ScopeChecker
 │   │   │   ├── Commands/            # GHCommand (GHOperation, GHArgumentPolicy), GHCommandService,
 │   │   │   │                        # GHCommandScheduler(+Extension), GHRepoRef, argv builders
-│   │   │   ├── API/                 # GHEnvironmentsAPI, GitHubPath, APIResponseParser, JSONValue,
-│   │   │   │                        # GHManifestAPI (fxvault.yml from the default branch, v0.8.0)
+│   │   │   ├── API/                 # GHEnvironmentsAPI, GitHubPath, APIResponseParser, JSONValue
 │   │   │   ├── DTOs/                # GHRepoDTO, GHSecretDTO, GHVariableDTO, GHEnvironmentDTO,
 │   │   │   │                        # GHBranchPolicyDTO, GHJSONDecoding
 │   │   │   ├── Errors/              # GHError, GHStderrClassifier, StderrRedactor
@@ -242,11 +240,6 @@ FXVault/
 │   │   │   ├── Import/              # EnvImportPlanner
 │   │   │   ├── Files/               # SecureFileWriter, CloudSyncDetector
 │   │   │   ├── Git/                 # GitignoreChecker (+ GitExposureInspector), GitignoreEditor
-│   │   │   ├── Manifest/            # fxvault.yml (v0.8.0): ManifestTokenizer, ManifestTreeBuilder,
-│   │   │   │                        # ManifestSchemaMapper, ManifestParser, ManifestSerializer,
-│   │   │   │                        # ManifestModel, ManifestTargetModel, ManifestVarModel,
-│   │   │   │                        # ManifestIssue, ManifestIdentifierValidator,
-│   │   │   │                        # ManifestEnvExample (.env.example), EnvToolsLimits+ManifestExtension
 │   │   │   └── Internal/            # ASCII, PathResolver
 │   │   ├── SharingKit/              # ShareError
 │   │   │   ├── Model/               # SharePackageModel, SharePackageCoder, SharePackageValidator
@@ -316,8 +309,6 @@ FXVault/
 │   │       │   │                    # refresh, resolve, import; live remote provider),
 │   │       │   │                    # DestinationAccessRepository (+ ShellResolvingAzureTokens)
 │   │       │   ├── Models/          # DestinationSyncModels
-│   │       │   ├── Overview/        # StageOverviewRepository, StageOverviewBuilder,
-│   │       │   │                    # StageOverviewModels, ManifestDraftBuilder
 │   │       │   └── Support/         # DestinationFieldCipher (+ ConnectionTokenCipher),
 │   │       │                        # DestinationItemWriter, PublicValuePolicy
 │   │       ├── EnvFiles/            # EnvFileRepository, EnvFileError, EnvExportAuthorizationModel,
@@ -351,7 +342,7 @@ FXVault/
 │       │                                         # (ProjectShareExport/ImportTests v0.9.0),
 │       │                                         # FoldersTests/,
 │       │                                         # DestinationsTests/ (repository, sync with a fake
-│       │                                         # remote, stage overview; v0.8.0; held rows,
+│       │                                         # remote; v0.8.0; held rows,
 │       │                                         # HeldDestinationTests v0.9.0),
 │       │                                         # Live/ (opt-in live E2E: FXV_LIVE_E2E*, plus a
 │       │                                         # GitHubSimulator dry run that always runs;
@@ -368,10 +359,9 @@ FXVault/
 │       │                                         # (file_v1_kat.py, file_v2_kat.py),
 │       │                                         # item-v1-0.1.1.json (package written by 0.1.1)
 │       ├── VaultDataTests/Fixtures/Sharing/      # repository-v1-0.1.1.fxvault (file written by 0.1.1)
-│       ├── GitHubKitTests/Fixtures/              # gh/, api/ (manifest-get-* since v0.8.0), ssh/,
+│       ├── GitHubKitTests/Fixtures/              # gh/, api/, ssh/,
 │       │                                         # shell/ (sanitized)
-│       └── EnvToolsTests/Fixtures/               # sample.env (placeholder values only),
-│                                                 # manifest-full.yml (names only, v0.8.0)
+│       └── EnvToolsTests/Fixtures/               # sample.env (placeholder values only)
 ├── scripts/
 │   ├── ci-local.sh                  # runs the blocking CI checks locally
 │   ├── lint.sh                      # convention checks (force unwraps, print, imports, literal

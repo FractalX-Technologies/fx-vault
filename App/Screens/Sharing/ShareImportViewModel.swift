@@ -17,8 +17,8 @@ import VaultData
 ///    (v0.9.0) shows its repositories (✓ in the vault, ⇣ imported from GitHub first, ✕ skipped),
 ///    each one's preview, its destinations and folders (``ProjectShareImportEditor``).
 /// 4. **Apply** in one transaction; nothing syncs automatically, and a project share's rows the
-///    remote does not have wait in Sync's From Files review. A project share then opens the
-///    Overview of its first repository at its first stage.
+///    remote does not have wait in Sync's From Files review. A project share then opens its
+///    first repository at the environment of its first stage (the repository level if none).
 ///
 /// A copy of a folder (v0.7.0) asks where it goes instead (``FolderDestinationModel``): saved as
 /// a folder at once, or imported into a repository scope through the same preview.
@@ -268,12 +268,19 @@ final class ShareImportViewModel: LockObserving {
 
     // MARK: - Project shares (v0.9.0)
 
+    /// The environment named like `stage` (fold key), or the repository level.
+    private func firstScope(of repositoryID: RepoID, stage: String?) -> ConfigScope {
+        guard let stage, let scopes = try? dependencies.config.scopes(repositoryID: repositoryID) else { return .repository }
+        let key = EnvironmentNameValidator.foldKey(stage)
+        return scopes.first { $0.environment?.nameKey == key }?.scope ?? .repository
+    }
+
     var canApplyBundle: Bool {
         step == .bundlePreview && bundleEditor?.canApply == true && bundleDraft != nil
     }
 
     /// Imports the ⇣ repositories from GitHub when online (the user's choices are carried into
-    /// the new plan), then applies the file in one transaction and opens the Overview.
+    /// the new plan), then applies the file in one transaction and opens its first repository.
     func applyBundle() async {
         guard canApplyBundle, var draft = bundleDraft, var editor = bundleEditor else { return }
         step = .bundleApplying
@@ -293,7 +300,7 @@ final class ShareImportViewModel: LockObserving {
             bundleResult = result
             step = .bundleDone
             if let repositoryID = result.firstRepositoryID {
-                dependencies.actions.openOverview(repositoryID, result.firstStage)
+                dependencies.actions.open(repositoryID, firstScope(of: repositoryID, stage: result.firstStage))
             }
         } catch .planOutdated {
             alert = SharingError.planOutdated.presentation

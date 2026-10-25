@@ -298,7 +298,7 @@ enum AddDestinationCopy {
     }
     static var stages: String { String(localized: "addDestination.stages", defaultValue: "Stages") }
     static var stageNote: String {
-        String(localized: "addDestination.stage.note", defaultValue: "The Overview lines it up with the GitHub environment of the same name.")
+        String(localized: "addDestination.stage.note", defaultValue: "Use the name of the GitHub environment it serves, for example production.")
     }
     static var vaultName: String { String(localized: "addDestination.vault", defaultValue: "Vault name") }
     static var tenant: String { String(localized: "addDestination.tenant", defaultValue: "Tenant (optional)") }

@@ -76,8 +76,6 @@ final class AddDestinationViewModel: LockObserving {
 
     @ObservationIgnored private let dependencies: FeatureDependencies
     @ObservationIgnored private let tasks = TaskBag()
-    /// A Vercel project the suggestion names, chosen once the projects arrive.
-    @ObservationIgnored private var suggestedVercelProject: String?
 
     init(context: AddDestinationContext, dependencies: FeatureDependencies) {
         self.context = context
@@ -85,13 +83,12 @@ final class AddDestinationViewModel: LockObserving {
         dependencies.actions.addLockObserver(self)
         loadStages()
         loadConnections()
-        apply(context.suggestion)
     }
 
     // MARK: - Loading
 
     private func loadStages() {
-        stageSuggestions = (try? dependencies.overview.stages(repositoryID: context.repositoryID, manifest: nil)) ?? []
+        stageSuggestions = (try? dependencies.destinations.stageSuggestions(repositoryID: context.repositoryID)) ?? []
         if stage.isEmpty {
             stage = stageSuggestions.first { EnvironmentNameValidator.foldKey($0) == Self.defaultStage } ?? stageSuggestions.first ?? Self.defaultStage
         }
@@ -116,26 +113,6 @@ final class AddDestinationViewModel: LockObserving {
         connectionChoice = providerConnections.first.map { .existing($0.id) } ?? .newToken
         if case .existing = connectionChoice {
             loadLists()
-        }
-    }
-
-    private func apply(_ suggestion: AddDestinationSuggestion?) {
-        guard let suggestion else { return }
-        if let stage = suggestion.stage { self.stage = stage }
-        switch suggestion.location {
-        case .keyVault(let vaultName):
-            provider = .azureKeyVault
-            self.vaultName = vaultName
-        case .supabase(let projectRef):
-            provider = .supabase
-            self.projectRef = projectRef
-        case .vercel(let project, let team, let environment):
-            provider = .vercel
-            vercelTeamID = team
-            vercelEnvironment = VercelEnvironment(rawValue: environment.rawValue) ?? .production
-            suggestedVercelProject = project
-        case .githubEnvironment:
-            break
         }
     }
 
@@ -209,11 +186,7 @@ final class AddDestinationViewModel: LockObserving {
 
     private func applyVercelProjects(_ projects: [VercelProjectModel]) {
         vercelProjects = projects
-        if let suggested = suggestedVercelProject,
-           let match = projects.first(where: { $0.name == suggested || $0.id == suggested }) {
-            vercelProjectID = match.id
-            suggestedVercelProject = nil
-        } else if vercelProjectID == nil, projects.count == 1 {
+        if vercelProjectID == nil, projects.count == 1 {
             vercelProjectID = projects[0].id
         }
     }

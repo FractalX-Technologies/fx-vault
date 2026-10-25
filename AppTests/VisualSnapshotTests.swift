@@ -275,12 +275,6 @@ struct VisualSnapshotTests {
         try await SnapshotOutput.write("main-destination-vercel", size: SnapshotOutput.windowSize, isTitled: true) {
             MainScreen(viewModel: main)
         }
-        scopes.selectOverview()
-        let overview = try #require(main.overview)
-        #expect(await TestFixtures.eventually { overview.overview?.rows.isEmpty == false })
-        try await SnapshotOutput.write("main-overview", size: SnapshotOutput.windowSize, isTitled: true) {
-            MainScreen(viewModel: main)
-        }
         withExtendedLifetime(harness) {}
     }
 

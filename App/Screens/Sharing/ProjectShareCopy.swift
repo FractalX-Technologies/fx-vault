@@ -257,7 +257,6 @@ enum ProjectShareCopy {
     }
 
     static let doneNothing = String(localized: "projectShare.done.nothing", defaultValue: "Nothing changed.")
-    static let openOverview = String(localized: "projectShare.done.openOverview", defaultValue: "Show Overview")
 
     // MARK: - Settings › Sharing
 

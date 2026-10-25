@@ -3,6 +3,18 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## Unreleased (1.0)
+
+### Removed
+
+- **Nearby, chat, teammates and shared spaces.** Pairing, presence, Nearby Chat, sending to a
+  nearby Mac and shared spaces are gone, with their tables (migration `v15_drop_teammates`).
+  Share a project as a passphrase `.fxvault` file instead; Share… still offers AirDrop. A 0.9
+  file sealed for teammates no longer opens. Production stages can't be shared for now.
+- **Overview and `fxvault.yml`.** The stage matrix, the manifest check and Share Stage… are
+  gone. After you open a project file, FX Vault shows the first repository at the environment of
+  the file's first stage.
+
 ## 0.9.0
 
 ### Added

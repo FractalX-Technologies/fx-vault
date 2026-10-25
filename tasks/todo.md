@@ -1928,6 +1928,8 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [ ] B1 Move `PassphraseGenerator` to VaultCrypto; cut the Spaces hooks from SyncEngine and `DEKRotator`. e2e: smoke flow.
 - [ ] B2 Remove the sharing, chat, teammates and spaces screens and managers, the Bonjour and `.fxvault`/`.fxvcard` entries in `project.yml`. e2e: smoke flow, nothing about teammates in the UI.
 - [ ] B3 Remove the teammate, nearby, chat and spaces parts of SharingKit and `VaultData` (keep passphrase files: File, Passphrase, Bundle, Import); the tables stay, unread. Remove Supabase, Vercel, Overview and `fxvault.yml`.
+- [ ] B3c Remove the stage Overview and `fxvault.yml`: EnvTools `Manifest/`, `GHManifestAPI`, VaultData `Destinations/Overview/`, the Overview screens and row. Add Destination keeps its stage suggestions (moved to `DestinationRepository`); after an import FX Vault opens the repository at the first stage's environment instead of the Overview. e2e: smoke flow.
+- [ ] B3d Remove Supabase and Vercel (DestinationKit remotes and account clients, connections, settings, Add Destination). Migration `v16_drop_runtime_providers` deletes their destinations, items, journal and tokens (Bryan, 2026-10-25: delete them) and keeps their names in `retired_destinations` for a one-time notice after unlock; nothing is deleted remotely. A 0.9 file that carries them imports without them, and the preview says so. Key Vault stays. e2e: smoke flow.
 - [ ] B3b Share Securely: passphrase `.fxvault` export of an org, repository or environment, and the open/preview/held import, from D2's Share boards; **Send with AirDrop** of that file (system share, Bryan 2026-10-25).
 - [ ] B4 `admin:org` scope check per organization and the refresh flow.
 - [ ] B5 Organization list commands and store (v15, additive); read-only organization node.
@@ -1990,4 +1992,14 @@ Review B1–B3a — remove teammates, nearby, chat and spaces (2026-10-25, autom
   - Comment nits → fixed.
   - Cross-purpose authorization → no change; the types keep the purposes apart (`EnvExportAuthorizationModel` vs `ShareAuthorizationModel`, `.fileExport` only).
 - Left in B3: remove Supabase, Vercel, Overview and `fxvault.yml` (Azure Key Vault stays).
+- Commit: `aa669f8` `refactor(sharing)!: remove teammates, nearby, chat and spaces`.
+
+Review B3c — remove the Overview and `fxvault.yml` (2026-10-25, automatic):
+- Removed: EnvTools `Manifest/`, `GHManifestAPI` (B11) and `GHCommandScheduler.manifest`, `Limits.maxManifestBytes`, VaultData `Destinations/Overview/`, the Overview screens, row and `MainViewModel.overview`, Share Stage… (`ShareExportContext.stage`) and the manifest suggestion in Add Destination.
+- Kept: Add Destination's stage suggestions, now `DestinationRepository.stageSuggestions` (destination stages, then GitHub environments, once per fold key).
+- After a project file import the app opens the first repository at the environment of the first stage (the repository level if none). `MainViewModel.open(repositoryID:scope:)` keeps the scope pending until the sidebar row and the column exist.
+- Tests: `stageSuggestionsListDestinationStagesThenEnvironmentsOnce`; `openingAScopeBeforeItsSidebarRowExistsSelectsItWhenTheRowAppears` (seen failing without the pending scope); the import test checks the staging environment opens. 9 test files and the cases for the removed features go (listed in the handoff).
+- Gates (verify copy without the 9 files): XcodeGen drift OK; `swift test` all suites green; `xcodebuild test` 557 app tests green; Release build OK; no UI-testing code; UI tests ×2 green; lint OK; check-secrets OK (973 files); re-run in the worktree after Bryan ran the deletion; strings synced (second run: no change).
+- Review: by me. Subagents were not available (session cap). Found and fixed: the first version of the pending-scope test passed without the change.
+- Docs: README, CHANGELOG (Unreleased 1.0), ARCHITECTURE (decisions 113–114 gone, 112, 117, 124 updated), API (B11 gone), DATABASE, DESIGN, STRUCTURE, SHARING-PROTOCOL, RELEASING (#44 gone).
 - Commit: (pending: Bryan approves the test deletions).

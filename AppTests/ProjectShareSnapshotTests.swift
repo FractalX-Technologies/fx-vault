@@ -16,9 +16,9 @@ struct ProjectShareSnapshotTests {
     private static let sheetSize = CGSize(width: Theme.Layout.shareSheetWidth, height: SnapshotOutput.tallSheetHeight)
     private static let notFound = "GraphQL: Could not resolve to a Repository with the name 'Example-Org/example-api'. (repository)\n"
 
-    private func shareModel(_ world: ProjectShareWorld, stage: String? = nil) async -> ProjectShareViewModel {
+    private func shareModel(_ world: ProjectShareWorld) async -> ProjectShareViewModel {
         let model = ProjectShareViewModel(
-            context: ShareExportContext(selection: .repository(world.senderRepositoryID), stage: stage),
+            context: ShareExportContext(selection: .repository(world.senderRepositoryID)),
             dependencies: world.senderDependencies(),
             delivery: FakeShareFileDelivery(),
             identity: ProjectShareWorld.identity,
@@ -59,14 +59,6 @@ struct ProjectShareSnapshotTests {
         await model.settle()
         #expect(model.stageOptions.contains { $0.isProduction })
         try await write("project-share-contents-three", model)
-    }
-
-    /// Opened on the production stage: the stage stays unchecked, since 1.0 never shares it.
-    @Test func contentsOpenedOnProduction() async throws {
-        let world = try await ProjectShareWorld()
-        let model = await shareModel(world, stage: "production")
-        #expect(model.chosenStageKeys.isEmpty)
-        try await write("project-share-production-blocked", model)
     }
 
     @Test func sendToPassphrase() async throws {

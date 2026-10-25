@@ -5,8 +5,8 @@ import VaultData
 
 /// Column 2 (§10): "Repository" then one row per environment, with the pending dot and the
 /// value-missing count, "+ New Environment" and the environment context menu. Since v0.8.0
-/// (tasks/todo.md R7) also **Overview** at the top and the RUNTIME destinations with
-/// "+ Add Destination"; a selection is a scope, a destination or the overview.
+/// (tasks/todo.md R7) also the RUNTIME destinations with "+ Add Destination"; a selection is a
+/// scope or a destination.
 ///
 /// Observes `ConfigRepository.observeScopes(repositoryID:)` and
 /// `DestinationRepository.observeDestinations(repositoryID:)`, so every local change (a new
@@ -42,8 +42,6 @@ final class ScopeListViewModel {
 
     /// `ConfigScopeSummaryModel.id` of the repository scope.
     static let repositoryScopeID = ConfigScopeLevel.repository.rawValue
-    /// The selection id of the Overview row (v0.8.0).
-    static let overviewID = "overview"
     private static let destinationIDPrefix = "destination|"
 
     /// The selection id of a destination row (v0.8.0).
@@ -97,10 +95,6 @@ final class ScopeListViewModel {
         }
     }
 
-    func selectOverview() {
-        selectedScopeID = Self.overviewID
-    }
-
     private func observe() {
         let stream = dependencies.config.observeScopes(repositoryID: repositoryID)
         tasks.set("scopes", Task { [weak self] in
@@ -152,11 +146,6 @@ final class ScopeListViewModel {
         return destinations.first { Self.selectionID(of: $0.id) == selectedScopeID }
     }
 
-    /// True while the Overview row is selected (v0.8.0).
-    var isOverviewSelected: Bool {
-        selectedScopeID == Self.overviewID
-    }
-
     /// The live destination with `id` (the detail column reads its counts).
     func destination(_ id: DestinationID) -> DestinationModel? {
         destinations.first { $0.id == id }
@@ -164,12 +153,12 @@ final class ScopeListViewModel {
 
     /// Every row id in column order, for Up and Down.
     var rowIDs: [String] {
-        [Self.overviewID] + scopes.map(\.id) + destinations.map { Self.selectionID(of: $0.id) }
+        scopes.map(\.id) + destinations.map { Self.selectionID(of: $0.id) }
     }
 
-    /// Overview and destination ids are not scopes: a scope snapshot never resets them.
+    /// Destination ids are not scopes: a scope snapshot never resets them.
     private func isOtherSelectionID(_ id: String) -> Bool {
-        id == Self.overviewID || id.hasPrefix(Self.destinationIDPrefix)
+        id.hasPrefix(Self.destinationIDPrefix)
     }
 
     var environments: [ConfigScopeSummaryModel] {
