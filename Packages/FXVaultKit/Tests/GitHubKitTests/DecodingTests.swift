@@ -201,26 +201,6 @@ struct DecodingTests {
         ])
     }
 
-    @Test func manifestFileDecodesFromBase64() throws {
-        let file = try GHManifestAPI.decode(try apiOutput(.manifestGet, fixture: "api/manifest-get-200.txt"))
-        #expect(file.text.hasPrefix("# fxvault.yml · names and destinations, never values\n"))
-        #expect(file.text.contains("API_URL: { to: [ci] }"))
-        #expect(file.sha == "3d21ec53a331a6f037a91c368710b99387d012c1")
-        #expect(throws: GHError.malformedOutput) {
-            try GHManifestAPI.decode(try apiOutput(.manifestGet, fixture: "api/manifest-get-dir.txt"))
-        }
-        #expect(throws: GHError.malformedOutput) {
-            try GHManifestAPI.decode(try apiOutput(.manifestGet, fixture: "api/environment-get-404.txt"))
-        }
-    }
-
-    @Test func manifestCommandReadsTheRootFile() throws {
-        let command = try GHManifestAPI.get(repo: try GHRepoRef(owner: "owner-a", name: "repo-a"))
-        #expect(command.operation == .manifestGet)
-        #expect(!command.operation.isWrite)
-        #expect(command.arguments.suffix(4) == ["-X", "GET", "-i", "repos/owner-a/repo-a/contents/fxvault.yml"])
-    }
-
     @Test func includeHeadResponses() throws {
         let ok = try APIResponseParser.parse(try Fixture.data("api/environment-get-200.txt"))
         #expect(ok.status == 200)

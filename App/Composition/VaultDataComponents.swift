@@ -39,8 +39,6 @@ struct VaultDataComponents {
     let folders: FolderRepository
     /// Runtime destinations of repositories and the provider connections (v0.8.0).
     let destinations: DestinationRepository
-    /// The stage Overview and `fxvault.yml` (v0.8.0).
-    let overview: StageOverviewRepository
     /// Destination Sync, Refresh and import over HTTPS (v0.8.0).
     let destinationSync: DestinationSyncRepository
     /// Token checks and the Add Destination pickers (v0.8.0).
@@ -142,7 +140,6 @@ struct VaultDataComponents {
             sharing: sharing,
             folders: FolderRepository(session: session, clock: clock),
             destinations: DestinationRepository(session: session, clock: clock),
-            overview: StageOverviewRepository(session: session, schedulers: github),
             destinationSync: DestinationSyncRepository(session: session, remotes: remotes, clock: clock),
             destinationAccess: DestinationAccessRepository(session: session, transport: transport, azureTokens: azureTokens, clock: clock),
             azureTokens: azureTokens

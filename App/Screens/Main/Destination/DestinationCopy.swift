@@ -6,17 +6,6 @@ import VaultData
 nonisolated enum DestinationCopy {
     // MARK: Scope column
 
-    static var overviewTitle: String {
-        String(localized: "destination.overview.title", defaultValue: "Overview")
-    }
-
-    static var overviewHelp: String {
-        String(
-            localized: "destination.overview.help",
-            defaultValue: "Every name a stage needs, across GitHub and the runtime destinations"
-        )
-    }
-
     static var runtimeSection: String {
         String(localized: "destination.section.runtime", defaultValue: "Runtime")
     }
@@ -28,7 +17,7 @@ nonisolated enum DestinationCopy {
     static var experimentalHelp: String {
         String(
             localized: "destination.experimental.help",
-            defaultValue: "Destinations are new: Sync, Refresh and the Overview may still change."
+            defaultValue: "Destinations are new: Sync and Refresh may still change."
         )
     }
 

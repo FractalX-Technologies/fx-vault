@@ -109,10 +109,6 @@ enum Theme {
         static let statusDotSize: CGFloat = 6
         /// Width of the provider symbol in a destination row (v0.8.0), so names line up.
         static let destinationSymbolWidth: CGFloat = 16
-        /// The Overview matrix (v0.8.0): the name column and each destination column.
-        static let overviewNameMinWidth: CGFloat = 200
-        static let overviewCellMinWidth: CGFloat = 104
-        static let overviewCycleWidth: CGFloat = 76
         /// The Add Destination sheet.
         static let destinationSheetWidth: CGFloat = 520
         static let chipHorizontalPadding: CGFloat = 6

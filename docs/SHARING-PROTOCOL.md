@@ -140,7 +140,7 @@ repository or one folder, sealed in format 2 (§2.1). Schemas 1–3 stay readabl
   only when at least two items of the file belong to the same linked-copy group.
 - **`publicNames`** lists the destination items the sender marked public (v0.8.0 R10), so the
   receiver keeps the mark.
-- **`stages`** are the stages the sender chose; the receiver opens the Overview at the first one.
+- **`stages`** are the stages the sender chose; after the import FX Vault opens the first repository at the environment of the first one.
 - **Never in a bundle:** connection tokens and labels, `az` sessions, GitHub accounts, SSH
   aliases, value hashes.
 - **Encoding** follows schemas 1–3: sorted keys, whole-second ISO-8601 UTC dates (fractional
@@ -431,7 +431,7 @@ state, `ProjectShareImporter` applies a plan.
   `stageOptions(repositoryIDs:)` lists every live environment name and destination stage,
   de-duplicated by fold key and flagged with `StageRisk.isProduction` (a word of the name, split on
   non-letters, is `prod`, `production`, `prd` or `live`). `selection(repositoryIDs:stages:…)`
-  expands stages as the Overview matches them: the environment whose fold key equals the stage plus
+  expands stages by fold key: the environment whose fold key equals the stage plus
   the destinations with that stage.
 - **Production places** (Q13): an environment or a destination stage `StageRisk` flags, and a
   Vercel production destination without a stage. `previewBundle(_:)` lists them; with the teammates mode gone an
@@ -482,7 +482,8 @@ state, `ProjectShareImporter` applies a plan.
      teammates file).
 
   Folder rows never sync and are never held. ⇣, ✕ and blocked repositories are skipped. The result
-  names the first imported repository and the first stage, for the Overview.
+  names the first imported repository and the first stage, which the app opens (the environment
+  of that stage, or the repository level).
 - **Holds** (P8, `VaultData/Sync`). A held row is never in a Sync plan (GitHub or destination).
   Sync's review lists each held file (`SyncReviewModel.heldShares`, `HeldShareModel`): sender
   (verified only for a 0.9 teammates file), import date, places and names. Including a file

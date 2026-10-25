@@ -132,9 +132,8 @@ final class ProjectShareViewModel: LockObserving {
         }
     }
 
-    /// What the sheet starts with: a repository opens with its non-production stages (or the
-    /// Overview's stage), an environment, an item or a subset opens with exactly that, a folder
-    /// with that folder.
+    /// What the sheet starts with: a repository opens with its non-production stages, an
+    /// environment, an item or a subset opens with exactly that, a folder with that folder.
     private func initialSelection() async throws -> (repositoryIDs: [RepoID], stageKeys: Set<String>, selection: ShareBundleSelectionModel?) {
         switch context.selection {
         case .folder(let id):
@@ -142,14 +141,7 @@ final class ProjectShareViewModel: LockObserving {
         case .repository(let id):
             let options = try await dependencies.sharing.stageOptions(repositoryIDs: [id])
             let shareable = Set(options.filter { !$0.isProduction }.map(\.id))
-            let keys: Set<String>
-            if let stage = context.stage {
-                // A production Overview opens with nothing checked: its checkbox is disabled.
-                keys = shareable.intersection([EnvironmentNameValidator.foldKey(stage)])
-            } else {
-                keys = shareable
-            }
-            return ([id], keys, nil)
+            return ([id], shareable, nil)
         case .environment(let id):
             let repositoryID = try await ShareScopeTreeLoader(config: dependencies.config, sharing: dependencies.sharing)
                 .repositoryID(for: context.selection)

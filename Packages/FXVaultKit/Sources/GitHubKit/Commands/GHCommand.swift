@@ -16,8 +16,6 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
     case variableList = "B8"
     case gitignoreList = "B10g"
     case licenseList = "B10l"
-    /// `fxvault.yml` at the root of the default branch (v0.8.0, names only).
-    case manifestGet = "B11"
     case repoCreate = "C1"
     case environmentUpsert = "C2"
     case branchPolicyAdd = "C3"
@@ -54,11 +52,11 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
         }
     }
 
-    /// True for `gh api` operations (environments, branch policies and the manifest file, D4).
+    /// True for `gh api` operations (environments and branch policies, D4).
     public var usesAPI: Bool {
         switch self {
         case .environmentList, .environmentGet, .branchPolicyList, .environmentUpsert,
-             .branchPolicyAdd, .branchPolicyDelete, .environmentDelete, .manifestGet:
+             .branchPolicyAdd, .branchPolicyDelete, .environmentDelete:
             true
         default:
             false
@@ -69,7 +67,7 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
     public var includesResponseHead: Bool {
         switch self {
         case .environmentGet, .environmentUpsert, .branchPolicyAdd, .branchPolicyDelete,
-             .environmentDelete, .manifestGet:
+             .environmentDelete:
             true
         default:
             false

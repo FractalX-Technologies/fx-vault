@@ -8,7 +8,7 @@ import VaultData
 ///
 /// UI feature contract entry view (ARCHITECTURE.md): presented by `MainScreen` for
 /// `MainSheet.shareExport`, from Share › File…, the File menu's Share Project…, a repository's or
-/// folder's Share as File… and the Overview's Share Stage….
+/// folder's Share as File….
 struct ProjectShareScreen: View {
     @State private var viewModel: ProjectShareViewModel
     @Environment(\.dismiss) private var dismiss

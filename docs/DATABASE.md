@@ -431,8 +431,8 @@ CREATE INDEX destination_journal_time ON destination_journal(started_at);
   `vaultName` and `tenantID` (Key Vault), `projectRef` (Supabase), `projectID`, `projectName`,
   `teamID` and `environment` (Vercel: `production`, `preview` or `development`). A row whose
   settings do not decode for its provider reads as `StoreError.invalidStoredValue`.
-- `stage` names the stage the Overview lines the destination up with (the GitHub environment of
-  the same fold key); `stage_key` = `EnvironmentNameValidator.foldKey(stage)`, set with it.
+- `stage` names the stage the destination serves (the GitHub environment of the same fold key,
+  as Share Project matches them); `stage_key` = `EnvironmentNameValidator.foldKey(stage)`, set with it.
 - `connection_id`: the Supabase or Vercel token the destination uses; NULL for Key Vault (the
   `az` sign-in) and after its connection is removed (the destination stays, and Sync blocks it
   until another connection is chosen).
@@ -643,5 +643,3 @@ Destinations (v0.8.0) keep these out of the database too:
   import or Use Remote) or wiped after the comparison. The SHA-256 FX Vault computes of a value
   it sends to Supabase, to confirm the write, and the digests Supabase lists are kept in memory
   for that run only; `remote_version` holds their keyed form (above).
-- `fxvault.yml` is read from the repository's default branch each time the Overview asks for
-  it and held in memory; only names are in it.

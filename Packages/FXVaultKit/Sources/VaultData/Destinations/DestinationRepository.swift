@@ -125,6 +125,18 @@ public struct DestinationRepository: Sendable {
         try performConfig { try store.fetchDestinations(repositoryID: repositoryID) }
     }
 
+    /// The stages Add Destination suggests: the destinations' stages, then the GitHub
+    /// environments, once per fold key.
+    public func stageSuggestions(repositoryID: RepoID) throws(ConfigRepositoryError) -> [String] {
+        try performConfig {
+            var seen: Set<String> = []
+            let environments = try ConfigStore(database: session.database).fetchEnvironments(repositoryID: repositoryID)
+            let stages = try store.fetchDestinations(repositoryID: repositoryID).compactMap(\.stage)
+                + environments.filter { !$0.isDeleted }.map(\.name)
+            return stages.filter { seen.insert(EnvironmentNameValidator.foldKey($0)).inserted }
+        }
+    }
+
     /// The destinations of a repository, now and after each change.
     public func observeDestinations(repositoryID: RepoID) -> AsyncThrowingStream<[DestinationModel], any Error> {
         store.observeDestinations(repositoryID: repositoryID)

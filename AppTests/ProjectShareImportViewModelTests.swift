@@ -39,9 +39,14 @@ struct ProjectShareImportViewModelTests {
         let result = try #require(model.bundleResult)
         #expect(result.destinationsCreated.count == 1)
         #expect(result.heldCount > 0)
-        let opened = try #require(world.openedOverviews.first)
+        // The repository opens at the environment of the file's first stage.
+        let opened = try #require(world.openedScopes.first)
         #expect(opened.0 == world.receiverRepositoryID)
-        #expect(opened.1 == "staging")
+        let receiverRepositoryID = try #require(world.receiverRepositoryID)
+        let staging = try #require(try world.receiver.data.config.scopes(repositoryID: receiverRepositoryID).first {
+            $0.environment?.name == "staging"
+        })
+        #expect(opened.1 == staging.scope)
     }
 
     @Test func choicesInARepositoryPreviewReachTheBundlePlan() async throws {

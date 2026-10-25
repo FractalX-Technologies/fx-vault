@@ -33,7 +33,7 @@ from `az` (section G).
 - **Success is exit code 0.** Native commands expose no HTTP status; stdout is parsed only on
   success and failures are classified from stderr plus the exit code (section E).
 - **`gh api`** (written `API` below) is used only for environments, deployment branch
-  policies and (B11, v0.8.0) reading `fxvault.yml`. It always sends `-H "Accept: application/vnd.github+json"`,
+  policies. It always sends `-H "Accept: application/vnd.github+json"`,
   `-H "X-GitHub-Api-Version: 2026-03-10"` and an explicit `-X <METHOD>`. `GitHubPath`
   percent-encodes each segment (ASCII unreserved set; `a/b c` becomes `a%2Fb%20c`) and throws on
   dot segments and their encoded forms. List reads use `--paginate --slurp`; single-object reads
@@ -106,7 +106,6 @@ while every foreign owner is that uid. Symlinks are resolved;
 | B6/B7 secrets | `gh secret list --repo={o}/{r} [--env={e}] --json name,updatedAt` | `GHSecretsCommands.list` / `decodeList` | gh follows every page. |
 | B8/B9 variables | `gh variable list --repo={o}/{r} [--env={e}] --json name,value,updatedAt,createdAt` | `GHVariablesCommands.list` / `decodeList` | Values become `SecretBytes` (`GHVariableListingModel`); stdout is wiped. The JSON decoder's transient `String` copies cannot be wiped. `FXVAULT_SPACE`, the marker 0.9's shared spaces wrote, is dropped from every listing (`droppingSpaceMarker`; 1.0 never writes it, so a leftover marker never shows as a variable). |
 | B10g / B10l | `gh repo gitignore list`, `gh repo license list` | `GHTemplatesCommands` | Plain text by line; license key column first. |
-| B11 manifest (v0.8.0) | `gh api -X GET -i repos/{o}/{r}/contents/fxvault.yml` | `GHManifestAPI.get(repo:)` / `decode` | The path comes from `GitHubPath.rootFile`. No `ref`, so GitHub answers from the default branch. `GHCommandScheduler.manifest(_:)` returns nil on a 404 (no file). The answer must be a `file` with `base64` encoding, at most `Limits.maxManifestBytes` (64 KiB) before and after decoding, and UTF-8; anything else (a directory named `fxvault.yml`, another encoding) is `.malformedOutput`. Returns the text and the blob sha; stdout is wiped. The file holds names only; FX Vault never writes it. |
 
 ## C. Write
 
@@ -218,7 +217,6 @@ case-insensitive, seeded once from the journal's write start times over the last
 | `DriftRepository` | B2–B9 | Full re-list on open (debounced `Timeouts.driftDebounce`, 2 min); a resolution re-reads the subject's scope and fails with `.stale` when it changed again |
 | `RepoCreationRepository` | B2, B10g, B10l, D3 | Name availability, owner and template pickers (templates cached per account), clone through the mapped SSH alias |
 | `SharingRepository` | B3, B5, B6–B9 (optional, `RemoteConfigReader`) | Lets the import plan show what GitHub already lists |
-| `StageOverviewRepository` | B11 | v0.8.0: the Overview's `fxvault.yml`, through the scheduler of the repository's account. A 404 is "no fxvault.yml" (`.none`); gh not ready, a repository not on GitHub yet or any failure is "could not be read" (`.unavailable`, logged with `GHError.logCode` only) |
 
 - **404 on deletes.** C6, C8 and C9 count a `.notFound` as done only after a successful re-list
   of the same scope (B3 for C9); a failed re-list leaves the change pending.

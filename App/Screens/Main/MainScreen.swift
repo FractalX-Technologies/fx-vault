@@ -365,8 +365,6 @@ private struct DetailColumnView: View {
                 FolderDetailScreen(viewModel: folderDetail, main: main)
             } else if let destinationDetail = main.destinationDetail {
                 DestinationDetailScreen(viewModel: destinationDetail, main: main)
-            } else if let overview = main.overview {
-                StageOverviewScreen(viewModel: overview, main: main)
             } else if let detail = main.detail {
                 RepoDetailScreen(viewModel: detail, main: main)
             } else {

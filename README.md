@@ -32,11 +32,6 @@ the secrets your code reads at runtime in Azure Key Vault, Supabase and Vercel.
   linked copies), and Sync pushes its changes after GitHub's, in the same review. Changes made
   in the provider are never overwritten: Refresh lists them first. Public names such as
   `NEXT_PUBLIC_` never receive a value that looks like a credential.
-- **Overview and `fxvault.yml`.** See one stage (for example production) across GitHub and its
-  destinations, name by name, with its cycle (Build, Runtime or Public) and what Sync will do in
-  each place. An optional, names-only `fxvault.yml` at the root of the repository says what each
-  stage needs; the Overview checks it, copies a `.env.example` per target, and can write a first
-  `fxvault.yml` from what the repository has.
 - **Folders.** Keep the secrets and variables you use in several repositories in folders of your
   own ("Mobile App", "Stripe test") at the top of the sidebar (New Folder…, ⇧⌘N). A folder never
   goes to GitHub by itself: copy its items into any repository with ⌘C / ⌘V or Copy To, and every
@@ -69,7 +64,8 @@ the secrets your code reads at runtime in Azure Key Vault, Supabase and Vercel.
   for Supabase, Vercel or Azure never travel: the receiver connects their own account.
 - **Open a project file.** Double-click it: FX Vault lists each repository as already in your
   vault, to import from GitHub with your account, or skipped (no access), previews the merge
-  (nothing of yours is deleted) and opens the Overview afterwards. Nothing from the file reaches
+  (nothing of yours is deleted) and then opens the first repository at the environment of the
+  file's first stage. Nothing from the file reaches
   GitHub or a provider until you include it in Sync's **From Files** review; until then its rows
   show **Held**.
 - **Works offline.** A banner says when the Mac has no internet connection or GitHub isn't

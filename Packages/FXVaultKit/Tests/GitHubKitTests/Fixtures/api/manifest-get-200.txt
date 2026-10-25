@@ -1,8 +1,0 @@
-HTTP/2.0 200 OK
-Access-Control-Allow-Origin: *
-Content-Type: application/json; charset=utf-8
-Date: Thu, 01 Jan 2026 00:00:00 GMT
-Server: github.com
-X-Github-Api-Version-Selected: 2026-03-10
-
-{"type":"file","encoding":"base64","size":149,"name":"fxvault.yml","path":"fxvault.yml","sha":"3d21ec53a331a6f037a91c368710b99387d012c1","content":"IyBmeHZhdWx0LnltbCDCtyBuYW1lcyBhbmQgZGVzdGluYXRpb25zLCBuZXZl\nciB2YWx1ZXMKc3RhZ2VzOiBbcHJvZHVjdGlvbl0KdGFyZ2V0czoKICBjaTog\neyBwcm92aWRlcjogZ2l0aHViLWFjdGlvbnMgfQp2YXJzOgogIEFQSV9VUkw6\nIHsgdG86IFtjaV0gfQo=\n"}

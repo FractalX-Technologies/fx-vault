@@ -57,14 +57,14 @@ struct DestinationViewModelTests {
         #expect(await TestFixtures.eventually { !scopes.scopes.isEmpty })
         let id = try fixture.addVault()
         #expect(await TestFixtures.eventually { scopes.destinations.map(\.id) == [id] })
-        #expect(scopes.rowIDs.first == ScopeListViewModel.overviewID)
+        #expect(scopes.rowIDs.first == ScopeListViewModel.repositoryScopeID)
         #expect(scopes.rowIDs.last == ScopeListViewModel.selectionID(of: id))
 
         scopes.select(destination: id)
         #expect(scopes.selectedDestination?.id == id)
         #expect(scopes.selectedScope == nil)
-        scopes.selectOverview()
-        #expect(scopes.isOverviewSelected)
+        scopes.select(scope: .repository)
+        #expect(scopes.selectedScope?.scope == .repository)
         #expect(scopes.selectedDestination == nil)
 
         // A destination asked for before it exists is selected when it appears.
@@ -184,45 +184,6 @@ struct DestinationViewModelTests {
         #expect(again.connectionChoice == .existing(connection))
         again.projectRef = "abcdefghijklmnopqrst"
         #expect(again.canAdd)
-    }
-
-    @Test func aManifestSuggestionPrefillsTheForm() async throws {
-        let fixture = try await Fixture()
-        let model = AddDestinationViewModel(
-            context: AddDestinationContext(
-                repositoryID: fixture.repositoryID,
-                suggestion: AddDestinationSuggestion(location: .keyVault(vaultName: "kv-sample-stg"), stage: "staging")
-            ),
-            dependencies: fixture.dependencies
-        )
-        #expect(model.provider == .azureKeyVault)
-        #expect(model.vaultName == "kv-sample-stg")
-        #expect(model.stage == "staging")
-    }
-
-    // MARK: - Overview
-
-    @Test func theOverviewBuildsTheStageMatrix() async throws {
-        let fixture = try await Fixture()
-        let id = try fixture.addVault()
-        try fixture.destinations.addItem(destinationID: id, kind: .secret, name: "DATABASE_URL", value: SecretBytes(utf8: "postgres://a"))
-        let model = StageOverviewViewModel(repositoryID: fixture.repositoryID, dependencies: fixture.dependencies) {
-            fixture.harness.repository(fixture.repositoryID)
-        }
-        #expect(await TestFixtures.eventually { model.overview?.rows.contains { $0.name == "DATABASE_URL" } == true })
-        #expect(model.stage == "production")
-        #expect(model.stages.contains("staging"))
-        #expect(model.destinationCount == 1)
-        // gh is not ready in this harness: fxvault.yml is not read.
-        #expect(model.manifestState == .unavailable)
-        let row = try #require(model.overview?.rows.first { $0.name == "DATABASE_URL" })
-        #expect(row.cells == [.notUsed, .willPush])
-        model.open(row: row, column: 1)
-        #expect(fixture.recorder.openedDestinations == [id])
-
-        model.copyDraftManifest()
-        #expect(model.notice == StageOverviewCopy.draftCopied)
-        #expect(model.alert == nil)
     }
 
     // MARK: - Settings › Destinations

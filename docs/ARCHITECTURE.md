@@ -49,8 +49,8 @@ SharingKit are pure domain services called by repositories.
 | `VaultCore` | none | done | Models, typed ids, validation, `SecretBytes`, `VaultClock`, `Limits`, `Timeouts`, errors |
 | `VaultCrypto` | VaultCore, Clibsodium | done | Argon2id, field encryption, key wrap, recovery key, keyring, password strength |
 | `VaultStore` | VaultCore, GRDB | done | Database factory, migrations v1–v15, records, stores, observation. Stores blobs only |
-| `GitHubKit` | VaultCore | done | Process runner, shell probe, gh locator/auth, command builders, scheduler, gh api for environments and `fxvault.yml`, ssh and git |
-| `EnvTools` | VaultCore | done | .env parsing/serialization, key normalization, credential heuristics, secure file writes, iCloud and gitignore checks, the `fxvault.yml` parser and serializer (v0.8.0) |
+| `GitHubKit` | VaultCore | done | Process runner, shell probe, gh locator/auth, command builders, scheduler, gh api for environments, ssh and git |
+| `EnvTools` | VaultCore | done | .env parsing/serialization, key normalization, credential heuristics, secure file writes, iCloud and gitignore checks |
 | `DestinationKit` | VaultCore, GitHubKit | done (v0.8.0, experimental) | HTTPS clients for runtime destinations (Azure Key Vault, Supabase Edge Function secrets, Vercel environment variables), the host allowlist, the `az` token provider, the Supabase and Vercel account lists, `DestinationError`. No database, no keys |
 | `SharingKit` | VaultCore (+ CryptoKit) | done | Share payload and bundles, `.fxvault` codecs, passphrases, import planners. Key derivation is injected (`KeyDeriving`), so no VaultCrypto dependency |
 | `SyncEngine` | VaultCore, VaultCrypto, GitHubKit | done | Change derivation, edit planning, summary, drift detection, preflight, planning, execution, verification, launch reconciliation. No database and no keys: VaultData plugs in through `SyncPersisting` and `SyncValueProviding` |
@@ -129,7 +129,7 @@ This is the contract for the next stage (the feature screens). Everything listed
   in a secrets-only provider is `ValidationError.kindNotSupported`, targets are checked by
   `validate(_ target:)` (`ValidationError.invalidDestinationTarget(DestinationTargetRule)`);
   `PublicNamePrefixes` (`NEXT_PUBLIC_`, `VITE_`, `EXPO_PUBLIC_`, …). New `Limits` (Key Vault value
-  size, items per destination, destinations per repository, connections, response and manifest
+  size, items per destination, destinations per repository, connections and response
   sizes) and `Timeouts` (`destinationRequest`, `azAccessToken`, `accessTokenRefreshMargin`,
   rate-limit backoff).
 - **Models:** `AccountModel` (id = lowercase login), `RepoModel` (+ `OwnerType`,
@@ -234,11 +234,6 @@ See [API.md](API.md) for the command catalog.
   `GHBranchPolicyDTO`, `GHLicenseTemplateModel`), `GHWriteRecordModel` (throttle seed).
 - **ssh/git:** `SSHConfigParser`, `SSHAliasValidator`, `SSHAliasResolver` (D1, D2),
   `GitService` (D3 clone, D4–D6).
-- **`fxvault.yml` (v0.8.0):** `GHManifestAPI.get(repo:)` (B11, `GET
-  repos/{o}/{r}/contents/fxvault.yml` on the default branch through `GitHubPath.rootFile`) and
-  `decode(_:)` (base64 file → `GHManifestFileModel` text and blob sha; at most
-  `Limits.maxManifestBytes`, UTF-8 only; stdout wiped); `GHCommandScheduler.manifest(_:)` returns
-  nil when the file does not exist. Read only: FX Vault never writes to a repository's files.
 - **Diagnostics** (v0.3.1): `GHDiagnosticsCollector(runner:identity:workingDirectory:fileInspector:)
   .collect(shell:overridePath:trustedBinary:) -> GHDiagnosticsModel` (Encodable, explicit nulls;
   runs only `gh --version` and A3; no token, no variable values), `GHDiagnosticsModel.unavailable`.
@@ -275,14 +270,6 @@ See [API.md](API.md) for the command catalog.
   symlinks, exclusive rename, `F_FULLFSYNC`), `CloudSyncDetector.status(for:)`.
 - **Git:** `protocol GitignoreChecker` (VaultData implements it over `GitService`),
   `GitExposureInspector.inspect(fileURL:using:)`, `GitignoreEditor`.
-- **Manifest (v0.8.0, `Manifest/`):** `ManifestParser.parse(_:) -> ManifestParseResult` (a strict
-  YAML subset: `ManifestTokenizer` → `ManifestTreeBuilder` → `ManifestSchemaMapper`; every problem
-  a line-numbered `ManifestIssue`, `issues(onLine:)`), `ManifestModel` (stages, targets
-  `ManifestTargetModel` with a `ManifestProvider` and per-stage `ManifestLocation`, vars
-  `ManifestVarModel` with kind, `secret`, `public`, targets and stages; `vars(for:)`,
-  `vars(sentTo:stage:)`, `location(of:at:)`), `ManifestIdentifierValidator`,
-  `ManifestSerializer.render(_:)` (round-trips through the parser) and
-  `ManifestEnvExample.render(_:target:stage:)` (`.env.example`, names only).
 
 ### DestinationKit
 
@@ -648,18 +635,6 @@ destination item never reaches GitHub except as a copy in a repository scope.
   `vercelProjects(connectionID:teamID:)`, `checkAzure(tenantID:)`. `actor
   ShellResolvingAzureTokens` builds the `AzureCLITokenProvider` on first use with the probed
   login-shell environment (`github.shellEnvironment()`); `reset()` drops every cached token.
-- Overview (`Overview/`, R8, R9): `struct StageOverviewRepository(session:schedulers:)`:
-  `stages(repositoryID:manifest:)` (the manifest's, then the destinations', then the GitHub
-  environments, by fold key), `overview(repositoryID:stage:manifest:) -> StageOverviewModel`
-  (columns: GitHub (repository level plus the environment named like the stage) and each
-  destination of the stage; rows: every name plus the manifest's vars; cells
-  `StageOverviewCellModel` `.synced`, `.willPush`, `.willDelete`, `.valueMissing`, `.missing`,
-  `.extra`, `.differs` (a linked copy with another value), `.blocked`, `.notUsed`; a
-  `StageOverviewCycle` per row (build, runtime, public); findings `StageOverviewFindingModel`
-  including `.destinationNotAdded`; values decrypted only to compare and classify, then wiped),
-  `manifest(repositoryID:) -> ManifestStateModel` (`.none`, `.read(sha:result:)`, `.unavailable`)
-  and `draftManifest(repositoryID:)` (`ManifestDraftBuilder`: an `fxvault.yml` describing the
-  repository now, names only). `StageOverviewBuilder` is pure.
 - Across places: `ItemCopySource` reads a row of any of the three tables and one `link_id` group
   spans them; `LinkedCopyPlaceModel.destination(…)`; `ConfigRepository+Links`,
   `EnvFileRepository` (import into and export from a destination) and Reveal take destination
@@ -724,8 +699,8 @@ a production stage throws `.productionNotShared` before the authorization is con
 checkGitHub:)` → `ShareOpenedShareFileModel` (`.repository`, `.folder` or
 `.bundle(ShareBundleDraftModel)`, plus the sender),
 `importMissingRepositories(of:)`, `replanBundle(_:checkGitHub:)`, `applyBundle(_:plan:
-confirmReplay:)` → `ShareBundleImportResultModel` (first repository and stage for the
-Overview). Internals: `ProjectShareExportBuilder`, `ProjectSharePlanning`, `ProjectShareImporter`.
+confirmReplay:)` → `ShareBundleImportResultModel` (first repository and stage, which the
+app opens). Internals: `ProjectShareExportBuilder`, `ProjectSharePlanning`, `ProjectShareImporter`.
 
 **Composition (`AppContainer`, `App/Composition/VaultDataComponents.swift`).**
 
@@ -745,7 +720,7 @@ let reauth = ReauthGate(manager: vault)
 
 - One instance of each repository for the process (`VaultDataComponents`): `github`, `catalog`,
   `config`, `envFiles`, `sync`, `creation`, `cloner`, `drift`, `sharing`, and since
-  v0.8.0 `destinations`, `overview`, `destinationSync`, `destinationAccess` and `azureTokens`
+  v0.8.0 `destinations`, `destinationSync`, `destinationAccess` and `azureTokens`
   (`ShellResolvingAzureTokens`). `make(…transport:)` takes the HTTP transport
   (`URLSessionTransport()` by default; one transport for every destination call);
   `makeOffline` passes a `FakeHTTPTransport`, so previews and tests never reach a provider.
@@ -926,23 +901,21 @@ repository. Destinations, the Overview and the manifest check ship marked **Expe
 | 109 | Access (R4) | Key Vault through the user's `az login` (`az account get-access-token`, absolute path of a trusted `az`, argv, allowlisted environment; the token in memory only, reset on lock); the data plane over HTTPS (api-version 7.4). Supabase and Vercel through personal access tokens added in Settings › Destinations, sealed in the vault and checked when added. One ephemeral `URLSession` to three allowlisted hosts; values only in request bodies. The Supabase CLI cannot take a value on stdin and the Vercel CLI needs a linked folder, so HTTPS keeps every value out of argv and files |
 | 110 | Sync (R5) | One Sync review covers GitHub and the repository's destinations, grouped by destination. Destination writes run after GitHub's (a run with only destination changes skips GitHub), each journaled in `destination_journal` (`in_flight` first, with the pre-write version and the fingerprint of the value sent; the plan's `dest\|…` key in `sync_journal` became this table of its own) and confirmed by re-listing. An item that changed remotely since the last sync is blocked ("changed in <provider>"). Key Vault deletes are soft deletes (never purged); re-adding a soft-deleted name recovers it first |
 | 111 | Drift (R6) | Refresh lists the destination; remote adds, changes and deletes since the last sync show as a banner with Review (Keep Mine / Use <provider>). A Supabase change can only mark the value missing (the API returns digests) |
-| 112 | UI (R7) | The scope column gains **Overview** at the top, a BUILD · GITHUB ACTIONS label over the GitHub scopes and a RUNTIME section with "+ Add Destination". The destination detail reuses the configuration table through `ConfigTableModel`. **Deviation from the canvas:** the stage switcher moved into the Overview header (a repository can have many environments); GitHub scopes stay as they are |
-| 113 | Overview (R8) | Per stage: GitHub (repository level plus the environment named like the stage) and every destination of that stage as columns; every name in them plus the manifest's vars as rows; cells Synced, Will push, Will delete, Value missing, Missing, Extra, Differs, Blocked, — |
-| 114 | Manifest (R9) | `fxvault.yml` is read from the default branch (B11, names only) and parsed as a strict YAML subset with line-numbered issues. FX Vault never writes to the repository: it generates an `fxvault.yml` and a `.env.example` per target to copy. The check adds Missing (including a destination not added yet, fixed with Add Destination), Extra, Blocked and kind mismatches; without a manifest the Overview still works, without Missing and Extra |
+| 112 | UI (R7) | The scope column gains a BUILD · GITHUB ACTIONS label over the GitHub scopes and a RUNTIME section with "+ Add Destination". The destination detail reuses the configuration table through `ConfigTableModel`. GitHub scopes stay as they are |
 | 115 | Public values (R10) | A Vercel item under a public prefix whose value looks like a credential blocks Sync with two fixes: change the value, or Mark as Public (per item, for keys meant to be public) |
 | 116 | Scope (R11) | Not in v0.8: a Local destination (Export .env covers it), Vercel git-branch and custom environments (listed as not usable), Key Vault certificates, keys and purge, destinations in `.fxvault` packages |
-| 117 | Experimental (R12) | Destinations, the Overview and the manifest check carry the Experimental tag: they talk to three new services, and live checks were limited to the accounts on the release Mac (Vercel live; Key Vault and Supabase through fakes) |
+| 117 | Experimental (R12) | Destinations carry the Experimental tag: they talk to three new services, and live checks were limited to the accounts on the release Mac (Vercel live; Key Vault and Supabase through fakes) |
 
 App side (v0.8.0): `Screens/Main/Destination/` (`DestinationDetailViewModel`/`Screen`,
-`StageOverviewViewModel`/`Screen`, `AddDestinationViewModel`/`Screen`,
-`DestinationSettingsScreen`, `DestinationDriftScreen`, `DestinationCopy`, `StageOverviewCopy`),
+`AddDestinationViewModel`/`Screen`,
+`DestinationSettingsScreen`, `DestinationDriftScreen`, `DestinationCopy`),
 `Screens/Sync/DestinationSyncPresentation` and `DestinationSyncCopy`,
 `Screens/Preferences/DestinationsSettingsViewModel`/`Screen`; helpers
 `DestinationModel+Extension` and `DestinationError+Extension`. `ScopeListViewModel` adds the
-Overview and destination rows (`selectedDestination`, `isOverviewSelected`, `select(destination:)`)
-and `MainViewModel` builds `destinationDetail` or `overview` for column 3
+destination rows (`selectedDestination`, `select(destination:)`)
+and `MainViewModel` builds `destinationDetail` for column 3
 (`followScopeSelection`); `MainActions.openDestination` shows a destination (a linked copy's
-place, an Overview cell). `AppViewModel` adds the destinations' pending counts to the Sync count
+place). `AppViewModel` adds the destinations' pending counts to the Sync count
 and the Dock badge and resets the Azure tokens on lock.
 
 ### As built in v0.9.0 (project share files)
@@ -959,7 +932,7 @@ teammate files shipped marked **Experimental**; 1.0 removed both.
 | 120 | Protection (P3, Q13) | `.fxvault` format 2, **passphrase** mode (Argon2id and six words, as v1). 0.9 also had a teammates mode (HPKE per paired device); 1.0 removed it, does not share production and reads a 0.9 teammates file as `invalidFile` |
 | 122 | Transport (P5) | File only, no server: the system share picker or Save…. The file is written 0600 (`SecureFileWriter`) in a private 0700 folder per export under `$TMPDIR/io.fractalx.fxvault.shares` (`ShareStagingFolder`) and removed when the sheet closes, or, when a share hand-off (AirDrop) is still running then, as soon as it finishes. It is named `FX Vault share <date>.fxvault`, without repository or stage names |
 | 123 | Expiry and sent log (P6) | 1, 7 (default) or 30 days; `expiresAt` inside the ciphertext and enforced by FX Vault (the copy says the cryptography does not). Every export writes a names-only `sent_shares` row, listed in Settings › Sharing with what to rotate |
-| 124 | Receiver (P7) | One list per file: ✓ in the vault, ⇣ imported from GitHub with the receiver's account (outside the transaction, then planned again), ✕ no access (skipped, the file can be opened again later). Today's merge preview per scope plus destinations (merged by target key, or created without a connection) and folders. Import applies everything in one transaction; the main window then selects the first repository and opens its Overview at the first shared stage (`MainActions.openOverview`, kept pending until the scope column exists) while the sheet shows the result |
+| 124 | Receiver (P7) | One list per file: ✓ in the vault, ⇣ imported from GitHub with the receiver's account (outside the transaction, then planned again), ✕ no access (skipped, the file can be opened again later). Today's merge preview per scope plus destinations (merged by target key, or created without a connection) and folders. Import applies everything in one transaction; the main window then selects the first repository at the environment of the first shared stage, or its repository level (`MainActions.open`, kept pending until the scope column exists; the Overview did this before 1.0) while the sheet shows the result |
 | 125 | Held until included (P8) | A row the remote does not have is saved with `share_hold` (the package id) and is in no Sync plan until the user includes its file in Sync's **From Files** review; Push on Next Sync releases one row |
 | 126 | Links (P9) | Linked copies inside the file travel as per-file tokens; the receiver gives fresh `link_id`s to the rows it writes; rows it keeps keep their links |
 | 127 | Format (P10) | Every export writes format 2 and schema 4, a single repository included (Share as File… becomes this sheet). v1 files and schemas 1–3 stay readable; FX Vault 0.8 shows "Wrong passphrase or damaged file". Limits: 16 MiB payload, 50 repositories |
@@ -988,6 +961,11 @@ D1–D5). This slice removed every peer-to-peer feature:
   marker on GitHub never shows up as a variable.
 - Decisions 51–58, 73–76, 81–98, 104, 121 and 133–134 went with the features; 120, 128 and 132
   above are updated.
+- Slice B3c removed the stage Overview and `fxvault.yml`: EnvTools `Manifest/`, `GHManifestAPI`
+  (B11) and VaultData `Destinations/Overview/`. Decisions 113 and 114 went with them; 112, 117
+  and 124 are updated. Add Destination keeps its stage suggestions
+  (`DestinationRepository.stageSuggestions`); after an import the app opens the first stage's
+  environment (`MainActions.open`) instead of the Overview.
 
 ## App shell
 
@@ -1116,13 +1094,12 @@ AppTests).
   - `ScopeListViewModel` (`Main/ScopeList`): "Repository" plus environments
     (`observeScopes`), pending dot, value-missing count, context menu Settings / Rename /
     Duplicate / Export .env / Share / Revert / Delete (confirmed), "+ New Environment" (admin).
-    v0.8.0 (R7): **Overview** first, the GitHub scopes under BUILD · GITHUB ACTIONS, then RUNTIME
+    v0.8.0 (R7): the GitHub scopes under BUILD · GITHUB ACTIONS, then RUNTIME
     with the Experimental tag: one row per destination (`observeDestinations`; provider symbol,
     name, provider · stage, value-missing warning, pending dot, count) with the
     `DestinationContextMenu` (Settings…, Export .env…, Remove from FX Vault…, confirmed) and
-    "+ Add Destination" (`.addDestination`). A selection is a scope, a destination
-    (`selectedDestination`) or the Overview (`isOverviewSelected`); Up and Down walk all three
-    (`rowIDs`). `MainViewModel.followScopeSelection` puts the matching view model in column 3:
+    "+ Add Destination" (`.addDestination`). A selection is a scope or a destination
+    (`selectedDestination`); Up and Down walk both (`rowIDs`). `MainViewModel.followScopeSelection` puts the matching view model in column 3:
   - `DestinationDetailViewModel` (`Main/Destination`, v0.8.0): the header (DESTINATION · RUNTIME,
     title, provider / stage / Experimental tags, how it is reached, Refresh, the actions menu),
     the STAGE / TARGET / NAMES AND VALUES card, the Refresh banner (changes → `.destinationDrift`,
@@ -1131,11 +1108,6 @@ AppTests).
     only). Rows add Mark as Public / Not Meant to Be Public; Copy To lists the repository's
     scopes, the folders and the other destinations; ⌘C / ⌘V and `.env` import work as for scopes.
     Refresh is disabled offline.
-  - `StageOverviewViewModel` (`Main/Destination`, v0.8.0, R8–R9): the stages
-    (`overview.stages`), the selected stage's matrix (rebuilt when scopes or destinations change),
-    `fxvault.yml` read once on open and on Read Again, the manifest panel (parse issues,
-    findings with Add Destination for a missing target, Copy .env.example per target, Copy
-    fxvault.yml for This Repository); a cell opens its place (`actions.openPlace`).
   - `RepoDetailViewModel` (`Main/RepoDetail`): header (owner/name, visibility, capability chip,
     Clone, Refresh, drift banner, deployment branches with Edit, plan note on private
     repositories, read-only explanation) and `ConfigTableView` (Secrets | Variables over one
@@ -1244,7 +1216,8 @@ AppTests).
     failed, blocked when listed again, not sent).
   - `Main/Destination` sheets (v0.8.0): Add Destination (`AddDestinationViewModel`, provider,
     stage with the Stages menu, target, connection or a new token checked before it is saved,
-    then `importRemote` and Open Destination; a manifest suggestion pre-fills it), the
+    then `importRemote` and Open Destination; stages suggested by
+    `DestinationRepository.stageSuggestions`), the
     destination's Settings… (stage and connection; the target never changes) and the drift
     review (`DestinationDriftScreen`: each finding with Keep Mine / Use <provider>, Use
     <provider> for All).
@@ -1344,10 +1317,10 @@ another route replaces the sheet; closing it sets `activeSheet` to nil (and open
 | `.createRepository` | `CreateRepo/` | `CreateRepoScreen` | `CreateRepoContext(accountLogin: String?, ownerLogin: String?)` (preselection only) |
 | `.envImport` | `EnvFile/` | `EnvImportScreen` | `EnvImportContext(repositoryID, scope, fileURL: URL? = nil, defaultKind: ConfigKind? = nil, start: .chooser / .pasteEditor / .pasted(EnvPasteBuffer) = .chooser)` |
 | `.envExport` | `EnvFile/` | `EnvExportScreen` | `EnvExportContext(repositoryID, scope)` |
-| `.shareExport` | `Sharing/` | `ProjectShareScreen` (v0.9.0; `ShareExportScreen` before) | `ShareExportContext(selection: ShareSelectionModel, stage: String? = nil)` (`stage`: the Overview's Share Stage…) |
+| `.shareExport` | `Sharing/` | `ProjectShareScreen` (v0.9.0; `ShareExportScreen` before) | `ShareExportContext(selection: ShareSelectionModel)` |
 | `.shareImport` | `Sharing/` | `ShareImportScreen` (a project file through `ProjectShareImportView`, v0.9.0) | `ShareImportContext(fileURL)` |
 | `.addRepositoryByName` | `Main/AddRepository/` | `AddRepositorySheet` (main window's own) | `AddRepositoryContext(accountLogin)` |
-| `.addDestination` (v0.8.0) | `Main/Destination/` | `AddDestinationScreen` | `AddDestinationContext(repositoryID, suggestion: AddDestinationSuggestion? = nil)` (a manifest target to start from) |
+| `.addDestination` (v0.8.0) | `Main/Destination/` | `AddDestinationScreen` | `AddDestinationContext(repositoryID)` |
 | `.destinationSettings` (v0.8.0) | `Main/Destination/` | `DestinationSettingsScreen` | `DestinationSettingsContext(destinationID)` |
 | `.destinationDrift` (v0.8.0) | `Main/Destination/` | `DestinationDriftScreen` | `DestinationDriftContext(destinationID, findings: [DestinationDriftModel])` |
 
@@ -1375,7 +1348,7 @@ so view-model tests construct it with a `TestHarness`.
 |---|---|
 | `session` | The vault session (`authorizeEnvExport` / `authorizeShare` need it). |
 | `config`, `catalog`, `github`, `sync`, `drift`, `envFiles`, `sharing`, `creation` | The VaultData repositories (one instance each). |
-| `destinations`, `overview`, `destinationSync`, `destinationAccess` | v0.8.0: destinations and connections, the stage Overview and `fxvault.yml`, destination Sync / Refresh / import, token checks and the Add Destination pickers. `destinationCopyTargets(repositoryID:excluding:)` gives Copy To › Destinations; `copyConflicts` / `copyItems` take a `.destination` place. |
+| `destinations`, `destinationSync`, `destinationAccess` | v0.8.0: destinations and connections, destination Sync / Refresh / import, token checks and the Add Destination pickers. `destinationCopyTargets(repositoryID:excluding:)` gives Copy To › Destinations; `copyConflicts` / `copyItems` take a `.destination` place. |
 | `cloner` | Clone (`RepoCloning`); never `creation.clone`. |
 | `reauth` | `ReauthGate`. |
 | `clipboard` | `ClipboardManager` (values: `copy`, commands: `copyCommand`). |

@@ -24,7 +24,7 @@ final class ProjectShareWorld {
     let receiverRepositoryID: RepoID?
     let destinationID: DestinationID
     /// Overviews the receiver's UI asked to open (repository and stage).
-    private(set) var openedOverviews: [(RepoID, String?)] = []
+    private(set) var openedScopes: [(RepoID, ConfigScope)] = []
 
     /// - Parameter receiverUsesGitHub: the receiver starts without a gh status, so a test can
     ///   install a scripted gh and look repositories up.
@@ -86,7 +86,7 @@ final class ProjectShareWorld {
             addLockObserver: { app.addLockObserver($0) },
             isGitHubReady: { false },
             select: { recorder.selections.append($0) },
-            openOverview: { [weak self] id, stage in self?.openedOverviews.append((id, stage)) }
+            open: { [weak self] id, scope in self?.openedScopes.append((id, scope)) }
         ))
     }
 

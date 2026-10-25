@@ -12,11 +12,10 @@ import VaultData
 struct ProjectShareExportViewModelTests {
     private func model(
         _ world: ProjectShareWorld,
-        stage: String? = nil,
         delivery: FakeShareFileDelivery = FakeShareFileDelivery()
     ) async -> ProjectShareViewModel {
         let model = ProjectShareViewModel(
-            context: ShareExportContext(selection: .repository(world.senderRepositoryID), stage: stage),
+            context: ShareExportContext(selection: .repository(world.senderRepositoryID)),
             dependencies: world.senderDependencies(),
             delivery: delivery,
             identity: ProjectShareWorld.identity,
@@ -48,22 +47,6 @@ struct ProjectShareExportViewModelTests {
         #expect(!model.isStageChosen(production))
         #expect(model.preview?.includesProduction == false)
         #expect(model.isShareAllowed)
-    }
-
-    @Test func aStageFromTheOverviewStartsCheckedAlone() async throws {
-        let world = try await ProjectShareWorld()
-        let model = await model(world, stage: "staging")
-        #expect(model.chosenStageKeys == ["staging"])
-        #expect(model.preview?.includesProduction == false)
-    }
-
-    /// Share from a production Overview opens with nothing checked rather than a checked stage
-    /// the user cannot uncheck-and-recheck (the checkbox is disabled).
-    @Test func aProductionStageFromTheOverviewIsNotChecked() async throws {
-        let world = try await ProjectShareWorld()
-        let model = await model(world, stage: "production")
-        #expect(model.chosenStageKeys.isEmpty)
-        #expect(model.preview?.includesProduction != true)
     }
 
     /// A production environment picked in the tree still blocks the file (Q13).
