@@ -2079,3 +2079,13 @@ Review B11a — macOS 26 minimum (2026-10-25, automatic):
 - B11 split: B11a macOS 26; B11b two-column main window with the GitHub › owner › repo › environment tree in a glass sidebar; B11c black-and-white tokens and Liquid Glass; B11d onboarding and start (D1); B11e notch unlock island; B11f allowlisted setup-command runner.
 - Docs: README (requirements; 0.9 is the last for macOS 14 and 15), CHANGELOG (Removed), ARCHITECTURE, DESIGN, RELEASING (rows 11 and 14).
 - Gates: `swift test` 1,316 green; `xcodebuild test` 567 app tests green; Release build OK; no UI-testing code; UI tests ×2 green; lint OK; check-secrets OK in the worktree (964 files).
+
+Review B6a — organization write commands in GitHubKit (2026-10-25, automatic, built in a parallel worktree):
+- §8 C10/C11 org secret set and delete, C12/C13 org variable set and delete (registered as writes), B14/B15 the repositories of a `selected` secret or variable (`gh api`, every page).
+- `GHOrgRepositoryAccess` (`all`, `private`, `selected`) means every write sends `--visibility=`; `GHSelectedRepositories` throws for an empty list, an invalid name or a duplicate, so `selected` always sends the complete `--repos` list. Values only on stdin; log templates carry `{repos}`, never names or values.
+- B14/B15 decoding fails on a count other than `total_count` or an invalid name: a write built from a partial list would revoke repositories.
+- Not confirmed: that gh prefixes the organization to bare `--repos` names, and that org `variable set` upserts (POST then PATCH on 409) like C7. Both get checked with Bryan's real gh before B6 writes ship.
+- Open for B6b: a `selected` item with no repositories cannot be written (secrets have `--no-repos-selected`, variables nothing); the §8 rule text should list the org `gh api` reads.
+- Tests: `OrgWriteTests` (10) and the six commands in `CommandBuilderTests.allCommands`; 8 mutations caught.
+- Docs: API (B14/B15, C10–C13, the `gh api` rule).
+- Gates: `swift test` 1,326 green; the app builds; lint OK; check-secrets OK (967 files).

@@ -29,6 +29,18 @@ extension GHCommandScheduler {
         try GHVariablesCommands.decodeList(try await run(try GHVariablesCommands.list(organization: organization)))
     }
 
+    /// B14: the repositories a `selected` organization secret is shared with, by name.
+    public func organizationSecretRepositories(_ name: String, organization: String) async throws(GHError) -> [String] {
+        let command = try GHSecretsCommands.selectedRepositories(name: name, organization: organization)
+        return try GHSecretsCommands.decodeSelectedRepositories(try await run(command))
+    }
+
+    /// B15: the repositories a `selected` organization variable is shared with, by name.
+    public func organizationVariableRepositories(_ name: String, organization: String) async throws(GHError) -> [String] {
+        let command = try GHVariablesCommands.selectedRepositories(name: name, organization: organization)
+        return try GHSecretsCommands.decodeSelectedRepositories(try await run(command))
+    }
+
     /// B1: repositories owned by `owner`.
     public func listRepositories(owner: String) async throws(GHError) -> [GHRepoDTO] {
         try GHReposCommands.decodeList(try await run(try GHReposCommands.list(owner: owner)))
@@ -153,6 +165,22 @@ extension GHCommandScheduler {
         _ = try await run(try GHSecretsCommands.delete(name: name, repo: repo, environment: environment))
     }
 
+    /// C10: `value` on stdin with the synced `access`. The caller still wipes its own `value`.
+    public func setOrganizationSecret(
+        _ name: String,
+        organization: String,
+        access: GHOrgRepositoryAccess,
+        value: SecretBytes
+    ) async throws(GHError) {
+        let command = try GHSecretsCommands.set(name: name, organization: organization, access: access, value: value)
+        _ = try await run(command)
+    }
+
+    /// C11. A 404 throws ``GHError/notFound``; the caller confirms with B12.
+    public func deleteOrganizationSecret(_ name: String, organization: String) async throws(GHError) {
+        _ = try await run(try GHSecretsCommands.delete(name: name, organization: organization))
+    }
+
     // MARK: - Variables
 
     /// B8/B9 without 0.9's shared space marker. Each listing's value is `SecretBytes`; encrypt,
@@ -185,5 +213,28 @@ extension GHCommandScheduler {
     /// C8. A 404 throws ``GHError/notFound``; the caller confirms with B8/B9.
     public func deleteVariable(_ name: String, repo: GHRepoRef, environment: String? = nil) async throws(GHError) {
         _ = try await run(try GHVariablesCommands.delete(name: name, repo: repo, environment: environment))
+    }
+
+    /// C12: `value` on stdin with the synced `access`. The caller still wipes its own `value`.
+    public func setOrganizationVariable(
+        _ name: String,
+        organization: String,
+        access: GHOrgRepositoryAccess,
+        value: SecretBytes,
+        isUpdate: Bool
+    ) async throws(GHError) {
+        let command = try GHVariablesCommands.set(
+            name: name,
+            organization: organization,
+            access: access,
+            value: value,
+            isUpdate: isUpdate
+        )
+        _ = try await run(command)
+    }
+
+    /// C13. A 404 throws ``GHError/notFound``; the caller confirms with B13.
+    public func deleteOrganizationVariable(_ name: String, organization: String) async throws(GHError) {
+        _ = try await run(try GHVariablesCommands.delete(name: name, organization: organization))
     }
 }

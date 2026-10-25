@@ -24,6 +24,17 @@ struct CommandBuilderTests {
             try GHOrgsCommands.membership(organization: "example-org"),
             try GHSecretsCommands.list(organization: "example-org"),
             try GHVariablesCommands.list(organization: "example-org"),
+            try GHSecretsCommands.selectedRepositories(name: "STRIPE_KEY", organization: "example-org"),
+            try GHVariablesCommands.selectedRepositories(name: "REGION", organization: "example-org"),
+            try GHSecretsCommands.set(
+                name: "STRIPE_KEY",
+                organization: "example-org",
+                access: .selected(try GHSelectedRepositories(["repo-a", "repo-b"])),
+                value: value
+            ),
+            try GHSecretsCommands.delete(name: "STRIPE_KEY", organization: "example-org"),
+            try GHVariablesCommands.set(name: "REGION", organization: "example-org", access: .all, value: value, isUpdate: true),
+            try GHVariablesCommands.delete(name: "REGION", organization: "example-org"),
             try GHReposCommands.list(owner: "owner-a"),
             try GHReposCommands.view(repo),
             try GHReposCommands.create(GHRepoCreateRequest(
