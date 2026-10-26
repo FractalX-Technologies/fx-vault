@@ -884,8 +884,9 @@ foreground color, so `.primary` text still turns white on selected rows.
   mark's dot grid), named after the app; left out in unit tests and previews
   (`AppContainer.hasSideEffects`).
 - `MenuBarContent`: Open FX Vault (the main window; while locked, the island instead, so no window
-  opens only to close), Review Sync · N pending… (only with changes pending after onboarding; the
-  Sync review, after the unlock when locked; without gh or the internet only the window), a
+  opens only to close), Review Sync · N pending… (only with changes pending, no Sync running and
+  onboarding done; the Sync review, after the unlock when locked; without gh or the internet
+  only the window; chosen over the Sync sheet it does nothing), a
   divider, Lock Now (disabled unless unlocked), Settings… ⌘,, a divider, Quit FX Vault ⌘Q.
 - Counts only: the menu never shows a name or a value. "Quick Vault ⌃⌥V" at the top comes with Q1.
 

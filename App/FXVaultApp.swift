@@ -134,7 +134,7 @@ struct VaultCommands: Commands {
                 viewModel.lock(trigger: .manual)
             }
             .keyboardShortcut("l", modifiers: [.control, .command])
-            .disabled(viewModel.phase != .unlocked)
+            .disabled(!viewModel.canLock)
 
             Button(SyncToolbarButton.title(count: viewModel.pendingChangeCount)) {
                 main?.sync()

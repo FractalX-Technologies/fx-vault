@@ -1053,8 +1053,10 @@ AppTests).
   GitHub plus destination changes), `isSyncing` /
   `beginSyncActivity() -> SyncActivity`, `pendingImports` / `openShareFiles(_:)` /
   `takeNextPendingImport()`, `setMainWindowOpener(_:)` / `requestMainWindow()`, the menu bar's
-  `openFXVault()` (the island while locked) and `offersSyncReview` / `requestSyncReview()` /
-  `takeSyncReviewRequest()` (a flag the main window consumes after the unlock; a lock clears it),
+  `openFXVault()` (the island while `unlocksInIsland`, the rule `attachMainWindow` shares) and
+  `offersSyncReview` / `requestSyncReview()` / `takeSyncReviewRequest()` (a flag the main window
+  consumes after the unlock; a lock clears it, and so does the Sync sheet it was chosen over),
+  `canLock` (⌃⌘L and Lock Now), `hasChangesToSync` (shared by Sync and Review Sync),
   `lastReconciliation` (launch reconciliation after each unlock, after the gh probe),
   `lock(trigger:)`, `didUnlock()`, `completeOnboarding()`, `didResetVault()`,
   `applicationWillTerminate()`, `shouldOfferTouchID(afterInvalidation:)` /

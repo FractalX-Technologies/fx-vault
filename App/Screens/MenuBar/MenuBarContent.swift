@@ -22,7 +22,7 @@ struct MenuBarContent: View {
         Button(MenuBarCopy.lockNow) {
             app.lock(trigger: .manual)
         }
-        .disabled(app.phase != .unlocked)
+        .disabled(!app.canLock)
         .accessibilityIdentifier(AccessibilityID.MenuBar.lockNow)
         Button(MenuBarCopy.settings) {
             // A menu bar item doesn't activate the app: the window would open behind others.

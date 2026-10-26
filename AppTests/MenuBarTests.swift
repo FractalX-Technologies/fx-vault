@@ -66,13 +66,10 @@ struct MenuBarTests {
 
     @Test func reviewSyncWhileLockedOpensAfterTheUnlock() async throws {
         let harness = try await TestHarness(vault: .locked, ghStatus: Self.ready)
-        var openedWindow = 0
-        harness.app.setMainWindowOpener { openedWindow += 1 }
         harness.app.setPendingChangeCount(2)
 
         harness.app.requestSyncReview()
-        // Unit tests have no island: the window stands in for it.
-        #expect(openedWindow == 1)
+        #expect(harness.app.unlocksInIsland)
         #expect(!harness.app.takeSyncReviewRequest())
         #expect(harness.app.isSyncReviewRequested)
 
@@ -102,17 +99,63 @@ struct MenuBarTests {
         #expect(main.activeSheet == nil)
     }
 
-    @Test func openFXVaultBringsTheWindow() async throws {
+    /// Review Sync chosen while the Sync sheet is up asks for that sheet: closing it ends the
+    /// request instead of opening the review again.
+    @Test func reviewSyncOverTheSyncSheetEndsWithIt() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
+        let main = harness.app.makeMainViewModel()
+        harness.app.setPendingChangeCount(3)
+        main.activeSheet = .sync(SyncContext(repositoryIDs: nil))
+
+        harness.app.requestSyncReview()
+        main.activeSheet = nil
+        #expect(main.activeSheet == nil)
+        #expect(!harness.app.isSyncReviewRequested)
+
+        // The main window sees the request at once (onChange) and ends it the same way.
+        main.activeSheet = .sync(SyncContext(repositoryIDs: nil))
+        harness.app.requestSyncReview()
+        main.presentRequestedSyncReview()
+        #expect(!harness.app.isSyncReviewRequested)
+        main.activeSheet = nil
+        #expect(main.activeSheet == nil)
+    }
+
+    /// Like Sync (⇧⌘S): nothing to review while a Sync runs.
+    @Test func reviewSyncIsHiddenWhileASyncRuns() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
+        harness.app.setPendingChangeCount(2)
+        let activity = harness.app.beginSyncActivity()
+        #expect(!harness.app.offersSyncReview)
+        harness.app.requestSyncReview()
+        #expect(!harness.app.isSyncReviewRequested)
+
+        activity.end()
+        #expect(harness.app.offersSyncReview)
+    }
+
+    @Test func openFXVaultBringsTheWindowWhenUnlocked() async throws {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
         var openedWindow = 0
         harness.app.setMainWindowOpener { openedWindow += 1 }
+        #expect(!harness.app.unlocksInIsland)
         harness.app.openFXVault()
         #expect(openedWindow == 1)
+    }
 
+    /// While locked Open FX Vault is the island (MenuBarUITests), unless recovery needs the window.
+    @Test func theIslandUnlocksUnlessRecoveryNeedsTheWindow() async throws {
+        let harness = try await TestHarness(vault: .locked, ghStatus: Self.ready)
+        #expect(harness.app.unlocksInIsland)
+        harness.app.lockScreen.isShowingRecoveryReset = true
+        #expect(!harness.app.unlocksInIsland)
+    }
+
+    @Test func lockNowNeedsAnUnlockedVault() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
+        #expect(harness.app.canLock)
         harness.app.lock(trigger: .manual)
-        harness.app.openFXVault()
-        #expect(openedWindow == 2)
-        #expect(harness.app.phase == .locked)
+        #expect(!harness.app.canLock)
     }
 
     @Test func copyNamesTheApp() {
