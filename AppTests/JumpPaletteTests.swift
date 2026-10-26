@@ -108,6 +108,7 @@ struct JumpPaletteTests {
         #expect(await TestFixtures.eventually { main.detail?.scope == .environment(production.id) })
         #expect(main.detail?.kind == .secret)
         #expect(main.detail?.selection == [key])
+        #expect(main.placeViewMode == .table, "the notes have no selection: the row shows in the table")
 
         // Nothing but a name matches: it is selected first; a variable opens on Variables.
         main.showJumpPalette()

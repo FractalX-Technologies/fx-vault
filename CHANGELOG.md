@@ -198,6 +198,13 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   them from this Mac only.
 - **Send with AirDrop.** After the passphrase is saved, Send with AirDrop opens the AirDrop
   window for the file; Share… and Save… stay.
+- **Notes.** Every place with values opens on its notes: numbered `# Secrets · N` and
+  `# Variables · N` sections, secrets masked and variables in plain text, "no value" and
+  "overrides example-org" at the end of a line, what a repository gets from its organization as
+  a read-only section with who gets each item, and ○ / ● for changed on GitHub (or in Key Vault)
+  and waiting for the next Sync. Notes | Table in the header switches to the table; a name
+  opened from ⌘K opens the table. A click on a masked value reveals it after Touch ID or your
+  master password, for 30 s, with the window kept out of screen capture.
 
 ### Removed
 

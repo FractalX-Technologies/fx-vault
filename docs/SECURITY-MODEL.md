@@ -241,7 +241,9 @@ another.
   Tools, enables secure event input while focused, and strips trailing CR/LF with a notice (D32).
 - **Display:** revealed cells re-mask after 30 s, when the app resigns active, on a scope change
   and on lock; windows are not restorable; recovery-key and passphrase views, the item editors
-  and the `.env` import sheet are excluded from screen capture. Sheets that hold typed or
+  and the `.env` import sheet are excluded from screen capture. A Reveal in a place's notes
+  (1.0) asks Touch ID or the master password first, and the main window is excluded from screen
+  capture while any value shows. Sheets that hold typed or
   decrypted values (`LockObserving`) wipe them on lock and on close.
 - **Files:** `.env` and `.fxvault` exports are written 0600 from creation (exclusive create, no
   symlinks, `F_FULLFSYNC`, atomic rename), with iCloud-sync and git-exposure warnings and a

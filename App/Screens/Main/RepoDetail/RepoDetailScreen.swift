@@ -3,8 +3,9 @@ import VaultCore
 import VaultData
 
 /// Column 3 (§10; boards Main2-Repository, Place-Table): the header (name, "Environment ·
-/// api-service · counts", the drift line, ⋯ More), the read-only explanation, the Secrets |
-/// Variables pill with the selection's actions, and the table.
+/// api-service · counts", the drift line, Copy All, Notes | Table, ⋯ More), the read-only
+/// explanation, then the notes, or the Secrets | Variables pill with the selection's actions and
+/// the table.
 struct RepoDetailScreen: View {
     @Bindable var viewModel: RepoDetailViewModel
     let main: MainViewModel
@@ -18,8 +19,13 @@ struct RepoDetailScreen: View {
                     .foregroundStyle(Theme.Colors.mutedText)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            RepoDetailControls(viewModel: viewModel)
-            ConfigTableView(viewModel: viewModel)
+            switch main.placeViewMode {
+            case .notes:
+                PlaceNotesView(model: viewModel)
+            case .table:
+                RepoDetailControls(viewModel: viewModel)
+                ConfigTableView(viewModel: viewModel)
+            }
             if let notice = viewModel.notice {
                 Text(notice)
                     .font(Theme.Typography.caption)
@@ -153,6 +159,7 @@ private struct RepoDetailHeader: View {
             CopyAllButton(isEnabled: viewModel.canCopyAll) {
                 viewModel.copyAll()
             }
+            PlaceViewModePicker(main: main)
         } moreItems: {
             RepoDetailMoreItems(viewModel: viewModel, main: main)
         }

@@ -22,6 +22,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     private(set) var destinationDetail: DestinationDetailViewModel?
     /// The detail column of the selected imported organization (1.0).
     private(set) var organizationDetail: OrganizationDetailViewModel?
+    /// Notes or Table, for every place (1.0 B9); Notes at each launch.
+    var placeViewMode: PlaceViewMode = .notes
     /// The sheet on screen (``MainSheet``). Setting another route replaces it.
     var activeSheet: MainSheet? {
         didSet {
@@ -110,6 +112,23 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
 
     /// A destination to select once the repository's column exists.
     @ObservationIgnored private var pendingDestination: DestinationID?
+
+    // MARK: - Revealed values
+
+    /// A secret shows in the open place (notes or table): the window stays out of screen
+    /// capture and the toolbar says so (board Place-Reveal).
+    var isShowingRevealedValue: Bool {
+        [detail?.values, folderDetail?.values, destinationDetail?.values, organizationDetail?.values]
+            .contains { $0?.isShowingRevealedValue == true }
+    }
+
+    /// Masks every revealed value of the open places (FX Vault resigned active).
+    func remaskRevealedValues() {
+        detail?.remaskAll()
+        folderDetail?.remaskAll()
+        destinationDetail?.remaskAll()
+        organizationDetail?.remaskAll()
+    }
 
     // MARK: - Selection
 
@@ -541,6 +560,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// place's detail shows it (a repository's scopes can arrive later).
     func jump(to item: JumpItemModel) {
         jump(to: item.target)
+        // The row is selected in the table: the notes have no selection.
+        placeViewMode = .table
         pendingRow = item.match
         selectPendingRow()
     }

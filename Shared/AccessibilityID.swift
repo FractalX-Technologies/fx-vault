@@ -138,6 +138,10 @@ enum AccessibilityID {
         static let subline = "place.subline"
         static let more = "place.more"
         static let copyAll = "place.copyAll"
+        /// Notes | Table on the header (1.0 B9).
+        static let viewMode = "place.viewMode"
+        /// A place's notes (1.0 B9; board Main2-Repository).
+        static let notes = "place.notes"
     }
 
     /// The ⌘K jump palette (1.0).

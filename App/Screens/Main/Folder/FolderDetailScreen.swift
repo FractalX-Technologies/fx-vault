@@ -3,8 +3,8 @@ import VaultCore
 import VaultData
 
 /// Column 3 for a folder (v0.7.0; board Folder-View): the header (the name, "Folder · never sent
-/// anywhere by itself · counts", Copy To, Share Securely…, ⋯ More), the Secrets | Variables pill
-/// with the selection's actions, and the table without the Status column.
+/// anywhere by itself · counts", Copy To, Share Securely…, Notes | Table, ⋯ More), then the notes,
+/// or the Secrets | Variables pill with the selection's actions and the table without Status.
 struct FolderDetailScreen: View {
     @Bindable var viewModel: FolderDetailViewModel
     let main: MainViewModel
@@ -12,17 +12,22 @@ struct FolderDetailScreen: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
             FolderDetailHeader(viewModel: viewModel, main: main)
-            FolderDetailControls(viewModel: viewModel)
-            ConfigTableView(
-                viewModel: viewModel,
-                emptyMessage: String(
-                    localized: "folder.table.empty",
-                    defaultValue: "Add one, paste KEY=value lines with ⌘V, import a .env file, or copy items here from a repository."
-                )
-            ) { row in
-                FolderRowActions(row: row, viewModel: viewModel)
-            } selectionMenu: { rows in
-                FolderSelectionMenu(rows: rows, viewModel: viewModel)
+            switch main.placeViewMode {
+            case .notes:
+                PlaceNotesView(model: viewModel)
+            case .table:
+                FolderDetailControls(viewModel: viewModel)
+                ConfigTableView(
+                    viewModel: viewModel,
+                    emptyMessage: String(
+                        localized: "folder.table.empty",
+                        defaultValue: "Add one, paste KEY=value lines with ⌘V, import a .env file, or copy items here from a repository."
+                    )
+                ) { row in
+                    FolderRowActions(row: row, viewModel: viewModel)
+                } selectionMenu: { rows in
+                    FolderSelectionMenu(rows: rows, viewModel: viewModel)
+                }
             }
             if let notice = viewModel.notice {
                 Text(notice)
@@ -63,6 +68,7 @@ private struct FolderDetailHeader: View {
             }
             .fxButtonStyle(.outline, size: .compact)
             .disabled(viewModel.items.isEmpty)
+            PlaceViewModePicker(main: main)
         } moreItems: {
             PlaceItemMoreItems(viewModel: viewModel) {
                 CopyAllMenuItem(isEnabled: viewModel.canCopyAll) {

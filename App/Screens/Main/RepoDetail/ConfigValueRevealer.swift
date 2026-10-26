@@ -9,25 +9,40 @@ import VaultData
 /// active, on a change of scope or folder and on lock.
 @Observable
 final class ConfigValueRevealer {
+    /// Decrypts one item; the caller wipes the bytes.
+    typealias Reveal = (ConfigItemID) throws(ConfigRepositoryError) -> SecretBytes
+
     private(set) var revealedValues: [ConfigItemID: String] = [:]
     private(set) var variableValues: [ConfigItemID: String] = [:]
+    /// When each revealed value hides again (the notes' countdown, board Place-Reveal).
+    private(set) var hideDates: [ConfigItemID: Date] = [:]
     /// The scheduled re-mask of each revealed value (internal so tests can await it).
     @ObservationIgnored private(set) var remaskTasks: [ConfigItemID: Task<Void, Never>] = [:]
-    @ObservationIgnored private let config: ConfigRepository
+    @ObservationIgnored private let decrypt: Reveal
     @ObservationIgnored private let clock: any VaultClock
 
-    init(config: ConfigRepository, clock: any VaultClock) {
-        self.config = config
+    /// `reveal` decrypts an item of the owner's kind (organization items have their own
+    /// repository, 1.0 B9).
+    init(clock: any VaultClock, reveal: @escaping Reveal) {
         self.clock = clock
+        decrypt = reveal
+    }
+
+    convenience init(config: ConfigRepository, clock: any VaultClock) {
+        self.init(clock: clock, reveal: config.reveal)
     }
 
     func display(for row: ConfigRowModel) -> ConfigValueDisplayModel {
-        guard row.hasValue else { return .missing }
-        switch row.kind {
+        display(id: row.id, kind: row.kind, hasValue: row.hasValue)
+    }
+
+    func display(id: ConfigItemID, kind: ConfigKind, hasValue: Bool) -> ConfigValueDisplayModel {
+        guard hasValue else { return .missing }
+        switch kind {
         case .secret:
-            return revealedValues[row.id].map(ConfigValueDisplayModel.revealed) ?? .masked
+            return revealedValues[id].map(ConfigValueDisplayModel.revealed) ?? .masked
         case .variable:
-            return variableValues[row.id].map(ConfigValueDisplayModel.plain) ?? .masked
+            return variableValues[id].map(ConfigValueDisplayModel.plain) ?? .masked
         }
     }
 
@@ -35,12 +50,18 @@ final class ConfigValueRevealer {
         revealedValues[id] != nil
     }
 
+    /// True while any value is revealed (the window is kept out of screen capture).
+    var isShowingRevealedValue: Bool {
+        !revealedValues.isEmpty
+    }
+
     /// Decrypts one secret for display and schedules its re-mask.
     func reveal(_ id: ConfigItemID) throws(ConfigRepositoryError) {
-        let value = try config.reveal(id)
+        let value = try decrypt(id)
         defer { value.wipe() }
         guard let text = value.utf8String() else { throw .unexpected }
         revealedValues[id] = text
+        hideDates[id] = clock.now.addingTimeInterval(Timeouts.revealRemask.timeInterval)
         remaskTasks[id]?.cancel()
         let clock = clock
         remaskTasks[id] = Task { [weak self] in
@@ -56,6 +77,7 @@ final class ConfigValueRevealer {
     func hide(_ id: ConfigItemID) {
         remaskTasks.removeValue(forKey: id)?.cancel()
         revealedValues.removeValue(forKey: id)
+        hideDates.removeValue(forKey: id)
     }
 
     /// Masks every revealed value.
@@ -65,6 +87,7 @@ final class ConfigValueRevealer {
         }
         remaskTasks.removeAll()
         revealedValues.removeAll()
+        hideDates.removeAll()
     }
 
     /// Masks the revealed values of rows that are gone and decrypts the variables of `ids` for
@@ -76,7 +99,7 @@ final class ConfigValueRevealer {
         var values: [ConfigItemID: String] = [:]
         for id in variableIDs {
             do {
-                let value = try config.reveal(id)
+                let value = try decrypt(id)
                 values[id] = value.utf8String()
                 value.wipe()
             } catch {

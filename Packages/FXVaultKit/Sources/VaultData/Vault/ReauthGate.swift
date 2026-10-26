@@ -9,6 +9,8 @@ public enum ReauthPurpose: String, Sendable, Hashable, CaseIterable {
     case share
     /// Copy All (1.0 D6c4): every value of a place, as `.env` text, on the clipboard.
     case copyAll
+    /// Reveal in a place's notes (1.0 B9): one secret shown until it re-masks.
+    case reveal
 }
 
 /// Operations that accept **only** the master password (D30). Touch ID never authorizes them:

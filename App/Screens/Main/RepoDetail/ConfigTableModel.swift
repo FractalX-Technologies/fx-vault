@@ -9,9 +9,15 @@ import VaultData
 /// sync state (no Revert, Push on Next Sync, Convert or Move).
 protocol ConfigTableModel: AnyObject, Observable {
     var kind: ConfigKind { get set }
-    var rows: [ConfigRowModel] { get }
-    /// What the table shows: ``rows``, then a repository's inherited organization items (B7a).
-    var tableRows: [ConfigRowModel] { get }
+    /// The place's own rows of `kind`, by name (``rows`` is the open tab's).
+    func rows(of kind: ConfigKind) -> [ConfigRowModel]
+    /// What the table (and the notes) show of `kind`: the own rows, then a repository's
+    /// inherited organization items (B7a).
+    func tableRows(of kind: ConfigKind) -> [ConfigRowModel]
+    /// The kinds the place holds, a section each in its notes (a Key Vault: secrets only).
+    var notesKinds: [ConfigKind] { get }
+    /// The rows the last check found changed at the source (the notes' ○ marks, 1.0 B9).
+    var changedAtSourceIDs: Set<ConfigItemID> { get }
     var selection: Set<ConfigItemID> { get set }
     /// Items can be added, edited, pasted and deleted here.
     var canEdit: Bool { get }
@@ -56,9 +62,28 @@ protocol ConfigTableModel: AnyObject, Observable {
 }
 
 extension ConfigTableModel {
-    /// Only the place's own rows by default (a folder or a Key Vault inherits nothing).
+    /// The open tab's own rows.
+    var rows: [ConfigRowModel] {
+        rows(of: kind)
+    }
+
+    /// What the open tab's table shows.
     var tableRows: [ConfigRowModel] {
-        rows
+        tableRows(of: kind)
+    }
+
+    /// Only the place's own rows by default (a folder or a Key Vault inherits nothing).
+    func tableRows(of kind: ConfigKind) -> [ConfigRowModel] {
+        rows(of: kind)
+    }
+
+    var notesKinds: [ConfigKind] {
+        ConfigKind.allCases
+    }
+
+    /// Nothing marked by default (a folder never syncs).
+    var changedAtSourceIDs: Set<ConfigItemID> {
+        []
     }
 
     /// No destinations by default (a folder belongs to no repository).

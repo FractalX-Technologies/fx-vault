@@ -3,9 +3,10 @@ import VaultCore
 import VaultData
 
 /// Column 3 for a Key Vault (v0.8.0; board KV-Place): the header (name, "Key Vault · counts",
-/// Refresh's findings as its status line, ⋯ More); the Secrets label (Key Vault holds secrets
-/// only) with the selection's actions; the table with the Status column; then the footnotes:
-/// what Refresh left hidden and how Key Vault names and deletes.
+/// Refresh's findings as its status line, Copy All, Notes | Table, ⋯ More); the notes, or the
+/// Secrets label (Key Vault holds secrets only) with the selection's actions and the table with
+/// the Status column; then the footnotes: what Refresh left hidden and how Key Vault names and
+/// deletes.
 struct DestinationDetailScreen: View {
     @Bindable var viewModel: DestinationDetailViewModel
     let main: MainViewModel
@@ -13,11 +14,16 @@ struct DestinationDetailScreen: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
             DestinationDetailHeader(viewModel: viewModel, main: main)
-            DestinationDetailControls(viewModel: viewModel)
-            ConfigTableView(viewModel: viewModel, emptyMessage: DestinationCopy.tableEmpty) { row in
-                DestinationRowActions(row: row, viewModel: viewModel)
-            } selectionMenu: { rows in
-                DestinationSelectionMenu(rows: rows, viewModel: viewModel)
+            switch main.placeViewMode {
+            case .notes:
+                PlaceNotesView(model: viewModel)
+            case .table:
+                DestinationDetailControls(viewModel: viewModel)
+                ConfigTableView(viewModel: viewModel, emptyMessage: DestinationCopy.tableEmpty) { row in
+                    DestinationRowActions(row: row, viewModel: viewModel)
+                } selectionMenu: { rows in
+                    DestinationSelectionMenu(rows: rows, viewModel: viewModel)
+                }
             }
             DestinationFootnotes(viewModel: viewModel)
             if let notice = viewModel.notice {
@@ -63,6 +69,7 @@ private struct DestinationDetailHeader: View {
             CopyAllButton(isEnabled: viewModel.canCopyAll) {
                 viewModel.copyAll()
             }
+            PlaceViewModePicker(main: main)
         } moreItems: {
             PlaceItemMoreItems(viewModel: viewModel, kinds: [.secret]) {
                 CopyAllMenuItem(isEnabled: viewModel.canCopyAll) {

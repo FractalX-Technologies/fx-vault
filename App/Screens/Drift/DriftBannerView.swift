@@ -44,16 +44,9 @@ struct DriftBannerView: View {
                 .fxTextStyle(.caption)
                 .foregroundStyle(Theme.Colors.mutedText)
                 .accessibilityHidden(true)
-            // Ink with a faint underline as the board, not the brand link of sheets.
-            Button(action: onReview) {
-                Text(PlaceCopy.review)
-                    .font(Theme.Typography.captionEmphasized)
-                    .foregroundStyle(Theme.Colors.ink)
-                    .underline(color: Theme.Colors.hairlineStrong)
-            }
-            .buttonStyle(.plain)
-            .pointerStyle(.link)
-            .help(reviewHelp)
+            Button(PlaceCopy.review, action: onReview)
+                .fxInkLinkButtonStyle()
+                .help(reviewHelp)
         }
         .accessibilityElement(children: .contain)
     }

@@ -334,7 +334,7 @@ Column headers are 12 pt medium, sentence case, muted (`ConfigTableFormat.header
 `TableMetaText` is 12 pt sans muted; a table's Status column is `StatusDotLabel` (the tone's dot
 and the title, no chip; D6a).
 
-### Sheet chrome: `SheetHeader`, `SheetCallout`, `FXCheckboxRow`, `InlineErrorView`, `FXLinkButtonStyle`, `.fxSheetContent`
+### Sheet chrome: `SheetHeader`, `SheetCallout`, `FXCheckboxRow`, `InlineErrorView`, `FXLinkButtonStyle`, `FXInkLinkButtonStyle`, `.fxSheetContent`
 
 One implementation each, in `SheetChrome.swift`; every sheet and full-window form uses them.
 
@@ -347,6 +347,8 @@ One implementation each, in `SheetChrome.swift`; every sheet and full-window for
 - `InlineErrorView(error:)`: the danger `Banner` box with a title and a message line.
 - `.fxLinkButtonStyle(isEmphasized:)`: a `brand` text button with the pointing-hand cursor,
   40% when disabled ("Use recovery key", "Edit").
+- `.fxInkLinkButtonStyle()`: an `ink` `captionEmphasized` text button underlined in
+  `hairlineStrong`, with the pointing-hand cursor: the drift line's Review and the notes' Hide.
 - `.fxSheetContent(width:)`: the content of a system `.sheet`: 32 pt padding on
   `.fxSheetBackground()`, optionally at a fixed width.
 - `FXCheckboxRow(isBoxed: false)`: the checkbox alone on the sheet (the 1.0 dialogs).
@@ -509,11 +511,12 @@ foreground color, so `.primary` text still turns white on selected rows.
   status line: Refreshing… with a mini spinner while Refresh runs (`PlaceRefreshingLine`), the
   drift line (`DriftBannerView`: a 7 pt ink ring, "2 changed on GitHub" in `mutedText` (with
   "· 1 also changed in your vault" on a conflict, still muted), "·", Review in `ink`
-  `captionEmphasized` with a `hairlineStrong` underline) or why the check failed. On the right, bottom-aligned: the place's own
+  `captionEmphasized` with a `hairlineStrong` underline, `FXInkLinkButtonStyle`) or why the check failed. On the right, bottom-aligned: the place's own
   `.compact` outline buttons (a folder's Copy To and Share Securely…; Copy All with the `touchid`
-  glyph on a repository scope, a Key Vault and an organization, `CopyAllButton`) and ⋯ More. The
-  `SegmentedPill` (Secrets / Variables) with the selection's actions; the table with
-  `.fxTable()`.
+  glyph on a repository scope, a Key Vault and an organization, `CopyAllButton`), Notes | Table
+  (`PlaceViewModePicker`, a small `SegmentedPill`; 1.0 B9) and ⋯ More. Then the notes (the
+  default, below), or the `SegmentedPill` (Secrets / Variables) with the selection's actions and
+  the table with `.fxTable()`.
 - Inherited organization items (1.0, B7a; board Place-Table): when the repository's
   organization is in the vault, each tab lists after its own rows the organization's items that
   reach the repository (all → every repository, private → private and internal ones, selected →
@@ -525,6 +528,31 @@ foreground color, so `.primary` text still turns white on selected rows.
   too); in an environment the repository level's names also keep the organization's out.
   FX Vault doesn't know the organization's plan: on GitHub Free private repositories can't use
   organization items, yet their all and private rows still say Inherited.
+- Notes (1.0 B9; boards Main2-Repository, Place-Reveal, KV-Place; `PlaceNotesView`): the
+  default view of every place with values (a repository scope, an environment, a Key Vault, a
+  folder, an organization). Notes | Table is one choice for every place, Notes at each launch; a
+  name opened from ⌘K switches to Table, since the notes have no selection. One `container` card
+  of 24 pt lines: a 44 pt gutter with the line number in `monoLabel` `subtleText`, after ○
+  (`RingDot`: changed on GitHub, or in Key Vault) or ● (an ink dot: waits for the next Sync; a
+  change at the source wins). `# Secrets · N` and `# Variables · N` headings in `.monoName`
+  italic `subtleText`, a blank line between sections, then `KEY = value` in `.monoName` (the `=`
+  in `subtleText`): a secret is a masked `••••` token (`monoLabel` `mutedText` on `surface2`), a
+  variable plaintext, a secret without a value nothing. The trailing note in `.caption`
+  `subtleText`: "no value", "overrides example-org", or an organization item's reach. A
+  repository's organization items follow as `# From example-org · N · read only`, in
+  `subtleText`, masked and never revealed. A Key Vault has its Secrets section alone; pending
+  deletions show in the table only.
+- Reveal in the notes (board Place-Reveal): a click on a masked token asks "Confirm it's you"
+  (`NotesRevealModel`: `ReauthView` in a `DialogSheet`, Touch ID tried at once, then the master
+  password; `ReauthPurpose.reveal`). The line then grows to 38 pt on `surface2`, the value in an
+  ink-outlined token, and "▬▬ hides in 30 s · Hide" at its trailing edge
+  (`Timeouts.revealRemask`). It masks again then, on Hide, on resign active, on another scope
+  and on lock. While any value shows, the toolbar has an `eye.slash` "Hidden from screen
+  capture" and the window is out of screen capture.
+- Departures from those boards: lines are 13 pt (no 12.5 pt token); line numbers in
+  `subtleText`, not the board's lighter gray (below AA); the card keeps the table's
+  16 pt `container` radius; Key Vault lines have no content-type chip, expiry or disabled lines;
+  file lines wait for F1; the table's eye still reveals without asking (it predates B9).
 - ⋯ More (board Main2-Actions), what each place offers, disabled when the account may not:
   New Secret, New Variable | Paste Multiple…, Import .env…, Export .env…, Copy All | Copy To
   (the selection, or the open tab when nothing is selected), Share Securely… | Deployment
@@ -535,8 +563,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   (Rename…, Share Securely…, Export .env…, Delete Folder…). The item actions are one section
   (`PlaceItemMoreItems`); Delete Selected… needs a selected row that is not already a pending
   deletion (`canDeleteSelection`); Copy All needs a live item (`canCopyAll`). A SwiftUI menu
-  item has no trailing lock glyph, so Copy All's help says it asks for Touch ID or your master password; Notes | Table
-  waits for B9.
+  item has no trailing lock glyph, so Copy All's help says it asks for Touch ID or your master password.
 - Copy All (1.0 D6c4, `CopyAllScreen`): "Confirm it's you" (`ReauthView`, Touch ID tried at once,
   then the master password), then "Copied" with the count and the clipboard's clear delay. The
   text is the board's notes: `# Secrets · N`, `KEY=value` lines by name, a blank line,
@@ -631,11 +658,11 @@ foreground color, so `.primary` text still turns white on selected rows.
   Experimental tag; Refresh in ⋯ More, disabled offline). After a Refresh the header's status
   line says "No changes since your last sync" in `mutedText`, or "2 changed in Key Vault" with
   Review (`DriftBannerView`). There is no info card: the stage is in the subline and the target
-  in Settings. Under the table, `DestinationFootnotes` in `.caption` `subtleText`: one `lock` line
+  in Settings. Under the notes or the table, `DestinationFootnotes` in `.caption` `subtleText`: one `lock` line
   per kind of secret FX Vault leaves alone ("1 disabled secret is hidden · not editable", their
   names as help; a name FX Vault can't use gets a `warning` triangle, since it never syncs), then
   the provider's rules ("Key Vault names use dashes: …").
-  Then the same table as a repository with the Status column: Key Vault holds secrets only, so
+  Then the notes (Secrets only), or the same table as a repository with the Status column: Key Vault holds secrets only, so
   a `SectionLabel` "SECRETS · 4" takes the place of the Secrets / Variables `SegmentedPill`. Add
   actions, multi-selection and the linked chip are unchanged.
 - After the first unlock on 1.0, the main window shows a one-time alert, "Supabase and Vercel
@@ -970,6 +997,7 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 | NewRepo, NewEnvironment | `CreateRepoFormView`, `NewEnvironmentScreen`, `BranchPolicyEditorView`, `DialogForm.swift` |
 | Main2-Delete, Main2-DeleteKeyVault, Main2-Export | `DeleteItemsSheet`, `EnvExportDialog`, `DialogNoteBox`, `DialogStackedField` |
 | Folder-View, Folder-LinkedUpdate, KV-Place, KV-NameRules, Org-UsedBy | `LinkedChip`, `LinkedUpdateList`, `DestinationDetailScreen` (`DestinationFootnotes`), `OrgVisibility.reachTitle` |
+| Main2-Repository, Place-Reveal, KV-Place (notes) | `PlaceNotesView`, `PlaceViewModePicker`, `NotesRevealModel`, `NotesDocumentModel`, `FXInkLinkButtonStyle` |
 | FX Vault Destinations 3: Key Vault destination | `DestinationDetailScreen`, the RUNTIME rows of `ScopeListView` |
 | FX Vault Destinations 4: multi-provider Sync review | `DestinationSyncPresentation` sections in the Sync sheet |
 

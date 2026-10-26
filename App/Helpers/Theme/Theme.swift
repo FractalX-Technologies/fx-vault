@@ -199,6 +199,18 @@ enum Theme {
         static let emptyStateIconSize: CGFloat = 32
         static let emptyStateMaxWidth: CGFloat = 360
 
+        // MARK: Notes (1.0 B9; boards Main2-Repository, Place-Reveal)
+
+        static let notesLineHeight: CGFloat = 24
+        /// A revealed line: the value's token and, at the trailing edge, its countdown.
+        static let notesRevealedLineHeight: CGFloat = 38
+        /// The line numbers and the ○ / ● marks.
+        static let notesGutterWidth: CGFloat = 44
+        /// A masked or revealed value's token.
+        static let notesTokenHeight: CGFloat = 18
+        static let notesRemaskBarWidth: CGFloat = 48
+        static let notesRemaskBarHeight: CGFloat = 2
+
         // MARK: Editor sheets (item editor, environment sheets)
 
         /// Wider than `sheetWidth`: a grouped form with the value editor or the branch rules.
