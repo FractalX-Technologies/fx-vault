@@ -18,7 +18,10 @@ the secrets your code reads at runtime in Azure Key Vault.
   by value), opening their place with the row selected. Settings ›
   Accounts shows, per organization, whether you can manage its secrets: **Ready**, **Needs
   admin:org** (with the `gh auth refresh -s admin:org` commands to copy, then Re-check), **Org
-  secrets need an org admin**, or **Needs SSO authorization** (with GitHub's SSO page).
+  secrets need an org admin**, or **Needs SSO authorization** (with GitHub's SSO page). Its
+  **Azure** group lists each tenant with the vaults you keep from it: **Signed in** with **Choose
+  Vaults…** to add more of its vaults, or `az login --tenant <id>` to copy for one that isn't, and
+  `az logout`. FX Vault never signs in or out of Azure for you, and never shows the account.
 - **Organization secrets and variables.** Selecting an organization in the sidebar imports
   its own secrets (names only: GitHub never returns values) and variables with their visibility:
   all repositories, private and internal, or the selected ones. **New Secret** and **New

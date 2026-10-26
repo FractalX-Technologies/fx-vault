@@ -14345,6 +14345,204 @@
         }
       }
     },
+    "settings.accounts.azure.added" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Added ^[%1$lld vault](inflect: true) with ^[%2$lld secret](inflect: true)."
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.checkAgain" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check Again"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.choose.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Vaults"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.choose.saved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ · In FX Vault"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.choose.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose vaults"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.chooseVaults" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose Vaults…"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.copied" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied %@. Run it in Terminal, then Check Again."
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.defaultTenant" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default tenant"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.noVaults" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No vaults in FX Vault"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.notRead" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Could not read %@."
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.notSignedIn" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not signed in"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.notSignedIn.line" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not signed in · %@"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.otherVaults" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld other vault](inflect: true)"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Azure"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.signOut" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sign out of Azure"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.signedIn" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Signed in"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.subscriptionVaults" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · ^[%2$lld vault](inflect: true)"
+          }
+        }
+      }
+    },
+    "settings.accounts.azure.vaults" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld vault](inflect: true)"
+          }
+        }
+      }
+    },
     "settings.accounts.copied" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

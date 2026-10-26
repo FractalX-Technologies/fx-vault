@@ -311,6 +311,10 @@ trusted for that path (below). Details: [API.md](API.md).
   TMPDIR, telemetry, color and progress output off), stdin is empty, and no value ever reaches
   it. The token is read from stdout with the secret JSON scanner and stdout is wiped; stderr is
   classified only after JWTs and GitHub token patterns are redacted, and never logged.
+  Settings › Accounts › Azure (1.0 S1b) runs `az account list` only and keeps each tenant's id
+  and `tenantDisplayName`; the listing's `user` (the signed-in account's email) is never read.
+  `az login --tenant <id>` and `az logout` are interactive, so Settings gives them to copy and
+  never runs them.
 
 ## 9. Sync integrity
 

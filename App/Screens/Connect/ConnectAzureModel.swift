@@ -7,9 +7,19 @@ import VaultData
 
 /// Board ConnectAzure (1.0): the `az` requirements, then each subscription with its Key Vaults to
 /// choose from. A chosen vault becomes a Key Vault of its own (no repository) and is imported
-/// with its values. Nothing is written to Azure.
+/// with its values. Nothing is written to Azure. Settings › Accounts › Choose Vaults… (S1b)
+/// reuses it for one tenant.
 @Observable
 final class ConnectAzureModel {
+    /// Which vaults the list offers.
+    enum Scope: Equatable {
+        /// Onboarding: every subscription, every vault checked.
+        case onboarding
+        /// Choose Vaults… for one tenant (lowercased id): nothing checked, and the vaults
+        /// already in FX Vault shown checked and disabled, so none is imported twice.
+        case tenant(String)
+    }
+
     /// What stands between FX Vault and the vault list.
     enum Requirement: Equatable {
         case ready
@@ -20,6 +30,11 @@ final class ConnectAzureModel {
         /// `az login` first (interactive, so Copy only).
         case notSignedIn
         case failed(ErrorPresentationModel)
+
+        var failure: ErrorPresentationModel? {
+            if case .failed(let presentation) = self { return presentation }
+            return nil
+        }
     }
 
     struct Vault: Identifiable, Hashable {
@@ -31,6 +46,11 @@ final class ConnectAzureModel {
 
         var id: String {
             name.lowercased()
+        }
+
+        /// The key a saved Key Vault of its own has for this vault.
+        var targetKey: String {
+            DestinationTargetModel.azureKeyVault(vaultName: name, tenantID: tenantID).targetKey
         }
     }
 
@@ -52,9 +72,12 @@ final class ConnectAzureModel {
     static let installCommand = SetupCommand.installAzureCLI.displayText
     static let loginCommand = DestinationSyncCopy.azLoginCommand
 
+    let scope: Scope
     private(set) var requirement: Requirement?
     private(set) var subscriptions: [Subscription] = []
     var selection: Set<Vault.ID> = []
+    /// The listed vaults already in FX Vault (``Scope/tenant(_:)`` only), by ``Vault/id``.
+    private(set) var savedVaultIDs: Set<Vault.ID> = []
     private(set) var isLoading = false
     private(set) var hasLoaded = false
     private(set) var copiedCommand: String?
@@ -62,8 +85,9 @@ final class ConnectAzureModel {
 
     @ObservationIgnored private let app: AppViewModel
 
-    init(app: AppViewModel) {
+    init(app: AppViewModel, scope: Scope = .onboarding) {
         self.app = app
+        self.scope = scope
         runs = SetupCommandRunState(github: app.container.data.github)
     }
 
@@ -72,22 +96,35 @@ final class ConnectAzureModel {
     }
 
     var selectedVaults: [Vault] {
-        subscriptions.flatMap(\.vaults).filter { selection.contains($0.id) }
+        subscriptions.flatMap(\.vaults).filter { selection.contains($0.id) && !savedVaultIDs.contains($0.id) }
+    }
+
+    func isSaved(_ vault: Vault) -> Bool {
+        savedVaultIDs.contains(vault.id)
+    }
+
+    /// A failure to list Azure, shown as the step's or the sheet's error.
+    var failure: ErrorPresentationModel? {
+        requirement?.failure
     }
 
     /// The commands the requirement asks for, in order.
     var commands: [String] {
+        Self.commands(for: requirement)
+    }
+
+    static func commands(for requirement: Requirement?) -> [String] {
         switch requirement {
-        case .notInstalled, .untrusted: [Self.installCommand, Self.loginCommand]
-        case .notSignedIn: [Self.loginCommand]
+        case .notInstalled, .untrusted: [installCommand, loginCommand]
+        case .notSignedIn: [loginCommand]
         case .ready, .failed, nil: []
         }
     }
 
     // MARK: - Loading
 
-    /// Lists the subscriptions and their vaults, every vault checked. Disabled and deleted
-    /// subscriptions are left out: their vaults cannot be read.
+    /// Lists the subscriptions and their vaults, every vault checked during onboarding. Disabled
+    /// and deleted subscriptions are left out: their vaults cannot be read.
     func load() async {
         guard !isLoading else { return }
         isLoading = true
@@ -108,7 +145,7 @@ final class ConnectAzureModel {
         }
         requirement = .ready
         subscriptions = listed
-            .filter { $0.subscription.state != .disabled && $0.subscription.state != .deleted }
+            .filter { $0.subscription.state != .disabled && $0.subscription.state != .deleted && isInScope($0.subscription) }
             .map { entry in
                 let tenantID = entry.subscription.tenantID
                 let subscription = KeyVaultSubscriptionModel(id: entry.subscription.id, name: entry.subscription.name)
@@ -131,7 +168,22 @@ final class ConnectAzureModel {
                     )
                 }
             }
-        selection = Set(subscriptions.flatMap(\.vaults).map(\.id))
+        switch scope {
+        case .onboarding:
+            savedVaultIDs = []
+            selection = Set(subscriptions.flatMap(\.vaults).map(\.id))
+        case .tenant:
+            let saved = Set(((try? data.destinations.destinations(repositoryID: nil)) ?? []).map(\.target.targetKey))
+            savedVaultIDs = Set(subscriptions.flatMap(\.vaults).filter { saved.contains($0.targetKey) }.map(\.id))
+            selection = selection.subtracting(savedVaultIDs)
+        }
+    }
+
+    private func isInScope(_ subscription: AzureSubscriptionModel) -> Bool {
+        switch scope {
+        case .onboarding: true
+        case .tenant(let tenantID): subscription.tenantID == tenantID
+        }
     }
 
     static func requirement(for error: DestinationError) -> Requirement {
@@ -150,12 +202,14 @@ final class ConnectAzureModel {
     func reset() {
         subscriptions = []
         selection = []
+        savedVaultIDs = []
         requirement = nil
         hasLoaded = false
         copiedCommand = nil
     }
 
     func toggle(_ vault: Vault) {
+        guard !isSaved(vault) else { return }
         if selection.contains(vault.id) {
             selection.remove(vault.id)
         } else {
@@ -214,7 +268,6 @@ final class ConnectAzureModel {
     }
 
     private func existingVault(_ vault: Vault) throws -> DestinationID? {
-        let key = DestinationTargetModel.azureKeyVault(vaultName: vault.name, tenantID: vault.tenantID).targetKey
-        return try data.destinations.destinations(repositoryID: nil).first { $0.target.targetKey == key }?.id
+        try data.destinations.destinations(repositoryID: nil).first { $0.target.targetKey == vault.targetKey }?.id
     }
 }

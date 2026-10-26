@@ -72,6 +72,19 @@ struct AzureDiscoveryTests {
         #expect(subscriptions[0].id == Self.production)
         #expect(subscriptions[0].tenantID == "00000000-0000-0000-0000-0000000000a1", "tenants are lowercased for DestinationTargetModel")
         #expect(AzureSubscriptionState(listed: "Expired") == .other)
+        #expect(subscriptions.map(\.tenantName) == ["Example", nil, nil, nil], "only the first entry lists tenantDisplayName")
+    }
+
+    /// Settings › Accounts shows the tenant name: invisible and bidi characters go, and a name
+    /// left empty is no name.
+    @Test func aTenantNameIsCleanedOrLeftOut() throws {
+        func listed(_ name: String) -> String {
+            #"[{"id":"00000000-0000-0000-0000-000000000009","name":"Example","tenantId":"00000000-0000-0000-0000-0000000000a1","tenantDisplayName":"\#(name)","state":"Enabled","isDefault":true}]"#
+        }
+        let cleaned = try AzureCLIDiscovery.parseSubscriptions(stdout: TestValues.secret(listed("  Example\u{202E} Labs ")))
+        #expect(cleaned.map(\.tenantName) == ["Example Labs"])
+        let blank = try AzureCLIDiscovery.parseSubscriptions(stdout: TestValues.secret(listed(" \u{200B} ")))
+        #expect(blank.map(\.tenantName) == [nil])
     }
 
     @Test func aSubscriptionListedTwiceKeepsTheDefaultEntry() throws {

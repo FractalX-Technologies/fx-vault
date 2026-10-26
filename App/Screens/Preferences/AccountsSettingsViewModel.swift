@@ -10,7 +10,8 @@ import VaultData
 /// also the accounts gh lists that FX Vault cannot use (with why), and a note when the user's
 /// shell exports `GH_TOKEN` or `GITHUB_TOKEN`. Since v0.3.2 the GitHub aliases no account uses,
 /// with how to log their account in to gh. Since 1.0 (B4) each account's organizations with
-/// their access, and the commands that add `admin:org`.
+/// their access, and the commands that add `admin:org`. Since 1.0 (S1b) the Azure group
+/// (``AzureAccountsViewModel``).
 ///
 /// Needs the vault unlocked (the tab shows "Unlock FX Vault…" otherwise); a lock clears it.
 @Observable
@@ -39,10 +40,14 @@ final class AccountsSettingsViewModel: LockObserving {
     /// FX Vault never does.
     private(set) var tokenVariables: [ShellVariableName] = []
 
+    /// The Azure group (1.0 S1b).
+    let azure: AzureAccountsViewModel
+
     @ObservationIgnored private let app: AppViewModel
 
     init(app: AppViewModel) {
         self.app = app
+        azure = AzureAccountsViewModel(app: app)
         app.addLockObserver(self)
     }
 
@@ -205,5 +210,6 @@ final class AccountsSettingsViewModel: LockObserving {
         testResults = [:]
         copiedCommand = nil
         error = nil
+        azure.reset()
     }
 }
