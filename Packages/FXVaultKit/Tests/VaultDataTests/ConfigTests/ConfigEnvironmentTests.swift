@@ -22,6 +22,23 @@ struct ConfigEnvironmentTests {
         #expect(stored.first?.name == "Producci\u{00F3}n")
     }
 
+    /// The ⌘K palette reads every repository's environments at once (1.0), without tombstones.
+    @Test func environmentsOfEveryRepositoryInOneRead() async throws {
+        let harness = try await ConfigHarness.make()
+        let first = try harness.seedRepository(name: "repo-a")
+        let second = try harness.seedRepository(name: "repo-b")
+        try harness.config.createEnvironment(in: first.id, name: "staging")
+        let preview = try harness.config.createEnvironment(in: first.id, name: "preview")
+        try harness.config.createEnvironment(in: second.id, name: "production")
+        try harness.markSynced(first)
+        try harness.config.deleteEnvironment(preview)
+        #expect(try harness.store.fetchEnvironments(repositoryID: first.id).contains { $0.id == preview && $0.isDeleted })
+
+        let byRepository = try harness.config.environmentsByRepository()
+        #expect(byRepository[first.id]?.map(\.name) == ["staging"])
+        #expect(byRepository[second.id]?.map(\.name) == ["production"])
+    }
+
     @Test func namesAreValidated() async throws {
         let harness = try await ConfigHarness.make()
         let repo = try harness.seedRepository()

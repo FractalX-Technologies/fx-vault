@@ -47,13 +47,5 @@ enum FolderCopy {
         defaultValue: "They are removed from this folder now. Copies in repositories and other folders stay."
     )
 
-    /// "3 secrets · 1 variable" (automatic grammar agreement).
-    static func counts(secrets: Int, variables: Int) -> String {
-        String(AttributedString(
-            localized: "folder.counts",
-            defaultValue: "^[\(secrets) secret](inflect: true) · ^[\(variables) variable](inflect: true)"
-        ).characters)
-    }
-
     static let sendFolder = String(localized: "folder.sendFolder", defaultValue: "Send Folder")
 }

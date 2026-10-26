@@ -7261,17 +7261,6 @@
         }
       }
     },
-    "folder.counts" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "^[%1$lld secret](inflect: true) · ^[%2$lld variable](inflect: true)"
-          }
-        }
-      }
-    },
     "folder.delete" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

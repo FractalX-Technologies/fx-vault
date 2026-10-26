@@ -414,7 +414,9 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     var isSidebarHidden = false
 
     /// Edit › Find (⌘F): shows the sidebar if it was hidden, then focuses its search field.
+    /// Edit › Find (⌘F): also closes the ⌘K palette, which would keep the focus from the search.
     func findInSidebar() {
+        jumpPalette = nil
         isSidebarHidden = false
         sidebar.focusSearch()
     }
@@ -492,12 +494,11 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// vault (the sidebar only lists the selected repository's).
     private var jumpPlaces: [JumpPlaceModel] {
         var environments: [RepoID: [EnvironmentModel]] = [:]
-        for repo in sidebar.input.vaultRepos {
-            do {
-                environments[repo.id] = try app.container.data.config.scopes(repositoryID: repo.id).compactMap(\.environment)
-            } catch {
-                AppLog.ui.error("Jump palette could not read a repository's environments")
-            }
+        do {
+            // One read for every repository: ⌘K opens at once even with many in the vault.
+            environments = try app.container.data.config.environmentsByRepository()
+        } catch {
+            AppLog.ui.error("Jump palette could not read the environments")
         }
         return JumpPlaces.places(JumpPlaceInputModel(
             owners: SidebarGrouping.owners(sidebar.input, query: ""),

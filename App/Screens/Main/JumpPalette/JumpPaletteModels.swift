@@ -59,7 +59,7 @@ enum JumpPlaces {
             }
         }
         places += input.keyVaults.map { place(.keyVault($0.id), $0.title, $0.provider.title, $0.provider.symbolName) }
-        places += input.folders.map { place(.folder($0.id), $0.name, JumpPaletteCopy.folder, "folder", style: .sans) }
+        places += input.folders.map { place(.folder($0.id), $0.name, JumpPaletteCopy.folder, Theme.Symbols.folder, style: .sans) }
         return places
     }
 
