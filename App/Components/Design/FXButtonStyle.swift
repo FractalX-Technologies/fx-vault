@@ -8,8 +8,9 @@ import SwiftUI
 /// - `.ghost`: no chrome until hover. Toolbar-like and inline actions.
 /// - `.destructive`: danger fill, ground text. Only the final confirm of a destructive action.
 ///
-/// Sizes: `.regular` (34 pt, 13 pt text) and `.large` (42 pt, 14 pt text). Disabled pills fade
-/// to 40%; keyboard focus draws a brand ring outside the capsule.
+/// Sizes: `.regular` (34 pt, 13 pt text), `.large` (42 pt, 14 pt text) and `.compact` (26 pt,
+/// 12 pt text, 8 pt corners: a place header's buttons). Disabled buttons fade to 40%; keyboard
+/// focus draws a brand ring outside the shape.
 ///
 /// ```swift
 /// Button("Sync 5 changes") { … }
@@ -29,6 +30,7 @@ struct FXButtonStyle: ButtonStyle {
     enum Size: CaseIterable, Sendable {
         case regular
         case large
+        case compact
     }
 
     /// The colors of a variant, resolved per state (pure, for tests and previews).
@@ -82,6 +84,15 @@ struct FXButtonStyle: ButtonStyle {
         switch size {
         case .regular: Theme.Layout.buttonHeightRegular
         case .large: Theme.Layout.buttonHeightLarge
+        case .compact: Theme.Layout.buttonHeightCompact
+        }
+    }
+
+    /// A capsule, or the compact size's rounded rectangle (board Main2-Repository).
+    static func shape(for size: Size) -> AnyShape {
+        switch size {
+        case .regular, .large: AnyShape(Capsule.pill)
+        case .compact: AnyShape(RoundedRectangle(cornerRadius: Theme.Radius.compactRow, style: .continuous))
         }
     }
 
@@ -89,6 +100,7 @@ struct FXButtonStyle: ButtonStyle {
         switch size {
         case .regular: Theme.Layout.buttonPaddingRegular
         case .large: Theme.Layout.buttonPaddingLarge
+        case .compact: Theme.Layout.buttonPaddingCompact
         }
     }
 
@@ -97,6 +109,7 @@ struct FXButtonStyle: ButtonStyle {
         switch size {
         case .regular: return isEmphasized ? Theme.Typography.calloutEmphasized : Theme.Typography.callout
         case .large: return isEmphasized ? Theme.Typography.bodyEmphasized : Theme.Typography.body
+        case .compact: return isEmphasized ? Theme.Typography.captionEmphasized : Theme.Typography.caption
         }
     }
 
@@ -120,6 +133,7 @@ private struct FXButtonBody: View {
     var body: some View {
         let palette = FXButtonStyle.palette(for: style.variant, isHovered: isHovered && isEnabled)
         let basePadding = FXButtonStyle.padding(for: style.size)
+        let shape = FXButtonStyle.shape(for: style.size)
         configuration.label
             .font(FXButtonStyle.font(for: style.variant, size: style.size))
             .lineLimit(1)
@@ -132,22 +146,23 @@ private struct FXButtonBody: View {
             .frame(maxWidth: style.isFullWidth ? .infinity : nil)
             .background {
                 if let fill = palette.fill {
-                    Capsule.pill.fill(fill)
+                    shape.fill(fill)
                 }
             }
             .overlay {
                 if let border = palette.border {
-                    Capsule.pill.strokeBorder(border, lineWidth: Theme.Stroke.hairline)
+                    shape.stroke(border, lineWidth: Theme.Stroke.hairline)
+                        .padding(Theme.Stroke.hairline / 2)
                 }
             }
             .overlay {
                 if isFocused {
-                    Capsule.pill
-                        .strokeBorder(Theme.Colors.brand, lineWidth: Theme.Layout.focusRingWidth)
-                        .padding(-(Theme.Layout.focusRingWidth + Theme.Layout.focusRingOffset))
+                    shape
+                        .stroke(Theme.Colors.brand, lineWidth: Theme.Layout.focusRingWidth)
+                        .padding(-(Theme.Layout.focusRingWidth / 2 + Theme.Layout.focusRingOffset))
                 }
             }
-            .contentShape(.pill)
+            .contentShape(shape)
             .opacity(configuration.isPressed ? Theme.Opacity.pressed : FXButtonStyle.hoverOpacity(for: style.variant, isHovered: isHovered))
             .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
             .onHover { isHovered = $0 }
@@ -156,58 +171,85 @@ private struct FXButtonBody: View {
     }
 }
 
-/// A 32 pt circular icon button (mockup toolbar: New repository, Share, Lock; the eye that
-/// reveals a value uses `.ghost`). Always give the button an accessibility label.
+/// A 32 pt circular icon button (the eye that reveals a value uses `.ghost`), or the 26 pt
+/// `.compact` square with 8 pt corners (a place header's ⋯). Always give the button an
+/// accessibility label.
 struct FXIconButtonStyle: ButtonStyle {
     enum Variant: Sendable {
-        /// Hairline circle (toolbar-style).
+        /// Hairline outline.
         case outline
         /// No chrome until hover (inline, in table cells).
         case ghost
     }
 
-    let variant: Variant
+    enum Size: Sendable {
+        case regular
+        case compact
+    }
 
-    init(_ variant: Variant = .outline) {
+    let variant: Variant
+    let size: Size
+
+    init(_ variant: Variant = .outline, size: Size = .regular) {
         self.variant = variant
+        self.size = size
     }
 
     func makeBody(configuration: Configuration) -> some View {
-        FXIconButtonBody(variant: variant, configuration: configuration)
+        FXIconButtonBody(variant: variant, size: size, configuration: configuration)
+    }
+
+    static func side(for size: Size) -> CGFloat {
+        switch size {
+        case .regular: Theme.Layout.iconButtonSize
+        case .compact: Theme.Layout.buttonHeightCompact
+        }
+    }
+
+    static func shape(for size: Size) -> AnyShape {
+        switch size {
+        case .regular: AnyShape(Circle())
+        case .compact: FXButtonStyle.shape(for: .compact)
+        }
     }
 }
 
 private struct FXIconButtonBody: View {
     let variant: FXIconButtonStyle.Variant
+    let size: FXIconButtonStyle.Size
     let configuration: ButtonStyleConfiguration
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.isFocused) private var isFocused
     @State private var isHovered = false
 
     var body: some View {
+        let shape = FXIconButtonStyle.shape(for: size)
+        let side = FXIconButtonStyle.side(for: size)
         configuration.label
             .labelStyle(.iconOnly)
-            .font(Theme.Typography.callout)
+            .font(size == .compact ? Theme.Typography.caption : Theme.Typography.callout)
             .foregroundStyle(variant == .ghost && !isHovered ? Theme.Colors.subtleText : Theme.Colors.ink)
-            .frame(width: Theme.Layout.iconButtonSize, height: Theme.Layout.iconButtonSize)
+            .frame(width: side, height: side)
             .background {
                 if isHovered && isEnabled {
-                    Circle().fill(Theme.Colors.surface2)
+                    shape.fill(Theme.Colors.surface2)
                 }
             }
             .overlay {
                 if variant == .outline {
-                    Circle().strokeBorder(Theme.Colors.hairline, lineWidth: Theme.Stroke.hairline)
+                    // The compact square takes the stronger hairline of the compact buttons beside it.
+                    shape.stroke(size == .compact ? Theme.Colors.hairlineStrong : Theme.Colors.hairline, lineWidth: Theme.Stroke.hairline)
+                        .padding(Theme.Stroke.hairline / 2)
                 }
             }
             .overlay {
                 if isFocused {
-                    Circle()
-                        .strokeBorder(Theme.Colors.brand, lineWidth: Theme.Layout.focusRingWidth)
-                        .padding(-(Theme.Layout.focusRingWidth + Theme.Layout.focusRingOffset))
+                    shape
+                        .stroke(Theme.Colors.brand, lineWidth: Theme.Layout.focusRingWidth)
+                        .padding(-(Theme.Layout.focusRingWidth / 2 + Theme.Layout.focusRingOffset))
                 }
             }
-            .contentShape(Circle())
+            .contentShape(shape)
             .opacity(configuration.isPressed ? Theme.Opacity.pressed : 1)
             .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
             .onHover { isHovered = $0 }
@@ -224,8 +266,8 @@ extension View {
     }
 
     /// Applies ``FXIconButtonStyle`` and hides the system focus ring (the style draws its own).
-    func fxIconButtonStyle(_ variant: FXIconButtonStyle.Variant = .outline) -> some View {
-        buttonStyle(FXIconButtonStyle(variant))
+    func fxIconButtonStyle(_ variant: FXIconButtonStyle.Variant = .outline, size: FXIconButtonStyle.Size = .regular) -> some View {
+        buttonStyle(FXIconButtonStyle(variant, size: size))
             .focusEffectDisabled()
     }
 }

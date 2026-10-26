@@ -60,4 +60,18 @@ extension ConfigTableModel {
     func heldHelp(for row: ConfigRowModel) -> String {
         HeldShareCopy.chipHelp(sender: nil)
     }
+
+    /// New Secret or New Variable from a place's ⋯ More (1.0 D6c3): that kind's tab first, so
+    /// the new row shows when the editor closes.
+    func add(_ kind: ConfigKind) {
+        self.kind = kind
+        add()
+    }
+
+    /// What a place's Copy To copies (1.0 D6c3): the selected rows, or the open tab's rows when
+    /// none is selected; never a deleted one.
+    var placeCopyRows: [ConfigRowModel] {
+        let selected = rows(for: selection)
+        return (selected.isEmpty ? rows : selected).filter { !$0.isDeleted }
+    }
 }

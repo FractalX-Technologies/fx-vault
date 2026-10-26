@@ -738,17 +738,6 @@
         }
       }
     },
-    "capability.admin" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Admin"
-          }
-        }
-      }
-    },
     "capability.explanation.adminRequired" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -778,39 +767,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "GitHub could not be read for this repository (SAML authorization, removed, or no longer shared). Refresh after fixing access."
-          }
-        }
-      }
-    },
-    "capability.readOnly.adminRequired" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Read-only: admin required"
-          }
-        }
-      }
-    },
-    "capability.readOnly.archived" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Read-only: archived"
-          }
-        }
-      }
-    },
-    "capability.repoLevelOnly" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Write: repo-level only"
           }
         }
       }
@@ -2432,17 +2388,6 @@
         }
       }
     },
-    "destination.access.az" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "via Azure CLI sign-in"
-          }
-        }
-      }
-    },
     "destination.add" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -3070,17 +3015,6 @@
         }
       }
     },
-    "drift.banner.review" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Review"
-          }
-        }
-      }
-    },
     "drift.banner.review.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -3088,28 +3022,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Keep your version or take GitHub's for each change"
-          }
-        }
-      }
-    },
-    "drift.banner.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld changes on GitHub"
-          }
-        }
-      }
-    },
-    "drift.banner.title.one" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1 change on GitHub"
           }
         }
       }
@@ -7327,17 +7239,6 @@
         }
       }
     },
-    "folder.actions" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Folder Actions"
-          }
-        }
-      }
-    },
     "folder.copiedItem.notice" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7668,28 +7569,6 @@
         }
       }
     },
-    "folder.localHelp" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "A folder stays in this vault. Copy its items into a repository to put them on GitHub with the next Sync."
-          }
-        }
-      }
-    },
-    "folder.localTag" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Never on GitHub"
-          }
-        }
-      }
-    },
     "folder.name.create" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7778,17 +7657,6 @@
         }
       }
     },
-    "folder.overviewHint" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy items into any repository with ⌘C and ⌘V or Copy To. Copies stay linked: change a value here and FX Vault offers to update them."
-          }
-        }
-      }
-    },
     "folder.paste.sameFolder" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7840,17 +7708,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "You already saved or imported this copy once. Saving it again changes nothing unless you replace values."
-          }
-        }
-      }
-    },
-    "folder.shareAsFile" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Share as File…"
           }
         }
       }
@@ -9549,39 +9406,6 @@
         }
       }
     },
-    "main.detail.add.help" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Add one item, or paste many KEY=value lines at once (⌘V on the table)"
-          }
-        }
-      }
-    },
-    "main.detail.addSecret" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Secret"
-          }
-        }
-      }
-    },
-    "main.detail.addVariable" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Variable"
-          }
-        }
-      }
-    },
     "main.detail.branches" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9589,28 +9413,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Deployment branches: %@"
-          }
-        }
-      }
-    },
-    "main.detail.branches.edit" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit"
-          }
-        }
-      }
-    },
-    "main.detail.clone" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Clone"
           }
         }
       }
@@ -9901,28 +9703,6 @@
         }
       }
     },
-    "main.detail.environment" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment"
-          }
-        }
-      }
-    },
-    "main.detail.importEnvFile" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Import .env File…"
-          }
-        }
-      }
-    },
     "main.detail.kind" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9952,17 +9732,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Variables"
-          }
-        }
-      }
-    },
-    "main.detail.notOnGitHub" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Created by the next Sync"
           }
         }
       }
@@ -10055,17 +9824,6 @@
         }
       }
     },
-    "main.detail.refresh" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Refresh"
-          }
-        }
-      }
-    },
     "main.detail.refresh.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10088,17 +9846,6 @@
         }
       }
     },
-    "main.detail.repository" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Repository"
-          }
-        }
-      }
-    },
     "main.detail.reverted.notice" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10117,28 +9864,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Reverted 1 item to what GitHub has."
-          }
-        }
-      }
-    },
-    "main.detail.scopeActions.environment" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment Actions"
-          }
-        }
-      }
-    },
-    "main.detail.scopeActions.repository" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Repository Actions"
           }
         }
       }
@@ -10385,17 +10110,6 @@
         }
       }
     },
-    "main.scopes.delete" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
-          }
-        }
-      }
-    },
     "main.scopes.delete.confirm" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10429,13 +10143,24 @@
         }
       }
     },
-    "main.scopes.duplicate" : {
+    "main.scopes.deleteEnvironment" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Duplicate…"
+            "value" : "Delete Environment…"
+          }
+        }
+      }
+    },
+    "main.scopes.duplicateEnvironment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Duplicate Environment…"
           }
         }
       }
@@ -10546,28 +10271,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Revert Changes"
-          }
-        }
-      }
-    },
-    "main.scopes.settings" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings…"
-          }
-        }
-      }
-    },
-    "main.scopes.share" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Share…"
           }
         }
       }
@@ -10986,17 +10689,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Settings"
-          }
-        }
-      }
-    },
-    "main.sidebar.share" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Share…"
           }
         }
       }
@@ -11848,28 +11540,6 @@
         }
       }
     },
-    "organization.counts" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld secrets · %2$lld variables"
-          }
-        }
-      }
-    },
-    "organization.counts.withoutValue" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$lld without value"
-          }
-        }
-      }
-    },
     "organization.editor.access" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12350,6 +12020,259 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Avoid years and dates."
+          }
+        }
+      }
+    },
+    "place.counts.secrets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld secret](inflect: true)"
+          }
+        }
+      }
+    },
+    "place.counts.variables" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld variable](inflect: true)"
+          }
+        }
+      }
+    },
+    "place.counts.withoutValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld without value"
+          }
+        }
+      }
+    },
+    "place.createdByNextSync" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "created by the next Sync"
+          }
+        }
+      }
+    },
+    "place.drift.changed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld changed on GitHub"
+          }
+        }
+      }
+    },
+    "place.drift.review" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Review"
+          }
+        }
+      }
+    },
+    "place.folder.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "never sent anywhere by itself"
+          }
+        }
+      }
+    },
+    "place.kind.environment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Environment"
+          }
+        }
+      }
+    },
+    "place.kind.folder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folder"
+          }
+        }
+      }
+    },
+    "place.kind.organization" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Organization"
+          }
+        }
+      }
+    },
+    "place.kind.repository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Repository"
+          }
+        }
+      }
+    },
+    "place.more" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "More"
+          }
+        }
+      }
+    },
+    "place.more.clone" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clone…"
+          }
+        }
+      }
+    },
+    "place.more.copyTo" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy To"
+          }
+        }
+      }
+    },
+    "place.more.deleteSelected" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete Selected…"
+          }
+        }
+      }
+    },
+    "place.more.deploymentBranches" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Deployment Branches…"
+          }
+        }
+      }
+    },
+    "place.more.exportEnv" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Export .env…"
+          }
+        }
+      }
+    },
+    "place.more.importEnv" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import .env…"
+          }
+        }
+      }
+    },
+    "place.more.newSecret" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Secret"
+          }
+        }
+      }
+    },
+    "place.more.newVariable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Variable"
+          }
+        }
+      }
+    },
+    "place.more.pasteMultiple" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paste Multiple…"
+          }
+        }
+      }
+    },
+    "place.more.refresh" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Refresh"
+          }
+        }
+      }
+    },
+    "place.more.shareSecurely" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Share Securely…"
           }
         }
       }

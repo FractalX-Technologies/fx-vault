@@ -2,16 +2,16 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// Column 3 for a runtime destination (v0.8.0, canvas board 3): DESTINATION · RUNTIME and the
-/// destination's name with its provider, stage and Experimental tags; Refresh and the actions; a
-/// card with the stage, the target and the provider's rules; the Refresh banner; the Secrets
-/// label (Key Vault holds secrets only) with the add actions; and the table with the Status column.
+/// Column 3 for a Key Vault (v0.8.0; board KV-Place): the header (name, "Key Vault · counts",
+/// ⋯ More); a card with the stage, the target and the provider's rules; the Refresh banner; the
+/// Secrets label (Key Vault holds secrets only) with the selection's actions; and the table with
+/// the Status column.
 struct DestinationDetailScreen: View {
     @Bindable var viewModel: DestinationDetailViewModel
     let main: MainViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.largePlus) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
             if let banner = main.connectivityBanner {
                 MainConnectivityBanner(banner: banner, main: main)
             }
@@ -32,9 +32,7 @@ struct DestinationDetailScreen: View {
                     .foregroundStyle(Theme.Colors.mutedText)
             }
         }
-        .padding(.horizontal, Theme.Spacing.xxLargePlus)
-        .padding(.vertical, Theme.Spacing.xLargePlus)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .fxPlaceColumn()
         .onPasteCommand(of: [.plainText], validator: viewModel.validatePaste) { providers in
             Task { await viewModel.handlePaste(providers) }
         }
@@ -62,79 +60,50 @@ struct DestinationDetailScreen: View {
     }
 }
 
-/// The eyebrow, the name in the large title with its tags, then Refresh and the actions menu.
+/// The vault's name, its subline, the Experimental tag of a runtime destination, and ⋯ More: New
+/// Secret (a Key Vault holds secrets only), Paste Multiple…, Import .env…, Copy To, Refresh, Delete
+/// Selected…, then the vault's own menu.
 private struct DestinationDetailHeader: View {
     let viewModel: DestinationDetailViewModel
     let main: MainViewModel
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .bottom, spacing: Theme.Spacing.large) {
-                details
-                Spacer(minLength: 0)
-                actions
+        let destination = viewModel.destination
+        PlaceHeader(title: destination?.title ?? "", subline: viewModel.subline) {
+            if destination?.repositoryID != nil {
+                StatusChip.tag(DestinationCopy.experimentalTag)
+                    .help(DestinationCopy.experimentalHelp)
             }
-            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-                details
-                actions
+        } moreItems: {
+            Button(PlaceCopy.newItem(.secret)) {
+                viewModel.add(.secret)
             }
-        }
-    }
-
-    private var details: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
-            SectionLabel(DestinationCopy.eyebrow)
-            Text(verbatim: viewModel.destination?.title ?? "")
-                .fxTextStyle(.largeTitle)
-                .foregroundStyle(Theme.Colors.ink)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .textSelection(.enabled)
-            if let destination = viewModel.destination {
-                HStack(spacing: Theme.Spacing.small) {
-                    StatusChip.tag(destination.provider.title)
-                    StatusChip.tag(destination.stage ?? DestinationCopy.noStage)
-                    StatusChip.tag(DestinationCopy.experimentalTag)
-                        .help(DestinationCopy.experimentalHelp)
-                    Text(destination.provider.accessDescription)
-                        .fxTextStyle(.monoMeta)
-                        .foregroundStyle(Theme.Colors.subtleText)
-                        .lineLimit(1)
-                }
-                .padding(.top, Theme.Spacing.xSmall)
+            Divider()
+            Button(PlaceCopy.pasteMultiple) {
+                viewModel.pasteMultiple()
             }
-        }
-    }
-
-    private var actions: some View {
-        HStack(spacing: Theme.Spacing.large) {
-            Button {
+            Button(PlaceCopy.importEnv) {
+                viewModel.importEnvFile()
+            }
+            Divider()
+            CopyToMenu(title: PlaceCopy.copyTo, rows: viewModel.placeCopyRows, viewModel: viewModel)
+            Button(PlaceCopy.refresh) {
                 viewModel.refreshNow()
-            } label: {
-                if viewModel.isRefreshing {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Text(DestinationCopy.refresh)
-                }
             }
-            .fxButtonStyle(.secondary)
             .disabled(viewModel.isRefreshing || !main.isOnline)
             .help(main.networkHelp(DestinationCopy.refreshHelp))
-            if let destination = viewModel.destination {
-                Menu {
-                    if destination.repositoryID == nil {
-                        KeyVaultContextMenu(vault: destination, sidebar: main.sidebar)
-                    } else if let scopeList = main.scopeList {
-                        DestinationContextMenu(destination: destination, viewModel: scopeList)
-                    }
-                } label: {
-                    Label(String(localized: "main.detail.actions", defaultValue: "Actions"), systemImage: "ellipsis")
+            Divider()
+            Button(PlaceCopy.deleteSelected, role: .destructive) {
+                viewModel.deleteSelection()
+            }
+            .disabled(viewModel.selection.isEmpty)
+            if let destination {
+                Divider()
+                if destination.repositoryID == nil {
+                    KeyVaultContextMenu(vault: destination, sidebar: main.sidebar)
+                } else if let scopeList = main.scopeList {
+                    DestinationContextMenu(destination: destination, viewModel: scopeList)
                 }
-                .menuStyle(.button)
-                .menuIndicator(.hidden)
-                .fxIconButtonStyle()
-                .help(String(localized: "main.detail.actions", defaultValue: "Actions"))
             }
         }
     }
@@ -208,8 +177,8 @@ private struct DestinationRefreshBanner: View {
     }
 }
 
-/// The pill (or SECRETS · n where the provider holds secrets only) with the add actions, or the
-/// selection's actions while several rows are selected.
+/// SECRETS · n (the provider holds secrets only), with the selection's actions while several
+/// rows are selected.
 private struct DestinationDetailControls: View {
     @Bindable var viewModel: DestinationDetailViewModel
 
@@ -264,8 +233,6 @@ private struct DestinationDetailControls: View {
                 .help(String(localized: "main.detail.selection.clear", defaultValue: "Deselect"))
             }
             .fixedSize()
-        } else {
-            ConfigAddActions(viewModel: viewModel)
         }
     }
 }

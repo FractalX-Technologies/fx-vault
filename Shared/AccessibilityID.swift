@@ -117,6 +117,12 @@ enum AccessibilityID {
         static let jumpAnywhere = "main.jumpAnywhere"
     }
 
+    /// A place's header (1.0 D6c3): its "kind · parent · counts" line and ⋯ More.
+    enum Place {
+        static let subline = "place.subline"
+        static let more = "place.more"
+    }
+
     /// The ⌘K jump palette (1.0).
     enum Jump {
         static let palette = "jump.palette"

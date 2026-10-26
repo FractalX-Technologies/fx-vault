@@ -45,12 +45,16 @@ final class OrganizationDetailViewModel {
         items.sorted { ($0.kind == .secret ? 0 : 1, $0.name) < ($1.kind == .secret ? 0 : 1, $1.name) }
     }
 
-    var counts: String {
-        OrganizationCopy.counts(
-            secrets: items.lazy.filter { $0.kind == .secret }.count,
-            variables: items.lazy.filter { $0.kind == .variable }.count,
-            withoutValue: items.lazy.filter { !$0.hasValue }.count
-        )
+    /// "Organization · 14 secrets · 6 variables · 3 without value" (board Org-Visibility).
+    var subline: String {
+        PlaceCopy.subline([
+            PlaceCopy.organization,
+            PlaceCopy.counts(
+                secrets: items.lazy.filter { $0.kind == .secret }.count,
+                variables: items.lazy.filter { $0.kind == .variable }.count,
+                withoutValue: items.lazy.filter { !$0.hasValue }.count
+            ),
+        ])
     }
 
     // MARK: - Changes

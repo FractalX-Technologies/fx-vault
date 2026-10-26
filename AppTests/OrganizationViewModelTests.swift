@@ -78,8 +78,9 @@ struct OrganizationViewModelTests {
         #expect(OrgVisibility.private.title(selectedCount: nil) == "Private and internal repositories")
         #expect(OrgVisibility.selected.title(selectedCount: 3) == "Selected · 3 repositories")
         #expect(OrgVisibility.selected.title(selectedCount: nil) == "Selected repositories")
-        #expect(OrganizationCopy.counts(secrets: 2, variables: 1, withoutValue: 0) == "2 secrets · 1 variables")
-        #expect(OrganizationCopy.counts(secrets: 2, variables: 1, withoutValue: 2) == "2 secrets · 1 variables · 2 without value")
+        #expect(PlaceCopy.counts(secrets: 2, variables: 1, withoutValue: 0) == "2 secrets · 1 variable")
+        #expect(PlaceCopy.counts(secrets: 1, variables: 2, withoutValue: 2) == "1 secret · 2 variables · 2 without value")
+        #expect(PlaceCopy.counts(secrets: 32, variables: nil) == "32 secrets", "a Key Vault holds secrets only")
     }
 
     // MARK: - Selection and import
@@ -136,7 +137,7 @@ struct OrganizationViewModelTests {
         #expect(detail.organizationID == organization.id)
         #expect(await TestFixtures.eventually { detail.items.count == 3 })
         #expect(detail.rows.map(\.name) == ["NPM_TOKEN", "STRIPE_KEY", "REGION"])
-        #expect(detail.counts == "2 secrets · 1 variables · 2 without value")
+        #expect(detail.subline == "Organization · 2 secrets · 1 variable · 2 without value")
         #expect(detail.organization?.login == "Example-Org")
 
         sidebar.requestRemoval(organization)

@@ -23,6 +23,10 @@ enum Theme {
         static let buttonHeightLarge: CGFloat = 42
         static let buttonPaddingRegular: CGFloat = 16
         static let buttonPaddingLarge: CGFloat = 22
+        /// `.compact` buttons and the ⋯ square of a place header (boards Main2-Repository,
+        /// Folder-View): 26 pt, 10 pt sides.
+        static let buttonHeightCompact: CGFloat = 26
+        static let buttonPaddingCompact: CGFloat = 10
         /// Circular icon buttons (toolbar-style New, Share, Lock).
         static let iconButtonSize: CGFloat = 32
         /// Text fields and secure fields.
@@ -129,6 +133,8 @@ enum Theme {
         static let tableDateMinWidth: CGFloat = 128
         static let tableStatusMinWidth: CGFloat = 90
         static let statusDotSize: CGFloat = 6
+        /// The "changed on GitHub" ring of a place header (board Main2-Repository).
+        static let changedDotSize: CGFloat = 7
         /// Width of the provider symbol in a destination row (v0.8.0), so names line up.
         static let destinationSymbolWidth: CGFloat = 16
         /// The Add Destination sheet.
@@ -234,6 +240,8 @@ enum Theme {
     nonisolated enum Stroke {
         /// Every border and divider: 1 pt hairlines instead of shadows.
         static let hairline: CGFloat = 1
+        /// The "changed on GitHub" ring (board Main2-Repository).
+        static let changedDot: CGFloat = 1.5
         /// Dashed hairlines ("+ New Environment"): 4 pt dashes, 4 pt gaps.
         static let dashPattern: [CGFloat] = [4, 4]
         /// The outlined center cell of the brand mark, as a fraction of the mark's size.

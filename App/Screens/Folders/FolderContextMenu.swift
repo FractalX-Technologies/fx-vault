@@ -1,8 +1,8 @@
 import SwiftUI
 import VaultCore
 
-/// A folder's actions (v0.7.0): the sidebar row's context menu and the ••• of its detail
-/// header. Share as File… and Export .env… need items.
+/// A folder's actions (v0.7.0): the sidebar row's context menu and the end of its ⋯ More.
+/// Share Securely… and Export .env… need items.
 struct FolderContextMenu: View {
     let folderID: FolderID
     let main: MainViewModel
@@ -14,7 +14,7 @@ struct FolderContextMenu: View {
             main.present(.folderName(FolderNameContext(mode: .rename(folderID))))
         }
         Divider()
-        Button(FolderCopy.shareAsFile) {
+        Button(PlaceCopy.shareSecurely) {
             main.present(.shareExport(ShareExportContext(selection: .folder(folderID))))
         }
         .disabled(!hasItems)

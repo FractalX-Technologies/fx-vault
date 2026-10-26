@@ -252,12 +252,6 @@ nonisolated enum DriftCopy {
     // MARK: - Banner
 
     /// "3 changes on GitHub" (§10 Column 3).
-    static func bannerTitle(count: Int) -> String {
-        count == 1
-            ? String(localized: "drift.banner.title.one", defaultValue: "1 change on GitHub")
-            : String(localized: "drift.banner.title", defaultValue: "\(count) changes on GitHub")
-    }
-
     static func bannerConflicts(_ count: Int) -> String {
         String(localized: "drift.banner.conflicts", defaultValue: "\(count) also changed in your vault")
     }

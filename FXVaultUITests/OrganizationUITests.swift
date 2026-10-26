@@ -19,7 +19,8 @@ final class OrganizationUITests: VaultUITestCase {
         let app = launch()
         let table = try importExampleOrganization(app)
 
-        click(app.buttons[AccessibilityID.Main.organizationAdd("variable")])
+        click(app.descendants(matching: .any).matching(identifier: AccessibilityID.Place.more).firstMatch)
+        click(app.menuItems["New Variable"])
         type("zone", into: app.textFields[AccessibilityID.ItemEditor.name])
         type("eu-west-1", into: app.textViews[AccessibilityID.ItemEditor.value])
         click(app.sheets.firstMatch.buttons["Add"])

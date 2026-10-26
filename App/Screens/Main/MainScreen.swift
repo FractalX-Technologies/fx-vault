@@ -172,7 +172,7 @@ private struct DetailColumnView: View {
         VStack(spacing: 0) {
             if main.showsRecoveryKeyReminder {
                 RecoveryKeyBanner(main: main)
-                    .padding(.horizontal, Theme.Spacing.xxLargePlus)
+                    .padding(.horizontal, Theme.Spacing.xLargePlus)
                     .padding(.top, Theme.Spacing.large)
             }
             selectedPlace
@@ -195,8 +195,8 @@ private struct DetailColumnView: View {
                 VStack(spacing: 0) {
                     if let banner = main.connectivityBanner {
                         MainConnectivityBanner(banner: banner, main: main)
-                            .padding(.horizontal, Theme.Spacing.xxLargePlus)
-                            .padding(.top, Theme.Spacing.xLargePlus)
+                            .padding(.horizontal, Theme.Spacing.xLargePlus)
+                            .padding(.top, Theme.Spacing.largePlus)
                     }
                     if let repo = main.selectedRepo {
                         RepoImportPromptView(repo: repo, sidebar: main.sidebar)

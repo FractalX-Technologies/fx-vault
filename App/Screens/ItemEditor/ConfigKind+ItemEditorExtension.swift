@@ -9,14 +9,6 @@ extension ConfigKind {
         }
     }
 
-    /// "Add Secret" or "Add Variable" (the detail columns' add buttons).
-    var addTitle: String {
-        switch self {
-        case .secret: String(localized: "main.detail.addSecret", defaultValue: "Add Secret")
-        case .variable: String(localized: "main.detail.addVariable", defaultValue: "Add Variable")
-        }
-    }
-
     /// The other kind (Convert).
     var editorOpposite: ConfigKind {
         switch self {

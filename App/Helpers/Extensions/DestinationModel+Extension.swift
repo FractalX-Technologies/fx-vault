@@ -22,13 +22,6 @@ nonisolated extension DestinationProvider {
         case .azureKeyVault: "key"
         }
     }
-
-    /// How FX Vault reaches the provider, for the review and the detail header.
-    var accessDescription: String {
-        switch self {
-        case .azureKeyVault: String(localized: "destination.access.az", defaultValue: "via Azure CLI sign-in")
-        }
-    }
 }
 
 nonisolated extension DestinationModel {

@@ -199,11 +199,6 @@ final class ScopeListViewModel {
 
     // MARK: - Actions
 
-    func openSettings(_ scope: ConfigScopeSummaryModel) {
-        guard canEdit(scope), let context = environmentContext(scope) else { return }
-        dependencies.actions.present(.environmentSettings(context))
-    }
-
     func rename(_ scope: ConfigScopeSummaryModel) {
         guard canEdit(scope), let context = environmentContext(scope) else { return }
         dependencies.actions.present(.renameEnvironment(context))

@@ -65,6 +65,22 @@ final class DestinationDetailViewModel: LockObserving {
         destinationProvider()
     }
 
+    /// "Key Vault · 32 secrets" (board KV-Place; its subscription arrives with 1g); a runtime
+    /// destination adds "Runtime" and its stage.
+    var subline: String {
+        guard let destination else { return "" }
+        let counts = PlaceCopy.counts(secrets: count(of: .secret), variables: nil)
+        guard destination.repositoryID != nil else {
+            return PlaceCopy.subline([destination.provider.title, counts])
+        }
+        return PlaceCopy.subline([
+            destination.provider.title,
+            DestinationCopy.runtimeSection,
+            destination.stage ?? DestinationCopy.noStage,
+            counts,
+        ])
+    }
+
     private var place: ItemPlaceModel {
         .destination(destinationID)
     }
