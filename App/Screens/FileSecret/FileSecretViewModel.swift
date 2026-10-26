@@ -37,7 +37,8 @@ final class FileSecretViewModel: LockObserving {
     @ObservationIgnored private var isLocked = false
     @ObservationIgnored private let readFile: @Sendable (URL) async -> Result<SecretBytes, SecretFileReader.ReadError>
 
-    /// Reads a file off the main actor.
+    /// Reads a file off the main actor: `read(2)` blocks while an iCloud placeholder or a network
+    /// volume delivers the file, so it runs detached rather than freezing the sheet.
     static let readInBackground: @Sendable (URL) async -> Result<SecretBytes, SecretFileReader.ReadError> = { url in
         await Task.detached(priority: .userInitiated) {
             Result { () throws(SecretFileReader.ReadError) in
