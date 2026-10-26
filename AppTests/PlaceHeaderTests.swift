@@ -1,5 +1,6 @@
 import DestinationKit
 import Foundation
+import Synchronization
 import Testing
 import VaultCore
 import VaultData
@@ -107,6 +108,25 @@ struct PlaceHeaderTests {
         let own = try fixture.detail(ownID)
         try fixture.destinations.addItem(destinationID: ownID, kind: .secret, name: "DATABASE_URL", value: SecretBytes(utf8: "FXV_FIXTURE_SECRET"))
         #expect(await TestFixtures.eventually { own.subline == "Key Vault · 1 secret" })
+    }
+
+    /// Refresh of a repository shows "Refreshing…" on the header while gh answers: the
+    /// observed `isRefreshing` changes during the refresh and is false after it.
+    @Test func aRepositoryShowsItsRefresh() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: nil)
+        let id = try await EnvFileFixtures.importRepositoryWithMissingSecret(harness)
+        let main = harness.app.makeMainViewModel()
+        let model = try await MainConnectivityTests.open(id, in: main)
+        #expect(model.canRefresh)
+        let sawRefreshing = Mutex(false)
+        withObservationTracking {
+            _ = model.isRefreshing
+        } onChange: {
+            sawRefreshing.withLock { $0 = true }
+        }
+        await model.refresh()
+        #expect(sawRefreshing.withLock { $0 })
+        #expect(!model.isRefreshing)
     }
 
     /// A Key Vault read from Azure: Refresh says "Refreshing…" until `az` answers, and Delete
