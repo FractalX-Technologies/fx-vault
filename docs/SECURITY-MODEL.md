@@ -273,8 +273,11 @@ Copy and Services can't put it on the clipboard around `ClipboardManager`.
   plaintext on disk, in gh's arguments and on GitHub. Among the secrets, other text is a name or
   one line that opens Set value… with it, never text in the editor; several lines are refused.
   A pasted word that passes as a name is a value when `CredentialClassifier` finds a known token
-  prefix (`ghp_`, `sk_live_`, `xoxb-`, …) or high entropy with a lowercase letter (Base64, hex);
-  snake case in one case stays a name, and so does uppercase Base32 (a waiver).
+  prefix (`ghp_`, `sk_live_`, `xoxb-`, …) or high entropy with a lowercase letter (Base64, hex),
+  and when it is Base64 with its padding or a short key (8+ characters, no `_` or `-`, both
+  cases and a digit). Snake case in one case stays a name only while no `_`-separated segment
+  is 16+ characters with a digit (`aws_s3_bucket_name_2` stays; `shpat_`, `dop_v1_` or `sbp_`
+  with a hex body does not); uppercase Base32 stays a name (a waiver).
   Values become `SecretBytes`, and the clipboard is cleared if nothing was copied since (Set
   value…'s Paste button clears it too). Generate draws 32 bytes from
   `SystemRandomNumberGenerator`. Revealed values are hidden when an edit starts. Save writes

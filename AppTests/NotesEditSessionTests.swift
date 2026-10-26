@@ -191,11 +191,17 @@ struct NotesEditSessionTests {
     }
 
     /// Keep Editing leaves nothing asked for meanwhile: a ⌘K row in the edited place is selected
-    /// only after Discard, and a scope asked for in another repository is not opened later.
+    /// only after Discard, and a scope or destination asked for in another repository is not
+    /// opened later.
     @Test func keepEditingLeavesNothingPending() async throws {
         let (harness, main, detail, _) = try await Self.mainWindow()
         let otherID = try await harness.stageRepository(name: "web-app", environments: [RepoCreationEnvironmentDraftModel(name: "staging")])
         let staging = try EditorFixtures.environment(harness, otherID, named: "staging")
+        let destinationID = try harness.data.destinations.createDestination(
+            repositoryID: otherID,
+            target: .azureKeyVault(vaultName: "kv-web-app-stg", tenantID: nil),
+            stage: "staging"
+        )
         #expect(await TestFixtures.eventually { main.sidebar.owners.flatMap(\.repos).contains { $0.importedRepoID == otherID } })
         #expect(await TestFixtures.eventually { !detail.rows(of: .secret).isEmpty })
         let secret = try #require(detail.rows(of: .secret).first)
@@ -221,6 +227,12 @@ struct NotesEditSessionTests {
         main.keepEditingNotes()
         #expect(main.detail === detail)
 
+        // A linked copy's place: its destination in web-app.
+        main.open(destinationID: destinationID)
+        #expect(main.discardRequest != nil)
+        main.keepEditingNotes()
+        #expect(main.detail === detail)
+
         main.jump(to: jump)
         main.discardNotesEdit()
         #expect(main.placeViewMode == .table)
@@ -228,7 +240,10 @@ struct NotesEditSessionTests {
 
         main.sidebar.select(repositoryID: otherID)
         #expect(await TestFixtures.eventually { main.scopeList?.repositoryID == otherID && main.scopeList?.selectedScope != nil })
+        #expect(await TestFixtures.eventually { main.scopeList?.destinations.map(\.id) == [destinationID] })
         #expect(main.scopeList?.selectedScope?.scope == .repository, "staging was asked for before Keep Editing")
+        #expect(main.scopeList?.selectedDestination == nil, "the destination was asked for before Keep Editing")
+        #expect(main.destinationDetail == nil)
     }
 
     @Test func lockingDropsTheEditAndItsValues() async throws {
