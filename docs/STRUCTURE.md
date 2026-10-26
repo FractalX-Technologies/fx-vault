@@ -100,7 +100,6 @@ FXVault/
 │   │   │                            # FolderDestinationModel/View (a received copy), FolderCopy,
 │   │   │                            # FolderRepository+Extension (v0.7.0)
 │   │   ├── FileSecret/              # FileSecretScreen/ViewModel (Add file secret, 1.0 F1),
-│   │   │                            # FileSecretReader (a file straight into SecretBytes),
 │   │   │                            # FileSecretPanels, FileSecretDropTarget (a drop on a place),
 │   │   │                            # FileSecretCopy
 │   │   ├── ItemEditor/              # ItemEditorScreen/ViewModel (add, edit, fill, convert/move),
@@ -240,7 +239,8 @@ FXVault/
 │   ├── Package.resolved             # committed: GRDB.swift 7.11.1, swift-sodium 0.11.0
 │   │                                # (DestinationKit adds no dependency: Foundation URLSession)
 │   ├── Sources/
-│   │   ├── VaultCore/               # Identifiers, SecretBytes, Clock (VaultClock), Limits, Timeouts
+│   │   ├── VaultCore/               # Identifiers, SecretBytes, SecretFileReader (a chosen file
+│   │   │                            # into SecretBytes, 1.0), Clock (VaultClock), Limits, Timeouts
 │   │   │   ├── Models/              # Account, Repo, RepoCapability, Environment, ConfigItem,
 │   │   │   │                        # ConfigKind, BranchPattern, DeploymentBranchPolicy,
 │   │   │   │                        # Folder/FolderItem, ItemPlace (v0.7.0), Destination

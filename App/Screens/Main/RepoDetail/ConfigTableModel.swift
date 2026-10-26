@@ -101,10 +101,6 @@ extension ConfigTableModel {
         HeldShareCopy.chipHelp(sender: nil)
     }
 
-    var maxValueBytes: Int {
-        Limits.maxValueBytes
-    }
-
     /// A file dropped on the place (1.0 F1; board Place-FileDrop): a .p8, .pem or .json file
     /// opens Add file secret with it. Any other is refused: a drop is quick to do by mistake,
     /// and Choose… in the sheet takes every file.

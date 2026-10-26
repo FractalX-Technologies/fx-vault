@@ -177,8 +177,9 @@ struct MigrationTests {
         }
     }
 
-    /// v21: items saved before it came from no file; `file_detail` takes only valid JSON with a
-    /// 1–255 character file name and a known encoding, on the three item tables.
+    /// v21: items saved before it came from no file; `file_detail` takes only an object with a
+    /// 1–255 character file name, a known encoding, an optional count of lines and no other key,
+    /// on the three item tables.
     @Test func itemsGainAnEmptyFileDetail() throws {
         let database = try DatabaseFactory.unmigratedInMemory()
         try VaultMigrator.migrate(database, upTo: .v20KeyVaultSubscriptions)
@@ -193,14 +194,20 @@ struct MigrationTests {
                 try String.fetchOne(tx.db, sql: "SELECT file_detail FROM \(table) WHERE id = ?", arguments: [id])
             }
             #expect(detail == nil)
+            let binary = #"{"encoding":"base64","fileName":"cert.der"}"#
             let valid = #"{"fileName":"AuthKey.p8","lineCount":6,"encoding":"text"}"#
             try database.write { tx in
+                try tx.db.execute(sql: "UPDATE \(table) SET file_detail = ? WHERE id = ?", arguments: [binary, id])
                 try tx.db.execute(sql: "UPDATE \(table) SET file_detail = ? WHERE id = ?", arguments: [valid, id])
             }
             for invalid in [
                 "not json", #"{"fileName":"","encoding":"text"}"#, #"{"fileName":"AuthKey.p8","encoding":"hex"}"#,
                 #"{"encoding":"base64"}"#, #"{"fileName":7,"encoding":"text"}"#,
                 #"{"fileName":"AuthKey.p8","lineCount":"6","encoding":"text"}"#,
+                #"{"fileName":"AuthKey.p8","lineCount":6}"#,
+                #"{"fileName":"AuthKey.p8","lineCount":-1,"encoding":"text"}"#,
+                #"{"fileName":"AuthKey.p8","encoding":"text","path":"/Users/user-a/keys"}"#,
+                #"["AuthKey.p8"]"#,
             ] {
                 #expect(throws: (any Error).self, "\(table): \(invalid)") {
                     try database.write { tx in

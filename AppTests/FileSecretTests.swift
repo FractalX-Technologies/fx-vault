@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Testing
 import VaultCore
 import VaultData
@@ -39,12 +40,22 @@ struct FileSecretTests {
     }
 
     private func sheet(_ harness: TestHarness, place: ItemPlaceModel, file: URL? = nil) async -> FileSecretViewModel {
-        let model = FileSecretViewModel(
-            context: FileSecretContext(place: place, fileURL: file),
-            dependencies: harness.dependencies(recorder: ActionRecorder())
-        )
+        let model = unloadedSheet(harness, place: place, file: file)
         await model.load()
         return model
+    }
+
+    private func unloadedSheet(
+        _ harness: TestHarness,
+        place: ItemPlaceModel,
+        file: URL? = nil,
+        readFile: @escaping @Sendable (URL) async -> Result<SecretBytes, SecretFileReader.ReadError> = FileSecretViewModel.readInBackground
+    ) -> FileSecretViewModel {
+        FileSecretViewModel(
+            context: FileSecretContext(place: place, fileURL: file),
+            dependencies: harness.dependencies(recorder: ActionRecorder()),
+            readFile: readFile
+        )
     }
 
     // MARK: - The sheet
@@ -108,13 +119,13 @@ struct FileSecretTests {
         #expect(model.file == nil && !model.canSave)
         #expect(model.limitsLine == "GitHub 48,000 bytes · Key Vault 25,600")
 
-        model.choose(try files.write("AuthKey_ABC123.p8", Self.keyText))
+        await model.choose(try files.write("AuthKey_ABC123.p8", Self.keyText))
         #expect(model.names.name == "AUTH_KEY_P8")
-        model.choose(try files.write("server.pem", Self.keyText))
+        await model.choose(try files.write("server.pem", Self.keyText))
         #expect(model.names.name == "SERVER_PEM", "an untouched suggestion follows the file")
 
         model.names.name = "apns_key"
-        model.choose(try files.write("other.pem", Self.keyText))
+        await model.choose(try files.write("other.pem", Self.keyText))
         #expect(model.names.name == "APNS_KEY")
         #expect(model.file?.name == "other.pem")
 
@@ -130,25 +141,25 @@ struct FileSecretTests {
         let (harness, id) = try await EditorFixtures.stagedHarness()
         let model = await sheet(harness, place: .scope(repositoryID: id, scope: .repository))
 
-        model.choose(files.folder.appendingPathComponent("missing.p8"))
+        await model.choose(files.folder.appendingPathComponent("missing.p8"))
         #expect(model.readError == .unreadable)
-        #expect(model.fileNote == .error(FileSecretCopy.readError(.unreadable)))
-        model.choose(files.folder)
+        #expect(model.fileNote == .error(FileSecretCopy.readError(.unreadable, limit: Limits.maxValueBytes)))
+        await model.choose(files.folder)
         #expect(model.readError == .notAFile)
 
-        model.choose(try files.write("empty.pem", "\n\n"))
+        await model.choose(try files.write("empty.pem", "\n\n"))
         #expect(model.readError == nil)
         #expect(model.fileNote == .error(FileSecretCopy.empty), "only line breaks: nothing left as Exact text")
         #expect(!model.canSave)
 
         let huge = Limits.maxFileSecretReadBytes + 1
-        model.choose(try files.write("huge.json", String(repeating: "a", count: huge)))
+        await model.choose(try files.write("huge.json", String(repeating: "a", count: huge)))
         #expect(model.readError == .tooLarge(byteCount: huge))
         #expect(model.file == nil)
 
         // Just over GitHub's limit once in Base64.
         let text = String(repeating: "a", count: 36_001)
-        model.choose(try files.write("big.json", text))
+        await model.choose(try files.write("big.json", text))
         #expect(model.fileNote == nil)
         model.encoding = .base64
         let expected = FileSecretCopy.tooLarge(stored: 48_004, limit: Limits.maxValueBytes, encoding: .base64)
@@ -167,6 +178,11 @@ struct FileSecretTests {
         model.encoding = .base64
         #expect(model.fileNote == .error(FileSecretCopy.tooLarge(stored: 26_668, limit: Limits.maxKeyVaultValueBytes, encoding: .base64)))
 
+        // Too large to read: the message gives Key Vault's own limit.
+        await model.choose(try files.write("huge.json", String(repeating: "a", count: Limits.maxFileSecretReadBytes + 1)))
+        #expect(model.fileNote == .error("This file is 96,001 bytes. This place holds up to 25,600 bytes."))
+        await model.choose(try files.write("big.json", String(repeating: "a", count: 20_000)))
+
         model.encoding = .text
         model.names.name = String(repeating: "K", count: DestinationRules.maxKeyVaultNameLength + 1)
         #expect(model.nameNote?.isError == true, "Key Vault names have at most 127 characters")
@@ -176,6 +192,42 @@ struct FileSecretTests {
         #expect(model.save())
         let item = try #require(try fixture.destinations.items(destinationID: vault).first { $0.name == "BIG_JSON" })
         #expect(item.file == FileSecretModel(fileName: "big.json", lineCount: 1, encoding: .text))
+    }
+
+    /// The place loads before the dropped file is read: a lock or a closed sheet in between
+    /// reads nothing, and Cancel during a read throws away what it read.
+    @Test func aLockedOrClosedSheetReadsNoFile() async throws {
+        let (harness, id) = try await EditorFixtures.stagedHarness()
+        let place = ItemPlaceModel.scope(repositoryID: id, scope: .repository)
+        let key = URL(fileURLWithPath: "/tmp/AuthKey.p8")
+        let reads = OSAllocatedUnfairLock(initialState: 0)
+        let text = Self.keyText
+        let readFile: @Sendable (URL) async -> Result<SecretBytes, SecretFileReader.ReadError> = { _ in
+            reads.withLock { $0 += 1 }
+            try? await Task.sleep(for: .milliseconds(100))
+            return .success(SecretBytes(utf8: text))
+        }
+
+        let locked = unloadedSheet(harness, place: place, file: key, readFile: readFile)
+        locked.vaultDidLock()
+        await locked.load()
+        let closed = unloadedSheet(harness, place: place, file: key, readFile: readFile)
+        let task = Task { await closed.load() }
+        task.cancel()
+        await task.value
+        #expect(reads.withLock { $0 } == 0)
+        #expect(locked.file == nil && closed.file == nil)
+
+        let cancelled = unloadedSheet(harness, place: place, readFile: readFile)
+        let reading = Task { await cancelled.choose(key) }
+        while !cancelled.isReading {
+            await Task.yield()
+        }
+        #expect(!cancelled.canSave, "nothing to save while the file is read")
+        cancelled.dropFile()
+        await reading.value
+        #expect(reads.withLock { $0 } == 1)
+        #expect(cancelled.file == nil && !cancelled.isReading)
     }
 
     @Test func lockingWipesTheFile() async throws {

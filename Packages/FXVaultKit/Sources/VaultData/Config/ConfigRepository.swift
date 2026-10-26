@@ -600,6 +600,8 @@ public struct ConfigRepository: Sendable {
         if let value = try ConfigFieldCipher.openValue(of: record, keys: keys) {
             defer { value.wipe() }
             try ConfigFieldCipher.setValue(value, on: &copy, keys: keys)
+            // After setValue, which drops the label of a new value: the copy holds the same file.
+            copy.file = record.file
         }
         try store.insertItem(copy, in: tx)
     }

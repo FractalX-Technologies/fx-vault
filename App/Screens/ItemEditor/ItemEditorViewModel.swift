@@ -741,7 +741,7 @@ final class ItemEditorViewModel: LockObserving {
 
     /// The largest value the place stores: 25,600 bytes in a Key Vault, GitHub's limit elsewhere.
     var maxValueBytes: Int {
-        destination.map { DestinationRules.maxValueBytes(for: $0.provider) } ?? Limits.maxValueBytes
+        DestinationRules.maxValueBytes(for: context.place, provider: destination?.provider)
     }
 
     /// True when the save offers to update the item's linked copies too (a new value).

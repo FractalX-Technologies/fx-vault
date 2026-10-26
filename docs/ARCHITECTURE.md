@@ -1333,8 +1333,9 @@ AppTests).
     and on lock.
   - `FileSecret` (1.0 F1): `FileSecretViewModel` (`LockObserving`) adds one secret from a file
     chosen in the sheet or dropped on a place (`.fileSecretDropTarget`, `ConfigTableModel.dropFile`,
-    `.p8`, `.pem` and `.json` only). `FileSecretReader` reads a regular file of at most
-    `Limits.maxFileSecretReadBytes` straight into `SecretBytes`; `FileSecretRules` (VaultCore)
+    `.p8`, `.pem` and `.json` only). `SecretFileReader` (VaultCore, shared with the `.env`
+    import) reads a regular file of at most `Limits.maxFileSecretReadBytes` straight into
+    `SecretBytes`, off the main actor; `FileSecretRules` (VaultCore)
     measures it, picks Exact text or Base64 (binary files always Base64), checks the place's
     limit after Base64 and suggests a name. The name field and the save are an inner
     `ItemEditorViewModel` (`addItem(value:file:)`), so the name rules, Key Vault's included, are

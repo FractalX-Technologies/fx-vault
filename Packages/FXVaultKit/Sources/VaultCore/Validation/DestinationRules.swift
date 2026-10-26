@@ -78,6 +78,16 @@ public enum DestinationRules {
         }
     }
 
+    /// Largest value `place` stores: GitHub's for a repository scope or a folder, its provider's
+    /// for a destination. `provider` nil (not read yet) gives the smallest provider limit.
+    public static func maxValueBytes(for place: ItemPlaceModel, provider: DestinationProvider?) -> Int {
+        guard case .destination = place else { return Limits.maxValueBytes }
+        if let provider {
+            return maxValueBytes(for: provider)
+        }
+        return DestinationProvider.allCases.map(maxValueBytes(for:)).min() ?? Limits.maxValueBytes
+    }
+
     // MARK: - Targets
 
     /// Validates a target's identifiers and returns it with names trimmed.

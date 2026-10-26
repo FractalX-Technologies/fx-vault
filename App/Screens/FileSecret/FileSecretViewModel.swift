@@ -19,7 +19,10 @@ final class FileSecretViewModel: LockObserving {
     let names: ItemEditorViewModel
     private(set) var file: FileModel?
     /// Why the last chosen or dropped file could not be read.
-    private(set) var readError: FileSecretReader.ReadError?
+    private(set) var readError: SecretFileReader.ReadError?
+    /// A chosen or dropped file is being read (off the main actor: an iCloud placeholder can
+    /// take seconds to download).
+    private(set) var isReading = false
     /// The choice for a text file; a binary file is stored as Base64 whatever it says.
     var encoding: FileSecretEncoding = .text
     var alert: ErrorPresentationModel?
@@ -28,14 +31,25 @@ final class FileSecretViewModel: LockObserving {
     @ObservationIgnored private var bytes: SecretBytes?
     /// The name the last file suggested: the next file replaces it, unlike a typed name.
     @ObservationIgnored private var suggestedName: String?
-    @ObservationIgnored private let readFile: (URL) throws(FileSecretReader.ReadError) -> SecretBytes
+    /// Bumped by every new file, Cancel and the lock, so a read still running is thrown away.
+    @ObservationIgnored private var readGeneration = 0
+    /// A sheet never outlives a lock: once set, nothing more is read.
+    @ObservationIgnored private var isLocked = false
+    @ObservationIgnored private let readFile: @Sendable (URL) async -> Result<SecretBytes, SecretFileReader.ReadError>
+
+    /// Reads a file off the main actor.
+    static let readInBackground: @Sendable (URL) async -> Result<SecretBytes, SecretFileReader.ReadError> = { url in
+        await Task.detached(priority: .userInitiated) {
+            Result { () throws(SecretFileReader.ReadError) in
+                try SecretFileReader.read(url, maxBytes: Limits.maxFileSecretReadBytes)
+            }
+        }.value
+    }
 
     init(
         context: FileSecretContext,
         dependencies: FeatureDependencies,
-        readFile: @escaping (URL) throws(FileSecretReader.ReadError) -> SecretBytes = { url throws(FileSecretReader.ReadError) in
-            try FileSecretReader.read(url)
-        }
+        readFile: @escaping @Sendable (URL) async -> Result<SecretBytes, SecretFileReader.ReadError> = FileSecretViewModel.readInBackground
     ) {
         self.context = context
         self.readFile = readFile
@@ -46,25 +60,35 @@ final class FileSecretViewModel: LockObserving {
     /// Reads the place, then the dropped file. Call once when the sheet opens.
     func load() async {
         await names.load()
-        if let url = context.fileURL {
-            choose(url)
-        }
+        // The vault locked or the sheet closed while the place loaded: the file is not read.
+        guard !isLocked, !Task.isCancelled, let url = context.fileURL else { return }
+        await choose(url)
     }
 
     /// Reads `url` in place of the current file. Its name becomes the secret's name unless the
     /// user typed one.
-    func choose(_ url: URL) {
+    func choose(_ url: URL) async {
+        guard !isLocked else { return }
         dropFile()
-        let read: SecretBytes
-        do {
-            read = try readFile(url)
-        } catch {
-            readError = error
+        readError = nil
+        let generation = readGeneration
+        isReading = true
+        let result = await readFile(url)
+        guard generation == readGeneration, !isLocked else {
+            if case .success(let read) = result { read.wipe() }
             return
         }
-        readError = nil
+        isReading = false
+        let read: SecretBytes
+        switch result {
+        case .failure(let error):
+            readError = error
+            return
+        case .success(let bytes):
+            read = bytes
+        }
         bytes = read
-        let fileName = url.lastPathComponent
+        let fileName = FileSecretRules.fileName(url.lastPathComponent)
         file = FileModel(name: fileName, facts: FileSecretRules.facts(of: read))
         if names.name.isEmpty || names.name == suggestedName {
             suggestedName = FileSecretRules.suggestedName(forFileName: fileName)
@@ -111,7 +135,7 @@ final class FileSecretViewModel: LockObserving {
     /// The file could not be read, is empty, or is over the place's limit once stored.
     var fileNote: ConfigEditorNoteModel? {
         if let readError {
-            return .error(FileSecretCopy.readError(readError))
+            return .error(FileSecretCopy.readError(readError, limit: names.maxValueBytes))
         }
         guard let file else { return nil }
         let stored = FileSecretRules.storedByteCount(of: file.facts, as: storedEncoding)
@@ -129,7 +153,7 @@ final class FileSecretViewModel: LockObserving {
     }
 
     var canSave: Bool {
-        names.loadState == .ready && canEdit && !isSaving && file != nil && fileNote == nil && names.isNameValid
+        names.loadState == .ready && canEdit && !isSaving && !isReading && file != nil && fileNote == nil && names.isNameValid
     }
 
     // MARK: - Save
@@ -154,14 +178,18 @@ final class FileSecretViewModel: LockObserving {
 
     // MARK: - Hygiene
 
-    /// Wipes the file's bytes and forgets the file (save, Cancel, lock, another file).
+    /// Wipes the file's bytes and forgets the file (save, Cancel, lock, another file), and any
+    /// read still running.
     func dropFile() {
+        readGeneration += 1
+        isReading = false
         bytes?.wipe()
         bytes = nil
         file = nil
     }
 
     func vaultDidLock() {
+        isLocked = true
         dropFile()
         readError = nil
     }

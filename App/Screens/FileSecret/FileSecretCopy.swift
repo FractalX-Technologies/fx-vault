@@ -67,7 +67,8 @@ nonisolated enum FileSecretCopy {
 
     static let empty = String(localized: "fileSecret.error.empty", defaultValue: "This file is empty: there is nothing to store.")
 
-    static func readError(_ error: FileSecretReader.ReadError) -> String {
+    /// Why a file was not read; `limit` is the place's (25,600 bytes in a Key Vault).
+    static func readError(_ error: SecretFileReader.ReadError, limit: Int) -> String {
         switch error {
         case .unreadable:
             String(localized: "fileSecret.error.unreadable", defaultValue: "FX Vault could not read this file.")
@@ -76,8 +77,10 @@ nonisolated enum FileSecretCopy {
         case .tooLarge(let byteCount):
             String(
                 localized: "fileSecret.error.tooLargeToRead",
-                defaultValue: "This file is \(bytes(byteCount)). A secret holds up to \(bytes(Limits.maxValueBytes))."
+                defaultValue: "This file is \(bytes(byteCount)). This place holds up to \(bytes(limit))."
             )
+        case .changed:
+            String(localized: "fileSecret.error.changed", defaultValue: "This file changed while FX Vault read it. Choose it again.")
         }
     }
 

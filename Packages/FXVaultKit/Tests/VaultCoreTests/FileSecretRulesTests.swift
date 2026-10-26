@@ -87,6 +87,10 @@ struct FileSecretRulesTests {
         // Cut by Unicode scalars, as SQLite's length() counts them: "é" written as e + U+0301.
         let long = FileSecretRules.model(fileName: String(repeating: "e\u{301}", count: 200), facts: facts, encoding: .text)
         #expect(long.fileName.unicodeScalars.count == Limits.maxFileSecretNameLength)
+        // No bidi override or invisible character reaches the table's chip.
+        #expect(FileSecretRules.fileName("AuthKey\u{202E}8p.txt") == "AuthKey8p.txt")
+        #expect(FileSecretRules.fileName("Auth\u{200B}Key.p8") == "AuthKey.p8")
+        #expect(FileSecretRules.fileName("\u{200B}\u{202E}") == FileSecretRules.unnamedFile)
     }
 
     @Test(arguments: [

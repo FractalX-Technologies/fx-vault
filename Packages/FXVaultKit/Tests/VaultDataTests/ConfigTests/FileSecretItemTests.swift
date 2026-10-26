@@ -5,7 +5,8 @@ import VaultCore
 import VaultStore
 
 /// File secrets (1.0 F1): the file label (`file_detail`, v21) follows the value in the three item
-/// tables. It is kept by a rename, a move, a copy and a linked update, and dropped by a new value.
+/// tables. It is kept by a rename, a move, a copy, a linked update and Duplicate Environment, and
+/// dropped by a new value.
 @Suite("File secret items")
 struct FileSecretItemTests {
     static let file = FileSecretModel(fileName: "AuthKey.p8", lineCount: 6, encoding: .text)
@@ -29,6 +30,20 @@ struct FileSecretItemTests {
 
         try harness.config.editValue(renamed, value: SecretBytes(utf8: ConfigFixture.valueB))
         #expect(try harness.record(renamed).file == nil)
+    }
+
+    @Test func duplicateEnvironmentKeepsTheFile() async throws {
+        let harness = try await ConfigHarness.make()
+        let repo = try harness.seedRepository()
+        let staging = try harness.config.createEnvironment(in: repo.id, name: "staging")
+        _ = try harness.config.addItem(
+            repositoryID: repo.id, scope: .environment(staging), kind: .secret, name: "APNS_KEY",
+            value: SecretBytes(utf8: ConfigFixture.valueA), file: Self.file
+        )
+        let production = try harness.config.duplicateEnvironment(staging, as: "production")
+        let copy = try #require(try harness.store.fetchItemRecords(repositoryID: repo.id, scope: .environment(production)).first)
+        #expect(copy.name == "APNS_KEY")
+        #expect(copy.file == Self.file)
     }
 
     @Test func aSyncedItemKeepsItsFileThroughARenameAndAMove() async throws {
