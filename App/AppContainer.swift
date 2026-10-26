@@ -14,7 +14,7 @@ import VaultData
 ///   (``VaultDataComponents/makeOffline(session:runner:clock:sandbox:)``). SwiftUI previews use
 ///   it, and so does the app while it hosts the test bundle (nothing under `~/Library`, no shell
 ///   probe, no gh).
-/// - `test`: unit tests pass their own fakes to ``init(mode:vaultManager:data:preferences:clipboard:autoLock:ghStatusProbe:dockBadge:passphraseGenerator:vaultDirectory:clock:connectivity:loginItem:)``.
+/// - `test`: unit tests pass their own fakes to ``init(mode:vaultManager:data:preferences:clipboard:autoLock:ghStatusProbe:dockBadge:passphraseGenerator:vaultDirectory:clock:connectivity:loginItem:quickVaultHotKey:)``.
 ///
 /// Order matters: the session first, then the repositories (``data``), then `VaultManager`,
 /// whose `onLock` purges the token cache of ``VaultDataComponents/github`` (§5.8 Phase A).
@@ -75,6 +75,8 @@ final class AppContainer {
     let keyVaultSubscriptions: KeyVaultSubscriptionLookup
     /// Open at login: `SMAppService` live, recorded everywhere else (never registers a test host).
     let loginItem: any LoginItemControlling
+    /// The quick vault's global shortcut: Carbon live, recorded everywhere else (1.0 Q1).
+    let quickVaultHotKey: any QuickVaultHotKeyRegistering
 
     init(
         mode: Mode,
@@ -89,7 +91,8 @@ final class AppContainer {
         vaultDirectory: URL?,
         clock: any VaultClock,
         connectivity: ConnectivityMonitor? = nil,
-        loginItem: (any LoginItemControlling)? = nil
+        loginItem: (any LoginItemControlling)? = nil,
+        quickVaultHotKey: (any QuickVaultHotKeyRegistering)? = nil
     ) {
         self.mode = mode
         self.vaultManager = vaultManager
@@ -106,6 +109,7 @@ final class AppContainer {
         self.clock = clock
         self.connectivity = connectivity ?? ConnectivityMonitor(source: FixedNetworkPathSource(), clock: clock)
         self.loginItem = loginItem ?? RecordedLoginItem()
+        self.quickVaultHotKey = quickVaultHotKey ?? RecordedQuickVaultHotKey()
     }
 
     /// Whether this container behaves as the running app: the real vault, keychain and gh, or
@@ -177,7 +181,8 @@ final class AppContainer {
             vaultDirectory: session.databaseDirectory,
             clock: clock,
             connectivity: ConnectivityMonitor(source: NWPathMonitorSource(), clock: clock),
-            loginItem: LoginItemManager()
+            loginItem: LoginItemManager(),
+            quickVaultHotKey: CarbonQuickVaultHotKey()
         )
     }
 

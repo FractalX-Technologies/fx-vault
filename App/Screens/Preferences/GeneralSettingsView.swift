@@ -19,7 +19,9 @@ struct GeneralSettingsView: View {
                     shortcutLabel,
                     detail: String(localized: "settings.general.quickVault.detail", defaultValue: "Opens the quick vault from the notch")
                 ) {
-                    QuickVaultShortcutRecorder(title: shortcutLabel, shortcut: $viewModel.quickVaultShortcut)
+                    QuickVaultShortcutRecorder(title: shortcutLabel, shortcut: $viewModel.quickVaultShortcut) { isRecording in
+                        viewModel.isRecordingShortcut = isRecording
+                    }
                         .frame(width: Theme.Layout.settingsPopUpWidth)
                         .accessibilityIdentifier(AccessibilityID.Settings.quickVaultShortcut)
                 }

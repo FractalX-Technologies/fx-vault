@@ -96,6 +96,10 @@ final class AppViewModel {
     /// Review Sync… in the menu bar asked for the Sync review; the main window opens it once the
     /// vault is unlocked (``takeSyncReviewRequest()``).
     private(set) var isSyncReviewRequested = false
+    /// The quick vault's shortcut came while locked: the quick vault opens after the unlock (1.0 Q1).
+    private(set) var isQuickVaultRequested = false
+    /// The place the quick vault's Expand asked the main window for (``takePlaceRequest()``).
+    private(set) var requestedPlace: JumpPlaceTarget?
 
     @ObservationIgnored let container: AppContainer
     @ObservationIgnored private var lockObservers: [WeakLockObserver] = []
@@ -113,8 +117,10 @@ final class AppViewModel {
     @ObservationIgnored private(set) lazy var lockScreen = LockViewModel(app: self)
     /// The unlock UI while locked (1.0). Nil without side effects (tests, previews), where the
     /// window's lock screen stays.
-    @ObservationIgnored private(set) lazy var island: NotchIslandController? =
-        container.hasSideEffects ? NotchIslandController(lock: lockScreen) : nil
+    @ObservationIgnored private(set) lazy var island: NotchIslandController? = makeIsland()
+    /// The quick vault (1.0 Q1); its panel exists only with side effects (``quickVaultPanel``).
+    @ObservationIgnored private(set) lazy var quickVault = QuickVaultViewModel(app: self)
+    @ObservationIgnored private var quickVaultPanel: QuickVaultController?
 
     /// The file extension of share files (§9.1; UTType `io.fractalx.fxvault.share`).
     static let shareFileExtension = "fxvault"
@@ -134,6 +140,10 @@ final class AppViewModel {
             await self?.refreshGHStatus()
         }
         observePendingCounts()
+        if container.hasSideEffects {
+            quickVaultPanel = QuickVaultController(model: quickVault)
+        }
+        registerQuickVaultHotKey()
         if phase == .unlocked {
             startReconciliation()
         }
@@ -181,10 +191,88 @@ final class AppViewModel {
         requestMainWindow()
     }
 
+    private func makeIsland() -> NotchIslandController? {
+        guard container.hasSideEffects else { return nil }
+        let island = NotchIslandController(lock: lockScreen)
+        island.onQuickVaultRequestEnded = { [weak self] in
+            self?.endQuickVaultRequest()
+        }
+        return island
+    }
+
+    // MARK: - Quick vault (1.0 Q1)
+
+    /// Registers the shortcut of Settings › General with macOS; again after it changes.
+    func registerQuickVaultHotKey() {
+        container.quickVaultHotKey.register(container.preferences.quickVaultShortcut) { [weak self] in
+            self?.toggleQuickVault()
+        }
+    }
+
+    /// While Settings records a new shortcut, the old one must not open the quick vault.
+    func setQuickVaultHotKeySuspended(_ isSuspended: Bool) {
+        if isSuspended {
+            container.quickVaultHotKey.unregister()
+        } else {
+            registerQuickVaultHotKey()
+        }
+    }
+
+    /// The shortcut: the quick vault, or away when it is open.
+    func toggleQuickVault() {
+        if phase == .unlocked, quickVault.isOpen {
+            quickVault.close(returnsFocus: true)
+        } else {
+            openQuickVault()
+        }
+    }
+
+    /// The menu bar's Quick Vault and the shortcut. While locked the island unlocks first, then
+    /// the quick vault opens; before a vault exists, the window shows onboarding.
+    func openQuickVault() {
+        switch phase {
+        case .onboarding:
+            requestMainWindow()
+        case .unlocked:
+            guard !quickVault.isOpen else { return }
+            quickVault.open()
+        case .locked:
+            isQuickVaultRequested = true
+            // Recovery and the Touch ID offer are in the window; the quick vault follows them.
+            guard unlocksInIsland, let island else {
+                requestMainWindow()
+                return
+            }
+            island.present(opensQuickVault: true)
+            NSApp.activate()
+            mainWindow?.close()
+        }
+    }
+
+    /// The island went away (FX Vault resigned active): a later unlock opens the window again.
+    func endQuickVaultRequest() {
+        isQuickVaultRequested = false
+    }
+
+    /// Expand in the quick vault: the main window comes forward on `target`.
+    func requestPlace(_ target: JumpPlaceTarget) {
+        guard phase == .unlocked else { return }
+        requestedPlace = target
+        requestMainWindow()
+    }
+
+    /// Clears and returns Expand's place, once the vault is unlocked.
+    func takePlaceRequest() -> JumpPlaceTarget? {
+        guard phase == .unlocked, let target = requestedPlace else { return nil }
+        requestedPlace = nil
+        return target
+    }
+
     private func runLockPhaseB() {
         // In memory only: after a lock the main window follows the unlock, like a relaunch.
         isFirstConnectPending = false
         isSyncReviewRequested = false
+        requestedPlace = nil
         lockObservers.removeAll { $0.observer == nil }
         for entry in lockObservers {
             entry.observer?.vaultDidLock()
@@ -231,8 +319,15 @@ final class AppViewModel {
         }
         container.autoLock.recordInteraction()
         phase = .unlocked
-        island?.dismissUnlocked()
-        requestMainWindow()
+        if isQuickVaultRequested {
+            // The island makes way for the quick vault in the same place, without "Unlocked".
+            isQuickVaultRequested = false
+            island?.dismiss()
+            quickVault.open()
+        } else {
+            island?.dismissUnlocked()
+            requestMainWindow()
+        }
         startReconciliation()
     }
 
@@ -525,6 +620,7 @@ final class AppViewModel {
     /// **Open FX Vault** (the menu bar item): the main window, or the island while locked (the
     /// window would only close again).
     func openFXVault() {
+        isQuickVaultRequested = false
         guard unlocksInIsland, island != nil else {
             requestMainWindow()
             return

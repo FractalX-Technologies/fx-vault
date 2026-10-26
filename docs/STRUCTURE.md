@@ -44,6 +44,10 @@ FXVault/
 │   │   │                            # password unlock), PasswordRequiredReason+Extension
 │   │   ├── MenuBar/                 # MenuBarContent, MenuBarCopy (the menu bar item, 1.0 M1;
 │   │   │                            # board MenuBar)
+│   │   ├── QuickVault/              # QuickVaultController (panel), QuickVaultView,
+│   │   │                            # QuickVaultViewModel, QuickVaultPlaceViewModel (Copy),
+│   │   │                            # QuickVaultModels (places, recents), QuickVaultCopy
+│   │   │                            # (1.0 Q1; boards QuickVault-*)
 │   │   ├── GHSetup/                 # GHSetupScreen/ViewModel (install, upgrade, untrusted, Trust
 │   │   │                            # This gh, login, GH_TOKEN, unusable accounts, Copy
 │   │   │                            # Diagnostics, Check Again, Not Now)
@@ -180,7 +184,8 @@ FXVault/
 │   │                                # PreferencesManager (+ QuickVaultShortcutModel),
 │   │                                # LoginItemManager, DockBadgeManager, GHStatusProbe,
 │   │                                # ConnectivityMonitor (NWPathMonitor, path sources),
-│   │                                # GitHubReachability
+│   │                                # GitHubReachability, QuickVaultHotKey (Carbon hot key,
+│   │                                # recorded in tests)
 │   ├── Helpers/
 │   │   ├── AppIdentity.swift        # FX Vault vs FX Vault Dev (bundle id, window title, DEV)
 │   │   ├── AppLog.swift             # os.Logger categories

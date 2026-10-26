@@ -32,6 +32,13 @@ the secrets your code reads at runtime in Azure Key Vault.
   leaves them for later. **Refresh** (⋯ menu) reads the organization again and marks what
   changed on GitHub; Review keeps your version or takes GitHub's for each. Needs
   `admin:org` and the organization's admin role (see Settings › Accounts).
+- **Quick vault.** From any app, the shortcut of Settings › General (⌃⌥V) or **Quick Vault** in
+  the menu bar opens a search under the notch: your places, recent ones first, and secrets and
+  variables by name. ↩ shows a place's lines; **Copy** puts a variable on the clipboard at once
+  and a secret after Touch ID or the master password (the clipboard clears after 30 seconds);
+  ⌘↩ opens the place in the main window. It is hidden from screen capture and closes when you
+  switch away or FX Vault locks. While locked, the island asks for the unlock first, then opens
+  it.
 - **Secrets and variables, repository and environment level.** Add, edit, rename, convert
   between secret and variable, move between scopes, fill values GitHub does not return, revert
   and delete. Secrets stay masked until you reveal them and re-mask after 30 seconds.
@@ -169,8 +176,8 @@ says **Unlocked** and the main window opens; locking (⌃⌘L, sleep, idle) clos
 **Recovery Key…** in the island opens the recovery window. **Settings › General › Open at
 login** starts FX Vault, locked, when you log in to your Mac.
 
-FX Vault's dot grid in the menu bar opens the same island when locked (**Open FX Vault**), and
-has **Review Sync · N pending…** (the Sync review, after the unlock), **Lock Now**,
+FX Vault's dot grid in the menu bar has **Quick Vault** (with its shortcut), opens the same
+island when locked (**Open FX Vault**), and has **Review Sync · N pending…** (the Sync review, after the unlock), **Lock Now**,
 **Settings…** and **Quit**. It shows counts only, never names or values.
 
 ### Touch ID

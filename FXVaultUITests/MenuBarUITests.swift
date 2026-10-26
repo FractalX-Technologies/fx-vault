@@ -5,7 +5,7 @@ import XCTest
 final class MenuBarUITests: VaultUITestCase {
     /// The UI-testing build is a Debug build ("FX Vault Dev"), and its onboarded vault has
     /// nothing pending, so Review Sync is hidden.
-    private let expectedTitles = ["Open FX Vault Dev", "Lock Now", "Settings…", "Quit FX Vault Dev"]
+    private let expectedTitles = ["Quick Vault", "Open FX Vault Dev", "Lock Now", "Settings…", "Quit FX Vault Dev"]
     // A `MenuBarExtra` doesn't pass `.accessibilityIdentifier` to its menu items (Xcode 27,
     // 2026-10-26): they are found by the titles checked above.
     private let openTitle = "Open FX Vault Dev"
@@ -29,16 +29,6 @@ final class MenuBarUITests: VaultUITestCase {
         type(password, into: field)
         field.typeKey(.return, modifierFlags: [])
         _ = mainSidebar(app)
-    }
-
-    /// Clicks the menu bar item and returns its open menu.
-    @MainActor
-    private func openMenuBarMenu(_ app: XCUIApplication) -> XCUIElement {
-        let item = app.statusItems.firstMatch
-        click(item)
-        let menu = item.menus.firstMatch
-        XCTAssertTrue(menu.waitForExistence(timeout: timeout), "The menu bar item opened no menu")
-        return menu
     }
 
     /// The titles of `menu`'s items, separators left out.

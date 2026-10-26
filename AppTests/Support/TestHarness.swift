@@ -124,6 +124,7 @@ final class TestHarness {
     let ticker = FakeTicker()
     let dockBadge = RecordedDockBadge()
     let loginItem = RecordedLoginItem()
+    let hotKey = RecordedQuickVaultHotKey()
     /// The network path the connectivity monitor sees (nothing is reported until a test sends
     /// one, so the app starts online).
     let pathSource = FakeNetworkPathSource()
@@ -207,7 +208,8 @@ final class TestHarness {
             vaultDirectory: nil,
             clock: clock,
             connectivity: ConnectivityMonitor(source: pathSource, clock: networkClock),
-            loginItem: loginItem
+            loginItem: loginItem,
+            quickVaultHotKey: hotKey
         )
         app = AppViewModel(container: container)
         await app.ghProbeTask?.value

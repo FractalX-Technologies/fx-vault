@@ -11,6 +11,9 @@ final class NotchIslandController {
     private var panel: NotchIslandPanel?
     private var hideTask: Task<Void, Never>?
     private var activationObserver: NSObjectProtocol?
+    private var resignObserver: NSObjectProtocol?
+    /// The quick vault's request ended with the island out of sight (1.0 Q1).
+    var onQuickVaultRequestEnded: (() -> Void)?
 
     init(lock: LockViewModel) {
         model = NotchIslandModel(lock: lock)
@@ -26,15 +29,34 @@ final class NotchIslandController {
                 self?.showIfPresented()
             }
         }
+        resignObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.endQuickVaultRequest()
+            }
+        }
     }
 
     /// Starts a lock's island: on screen now when FX Vault is active, else at its next activation
-    /// (a screen lock or sleep must not bring FX Vault forward).
-    func present() {
+    /// (a screen lock or sleep must not bring FX Vault forward). `opensQuickVault`: the quick
+    /// vault's shortcut asked, and it opens after the unlock (board QuickVault-Locked).
+    func present(opensQuickVault: Bool = false) {
         hideTask?.cancel()
         model.reset()
+        model.opensQuickVault = opensQuickVault
         isPresented = true
         showIfPresented()
+    }
+
+    /// Another app came forward: the shortcut's request was for then, so a later unlock opens the
+    /// window. Not during an unlock (a Touch ID prompt may take the focus).
+    private func endQuickVaultRequest() {
+        guard model.opensQuickVault, !model.lock.isUnlocking else { return }
+        model.opensQuickVault = false
+        onQuickVaultRequestEnded?()
     }
 
     /// Shows "Unlocked" for a moment, then goes away.

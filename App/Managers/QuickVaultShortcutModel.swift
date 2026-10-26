@@ -1,5 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
+import SwiftUI
 
 /// The global shortcut that opens the quick vault (board Settings-General; default ⌃⌥V).
 /// Settings › General records it and ``PreferencesManager`` stores it; the quick vault registers
@@ -107,5 +108,40 @@ struct QuickVaultShortcutModel: Hashable, Sendable {
         kVK_Home: "↖", kVK_End: "↘", kVK_PageUp: "⇞", kVK_PageDown: "⇟",
         kVK_F1: "F1", kVK_F2: "F2", kVK_F3: "F3", kVK_F4: "F4", kVK_F5: "F5", kVK_F6: "F6",
         kVK_F7: "F7", kVK_F8: "F8", kVK_F9: "F9", kVK_F10: "F10", kVK_F11: "F11", kVK_F12: "F12",
+    ]
+}
+
+extension QuickVaultShortcutModel {
+    /// The same keys as a menu item's shortcut (the menu bar's Quick Vault); nil for a key a
+    /// menu can't show.
+    var keyboardShortcut: KeyboardShortcut? {
+        let key: KeyEquivalent? = if let special = Self.keyEquivalents[Int(keyCode)] {
+            special
+        } else if let function = Self.functionKeys.firstIndex(of: Int(keyCode)),
+                  let scalar = UnicodeScalar(NSF1FunctionKey + function) {
+            KeyEquivalent(Character(scalar))
+        } else if self.key.count == 1, let character = self.key.lowercased().first {
+            KeyEquivalent(character)
+        } else {
+            nil
+        }
+        guard let key else { return nil }
+        var flags: SwiftUI.EventModifiers = []
+        if modifiers.contains(.control) { flags.insert(.control) }
+        if modifiers.contains(.option) { flags.insert(.option) }
+        if modifiers.contains(.shift) { flags.insert(.shift) }
+        if modifiers.contains(.command) { flags.insert(.command) }
+        return KeyboardShortcut(key, modifiers: flags)
+    }
+
+    private static let keyEquivalents: [Int: KeyEquivalent] = [
+        kVK_Space: .space, kVK_Return: .return, kVK_Tab: .tab, kVK_Delete: .delete, kVK_ForwardDelete: .deleteForward,
+        kVK_LeftArrow: .leftArrow, kVK_RightArrow: .rightArrow, kVK_UpArrow: .upArrow, kVK_DownArrow: .downArrow,
+        kVK_Home: .home, kVK_End: .end, kVK_PageUp: .pageUp, kVK_PageDown: .pageDown,
+    ]
+
+    /// F1 to F12, in order: their characters follow `NSF1FunctionKey`.
+    private static let functionKeys = [
+        kVK_F1, kVK_F2, kVK_F3, kVK_F4, kVK_F5, kVK_F6, kVK_F7, kVK_F8, kVK_F9, kVK_F10, kVK_F11, kVK_F12,
     ]
 }

@@ -8,6 +8,8 @@ import SwiftUI
 struct QuickVaultShortcutRecorder: View {
     let title: String
     @Binding var shortcut: QuickVaultShortcutModel
+    /// Listening starts or ends: the shortcut is off while the box listens.
+    var onRecordingChange: (Bool) -> Void = { _ in }
     @State private var isRecording = false
     @State private var monitor: Any?
 
@@ -49,6 +51,7 @@ struct QuickVaultShortcutRecorder: View {
 
     private func startRecording() {
         isRecording = true
+        onRecordingChange(true)
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             // AppKit calls local monitors on the main thread; the event stays outside.
             let keyCode = event.keyCode
@@ -79,7 +82,9 @@ struct QuickVaultShortcutRecorder: View {
             NSEvent.removeMonitor(monitor)
         }
         monitor = nil
+        guard isRecording else { return }
         isRecording = false
+        onRecordingChange(false)
     }
 }
 

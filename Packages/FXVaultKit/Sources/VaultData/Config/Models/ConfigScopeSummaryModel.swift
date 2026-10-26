@@ -47,11 +47,14 @@ public struct RepoPendingCountModel: Sendable, Hashable {
     /// Live secrets without a value, at the repository level and in its live environments: the
     /// sidebar's count after the repository (1.0 D6d, board Main2-Repository).
     public let valueMissing: Int
+    /// The live scopes with a change to push: the quick vault's dot per place (1.0 Q1).
+    public let pendingScopes: Set<ConfigScope>
 
-    public init(pending: Int, blocked: Int, valueMissing: Int = 0) {
+    public init(pending: Int, blocked: Int, valueMissing: Int = 0, pendingScopes: Set<ConfigScope> = []) {
         self.pending = pending
         self.blocked = blocked
         self.valueMissing = valueMissing
+        self.pendingScopes = pendingScopes
     }
 }
 

@@ -180,6 +180,12 @@ enum Theme {
         static let jumpPaletteFieldHeight: CGFloat = 48
         static let jumpPaletteRowHeight: CGFloat = 34
         static let jumpPaletteListMaxHeight: CGFloat = 340
+        /// The quick vault from the notch (boards QuickVault-*): as wide as ⌘K, with a list of a
+        /// fixed height, so the island keeps its size between search and a place.
+        static let quickVaultWidth: CGFloat = 600
+        static let quickVaultFieldHeight: CGFloat = 36
+        static let quickVaultLineHeight: CGFloat = 27
+        static let quickVaultListHeight: CGFloat = 300
         /// Detail table columns. Name and value are flexible from their minimums; the name starts
         /// at its ideal width so a long mono name ("STRIPE_SECRET_KEY") is not truncated; the value
         /// fits eight mask dots with the eye, or the "Value missing" chip. Date and status are

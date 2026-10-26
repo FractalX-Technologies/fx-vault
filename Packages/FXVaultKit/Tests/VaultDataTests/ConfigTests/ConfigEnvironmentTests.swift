@@ -276,6 +276,31 @@ struct ConfigEnvironmentTests {
         #expect(try harness.config.pendingCounts().counts(for: repo.id).valueMissing == 2)
         #expect(try harness.config.pendingCounts().counts(for: RepoID()).valueMissing == 0)
     }
+
+    /// The quick vault's dot (1.0 Q1): the live scopes with a change to push, not the
+    /// repository as a whole.
+    @Test func aRepositoryNamesItsScopesWithChanges() async throws {
+        let harness = try await ConfigHarness.make()
+        let repo = try harness.seedRepository()
+        let staging = try harness.config.createEnvironment(in: repo.id, name: "staging")
+        let production = try harness.config.createEnvironment(in: repo.id, name: "production")
+        try harness.add(repo, "API_KEY", value: ConfigFixture.valueA, scope: .environment(staging))
+        try harness.markSynced(repo)
+        #expect(try harness.config.pendingCounts().counts(for: repo.id).pendingScopes.isEmpty)
+
+        try harness.add(repo, "NEW_KEY", value: ConfigFixture.valueB, scope: .environment(production))
+        #expect(try harness.config.pendingCounts().counts(for: repo.id).pendingScopes == [.environment(production)])
+        try harness.add(repo, "MODE", kind: .variable, value: "test")
+        #expect(try harness.config.pendingCounts().counts(for: repo.id).pendingScopes == [.repository, .environment(production)])
+    }
+
+    /// The quick vault reads the vault's repositories once when it opens (1.0 Q1).
+    @Test func everyRepositoryInOneRead() async throws {
+        let harness = try await ConfigHarness.make()
+        let first = try harness.seedRepository(name: "repo-a")
+        let second = try harness.seedRepository(name: "repo-b")
+        #expect(Set(try harness.config.repositories().map(\.id)) == [first.id, second.id])
+    }
 }
 
 private extension PendingCountsModel {

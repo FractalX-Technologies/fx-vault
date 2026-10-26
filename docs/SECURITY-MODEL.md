@@ -211,6 +211,11 @@ still waiting for that check (a Cancel, another scope, a lock or a newer request
 decrypting fails while the vault is locked. The revealed value is not selectable, so ⌘C,
 Copy and Services can't put it on the clipboard around `ClipboardManager`.
 
+Copy in the quick vault (1.0 Q1, `ReauthPurpose.copyValue`) asks the same check for one secret
+that isn't revealed, and its authorization is taken the same way (one request, the same turn,
+dropped by Cancel, a close or a lock); a variable, or a secret already revealed by its own
+check, copies at once. The value goes through `ClipboardManager` only (§7).
+
 ## 7. Values in use
 
 - `SecretBytes` holds values in memory: lock-protected, wiped on `wipe()` and `deinit`,
@@ -283,6 +288,14 @@ Copy and Services can't put it on the clipboard around `ClipboardManager`.
   `SystemRandomNumberGenerator`. Revealed values are hidden when an edit starts. Save writes
   pending changes only; nothing reaches GitHub or Key Vault before Sync. While an edit runs, a
   file drop, ⌘V of copied items and Import .env… wait for it to end.
+- **Quick vault (1.0 Q1):** a global shortcut registered with Carbon's `RegisterEventHotKey`,
+  which needs no Accessibility or Input Monitoring permission and receives that one combination
+  only (no keystroke monitoring); Settings unregisters it while its recorder listens. The panel
+  is excluded from screen capture. While locked it shows nothing of the vault: the island asks
+  for the unlock first, with no name, value or count. It closes when FX Vault resigns active or
+  the panel loses the key (not during the Touch ID or password check), and on lock, dropping
+  the places it read, the open place's lines and revealed values; recent places are ids in
+  memory only, never written. Revealed values follow N1's rules (not selectable, re-masked).
 - **File secrets (1.0):** Choose… or a drop on a place reads one regular file (at most twice the
   48,000-byte limit) with `SecretFileReader` (VaultCore, also the `.env` import's reader): the
   path is `stat`ed before it is opened, so a folder, a pipe or a device is never opened, then

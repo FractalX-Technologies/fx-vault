@@ -178,6 +178,17 @@ class VaultUITestCase: XCTestCase {
         field.typeText(text)
     }
 
+    /// Clicks the menu bar item and returns its open menu. A `MenuBarExtra` doesn't pass
+    /// `.accessibilityIdentifier` to its menu items: find them by title.
+    @MainActor
+    func openMenuBarMenu(_ app: XCUIApplication) -> XCUIElement {
+        let item = app.statusItems.firstMatch
+        click(item)
+        let menu = item.menus.firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: timeout), "The menu bar item opened no menu")
+        return menu
+    }
+
     /// Waits for the element to exist and be enabled (view models enable buttons asynchronously).
     @MainActor
     func click(_ element: XCUIElement) {
