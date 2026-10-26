@@ -81,6 +81,8 @@ FXVault/
 │   │   │   │                        # findings, Keep Mine / Use Remote), RetiredDestinationsNotice
 │   │   │   │                        # (1.0: the Supabase and Vercel destinations v16 removed)
 │   │   │   └── AddRepository/       # AddRepositorySheet/ViewModel (Add repository by name)
+│   │   ├── CopyAll/                 # CopyAllScreen/ViewModel, CopyAllCopy (Copy All after
+│   │   │                            # Touch ID or the master password, 1.0 D6c4)
 │   │   ├── CopyToRepository/        # CopyToRepositoryScreen/ViewModel (Copy To › Another
 │   │   │                            # Repository…, v0.4.1)
 │   │   ├── Folders/                 # FolderContextMenu,
@@ -110,7 +112,8 @@ FXVault/
 │   │   │                            # EnvPasteEditorView,
 │   │   │                            # EnvExportScreen/ViewModel, EnvFilePanels,
 │   │   │                            # EnvFileError+Extension, EnvParseIssue+Extension
-│   │   ├── Sharing/                 # ShareImport Screen+ViewModel, ShareReauthModel/View,
+│   │   ├── Reauth/                  # ReauthModel/View ("Confirm it's you": shares, Copy All)
+│   │   ├── Sharing/                 # ShareImport Screen+ViewModel,
 │   │   │                            # ShareScopeTree Model/View (tri-state), ShareContentSummaryView,
 │   │   │                            # ShareImportPlanEditor/PreviewView, ShareRepositoryImporter,
 │   │   │                            # ShareFileDelivery (share picker, AirDrop included),
@@ -197,6 +200,8 @@ FXVault/
 │   │                                # tone, value editor frame, editor sheet sizing
 │   ├── PlaceHeaderTests.swift       # D6c3: place sublines and counts, New Secret / New
 │   │                                # Variable, Copy To's rows
+│   ├── CopyAllTests.swift           # D6c4: Copy All asks ReauthGate first, copies the notes
+│   │                                # text, clears it after 30 s
 │   ├── MainScreenPresentationTests.swift # v0.3.0: column keyboard selection, initials, dates
 │   ├── VisualSnapshotTests.swift    # v0.3.0, opt-in (FXV_SNAPSHOTS_DIR): light/dark PNGs of the
 │   │                                # main screens for visual review (docs/DESIGN.md)
@@ -341,8 +346,9 @@ FXVault/
 │   │       │   │                    # ShellResolvingAzureTokens
 │   │       │   ├── Models/          # DestinationSyncModels
 │   │       │   └── Support/         # DestinationFieldCipher, DestinationItemWriter
-│   │       ├── EnvFiles/            # EnvFileRepository, EnvFileError, EnvExportAuthorizationModel,
-│   │       │   │                    # ReauthGate+EnvExport, GitServiceGitignoreChecker
+│   │       ├── EnvFiles/            # EnvFileRepository (+ Copy All's text), EnvFileError,
+│   │       │   │                    # EnvExportAuthorizationModel, ReauthGate+EnvExport,
+│   │       │   │                    # GitServiceGitignoreChecker
 │   │       │   └── Models/          # EnvExportModels, EnvImportModels
 │   │       ├── Sync/                # SyncRepository (+Models, +Error); v0.9.0 held imports:
 │   │       │                        # HeldChangeFilter, HeldShareModels, ShareHoldRepository

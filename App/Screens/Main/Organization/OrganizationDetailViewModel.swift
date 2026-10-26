@@ -120,6 +120,15 @@ final class OrganizationDetailViewModel {
         }
     }
 
+    /// Copy All (1.0 D6c4) needs a live item; the sheet asks for Touch ID or the password first.
+    var canCopyAll: Bool {
+        items.contains { $0.syncStatus != .deleted }
+    }
+
+    func copyAll() {
+        dependencies.actions.present(.copyAll(CopyAllContext(place: .organization(organizationID))))
+    }
+
     func copy(_ row: OrgItemModel) {
         do {
             try dependencies.copyOrganizationValue(of: row.id)

@@ -3,16 +3,20 @@ import Observation
 import VaultCore
 import VaultData
 
-/// The re-authentication step of a share (D30, §5.6): Touch ID or the master password, through
-/// `ReauthGate.authorizeShare`. The result is a single-use ``ShareAuthorizationModel`` that
-/// ``SharingRepository`` consumes, so nothing is exported or sent without it.
-///
-/// Touch ID is tried first; any Touch ID failure (cancel, "Use Master Password", not enabled,
-/// unavailable, invalidated) falls back to the password field. The typed password lives only
-/// here and is cleared after every attempt and by ``reset()`` (the owner calls it on lock).
+/// A single-use proof of presence from `ReauthGate` (D30): what ``ReauthModel`` hands out.
+protocol ReauthAuthorization: AnyObject, Sendable {
+    var isUsable: Bool { get }
+}
+
+extension ShareAuthorizationModel: ReauthAuthorization {}
+extension EnvExportAuthorizationModel: ReauthAuthorization {}
+
+/// "Confirm it's you" before a share or Copy All (D30, §5.6): Touch ID first, and after any
+/// Touch ID failure the master password, through `ReauthGate`. The repository consumes the
+/// single-use authorization, so nothing leaves without it; the typed password is cleared after
+/// every attempt and by ``reset()`` (the owner calls it on lock).
 @Observable
-final class ShareReauthModel {
-    let purpose: ShareAuthorizationPurpose
+final class ReauthModel<Authorization: ReauthAuthorization> {
     var password = ""
     private(set) var isAuthorizing = false
     /// Hidden after Touch ID reported it cannot be used on this Mac or build.
@@ -21,24 +25,21 @@ final class ShareReauthModel {
     private(set) var focusPasswordRequest = 0
     private(set) var error: ErrorPresentationModel?
     /// The authorization, until ``takeAuthorization()`` hands it out.
-    private(set) var authorization: ShareAuthorizationModel?
+    private(set) var authorization: Authorization?
 
-    @ObservationIgnored private let reauth: ReauthGate
-    @ObservationIgnored private let session: VaultSession
+    @ObservationIgnored private let prompt: BiometricPrompt
+    @ObservationIgnored private let grant: (ReauthCredential) async throws -> Authorization
 
-    /// - Parameter touchIDStatus: the vault's Touch ID status (`FeatureDependencies.touchIDStatus`);
-    ///   when known and not `.available`, only the password is offered. nil (unknown) tries Touch
-    ///   ID once and hides it after the first failure.
+    /// A known `touchIDStatus` other than `.available` offers only the password; nil (unknown)
+    /// tries Touch ID once and hides it after the first failure. `grant` asks `ReauthGate`.
     init(
-        purpose: ShareAuthorizationPurpose,
-        reauth: ReauthGate,
-        session: VaultSession,
-        touchIDStatus: BiometricUnlockStatus? = nil
+        prompt: BiometricPrompt,
+        touchIDStatus: BiometricUnlockStatus? = nil,
+        grant: @escaping (ReauthCredential) async throws -> Authorization
     ) {
-        self.purpose = purpose
+        self.prompt = prompt
         canUseTouchID = touchIDStatus.map { $0 == .available } ?? true
-        self.reauth = reauth
-        self.session = session
+        self.grant = grant
     }
 
     var isAuthorized: Bool {
@@ -54,7 +55,6 @@ final class ShareReauthModel {
     @discardableResult
     func authorizeWithTouchID(automatic: Bool = false) async -> Bool {
         guard canUseTouchID, !isAuthorizing, !isAuthorized else { return isAuthorized }
-        let prompt = FeatureDependencies.reauthPrompt(for: .share)
         return await authorize(with: .biometrics(prompt), automatic: automatic)
     }
 
@@ -68,7 +68,7 @@ final class ShareReauthModel {
     }
 
     /// Hands out the authorization once (it is single-use anyway).
-    func takeAuthorization() -> ShareAuthorizationModel? {
+    func takeAuthorization() -> Authorization? {
         defer { authorization = nil }
         return authorization?.isUsable == true ? authorization : nil
     }
@@ -90,7 +90,7 @@ final class ShareReauthModel {
         error = nil
         defer { isAuthorizing = false }
         do {
-            authorization = try await reauth.authorizeShare(purpose, with: credential, session: session)
+            authorization = try await grant(credential)
             return true
         } catch let failure as VaultError {
             handle(failure, credential: credential, automatic: automatic)
@@ -124,6 +124,22 @@ final class ShareReauthModel {
                 focusPasswordRequest += 1
             }
             error = (failure as any Error).presentation
+        }
+    }
+}
+
+/// A share's confirmation (`.fxvault` file export).
+typealias ShareReauthModel = ReauthModel<ShareAuthorizationModel>
+
+extension ReauthModel where Authorization == ShareAuthorizationModel {
+    convenience init(
+        purpose: ShareAuthorizationPurpose,
+        reauth: ReauthGate,
+        session: VaultSession,
+        touchIDStatus: BiometricUnlockStatus? = nil
+    ) {
+        self.init(prompt: FeatureDependencies.reauthPrompt(for: .share), touchIDStatus: touchIDStatus) { credential in
+            try await reauth.authorizeShare(purpose, with: credential, session: session)
         }
     }
 }

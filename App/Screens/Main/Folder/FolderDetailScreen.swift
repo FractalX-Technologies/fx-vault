@@ -59,8 +59,9 @@ struct FolderDetailScreen: View {
 }
 
 /// The folder's name in sans (the user named it), its subline, Copy To and Share Securely… as on
-/// board Folder-View, and ⋯ More: New Secret, New Variable, Paste Multiple…, Import .env…, Delete
-/// Selected…, then the folder's own menu (Rename…, Share Securely…, Export .env…, Delete Folder…).
+/// board Folder-View, and ⋯ More: New Secret, New Variable, Paste Multiple…, Import .env…, Copy
+/// All, Delete Selected…, then the folder's own menu (Rename…, Share Securely…, Export .env…,
+/// Delete Folder…).
 private struct FolderDetailHeader: View {
     let viewModel: FolderDetailViewModel
     let main: MainViewModel
@@ -77,7 +78,11 @@ private struct FolderDetailHeader: View {
             .fxButtonStyle(.outline, size: .compact)
             .disabled(viewModel.items.isEmpty)
         } moreItems: {
-            PlaceItemMoreItems(viewModel: viewModel)
+            PlaceItemMoreItems(viewModel: viewModel) {
+                CopyAllMenuItem(isEnabled: viewModel.canCopyAll) {
+                    viewModel.copyAll()
+                }
+            }
             Divider()
             FolderContextMenu(folderID: viewModel.folderID, main: main)
         }

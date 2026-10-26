@@ -571,6 +571,10 @@ final class RepoDetailViewModel: LockObserving {
         values.remaskAll()
     }
 
+    func copyAll() {
+        dependencies.actions.present(.copyAll(CopyAllContext(place: .place(.scope(repositoryID: repositoryID, scope: scope)))))
+    }
+
     /// Copies the value through `ClipboardManager` (concealed, cleared after 30 s).
     func copy(_ id: ConfigItemID) {
         do {

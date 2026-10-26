@@ -85,6 +85,25 @@ struct DotEnvSerializerTests {
         }
     }
 
+    /// Copy All (1.0 D6c4): one blank line between sections, and a key may repeat across them.
+    @Test func sectionsAreSeparatedByABlankLine() throws {
+        let output = try DotEnvSerializer.serialize(sections: [
+            DotEnvSectionModel(comments: ["Secrets · 2"], entries: [entry("A", "1"), entry("B", "")]),
+            DotEnvSectionModel(comments: ["Variables · 1"], entries: [entry("A", "a b")]),
+        ])
+        #expect(output.utf8String() == "# Secrets · 2\nA=1\nB=\n\n# Variables · 1\nA='a b'\n")
+        #expect(try DotEnvSerializer.serialize(sections: []).count == 0)
+        #expect(throws: DotEnvSerializeError.duplicateKey("A")) {
+            try DotEnvSerializer.serialize(sections: [DotEnvSectionModel(comments: [], entries: [entry("A", "1"), entry("A", "2")])])
+        }
+        #expect(throws: DotEnvSerializeError.invalidComment) {
+            try DotEnvSerializer.serialize(sections: [
+                DotEnvSectionModel(comments: ["one"], entries: []),
+                DotEnvSectionModel(comments: ["two\nlines"], entries: []),
+            ])
+        }
+    }
+
     @Test func rejectsCommentsWithLineBreaks() {
         #expect(throws: DotEnvSerializeError.invalidComment) {
             try DotEnvSerializer.serialize([entry("A", "1")], headerComments: ["one\ntwo"])

@@ -40,6 +40,10 @@ enum MainSheet: Hashable, Identifiable {
     case envImport(EnvImportContext)
     case envExport(EnvExportContext)
 
+    // CopyAll/ (1.0 D6c4)
+    /// Copy All: Touch ID or the master password, then every value of a place on the clipboard.
+    case copyAll(CopyAllContext)
+
     // Sharing/
     case shareExport(ShareExportContext)
     case shareImport(ShareImportContext)
@@ -77,6 +81,12 @@ enum MainSheet: Hashable, Identifiable {
 }
 
 // MARK: - Contexts
+
+/// What ``CopyAllScreen`` copies (1.0 D6c4): a repository scope, folder, destination or
+/// organization.
+struct CopyAllContext: Hashable {
+    let place: CopyAllPlaceModel
+}
 
 /// "+ Add Destination" (v0.8.0).
 struct AddDestinationContext: Hashable {

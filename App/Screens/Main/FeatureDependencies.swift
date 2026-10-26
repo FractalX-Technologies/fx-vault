@@ -57,8 +57,9 @@ struct MainActions {
 /// - Values are decrypted only through ``config`` (`reveal`) or the feature's repository, and
 ///   copied only through ``copyValue(of:)`` / ``clipboard`` (§5.9).
 /// - Value entry uses `SecretValueEditor` (§5.11).
-/// - `.env` export needs `reauth.authorizeEnvExport(with:session:)`; `.fxvault` export
-///   needs `reauth.authorizeShare(_:with:session:)`, with ``reauthPrompt(for:)`` for Touch ID.
+/// - `.env` export and Copy All need `reauth.authorizeEnvExport(_:with:session:)`; `.fxvault`
+///   export needs `reauth.authorizeShare(_:with:session:)`, with ``reauthPrompt(for:)`` for
+///   Touch ID.
 struct FeatureDependencies {
     let session: VaultSession
     let config: ConfigRepository
@@ -150,7 +151,9 @@ struct FeatureDependencies {
         try copy(organizationItems.reveal(id))
     }
 
-    private func copy(_ value: SecretBytes) throws(ConfigRepositoryError) {
+    /// Copies decrypted text (a value, or Copy All's `.env` text) with the privacy markers and
+    /// wipes it; `.unexpected` for bytes that are not UTF-8.
+    func copy(_ value: SecretBytes) throws(ConfigRepositoryError) {
         defer { value.wipe() }
         guard let text = value.utf8String() else { throw .unexpected }
         clipboard.copy(text)
@@ -205,6 +208,8 @@ struct FeatureDependencies {
             String(localized: "touchID.prompt.export", defaultValue: "export a .env file")
         case .share:
             String(localized: "touchID.prompt.share", defaultValue: "share configuration")
+        case .copyAll:
+            String(localized: "touchID.prompt.copyAll", defaultValue: "copy every value to the clipboard")
         }
         return BiometricPrompt(reason: reason, fallbackTitle: fallback)
     }

@@ -139,6 +139,8 @@ private struct MainSheetContent: View {
             EnvImportScreen(context: context, dependencies: dependencies)
         case .envExport(let context):
             EnvExportScreen(context: context, dependencies: dependencies)
+        case .copyAll(let context):
+            CopyAllScreen(context: context, dependencies: dependencies)
         case .shareExport(let context):
             ProjectShareScreen(context: context, dependencies: dependencies)
         case .shareImport(let context):

@@ -182,6 +182,10 @@ final class DestinationDetailViewModel: LockObserving {
         }
     }
 
+    func copyAll() {
+        dependencies.actions.present(.copyAll(CopyAllContext(place: .place(place))))
+    }
+
     // MARK: - Add, edit, fill and delete
 
     func add() {

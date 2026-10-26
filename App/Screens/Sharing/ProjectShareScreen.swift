@@ -58,7 +58,7 @@ struct ProjectShareScreen: View {
         case .contents:
             ProjectShareContentsStep(viewModel: viewModel)
         case .authenticate:
-            ShareReauthView(
+            ReauthView(
                 model: viewModel.activeReauth,
                 message: viewModel.includesProduction ? ProjectShareCopy.productionReauthMessage : ProjectShareCopy.reauthMessage,
                 onTouchID: { await viewModel.authenticateWithTouchID() },

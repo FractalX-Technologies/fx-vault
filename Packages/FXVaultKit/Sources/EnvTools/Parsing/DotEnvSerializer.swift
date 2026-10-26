@@ -22,6 +22,17 @@ public enum DotEnvSerializeError: Error, Sendable, Hashable {
     case invalidComment
 }
 
+/// One part of a serialized `.env` text: its `# ` comment lines, then its entries.
+public struct DotEnvSectionModel: Sendable {
+    public let comments: [String]
+    public let entries: [DotEnvEntryModel]
+
+    public init(comments: [String], entries: [DotEnvEntryModel]) {
+        self.comments = comments
+        self.entries = entries
+    }
+}
+
 /// Writes `.env` files that ``DotEnvParser`` reads back exactly: `parse(serialize(x)) == x`.
 ///
 /// Each value gets the plainest quoting that round-trips (``DotEnvQuoting``), which also keeps
@@ -34,17 +45,71 @@ public enum DotEnvSerializeError: Error, Sendable, Hashable {
 public enum DotEnvSerializer {
     private static let commentPrefix = Array("# ".utf8)
 
+    /// How one entry is written, measured before the buffer is allocated.
+    private struct EntryPlan {
+        let entry: DotEnvEntryModel
+        let quoting: DotEnvQuoting
+        let length: Int
+    }
+
     /// Serializes `entries` in order, after optional `# ` header comment lines.
     public static func serialize(
         _ entries: [DotEnvEntryModel],
         headerComments: [String] = []
     ) throws(DotEnvSerializeError) -> SecretBytes {
-        for comment in headerComments where comment.contains(where: \.isNewline) {
+        try serialize(sections: [DotEnvSectionModel(comments: headerComments, entries: entries)])
+    }
+
+    /// Serializes `sections` in order with a blank line between two (Copy All's `# Secrets · N`
+    /// and `# Variables · N`). Keys are unique within a section, so a secret and a variable may
+    /// share a name.
+    public static func serialize(sections: [DotEnvSectionModel]) throws(DotEnvSerializeError) -> SecretBytes {
+        var planned: [(comments: [String], entries: [EntryPlan])] = []
+        var length = max(sections.count - 1, 0)
+        for section in sections {
+            let plans = try plan(section)
+            length += section.comments.reduce(0) { total, comment in
+                total + commentPrefix.count + comment.utf8.count + 1
+            }
+            length += plans.reduce(0) { total, plan in
+                // KEY + "=" + encoded value + "\n"
+                total + plan.entry.key.utf8.count + 1 + plan.length + 1
+            }
+            planned.append((section.comments, plans))
+        }
+
+        let output = SecretBytes(count: length)
+        output.withUnsafeMutableBytes { buffer in
+            var writer = ByteWriter(buffer: buffer)
+            for (index, section) in planned.enumerated() {
+                if index > 0 {
+                    writer.append(ASCII.lineFeed)
+                }
+                for comment in section.comments {
+                    writer.append(commentPrefix)
+                    writer.append(comment.utf8)
+                    writer.append(ASCII.lineFeed)
+                }
+                for plan in section.entries {
+                    writer.append(plan.entry.key.utf8)
+                    writer.append(ASCII.equals)
+                    plan.entry.value.withUnsafeBytes { bytes in
+                        writer.appendValue(bytes, quoting: plan.quoting)
+                    }
+                    writer.append(ASCII.lineFeed)
+                }
+            }
+        }
+        return output
+    }
+
+    private static func plan(_ section: DotEnvSectionModel) throws(DotEnvSerializeError) -> [EntryPlan] {
+        for comment in section.comments where comment.contains(where: \.isNewline) {
             throw .invalidComment
         }
         var seenKeys = Set<String>()
-        var plans: [(entry: DotEnvEntryModel, quoting: DotEnvQuoting, length: Int)] = []
-        for entry in entries {
+        var plans: [EntryPlan] = []
+        for entry in section.entries {
             guard isPortableKey(entry.key) else { throw .invalidKey(entry.key) }
             guard seenKeys.insert(entry.key).inserted else { throw .duplicateKey(entry.key) }
             let analysis = entry.value.withUnsafeBytes { bytes in
@@ -56,35 +121,9 @@ public enum DotEnvSerializer {
                 )
             }
             guard analysis.isValid else { throw .invalidValueEncoding(key: entry.key) }
-            plans.append((entry, analysis.quoting, analysis.length))
+            plans.append(EntryPlan(entry: entry, quoting: analysis.quoting, length: analysis.length))
         }
-
-        let headerLength = headerComments.reduce(0) { total, comment in
-            total + commentPrefix.count + comment.utf8.count + 1
-        }
-        let bodyLength = plans.reduce(0) { total, plan in
-            // KEY + "=" + encoded value + "\n"
-            total + plan.entry.key.utf8.count + 1 + plan.length + 1
-        }
-
-        let output = SecretBytes(count: headerLength + bodyLength)
-        output.withUnsafeMutableBytes { buffer in
-            var writer = ByteWriter(buffer: buffer)
-            for comment in headerComments {
-                writer.append(commentPrefix)
-                writer.append(comment.utf8)
-                writer.append(ASCII.lineFeed)
-            }
-            for plan in plans {
-                writer.append(plan.entry.key.utf8)
-                writer.append(ASCII.equals)
-                plan.entry.value.withUnsafeBytes { bytes in
-                    writer.appendValue(bytes, quoting: plan.quoting)
-                }
-                writer.append(ASCII.lineFeed)
-            }
-        }
-        return output
+        return plans
     }
 
     /// The quoting ``serialize(_:headerComments:)`` uses for `value`.

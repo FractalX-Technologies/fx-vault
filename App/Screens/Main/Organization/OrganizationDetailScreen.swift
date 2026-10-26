@@ -44,14 +44,22 @@ struct OrganizationDetailScreen: View {
         }
     }
 
-    /// The login, "Organization · counts" and ⋯ More: New Secret, New Variable, Remove from
-    /// Vault… (board Org-Visibility; Refresh arrives with B7).
+    /// The login, "Organization · counts", Copy All and ⋯ More: New Secret, New Variable, Copy
+    /// All, Remove from Vault… (board Org-Visibility; Refresh arrives with B7).
     private var header: some View {
         PlaceHeader(title: viewModel.organization?.login ?? "", subline: viewModel.subline) {
+            CopyAllButton(isEnabled: viewModel.canCopyAll) {
+                viewModel.copyAll()
+            }
+        } moreItems: {
             ForEach(ConfigKind.allCases, id: \.self) { kind in
                 Button(PlaceCopy.newItem(kind)) {
                     viewModel.add(kind)
                 }
+            }
+            Divider()
+            CopyAllMenuItem(isEnabled: viewModel.canCopyAll) {
+                viewModel.copyAll()
             }
             if let organization = viewModel.organization {
                 Divider()

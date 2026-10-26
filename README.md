@@ -71,6 +71,9 @@ the secrets your code reads at runtime in Azure Key Vault.
   reads the clipboard only when you paste.
 - **`.env` import and export.** Import with key fixes and credential detection; export after
   Touch ID or your master password, with iCloud and git-exposure warnings.
+- **Copy All.** A place's Copy All (its header or its ⋯ menu) copies every value as `.env` text,
+  secrets then variables, after Touch ID or your master password; the clipboard clears after 30
+  seconds.
 - **Share a project as one file.** File › Share Project… (⌥⌘S) puts several repositories into
   one encrypted `.fxvault` file you send with **Send with AirDrop** to a Mac nearby, or by
   WhatsApp or Mail: pick the stages, and
@@ -269,7 +272,7 @@ Neither contains a token, a secret, or the value of an environment variable.
   recovery key you keep offline.
 - The vault locks on sleep, screen lock, inactivity and window close, and the clipboard is
   cleared 30 seconds after a copy.
-- `.env` export and every share need a fresh Touch ID or master-password check.
+- `.env` export, Copy All and every share need a fresh Touch ID or master-password check.
 - Every GitHub operation goes through `gh` with values passed on stdin, never as arguments.
 - Runtime destinations are reached over HTTPS only at `<vault>.vault.azure.net`, with no
   cookies, cache or redirects; the Azure token stays in memory until the vault locks.
