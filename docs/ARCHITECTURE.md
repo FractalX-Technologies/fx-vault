@@ -1256,11 +1256,11 @@ AppTests).
     An environment row's `ScopeContextMenu` (board Main2-Actions): Rename…, Duplicate
     Environment…, Share Securely…, Refresh (the open `RepoDetailViewModel`), Revert Changes when
     there is one, Delete Environment…; the delete confirmation stays on the scope list.
-  - Connectivity (v0.2.0): `ConnectivityBannerView` (a `Banner`, at the top of the detail
-    column since v0.3.0) shows
-    `MainViewModel.connectivityBanner` ("No internet connection. Your changes stay in the vault;
-    sync when you're back online.", or "GitHub isn't responding. Try again in a moment." with
-    Retry → `retryGitHub()`; offline wins). While offline, Sync, New Repository, Import (sidebar
+  - Connectivity (v0.2.0): `ConnectivityBannerView` (since 1.0 D6d a `MainStatusStrip` under
+    the toolbar panel, over every place; before, a `Banner` at the top of the detail column)
+    shows `MainViewModel.connectivityBanner` ("Offline · edits stay in the vault; Sync, import and
+    drift checks wait", or "GitHub isn't responding · edits stay in the vault; try again in a
+    moment" with Retry → `retryGitHub()`; offline wins). While offline, Sync, New Repository, Import (sidebar
     and detail prompt), Add repository by name, Clone, Refresh, the catalog reload and every
     drift check are disabled, with `ConnectivityCopy.offlineHelp` as their `.help`
     (`networkHelp(_:)`), and the router refuses `MainSheet.needsInternet` routes (`.sync`,

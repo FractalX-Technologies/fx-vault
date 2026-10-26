@@ -2,9 +2,9 @@ import AppKit
 import SwiftUI
 import VaultCore
 
-/// The main window (§10.4; boards Main2-Home, Main2-Repository, Main2-Search): the sidebar panel
-/// and, beside it, the toolbar panel, the recovery-key strip and the selected place, all on the
-/// soft ground under a hidden title bar (``MainWindowTitleBar``); the ⌘K jump palette over them
+/// The main window (§10.4; boards Main2-Home, Main2-Repository, Main2-Search, Main2-Offline): the
+/// sidebar panel and, beside it, the toolbar panel, the connectivity and recovery-key strips and
+/// the selected place, all on the soft ground under a hidden title bar (``MainWindowTitleBar``); the ⌘K jump palette over them
 /// and the sheet router of the UI feature contract.
 struct MainScreen: View {
     @State private var viewModel: MainViewModel
@@ -92,6 +92,9 @@ struct MainScreen: View {
                 MainToolbarPanel(viewModel: viewModel)
                     // Full screen hides the traffic lights.
                     .padding(.leading, viewModel.isSidebarHidden && !isFullScreen ? Theme.Layout.trafficLightsWidth : 0)
+                if let banner = viewModel.connectivityBanner {
+                    MainConnectivityBanner(banner: banner, main: viewModel)
+                }
                 if viewModel.showsRecoveryKeyReminder {
                     RecoveryKeyStrip(main: viewModel)
                 }
@@ -232,8 +235,7 @@ private struct MainSheetContent: View {
 
 /// The detail under the toolbar panel: the selected place (a repository scope, a destination, a
 /// folder or an organization), the Import prompt for a repository or organization not in the
-/// vault, or the home. The detail draws the connectivity banner itself (above its header); the
-/// other states show it here. No background of its own: the window's soft ground shows.
+/// vault, or the home. No background of its own: the window's soft ground shows.
 private struct DetailColumnView: View {
     let main: MainViewModel
 
@@ -247,21 +249,12 @@ private struct DetailColumnView: View {
                 DestinationDetailScreen(viewModel: destinationDetail, main: main)
             } else if let detail = main.detail {
                 RepoDetailScreen(viewModel: detail, main: main)
+            } else if let repo = main.selectedRepo {
+                RepoImportPromptView(repo: repo, sidebar: main.sidebar)
+            } else if let owner = main.sidebar.selectedOrganizationOwner {
+                OrganizationImportPromptView(owner: owner, sidebar: main.sidebar)
             } else {
-                VStack(spacing: 0) {
-                    if let banner = main.connectivityBanner {
-                        MainConnectivityBanner(banner: banner, main: main)
-                            .padding(.horizontal, Theme.Spacing.xLargePlus)
-                            .padding(.top, Theme.Spacing.largePlus)
-                    }
-                    if let repo = main.selectedRepo {
-                        RepoImportPromptView(repo: repo, sidebar: main.sidebar)
-                    } else if let owner = main.sidebar.selectedOrganizationOwner {
-                        OrganizationImportPromptView(owner: owner, sidebar: main.sidebar)
-                    } else {
-                        MainHomeView(main: main)
-                    }
-                }
+                MainHomeView(main: main)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -298,32 +291,18 @@ private struct RecoveryKeyStrip: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.small) {
-            Image(systemName: "key")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.ink)
-                .accessibilityHidden(true)
-            Text(MainCopy.recoveryKeyNotSaved)
-                .fxTextStyle(.calloutEmphasized)
-                .foregroundStyle(Theme.Colors.ink)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            Spacer(minLength: 0)
-            Button(MainCopy.createNewRecoveryKey) {
+        MainStatusStrip(
+            systemImage: "key",
+            title: MainCopy.recoveryKeyNotSaved,
+            action: .init(title: MainCopy.createNewRecoveryKey) {
                 main.createNewRecoveryKey()
                 openSettings()
             }
-            .fxButtonStyle(.secondary, size: .compact)
-        }
-        .padding(.leading, Theme.Spacing.mediumPlus)
-        .padding(.trailing, Theme.Spacing.smallMinus)
-        .frame(height: Theme.Layout.bannerStripHeight)
-        .fxGlassPanel(radius: Theme.Radius.row)
-        .accessibilityElement(children: .contain)
+        )
     }
 }
 
-/// The connectivity banner of the main window, sliding in from the top; Retry re-checks GitHub.
+/// The connectivity strip under the toolbar panel, sliding in from the top; Retry re-checks GitHub.
 struct MainConnectivityBanner: View {
     let banner: ConnectivityBannerModel
     let main: MainViewModel

@@ -1288,24 +1288,46 @@
         }
       }
     },
-    "connectivity.banner.github" : {
+    "connectivity.banner.github.detail" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "GitHub isn't responding. Try again in a moment."
+            "value" : "edits stay in the vault; try again in a moment"
           }
         }
       }
     },
-    "connectivity.banner.offline" : {
+    "connectivity.banner.github.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "No internet connection. Your changes stay in the vault; sync when you're back online."
+            "value" : "GitHub isn't responding"
+          }
+        }
+      }
+    },
+    "connectivity.banner.offline.detail" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "edits stay in the vault; Sync, import and drift checks wait"
+          }
+        }
+      }
+    },
+    "connectivity.banner.offline.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Offline"
           }
         }
       }

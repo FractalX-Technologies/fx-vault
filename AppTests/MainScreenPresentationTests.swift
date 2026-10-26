@@ -81,6 +81,19 @@ struct MainScreenPresentationTests {
 
     // MARK: - Rendering
 
+    /// Board Main2-Offline: "Offline" then " · " and the detail, as one line (the tooltip reads
+    /// the same); a strip without a detail is its title alone.
+    @Test func aStatusStripReadsTitleThenDetail() {
+        let detail = ConnectivityBannerModel.offline.detail
+        let text = MainStatusStrip.text(title: "Offline", detail: detail)
+        #expect(String(text.characters) == "Offline · \(detail)")
+        #expect(MainStatusStrip.sentence(title: "Offline", detail: detail) == String(text.characters))
+        #expect(text.runs.first?.font == Theme.Typography.calloutEmphasized)
+        #expect(text.runs.first?.foregroundColor == Theme.Colors.ink)
+        #expect(text.runs.last?.foregroundColor == Theme.Colors.mutedText)
+        #expect(String(MainStatusStrip.text(title: MainCopy.recoveryKeyNotSaved, detail: nil).characters) == MainCopy.recoveryKeyNotSaved)
+    }
+
     @Test(arguments: [ColorScheme.light, ColorScheme.dark])
     func connectivityBannersRender(scheme: ColorScheme) {
         for banner in [ConnectivityBannerModel.offline, .gitHubNotResponding(isRetrying: false), .gitHubNotResponding(isRetrying: true)] {

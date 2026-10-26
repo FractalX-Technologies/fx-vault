@@ -268,7 +268,7 @@ segments with 6 pt `Radius.token` corners on an 8 pt track, 12 pt ink text, medi
 ### `Banner`
 
 ```swift
-Banner(.offline, message: ConnectivityBannerModel.offline.message)
+Banner(.warning, message: reason.localizedExplanation, systemImage: "lock")
 Banner(.info, message: driftText, action: .init(title: reviewTitle) { viewModel.reviewDifferences() })
 Banner(.warning, message: text, label: "Experimental")
 ```
@@ -276,7 +276,8 @@ Banner(.warning, message: text, label: "Experimental")
 12 pt corners in the content column (not edge to edge). `.info`: `card` + hairline + brand dot;
 `.warning`: `card` + `hairlineStrong` + warning symbol (a read-only scope, the recovery-key
 notice); `.offline`: `surface2` + `hairlineStrong` + `wifi.slash` + the `OFFLINE` mono label (the
-only `surface2` banner, so it reads apart from the others); `.danger`: `card` + `hairlineStrong` + danger
+only `surface2` banner, so it reads apart from the others; since 1.0 the main window's
+connectivity notice is a `MainStatusStrip`, and `.offline` has no caller); `.danger`: `card` + `hairlineStrong` + danger
 symbol. The action is an emphasized `FXLinkButtonStyle` link (brand on `card` is 5.49:1 light;
 pointer cursor, 40% when disabled).
 
@@ -393,8 +394,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   `.windowStyle(.hiddenTitleBar)`; `MainScreen` lays out `.fxGlassPanel()`s on
   `MainWindowGround`, `mainPanelInset` (8) from the window's edges and from each other, from the
   window's very top: the sidebar panel (`sidebarWidth` 264, its content `sidebarPanelTopInset`
-  44 down), and beside it the toolbar panel (`toolbarPanelHeight` 44), the recovery-key strip
-  and the detail. Dragging the gutter after the sidebar resizes it between `sidebarMinWidth`
+  44 down), and beside it the toolbar panel (`toolbarPanelHeight` 44), the connectivity strip,
+  the recovery-key strip and the detail. Dragging the gutter after the sidebar resizes it between `sidebarMinWidth`
   (240) and `sidebarMaxWidth` (400), saved per Mac user when the drag ends
   (`PreferencesManager.sidebarWidth`); the
   screen's minimum is `mainScreenMinWidth` (the widest sidebar beside `detailMinWidth`) with the
@@ -464,11 +465,19 @@ foreground color, so `.primary` text still turns white on selected rows.
 - Home (nothing selected; board Main2-Home): `EmptyStateView` with `square.3.layers.3d`, "Choose
   a place", the pending changes ("4 pending changes", or "No pending changes") and
   `KeyHint("⌘K")` + "to jump anywhere".
-- Recovery key (never confirmed as saved; board Main2-Home): a glass strip under the toolbar
-  panel, over every place (`bannerStripHeight` 36, `row` corners, 14 / 6 pt sides): `key`, "Your
-  recovery key wasn't saved" in `.calloutEmphasized` ink, then Create New Key… (`.secondary`
-  `.compact`; Settings › Security on the new-key sheet). The key shown at onboarding cannot be
-  shown again, so the board's "Show Key" is not offered.
+- Strips under the toolbar panel (`MainStatusStrip`; boards Main2-Home, Main2-Offline): glass,
+  over every place (`bannerStripHeight` 36, `row` corners, 14 / 6 pt sides), a symbol in ink, the
+  title in `.calloutEmphasized` ink and " · detail" in `.callout` `mutedText` as one truncating
+  line (its tooltip is the whole sentence), then an optional `.secondary` `.compact` button.
+- Recovery key (never confirmed as saved; board Main2-Home): `key`, "Your recovery key wasn't
+  saved", then Create New Key… (Settings › Security on the new-key sheet). The key shown at
+  onboarding cannot be shown again, so the board's "Show Key" is not offered.
+- Connectivity (1.0 D6d; board Main2-Offline): first under the toolbar panel, sliding in from
+  the top. Offline: `wifi.slash`, "Offline · edits stay in the vault; Sync, import and drift
+  checks wait", and the Sync pill at 40%; no Retry (the board's): the connection is watched and
+  its return re-checks GitHub. GitHub not responding: `exclamationmark.icloud`, "GitHub isn't
+  responding · edits stay in the vault; try again in a moment", Retry (Retrying… while it runs).
+  Before 1.0 it was a `Banner` above each place's header, missing on folders and organizations.
 - Jump palette (⌘K, Edit › Jump Anywhere or the toolbar's search button; board Main2-Search):
   over the window on `scrim` (a click outside closes it), `jumpPaletteWidth` wide under the
   toolbar, `.fxCardBackground(.popover)` (the `card` fill over `.regularMaterial`, so the text
@@ -546,7 +555,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   Share Securely…, Refresh, Revert Changes (only when there is a change to undo; not on the
   board), | Delete Environment….
 - Dark appearance and offline are the same layout (MainDark): only tokens change; offline adds
-  `Banner(.offline)` and disables the Sync pill.
+  the connectivity strip and disables the Sync pill.
 - Columns take the window's height: the sidebar panel and the detail have
   `.frame(minHeight: 0, maxHeight: .infinity)` (`mainColumnHeight()` in MainScreen.swift).
   SwiftUI measures a column's minimum height at zero width, where a wrapped empty-state message
