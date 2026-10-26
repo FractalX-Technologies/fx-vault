@@ -95,7 +95,9 @@ struct OrganizationSyncRepositoryTests {
         #expect(!after.contains { $0.name == "FXV_FIXTURE_URL" })
         let deploy = try await base.item("DEPLOY_KEY")
         #expect(deploy.selectedRepositoryCount == 1)
-        #expect(try items.repositories(of: deploy.id).isEmpty, "the edited list is GitHub's now")
+        // O1: what each write sent is GitHub's list now, edited (DEPLOY_KEY) or read (STRIPE_KEY).
+        #expect(try items.repositories(of: deploy.id) == ["api"])
+        #expect(try items.repositories(of: try await base.item("STRIPE_KEY").id) == ["api", "web"])
         #expect(try items.pendingCounts() == [fixture.organizationID: 1])
     }
 

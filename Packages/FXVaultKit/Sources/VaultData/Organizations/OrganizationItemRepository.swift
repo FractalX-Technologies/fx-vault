@@ -95,8 +95,8 @@ public struct OrganizationItemRepository: Sendable {
         }
     }
 
-    /// The repository list the next Sync sends for an item whose list was edited; empty when
-    /// GitHub's list stands.
+    /// The item's repository list: the edited one the next Sync sends, else GitHub's as Import,
+    /// Refresh or Sync last read it; empty when unknown.
     public func repositories(of id: ConfigItemID) throws(ConfigRepositoryError) -> [String] {
         try performConfig { try session.database.read { tx in try store.fetchRepositories(itemID: id, in: tx) } }
     }
@@ -127,7 +127,7 @@ public struct OrganizationItemRepository: Sendable {
                     continue
                 }
                 if item.repositoriesEdited || item.visibility != synced {
-                    // The synced count is unknown once the list was edited; GitHub's list stands.
+                    // GitHub's count and list are unknown once the access was edited; Refresh reads them.
                     item.selectedCount = nil
                 }
                 item.isDeleted = false

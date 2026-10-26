@@ -2574,10 +2574,18 @@ Orchestrator:
   - Throwaway writes: `gh secret set --org --visibility=selected --repos=<bare name>`, and org `variable set` twice (upsert).
   - A Key Vault secret set, then delete, through the live tests (`FXV_LIVE_E2E`, `FXV_LIVE_DEST_KEYVAULT`).
   - A failing check gets its fix with a test.
-- [ ] O1 Follow-up of the B7a review: read each `selected` organization item's repositories (B14/B15) at import and Refresh.
+- [x] O1 Follow-up of the B7a review: read each `selected` organization item's repositories (B14/B15) at import and Refresh.
 - [ ] Not doable here:
   - B4b (`gh auth refresh` changes Bryan's real gh token);
   - B11e2 Touch ID inside the island (signed build and sensor);
   - the RELEASING manual rows;
   - tag and release.
 
+Review O1 — selected organization items' repository lists (2026-10-26, automatic):
+- Import and Refresh read B14/B15 for each `selected` item (`OrganizationRepository.selectedRepositories`) and store GitHub's names in `org_item_repositories`; Sync's confirm stores the names it sent. No migration: v19's table now also holds GitHub's list while `repositories_edited` is unset.
+- Refresh compares the folded names when both lists are known, else the count; an unknown list (never read, or dropped by Revert) is filled by Refresh when nothing else changed, with no finding.
+- Accept GitHub stores GitHub's list. Keep Local over a list GitHub changed keeps the vault's as an edited list, so Sync sends it back.
+- Assumption: a failed B14/B15 read only logs its code and leaves the list unknown (as before O1), so Import and Refresh never fail on it.
+- Behaviour change: `writesSendTheCompleteAccessThenTheListingConfirmsThem` expected an empty stored list after Sync; it now expects the sent names. A `selected` item now shows as inherited on the repositories GitHub lists, without an edit.
+- Tests: `importReadsGitHubsListOfEachSelectedItem`, `refreshComparesRepositoryNamesAndFillsAnUnknownList`, and the Sync expectation above; seen failing before the change (3 tests, 10 issues).
+- Docs: ARCHITECTURE, DATABASE, CHANGELOG.

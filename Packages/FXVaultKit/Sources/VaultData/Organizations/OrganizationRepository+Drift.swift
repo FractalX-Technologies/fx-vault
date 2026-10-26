@@ -20,6 +20,8 @@ extension OrganizationRepository {
         let updatedAt: Date?
         /// A variable's value, wiped with its ``Listing``.
         let value: SecretBytes?
+        /// B14/B15 for a `selected` item (O1); nil when it couldn't be read.
+        var repositories: [String]?
     }
 
     struct Listing {
@@ -51,7 +53,7 @@ extension OrganizationRepository {
         defer { listing.wipe() }
         let now = clock.now
         let suppressed = deletions.recentKeys(organizationID: organizationID, now: now)
-        let rows = try perform {
+        let findings = try perform {
             try session.database.write { tx in
                 let rows = try store.fetchItemRecords(organizationID: organizationID, in: tx)
                 let gone = Set(rows.filter { $0.isDeleted && listing.items[OrgItemKey.make($0.kind, $0.name)] == nil }.map(\.id))
@@ -59,10 +61,20 @@ extension OrganizationRepository {
                     try store.deleteItem(id: id, in: tx)
                 }
                 try store.recordRefresh(organizationID: organizationID, at: now, in: tx)
-                return rows.filter { !gone.contains($0.id) }
+                let live = rows.filter { !gone.contains($0.id) }
+                let stored = try Self.storedLists(of: live, store: store, tx: tx)
+                let findings = Self.findings(organizationID: organizationID, rows: live, listed: listing.items, stored: stored, suppressed: suppressed)
+                try Self.fillUnknownLists(
+                    of: live,
+                    stored: stored,
+                    listed: listing.items,
+                    except: Set(findings.compactMap(\.itemID)),
+                    store: store,
+                    tx: tx
+                )
+                return findings
             }
         }
-        let findings = Self.findings(organizationID: organizationID, rows: rows, listed: listing.items, suppressed: suppressed)
         Self.log.info("Refreshed an organization: \(findings.count, privacy: .public) differences")
         return OrgRefreshModel(organizationID: organizationID, findings: findings, skippedNames: listing.skipped, listedAt: now)
     }
@@ -73,6 +85,7 @@ extension OrganizationRepository {
         organizationID: OrganizationID,
         rows: [OrgItemRecord],
         listed: [String: ListedItem],
+        stored: [ConfigItemID: [String]],
         suppressed: Set<String>
     ) -> [OrgDriftModel] {
         let rowsByKey = Dictionary(rows.map { (OrgItemKey.make($0.kind, $0.name), $0) }, uniquingKeysWith: { first, _ in first })
@@ -84,7 +97,7 @@ extension OrganizationRepository {
             }
             if row == nil || row?.syncedVisibility == nil {
                 findings.append(finding(.remoteAdded, organizationID: organizationID, item: item, row: row))
-            } else if let row, differs(row, item) {
+            } else if let row, differs(row, item, stored: stored[row.id]) {
                 findings.append(finding(row.kind == .secret ? .secretModified : .variableModified, organizationID: organizationID, item: item, row: row))
             }
         }
@@ -94,15 +107,52 @@ extension OrganizationRepository {
         return findings.sorted { ($0.name, $0.itemKind.rawValue) < ($1.name, $1.itemKind.rawValue) }
     }
 
-    /// GitHub's date or visibility moved since the vault read it, or how many repositories a
-    /// `selected` item reaches while the vault keeps GitHub's own list: the count catches a
-    /// list change that leaves `updatedAt` alone. A count Revert forgot is unknown, not changed.
-    static func differs(_ row: OrgItemRecord, _ item: ListedItem) -> Bool {
+    /// GitHub's date or visibility moved since the vault read it, or which repositories a
+    /// `selected` item the vault doesn't edit reaches: a list change leaves `updatedAt` alone.
+    /// The names compare when both lists are known, else the count; an unknown count is unchanged.
+    static func differs(_ row: OrgItemRecord, _ item: ListedItem, stored: [String]?) -> Bool {
         guard item.updatedAt == row.remoteUpdatedAt, item.visibility == row.syncedVisibility else { return true }
-        guard item.visibility == .selected, row.visibility == .selected, !row.repositoriesEdited, let count = row.selectedCount else {
-            return false
+        guard item.visibility == .selected, row.visibility == .selected, !row.repositoriesEdited else { return false }
+        if let stored, !stored.isEmpty, let listed = item.repositories {
+            return !sameRepositories(stored, listed)
         }
+        guard let count = row.selectedCount else { return false }
         return item.selectedCount != count
+    }
+
+    static func sameRepositories(_ first: [String], _ second: [String]) -> Bool {
+        Set(first.map(RepoNameValidator.foldKey)) == Set(second.map(RepoNameValidator.foldKey))
+    }
+
+    /// The list stored for each `selected` row the vault doesn't edit: GitHub's as last read,
+    /// empty when unknown (never read, or dropped by Revert).
+    static func storedLists(of rows: [OrgItemRecord], store: OrganizationStore, tx: StoreTransaction) throws -> [ConfigItemID: [String]] {
+        var stored: [ConfigItemID: [String]] = [:]
+        for row in rows where row.visibility == .selected && !row.repositoriesEdited {
+            stored[row.id] = try store.fetchRepositories(itemID: row.id, in: tx)
+        }
+        return stored
+    }
+
+    /// Stores GitHub's list for a row whose list is unknown and that nothing else changed, so
+    /// the repositories it reaches inherit it; a changed row waits for Keep Local or Accept GitHub.
+    static func fillUnknownLists(
+        of rows: [OrgItemRecord],
+        stored: [ConfigItemID: [String]],
+        listed: [String: ListedItem],
+        except changed: Set<ConfigItemID>,
+        store: OrganizationStore,
+        tx: StoreTransaction
+    ) throws {
+        for var row in rows where stored[row.id]?.isEmpty == true && !changed.contains(row.id) {
+            guard let item = listed[OrgItemKey.make(row.kind, row.name)], item.visibility == .selected,
+                  let names = item.repositories, !names.isEmpty else { continue }
+            try store.replaceRepositories(itemID: row.id, names: names, in: tx)
+            if row.selectedCount == nil {
+                row.selectedCount = names.count
+                try store.updateItem(row, in: tx)
+            }
+        }
     }
 
     private static func finding(_ kind: DriftKind, organizationID: OrganizationID, item: ListedItem?, row: OrgItemRecord?) -> OrgDriftModel {
@@ -158,8 +208,10 @@ extension OrganizationRepository {
         do {
             try session.write { keys, tx in
                 let rows = try store.fetchItemRecords(organizationID: organizationID, in: tx)
+                let stored = try Self.storedLists(of: rows, store: store, tx: tx)
                 let current = Dictionary(
-                    Self.findings(organizationID: organizationID, rows: rows, listed: listing.items, suppressed: suppressed).map { ($0.id, $0) },
+                    Self.findings(organizationID: organizationID, rows: rows, listed: listing.items, stored: stored, suppressed: suppressed)
+                        .map { ($0.id, $0) },
                     uniquingKeysWith: { first, _ in first }
                 )
                 for finding in findings {
@@ -227,13 +279,18 @@ extension OrganizationRepository {
             try take(listed, into: &row, keys: keys)
             row.isDeleted = option == .keepLocal
             try store.insertItem(row, in: tx)
+            try store.replaceRepositories(itemID: row.id, names: listed.visibility == .selected ? listed.repositories ?? [] : [], in: tx)
             return
         }
         if option == .acceptGitHub {
             try take(listed, into: &row, keys: keys)
-            try store.replaceRepositories(itemID: row.id, names: [], in: tx)
+            try store.replaceRepositories(itemID: row.id, names: listed.visibility == .selected ? listed.repositories ?? [] : [], in: tx)
         } else {
-            adopt(listed, into: &row, keys: keys)
+            let stored = try store.fetchRepositories(itemID: row.id, in: tx)
+            adopt(listed, into: &row, keys: keys, stored: stored)
+            if stored.isEmpty, !row.repositoriesEdited, row.visibility == .selected, let names = listed.repositories {
+                try store.replaceRepositories(itemID: row.id, names: names, in: tx)
+            }
         }
         row.updatedAt = now
         try store.updateItem(row, in: tx)
@@ -262,12 +319,17 @@ extension OrganizationRepository {
 
     /// Keep Local: what GitHub has now becomes the synced state, so the vault's item is pending
     /// over it; the next Sync's review no longer blocks it as changed on GitHub.
-    private static func adopt(_ listed: ListedItem, into row: inout OrgItemRecord, keys: borrowing UnlockedKeys) {
+    private static func adopt(_ listed: ListedItem, into row: inout OrgItemRecord, keys: borrowing UnlockedKeys, stored: [String]) {
         row.syncedVisibility = listed.visibility
         row.remoteUpdatedAt = listed.updatedAt
         // A secret's value on GitHub is unknown, so the vault's is sent.
         row.syncedFingerprint = listed.value.map { keys.fingerprint($0, rowID: row.id) }
-        if row.visibility == .selected, listed.visibility == .selected, !row.repositoriesEdited {
+        guard row.visibility == .selected, listed.visibility == .selected, !row.repositoriesEdited else { return }
+        if !stored.isEmpty, let names = listed.repositories, !sameRepositories(stored, names) {
+            // The list the vault read is kept: Sync sends it back.
+            row.repositoriesEdited = true
+            row.selectedCount = stored.count
+        } else {
             row.selectedCount = listed.selectedCount
         }
     }
@@ -312,6 +374,15 @@ extension OrganizationRepository {
         } catch {
             variables.forEach { $0.wipe() }
             throw error
+        }
+        let lists = await Self.selectedRepositories(
+            of: items.values.map { ($0.kind, $0.name, $0.visibility) },
+            organization: organization.login,
+            accountLogin: organization.accountLogin,
+            schedulers: schedulers
+        )
+        for (key, names) in lists {
+            items[key]?.repositories = names
         }
         return Listing(items: items, skipped: skipped, variables: variables)
     }

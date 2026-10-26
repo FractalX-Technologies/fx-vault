@@ -38,6 +38,22 @@ struct OrganizationRepositoryTests {
             provider.runner.enqueue(.success(variables), matching: { $0.starts(with: ["variable", "list", flag]) })
         }
 
+        /// B14 (a secret) or B15 (a variable) for `name`: GitHub's list of repositories. An
+        /// item left unscripted fails its read, and its list stays unknown.
+        func scriptRepositories(_ kind: ConfigKind, of name: String, _ names: [String]) {
+            let path = "/\(kind == .secret ? "secrets" : "variables")/\(name)/repositories"
+            let repositories = names.map { #"{"name":"\#($0)"}"# }.joined(separator: ",")
+            provider.runner.enqueue(
+                .success(#"[{"total_count":\#(names.count),"repositories":[\#(repositories)]}]"#),
+                matching: { $0.first == "api" && $0.last?.contains(path) == true }
+            )
+        }
+
+        func repositories(_ name: String, kind: ConfigKind, of id: OrganizationID) throws -> [String] {
+            let record = try record(name, kind: kind, of: id)
+            return try harness.database.read { tx in try store.fetchRepositories(itemID: record.id, in: tx) }
+        }
+
         func record(_ name: String, kind: ConfigKind, of id: OrganizationID) throws -> OrgItemRecord {
             try harness.database.read { tx in
                 try #require(try store.fetchItemRecords(organizationID: id, in: tx).first { $0.name == name && $0.kind == kind })
@@ -103,6 +119,22 @@ struct OrganizationRepositoryTests {
         let url = try fixture.record("FXV_FIXTURE_URL", kind: .variable, of: organization.id)
         #expect(try fixture.reveal(url) == "https://example.invalid/api\n")
         #expect(url.selectedCount == nil)
+    }
+
+    /// O1: a `selected` item's repositories come from GitHub at import, so a repository it
+    /// reaches inherits it; a list that can't be read stays unknown and the import goes on.
+    @Test func importReadsGitHubsListOfEachSelectedItem() async throws {
+        let fixture = try await Fixture.make()
+        fixture.scriptLists()
+        fixture.scriptRepositories(.secret, of: "STRIPE_KEY", ["api", "web", "worker"])
+
+        let id = try await fixture.organizations.importOrganization(login: Self.organization, accountLogin: ConfigFixture.login).organization.id
+
+        #expect(try fixture.repositories("STRIPE_KEY", kind: .secret, of: id) == ["api", "web", "worker"])
+        #expect(try fixture.repositories("REGION", kind: .variable, of: id).isEmpty)
+        #expect(try fixture.record("REGION", kind: .variable, of: id).selectedCount == 2)
+        let web = try await fixture.organizations.inheritedItems(ownerLogin: Self.organization, repositoryName: "web", isPrivate: false)
+        #expect(web?.items.map(\.name) == ["NPM_TOKEN", "STRIPE_KEY"])
     }
 
     @Test func importingTheSameOrganizationAgainIsRefused() async throws {

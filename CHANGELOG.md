@@ -63,7 +63,7 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   "all repos", "private and internal" or "selected · 3 repos".
 - **Refresh an organization.** ⋯ More › Refresh reads the organization from GitHub again and
   marks what changed there since FX Vault last read it ("Changed on GitHub": a new date,
-  visibility or repository count, an item GitHub added or deleted). Review offers Keep Local or
+  visibility or repository list, an item GitHub added or deleted). Review offers Keep Local or
   Accept GitHub for each, as for a repository; taking GitHub's version of a secret GitHub
   changed leaves it without a value, since GitHub never returns one (one whose only change is
   who can use it keeps its value). Taking GitHub's deletion, or GitHub's item over one you
@@ -76,13 +76,13 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   the vault, its Secrets and Variables tabs also list, muted and read only, what the
   organization gives it ("example-org · all repos", "· private and internal", "· selected"),
   marked Inherited. An item of the repository or environment with the same name says
-  "Overrides example-org" beside its status. A `selected` item shows once FX Vault knows its
-  repository list (after it was edited here). On GitHub Free, private repositories can't use
+  "Overrides example-org" beside its status. A `selected` item shows on the repositories
+  GitHub lists for it, read at import, on Refresh and after Sync. On GitHub Free, private repositories can't use
   organization items, but FX Vault doesn't know the plan and still lists them there.
 - **Edit organization secrets and variables.** The organization view gains Add Secret, Add
   Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
-  with the organization's repositories). A Selected item keeps GitHub's repository list until
-  you pick repositories. The row menu offers Copy Value, Edit…, Revert (Revert Access for a
+  with the organization's repositories). A Selected item opens with GitHub's repositories
+  checked; one whose list FX Vault couldn't read keeps GitHub's until you pick repositories. The row menu offers Copy Value, Edit…, Revert (Revert Access for a
   changed item) and Delete…. The changes count on the Sync button, and the toolbar Sync
   sends them as one group per organization, after the repositories; deletions go through the
   deletion review.

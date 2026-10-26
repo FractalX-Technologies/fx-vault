@@ -643,14 +643,16 @@ destination item never reaches GitHub except as a copy in a repository scope.
   synced fingerprints (clearing one that no longer matches).
 
 **Organizations** (`Organizations/`, 1.0). `actor OrganizationRepository(session:schedulers:clock:)`:
-`importOrganization(login:accountLogin:)` (B12 and B13 through the account's scheduler, one
-`VaultSession.write`; secrets without value, variables sealed by `OrgFieldCipher` with
+`importOrganization(login:accountLogin:)` (B12 and B13 through the account's scheduler, then
+B14/B15 for each `selected` item, stored as its `org_item_repositories` list (a failed read only
+logs, and the list stays unknown); one `VaultSession.write`; secrets without value, variables sealed by `OrgFieldCipher` with
 `synced_fp` = `value_fp`; names the vault cannot hold are skipped and reported in
 `OrgImportResultModel`; a row without visibility fails as `.malformedOutput`),
 `organizations()`, `observeOrganizations()`, `items(of:)`, `observeItems(of:)`,
 `inheritedItems(ownerLogin:repositoryName:isPrivate:)` and `observeInheritedItems(…)` (B7a: the
 live items whose `OrgVisibility.reaches(repositoryName:isPrivate:selectedRepositories:)`, one
-read; a `selected` item reaches only through the `org_item_repositories` list FX Vault stores),
+read; a `selected` item reaches only through the `org_item_repositories` list FX Vault stores:
+the edited one, or GitHub's as Import, Refresh or Sync last read it),
 `removeOrganization(_:)` (the vault only). Errors are `RepoCatalogError`
 (`.organizationAlreadyImported`, `.organizationNotFound`). Refresh (B7b,
 `OrganizationRepository+Drift`): `refresh(organizationID:)` lists B12/B13 again (the shared
@@ -660,15 +662,18 @@ view keeps it). A name this Mac's Sync deleted within `Timeouts.recentDeletionSu
 reported as added (D28): organization Sync keeps no journal, so `OrgDeletionLog` (in memory,
 one instance shared by both actors in `VaultDataComponents`, a required init argument of each so
 no construction drops it) holds those deletions. An `OrgDriftModel` reuses SyncEngine's `DriftKind` (`.secretModified` /
-`.variableModified` when `updatedAt` or the visibility differs, or the count of a `selected` item
-whose list FX Vault doesn't hold; `.remoteAdded`; `.remoteDeleted`) and is keyed by
+`.variableModified` when `updatedAt` or the visibility differs, or which repositories a `selected`
+item FX Vault doesn't edit reaches: the folded names when both lists are known, else the count;
+`.remoteAdded`; `.remoteDeleted`). Refresh reads B14/B15 for each `selected` item and stores
+GitHub's list where the vault's is unknown and nothing else changed and is keyed by
 `OrgItemKey` (kind and folded name). `resolve(_:option:organizationID:)` takes a
 `DriftResolutionOption`, lists again, and throws `DriftRepositoryError` (`.stale` when a finding
 moved: another row, or another GitHub date than the one reviewed; `.resolutionUnavailable(.valueMissing)`
 for Keep Local without the vault's value).
-Accept GitHub writes GitHub's visibility, count, date and a variable's value as synced (a
+Accept GitHub writes GitHub's visibility, count, list, date and a variable's value as synced (a
 secret whose date moved loses its value; under the same date it keeps it); Keep Local records GitHub's state as synced so the vault's item is
-pending over it (a remote add becomes a pending deletion, a remote deletion an add). `DEKRotator` re-seals organization
+pending over it (a remote add becomes a pending deletion, a remote deletion an add; a list GitHub
+changed becomes an edited list, so Sync sends the vault's back). `DEKRotator` re-seals organization
 values with the same `synced_fp` rule as destinations.
 
 **.env files** (`EnvFiles/`). `struct EnvFileRepository(session:gitignoreChecker:

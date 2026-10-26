@@ -629,9 +629,10 @@ CREATE TABLE org_item_repositories (item_id TEXT NOT NULL REFERENCES org_items(i
 - Additive. Organization items get local changes (B6b): a tombstone, the visibility GitHub has
   (NULL: never synced, an add; rows imported before v19 are synced), and an edited repository
   list.
-- `org_item_repositories` holds the list to send only while `repositories_edited` is set;
-  otherwise Sync reads GitHub's list (B14/B15) right before a write, so every write sends the
-  complete list.
+- `org_item_repositories` holds the list to send while `repositories_edited` is set; otherwise
+  GitHub's list as Import, Refresh or Sync last read it (B14/B15, 1.0 O1), or nothing when unknown.
+  Sync still reads GitHub's list right before a write of an unedited item, so every write sends
+  the complete list.
 - Status (`OrgItemRecord.syncStatus`): deleted, added, modified (value fingerprint differs from
   `synced_fp`, visibility differs, or the list was edited), else synced. A secret with no value
   is synced. No synced value is kept, so a changed value cannot be reverted (as destinations).
@@ -672,7 +673,7 @@ ALTER TABLE destinations ADD COLUMN subscription_name TEXT
 | `sent_shares` | `SentShareRecord` (`SentShareModel`) | `SentShareStore` | Names only, v0.9.0 |
 | `organizations` | `OrganizationRecord` (`OrganizationModel` with counts) | `OrganizationStore` | Unique by `login_key`, 1.0 |
 | `org_items` | `OrgItemRecord` (with ciphertext; `OrgItemModel` without) | `OrganizationStore` | Value optional for secrets; visibility and selected count, 1.0; pending state, v19 |
-| `org_item_repositories` | — (raw SQL) | `OrganizationStore` | The edited repository list of a `selected` item, v19 |
+| `org_item_repositories` | — (raw SQL) | `OrganizationStore` | A `selected` item's repository list: the edited one, or GitHub's as last read, v19 |
 | holds (`share_hold` on both item tables, the import records) | `HeldShareInputsModel` | `ShareHoldStore` | Read model of Sync's From Files review and bulk release, v0.9.0 |
 
 ## Transactions
