@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- macOS 14 or later with Xcode 26.6 or later
+- macOS 26 Tahoe or later with Xcode 26.6 or later (the app's deployment target)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen), at the version pinned in `.xcodegen-version`
   (only needed when you change `project.yml`)
 
