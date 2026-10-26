@@ -236,10 +236,10 @@ struct SidebarCount: View {
 /// The ink dot of a node with changes waiting for the next Sync.
 struct SidebarPendingDot: View {
     var body: some View {
-        Circle()
-            .fill(Theme.Colors.brand)
-            .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
+        // `StatusDot` hides itself from VoiceOver; this dot is the row's only pending cue.
+        StatusDot(color: Theme.Colors.brand)
             .help(SidebarCopy.pending)
+            .accessibilityElement()
             .accessibilityLabel(SidebarCopy.pending)
     }
 }
