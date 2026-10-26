@@ -181,6 +181,8 @@ private struct MainSheetContent: View {
         switch sheet {
         case .itemEditor(let context):
             ItemEditorScreen(context: context, dependencies: dependencies)
+        case .fileSecret(let context):
+            FileSecretScreen(context: context, dependencies: dependencies)
         case .orgItemEditor(let context):
             OrgItemEditorScreen(context: context, dependencies: dependencies)
         case .orgDrift(let context):

@@ -130,6 +130,7 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
         TableColumn(Self.header(String(localized: "main.table.value", defaultValue: "Value"))) { row in
             MaskedValueCell(
                 display: viewModel.display(for: row),
+                file: row.file,
                 onToggle: row.kind == .secret && row.hasValue && !row.isDeleted && row.inherited == nil
                     ? { viewModel.toggleReveal(row.id) }
                     : nil

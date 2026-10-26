@@ -102,8 +102,8 @@ public enum Limits {
     /// Largest file the Add file secret sheet reads. Local choice: twice GitHub's value limit, so
     /// a file just over the limit is still measured and refused with its size.
     public static let maxFileSecretReadBytes = 2 * maxValueBytes
-    /// Longest file name kept with a file secret, in characters (database CHECK, v21; macOS
-    /// file names are at most 255 UTF-8 bytes).
+    /// Longest file name kept with a file secret, in Unicode scalars as the v21 CHECK's
+    /// `length()` counts them (macOS file names are at most 255 UTF-8 bytes).
     public static let maxFileSecretNameLength = 255
 
     // MARK: - Write throttle and retries (D12, §7.3)

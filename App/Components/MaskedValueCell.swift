@@ -1,4 +1,5 @@
 import SwiftUI
+import VaultCore
 
 /// A value cell (§5.11): a masked secret with an eye toggle, a revealed secret, a variable in
 /// plaintext, or the "Value missing" chip.
@@ -8,6 +9,8 @@ import SwiftUI
 /// tested in one place (`RepoDetailViewModel`).
 struct MaskedValueCell: View {
     let display: ConfigValueDisplayModel
+    /// The file a file secret came from (1.0 F1): its chip stands in for the dots.
+    var file: FileSecretModel?
     /// Reveals or hides the value; nil hides the eye (for example while locked).
     let onToggle: (() -> Void)?
 
@@ -24,7 +27,11 @@ struct MaskedValueCell: View {
             valueText(value, isMasked: false)
         case .masked, .revealed:
             HStack(spacing: Theme.Spacing.mediumMinus) {
-                valueText(revealed ?? Self.mask, isMasked: revealed == nil)
+                if revealed == nil, let file {
+                    FileSecretChip.table(file)
+                } else {
+                    valueText(revealed ?? Self.mask, isMasked: revealed == nil)
+                }
                 if let onToggle {
                     Button(action: onToggle) {
                         Label(

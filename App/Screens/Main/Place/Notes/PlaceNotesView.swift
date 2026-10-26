@@ -190,7 +190,16 @@ private struct NotesValueView: View {
         RoundedRectangle(cornerRadius: Theme.Radius.token, style: .continuous)
     }
 
+    @ViewBuilder
     private var maskToken: some View {
+        if let file = item.file {
+            FileSecretChip.notes(file)
+        } else {
+            dots
+        }
+    }
+
+    private var dots: some View {
         Text(verbatim: NotesCopy.maskToken)
             .fxTextStyle(.monoLabel)
             .foregroundStyle(Theme.Colors.mutedText)

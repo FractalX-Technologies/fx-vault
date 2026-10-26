@@ -650,6 +650,31 @@ ALTER TABLE destinations ADD COLUMN subscription_name TEXT
   subscription › vault. Connect Azure saves it; vaults imported before v20 keep NULL (directly
   under Azure) until a Refresh looks it up with `az`. FX Vault always writes both columns together.
 
+### v21_file_secrets (1.0)
+
+```sql
+ALTER TABLE config_items ADD COLUMN file_detail TEXT
+  CHECK (file_detail IS NULL OR (json_valid(file_detail)
+    AND json_type(file_detail, '$.fileName') IS 'text'
+    AND length(json_extract(file_detail, '$.fileName')) BETWEEN 1 AND 255
+    AND coalesce(json_extract(file_detail, '$.encoding'), '') IN ('text', 'base64')
+    AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')));
+-- The same column and CHECK on folder_items and destination_items.
+```
+
+- Additive. The file a secret's value came from (F1, Add file secret): `FileSecretModel` as JSON
+  (`fileName` without its folder, `lineCount` of a text file, `encoding` `text` or `base64`).
+  NULL for a typed value and for every row saved before v21. Plaintext like the item's name
+  (docs/SECURITY-MODEL.md); the file's content is the sealed value.
+- The CHECK uses `IS` and `coalesce` because a CHECK that evaluates to NULL passes (a missing
+  key would otherwise slip through, as with `key_wraps` above). It is spelled out per table: a
+  frozen migration shares no text with later code.
+- The label follows the value (`ConfigFieldCipher.setValue` and its folder and destination
+  twins): a value with another fingerprint drops it, so a typed value, a pull or a drift
+  replace leaves no stale file name; a rename, a move, a copy and a linked update carry it with
+  the value, and a pushed Key Vault rename gives it to the new row. Revert restores a value but
+  not a label an edit dropped; `.env` files and share files carry no label.
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -660,14 +685,14 @@ ALTER TABLE destinations ADD COLUMN subscription_name TEXT
 | `repositories` | `RepositoryRecord` | `RepoStore` | Deleting a repository cascades to environments, items, patterns and destinations and nulls journal rows |
 | `environments` | `EnvironmentRecord` | `ConfigStore` | Patterns are attached when the policy is custom |
 | `deployment_branch_patterns` | `BranchPatternRecord` | `ConfigStore` | |
-| `config_items` | `ConfigItemRecord` (with ciphertext), `ConfigItemState` (read-only projection without ciphertext) | `ConfigStore` | Status is derived with `ConfigSyncStatus.derive(state.syncFacts)`; `link_id` groups linked copies (v0.4.1); `share_hold` (v0.9.0) |
+| `config_items` | `ConfigItemRecord` (with ciphertext), `ConfigItemState` (read-only projection without ciphertext) | `ConfigStore` | Status is derived with `ConfigSyncStatus.derive(state.syncFacts)`; `link_id` groups linked copies (v0.4.1); `share_hold` (v0.9.0); `file_detail` (v21) |
 | `sync_journal` | `SyncJournalRecord` | `SyncJournalStore` | Names and push fingerprints only, never values |
 | `imported_share_packages` | `ImportedSharePackageRecord` | `SharePackageStore` | `sender_device_id` for a 0.9 teammates file, v0.9.0 |
 | `folders` | `FolderRecord` | `FolderStore` | Unique by `name_key`, sidebar order, v0.7.0 |
-| `folder_items` | `FolderItemRecord` (with ciphertext; `FolderItemModel` without) | `FolderStore` | Always with a value; `link_id` groups span `config_items`, v0.7.0 |
+| `folder_items` | `FolderItemRecord` (with ciphertext; `FolderItemModel` without) | `FolderStore` | Always with a value; `link_id` groups span `config_items`, v0.7.0; `file_detail` (v21) |
 | `provider_connections` | — | — | Empty and unused since v16 (Supabase and Vercel tokens, v0.8.0) |
 | `destinations` | `DestinationRecord` (`DestinationSettings` in `settings_json`) | `DestinationStore` | Unique per repository by `target_key`, v0.8.0; a NULL `repository_id` is a Key Vault of its own, unique by `target_key` (v18, 1.0); its Azure subscription (v20) |
-| `destination_items` | `DestinationItemRecord` (with ciphertext), `DestinationItemState` (without) | `DestinationStore` | Value optional for secrets; `link_id` groups span all three item tables, v0.8.0; `share_hold` (v0.9.0) |
+| `destination_items` | `DestinationItemRecord` (with ciphertext), `DestinationItemState` (without) | `DestinationStore` | Value optional for secrets; `link_id` groups span all three item tables, v0.8.0; `share_hold` (v0.9.0); `file_detail` (v21) |
 | `destination_journal` | `DestinationJournalRecord` | `DestinationStore` | Destination writes, names and push fingerprints only, v0.8.0 |
 | `retired_destinations` | — (labels as `String`) | `DestinationStore` | The one-time notice after v16, names only, 1.0 |
 | `sent_shares` | `SentShareRecord` (`SentShareModel`) | `SentShareStore` | Names only, v0.9.0 |

@@ -177,6 +177,12 @@ final class FolderDetailViewModel: LockObserving {
         dependencies.actions.present(.itemEditor(ItemEditorContext(folderID: folderID, mode: .add(kind))))
     }
 
+    func addFileSecret(from url: URL?) {
+        guard canEdit else { return }
+        kind = .secret
+        dependencies.actions.present(.fileSecret(FileSecretContext(place: .folder(folderID), fileURL: url)))
+    }
+
     func edit(_ row: ConfigRowModel) {
         guard canEdit else { return }
         dependencies.actions.present(.itemEditor(ItemEditorContext(folderID: folderID, mode: .edit(row.id))))
@@ -399,6 +405,7 @@ extension ConfigRowModel {
         status = .added
         syncedName = nil
         linkCount = item.isLinked ? item.linkCount : 0
+        file = item.file
     }
 }
 

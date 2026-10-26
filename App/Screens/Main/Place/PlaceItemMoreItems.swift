@@ -2,8 +2,9 @@ import SwiftUI
 import VaultCore
 
 /// The item actions every place's ⋯ More shares (1.0 D6c3; board Main2-Actions): New Secret and
-/// New Variable (the kinds the place holds), Paste Multiple… and Import .env…, then the place's
-/// own items, then Delete Selected… under one rule (``ConfigTableModel/canDeleteSelection``).
+/// New Variable (the kinds the place holds), Add File Secret… (F1), Paste Multiple… and Import
+/// .env…, then the place's own items, then Delete Selected… under one rule
+/// (``ConfigTableModel/canDeleteSelection``).
 struct PlaceItemMoreItems<Model: ConfigTableModel, PlaceItems: View>: View {
     let viewModel: Model
     var kinds: [ConfigKind] = ConfigKind.allCases
@@ -15,6 +16,9 @@ struct PlaceItemMoreItems<Model: ConfigTableModel, PlaceItems: View>: View {
                 Button(PlaceCopy.newItem(kind)) {
                     viewModel.add(kind)
                 }
+            }
+            Button(FileSecretCopy.menuTitle) {
+                viewModel.addFileSecret(from: nil)
             }
             Divider()
             Button(PlaceCopy.pasteMultiple) {

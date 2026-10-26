@@ -36,6 +36,11 @@ the secrets your code reads at runtime in Azure Key Vault.
   secrets masked and variables in plain text, what a repository gets from its organization (read
   only), and marks for what changed on GitHub or waits for the next Sync. Revealing a secret
   there asks Touch ID or your master password. Notes | Table switches to the table.
+- **File secrets.** Add a key file (`.p8`, `.pem`, `.json`) as a secret with ⋯ More › Add File
+  Secret… or by dropping it on a place: stored as exact text or Base64 (binary files always),
+  within GitHub's 48,000 bytes or Key Vault's 25,600 after Base64. The name comes from the file
+  (`AuthKey_ABC123.p8` → `AUTH_KEY_P8`), and the table and notes show the file name and its
+  lines in place of the mask. The file itself stays where it is.
 - **The vault is the source of truth.** A secret value you fill in is pushed by the next Sync
   (unless you check "Already matches GitHub"), and Push on Next Sync re-sends any secret so
   GitHub matches FX Vault.

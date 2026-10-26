@@ -419,7 +419,13 @@ final class ItemEditorViewModel: LockObserving {
     }
 
     var isNameValid: Bool {
-        GitHubNameValidator.isValid(name) && !isNameTaken
+        GitHubNameValidator.isValid(name) && !isNameTaken && destinationNameViolation == nil
+    }
+
+    /// The destination's own rule the name breaks (Key Vault: at most 127 characters).
+    private var destinationNameViolation: ValidationError? {
+        guard let destination, isNameEditable, isNameChanged else { return nil }
+        return DestinationRules.violation(of: normalizedName, kind: effectiveKind, provider: destination.provider)
     }
 
     /// Live feedback under the name field (nothing while it is empty).
@@ -427,6 +433,9 @@ final class ItemEditorViewModel: LockObserving {
         guard isNameEditable, !name.isEmpty else { return nil }
         if let rule = GitHubNameValidator.violation(in: name) {
             return .error(rule.localizedMessage)
+        }
+        if let violation = destinationNameViolation {
+            return .error(violation.localizedMessage)
         }
         if isNameTaken {
             return .error(String(
@@ -714,15 +723,25 @@ final class ItemEditorViewModel: LockObserving {
     private func add() throws(ConfigRepositoryError) {
         let bytes = SecretBytes(utf8: value)
         defer { bytes.wipe() }
-        let result = switch context.place {
+        didStripTrailingNewlines = try addItem(value: bytes).didStripTrailingNewlines
+    }
+
+    /// Adds the item with ``kind`` and ``normalizedName`` to the place, holding `value` (the
+    /// caller wipes it) and, from Add file secret (1.0 F1), the `file` it came from.
+    func addItem(value: SecretBytes, file: FileSecretModel? = nil) throws(ConfigRepositoryError) -> ItemWriteResultModel {
+        switch context.place {
         case .scope(let repositoryID, let scope):
-            try dependencies.config.addItem(repositoryID: repositoryID, scope: scope, kind: kind, name: normalizedName, value: bytes)
+            try dependencies.config.addItem(repositoryID: repositoryID, scope: scope, kind: kind, name: normalizedName, value: value, file: file)
         case .folder(let folderID):
-            try dependencies.folders.addItem(folderID: folderID, kind: kind, name: normalizedName, value: bytes)
+            try dependencies.folders.addItem(folderID: folderID, kind: kind, name: normalizedName, value: value, file: file)
         case .destination(let destinationID):
-            try dependencies.destinations.addItem(destinationID: destinationID, kind: kind, name: normalizedName, value: bytes)
+            try dependencies.destinations.addItem(destinationID: destinationID, kind: kind, name: normalizedName, value: value, file: file)
         }
-        didStripTrailingNewlines = result.didStripTrailingNewlines
+    }
+
+    /// The largest value the place stores: 25,600 bytes in a Key Vault, GitHub's limit elsewhere.
+    var maxValueBytes: Int {
+        destination.map { DestinationRules.maxValueBytes(for: $0.provider) } ?? Limits.maxValueBytes
     }
 
     /// True when the save offers to update the item's linked copies too (a new value).

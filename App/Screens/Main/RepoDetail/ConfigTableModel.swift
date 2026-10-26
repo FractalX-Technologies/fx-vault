@@ -59,6 +59,11 @@ protocol ConfigTableModel: AnyObject, Observable {
     func unlink(_ row: ConfigRowModel)
     /// The Held chip's tooltip (v0.9.0).
     func heldHelp(for row: ConfigRowModel) -> String
+    /// Add File Secret… (1.0 F1): the sheet for this place, with the `url` of a dropped file.
+    func addFileSecret(from url: URL?)
+    /// The largest value the place stores (25,600 bytes in a Key Vault), for the drop overlay.
+    var maxValueBytes: Int { get }
+    var alert: ErrorPresentationModel? { get set }
 }
 
 extension ConfigTableModel {
@@ -94,6 +99,22 @@ extension ConfigTableModel {
     /// Without the sender's name (a folder never holds rows).
     func heldHelp(for row: ConfigRowModel) -> String {
         HeldShareCopy.chipHelp(sender: nil)
+    }
+
+    var maxValueBytes: Int {
+        Limits.maxValueBytes
+    }
+
+    /// A file dropped on the place (1.0 F1; board Place-FileDrop): a .p8, .pem or .json file
+    /// opens Add file secret with it. Any other is refused: a drop is quick to do by mistake,
+    /// and Choose… in the sheet takes every file.
+    func dropFile(_ url: URL) {
+        guard canEdit else { return }
+        guard url.isFileURL, FileSecretRules.isDroppable(fileName: url.lastPathComponent) else {
+            alert = ErrorPresentationModel(title: FileSecretCopy.notDroppableTitle, message: FileSecretCopy.notDroppableMessage)
+            return
+        }
+        addFileSecret(from: url)
     }
 
     /// New Secret or New Variable from a place's ⋯ More (1.0 D6c3): that kind's tab first, so
