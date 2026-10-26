@@ -17,6 +17,11 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   card; Cancel After Current stops after the write in flight. A run where nothing failed ends on
   a short "Synced 8 changes" with the places and what stays pending. The deletion check reads
   "Delete 1 secret?" and lists each name with its place.
+- **New Repository and New Environment as the boards.** Both are compact forms with their
+  labels in a column: New Repository shows environments as chips, the account's SSH alias beside
+  the clone folder, and the button says Stage Repository; New Environment is titled with its
+  repository, says when a name is free ("Not used in api-service yet"), shows branch rules as
+  chips, and the button says Stage Environment. Both end on "Created on GitHub at the next Sync."
 - **Edit organization secrets and variables.** The organization view gains Add Secret, Add
   Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
   with the organization's repositories). A Selected item keeps GitHub's repository list until

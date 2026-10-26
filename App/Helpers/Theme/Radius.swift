@@ -16,6 +16,10 @@ extension Theme {
         static let row: CGFloat = 10
         /// Sidebar repository rows (32 pt tall).
         static let compactRow: CGFloat = 8
+        /// The fields and pop-up buttons of a 1.0 dialog form (boards NewRepo, NewEnvironment).
+        static let field: CGFloat = 7
+        /// Their name chips and the segments of the `.small` segmented control.
+        static let token: CGFloat = 6
 
         // MARK: Legacy names (v0.2 screens)
 

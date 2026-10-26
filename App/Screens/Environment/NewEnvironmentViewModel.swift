@@ -36,13 +36,12 @@ final class NewEnvironmentViewModel {
         }
     }
 
-    var subtitle: String? {
-        directory.map { directory in
-            String(
-                localized: "environment.new.subtitle",
-                defaultValue: "In \(directory.repository.fullName). The next Sync creates it on GitHub."
-            )
+    /// "New Environment in api-service" (board NewEnvironment).
+    var title: String {
+        guard let directory else {
+            return String(localized: "environment.new.title", defaultValue: "New Environment")
         }
+        return String(localized: "environment.new.titleIn", defaultValue: "New Environment in \(directory.repository.name)")
     }
 
     var readOnlyReason: RepoCapabilityModel.ReadOnlyReason? {
@@ -55,6 +54,16 @@ final class NewEnvironmentViewModel {
 
     var nameStatus: EnvironmentNameStatusModel {
         directory?.nameStatus(of: name, for: .create) ?? .empty
+    }
+
+    /// The note under the name: "Not used in api-service yet" for a free name (board
+    /// NewEnvironment), else the status's own note.
+    var nameNote: ConfigEditorNoteModel? {
+        guard nameStatus == .available, let directory else { return nameStatus.note }
+        return .success(String(
+            localized: "environment.new.nameFree",
+            defaultValue: "Not used in \(directory.repository.name) yet"
+        ))
     }
 
     var showsPlanNote: Bool {

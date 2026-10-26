@@ -73,14 +73,7 @@ struct SyncScreen: View {
 
     /// No eyebrow on any step (the 1.0 boards): the title says it.
     private var header: some View {
-        SheetHeader(
-            label: nil,
-            title: title,
-            subtitle: subtitle,
-            titleStyle: .leadEmphasized,
-            subtitleStyle: .callout,
-            subtitleSpacing: Theme.Spacing.xSmall
-        ) {
+        SheetHeader.dialog(title, subtitle: subtitle) {
             if viewModel.step == .summary || viewModel.step == .result {
                 Button {
                     viewModel.copySummary()

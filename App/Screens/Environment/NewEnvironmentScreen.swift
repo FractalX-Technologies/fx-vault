@@ -1,8 +1,9 @@
 import SwiftUI
 import VaultCore
 
-/// "+ New Environment": name (fold-key availability) and deployment branch policy, created with
-/// `ConfigRepository.createEnvironment(in:name:policy:)`.
+/// New Environment (board NewEnvironment): the name (fold-key availability) and the deployment
+/// branch policy in the dialog form, staged with `ConfigRepository.createEnvironment(in:name:policy:)`;
+/// the next Sync creates it on GitHub.
 ///
 /// UI feature contract entry view (ARCHITECTURE.md): presented by `MainScreen` for
 /// `MainSheet.newEnvironment`. The init signature is fixed. Dismiss with `@Environment(\.dismiss)`.
@@ -12,20 +13,20 @@ struct NewEnvironmentScreen: View {
     @FocusState private var isNameFocused: Bool
 
     init(context: NewEnvironmentContext, dependencies: FeatureDependencies) {
-        _viewModel = State(initialValue: NewEnvironmentViewModel(context: context, dependencies: dependencies))
+        self.init(viewModel: NewEnvironmentViewModel(context: context, dependencies: dependencies))
+    }
+
+    /// Over a prepared view model (snapshots of board NewEnvironment).
+    init(viewModel: NewEnvironmentViewModel) {
+        _viewModel = State(initialValue: viewModel)
     }
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        ConfigEditorSheet(
-            eyebrow: String(localized: "environment.sheet.eyebrow", defaultValue: "Environment"),
-            title: String(localized: "environment.new.title", defaultValue: "New Environment"),
-            subtitle: viewModel.subtitle,
-            primaryTitle: String(localized: "environment.new.create", defaultValue: "Create"),
-            isPrimaryEnabled: viewModel.canCreate,
-            isWorking: viewModel.isSaving,
-            onCancel: { dismiss() },
-            onPrimary: create
+        DialogSheet(
+            title: viewModel.title,
+            footerNote: SyncCopy.createdAtNextSync,
+            isWorking: viewModel.isSaving
         ) {
             if let error = viewModel.loadError {
                 Banner(.danger, message: error.message)
@@ -33,25 +34,40 @@ struct NewEnvironmentScreen: View {
                 if let reason = viewModel.readOnlyReason {
                     Banner(.warning, message: reason.localizedExplanation, systemImage: "lock")
                 }
-                ConfigSheetField(String(localized: "environment.name", defaultValue: "Name")) {
+                let nameTitle = String(localized: "environment.name", defaultValue: "Name")
+                DialogFormRow(nameTitle) {
                     EnvironmentNameField(
-                        title: String(localized: "environment.name", defaultValue: "Name"),
+                        title: nameTitle,
                         name: $viewModel.name,
                         prompt: "staging",
                         isInvalid: viewModel.nameStatus.note?.isError ?? false,
-                        isFocused: $isNameFocused
+                        isFocused: $isNameFocused,
+                        shape: .dialog
                     )
                     .disabled(!viewModel.canEdit)
-                    if let note = viewModel.nameStatus.note {
-                        ConfigEditorNoteView(note: note)
+                    if let note = viewModel.nameNote {
+                        DialogFormNote(note.message, tone: note.dialogTone)
                     }
                 }
-                BranchPolicyEditorView(form: $viewModel.policy, isEnabled: viewModel.canEdit)
-                if viewModel.showsPlanNote {
-                    EnvironmentPlanNoteView(isPlanGated: viewModel.isPlanGated)
+                DialogFormRow(BranchPolicyEditorView.formLabel) {
+                    BranchPolicyEditorView(form: $viewModel.policy, isEnabled: viewModel.canEdit)
+                    if viewModel.showsPlanNote {
+                        EnvironmentPlanNoteView(isPlanGated: viewModel.isPlanGated)
+                    }
                 }
             }
+        } actions: {
+            Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
+                dismiss()
+            }
+            .fxButtonStyle(.outline, size: .dialog)
+            .keyboardShortcut(.cancelAction)
+            Button(String(localized: "environment.new.stage", defaultValue: "Stage Environment"), action: create)
+                .fxButtonStyle(.primary, size: .dialog)
+                .keyboardShortcut(.defaultAction)
+                .disabled(!viewModel.canCreate)
         }
+        .frame(width: Theme.Layout.newEnvironmentSheetWidth)
         .errorAlert($viewModel.alert)
     }
 

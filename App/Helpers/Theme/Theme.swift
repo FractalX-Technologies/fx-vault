@@ -45,6 +45,9 @@ enum Theme {
         /// The segmented pill: track inset and segment height.
         static let segmentTrackInset: CGFloat = 3
         static let segmentHeight: CGFloat = 30
+        /// The `.small` segmented control of the 1.0 dialogs (boards NewRepo, Share-Pick).
+        static let segmentTrackInsetSmall: CGFloat = 2
+        static let segmentHeightSmall: CGFloat = 22
         /// Pending and banner dots.
         static let bannerDotSize: CGFloat = 8
         /// Rows: tables 34 (boards Main2, Org-Visibility), scopes 36, the sidebar tree 28.
@@ -88,6 +91,14 @@ enum Theme {
         static let compactSheetInset: CGFloat = 22
         /// A row of a dialog's grey list box (board Sync-Delete).
         static let dialogListRowHeight: CGFloat = 24
+        /// A 1.0 dialog form (boards NewRepo, NewEnvironment): a 150 pt label column, 28 pt
+        /// fields and pop-ups, the label 7 pt down (centred on a field), notes 5 pt under it.
+        static let dialogLabelWidth: CGFloat = 150
+        static let dialogFieldHeight: CGFloat = 28
+        static let dialogLabelTopInset: CGFloat = 7
+        static let dialogNoteSpacing: CGFloat = 5
+        /// The name chips of a dialog form ("production ×") and their remove cross.
+        static let dialogChipHeight: CGFloat = 22
 
         // MARK: Onboarding, lock and recovery
 
@@ -158,7 +169,9 @@ enum Theme {
         // MARK: New Repository sheet
 
         /// A full form: owner, name, contents, environments and items.
-        static let createRepoSheetWidth: CGFloat = 560
+        /// Boards NewRepo (620) and NewEnvironment (580).
+        static let createRepoSheetWidth: CGFloat = 620
+        static let newEnvironmentSheetWidth: CGFloat = 580
         static let createRepoSheetHeight: CGFloat = 640
         /// Height of the loading and failure states.
         static let createRepoStatusHeight: CGFloat = 320

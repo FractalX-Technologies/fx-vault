@@ -169,6 +169,10 @@ extension Theme.TextStyle {
     static let caption = Self(font: Typography.caption, size: Typography.Size.caption)
     /// 12 pt, semibold. A place's name heading a Sync summary card (`api-service › production`).
     static let placeName = Self(font: Typography.placeName, size: Typography.Size.caption)
+    /// 11 pt, medium. The label column of a 1.0 dialog form ("Owner", "Visibility").
+    static let formLabel = Self(font: Typography.labelEmphasized, size: Typography.Size.label)
+    /// 11 pt. A note under a dialog form's control ("Probably available · GitHub confirms it at Sync").
+    static let formNote = Self(font: Typography.label, size: Typography.Size.label)
 
     /// 13 pt mono. Names inside body text, recovery keys, commands.
     static let mono = Self(font: Typography.monospaced, size: Typography.Size.body)

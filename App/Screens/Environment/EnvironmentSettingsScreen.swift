@@ -60,7 +60,9 @@ struct EnvironmentSettingsScreen: View {
                         ConfigEditorNoteView(note: note)
                     }
                 }
-                BranchPolicyEditorView(form: $viewModel.policy, isEnabled: viewModel.canEdit)
+                ConfigSheetField(BranchPolicyEditorView.header) {
+                    BranchPolicyEditorView(form: $viewModel.policy, isEnabled: viewModel.canEdit)
+                }
                 if viewModel.showsPlanNote {
                     EnvironmentPlanNoteView(isPlanGated: viewModel.isPlanGated)
                 }

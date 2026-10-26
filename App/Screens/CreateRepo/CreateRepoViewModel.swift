@@ -316,8 +316,12 @@ final class CreateRepoViewModel: LockObserving {
     /// "Clone to my Mac" is on but the account has no SSH alias mapped (D19): Sync would create
     /// the repository and report the clone as failed.
     var cloneNeedsSSHAlias: Bool {
-        guard clonesAfterCreate, let account = accountLogin else { return false }
-        return aliases[OwnerLoginValidator.foldKey(account)] == nil
+        clonesAfterCreate && accountLogin != nil && cloneSSHAlias == nil
+    }
+
+    /// The SSH alias Sync clones through: the account's mapping (board NewRepo, beside the folder).
+    var cloneSSHAlias: String? {
+        accountLogin.flatMap { aliases[OwnerLoginValidator.foldKey($0)] }
     }
 
     // MARK: - Environments and items
@@ -447,32 +451,6 @@ final class CreateRepoViewModel: LockObserving {
             editor.discard()
         }
         editor = nil
-    }
-
-    // MARK: - Summary (names and counts only)
-
-    /// The two review lines above Create: what Sync will create. Never contains a value.
-    var reviewSummary: [String] {
-        var traits = [visibility.localizedTitle]
-        if addsReadme {
-            traits.append(String(localized: "createRepo.summary.readme", defaultValue: "README"))
-        }
-        if let gitignoreTemplate {
-            traits.append(String(localized: "createRepo.summary.gitignore", defaultValue: "\(gitignoreTemplate) .gitignore"))
-        }
-        if let licenseKey {
-            traits.append(licenseTemplates.first { $0.key == licenseKey }?.name ?? licenseKey)
-        }
-        let owner = selectedOwner?.login ?? ""
-        let title = name.isEmpty ? owner : "\(owner)/\(name)"
-        return [
-            ([title] + traits).joined(separator: " · "),
-            CreateRepoText.contentSummary(
-                environments: environments.count,
-                secrets: secretCount,
-                variables: variableCount
-            ),
-        ]
     }
 
     // MARK: - Create

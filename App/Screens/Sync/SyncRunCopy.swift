@@ -4,6 +4,11 @@ import VaultCore
 /// The phrases of the Sync run, its deletion check and its finish (boards Sync-Progress,
 /// Sync-Delete, Sync-Done). Names and counts only.
 extension SyncCopy {
+    /// The footer of what New Repository and New Environment stage (boards NewRepo, NewEnvironment).
+    static var createdAtNextSync: String {
+        String(localized: "sync.createdAtNextSync", defaultValue: "Created on GitHub at the next Sync.")
+    }
+
     // MARK: - Run (board Sync-Progress)
 
     static var progressTitle: String {

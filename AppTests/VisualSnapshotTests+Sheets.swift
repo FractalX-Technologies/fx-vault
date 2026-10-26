@@ -74,6 +74,40 @@ extension VisualSnapshotTests {
         }
     }
 
+    // MARK: - New Repository and New Environment (boards NewRepo, NewEnvironment)
+
+    /// The two dialog forms filled as their boards: a name, environments as chips, a staged
+    /// secret, cloning on; an environment with selected branches and tags.
+    @Test func newRepositoryAndEnvironment() async throws {
+        let fixture = try await CreateRepoViewModelTests.Fixture()
+        await fixture.readyToCreate(name: "billing-service")
+        _ = fixture.addEnvironment("production")
+        _ = fixture.addEnvironment("staging")
+        try fixture.addItem(.secret, "STRIPE_KEY", "snapshot-value")
+        let repository = fixture.viewModel
+        repository.clonesAfterCreate = true
+        try await SnapshotOutput.write("new-repository", size: CGSize(width: Theme.Layout.createRepoSheetWidth, height: Theme.Layout.createRepoSheetHeight)) {
+            CreateRepoFormView(viewModel: repository, onCancel: {}, onCreate: {})
+        }
+
+        let (harness, id) = try await EditorFixtures.stagedHarness()
+        let environment = NewEnvironmentViewModel(
+            context: NewEnvironmentContext(repositoryID: id),
+            dependencies: harness.dependencies(recorder: ActionRecorder())
+        )
+        environment.name = "preview"
+        environment.policy.choice = .selected
+        for (pattern, type) in [("main", BranchPatternType.branch), ("release/*", .branch), ("v*", .tag)] {
+            environment.policy.newPatternType = type
+            environment.policy.newPattern = pattern
+            environment.policy.addPattern()
+        }
+        try await SnapshotOutput.write("new-environment", size: CGSize(width: Theme.Layout.newEnvironmentSheetWidth, height: Self.newEnvironmentHeight)) {
+            NewEnvironmentScreen(viewModel: environment)
+        }
+    }
+
+    private static let newEnvironmentHeight: CGFloat = 440
     private static let syncDeletionsHeight: CGFloat = 320
     private static let syncProgressHeight: CGFloat = 520
     private static let syncDoneHeight: CGFloat = 260
