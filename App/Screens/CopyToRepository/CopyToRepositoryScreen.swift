@@ -25,7 +25,7 @@ struct CopyToRepositoryScreen: View {
     var body: some View {
         @Bindable var viewModel = viewModel
         ConfigEditorSheet(
-            eyebrow: String(localized: "copyTo.eyebrow", defaultValue: "Copy To"),
+            eyebrow: PlaceCopy.copyTo,
             title: String(localized: "copyTo.title", defaultValue: "Another Repository"),
             subtitle: viewModel.subtitle,
             primaryTitle: viewModel.result == nil

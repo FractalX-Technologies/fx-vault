@@ -45,14 +45,16 @@ final class OrganizationDetailViewModel {
         items.sorted { ($0.kind == .secret ? 0 : 1, $0.name) < ($1.kind == .secret ? 0 : 1, $1.name) }
     }
 
-    /// "Organization · 14 secrets · 6 variables · 3 without value" (board Org-Visibility).
+    /// "Organization · 14 secrets · 6 variables · 3 without value" (board Org-Visibility): as a
+    /// repository's, pending deletions are left out and "without value" counts secrets only.
     var subline: String {
-        PlaceCopy.subline([
+        let live = items.filter { $0.syncStatus != .deleted }
+        return PlaceCopy.subline([
             PlaceCopy.organization,
             PlaceCopy.counts(
-                secrets: items.lazy.filter { $0.kind == .secret }.count,
-                variables: items.lazy.filter { $0.kind == .variable }.count,
-                withoutValue: items.lazy.filter { !$0.hasValue }.count
+                secrets: live.lazy.filter { $0.kind == .secret }.count,
+                variables: live.lazy.filter { $0.kind == .variable }.count,
+                withoutValue: live.lazy.filter { $0.kind == .secret && !$0.hasValue }.count
             ),
         ])
     }

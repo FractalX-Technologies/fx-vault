@@ -20,6 +20,8 @@ final class OrganizationUITests: VaultUITestCase {
         let table = try importExampleOrganization(app)
 
         click(app.descendants(matching: .any).matching(identifier: AccessibilityID.Place.more).firstMatch)
+        // By title: a SwiftUI menu item's identifier is "menuAction:" (UI logs), never the
+        // button's `accessibilityIdentifier`.
         click(app.menuItems["New Variable"])
         type("zone", into: app.textFields[AccessibilityID.ItemEditor.name])
         type("eu-west-1", into: app.textViews[AccessibilityID.ItemEditor.value])

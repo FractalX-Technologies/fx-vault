@@ -91,7 +91,7 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
                         : String(localized: "main.table.empty.readOnly", defaultValue: "Nothing in this scope.")
                 ) {
                     if viewModel.canEdit {
-                        Button(String(localized: "main.detail.pasteMultiple", defaultValue: "Paste Multiple…")) {
+                        Button(PlaceCopy.pasteMultiple) {
                             viewModel.pasteMultiple()
                         }
                         .fxButtonStyle(.outline)
@@ -310,7 +310,7 @@ struct ConfigRowActions: View {
         }
         .disabled(!viewModel.canEdit || row.isDeleted)
         if !row.isDeleted {
-            CopyToMenu(title: String(localized: "main.table.copyTo", defaultValue: "Copy To"), rows: [row], viewModel: viewModel)
+            CopyToMenu(title: PlaceCopy.copyTo, rows: [row], viewModel: viewModel)
         }
         if row.isLinked {
             Button(String(localized: "main.table.linked.show", defaultValue: "Show Linked Copies")) {

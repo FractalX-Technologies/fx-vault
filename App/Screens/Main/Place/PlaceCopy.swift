@@ -19,6 +19,7 @@ nonisolated enum PlaceCopy {
     static let deploymentBranches = String(localized: "place.more.deploymentBranches", defaultValue: "Deployment Branches…")
     static let clone = String(localized: "place.more.clone", defaultValue: "Clone…")
     static let refresh = String(localized: "place.more.refresh", defaultValue: "Refresh")
+    static let refreshing = String(localized: "place.refreshing", defaultValue: "Refreshing…")
     static let deleteSelected = String(localized: "place.more.deleteSelected", defaultValue: "Delete Selected…")
     static let review = String(localized: "place.drift.review", defaultValue: "Review")
 

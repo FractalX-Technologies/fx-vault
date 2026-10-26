@@ -16,7 +16,6 @@ enum JumpPaletteCopy {
     static let toJumpAnywhere = String(localized: "jump.anywhere.hint", defaultValue: "to jump anywhere")
 
     static let organization = String(localized: "jump.place.organization", defaultValue: "GitHub organization")
-    static let folder = String(localized: "jump.place.folder", defaultValue: "Folder")
 
     static func repository(owner: String) -> String {
         String(localized: "jump.place.repository", defaultValue: "\(owner) › repository")

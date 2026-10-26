@@ -1168,8 +1168,10 @@ AppTests).
     scopes, the folders and the other destinations; ⌘C / ⌘V and `.env` import work as for scopes.
     Refresh is disabled offline.
   - `RepoDetailViewModel` (`Main/RepoDetail`): the place header (1.0 D6c3, `Main/Place`:
-    `PlaceHeader` with `headerTitle`, `headerSubline` built by `PlaceCopy`, the drift line, and
-    ⋯ More: New Secret / New Variable (`ConfigTableModel.add(_:)` opens that kind's tab first),
+    `PlaceHeader` with `headerTitle`, `headerSubline` built by `PlaceCopy`, Refreshing… or the
+    drift line, and ⋯ More, whose item actions are `PlaceItemMoreItems` (shared with Key Vaults
+    and folders; Delete Selected… follows `ConfigTableModel.canDeleteSelection`): New Secret /
+    New Variable (`ConfigTableModel.add(_:)` opens that kind's tab first),
     Paste Multiple…, Import .env…, Export .env…, Copy To (`placeCopyRows`: the selection, or the
     open tab), Share Securely…, Deployment Branches… (`editBranchPolicy()`; its help carries the
     policy and the plan note), Clone…, Refresh, Delete Selected…), the read-only explanation, and

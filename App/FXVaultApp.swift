@@ -75,7 +75,7 @@ struct VaultCommands: Commands {
             .keyboardShortcut("n", modifiers: [.shift, .command])
             .disabled(viewModel.phase != .unlocked || main == nil)
 
-            Button(String(localized: "menu.file.importEnv", defaultValue: "Import .env…")) {
+            Button(PlaceCopy.importEnv) {
                 main?.importEnv()
             }
             .keyboardShortcut("i", modifiers: [.shift, .command])

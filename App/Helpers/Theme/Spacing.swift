@@ -21,8 +21,6 @@ extension Theme {
         /// 28: the detail column's side inset, hero gaps on lock and onboarding.
         static let xLargePlus: CGFloat = 28
         static let xxLarge: CGFloat = 32
-        /// 36: wide page insets.
-        static let xxLargePlus: CGFloat = 36
         static let xxxLarge: CGFloat = 48
         /// 56 and 64: onboarding and lock page insets.
         static let huge: CGFloat = 56

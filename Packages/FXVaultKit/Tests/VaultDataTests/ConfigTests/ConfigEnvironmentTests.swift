@@ -29,13 +29,15 @@ struct ConfigEnvironmentTests {
         let second = try harness.seedRepository(name: "repo-b")
         try harness.config.createEnvironment(in: first.id, name: "staging")
         let preview = try harness.config.createEnvironment(in: first.id, name: "preview")
+        // Created after staging: the scopes column's order (by creation), not by name.
+        try harness.config.createEnvironment(in: first.id, name: "qa")
         try harness.config.createEnvironment(in: second.id, name: "production")
         try harness.markSynced(first)
         try harness.config.deleteEnvironment(preview)
         #expect(try harness.store.fetchEnvironments(repositoryID: first.id).contains { $0.id == preview && $0.isDeleted })
 
         let byRepository = try harness.config.environmentsByRepository()
-        #expect(byRepository[first.id]?.map(\.name) == ["staging"])
+        #expect(byRepository[first.id]?.map(\.name) == ["staging", "qa"])
         #expect(byRepository[second.id]?.map(\.name) == ["production"])
     }
 

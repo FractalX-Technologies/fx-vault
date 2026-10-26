@@ -131,9 +131,10 @@ struct ItemCopyTargetModel: Hashable, Identifiable {
     }
 }
 
-/// Column 3 (§10): the header (owner/name, visibility, capability chip, Clone, Refresh, drift
-/// banner, deployment branches and plan note on environments, read-only explanation) and one
-/// table with the Secrets | Variables picker and the row actions.
+/// Column 3 (§10; boards Main2-Repository, Main2-Actions): the header (the scope's name, "kind ·
+/// parent · counts", Refreshing… or the drift line, ⋯ More with Clone, Refresh and Deployment
+/// Branches…), the read-only explanation and one table with the Secrets | Variables pill and
+/// the row actions.
 ///
 /// Values: a secret is decrypted only while revealed or copied, and every revealed value is
 /// masked again after `Timeouts.revealRemask`, when FX Vault resigns active, when the scope
@@ -599,7 +600,7 @@ final class RepoDetailViewModel: LockObserving {
         presentImport(.pasteEditor)
     }
 
-    /// "Import .env File…" from the Add menu: the file chooser, rows defaulting to the tab's kind.
+    /// Import .env… from ⋯ More: the file chooser, rows defaulting to the tab's kind.
     func importEnvFile() {
         presentImport(.chooser)
     }

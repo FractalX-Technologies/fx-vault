@@ -193,7 +193,7 @@ struct DestinationContextMenu: View {
         Button(DestinationCopy.settingsMenu) {
             viewModel.openSettings(destination)
         }
-        Button(String(localized: "main.scopes.exportEnv", defaultValue: "Export .env…")) {
+        Button(PlaceCopy.exportEnv) {
             viewModel.exportEnv(destination)
         }
         .disabled(destination.itemCount == 0)

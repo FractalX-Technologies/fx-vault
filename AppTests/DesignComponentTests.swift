@@ -33,6 +33,19 @@ struct DesignComponentTests {
         #expect(FXButtonStyle.hoverOpacity(for: .outline, isHovered: true) == 1)
     }
 
+    /// A place header's buttons (board Main2-Repository): 26 pt tall with 8 pt corners, where
+    /// the other sizes are capsules; the ⋯ square takes the same shape.
+    @Test func compactButtonsAreShortRoundedRectangles() {
+        #expect(FXButtonStyle.height(for: .compact) == 26)
+        #expect(FXButtonStyle.font(for: .outline, size: .compact) == Theme.Typography.caption)
+        let rect = CGRect(x: 0, y: 0, width: 80, height: 26)
+        let rounded = RoundedRectangle(cornerRadius: Theme.Radius.compactRow, style: .continuous).path(in: rect)
+        #expect(FXButtonStyle.shape(for: .compact).path(in: rect) == rounded)
+        #expect(FXButtonStyle.shape(for: .regular).path(in: rect) == Capsule.pill.path(in: rect))
+        #expect(FXIconButtonStyle.side(for: .compact) == 26)
+        #expect(FXIconButtonStyle.shape(for: .compact).path(in: rect) == rounded)
+    }
+
     // MARK: Chips
 
     @Test func syncStatusesMapToChipTones() {

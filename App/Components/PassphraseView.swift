@@ -3,7 +3,7 @@ import SwiftUI
 
 /// A generated passphrase (D8, §9.2) as large SF Mono words in a card, numbered so it can be
 /// read out or written down, with Copy. Hidden from screen capture. Used by onboarding (the
-/// generated master password) and Share as File.
+/// generated master password) and Share Securely….
 struct PassphraseView: View {
     let passphrase: String
     let onCopy: () -> Void

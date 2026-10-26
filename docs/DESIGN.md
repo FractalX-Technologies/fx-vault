@@ -252,14 +252,14 @@ choices of the editor sheets; settings keep native pickers. `.disabled` dims the
 
 ```swift
 Banner(.offline, message: ConnectivityBannerModel.offline.message)
-Banner(.info, message: driftText, action: .init(title: reviewTitle) { viewModel.reviewDrift() })
+Banner(.info, message: driftText, action: .init(title: reviewTitle) { viewModel.reviewDifferences() })
 Banner(.warning, message: text, label: "Experimental")
 ```
 
 12 pt corners in the content column (not edge to edge). `.info`: `card` + hairline + brand dot;
-`.warning`: `card` + `hairlineStrong` + warning symbol (the drift banner with conflicts);
-`.offline`: `surface2` + `hairlineStrong` + `wifi.slash` + the `OFFLINE` mono label (the only
-`surface2` banner, so it reads apart from drift); `.danger`: `card` + `hairlineStrong` + danger
+`.warning`: `card` + `hairlineStrong` + warning symbol (a read-only scope, the recovery-key
+notice); `.offline`: `surface2` + `hairlineStrong` + `wifi.slash` + the `OFFLINE` mono label (the
+only `surface2` banner, so it reads apart from the others); `.danger`: `card` + `hairlineStrong` + danger
 symbol. The action is an emphasized `FXLinkButtonStyle` link (brand on `card` is 5.49:1 light;
 pointer cursor, 40% when disabled).
 
@@ -399,9 +399,10 @@ foreground color, so `.primary` text still turns white on selected rows.
   `subtleText` (`PlaceCopy.subline`: `Environment · api-service · 6 secrets · 2 variables · 1
   without value`; the repository scope adds its visibility and "created by the next Sync"; a Key
   Vault "Key Vault · 32 secrets"; a folder "Folder · never sent anywhere by itself · …"), then a
-  status line: the drift line (`DriftBannerView`: a 7 pt ink ring, "2 changed on GitHub" in
-  `mutedText` (`warning` when a change also changed in the vault), "·", Review as an
-  emphasized link) or why the check failed. On the right, bottom-aligned: the place's own
+  status line: Refreshing… with a mini spinner while Refresh runs (`PlaceRefreshingLine`), the
+  drift line (`DriftBannerView`: a 7 pt ink ring, "2 changed on GitHub" in `mutedText` (with
+  "· 1 also changed in your vault" on a conflict, still muted), "·", Review in `ink`
+  `captionEmphasized` with a `hairlineStrong` underline) or why the check failed. On the right, bottom-aligned: the place's own
   `.compact` outline buttons (a folder's Copy To and Share Securely…) and ⋯ More. The
   `SegmentedPill` (Secrets / Variables) with the selection's actions; the table with
   `.fxTable()`.
@@ -412,8 +413,9 @@ foreground color, so `.primary` text still turns white on selected rows.
   Selected…. An organization: New Secret, New Variable | Remove from Vault…. A Key Vault: New
   Secret | Paste Multiple…, Import .env… | Copy To, Refresh | Delete Selected… | its own menu. A
   folder: the item actions, then its own menu (Rename…, Share Securely…, Export .env…, Delete
-  Folder…). Copy All joins in 1e; the lock beside Touch ID items and Notes | Table wait for 1e
-  and B9.
+  Folder…). The item actions are one section (`PlaceItemMoreItems`); Delete Selected… needs a
+  selected row that is not already a pending deletion (`canDeleteSelection`). Copy All joins in
+  1e; the lock beside Touch ID items and Notes | Table wait for 1e and B9.
 - An environment row's context menu (board Main2-Actions): Rename…, Duplicate Environment…,
   Share Securely…, Refresh, Revert Changes (only when there is a change to undo; not on the
   board), | Delete Environment….
