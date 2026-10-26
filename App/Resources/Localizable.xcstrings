@@ -11474,6 +11474,61 @@
         }
       }
     },
+    "menuBar.lockNow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Lock Now"
+          }
+        }
+      }
+    },
+    "menuBar.open" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open %@"
+          }
+        }
+      }
+    },
+    "menuBar.quit" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Quit %@"
+          }
+        }
+      }
+    },
+    "menuBar.reviewSync" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Review Sync · %lld pending…"
+          }
+        }
+      }
+    },
+    "menuBar.settings" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Settings…"
+          }
+        }
+      }
+    },
     "notes.accessibility" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

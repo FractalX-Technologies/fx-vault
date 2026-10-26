@@ -878,6 +878,17 @@ foreground color, so `.primary` text still turns white on selected rows.
   `.bodyEmphasized` total, a warning `Banner` naming failures, and the "GitHub never returns
   secret values" note.
 
+### Menu bar (board MenuBar)
+
+- A `MenuBarExtra` (menu style) with `Theme.Symbols.menuBar` (`circle.grid.3x3.fill`, the brand
+  mark's dot grid), named after the app; left out in unit tests and previews
+  (`AppContainer.hasSideEffects`).
+- `MenuBarContent`: Open FX Vault (the main window; while locked, the island instead, so no window
+  opens only to close), Review Sync · N pending… (only with changes pending after onboarding; the
+  Sync review, after the unlock when locked; without gh or the internet only the window), a
+  divider, Lock Now (disabled unless unlocked), Settings… ⌘,, a divider, Quit FX Vault ⌘Q.
+- Counts only: the menu never shows a name or a value. "Quick Vault ⌃⌥V" at the top comes with Q1.
+
 ### Settings
 
 Boards Settings-*: the native `Settings` scene and `TabView` (toolbar tabs: `gearshape`, `lock`,
@@ -993,6 +1004,7 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 | Brand: type, buttons | `Theme.Typography`, `Theme.TextStyle`, `FXButtonStyle` |
 | Main / MainDark | `.fxWindowBackground`, `SectionLabel`, `.fxRowBackground`, `StatusChip`, `SegmentedPill`, `Banner`, `.fxTable`, `TableNameText`, `SyncToolbarButton`, `FXIconButtonStyle` |
 | Lock | `DotGridBackground`, `BrandMark`, `.display`, `FXTextField(.pill)`, `FXButtonStyle` |
+| MenuBar | `MenuBarContent`, `MenuBarCopy`, `Theme.Symbols.menuBar` |
 | Onboarding | `StepCounter`, `.largeTitle`, `.lead`, `FXTextField(.rounded)`, `SectionLabel` |
 | Sync-Review | `.fxSheetBackground`, `SyncSummaryCardView` (`.fxCardBackground(.container)`), `.leadEmphasized`, `.placeName`, `.monoMeta`, `FXLinkButtonStyle`, `FXButtonStyle(.large)` |
 | Sync-Delete, Sync-Progress, Sync-Done | `SyncDeletionsView` (`.fxDialogListBox`), `SyncRunView` (`SyncProgressPresentation`), `SyncDoneView`, `FXButtonStyle(.dialog)` |

@@ -51,6 +51,18 @@ struct FXVaultApp: App {
             }
             .fxWindowBackground()
         }
+
+        // The menu bar item (board MenuBar). Not while the app hosts unit tests or previews: it
+        // would sit in the developer's menu bar.
+        MenuBarExtra(
+            AppIdentity.windowTitle,
+            systemImage: Theme.Symbols.menuBar,
+            isInserted: .constant(appDelegate.bootstrap.viewModel?.container.hasSideEffects == true)
+        ) {
+            if let viewModel = appDelegate.bootstrap.viewModel {
+                MenuBarContent(app: viewModel)
+            }
+        }
     }
 }
 

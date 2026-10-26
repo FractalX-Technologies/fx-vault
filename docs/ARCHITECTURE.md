@@ -1052,12 +1052,15 @@ AppTests).
   being the Key Vaults of their own (1.0), and `pendingChangeCount(of:)` gives one repository's
   GitHub plus destination changes), `isSyncing` /
   `beginSyncActivity() -> SyncActivity`, `pendingImports` / `openShareFiles(_:)` /
-  `takeNextPendingImport()`, `setMainWindowOpener(_:)` / `requestMainWindow()`,
+  `takeNextPendingImport()`, `setMainWindowOpener(_:)` / `requestMainWindow()`, the menu bar's
+  `openFXVault()` (the island while locked) and `offersSyncReview` / `requestSyncReview()` /
+  `takeSyncReviewRequest()` (a flag the main window consumes after the unlock; a lock clears it),
   `lastReconciliation` (launch reconciliation after each unlock, after the gh probe),
   `lock(trigger:)`, `didUnlock()`, `completeOnboarding()`, `didResetVault()`,
   `applicationWillTerminate()`, `shouldOfferTouchID(afterInvalidation:)` /
   `recordTouchIDOfferAnswer()` (the one-time Touch ID offer) and `make…ViewModel()` factories.
-- Scenes: the main `Window` (`SceneID.main`) and Settings.
+- Scenes: the main `Window` (`SceneID.main`), Settings, and the `MenuBarExtra` (1.0 M1,
+  `MenuBarContent`; inserted only when `hasSideEffects`).
 - `FXVaultMain` (`FXVaultApp.swift`) is the `@main` entry: `DiagnoseCommand.runIfRequested()`
   answers `--diagnose` (JSON on stdout, then `exit(0)`) before `FXVaultApp.main()` creates the app
   delegate, so no window, vault or database opens. `App/Diagnostics`: `DiagnosticReporter`

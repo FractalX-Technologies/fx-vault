@@ -158,6 +158,10 @@ says **Unlocked** and the main window opens; locking (⌃⌘L, sleep, idle) clos
 **Recovery Key…** in the island opens the recovery window. **Settings › General › Open at
 login** starts FX Vault, locked, when you log in to your Mac.
 
+FX Vault's dot grid in the menu bar opens the same island when locked (**Open FX Vault**), and
+has **Review Sync · N pending…** (the Sync review, after the unlock), **Lock Now**,
+**Settings…** and **Quit**. It shows counts only, never names or values.
+
 ### Touch ID
 
 The signed release can unlock the vault with Touch ID. After a password unlock, FX Vault offers

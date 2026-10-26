@@ -43,6 +43,7 @@ struct MainScreen: View {
                     viewModel.retiredDestinations.load()
                 }
                 viewModel.presentNextPendingImport()
+                viewModel.presentRequestedSyncReview()
             }
             .alert(
                 DestinationCopy.retiredTitle,
@@ -60,6 +61,9 @@ struct MainScreen: View {
             }
             .onChange(of: viewModel.app.pendingImports) {
                 viewModel.presentNextPendingImport()
+            }
+            .onChange(of: viewModel.app.isSyncReviewRequested) {
+                viewModel.presentRequestedSyncReview()
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
                 viewModel.remaskRevealedValues()

@@ -168,6 +168,15 @@ enum AccessibilityID {
         static let unmappedCheckAgain = "accounts.unmapped.checkAgain"
     }
 
+    /// The menu bar item's menu (1.0 M1).
+    enum MenuBar {
+        static let open = "menuBar.open"
+        static let reviewSync = "menuBar.reviewSync"
+        static let lockNow = "menuBar.lockNow"
+        static let settings = "menuBar.settings"
+        static let quit = "menuBar.quit"
+    }
+
     /// Settings › General, Security and Advanced.
     enum Settings {
         static let quickVaultShortcut = "settings.quickVaultShortcut"

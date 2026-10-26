@@ -16,6 +16,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   one, with Copy.
 - **Add Account….** Settings › Accounts gives gh's login command for another GitHub account,
   with Check Again.
+- **Menu bar item.** FX Vault's dot grid in the menu bar: Open FX Vault (the island while
+  locked), Review Sync · N pending… (opens the Sync review, after the unlock when locked), Lock
+  Now, Settings… and Quit. It shows counts only, never names or values.
 
 ### Fixed
 
