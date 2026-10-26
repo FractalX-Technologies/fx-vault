@@ -27,6 +27,10 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         didSet {
             if activeSheet == nil {
                 presentNextPendingImport()
+            } else {
+                // A menu command or an opened .fxvault file can bring a sheet over the palette; it
+                // would come back stale when the sheet goes.
+                jumpPalette = nil
             }
         }
     }
@@ -121,10 +125,14 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// Selects a repository row. The row stands for the repository scope (1.0 has no separate
     /// "Repository" row), so clicking it again from one of its environments goes back there.
     func select(repository repo: SidebarRepoModel) {
-        if sidebar.selectedRowID == repo.id {
+        select(repositoryRow: repo.id)
+    }
+
+    private func select(repositoryRow id: SidebarRepoModel.ID) {
+        if sidebar.selectedRowID == id {
             scopeList?.selectedScopeID = ScopeListViewModel.repositoryScopeID
         } else {
-            sidebar.selectedRowID = repo.id
+            sidebar.selectedRowID = id
         }
     }
 
@@ -136,11 +144,12 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         return scopeList.selectedScopeID == ScopeListViewModel.repositoryScopeID
     }
 
-    /// The selected place as the toolbar's path: `GitHub › owner › repo › environment`, or
-    /// `Folders › name`, `Azure Key Vault › name`; empty with nothing selected.
+    /// The selected place as the toolbar's path, named like its sidebar section:
+    /// `GitHub › owner › repo › environment`, `Azure › vault` or `Folders › name`; empty with
+    /// nothing selected.
     var breadcrumb: [String] {
         if let vault = sidebar.selectedKeyVault {
-            return [MainCopy.azureSection, vault.title]
+            return [SidebarCopy.azureSection, vault.title]
         }
         if let folder = sidebar.selectedFolder {
             return [FolderCopy.sectionTitle, folder.name]
@@ -339,6 +348,12 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         )))
     }
 
+    /// New Repository… on an owner's context menu (1.0 D6c2), with that owner preselected.
+    func newRepository(in owner: SidebarOwnerModel) {
+        guard canCreateRepository else { return }
+        present(.createRepository(CreateRepoContext(accountLogin: owner.accountLogin, ownerLogin: owner.login)))
+    }
+
     /// Import .env (⇧⌘I) needs a selected scope whose items can change, a folder or a
     /// destination.
     var canImportEnv: Bool {
@@ -420,6 +435,78 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         app.container.preferences.isRecoveryKeyConfirmationPending
     }
 
+    /// The banner's button: the key that was shown cannot be shown again, so Settings › Security
+    /// opens on a new one. The view then opens the Settings window.
+    func createNewRecoveryKey() {
+        app.requestSettingsTab(.security, securitySheet: .newRecoveryKey)
+    }
+
+    // MARK: - Jump palette (⌘K, 1.0 D6c2)
+
+    /// The palette on screen, or nil.
+    private(set) var jumpPalette: JumpPaletteViewModel?
+
+    /// The toolbar's search button and ⌘K: unlocked, with no sheet over the window.
+    var canJump: Bool {
+        isUnlocked && activeSheet == nil
+    }
+
+    /// ⌘K and the toolbar's search button: opens the palette with the sidebar's places, or
+    /// closes it when it is open.
+    func showJumpPalette() {
+        guard jumpPalette == nil else {
+            jumpPalette = nil
+            return
+        }
+        guard canJump else { return }
+        jumpPalette = JumpPaletteViewModel(places: jumpPlaces) { [weak self] target in
+            self?.jump(to: target)
+        }
+    }
+
+    /// Esc or a click outside.
+    func closeJumpPalette() {
+        jumpPalette = nil
+    }
+
+    /// Selects the place in the sidebar (clearing its search so the row shows) and closes the
+    /// palette.
+    func jump(to target: JumpPlaceTarget) {
+        jumpPalette = nil
+        sidebar.searchText = ""
+        switch target {
+        case .organization(let id):
+            sidebar.selectedOrganizationOwnerID = id
+        case .repository(let id):
+            select(repositoryRow: id)
+        case .environment(let repositoryID, let environmentID):
+            open(repositoryID: repositoryID, scope: .environment(environmentID))
+        case .keyVault(let id):
+            sidebar.select(keyVaultID: id)
+        case .folder(let id):
+            sidebar.select(folderID: id)
+        }
+    }
+
+    /// Every place the sidebar can show, whatever its search; environments are read from the
+    /// vault (the sidebar only lists the selected repository's).
+    private var jumpPlaces: [JumpPlaceModel] {
+        var environments: [RepoID: [EnvironmentModel]] = [:]
+        for repo in sidebar.input.vaultRepos {
+            do {
+                environments[repo.id] = try app.container.data.config.scopes(repositoryID: repo.id).compactMap(\.environment)
+            } catch {
+                AppLog.ui.error("Jump palette could not read a repository's environments")
+            }
+        }
+        return JumpPlaces.places(JumpPlaceInputModel(
+            owners: SidebarGrouping.owners(sidebar.input, query: ""),
+            environments: environments,
+            keyVaults: sidebar.keyVaults,
+            folders: sidebar.folders
+        ))
+    }
+
     // MARK: - Clone
 
     /// The folder new clones go to, or nil until one is chosen (Preferences › General).
@@ -489,5 +576,6 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         reconnectTask?.cancel()
         reconnectTask = nil
         activeSheet = nil
+        jumpPalette = nil
     }
 }

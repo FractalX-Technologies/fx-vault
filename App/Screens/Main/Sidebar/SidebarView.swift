@@ -12,10 +12,6 @@ struct SidebarView: View {
         @Bindable var sidebar = main.sidebar
         let owners = sidebar.owners
         VStack(spacing: Theme.Spacing.small) {
-            if main.showsRecoveryKeyReminder {
-                RecoveryKeyReminderView()
-                    .padding([.horizontal, .top], Theme.Spacing.medium)
-            }
             SidebarSearchField(sidebar: sidebar)
                 .padding(.horizontal, Theme.Spacing.medium)
             ScrollView {
@@ -380,8 +376,8 @@ private struct RepoNodeView: View {
     }
 }
 
-/// Import or Remove from Vault for an organization, and Add Repository by Name… through the
-/// account the owner goes through.
+/// Import or Remove from Vault for an organization, then New Repository… (the owner
+/// preselected) and Add Repository by Name… through the account the owner goes through.
 private struct OwnerContextMenu: View {
     let owner: SidebarOwnerModel
     let main: MainViewModel
@@ -400,6 +396,10 @@ private struct OwnerContextMenu: View {
             .disabled(!sidebar.canImportOrganization(owner))
             Divider()
         }
+        Button(MainCopy.newRepository) {
+            main.newRepository(in: owner)
+        }
+        .disabled(!main.canCreateRepository)
         Button(SidebarCopy.addByName) {
             main.addRepositoryByName(accountLogin: owner.accountLogin)
         }
@@ -521,19 +521,6 @@ private struct SidebarFooter: View {
             .foregroundStyle(Theme.Colors.mutedText)
             .frame(width: Theme.Layout.sidebarControlHeight, height: Theme.Layout.sidebarControlHeight)
             .contentShape(Rectangle())
-    }
-}
-
-/// The reminder shown when a recovery key was never confirmed as saved.
-private struct RecoveryKeyReminderView: View {
-    var body: some View {
-        Banner(
-            .warning,
-            message: String(
-                localized: "main.recoveryReminder",
-                defaultValue: "Your recovery key was not saved. Create a new one in Settings › Security."
-            )
-        )
     }
 }
 

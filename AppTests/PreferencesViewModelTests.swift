@@ -53,6 +53,25 @@ struct PreferencesViewModelTests {
         #expect(viewModel.selectedTab == .general, "a request is shown once")
     }
 
+    /// The recovery-key banner (1.0 D6c2, board Main2-Home) opens Settings › Security with the
+    /// new-key sheet, the only way to get a key the user can save.
+    @Test func theRecoveryBannerOpensTheNewKeySheet() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let viewModel = PreferencesViewModel(app: harness.app)
+        let main = harness.app.makeMainViewModel()
+        harness.container.preferences.isRecoveryKeyConfirmationPending = true
+        #expect(main.showsRecoveryKeyReminder)
+
+        main.createNewRecoveryKey()
+        viewModel.showRequestedTab()
+        #expect(viewModel.selectedTab == .security)
+        #expect(viewModel.security.activeSheet == .newRecoveryKey)
+
+        viewModel.security.dismissSheet()
+        viewModel.showRequestedTab()
+        #expect(viewModel.security.activeSheet == nil, "a request is shown once")
+    }
+
     @Test func unlockedPhaseEnablesSecurity() async throws {
         let harness = try await TestHarness(vault: .unlocked)
         let viewModel = PreferencesViewModel(app: harness.app)

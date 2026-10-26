@@ -6,7 +6,7 @@ import XCTest
 final class MainTreeUITests: VaultUITestCase {
     @MainActor
     func testEnvironmentsNestUnderTheRepositoryAndFollowTheToolbarPath() throws {
-        let app = launch()
+        let app = launch(appearance: .dark)
         let sidebar = try onboard(app)
         revealRepositories(of: "example-org", in: sidebar)
         let repository = sidebarRow("api-service", in: sidebar)
@@ -25,10 +25,7 @@ final class MainTreeUITests: VaultUITestCase {
         click(repository)
         expect(path, toEndWith: "api-service")
 
-        // The window as drawn, to compare with board Main2-Repository (the floating sidebar).
-        let screenshot = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
-        screenshot.name = "main-window-tree"
-        screenshot.lifetime = .keepAlways
-        add(screenshot)
+        // Board Main2-Dark: the floating sidebar and the glass toolbar (JumpPaletteUITests has light).
+        attachWindowScreenshot(of: app, named: "main-window-dark")
     }
 }

@@ -57,10 +57,13 @@ final class PreferencesViewModel: LockObserving {
         app.requestedSettingsTab
     }
 
-    /// Switches to the requested tab, once.
+    /// Switches to the requested tab, and opens the requested Security sheet, once.
     func showRequestedTab() {
         guard let tab = app.requestedSettingsTab else { return }
         selectedTab = tab
+        if let sheet = app.requestedSecuritySheet {
+            security.present(sheet)
+        }
         app.clearSettingsTabRequest()
     }
 

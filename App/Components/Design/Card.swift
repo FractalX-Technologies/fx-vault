@@ -8,6 +8,8 @@ import SwiftUI
 /// - `.sheet`: 24 pt corners, hairline-strong border and the one soft shadow. A dialog drawn
 ///   inside the window. System `.sheet`s keep their own chrome: give their content
 ///   `.fxSheetBackground()` instead.
+/// - `.popover`: 16 pt corners, no padding, hairline-strong border and the soft shadow. The ⌘K
+///   jump palette over the window (board Main2-Search).
 ///
 /// ```swift
 /// Card {
@@ -47,16 +49,29 @@ struct Card<Content: View>: View {
     static func defaultPadding(for style: Style) -> CGFloat {
         switch style {
         case .card, .sheet: Theme.Spacing.xxLarge
-        case .container: 0
+        case .container, .popover: 0
         }
     }
 }
 
-/// The three card treatments (see ``Card``).
+/// The card treatments (see ``Card``).
 enum CardStyle: Sendable {
     case card
     case container
     case sheet
+    case popover
+
+    var radius: CGFloat {
+        switch self {
+        case .card, .sheet: Theme.Radius.card
+        case .container, .popover: Theme.Radius.container
+        }
+    }
+
+    /// Dialogs over the window stand out with the stronger border and the one soft shadow.
+    var floatsOverContent: Bool {
+        self == .sheet || self == .popover
+    }
 }
 
 private struct CardBackground<S: InsettableShape>: ViewModifier {
@@ -79,13 +94,12 @@ private struct CardBackground<S: InsettableShape>: ViewModifier {
 }
 
 extension View {
-    /// Draws the card background, border and (for `.sheet`) shadow behind any view.
+    /// Draws the card background, border and (for `.sheet` and `.popover`) shadow behind any view.
     func fxCardBackground(_ style: CardStyle = .card) -> some View {
-        let radius = style == .container ? Theme.Radius.container : Theme.Radius.card
-        return modifier(CardBackground(
-            shape: RoundedRectangle(cornerRadius: radius, style: .continuous),
-            border: style == .sheet ? Theme.Colors.hairlineStrong : Theme.Colors.hairline,
-            hasShadow: style == .sheet
+        modifier(CardBackground(
+            shape: RoundedRectangle(cornerRadius: style.radius, style: .continuous),
+            border: style.floatsOverContent ? Theme.Colors.hairlineStrong : Theme.Colors.hairline,
+            hasShadow: style.floatsOverContent
         ))
     }
 

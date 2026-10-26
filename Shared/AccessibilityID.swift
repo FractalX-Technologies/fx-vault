@@ -112,6 +112,15 @@ enum AccessibilityID {
         static func ownerToggle(_ login: String) -> String {
             "main.ownerToggle.\(login)"
         }
+
+        /// The toolbar's search button that opens the ⌘K jump palette (1.0).
+        static let jumpAnywhere = "main.jumpAnywhere"
+    }
+
+    /// The ⌘K jump palette (1.0).
+    enum Jump {
+        static let palette = "jump.palette"
+        static let field = "jump.field"
     }
 
     /// The item editor sheets (repository, folder, destination and organization items).

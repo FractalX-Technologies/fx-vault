@@ -44,7 +44,9 @@ FXVault/
 │   │   ├── GHSetup/                 # GHSetupScreen/ViewModel (install, upgrade, untrusted, Trust
 │   │   │                            # This gh, login, GH_TOKEN, unusable accounts, Copy
 │   │   │                            # Diagnostics, Check Again, Not Now)
-│   │   ├── Main/                    # MainScreen/ViewModel (two columns, toolbar, router)
+│   │   ├── Main/                    # MainScreen/ViewModel (two columns, router), MainToolbar
+│   │   │   ├── JumpPalette/         # the ⌘K palette (D6c2): JumpPaletteModels (JumpPlaces,
+│   │   │   │                        # pure), JumpPaletteViewModel, JumpPaletteView, JumpPaletteCopy
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
 │   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel

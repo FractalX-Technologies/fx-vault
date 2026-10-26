@@ -2,9 +2,9 @@ import AppKit
 import SwiftUI
 import VaultCore
 
-/// The main window (§10.4; mockups Main2-Home and Main2-Repository): a two-column split view (the
-/// sidebar tree and the selected place), the toolbar and the sheet router of the UI feature
-/// contract. The connectivity banner sits at the top of the detail column.
+/// The main window (§10.4; boards Main2-Home, Main2-Repository, Main2-Search): a two-column split
+/// view (the sidebar tree and the selected place), the toolbar, the ⌘K jump palette over both and
+/// the sheet router of the UI feature contract. The banners sit at the top of the detail column.
 struct MainScreen: View {
     @State private var viewModel: MainViewModel
 
@@ -21,6 +21,10 @@ struct MainScreen: View {
         @Bindable var viewModel = viewModel
         splitView
             .animation(Theme.Durations.spring, value: viewModel.connectivityBanner)
+            .overlay {
+                JumpPaletteOverlay(main: viewModel)
+            }
+            .animation(Theme.Durations.interactionAnimation, value: viewModel.jumpPalette == nil)
             .modifier(MainToolbarModifier(viewModel: viewModel))
             .sheet(item: $viewModel.activeSheet) { sheet in
                 MainSheetContent(sheet: sheet, main: viewModel)
@@ -97,167 +101,6 @@ private extension View {
     }
 }
 
-/// Installs the toolbar. The window title is drawn by ``MainToolbarTitle`` (mark and the
-/// selected place's path), so the system title is removed; every item hides the shared glass so the
-/// pills keep their own fill (docs/DESIGN.md).
-private struct MainToolbarModifier: ViewModifier {
-    let viewModel: MainViewModel
-
-    func body(content: Content) -> some View {
-        content
-            .toolbar { MainToolbar(viewModel: viewModel) }
-            .toolbar(removing: .title)
-    }
-}
-
-/// The toolbar (§10 Toolbar; mockup Main2-Repository): the mark and the mono
-/// `GitHub › owner › repo › environment` path; the search field; New repository, Import .env, Share and Lock as outline circles; Sync
-/// last. Import .env is not on the mockup but stays: it is the import without a default kind
-/// that remains enabled offline (ARCHITECTURE decisions 39 and 51).
-private struct MainToolbar: ToolbarContent {
-    let viewModel: MainViewModel
-
-    var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            MainToolbarTitle(viewModel: viewModel)
-        }
-        .sharedBackgroundVisibility(.hidden)
-        ToolbarItemGroup(placement: .primaryAction) {
-            MainToolbarActions(viewModel: viewModel)
-        }
-        .sharedBackgroundVisibility(.hidden)
-        ToolbarItem(placement: .primaryAction) {
-            MainSyncButton(viewModel: viewModel)
-        }
-        .sharedBackgroundVisibility(.hidden)
-    }
-}
-
-/// The mark, then the selected place as a mono path (``MainViewModel/breadcrumb``), or the app
-/// name with nothing selected, and in Debug builds the DEV chip. It is `toolbarTitleWidth` wide:
-/// a long path drops its first steps down to the last one, then the whole path, rather than
-/// pushing the buttons.
-struct MainToolbarTitle: View {
-    let viewModel: MainViewModel
-
-    var body: some View {
-        let path = viewModel.breadcrumb
-        ViewThatFits(in: .horizontal) {
-            ForEach(Self.fallbacks(path), id: \.self) { steps in
-                row(steps)
-            }
-        }
-        .frame(width: Theme.Layout.toolbarTitleWidth, alignment: .leading)
-        .padding(.horizontal, Theme.Spacing.small)
-        .help(path.joined(separator: Self.separator))
-    }
-
-    private static let separator = " › "
-
-    /// The rows to try, widest first: the path, its tails down to the last step, then the app name.
-    static func fallbacks(_ path: [String]) -> [[String]] {
-        path.indices.map { Array(path.dropFirst($0)) } + [[]]
-    }
-
-    private func row(_ path: [String]) -> some View {
-        HStack(spacing: Theme.Spacing.mediumMinus) {
-            BrandMark()
-            if path.isEmpty {
-                Text(AppIdentity.windowTitle)
-                    .fxTextStyle(.headline)
-                    .foregroundStyle(Theme.Colors.ink)
-                    .lineLimit(1)
-                    .fixedSize()
-            } else {
-                Text(verbatim: path.joined(separator: Self.separator))
-                    .fxTextStyle(.monoMeta)
-                    .foregroundStyle(Theme.Colors.subtleText)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .accessibilityIdentifier(AccessibilityID.Main.breadcrumb)
-            }
-            if AppIdentity.isDevelopmentBuild {
-                DevBuildBadge()
-            }
-        }
-    }
-}
-
-/// New repository, Import .env and Share as 32 pt outline circles (Lock is at the bottom of the
-/// sidebar, 1.0).
-private struct MainToolbarActions: View {
-    let viewModel: MainViewModel
-
-    var body: some View {
-        Button {
-            viewModel.newRepository()
-        } label: {
-            Label(String(localized: "toolbar.newRepository", defaultValue: "New Repository"), systemImage: "plus")
-        }
-        .fxIconButtonStyle()
-        .help(viewModel.networkHelp(String(localized: "toolbar.newRepository.help", defaultValue: "New Repository (⌘N)")))
-        .disabled(!viewModel.canCreateRepository)
-
-        Button {
-            viewModel.importEnv()
-        } label: {
-            Label(String(localized: "toolbar.importEnv", defaultValue: "Import .env"), systemImage: "square.and.arrow.down")
-        }
-        .fxIconButtonStyle()
-        .help(String(localized: "toolbar.importEnv.help", defaultValue: "Import a .env file into the selected scope (⇧⌘I)"))
-        .disabled(!viewModel.canImportEnv)
-
-        ShareMenu(viewModel: viewModel)
-    }
-}
-
-/// The ink Sync pill with the mono pending count; 40% while it cannot run (offline included).
-private struct MainSyncButton: View {
-    let viewModel: MainViewModel
-
-    var body: some View {
-        SyncToolbarButton(
-            count: viewModel.pendingChangeCount,
-            isSyncing: viewModel.isSyncing,
-            isEnabled: viewModel.canSync,
-            unavailableReason: viewModel.isOnline ? nil : ConnectivityCopy.offlineHelp
-        ) {
-            viewModel.sync()
-        }
-    }
-}
-
-/// "DEV" in the toolbar of Debug builds (FX Vault Dev), which use their own vault folder.
-private struct DevBuildBadge: View {
-    var body: some View {
-        StatusChip(
-            title: String(localized: "toolbar.devBuild", defaultValue: "DEV"),
-            tone: .warning
-        )
-        .help(String(
-            localized: "toolbar.devBuild.help",
-            defaultValue: "Development build (FX Vault Dev). It uses the FX Vault Dev vault, not the vault of the installed FX Vault."
-        ))
-        .accessibilityLabel(String(localized: "toolbar.devBuild.accessibility", defaultValue: "Development build"))
-    }
-}
-
-/// Share Project… as an outline circle.
-private struct ShareMenu: View {
-    let viewModel: MainViewModel
-
-    var body: some View {
-        Button {
-            viewModel.shareProject()
-        } label: {
-            Label(String(localized: "toolbar.share", defaultValue: "Share"), systemImage: "square.and.arrow.up")
-        }
-        .disabled(!viewModel.canShareProject)
-        .fxIconButtonStyle()
-        .help(String(localized: "toolbar.share.help", defaultValue: "Share configuration with a teammate"))
-    }
-}
-
 /// Maps a ``MainSheet`` route to its feature entry view (UI feature contract).
 private struct MainSheetContent: View {
     let sheet: MainSheet
@@ -317,14 +160,28 @@ private struct MainSheetContent: View {
     }
 }
 
-/// The detail column: the selected place (a repository scope, a destination, a folder or an
-/// organization), the Import prompt for a repository or organization not in the vault, or an
-/// empty state. The detail draws the connectivity banner itself (above its header); the other
-/// states show it here.
+/// The detail column: the recovery-key banner, then the selected place (a repository scope, a
+/// destination, a folder or an organization), the Import prompt for a repository or organization
+/// not in the vault, or the home. The detail draws the connectivity banner itself (above its
+/// header); the other states show it here. No background of its own: the window's ground shows,
+/// and the system's floating sidebar and glass toolbar stay as macOS draws them.
 private struct DetailColumnView: View {
     let main: MainViewModel
 
     var body: some View {
+        VStack(spacing: 0) {
+            if main.showsRecoveryKeyReminder {
+                RecoveryKeyBanner(main: main)
+                    .padding(.horizontal, Theme.Spacing.xxLargePlus)
+                    .padding(.top, Theme.Spacing.large)
+            }
+            selectedPlace
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var selectedPlace: some View {
         Group {
             if let folderDetail = main.folderDetail {
                 FolderDetailScreen(viewModel: folderDetail, main: main)
@@ -346,20 +203,53 @@ private struct DetailColumnView: View {
                     } else if let owner = main.sidebar.selectedOrganizationOwner {
                         OrganizationImportPromptView(owner: owner, sidebar: main.sidebar)
                     } else {
-                        EmptyStateView(
-                            systemImage: "key.horizontal",
-                            title: String(localized: "main.detail.noSelection", defaultValue: "No repository selected"),
-                            message: String(
-                                localized: "main.detail.noSelection.message",
-                                defaultValue: "Select a repository in the sidebar to see its secrets and variables."
-                            )
-                        )
+                        MainHomeView(main: main)
                     }
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.Colors.ground)
+    }
+}
+
+/// The detail with nothing selected (board Main2-Home): the pending changes and the ⌘K hint.
+private struct MainHomeView: View {
+    let main: MainViewModel
+
+    var body: some View {
+        EmptyStateView(
+            systemImage: "square.3.layers.3d",
+            title: MainCopy.homeTitle,
+            message: MainCopy.homePendingChanges(main.pendingChangeCount)
+        ) {
+            HStack(spacing: Theme.Spacing.small) {
+                KeyHint("⌘K")
+                Text(JumpPaletteCopy.toJumpAnywhere)
+                    .fxTextStyle(.callout)
+                    .foregroundStyle(Theme.Colors.mutedText)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(JumpPaletteCopy.jumpAnywhereHelp)
+        }
+    }
+}
+
+/// The recovery key was never confirmed as saved (board Main2-Home). The key that was shown
+/// cannot be shown again, so the button opens Settings › Security on a new one.
+private struct RecoveryKeyBanner: View {
+    let main: MainViewModel
+    @Environment(\.openSettings) private var openSettings
+
+    var body: some View {
+        Banner(
+            .warning,
+            message: MainCopy.recoveryKeyNotSaved,
+            systemImage: "key",
+            action: .init(title: MainCopy.createNewRecoveryKey) {
+                main.createNewRecoveryKey()
+                openSettings()
+            }
+        )
     }
 }
 

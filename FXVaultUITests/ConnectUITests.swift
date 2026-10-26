@@ -29,11 +29,11 @@ final class ConnectUITests: VaultUITestCase {
         click(app.buttons[AccessibilityID.Connect.openVault])
         let sidebar = mainSidebar(app)
         let vaultRow = sidebar.buttons[AccessibilityID.Main.keyVault("kv-example-prod")]
-        XCTAssertTrue(vaultRow.waitForExistence(timeout: timeout), "The vault is not under Azure Key Vault")
+        XCTAssertTrue(vaultRow.waitForExistence(timeout: timeout), "The vault is not under Azure")
         click(vaultRow)
         let path = app.staticTexts[AccessibilityID.Main.breadcrumb]
         XCTAssertTrue(path.waitForExistence(timeout: timeout))
-        expect(path, toEndWith: "Azure Key Vault › kv-example-prod")
+        expect(path, toEndWith: "Azure › kv-example-prod")
 
         vaultRow.rightClick()
         click(app.menuItems["Remove from FX Vault…"])

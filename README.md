@@ -13,7 +13,8 @@ the secrets your code reads at runtime in Azure Key Vault.
   accounts see it, with each repository's environments under it, search (⌘F), and what an
   owner needs under its name (Needs admin:org · Approve, Authorize SSO · Open); the Azure Key
   Vaults you connected are under **Azure**, and Lock and Settings at the bottom of the sidebar.
-  The toolbar shows where you are. Settings ›
+  The toolbar shows where you are; **⌘K** jumps to any organization, repository, environment,
+  Key Vault or folder by typing part of its name. Settings ›
   Accounts shows, per organization, whether you can manage its secrets: **Ready**, **Needs
   admin:org** (with the `gh auth refresh -s admin:org` commands to copy, then Re-check), **Org
   secrets need an org admin**, or **Needs SSO authorization** (with GitHub's SSO page).

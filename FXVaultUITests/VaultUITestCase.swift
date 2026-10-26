@@ -14,12 +14,37 @@ class VaultUITestCase: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// The app's appearance, set for its process only (the Mac's own setting is never changed).
+    enum Appearance {
+        case system
+        case light
+        case dark
+
+        var launchArguments: [String] {
+            switch self {
+            case .system: []
+            case .light: ["-NSRequiresAquaSystemAppearance", "YES"]
+            case .dark: ["-AppleInterfaceStyle", "Dark"]
+            }
+        }
+    }
+
     @MainActor
-    func launch() -> XCUIApplication {
+    func launch(appearance: Appearance = .system) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["-ApplePersistenceIgnoreState", "YES", "-AppleLanguages", "(en)"]
+        app.launchArguments += ["-ApplePersistenceIgnoreState", "YES", "-AppleLanguages", "(en)"] + appearance.launchArguments
         app.launch()
         return app
+    }
+
+    /// Keeps the main window as drawn (toolbar, sidebar and detail) in the test report, to compare
+    /// with the boards.
+    @MainActor
+    func attachWindowScreenshot(of app: XCUIApplication, named name: String) {
+        let screenshot = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
+        screenshot.name = name
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
     }
 
     /// Creates the vault (password, recovery key, its confirmation), skips the Connect phase and
