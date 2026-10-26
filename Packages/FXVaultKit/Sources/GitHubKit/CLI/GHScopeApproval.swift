@@ -9,6 +9,27 @@ public enum GHApprovalScope: String, Sendable, Hashable, CaseIterable {
     case adminOrg = "admin:org"
 }
 
+extension GHApprovalScope {
+    /// True when `scopes` (gh's list for the account) cover every requested scope, by
+    /// ``ScopeChecker``'s rule: `read:org` is met by any organization scope, `admin:org` too.
+    public static func areGranted(_ requested: [GHApprovalScope], by scopes: [String]) -> Bool {
+        let held = Set(scopes.map { $0.lowercased() })
+        let missing: [String]
+        if case .missing(let names) = ScopeChecker.check(scopes: held) {
+            missing = names
+        } else {
+            missing = []
+        }
+        return requested.allSatisfy { scope in
+            switch scope {
+            case .repo: !missing.contains(ScopeChecker.repoScope)
+            case .readOrg: !missing.contains(ScopeChecker.suggestedOrgScope)
+            case .adminOrg: held.contains(ScopeChecker.adminOrgScope)
+            }
+        }
+    }
+}
+
 /// gh's one-time device code, entered at ``verificationURL``. Shown, never logged.
 public struct GHDeviceCodeModel: Sendable, Hashable {
     /// Where the code goes; also the button's title without the scheme.

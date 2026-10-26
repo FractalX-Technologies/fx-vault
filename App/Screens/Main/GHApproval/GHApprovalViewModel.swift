@@ -33,8 +33,8 @@ final class GHApprovalViewModel: LockObserving {
     private(set) var isChecking = false
 
     @ObservationIgnored private let approve: Approve
-    /// gh's scopes for a login now (`gh auth status`), or nil when they can't be read.
-    @ObservationIgnored private let readScopes: (String) async -> [String]?
+    /// True once gh lists the scopes on the login (`gh auth status` read again).
+    @ObservationIgnored private let hasScopes: ([GHApprovalScope], String) async -> Bool
     @ObservationIgnored private let copy: (String) -> Void
     /// The sidebar reads accounts and organization access again.
     @ObservationIgnored private let didApprove: () -> Void
@@ -45,13 +45,13 @@ final class GHApprovalViewModel: LockObserving {
     init(
         context: GHApprovalContext,
         approve: @escaping Approve,
-        readScopes: @escaping (String) async -> [String]?,
+        hasScopes: @escaping ([GHApprovalScope], String) async -> Bool,
         copy: @escaping (String) -> Void,
         didApprove: @escaping () -> Void
     ) {
         self.context = context
         self.approve = approve
-        self.readScopes = readScopes
+        self.hasScopes = hasScopes
         self.copy = copy
         self.didApprove = didApprove
     }
@@ -65,10 +65,7 @@ final class GHApprovalViewModel: LockObserving {
             approve: { scopes, login, onDeviceCode throws(GHApprovalError) in
                 try await github.approveScopes(scopes, login: login, codeWait: codeWait, onDeviceCode: onDeviceCode)
             },
-            readScopes: { login in
-                let accounts = try? await github.accounts()
-                return accounts?.first { $0.id == OwnerLoginValidator.foldKey(login) }?.status?.scopeList
-            },
+            hasScopes: { scopes, login in await github.hasScopes(scopes, login: login) },
             copy: dependencies.clipboard.copyCommand,
             didApprove: { dependencies.actions.refresh(.catalog) }
         )
@@ -119,9 +116,7 @@ final class GHApprovalViewModel: LockObserving {
         guard !isChecking else { return }
         isChecking = true
         defer { isChecking = false }
-        guard let scopes = await readScopes(context.login) else { return }
-        let held = Set(scopes.map { $0.lowercased() })
-        guard context.scopes.allSatisfy({ held.contains($0.rawValue) }) else { return }
+        guard await hasScopes(context.scopes, context.login) else { return }
         cancel()
         phase = .approved
         didApprove()
