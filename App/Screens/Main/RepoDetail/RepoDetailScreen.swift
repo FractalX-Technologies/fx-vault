@@ -2,18 +2,15 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// Column 3 (§10; boards Main2-Repository, Place-Table): the connectivity banner, the header
-/// (name, "Environment · api-service · counts", the drift line, ⋯ More), the read-only
-/// explanation, the Secrets | Variables pill with the selection's actions, and the table.
+/// Column 3 (§10; boards Main2-Repository, Place-Table): the header (name, "Environment ·
+/// api-service · counts", the drift line, ⋯ More), the read-only explanation, the Secrets |
+/// Variables pill with the selection's actions, and the table.
 struct RepoDetailScreen: View {
     @Bindable var viewModel: RepoDetailViewModel
     let main: MainViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
-            if let banner = main.connectivityBanner {
-                MainConnectivityBanner(banner: banner, main: main)
-            }
             RepoDetailHeader(viewModel: viewModel, main: main)
             if let reason = viewModel.readOnlyReason {
                 Label(reason.localizedExplanation, systemImage: "lock")

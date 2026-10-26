@@ -12,9 +12,6 @@ struct DestinationDetailScreen: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
-            if let banner = main.connectivityBanner {
-                MainConnectivityBanner(banner: banner, main: main)
-            }
             DestinationDetailHeader(viewModel: viewModel, main: main)
             DestinationDetailControls(viewModel: viewModel)
             ConfigTableView(viewModel: viewModel, emptyMessage: DestinationCopy.tableEmpty) { row in

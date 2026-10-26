@@ -12,7 +12,7 @@ import SwiftUI
 ///
 /// ```swift
 /// Banner(.info, message: driftText, action: .init(title: reviewTitle) { viewModel.reviewDifferences() })
-/// Banner(.offline, message: ConnectivityBannerModel.offline.message)
+/// Banner(.warning, message: reason.localizedExplanation, systemImage: "lock")
 /// ```
 struct Banner: View {
     enum Tone: Sendable {

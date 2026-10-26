@@ -326,15 +326,15 @@ struct MainConnectivityTests {
 
         reachability.record(DriftRepositoryError.github(.network))
         #expect(main.connectivityBanner == .gitHubNotResponding(isRetrying: false))
-        #expect(main.connectivityBanner?.message == "GitHub isn't responding. Try again in a moment.")
+        #expect(main.connectivityBanner?.title == "GitHub isn't responding")
+        #expect(main.connectivityBanner?.detail == "edits stay in the vault; try again in a moment")
 
         // Offline wins over GitHub.
         harness.pathSource.send(.offline)
         #expect(main.connectivityBanner == .offline)
-        #expect(
-            main.connectivityBanner?.message
-                == "No internet connection. Your changes stay in the vault; sync when you're back online."
-        )
+        // Board Main2-Offline's words.
+        #expect(main.connectivityBanner?.title == "Offline")
+        #expect(main.connectivityBanner?.detail == "edits stay in the vault; Sync, import and drift checks wait")
 
         // Back online: the banner hides and the GitHub state starts over.
         await Self.settle(harness, to: .online)

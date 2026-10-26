@@ -373,12 +373,27 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
+    /// Board Main2-Offline: nothing selected, the Offline strip under the toolbar panel and the
+    /// Sync pill at 40%.
     @Test func mainWindowOffline() async throws {
         let (harness, main) = try await MainSnapshotFixture.make()
+        main.sidebar.selectedRowID = nil
+        #expect(await TestFixtures.eventually { main.detail == nil })
         harness.container.connectivity.start()
         harness.pathSource.send(.offline)
         #expect(await TestFixtures.eventually { main.connectivityBanner != nil })
         try await SnapshotOutput.write("main-offline", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+    }
+
+    /// GitHub not responding (after a Sync or a check that could not reach it): the same strip
+    /// with Retry, above the selected environment.
+    @Test func mainWindowGitHubNotResponding() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        harness.container.gitHubReachability.record(GHError.timeout)
+        #expect(main.connectivityBanner == .gitHubNotResponding(isRetrying: false))
+        try await SnapshotOutput.write("main-github-not-responding", size: SnapshotOutput.windowSize, isTitled: true) {
             MainScreen(viewModel: main)
         }
     }

@@ -58,8 +58,10 @@ FXVault/
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
 │   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel
-│   │   │   ├── ConnectivityBannerView.swift  # offline / GitHub-not-responding banner,
+│   │   │   ├── ConnectivityBannerView.swift  # offline / GitHub-not-responding strip,
 │   │   │   │                        # ConnectivityBannerModel, ConnectivityCopy (offline .help)
+│   │   │   ├── MainStatusStrip.swift  # the glass strip under the toolbar panel (connectivity,
+│   │   │   │                        # recovery key; 1.0 D6d)
 │   │   │   ├── MainColumnSelection.swift  # Up/Down selection of the custom-drawn sidebar and
 │   │   │   │                        # scope rows (pure helper + modifier)
 │   │   │   ├── Sidebar/             # SidebarModels (SidebarGrouping, pure), SidebarView/ViewModel,

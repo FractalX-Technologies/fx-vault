@@ -17,6 +17,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   card; Cancel After Current stops after the write in flight. A run where nothing failed ends on
   a short "Synced 8 changes" with the places and what stays pending. The deletion check reads
   "Delete 1 secret?" and lists each name with its place.
+- **Offline and GitHub notices.** Offline, or with GitHub not responding, a glass strip sits under
+  the toolbar over every place, folders and organizations included: "Offline · edits stay in the
+  vault; Sync, import and drift checks wait", or "GitHub isn't responding" with Retry.
 - **New Repository and New Environment as the boards.** Both are compact forms with their
   labels in a column: New Repository shows environments as chips, the account's SSH alias beside
   the clone folder, and the button says Stage Repository; New Environment is titled with its
