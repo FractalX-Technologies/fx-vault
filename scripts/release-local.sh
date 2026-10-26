@@ -764,7 +764,7 @@ Or download $DMG_NAME and check it before opening:
     shasum -a 256 -c $DMG_NAME.sha256
     spctl -a -vvv -t install $DMG_NAME
 
-Requires macOS 14 or later and the GitHub CLI (gh) 2.97.0 or later.
+Requires macOS 26 (Tahoe) or later and the GitHub CLI (gh) 2.97.0 or later.
 EOF
   if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
     run_logged publish gh release upload "$tag" "$DIST_DMG" "$DIST_SHA" --repo "$repo"
