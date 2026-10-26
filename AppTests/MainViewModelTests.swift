@@ -76,6 +76,23 @@ struct MainViewModelTests {
         #expect(!main.isSidebarHidden)
     }
 
+    /// Dragging the sidebar's gutter follows the pointer within the tokens and saves the width
+    /// once, when the drag ends (not on every move).
+    @Test func draggingTheSidebarSavesItsWidthOnce() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
+        let main = harness.app.makeMainViewModel()
+        let preferences = harness.container.preferences
+        main.dragSidebar(to: 300)
+        #expect(main.sidebarWidth == 300)
+        #expect(preferences.sidebarWidth == Int(Theme.Layout.sidebarWidth), "nothing saved mid-drag")
+        main.dragSidebar(to: 10_000)
+        #expect(main.sidebarWidth == Theme.Layout.sidebarMaxWidth)
+        main.endSidebarDrag()
+        #expect(preferences.sidebarWidth == Int(Theme.Layout.sidebarMaxWidth))
+        #expect(main.draggedSidebarWidth == nil)
+        #expect(main.sidebarWidth == Theme.Layout.sidebarMaxWidth)
+    }
+
     @Test func newRepositoryAndNothingToShareYet() async throws {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
         let main = harness.app.makeMainViewModel()

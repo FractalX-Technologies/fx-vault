@@ -651,7 +651,7 @@ cloudSyncDetector:fileWriter:clock:writePolicy:)`: `readFile(at:)`, `parse(_:)`,
 `exportPreview(repositoryID:scope:)`, `inspectDestination(_:)`, `export(repositoryID:scope:to:
 authorization:existingFile:headerComments:)` (0600, needs an `EnvExportAuthorizationModel`),
 `addGitignoreEntry(relativePath:repositoryRoot:)`, and Copy All's
-`copyAllText(of: ItemHolderModel, authorization:sectionTitle:) -> SecretBytes` (1.0 D6c4: a
+`copyAllText(of: ItemHolderModel, authorization:sectionTitle:) -> CopyAllTextModel` (the text and how many lines carry a value) (1.0 D6c4: a
 scope, folder, destination or organization; a `.clipboard` authorization; `DotEnvSerializer`'s
 sections). `GitServiceGitignoreChecker(git:)`.
 

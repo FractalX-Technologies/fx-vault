@@ -26,9 +26,17 @@ struct CopyAllTextTests {
         _ place: ItemHolderModel,
         _ authorization: EnvExportAuthorizationModel
     ) throws -> String? {
-        let text = try files.copyAllText(of: place, authorization: authorization, sectionTitle: title)
-        defer { text.wipe() }
-        return text.utf8String()
+        try copied(files, place, authorization).text
+    }
+
+    static func copied(
+        _ files: EnvFileRepository,
+        _ place: ItemHolderModel,
+        _ authorization: EnvExportAuthorizationModel
+    ) throws -> (text: String?, valueCount: Int) {
+        let copied = try files.copyAllText(of: place, authorization: authorization, sectionTitle: title)
+        defer { copied.text.wipe() }
+        return (copied.text.utf8String(), copied.valueCount)
     }
 
     /// Secrets first, then variables, names in order, a blank line between; a secret without a
@@ -57,11 +65,12 @@ struct CopyAllTextTests {
             updatedAt: harness.clock.now
         ))
 
-        let text = try Self.text(
+        let (text, valueCount) = try Self.copied(
             fixture.files,
             .place(.scope(repositoryID: fixture.repo.id, scope: scope)),
             try await Self.clipboardAuthorization(harness)
         )
+        #expect(valueCount == 3, "IMPORTED has no value to copy")
         #expect(text == """
         # Secrets · 2
         API_TOKEN=value-b

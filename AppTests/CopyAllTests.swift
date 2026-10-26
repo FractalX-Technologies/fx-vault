@@ -35,7 +35,7 @@ struct CopyAllTests {
         #expect(fixture.recorder.presented == [
             .copyAll(CopyAllContext(place: .place(.scope(repositoryID: fixture.repositoryID, scope: .repository)))),
         ])
-        #expect(CopyAllCopy.accessibilityLabel == "Copy All, asks for Touch ID")
+        #expect(CopyAllCopy.accessibilityLabel == "Copy All, after you confirm it's you")
     }
 
     /// Nothing reaches the clipboard before the gate says yes; a wrong password copies nothing.

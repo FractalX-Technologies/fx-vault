@@ -580,27 +580,31 @@ public struct EnvFileRepository: Sendable {
         of place: ItemHolderModel,
         authorization: EnvExportAuthorizationModel,
         sectionTitle: (ConfigKind, Int) -> String
-    ) throws(EnvFileError) -> SecretBytes {
+    ) throws(EnvFileError) -> CopyAllTextModel {
         try authorization.consume(.clipboard, for: session)
         let byKind: [ConfigKind: [DotEnvEntryModel]]
+        let valueCount: Int
         do {
-            byKind = try session.read { keys, tx in
+            (byKind, valueCount) = try session.read { keys, tx in
                 var byKind: [ConfigKind: [DotEnvEntryModel]] = [:]
+                var valueCount = 0
+                func add(_ kind: ConfigKind, _ name: String, _ value: SecretBytes?) {
+                    if value != nil { valueCount += 1 }
+                    byKind[kind, default: []].append(DotEnvEntryModel(key: name, value: value ?? SecretBytes(count: 0)))
+                }
                 switch place {
                 case .place(let place):
                     for source in try itemSources(of: place, in: tx) where !source.isDeleted {
-                        let value = try source.openValue(keys: keys) ?? SecretBytes(count: 0)
-                        byKind[source.kind, default: []].append(DotEnvEntryModel(key: source.name, value: value))
+                        add(source.kind, source.name, try source.openValue(keys: keys))
                     }
                 case .organization(let organizationID):
                     let records = try OrganizationStore(database: session.database)
                         .fetchItemRecords(organizationID: organizationID, in: tx)
                     for record in records where !record.isDeleted {
-                        let value = try OrgFieldCipher.openValue(of: record, keys: keys) ?? SecretBytes(count: 0)
-                        byKind[record.kind, default: []].append(DotEnvEntryModel(key: record.name, value: value))
+                        add(record.kind, record.name, try OrgFieldCipher.openValue(of: record, keys: keys))
                     }
                 }
-                return byKind
+                return (byKind, valueCount)
             }
         } catch {
             throw .config(.wrap(error))
@@ -611,9 +615,15 @@ public struct EnvFileRepository: Sendable {
             return DotEnvSectionModel(comments: [sectionTitle(kind, entries.count)], entries: entries.sorted { $0.key < $1.key })
         }
         do {
-            return try DotEnvSerializer.serialize(sections: sections)
+            return CopyAllTextModel(text: try DotEnvSerializer.serialize(sections: sections), valueCount: valueCount)
         } catch {
             throw .serialize(error)
         }
     }
+}
+
+/// Copy All's dotenv text and how many of its lines carry a value (a secret without one is `KEY=`).
+public struct CopyAllTextModel: Sendable {
+    public let text: SecretBytes
+    public let valueCount: Int
 }

@@ -163,8 +163,9 @@ enum Theme {
         /// The search field at the top of the sidebar and the footer's icon buttons.
         static let sidebarControlHeight: CGFloat = 28
         static let detailMinWidth: CGFloat = 420
-        /// The main screen's minimum: the widest sidebar beside the narrowest detail, with the
-        /// sidebar hidden too, so showing it again never pushes the detail past the window edge.
+        /// The main screen's minimum: the widest sidebar beside the narrowest detail, sidebar
+        /// hidden too. `windowMinWidth` (900) covers it today; this keeps MainScreen right on its
+        /// own (tests, previews, a smaller window minimum later).
         static let mainScreenMinWidth = 3 * mainPanelInset + sidebarMaxWidth + detailMinWidth
         /// The ⌘K jump palette (board Main2-Search).
         static let jumpPaletteWidth: CGFloat = 600

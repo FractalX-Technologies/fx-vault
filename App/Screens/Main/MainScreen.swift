@@ -98,6 +98,9 @@ struct MainScreen: View {
                 DetailColumnView(main: viewModel)
                     .frame(minWidth: Theme.Layout.detailMinWidth)
                     .mainColumnHeight()
+                    // Its empty parts (beside a title, around an empty state) are not chrome:
+                    // without a shape the click reaches the ground's drag area behind.
+                    .contentShape(Rectangle())
             }
         }
         .padding(Theme.Layout.mainPanelInset)
@@ -116,7 +119,7 @@ struct MainScreen: View {
 }
 
 /// The gutter between the sidebar panel and the detail: dragging it resizes the sidebar between
-/// `sidebarMinWidth` and `sidebarMaxWidth` (``MainViewModel/sidebarWidth``, kept per Mac user).
+/// `sidebarMinWidth` and `sidebarMaxWidth`, saved per Mac user when the drag ends.
 private struct SidebarResizeHandle: View {
     let main: MainViewModel
     @State private var startWidth: CGFloat?
@@ -135,10 +138,11 @@ private struct SidebarResizeHandle: View {
                         startWidth = start
                         // Global coordinates don't flip: right to left, the sidebar is on the right.
                         let delta = layoutDirection == .rightToLeft ? -drag.translation.width : drag.translation.width
-                        main.sidebarWidth = start + delta
+                        main.dragSidebar(to: start + delta)
                     }
                     .onEnded { _ in
                         startWidth = nil
+                        main.endSidebarDrag()
                     }
             )
             .accessibilityHidden(true)
