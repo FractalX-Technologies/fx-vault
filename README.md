@@ -32,6 +32,10 @@ the secrets your code reads at runtime in Azure Key Vault.
 - **Secrets and variables, repository and environment level.** Add, edit, rename, convert
   between secret and variable, move between scopes, fill values GitHub does not return, revert
   and delete. Secrets stay masked until you reveal them and re-mask after 30 seconds.
+- **Notes.** Every place opens on its notes: numbered `# Secrets` and `# Variables` sections,
+  secrets masked and variables in plain text, what a repository gets from its organization (read
+  only), and marks for what changed on GitHub or waits for the next Sync. Revealing a secret
+  there asks Touch ID or your master password. Notes | Table switches to the table.
 - **The vault is the source of truth.** A secret value you fill in is pushed by the next Sync
   (unless you check "Already matches GitHub"), and Push on Next Sync re-sends any secret so
   GitHub matches FX Vault.
@@ -276,7 +280,8 @@ Neither contains a token, a secret, or the value of an environment variable.
   recovery key you keep offline.
 - The vault locks on sleep, screen lock, inactivity and window close, and the clipboard is
   cleared 30 seconds after a copy.
-- `.env` export, Copy All and every share need a fresh Touch ID or master-password check.
+- `.env` export, Copy All, a Reveal in the notes and every share need a fresh Touch ID or
+  master-password check.
 - Every GitHub operation goes through `gh` with values passed on stdin, never as arguments.
 - Runtime destinations are reached over HTTPS only at `<vault>.vault.azure.net`, with no
   cookies, cache or redirects; the Azure token stays in memory until the vault locks.

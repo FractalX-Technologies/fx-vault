@@ -62,8 +62,7 @@ struct MainScreen: View {
                 viewModel.presentNextPendingImport()
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
-                viewModel.detail?.remaskAll()
-                viewModel.folderDetail?.remaskAll()
+                viewModel.remaskRevealedValues()
             }
     }
 

@@ -3,13 +3,17 @@ import Observation
 import VaultCore
 import VaultData
 
-/// Column 3 for an imported organization (1.0, B5c, B6b3a, B7b): its name and counts and the
-/// table of its secrets and variables with their visibility and sync status. Add, edit, delete
-/// and revert change the vault; the next Sync sends them. Refresh marks what changed on GitHub.
+/// Column 3 for an imported organization (1.0, B5c, B6b3a, B7b, B9): its name and counts, its
+/// notes or the table of its secrets and variables with their visibility and sync status. Add,
+/// edit, delete and revert change the vault; the next Sync sends them. Refresh marks what
+/// changed on GitHub. The notes show variables in plaintext (dropped on lock).
 @Observable
-final class OrganizationDetailViewModel {
+final class OrganizationDetailViewModel: LockObserving {
     let organizationID: OrganizationID
     private(set) var items: [OrgItemModel] = []
+    /// Revealed secrets and the variables the notes show (1.0 B9).
+    let values: ConfigValueRevealer
+    let notesReveal: NotesRevealModel
     var selection: Set<ConfigItemID> = []
     /// Rows on GitHub waiting for the Delete confirmation.
     var pendingDeletion: [OrgItemModel]?
@@ -36,6 +40,9 @@ final class OrganizationDetailViewModel {
         self.dependencies = dependencies
         organizationProvider = organization
         self.repositoryNames = repositoryNames
+        values = ConfigValueRevealer(clock: dependencies.clock, reveal: dependencies.organizationItems.reveal)
+        notesReveal = NotesRevealModel(values: values, dependencies: dependencies)
+        dependencies.actions.addLockObserver(self)
         observeItems(dependencies.organizations)
     }
 
@@ -213,12 +220,62 @@ final class OrganizationDetailViewModel {
         tasks.set("items", Task { [weak self] in
             do {
                 for try await items in stream {
-                    self?.items = items
+                    self?.apply(items)
                 }
             } catch {
                 AppLog.ui.error("Organization item observation ended")
             }
         })
+    }
+
+    /// A new snapshot: revealed rows that are gone are masked, the variables decrypted for the
+    /// notes (a locked vault leaves them masked).
+    func apply(_ items: [OrgItemModel]) {
+        self.items = items
+        values.follow(
+            liveIDs: Set(items.map(\.id)),
+            variableIDs: items.filter { $0.kind == .variable && $0.hasValue }.map(\.id)
+        )
+    }
+
+    /// Masks every revealed value (resign active).
+    func remaskAll() {
+        values.remaskAll()
+    }
+
+    func vaultDidLock() {
+        values.remaskAll()
+        values.clearVariables()
+    }
+}
+
+extension OrganizationDetailViewModel: NotesPlaceModel {
+    /// Secrets, then variables, each line with who can use it (board Org-Visibility's reach).
+    var notes: NotesDocumentModel {
+        let live = rows.filter { $0.syncStatus != .deleted }
+        return NotesDocumentModel(sections: ConfigKind.allCases.map { kind in
+            let lines = live.filter { $0.kind == kind }.map(notesLine)
+            return NotesSectionModel(title: CopyAllCopy.section(kind, count: lines.count), lines: lines)
+        })
+    }
+
+    var notesPlaceName: String {
+        organization?.login ?? ""
+    }
+
+    private func notesLine(_ item: OrgItemModel) -> NotesItemLineModel {
+        NotesItemLineModel(
+            id: item.id,
+            name: item.name,
+            kind: item.kind,
+            value: values.display(id: item.id, kind: item.kind, hasValue: item.hasValue),
+            mark: NotesMarkModel.mark(isChangedAtSource: isChangedOnGitHub(item), status: item.syncStatus),
+            note: PlaceCopy.subline([
+                item.kind == .secret && !item.hasValue ? NotesCopy.noValue : nil,
+                item.visibility.reachTitle(selectedCount: item.selectedRepositoryCount),
+            ]),
+            canReveal: item.kind == .secret && item.hasValue
+        )
     }
 }
 

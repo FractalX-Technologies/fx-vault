@@ -1,23 +1,29 @@
 import XCTest
 
-/// An organization's own secrets and variables (tasks/todo.md B5c, B6b3a): the scripted
-/// example-org row offers Import, which reads them with their visibility; then they are edited
-/// in the vault for the next Sync (nothing is written to GitHub here).
+/// An organization's own secrets and variables (tasks/todo.md B5c, B6b3a, B9): the scripted
+/// example-org row offers Import, which reads them with their visibility into the notes and the
+/// table; then they are edited in the vault for the next Sync (nothing is written to GitHub here).
 final class OrganizationUITests: VaultUITestCase {
     @MainActor
     func testImportingAnOrganizationListsItsItemsWithTheirVisibility() throws {
         let app = launch()
-        let table = try importExampleOrganization(app)
+        let notes = try importExampleOrganization(app)
+        for text in ["# Secrets · 2", "NPM_TOKEN", "no value · all repos", "# Variables · 1", "REGION", "ui-test", "private and internal"] {
+            XCTAssertTrue(notes.staticTexts[text].waitForExistence(timeout: timeout), "\(text) is not in the notes")
+        }
+        XCTAssertFalse(app.buttons[AccessibilityID.Main.importOrganization].exists)
+
+        let table = showTable(app)
         for text in ["NPM_TOKEN", "STRIPE_KEY", "REGION", "all repos", "selected · 3 repos", "private and internal"] {
             XCTAssertTrue(table.staticTexts[text].waitForExistence(timeout: timeout), "\(text) is not in the table")
         }
-        XCTAssertFalse(app.buttons[AccessibilityID.Main.importOrganization].exists)
     }
 
     @MainActor
     func testAddingAVariableAndDeletingASecretWaitForTheNextSync() throws {
         let app = launch()
-        let table = try importExampleOrganization(app)
+        _ = try importExampleOrganization(app)
+        let table = showTable(app)
 
         click(app.descendants(matching: .any).matching(identifier: AccessibilityID.Place.more).firstMatch)
         // By title: a SwiftUI menu item's identifier is "menuAction:" (UI logs), never the
@@ -47,7 +53,7 @@ final class OrganizationUITests: VaultUITestCase {
         XCTAssertTrue(table.staticTexts["Deleted"].waitForExistence(timeout: timeout), "NPM_TOKEN is not pending deletion")
     }
 
-    /// Onboards, imports example-org from its sidebar row and returns its table.
+    /// Onboards, imports example-org from its sidebar row and returns its notes (the default).
     @MainActor
     private func importExampleOrganization(_ app: XCUIApplication) throws -> XCUIElement {
         _ = try onboard(app)
@@ -55,8 +61,17 @@ final class OrganizationUITests: VaultUITestCase {
         XCTAssertTrue(row.waitForExistence(timeout: timeout), "example-org has no organization row")
         click(row)
         click(app.buttons[AccessibilityID.Main.importOrganization])
+        let notes = app.descendants(matching: .any)[AccessibilityID.Place.notes]
+        XCTAssertTrue(notes.waitForExistence(timeout: timeout), "The import never showed the notes")
+        return notes
+    }
+
+    /// Notes | Table → Table, and returns the table.
+    @MainActor
+    private func showTable(_ app: XCUIApplication) -> XCUIElement {
+        click(app.descendants(matching: .any)[AccessibilityID.Place.viewMode].buttons["Table"])
         let table = app.descendants(matching: .any)[AccessibilityID.Main.organizationTable]
-        XCTAssertTrue(table.waitForExistence(timeout: timeout), "The import never showed the table")
+        XCTAssertTrue(table.waitForExistence(timeout: timeout), "Table never showed the table")
         return table
     }
 }

@@ -24,6 +24,8 @@ final class FolderDetailViewModel: LockObserving {
     private(set) var items: [FolderItemModel] = []
     /// Revealed secrets and decrypted variables.
     let values: ConfigValueRevealer
+    /// Reveal in the notes, after Touch ID or the master password (1.0 B9).
+    let notesReveal: NotesRevealModel
     /// Copy and paste with "Replace or keep?".
     let copyFlow: ItemCopyFlow
     var selection: Set<ConfigItemID> = []
@@ -51,6 +53,7 @@ final class FolderDetailViewModel: LockObserving {
         self.dependencies = dependencies
         folderProvider = folder
         values = ConfigValueRevealer(config: dependencies.config, clock: dependencies.clock)
+        notesReveal = NotesRevealModel(values: values, dependencies: dependencies)
         copyFlow = ItemCopyFlow(dependencies: dependencies)
         dependencies.actions.addLockObserver(self)
         observeItems()
@@ -66,7 +69,7 @@ final class FolderDetailViewModel: LockObserving {
 
     // MARK: - Table
 
-    var rows: [ConfigRowModel] {
+    func rows(of kind: ConfigKind) -> [ConfigRowModel] {
         items
             .filter { $0.kind == kind }
             .sorted { $0.name < $1.name }
@@ -375,6 +378,12 @@ final class FolderDetailViewModel: LockObserving {
 }
 
 extension FolderDetailViewModel: ConfigTableModel {}
+
+extension FolderDetailViewModel: NotesPlaceModel {
+    var notesPlaceName: String {
+        folder?.name ?? ""
+    }
+}
 
 extension ConfigRowModel {
     /// A folder item's row: always with a value, never synced (v0.7.0).

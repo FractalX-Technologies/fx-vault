@@ -26,6 +26,8 @@ final class DestinationDetailViewModel: LockObserving {
     }
     private(set) var items: [DestinationItemModel] = []
     let values: ConfigValueRevealer
+    /// Reveal in the notes, after Touch ID or the master password (1.0 B9).
+    let notesReveal: NotesRevealModel
     let copyFlow: ItemCopyFlow
     var selection: Set<ConfigItemID> = []
     var alert: ErrorPresentationModel?
@@ -57,6 +59,7 @@ final class DestinationDetailViewModel: LockObserving {
         self.dependencies = dependencies
         destinationProvider = live
         values = ConfigValueRevealer(config: dependencies.config, clock: dependencies.clock)
+        notesReveal = NotesRevealModel(values: values, dependencies: dependencies)
         copyFlow = ItemCopyFlow(dependencies: dependencies)
         dependencies.actions.addLockObserver(self)
         observeItems()
@@ -88,7 +91,7 @@ final class DestinationDetailViewModel: LockObserving {
 
     // MARK: - Table
 
-    var rows: [ConfigRowModel] {
+    func rows(of kind: ConfigKind) -> [ConfigRowModel] {
         items
             .filter { $0.kind == kind }
             .sorted { $0.name < $1.name }
@@ -481,6 +484,25 @@ final class DestinationDetailViewModel: LockObserving {
 }
 
 extension DestinationDetailViewModel: ConfigTableModel {}
+
+extension DestinationDetailViewModel: NotesPlaceModel {
+    /// Key Vault holds secrets only (R3).
+    var notesKinds: [ConfigKind] {
+        [.secret]
+    }
+
+    var changedAtSourceIDs: Set<ConfigItemID> {
+        Set(refresh?.findings.compactMap(\.itemID) ?? [])
+    }
+
+    var notesPlaceName: String {
+        destination?.title ?? ""
+    }
+
+    var changedAtSourceTitle: String {
+        destination.map { DestinationCopy.changedMark(provider: $0.provider) } ?? PlaceCopy.changedOnGitHubMark
+    }
+}
 
 /// Refresh's result as the header's line and the footnotes show it.
 struct DestinationRefreshPresentationModel: Equatable {

@@ -213,6 +213,8 @@ struct FeatureDependencies {
             String(localized: "touchID.prompt.share", defaultValue: "share configuration")
         case .copyAll:
             String(localized: "touchID.prompt.copyAll", defaultValue: "copy every value to the clipboard")
+        case .reveal:
+            String(localized: "touchID.prompt.reveal", defaultValue: "reveal a secret")
         }
         return BiometricPrompt(reason: reason, fallbackTitle: fallback)
     }

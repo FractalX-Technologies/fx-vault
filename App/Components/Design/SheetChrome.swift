@@ -254,10 +254,29 @@ private struct FXLinkButtonBody: View {
     }
 }
 
+/// A quiet link inside a caption line (boards Main2-Repository's Review, Place-Reveal's Hide):
+/// ink, medium, a faint underline, not the brand link of sheets.
+struct FXInkLinkButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(Theme.Typography.captionEmphasized)
+            .foregroundStyle(Theme.Colors.ink)
+            .underline(color: Theme.Colors.hairlineStrong)
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? Theme.Opacity.pressed : 1)
+            .linkPointer()
+    }
+}
+
 extension View {
     /// Applies ``FXLinkButtonStyle``.
     func fxLinkButtonStyle(isEmphasized: Bool = false) -> some View {
         buttonStyle(FXLinkButtonStyle(isEmphasized: isEmphasized))
+    }
+
+    /// Applies ``FXInkLinkButtonStyle``.
+    func fxInkLinkButtonStyle() -> some View {
+        buttonStyle(FXInkLinkButtonStyle())
     }
 
     /// The pointing-hand cursor over links.

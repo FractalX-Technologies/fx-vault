@@ -10,6 +10,9 @@ struct MainToolbarPanel: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.small) {
             MainToolbarTitle(viewModel: viewModel)
+            if viewModel.isShowingRevealedValue {
+                HiddenFromCaptureMark()
+            }
             JumpToolbarButton(viewModel: viewModel)
             MainSyncButton(viewModel: viewModel)
         }
@@ -86,6 +89,20 @@ struct MainToolbarTitle: View {
                 .fixedSize()
                 .accessibilityIdentifier(AccessibilityID.Main.breadcrumb)
         }
+    }
+}
+
+/// While a secret shows (board Place-Reveal): the window is out of screen capture and sharing
+/// for as long as this mark is on screen.
+private struct HiddenFromCaptureMark: View {
+    var body: some View {
+        Image(systemName: "eye.slash")
+            .font(Theme.Typography.caption)
+            .foregroundStyle(Theme.Colors.mutedText)
+            .padding(.horizontal, Theme.Spacing.xSmall)
+            .help(NotesCopy.hiddenFromCapture)
+            .accessibilityLabel(NotesCopy.hiddenFromCapture)
+            .screenCaptureProtected()
     }
 }
 

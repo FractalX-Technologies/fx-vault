@@ -97,6 +97,11 @@ nonisolated enum DestinationCopy {
         String(localized: "destination.detail.changed", defaultValue: "\(count) changed in \(provider.shortTitle)")
     }
 
+    /// The notes' ○ mark (1.0 B9): "Changed in Key Vault".
+    static func changedMark(provider: DestinationProvider) -> String {
+        String(localized: "destination.detail.changedMark", defaultValue: "Changed in \(provider.shortTitle)")
+    }
+
     static func reviewHelp(provider: DestinationProvider) -> String {
         String(localized: "destination.detail.review.help", defaultValue: "Keep your version or take \(provider.shortTitle)’s for each change")
     }

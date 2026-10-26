@@ -2729,6 +2729,17 @@
         }
       }
     },
+    "destination.detail.changedMark" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Changed in %@"
+          }
+        }
+      }
+    },
     "destination.detail.drift" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11463,6 +11474,171 @@
         }
       }
     },
+    "notes.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ notes"
+          }
+        }
+      }
+    },
+    "notes.hiddenFromCapture" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hidden from screen capture"
+          }
+        }
+      }
+    },
+    "notes.mark.pending" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Waits for the next Sync"
+          }
+        }
+      }
+    },
+    "notes.mode.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "View"
+          }
+        }
+      }
+    },
+    "notes.mode.notes" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Notes"
+          }
+        }
+      }
+    },
+    "notes.mode.table" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Table"
+          }
+        }
+      }
+    },
+    "notes.note.noValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "no value"
+          }
+        }
+      }
+    },
+    "notes.note.overrides" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "overrides %@"
+          }
+        }
+      }
+    },
+    "notes.reveal" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reveal %@"
+          }
+        }
+      }
+    },
+    "notes.reveal.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reveal this value for %lld seconds. Asks for Touch ID or your master password."
+          }
+        }
+      }
+    },
+    "notes.reveal.hide" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide"
+          }
+        }
+      }
+    },
+    "notes.reveal.hidesIn" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "hides in %lld s"
+          }
+        }
+      }
+    },
+    "notes.reveal.hidesIn.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hides in %lld seconds"
+          }
+        }
+      }
+    },
+    "notes.reveal.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The value shows in the notes for %lld seconds, then hides again."
+          }
+        }
+      }
+    },
+    "notes.section.inherited" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From %1$@ · %2$lld · read only"
+          }
+        }
+      }
+    },
     "onboarding.back" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -19269,6 +19445,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Use Master Password"
+          }
+        }
+      }
+    },
+    "touchID.prompt.reveal" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "reveal a secret"
           }
         }
       }

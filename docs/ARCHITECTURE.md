@@ -501,7 +501,7 @@ them with `await`). Packages ship no user-facing text: the app maps every error.
   failed replacement; set wherever that is detected, including ReauthGate checks while unlocked;
   cleared by enable, disable, reset and an answered offer). Argon2id work is `@concurrent`. A weak
   new password throws `PasswordPolicyError.tooWeak`.
-- `ReauthGate` (D30): `authorize(.export | .share | .copyAll, with: .biometrics(prompt) |
+- `ReauthGate` (D30): `authorize(.export | .share | .copyAll | .reveal, with: .biometrics(prompt) |
   .password(String))`, `authorizeWithPassword(.newRecoveryKey | .changePassword |
   .disableTouchID | .rotateKey | .resetVault, password:)`; plus `authorizeEnvExport(.file |
   .clipboard, with:session:) -> EnvExportAuthorizationModel` and `authorizeShare(_:with:session:)
@@ -1232,6 +1232,10 @@ AppTests).
     reads the providers) opens the import preview prefilled. Paste, import and ⌘V pass the tab's kind as `defaultKind` and the open scope as the
     target. Revealed values re-mask after
     `Timeouts.revealRemask` (injected clock), on resign active, on scope change and on lock.
+    1.0 B9: Notes | Table (`MainViewModel.placeViewMode`, Notes at launch, a ⌘K name switches
+    to Table). `PlaceNotesView` draws `NotesDocumentModel` from `NotesPlaceModel` (the four
+    detail view models; `Screens/Main/Place/Notes/`); its Reveal asks `ReauthGate` (`.reveal`)
+    through `NotesRevealModel`, then the place's `ConfigValueRevealer`.
     The drift check runs when a repository opens (`DriftRepository.detectOnOpen`).
     v0.4.0 multi-selection: ⌘/⇧-click and ⌘A select rows (`selection`); with two or more
     selected, `RepoDetailSelectionActions` replaces the add actions ("N selected", Push on Next

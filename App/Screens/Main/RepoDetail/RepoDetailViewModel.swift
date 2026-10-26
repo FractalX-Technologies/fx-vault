@@ -64,7 +64,8 @@ struct ConfigRowModel: Identifiable, Hashable {
         syncedName = nil
         linkCount = 0
         inherited = InheritedRowModel(
-            scope: PlaceCopy.subline([organization, item.visibility.reachTitle(selectedCount: item.selectedRepositoryCount)]),
+            organization: organization,
+            reach: item.visibility.reachTitle(selectedCount: item.selectedRepositoryCount),
             updatedAt: item.remoteUpdatedAt
         )
     }
@@ -94,10 +95,16 @@ struct ConfigRowModel: Identifiable, Hashable {
 
 /// What an inherited row says beyond its name (1.0, B7a; board Place-Table).
 struct InheritedRowModel: Hashable {
-    /// "example-org · all repos", "example-org · private and internal".
-    let scope: String
+    let organization: String
+    /// "all repos", "private and internal" (`OrgVisibility.reachTitle`).
+    let reach: String
     /// GitHub's last change; nil for an organization item not synced yet.
     let updatedAt: Date?
+
+    /// "example-org · all repos", under the name in the table.
+    var scope: String {
+        PlaceCopy.subline([organization, reach])
+    }
 }
 
 /// The rows waiting for the "Delete?" confirmation: one row, or a multi-selection (v0.4.0).
@@ -175,6 +182,8 @@ final class RepoDetailViewModel: LockObserving {
     private(set) var items: [ConfigItemModel] = []
     /// Revealed secrets and decrypted variables (shared with folders, v0.7.0).
     let values: ConfigValueRevealer
+    /// Reveal in the notes, after Touch ID or the master password (1.0 B9).
+    let notesReveal: NotesRevealModel
     var selection: Set<ConfigItemID> = []
     private(set) var driftReport: DriftReportModel?
     /// Why the last drift check failed (shown as a small note); nil otherwise.
@@ -228,6 +237,7 @@ final class RepoDetailViewModel: LockObserving {
         self.repositoryID = repositoryID
         self.dependencies = dependencies
         values = ConfigValueRevealer(config: dependencies.config, clock: dependencies.clock)
+        notesReveal = NotesRevealModel(values: values, dependencies: dependencies)
         copyFlow = ItemCopyFlow(dependencies: dependencies)
         repositoryProvider = repository
         scopeProvider = scopeSummary
@@ -338,7 +348,7 @@ final class RepoDetailViewModel: LockObserving {
 
     // MARK: - Table
 
-    var rows: [ConfigRowModel] {
+    func rows(of kind: ConfigKind) -> [ConfigRowModel] {
         items
             .filter { $0.kind == kind }
             .sorted { $0.name < $1.name }
@@ -384,7 +394,8 @@ final class RepoDetailViewModel: LockObserving {
     /// The table: the scope's own rows (one that overrides an organization item says so), then
     /// the organization's items this repository gets and nothing here overrides, read only
     /// (board Place-Table). Actions only ever see ``rows``.
-    var tableRows: [ConfigRowModel] {
+    func tableRows(of kind: ConfigKind) -> [ConfigRowModel] {
+        let rows = rows(of: kind)
         guard let inherited else { return rows }
         let reached = inherited.items.filter { $0.kind == kind }
         let reachedNames = Set(reached.map(\.name))
@@ -564,6 +575,7 @@ final class RepoDetailViewModel: LockObserving {
         guard scope != self.scope else { return }
         self.scope = scope
         selection.removeAll()
+        notesReveal.cancel()
         remaskAll()
         values.clearVariables()
         items = []
@@ -1013,6 +1025,16 @@ final class RepoDetailViewModel: LockObserving {
 }
 
 extension RepoDetailViewModel: ConfigTableModel {}
+
+extension RepoDetailViewModel: NotesPlaceModel {
+    var notesPlaceName: String {
+        placeName
+    }
+
+    var changedAtSourceIDs: Set<ConfigItemID> {
+        driftReport?.changedItemIDs(in: scope) ?? []
+    }
+}
 
 extension ItemCopyResultModel {
     /// "Copied 3 items to staging." with what was kept or left out.

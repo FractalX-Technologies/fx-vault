@@ -3,8 +3,8 @@ import VaultCore
 import VaultData
 
 /// Column 3 for an imported organization (1.0; board Org-Visibility): the header (the login,
-/// "Organization · counts", ⋯ More) and the table Name | Kind | Value | Visibility | Status |
-/// Updated.
+/// "Organization · counts", Copy All, Notes | Table, ⋯ More), then the notes or the table Name |
+/// Kind | Value | Visibility | Status | Updated.
 struct OrganizationDetailScreen: View {
     @Bindable var viewModel: OrganizationDetailViewModel
     let main: MainViewModel
@@ -17,7 +17,12 @@ struct OrganizationDetailScreen: View {
                     .fxTextStyle(.caption)
                     .foregroundStyle(Theme.Colors.mutedText)
             } else {
-                OrganizationItemsTable(viewModel: viewModel)
+                switch main.placeViewMode {
+                case .notes:
+                    PlaceNotesView(model: viewModel)
+                case .table:
+                    OrganizationItemsTable(viewModel: viewModel)
+                }
             }
         }
         .fxPlaceColumn()
@@ -55,6 +60,7 @@ struct OrganizationDetailScreen: View {
             CopyAllButton(isEnabled: viewModel.canCopyAll) {
                 viewModel.copyAll()
             }
+            PlaceViewModePicker(main: main)
         } moreItems: {
             ForEach(ConfigKind.allCases, id: \.self) { kind in
                 Button(PlaceCopy.newItem(kind)) {
