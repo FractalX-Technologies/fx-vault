@@ -2368,6 +2368,14 @@ Review D6c5 — ⌘K "Secrets by name" (2026-10-26, automatic):
 - Departures: variables are listed too (the board shows only secrets; a variable is as findable); no "· 3 repos" after an organization; a repository's own destinations (not Key Vaults of their own) are left out (the sidebar doesn't list them).
 - Tests written, not run yet: package `ItemNameQueryTests.everyHolderAnswersEveryWordInAnyCase` (VaultDataTests); `JumpPaletteTests.namesFollowThePlacesAndOpenTheirRow` (and `selectedID` is a `JumpResultID`); UI `JumpPaletteUITests` types "mode" and opens staging.
 - Docs: README, CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE, RELEASING step 19.
+- Review (1f, 2026-10-26):
+  - The names' paths use `PlaceCopy.path` (`JumpPaletteCopy.path` removed).
+  - `Theme.Symbols.secret` / `.variable`; `ConfigKind.symbolName` returns them, and the table's empty state, the share preview and the share tree use them.
+  - `ItemNameStore` lists a destination's names only for a Key Vault of its own, before `LIMIT`, so a repository's destinations never take one of the 50.
+  - `MainViewModel.dropPendingRowElsewhere()` (in `followSelection` and the scopes' selection change) drops the ⌘K row once another place, scope or destination is chosen; nothing selected yet, or a sidebar selection still pending, keeps it.
+  - `SidebarResizeHandle` keeps its start in `@GestureState` and ends the drag when it resets (waiver: a cancelled drag).
+  - DESIGN: Copy All's help says Touch ID or the master password.
+  - Tests written, not run yet: `ItemNameQueryTests` (Key Vault and organization tombstones, a repository's Key Vault left out), `JumpPaletteTests.aNameLeftBeforeItsScopeShowsIsNotSelectedLater`, `MainViewModelTests.draggingTheSidebarSavesItsWidthOnce` (a second end saves nothing).
 
 Review B7a — inherited and shadowed names on a repository (2026-10-26, automatic):
 - VaultCore: `OrgVisibility.reaches(repositoryName:isPrivate:selectedRepositories:)` (all → every repository, private → private and internal, selected → the list, names without case); `InheritedOrgItemsModel` (organization id and login, the reached items).

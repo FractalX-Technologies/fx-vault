@@ -201,9 +201,9 @@ private struct ShareScopeTreeRow: View {
         case .repository, .repositoryLevel: Theme.Symbols.repository
         case .environment: Theme.Symbols.environment
         case .destination(let symbolName): symbolName
-        case .folder: "folder"
-        case .secret: "key"
-        case .variable: "textformat"
+        case .folder: Theme.Symbols.folder
+        case .secret: Theme.Symbols.secret
+        case .variable: Theme.Symbols.variable
         }
     }
 }

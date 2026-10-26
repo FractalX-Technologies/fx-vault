@@ -338,8 +338,8 @@ enum Theme {
         static let panelY: CGFloat = 8
     }
 
-    /// SF Symbols of the places, so the sidebar, the ⌘K palette and the Sync summary draw a
-    /// place the same way (boards Main2, Main2-Search, Sync-Review). A Key Vault's is its
+    /// SF Symbols of the places and item kinds, so the sidebar, the ⌘K palette and the Sync summary
+    /// draw them the same way (boards Main2, Main2-Search, Sync-Review). A Key Vault's is its
     /// provider's.
     enum Symbols {
         static let organization = "building.2"
@@ -350,5 +350,8 @@ enum Theme {
         static let folderSelected = "folder.fill"
         /// An Azure subscription in the sidebar (board Main2-Repository).
         static let subscription = "cloud"
+        /// The item kinds (`ConfigKind.symbolName`): tables, the share trees, ⌘K's names.
+        static let secret = "key"
+        static let variable = "textformat"
     }
 }

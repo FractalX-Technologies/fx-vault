@@ -170,6 +170,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// Rebuilds the scopes and detail columns when the selected repository, folder, organization
     /// or Key Vault changes (or the repository or organization becomes imported, or is removed).
     private func followSelection() {
+        dropPendingRowElsewhere()
         if let id = sidebar.selectedKeyVaultID {
             detail = nil
             scopeList = nil
@@ -234,6 +235,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         scopes.onSelectionChange = { [weak self, weak scopes, weak detail] in
             guard let scopes else { return }
             self?.followScopeSelection(scopes)
+            self?.dropPendingRowElsewhere()
             guard let scope = scopes.selectedScope?.scope else { return }
             detail?.select(scope: scope)
             self?.selectPendingRow()
@@ -565,6 +567,39 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             organizationDetail.selection = [row.id]
         }
         pendingRow = nil
+    }
+
+    /// Another place chosen before the ⌘K row's detail showed it: that row must not be selected
+    /// when its place opens later. Nothing selected yet, or a selection still pending, keeps it.
+    private func dropPendingRowElsewhere() {
+        guard let row = pendingRow, !sidebar.isSelectionPending else { return }
+        let repository = selectedRepo?.importedRepoID
+        let organization = sidebar.selectedOrganizationOwner?.organization?.id
+        let folder = sidebar.selectedFolderID
+        let vault = sidebar.selectedKeyVaultID
+        guard repository != nil || organization != nil || folder != nil || vault != nil else { return }
+        let isElsewhere: Bool
+        switch row.holder {
+        case .place(.scope(let id, let scope)):
+            if repository != id || organization != nil || folder != nil || vault != nil {
+                isElsewhere = true
+            } else if let scopeList, scopeList.repositoryID == id {
+                // Once the scopes are listed, another scope or a destination of the repository.
+                isElsewhere = scopeList.selectedDestination != nil
+                    || scopeList.selectedScope.map { $0.scope != scope } == true
+            } else {
+                isElsewhere = false
+            }
+        case .place(.folder(let id)):
+            isElsewhere = folder != id
+        case .place(.destination(let id)):
+            isElsewhere = vault != id
+        case .organization(let id):
+            isElsewhere = organization != id
+        }
+        if isElsewhere {
+            pendingRow = nil
+        }
     }
 
     /// Every place the sidebar can show, whatever its search; environments are read from the

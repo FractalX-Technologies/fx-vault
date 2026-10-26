@@ -225,7 +225,7 @@ struct ShareImportActionRow: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
-            Image(systemName: kind == .secret ? "key" : "textformat")
+            Image(systemName: kind.symbolName)
                 .font(Theme.Typography.callout)
                 .foregroundStyle(Theme.Colors.subtleText)
                 .accessibilityLabel(kind == .secret

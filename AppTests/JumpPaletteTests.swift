@@ -122,6 +122,37 @@ struct JumpPaletteTests {
         #expect(main.folderDetail?.selection == [mode.id])
     }
 
+    /// A name opened from ⌘K, then another place chosen before its scopes arrive: the row is not
+    /// selected when that scope is opened later.
+    @Test func aNameLeftBeforeItsScopeShowsIsNotSelectedLater() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: MainViewModelTests.ready)
+        let main = harness.app.makeMainViewModel()
+        let repoID = try await harness.stageRepository(name: "stripe-webhooks")
+        try harness.data.config.createEnvironment(in: repoID, name: "production")
+        let production = try EditorFixtures.environment(harness, repoID, named: "production")
+        try harness.data.config.addItem(
+            repositoryID: repoID,
+            scope: .environment(production.id),
+            kind: .secret,
+            name: "STRIPE_KEY",
+            value: SecretBytes(utf8: EditorFixtures.secretValue)
+        )
+        let folderID = try harness.data.folders.createFolder(named: "Notes")
+        #expect(await TestFixtures.eventually { !main.sidebar.owners.isEmpty && !main.sidebar.folders.isEmpty })
+
+        main.showJumpPalette()
+        let palette = try #require(main.jumpPalette)
+        palette.query = "stripe_key"
+        palette.open(try #require(palette.items.first))
+        // In the same turn, before the repository's scopes are listed.
+        main.sidebar.select(folderID: folderID)
+        #expect(main.folderDetail?.folderID == folderID)
+
+        main.open(repositoryID: repoID, scope: .environment(production.id))
+        #expect(await TestFixtures.eventually { main.detail?.scope == .environment(production.id) })
+        #expect(main.detail?.selection.isEmpty == true, "the row ⌘K opened was left behind")
+    }
+
     @Test func anOrganizationAndARepositoryOpenTheirSidebarPlaces() async throws {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: MainViewModelTests.ready)
         let main = harness.app.makeMainViewModel()

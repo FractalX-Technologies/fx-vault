@@ -5,7 +5,7 @@ import VaultCore
 import VaultStore
 
 /// ⌘K "Secrets by name" (1.0 D6c5, board Main2-Search): one query over the names of every
-/// repository scope, folder, Key Vault and organization; never a value.
+/// repository scope, folder, Key Vault of its own and organization; never a value.
 @Suite("Item names")
 struct ItemNameQueryTests {
     @Test func everyHolderAnswersEveryWordInAnyCase() async throws {
@@ -54,5 +54,15 @@ struct ItemNameQueryTests {
         // A deleted environment's items wait for Sync, not for ⌘K.
         try harness.config.deleteEnvironment(staging)
         #expect(try harness.config.itemNames(matching: "webhook").isEmpty)
+
+        // So do a Key Vault's and an organization's tombstones; a repository's own Key Vault is
+        // reached through its repository, so it never takes one of the 50 places.
+        let vaults = DestinationRepositoryTests.Fixture(harness: harness, destinations: destinations, repo: repo)
+        let vaultToken = try vaults.add(vault, "NPM_TOKEN", value: ConfigFixture.valueB)
+        try vaults.markSynced(vault)
+        try destinations.deleteItems([vaultToken])
+        try fixture.items.deleteItems([try await fixture.item("NPM_TOKEN").id])
+        try vaults.add(try vaults.keyVault(), "NPM_TOKEN_RUNTIME", value: ConfigFixture.valueC)
+        #expect(try harness.config.itemNames(matching: "npm").isEmpty)
     }
 }

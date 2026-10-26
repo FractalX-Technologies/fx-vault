@@ -24,11 +24,6 @@ enum JumpPaletteCopy {
         String(localized: "jump.place.repository", defaultValue: "\(owner) › repository")
     }
 
-    /// "example-org › api-service › production": where a name is.
-    static func path(_ steps: [String]) -> String {
-        steps.joined(separator: " › ")
-    }
-
     static func environment(owner: String, repository: String) -> String {
         String(localized: "jump.place.environment", defaultValue: "\(owner) › \(repository) › environment")
     }

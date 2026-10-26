@@ -4,7 +4,8 @@ import VaultCore
 
 /// Secret and variable names across every holder (1.0 D6c5, ⌘K "Secrets by name"; the quick
 /// vault, B10): the live rows of `config_items` (outside deleted environments), `folder_items`,
-/// `destination_items` and `org_items`. It selects no value column.
+/// `destination_items` of the Key Vaults of their own (the places ⌘K opens; filtered before the
+/// limit) and `org_items`. It selects no value column.
 public struct ItemNameStore: Sendable {
     public let database: VaultDatabase
 
@@ -24,7 +25,9 @@ public struct ItemNameStore: Sendable {
               UNION ALL
               SELECT id, kind, name, 'folder', folder_id, NULL FROM folder_items
               UNION ALL
-              SELECT id, kind, name, 'destination', destination_id, NULL FROM destination_items WHERE is_deleted = 0
+              SELECT di.id, di.kind, di.name, 'destination', di.destination_id, NULL
+                FROM destination_items di JOIN destinations d ON d.id = di.destination_id
+                WHERE di.is_deleted = 0 AND d.repository_id IS NULL
               UNION ALL
               SELECT id, kind, name, 'organization', organization_id, NULL FROM org_items WHERE is_deleted = 0)
             WHERE 1

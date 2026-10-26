@@ -87,7 +87,7 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
         .overlay {
             if rows.isEmpty {
                 EmptyStateView(
-                    systemImage: viewModel.kind == .secret ? "key" : "textformat",
+                    systemImage: viewModel.kind.symbolName,
                     title: viewModel.kind == .secret
                         ? String(localized: "main.table.empty.secrets", defaultValue: "No secrets")
                         : String(localized: "main.table.empty.variables", defaultValue: "No variables"),
