@@ -384,12 +384,15 @@ foreground color, so `.primary` text still turns white on selected rows.
   again, so the board's "Show Key" is not offered.
 - Jump palette (⌘K, Edit › Jump Anywhere or the toolbar's search button; board Main2-Search):
   over the window on `scrim` (a click outside closes it), `jumpPaletteWidth` wide under the
-  toolbar, `.fxCardBackground(.popover)`. The field (`.headline`, `jumpPaletteFieldHeight`), a
+  toolbar, `.fxCardBackground(.popover)` (the `card` fill over `.regularMaterial`, so the text
+  under it blurs instead of showing through). The field (`.headline`, `jumpPaletteFieldHeight`,
+  focused through `FocusRetry`: a focus set while the overlay is inserted is dropped), a
   divider, "Places" (`SidebarSectionHeader`) with rows up to `jumpPaletteListMaxHeight`, then it
   scrolls: `.fxRowBackground(style: .palette)` (34 pt), the place's symbol, its name in its
   sidebar style with the first typed word in the emphasized weight, the detail ("Folder",
   "owner › repository") in `.caption` subtle, `KeyHint("↩")` on the selected row. A divider and
-  the footer keys: ↑ ↓ to move, ↩ to open, esc to close. Every typed word must be in the name or
+  the footer keys: ↑ ↓ to move, ↩ to open, esc to close (`onEscapeKey`, a key-down monitor on
+  the window: the field's editor eats esc before SwiftUI sees it). Every typed word must be in the name or
   the owner and repository; names that start with a word come first, then names that contain
   one, then path matches. Secrets by name join in 1f.
 - Detail (no background of its own: the window's `ground` shows; `.fxPlaceColumn()`: insets

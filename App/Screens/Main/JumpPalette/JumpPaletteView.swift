@@ -27,8 +27,7 @@ struct JumpPaletteOverlay: View {
 }
 
 /// The field, "Places" with the matches (the selected one with its ↩ key) and the keys in the
-/// footer. The field keeps the focus: ↑↓ move the selection, ↩ opens it, esc (the footer's
-/// close, the window's cancel action) closes.
+/// footer. The field keeps the focus: ↑↓ move the selection, ↩ opens it, esc closes.
 struct JumpPaletteView: View {
     @Bindable var palette: JumpPaletteViewModel
     let onClose: () -> Void
@@ -46,9 +45,15 @@ struct JumpPaletteView: View {
         .fxCardBackground(.popover)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(AccessibilityID.Jump.palette)
-        .onAppear {
-            isFieldFocused = true
+        // A focus set while the overlay is being inserted is dropped and typing goes to the
+        // window behind (JumpPaletteUITests), so it is asked for until it lands.
+        .task {
+            await FocusRetry.take(isFocused: { isFieldFocused }) {
+                isFieldFocused = true
+            }
         }
+        // The one esc path, ahead of the field's editor (``View/onEscapeKey(perform:)``).
+        .onEscapeKey(perform: onClose)
     }
 
     private var field: some View {
@@ -113,24 +118,15 @@ struct JumpPaletteView: View {
 
     private var footer: some View {
         HStack(spacing: Theme.Spacing.large) {
-            HStack(spacing: Theme.Spacing.large) {
-                footerHint(["↑", "↓"], JumpPaletteCopy.move)
-                footerHint(["↩"], JumpPaletteCopy.open)
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel([JumpPaletteCopy.move, JumpPaletteCopy.open].joined(separator: ", "))
-            // esc as the window's cancel action: the field's editor swallows esc before
-            // `onExitCommand` sees it, and a key equivalent is tried first.
-            Button(action: onClose) {
-                footerHint(["esc"], JumpPaletteCopy.close)
-            }
-            .buttonStyle(.plain)
-            .keyboardShortcut(.cancelAction)
-            .accessibilityLabel(JumpPaletteCopy.close)
+            footerHint(["↑", "↓"], JumpPaletteCopy.move)
+            footerHint(["↩"], JumpPaletteCopy.open)
+            footerHint(["esc"], JumpPaletteCopy.close)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Theme.Spacing.large)
         .padding(.vertical, Theme.Spacing.medium)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel([JumpPaletteCopy.move, JumpPaletteCopy.open, JumpPaletteCopy.close].joined(separator: ", "))
     }
 
     private func footerHint(_ keys: [String], _ text: String) -> some View {

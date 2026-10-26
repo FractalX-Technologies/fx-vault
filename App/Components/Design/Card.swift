@@ -8,8 +8,9 @@ import SwiftUI
 /// - `.sheet`: 24 pt corners, hairline-strong border and the one soft shadow. A dialog drawn
 ///   inside the window. System `.sheet`s keep their own chrome: give their content
 ///   `.fxSheetBackground()` instead.
-/// - `.popover`: 16 pt corners, no padding, hairline-strong border and the soft shadow. The ⌘K
-///   jump palette over the window (board Main2-Search).
+/// - `.popover`: 16 pt corners, no padding, hairline-strong border, the soft shadow and a blur
+///   behind the fill, so the text under it does not show through. The ⌘K jump palette over the
+///   window (board Main2-Search).
 ///
 /// ```swift
 /// Card {
@@ -72,16 +73,24 @@ enum CardStyle: Sendable {
     var floatsOverContent: Bool {
         self == .sheet || self == .popover
     }
+
+    /// The palette floats over the window's text under a light scrim (board Main2-Search:
+    /// white at 94% over a backdrop blur).
+    var blursBehind: Bool {
+        self == .popover
+    }
 }
 
 private struct CardBackground<S: InsettableShape>: ViewModifier {
     let shape: S
     let border: Color
     let hasShadow: Bool
+    let blursBehind: Bool
 
     func body(content: Content) -> some View {
         content
             .background(Theme.Colors.card, in: shape)
+            .background(blursBehind ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(Color.clear), in: shape)
             .clipShape(shape)
             .overlay(shape.strokeBorder(border, lineWidth: Theme.Stroke.hairline))
             .shadow(
@@ -99,7 +108,8 @@ extension View {
         modifier(CardBackground(
             shape: RoundedRectangle(cornerRadius: style.radius, style: .continuous),
             border: style.floatsOverContent ? Theme.Colors.hairlineStrong : Theme.Colors.hairline,
-            hasShadow: style.floatsOverContent
+            hasShadow: style.floatsOverContent,
+            blursBehind: style.blursBehind
         ))
     }
 

@@ -195,24 +195,15 @@ private struct SidebarSearchField: View {
     }
 
     /// Edit › Find on a hidden sidebar asks while the column is still hidden, where the focus
-    /// cannot land and SwiftUI drops it: the request is retried while the column slides back,
-    /// until the field has the focus, then dropped (a newer request cancels this loop).
+    /// cannot land and SwiftUI drops it: the request is retried while the column slides back
+    /// (``FocusRetry``), until the field has the focus, then dropped (a newer request cancels it).
     private func takeFocus() async {
-        let attempts = Int(Theme.Durations.focusTimeout / Theme.Durations.focusRetry)
-        for _ in 0..<attempts {
-            guard sidebar.isSearchFocusPending else { return }
-            if isFocused {
-                sidebar.didFocusSearch()
-                return
-            }
+        let didFocus = await FocusRetry.take(isFocused: { isFocused }, isWanted: { sidebar.isSearchFocusPending }) {
             isFocused = true
-            do {
-                try await Task.sleep(for: Theme.Durations.focusRetry)
-            } catch {
-                return
-            }
         }
-        if !isFocused {
+        if didFocus {
+            sidebar.didFocusSearch()
+        } else if !Task.isCancelled, sidebar.isSearchFocusPending {
             sidebar.cancelSearchFocus()
         }
     }
