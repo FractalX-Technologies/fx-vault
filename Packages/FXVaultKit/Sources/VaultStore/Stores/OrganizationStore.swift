@@ -107,6 +107,43 @@ public struct OrganizationStore: Sendable {
         try OrgItemRecord.deleteOne(tx.db, key: id.uuidString)
     }
 
+    /// The live items of the organization `ownerLogin` that reach one of its repositories (B7a),
+    /// now and after each change; nil while that organization is not in the vault.
+    public func observeInheritedItems(
+        ownerLogin: String,
+        repositoryName: String,
+        isPrivate: Bool
+    ) -> AsyncThrowingStream<InheritedOrgItemsModel?, any Error> {
+        database.observe { db in
+            try Self.inheritedItems(ownerLogin: ownerLogin, repositoryName: repositoryName, isPrivate: isPrivate, db: db)
+        }
+    }
+
+    public func fetchInheritedItems(ownerLogin: String, repositoryName: String, isPrivate: Bool) throws -> InheritedOrgItemsModel? {
+        try database.read { tx in
+            try Self.inheritedItems(ownerLogin: ownerLogin, repositoryName: repositoryName, isPrivate: isPrivate, db: tx.db)
+        }
+    }
+
+    /// A `selected` item reaches the repository only through the list stored for it: GitHub's
+    /// own list is not read at import, so an unknown list reaches nothing.
+    static func inheritedItems(ownerLogin: String, repositoryName: String, isPrivate: Bool, db: Database) throws -> InheritedOrgItemsModel? {
+        guard let organization = try OrganizationRecord
+            .filter(OrganizationRecord.CodingKeys.loginKey == OwnerLoginValidator.foldKey(ownerLogin))
+            .fetchOne(db)
+        else { return nil }
+        var items: [OrgItemModel] = []
+        for record in try orderedItems(organizationID: organization.id).fetchAll(db) where !record.isDeleted {
+            let selected = record.visibility == .selected
+                ? try String.fetchAll(db, sql: "SELECT name FROM org_item_repositories WHERE item_id = ?", arguments: [record.id.uuidString])
+                : []
+            if record.visibility.reaches(repositoryName: repositoryName, isPrivate: isPrivate, selectedRepositories: selected) {
+                items.append(record.model)
+            }
+        }
+        return InheritedOrgItemsModel(organizationID: organization.id, organizationLogin: organization.login, items: items)
+    }
+
     /// The repository list stored for an item (`repositories_edited`), by name.
     public func fetchRepositories(itemID: ConfigItemID, in tx: StoreTransaction) throws -> [String] {
         try String.fetchAll(

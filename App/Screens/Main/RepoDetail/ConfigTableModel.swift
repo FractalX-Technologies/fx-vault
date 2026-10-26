@@ -10,6 +10,8 @@ import VaultData
 protocol ConfigTableModel: AnyObject, Observable {
     var kind: ConfigKind { get set }
     var rows: [ConfigRowModel] { get }
+    /// What the table shows: ``rows``, then a repository's inherited organization items (B7a).
+    var tableRows: [ConfigRowModel] { get }
     var selection: Set<ConfigItemID> { get set }
     /// Items can be added, edited, pasted and deleted here.
     var canEdit: Bool { get }
@@ -54,6 +56,11 @@ protocol ConfigTableModel: AnyObject, Observable {
 }
 
 extension ConfigTableModel {
+    /// Only the place's own rows by default (a folder or a Key Vault inherits nothing).
+    var tableRows: [ConfigRowModel] {
+        rows
+    }
+
     /// No destinations by default (a folder belongs to no repository).
     var destinationCopyTargets: [ItemCopyTargetModel] {
         []

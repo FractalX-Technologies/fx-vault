@@ -112,11 +112,13 @@ private struct FXRowBackground: ViewModifier {
 struct TableNameText: View {
     let name: String
     var isDeleted = false
+    /// A read-only row that is not the place's own (an inherited organization item, B7a).
+    var isMuted = false
 
     var body: some View {
         Text(verbatim: name)
             .fxTextStyle(.monoName)
-            .foregroundStyle(isDeleted ? Theme.Colors.subtleText : Theme.Colors.ink)
+            .foregroundStyle(isDeleted ? Theme.Colors.subtleText : isMuted ? Theme.Colors.mutedText : Theme.Colors.ink)
             .strikethrough(isDeleted)
             .lineLimit(1)
             .truncationMode(.middle)

@@ -53,6 +53,12 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   can't use, marked as a warning) and the naming rules are footnotes under the table instead
   of a card and banners. An organization's Visibility column says what each item reaches:
   "all repos", "private and internal" or "selected · 3 repos".
+- **Inherited organization secrets and variables.** When a repository's organization is in
+  the vault, its Secrets and Variables tabs also list, muted and read only, what the
+  organization gives it ("example-org · all repos", "· private and internal", "· selected"),
+  marked Inherited. An item of the repository or environment with the same name says
+  "Overrides example-org" beside its status. A `selected` item shows once FX Vault knows its
+  repository list (after it was edited here).
 - **Edit organization secrets and variables.** The organization view gains Add Secret, Add
   Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
   with the organization's repositories). A Selected item keeps GitHub's repository list until

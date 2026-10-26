@@ -36,6 +36,21 @@ public struct OrganizationModel: Sendable, Hashable, Identifiable {
     }
 }
 
+/// What a repository gets from its organization (1.0, B7a): the organization's live items whose
+/// visibility reaches it. A `selected` item counts only when FX Vault knows its list.
+public struct InheritedOrgItemsModel: Sendable, Hashable {
+    public var organizationID: OrganizationID
+    public var organizationLogin: String
+    /// By name, then kind.
+    public var items: [OrgItemModel]
+
+    public init(organizationID: OrganizationID, organizationLogin: String, items: [OrgItemModel]) {
+        self.organizationID = organizationID
+        self.organizationLogin = organizationLogin
+        self.items = items
+    }
+}
+
 /// One organization secret or variable (`org_items` row), without its value.
 public struct OrgItemModel: Sendable, Hashable, Identifiable {
     public var id: ConfigItemID

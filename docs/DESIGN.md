@@ -495,6 +495,15 @@ foreground color, so `.primary` text still turns white on selected rows.
   glyph on a repository scope, a Key Vault and an organization, `CopyAllButton`) and ⋯ More. The
   `SegmentedPill` (Secrets / Variables) with the selection's actions; the table with
   `.fxTable()`.
+- Inherited organization items (1.0, B7a; board Place-Table): when the repository's
+  organization is in the vault, each tab lists after its own rows the organization's items that
+  reach the repository (all → every repository, private → private and internal ones, selected →
+  the ones in the list FX Vault knows) and nothing here overrides: the name in `mutedText` over
+  "example-org · all repos" (`OrgVisibility.reachTitle`) in `.caption`, the value masked (a
+  variable's in plaintext), Updated from GitHub, and Status "Inherited" in `mutedText`. They
+  have no menu, no edit and no actions. The repository's (or the environment's) own item of the
+  same name shows "· Overrides example-org" in `mutedText` after its status; in an environment
+  the repository level's names also keep the organization's out.
 - ⋯ More (board Main2-Actions), what each place offers, disabled when the account may not:
   New Secret, New Variable | Paste Multiple…, Import .env…, Export .env…, Copy All | Copy To
   (the selection, or the open tab when nothing is selected), Share Securely… | Deployment

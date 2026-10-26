@@ -131,6 +131,23 @@ public actor OrganizationRepository {
         OrganizationStore(database: session.database).observeItems(organizationID: id)
     }
 
+    // MARK: - Inherited (B7a)
+
+    /// What a repository owned by `ownerLogin` gets from that organization; nil while the
+    /// organization is not in the vault (a person's repository, or one not imported).
+    public func inheritedItems(ownerLogin: String, repositoryName: String, isPrivate: Bool) throws(RepoCatalogError) -> InheritedOrgItemsModel? {
+        try perform { try store.fetchInheritedItems(ownerLogin: ownerLogin, repositoryName: repositoryName, isPrivate: isPrivate) }
+    }
+
+    /// ``inheritedItems(ownerLogin:repositoryName:isPrivate:)`` now and after each change.
+    public nonisolated func observeInheritedItems(
+        ownerLogin: String,
+        repositoryName: String,
+        isPrivate: Bool
+    ) -> AsyncThrowingStream<InheritedOrgItemsModel?, any Error> {
+        OrganizationStore(database: session.database).observeInheritedItems(ownerLogin: ownerLogin, repositoryName: repositoryName, isPrivate: isPrivate)
+    }
+
     // MARK: - Support
 
     /// The listed rows the vault can hold, by validated name; the first of a repeated name wins.

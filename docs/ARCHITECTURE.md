@@ -641,6 +641,9 @@ destination item never reaches GitHub except as a copy in a repository scope.
 `synced_fp` = `value_fp`; names the vault cannot hold are skipped and reported in
 `OrgImportResultModel`; a row without visibility fails as `.malformedOutput`),
 `organizations()`, `observeOrganizations()`, `items(of:)`, `observeItems(of:)`,
+`inheritedItems(ownerLogin:repositoryName:isPrivate:)` and `observeInheritedItems(…)` (B7a: the
+live items whose `OrgVisibility.reaches(repositoryName:isPrivate:selectedRepositories:)`, one
+read; a `selected` item reaches only through the `org_item_repositories` list FX Vault stores),
 `removeOrganization(_:)` (the vault only). Errors are `RepoCatalogError`
 (`.organizationAlreadyImported`, `.organizationNotFound`). `DEKRotator` re-seals organization
 values with the same `synced_fp` rule as destinations.
