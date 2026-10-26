@@ -68,6 +68,8 @@ public enum Limits {
     public static let maxBranchPatternsPerEnvironment = 50
     /// Largest sanitized display name, in UTF-8 bytes.
     public static let maxDisplayNameBytes = 63
+    /// Most names the ⌘K palette lists under "Secrets by name" (1.0 D6c5). Local choice.
+    public static let maxItemNameMatches = 50
     /// Percent-decoding passes ``PathSegmentValidator`` applies when looking for hidden dot
     /// segments (`%2E`, `%252E`, ...). Local choice.
     public static let maxPercentDecodingPasses = 4

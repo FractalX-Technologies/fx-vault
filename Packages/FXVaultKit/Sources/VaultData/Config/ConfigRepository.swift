@@ -432,6 +432,21 @@ public struct ConfigRepository: Sendable {
         }
     }
 
+    // MARK: - Names
+
+    /// The live secrets and variables whose name holds every word of `query` (any case), in
+    /// every repository, folder, destination and organization (1.0 D6c5, ⌘K): names only, never
+    /// a value; a name that starts with a word first. Empty for an empty query.
+    public func itemNames(
+        matching query: String,
+        limit: Int = Limits.maxItemNameMatches
+    ) throws(ConfigRepositoryError) -> [ItemNameMatchModel] {
+        let words = query.split(whereSeparator: \.isWhitespace).map { $0.uppercased() }
+        return try performConfig {
+            try ItemNameStore(database: session.database).fetchMatches(containing: words, limit: limit)
+        }
+    }
+
     // MARK: - Observation
 
     /// Every repository (sidebar), now and after each change.

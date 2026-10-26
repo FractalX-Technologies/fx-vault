@@ -6,6 +6,9 @@ enum JumpPaletteCopy {
     static let prompt = String(localized: "jump.prompt", defaultValue: "Jump to a place")
     static let places = String(localized: "jump.places", defaultValue: "Places")
     static let noMatches = String(localized: "jump.noMatches", defaultValue: "No places match")
+    /// The names section (1.0 D6c5): secrets and variables found by name, never by value.
+    static let secretsByName = String(localized: "jump.secretsByName", defaultValue: "Secrets by name")
+    static let namesOnly = String(localized: "jump.namesOnly", defaultValue: "Names only")
     static let move = String(localized: "jump.footer.move", defaultValue: "to move")
     static let open = String(localized: "jump.footer.open", defaultValue: "to open")
     static let close = String(localized: "jump.footer.close", defaultValue: "to close")
@@ -19,6 +22,11 @@ enum JumpPaletteCopy {
 
     static func repository(owner: String) -> String {
         String(localized: "jump.place.repository", defaultValue: "\(owner) › repository")
+    }
+
+    /// "example-org › api-service › production": where a name is.
+    static func path(_ steps: [String]) -> String {
+        steps.joined(separator: " › ")
     }
 
     static func environment(owner: String, repository: String) -> String {

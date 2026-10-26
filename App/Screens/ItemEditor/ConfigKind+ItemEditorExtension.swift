@@ -9,6 +9,14 @@ extension ConfigKind {
         }
     }
 
+    /// A key for a secret, text for a variable (tables, the share preview, ⌘K's names).
+    var symbolName: String {
+        switch self {
+        case .secret: "key"
+        case .variable: "textformat"
+        }
+    }
+
     /// The other kind (Convert).
     var editorOpposite: ConfigKind {
         switch self {

@@ -577,7 +577,7 @@ public struct EnvFileRepository: Sendable {
     /// ``EnvExportPurpose/clipboard`` authorization and logs nothing; the caller wipes the text.
     /// Throws `.authorizationInvalid`, `.config` or `.serialize`.
     public func copyAllText(
-        of place: CopyAllPlaceModel,
+        of place: ItemHolderModel,
         authorization: EnvExportAuthorizationModel,
         sectionTitle: (ConfigKind, Int) -> String
     ) throws(EnvFileError) -> SecretBytes {
@@ -616,11 +616,4 @@ public struct EnvFileRepository: Sendable {
             throw .serialize(error)
         }
     }
-}
-
-/// What Copy All reads (1.0 D6c4): a repository scope, a folder or a destination, or an
-/// organization.
-public enum CopyAllPlaceModel: Sendable, Hashable {
-    case place(ItemPlaceModel)
-    case organization(OrganizationID)
 }

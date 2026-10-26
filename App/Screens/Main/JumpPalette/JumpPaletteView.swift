@@ -28,8 +28,9 @@ struct JumpPaletteOverlay: View {
     }
 }
 
-/// The field, "Places" with the matches (the selected one with its ↩ key) and the keys in the
-/// footer. The field keeps the focus: ↑↓ move the selection, ↩ opens it, esc closes.
+/// The field, "Places" and "Secrets by name" with the matches (the selected one with its ↩ key)
+/// and the keys in the footer, "Names only" at its end. The field keeps the focus: ↑↓ move the
+/// selection, ↩ opens it, esc closes.
 struct JumpPaletteView: View {
     @Bindable var palette: JumpPaletteViewModel
     let onClose: () -> Void
@@ -86,9 +87,11 @@ struct JumpPaletteView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    SidebarSectionHeader(JumpPaletteCopy.places)
-                        .padding(.bottom, Theme.Spacing.xSmall)
-                    if palette.results.isEmpty {
+                    if !palette.results.isEmpty || palette.items.isEmpty {
+                        SidebarSectionHeader(JumpPaletteCopy.places)
+                            .padding(.bottom, Theme.Spacing.xSmall)
+                    }
+                    if palette.results.isEmpty && palette.items.isEmpty {
                         Text(JumpPaletteCopy.noMatches)
                             .fxTextStyle(.callout)
                             .foregroundStyle(Theme.Colors.subtleText)
@@ -96,19 +99,42 @@ struct JumpPaletteView: View {
                             .frame(height: Theme.Layout.jumpPaletteRowHeight)
                     }
                     ForEach(palette.results) { place in
-                        JumpPlaceRow(
-                            place: place,
+                        let id = JumpResultID.place(place.id)
+                        JumpRow(
+                            systemImage: place.systemImage,
+                            name: place.name,
+                            titleStyle: place.titleStyle,
+                            detail: place.detail,
                             highlight: palette.highlight(in: place.name),
-                            isSelected: place.id == palette.selectedID
+                            isSelected: id == palette.selectedID
                         ) {
                             palette.open(place)
                         }
-                        .id(place.id)
+                        .id(id)
+                    }
+                    if !palette.items.isEmpty {
+                        SidebarSectionHeader(JumpPaletteCopy.secretsByName)
+                            .padding(.top, palette.results.isEmpty ? 0 : Theme.Spacing.small)
+                            .padding(.bottom, Theme.Spacing.xSmall)
+                        ForEach(palette.items) { item in
+                            let id = JumpResultID.item(item.id)
+                            JumpRow(
+                                systemImage: item.match.kind.symbolName,
+                                name: item.name,
+                                titleStyle: .mono,
+                                detail: item.detail,
+                                highlight: palette.highlight(in: item.name),
+                                isSelected: id == palette.selectedID
+                            ) {
+                                palette.open(item)
+                            }
+                            .id(id)
+                        }
                     }
                 }
                 .padding(Theme.Spacing.small)
             }
-            // As tall as the places, up to the maximum, then it scrolls.
+            // As tall as the rows, up to the maximum, then it scrolls.
             .frame(maxHeight: Theme.Layout.jumpPaletteListMaxHeight)
             .fixedSize(horizontal: false, vertical: true)
             .onChange(of: palette.selectedID) { _, id in
@@ -124,11 +150,16 @@ struct JumpPaletteView: View {
             footerHint(["↩"], JumpPaletteCopy.open)
             footerHint(["esc"], JumpPaletteCopy.close)
             Spacer(minLength: 0)
+            Text(JumpPaletteCopy.namesOnly)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
         }
         .padding(.horizontal, Theme.Spacing.large)
         .padding(.vertical, Theme.Spacing.medium)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel([JumpPaletteCopy.move, JumpPaletteCopy.open, JumpPaletteCopy.close].joined(separator: ", "))
+        .accessibilityLabel(
+            [JumpPaletteCopy.move, JumpPaletteCopy.open, JumpPaletteCopy.close, JumpPaletteCopy.namesOnly].joined(separator: ", ")
+        )
     }
 
     private func footerHint(_ keys: [String], _ text: String) -> some View {
@@ -143,10 +174,14 @@ struct JumpPaletteView: View {
     }
 }
 
-/// One place: its symbol, the name with the typed text in bold (mono for names from GitHub and
-/// Azure, sans for folders), what and where it is, and ↩ on the selected row.
-private struct JumpPlaceRow: View {
-    let place: JumpPlaceModel
+/// One row, a place or a name: its symbol, the name with the typed text in bold (mono for names
+/// from GitHub and Azure and for secrets, sans for folders), what and where it is, and ↩ on the
+/// selected row.
+private struct JumpRow: View {
+    let systemImage: String
+    let name: String
+    let titleStyle: SidebarTitleStyle
+    let detail: String
     let highlight: Range<String.Index>?
     let isSelected: Bool
     let open: () -> Void
@@ -154,7 +189,7 @@ private struct JumpPlaceRow: View {
     var body: some View {
         Button(action: open) {
             HStack(spacing: Theme.Spacing.small) {
-                Image(systemName: place.systemImage)
+                Image(systemName: systemImage)
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Colors.mutedText)
                     .frame(width: Theme.Layout.sidebarSymbolWidth)
@@ -163,7 +198,7 @@ private struct JumpPlaceRow: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .layoutPriority(1)
-                Text(place.detail)
+                Text(detail)
                     .fxTextStyle(.caption)
                     .foregroundStyle(Theme.Colors.subtleText)
                     .lineLimit(1)
@@ -177,14 +212,14 @@ private struct JumpPlaceRow: View {
         }
         .buttonStyle(.plain)
         .fxRowBackground(isSelected: isSelected, style: .palette)
-        .accessibilityLabel([place.name, place.detail].joined(separator: ", "))
+        .accessibilityLabel([name, detail].joined(separator: ", "))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     /// The name at 13 pt in either style (the detail beside it is 12), the matched part in the
     /// emphasized weight.
     private var nameText: AttributedString {
-        let (regular, emphasized) = switch place.titleStyle {
+        let (regular, emphasized) = switch titleStyle {
         case .mono: (Theme.Typography.monoName, Theme.Typography.monoNameEmphasized)
         case .sans: (Theme.Typography.callout, Theme.Typography.calloutEmphasized)
         }
@@ -194,9 +229,9 @@ private struct JumpPlaceRow: View {
             part.foregroundColor = Theme.Colors.ink
             return part
         }
-        guard let highlight else { return part(place.name[...], regular) }
-        return part(place.name[..<highlight.lowerBound], regular)
-            + part(place.name[highlight], emphasized)
-            + part(place.name[highlight.upperBound...], regular)
+        guard let highlight else { return part(name[...], regular) }
+        return part(name[..<highlight.lowerBound], regular)
+            + part(name[highlight], emphasized)
+            + part(name[highlight.upperBound...], regular)
     }
 }

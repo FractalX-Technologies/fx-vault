@@ -9252,6 +9252,17 @@
         }
       }
     },
+    "jump.namesOnly" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Names only"
+          }
+        }
+      }
+    },
     "jump.noMatches" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9314,6 +9325,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Jump to a place"
+          }
+        }
+      }
+    },
+    "jump.secretsByName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets by name"
           }
         }
       }

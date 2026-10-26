@@ -553,7 +553,10 @@ one `VaultSession.write` and throws `ConfigRepositoryError`.
   `ItemWriteResultModel.didStripTrailingNewlines`).
 - Reads and streams: `changeSet(repositoryID:)`, `scopes(repositoryID:)`, `pendingCounts()`,
   `observeRepositories()`, `observeScopes(repositoryID:)`, `observeItems(repositoryID:scope:)`
-  (each model with its `linkCount`), `observePendingCounts()`.
+  (each model with its `linkCount`), `observePendingCounts()`. `itemNames(matching:limit:)`
+  (1.0 D6c5, ⌘K): live names from every holder through `VaultStore.ItemNameStore` (one
+  `UNION ALL` over the four item tables, no value column), `[ItemNameMatchModel]` with an
+  `ItemHolderModel` (a place or an organization, VaultCore; also Copy All's input).
 - Copy and linked copies (v0.4.0, v0.4.1): `copyConflicts(_:to:repositoryID:)` and
   `copyItems(_:to:repositoryID:conflicts:)` take sources from any repository; `copyItems` links
   each copy to its source. `ConfigRepository+Links.swift`: `linkedCopies(of:) ->
@@ -648,7 +651,7 @@ cloudSyncDetector:fileWriter:clock:writePolicy:)`: `readFile(at:)`, `parse(_:)`,
 `exportPreview(repositoryID:scope:)`, `inspectDestination(_:)`, `export(repositoryID:scope:to:
 authorization:existingFile:headerComments:)` (0600, needs an `EnvExportAuthorizationModel`),
 `addGitignoreEntry(relativePath:repositoryRoot:)`, and Copy All's
-`copyAllText(of: CopyAllPlaceModel, authorization:sectionTitle:) -> SecretBytes` (1.0 D6c4: a
+`copyAllText(of: ItemHolderModel, authorization:sectionTitle:) -> SecretBytes` (1.0 D6c4: a
 scope, folder, destination or organization; a `.clipboard` authorization; `DotEnvSerializer`'s
 sections). `GitServiceGitignoreChecker(git:)`.
 
@@ -1257,6 +1260,11 @@ AppTests).
     `ConfigRepository`, the Key Vaults and folders); `JumpPlaces.filter` (pure) ranks them as
     the query changes; ↩ calls `jump(to:)`, which clears the sidebar search and makes the
     sidebar selection. Closed by esc, a click outside, ⌘K again, a sheet opening (`activeSheet`'s `didSet`; `canJump` keeps it off a sheet) or a lock.
+    Secrets by name (D6c5): each query also asks `ConfigRepository.itemNames(matching:)` and
+    `JumpPlaces.items(_:in:)` labels the matches from the same sidebar data (a repository's own
+    destinations are left out); ↑↓ cross both sections (`JumpResultID`); ↩ on a name calls
+    `jump(to: JumpItemModel)`, which opens the place and keeps the row (`pendingRow`) until the
+    place's detail shows that scope, then sets its kind and selection.
   - The recovery-key banner (`showsRecoveryKeyReminder`) sits over the detail since D6c2;
     `createNewRecoveryKey()` asks `AppViewModel.requestSettingsTab(.security, securitySheet:
     .newRecoveryKey)`, which `PreferencesViewModel.showRequestedTab()` presents once.

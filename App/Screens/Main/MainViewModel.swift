@@ -236,6 +236,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             self?.followScopeSelection(scopes)
             guard let scope = scopes.selectedScope?.scope else { return }
             detail?.select(scope: scope)
+            self?.selectPendingRow()
         }
         scopeList = scopes
         self.detail = detail
@@ -472,9 +473,25 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             return
         }
         guard canJump else { return }
-        jumpPalette = JumpPaletteViewModel(places: jumpPlaces) { [weak self] target in
-            self?.jump(to: target)
-        }
+        let input = jumpPlaceInput
+        let config = app.container.data.config
+        jumpPalette = JumpPaletteViewModel(
+            places: JumpPlaces.places(input),
+            items: { query in
+                do {
+                    return JumpPlaces.items(try config.itemNames(matching: query), in: input)
+                } catch {
+                    AppLog.ui.error("Jump palette could not read the names")
+                    return []
+                }
+            },
+            open: { [weak self] target in
+                self?.jump(to: target)
+            },
+            openItem: { [weak self] item in
+                self?.jump(to: item)
+            }
+        )
     }
 
     /// Esc or a click outside.
@@ -486,6 +503,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// palette.
     func jump(to target: JumpPlaceTarget) {
         jumpPalette = nil
+        pendingRow = nil
         sidebar.searchText = ""
         switch target {
         case .organization(let id):
@@ -494,6 +512,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             select(repositoryRow: id)
         case .environment(let repositoryID, let environmentID):
             open(repositoryID: repositoryID, scope: .environment(environmentID))
+        case .repositoryScope(let repositoryID):
+            open(repositoryID: repositoryID, scope: .repository)
         case .keyVault(let id):
             sidebar.select(keyVaultID: id)
         case .folder(let id):
@@ -501,9 +521,42 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         }
     }
 
+    /// A name from "Secrets by name" (1.0 D6c5): opens its place, then selects its row once the
+    /// place's detail shows it (a repository's scopes can arrive later).
+    func jump(to item: JumpItemModel) {
+        jump(to: item.target)
+        pendingRow = item.match
+        selectPendingRow()
+    }
+
+    /// The row ⌘K opened, until its place's detail exists.
+    @ObservationIgnored private var pendingRow: ItemNameMatchModel?
+
+    private func selectPendingRow() {
+        guard let row = pendingRow else { return }
+        switch row.holder {
+        case .place(.scope(let repositoryID, let scope)):
+            guard let detail, detail.repositoryID == repositoryID, detail.scope == scope, destinationDetail == nil else { return }
+            detail.kind = row.kind
+            detail.selection = [row.id]
+        case .place(.folder(let id)):
+            guard let folderDetail, folderDetail.folderID == id else { return }
+            folderDetail.kind = row.kind
+            folderDetail.selection = [row.id]
+        case .place(.destination(let id)):
+            guard let destinationDetail, destinationDetail.destinationID == id else { return }
+            destinationDetail.kind = row.kind
+            destinationDetail.selection = [row.id]
+        case .organization(let id):
+            guard let organizationDetail, organizationDetail.organizationID == id else { return }
+            organizationDetail.selection = [row.id]
+        }
+        pendingRow = nil
+    }
+
     /// Every place the sidebar can show, whatever its search; environments are read from the
     /// vault (the sidebar only lists the selected repository's).
-    private var jumpPlaces: [JumpPlaceModel] {
+    private var jumpPlaceInput: JumpPlaceInputModel {
         var environments: [RepoID: [EnvironmentModel]] = [:]
         do {
             // One read for every repository: ⌘K opens at once even with many in the vault.
@@ -511,12 +564,12 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         } catch {
             AppLog.ui.error("Jump palette could not read the environments")
         }
-        return JumpPlaces.places(JumpPlaceInputModel(
+        return JumpPlaceInputModel(
             owners: SidebarGrouping.owners(sidebar.input, query: ""),
             environments: environments,
             keyVaults: sidebar.keyVaults,
             folders: sidebar.folders
-        ))
+        )
     }
 
     // MARK: - Clone

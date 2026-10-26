@@ -85,7 +85,7 @@ enum MainSheet: Hashable, Identifiable {
 /// What ``CopyAllScreen`` copies (1.0 D6c4): a repository scope, folder, destination or
 /// organization.
 struct CopyAllContext: Hashable {
-    let place: CopyAllPlaceModel
+    let place: ItemHolderModel
 }
 
 /// "+ Add Destination" (v0.8.0).

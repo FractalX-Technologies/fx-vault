@@ -471,7 +471,13 @@ foreground color, so `.primary` text still turns white on selected rows.
   the footer keys: ↑ ↓ to move, ↩ to open, esc to close (`onEscapeKey`, a key-down monitor on
   the window: the field's editor eats esc before SwiftUI sees it). Every typed word must be in the name or
   the owner and repository; names that start with a word come first, then names that contain
-  one, then path matches. Secrets by name join in 1f.
+  one, then path matches. Then "Secrets by name" (1.0 D6c5) once something is typed: secrets and
+  variables whose name holds every word, up to 50, a name that starts with one first; the kind's
+  symbol (key, text), the mono name, where it is ("owner › repository › environment",
+  "Folder · name", "Azure Key Vault · vault", "example-org · Organization"). ↑↓ cross both
+  sections; ↩ opens the place with the row selected. "Names only" closes the footer.
+  Departures: variables join the section (the board shows secrets); an organization name has no
+  "· 3 repos".
 - Detail (no background of its own: the window's `ground` shows; `.fxPlaceColumn()`: insets
   28 sides / 20 top and bottom, 14 between blocks, `Spacing.mediumPlus`): `Banner`s first; then
   the place header (1.0 D6c3, `PlaceHeader`; boards Main2-Repository, Place-Table): the name in
