@@ -1,48 +1,70 @@
 import AppKit
 import SwiftUI
+import VaultCore
 
-/// Preferences › General: clone folder and auto-lock (works in every phase), as hairline groups (docs/DESIGN.md, "Settings").
+/// Preferences › General (board Settings-General): auto-lock, then the clipboard and the clone
+/// folder. It works in every phase.
 struct GeneralSettingsView: View {
     @Bindable var viewModel: PreferencesViewModel
 
     var body: some View {
         PreferencesPage {
-            PreferencesSection(String(localized: "settings.general.repositories.section", defaultValue: "Repositories")) {
-                PreferencesRow(
-                    String(localized: "settings.general.cloneFolder", defaultValue: "Clone folder"),
-                    detail: viewModel.cloneFolderURL?.path(percentEncoded: false)
-                        ?? String(localized: "settings.general.cloneFolder.none", defaultValue: "Not chosen"),
-                    isDetailMonospaced: viewModel.cloneFolderURL != nil
-                ) {
-                    Button(String(localized: "settings.general.cloneFolder.choose", defaultValue: "Choose…")) {
-                        chooseCloneFolder()
-                    }
-                    .fxButtonStyle(.secondary)
-                }
-            }
             PreferencesSection(
-                String(localized: "settings.general.autoLock.section", defaultValue: "Auto-lock"),
+                String(localized: "settings.general.lock.section", defaultValue: "Lock"),
                 footnote: String(
                     localized: "settings.general.autoLock.note",
                     defaultValue: "FX Vault always locks when your Mac sleeps, the screen locks or the window closes. The inactivity timer pauses while a sync runs."
                 )
             ) {
-                PreferencesRow(String(localized: "settings.general.autoLock", defaultValue: "Lock after inactivity")) {
-                    Picker(
-                        String(localized: "settings.general.autoLock", defaultValue: "Lock after inactivity"),
-                        selection: $viewModel.autoLockMinutes
-                    ) {
-                        ForEach(viewModel.autoLockOptions, id: \.self) { minutes in
-                            Text(String(localized: "settings.general.autoLock.minutes", defaultValue: "\(minutes) min"))
-                                .tag(minutes)
+                PreferencesRow(autoLockLabel) {
+                    DialogPopUp(
+                        title: autoLockLabel,
+                        selection: $viewModel.autoLockMinutes,
+                        options: viewModel.autoLockOptions.map { minutes in
+                            .init(
+                                value: minutes,
+                                title: String(localized: "settings.general.autoLock.minutes", defaultValue: "\(minutes) min")
+                            )
                         }
+                    )
+                    .frame(width: Theme.Layout.settingsPopUpWidth)
+                }
+            }
+            PreferencesSection(nil) {
+                PreferencesRow(
+                    String(localized: "settings.general.clipboard", defaultValue: "Clipboard clears after"),
+                    detail: String(
+                        localized: "settings.general.clipboard.detail",
+                        defaultValue: "Copied values stay on this Mac and are marked concealed; most clipboard managers skip them"
+                    )
+                ) {
+                    PreferencesValue(text: String(
+                        localized: "settings.general.clipboard.seconds",
+                        defaultValue: "\(Timeouts.clipboardClear.wholeSeconds) s"
+                    ))
+                }
+                HairlineDivider()
+                PreferencesRow(String(localized: "settings.general.cloneFolder", defaultValue: "Clone folder")) {
+                    PreferencesValue(text: cloneFolder)
+                    Button(String(localized: "settings.general.cloneFolder.choose", defaultValue: "Choose…")) {
+                        chooseCloneFolder()
                     }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .fixedSize()
+                    .fxButtonStyle(.outline, size: .compact)
                 }
             }
         }
+    }
+
+    private var autoLockLabel: String {
+        String(localized: "settings.general.autoLock", defaultValue: "Lock after inactivity")
+    }
+
+    /// `~/Code`, as the board writes a folder in the home folder.
+    private var cloneFolder: String {
+        guard let url = viewModel.cloneFolderURL else {
+            return String(localized: "settings.general.cloneFolder.none", defaultValue: "Not chosen")
+        }
+        return (url.path(percentEncoded: false) as NSString).abbreviatingWithTildeInPath
     }
 
     private func chooseCloneFolder() {

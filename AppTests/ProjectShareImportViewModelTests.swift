@@ -140,7 +140,7 @@ struct ProjectShareSentLogTests {
         #expect(model.entries.count == 2)
         #expect(model.entries.map(\.id) == sent.map(\.id))
         let newest = try #require(model.entries.first)
-        #expect(model.entries.allSatisfy { $0.recipients == ProjectShareCopy.passphraseMode })
+        #expect(model.entries.allSatisfy { $0.recipients == nil })
         #expect(newest.repositories == ["\(TestFixtures.owner)/\(TestFixtures.repoName)"])
         #expect(newest.stages == ["staging"])
         #expect(newest.places.flatMap(\.secretNames).contains("DATABASE_URL"))
@@ -149,6 +149,28 @@ struct ProjectShareSentLogTests {
         model.requestRemoval(newest)
         await model.confirmRemoval()
         #expect(try await world.sender.data.sharing.sentShares().count == 1)
+    }
+
+    /// A passphrase row names no recipients and counts the secrets and variables of every place
+    /// (board Settings-Sharing: "18 secrets · 7 variables").
+    @Test func aPassphraseEntryCountsEveryPlace() {
+        let created = Date(timeIntervalSince1970: 1_800_000_000)
+        let share = SentShareModel(
+            packageID: SharePackageID(),
+            createdAt: created,
+            expiresAt: ShareExpiryChoice.oneDay.expiry(from: created),
+            mode: .passphrase,
+            recipientIDs: [],
+            summary: SentShareSummaryModel(stages: ["staging"], places: [
+                SentSharePlaceModel(kind: .repository, repository: "owner-a/api", name: nil, secretNames: ["A", "B"], variableNames: ["C"]),
+                SentSharePlaceModel(kind: .environment, repository: "owner-a/api", name: "staging", secretNames: ["D"], variableNames: ["E", "F"]),
+            ])
+        )
+        let entry = SharingSettingsViewModel.entry(share, now: created)
+        #expect(entry.recipients == nil)
+        #expect(entry.counts == ShareItemCountModel(secrets: 3, variables: 3))
+        #expect(!entry.isExpired)
+        #expect(ProjectShareCopy.sentExpiry(entry.expiresAt, isExpired: false).hasPrefix("expires "))
     }
 
     /// A 0.9 teammates row still lists, its recipients unresolved (1.0 keeps no teammates).

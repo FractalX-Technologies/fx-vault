@@ -84,8 +84,23 @@ enum Theme {
         static let windowMinHeight: CGFloat = 600
         static let windowDefaultWidth: CGFloat = 1_120
         static let windowDefaultHeight: CGFloat = 720
-        static let settingsWidth: CGFloat = 560
-        static let settingsMinHeight: CGFloat = 360
+        /// The Settings window (boards Settings-*): 640 pt wide, a 520 pt window less its tabs.
+        static let settingsWidth: CGFloat = 640
+        static let settingsMinHeight: CGFloat = 430
+        /// A Settings row's top and bottom inset (12 pt sides), and the 26 pt pop-up of a row
+        /// ("Lock after inactivity · 5 min").
+        static let settingsRowInset: CGFloat = 7
+        static let settingsPopUpWidth: CGFloat = 96
+        /// The gh path override field: a path, so wider than the board's "Automatic" pop-up.
+        static let settingsPathFieldWidth: CGFloat = 200
+        /// An account's first line and the lines under it (its organizations, board Settings-Accounts).
+        static let settingsAccountLineHeight: CGFloat = 24
+        static let settingsSublineHeight: CGFloat = 22
+        static let settingsSymbolWidth: CGFloat = 14
+        /// The lines under a sent file line up with its name, past the 13 pt icon (board Settings-Sharing).
+        static let settingsNamesIndent: CGFloat = 22
+        /// The Reset vault dialog (board Reset-Confirm).
+        static let resetDialogWidth: CGFloat = 380
         static let sheetWidth: CGFloat = 440
         /// The inset of the 1.0 dialogs (boards Sync-Progress, Sync-Delete, NewRepo, Share-*).
         static let dialogInset: CGFloat = 22

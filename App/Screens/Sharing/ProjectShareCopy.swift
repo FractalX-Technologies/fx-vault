@@ -124,8 +124,10 @@ enum ProjectShareCopy {
         )
     }
 
-    static func expires(_ date: Date) -> String {
-        String(localized: "projectShare.expires", defaultValue: "Expires \(date.formatted(date: .abbreviated, time: .shortened))")
+    /// A day and time as the share sheets and Settings › Sharing write them: "1 Nov, 14:02" in
+    /// the user's locale (a file expires at the minute it was created, days later).
+    static func moment(_ date: Date) -> String {
+        date.formatted(.dateTime.day().month(.abbreviated).hour().minute())
     }
 
     static let share = String(localized: "projectShare.share", defaultValue: "Share…")
@@ -283,27 +285,28 @@ enum ProjectShareCopy {
     // MARK: - Settings › Sharing
 
     static let settingsTab = String(localized: "settings.sharing.tab", defaultValue: "Sharing")
-    static let settingsTitle = String(localized: "settings.sharing.title", defaultValue: "Files you sent")
-    static let settingsHelp = String(
-        localized: "settings.sharing.help",
-        defaultValue: "Every share file this Mac wrote, with the names it carried. Values are never kept here."
+    static let settingsTitle = String(localized: "settings.sharing.shared", defaultValue: "Files you shared")
+    static let settingsFootnote = String(
+        localized: "settings.sharing.footnote",
+        defaultValue: "Names only; FX Vault keeps no copy of the file. If one leaks, rotate what’s in it."
     )
     static let settingsEmpty = String(localized: "settings.sharing.empty", defaultValue: "No share files sent from this Mac yet.")
+    static let active = String(localized: "settings.sharing.active", defaultValue: "Active")
     static let expired = String(localized: "settings.sharing.expired", defaultValue: "Expired")
-    static let passphraseMode = String(localized: "settings.sharing.mode.passphrase", defaultValue: "Passphrase")
+
+    /// "expires 1 Nov, 14:02", or "expired 10 Oct, 09:30" once it has.
+    static func sentExpiry(_ date: Date, isExpired: Bool) -> String {
+        isExpired
+            ? String(localized: "settings.sharing.expiredOn", defaultValue: "expired \(moment(date))")
+            : String(localized: "settings.sharing.expiresOn", defaultValue: "expires \(moment(date))")
+    }
 
     static func teammatesMode(_ names: [String]) -> String {
         String(localized: "settings.sharing.mode.teammates", defaultValue: "Teammates: \(names.joined(separator: ", "))")
     }
 
-    static func secretNames(_ count: Int) -> String {
-        count == 1
-            ? String(localized: "settings.sharing.secrets.one", defaultValue: "1 secret")
-            : String(localized: "settings.sharing.secrets", defaultValue: "\(count) secrets")
-    }
-
-    static let namesInFile = String(localized: "settings.sharing.names", defaultValue: "Names in this file")
-    static let rotateHint = String(localized: "settings.sharing.rotate", defaultValue: "Rotate these secrets if the file leaked.")
+    static let showNames = String(localized: "settings.sharing.showNames", defaultValue: "Show names")
+    static let hideNames = String(localized: "settings.sharing.hideNames", defaultValue: "Hide names")
     static let removeEntry = String(localized: "settings.sharing.remove", defaultValue: "Remove from List")
     static let removeEntryHelp = String(
         localized: "settings.sharing.remove.help",

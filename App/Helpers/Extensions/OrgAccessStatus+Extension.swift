@@ -2,7 +2,7 @@ import GitHubKit
 import SwiftUI
 
 extension OrgAccessStatus {
-    /// The organization's chip in Preferences › Accounts (1.0, B4; D1's Connect GitHub wording).
+    /// The organization's access in Preferences › Accounts and Connect (1.0, B4; D1's wording).
     var title: String {
         switch self {
         case .ready:
@@ -23,6 +23,16 @@ extension OrgAccessStatus {
         case .ready: Theme.Colors.success
         case .needsAdminOrgScope, .ssoRequired: Theme.Colors.warning
         case .needsOrgAdmin, .unknown: Theme.Colors.mutedText
+        }
+    }
+
+    /// The organization's mark in Preferences › Accounts (board Settings-Accounts): a ring where
+    /// the user can act (a scope, SSO), grey where only an org admin can.
+    var mark: PreferencesStatus.Mark {
+        switch self {
+        case .ready: .fine
+        case .needsAdminOrgScope, .ssoRequired: .needsYou
+        case .needsOrgAdmin, .unknown: .idle
         }
     }
 

@@ -2,9 +2,10 @@ import GitHubKit
 import SwiftUI
 import VaultData
 
-/// Preferences › Accounts (§10): gh path and version, then each account with its token state,
-/// scopes (with copyable fix commands), organizations with their access (1.0), SSH alias picker,
-/// **Test** and **Re-check**.
+/// Preferences › Accounts (§10; board Settings-Accounts): each gh account with its SSH alias,
+/// **Re-check** and **Test**, its token and scopes (with copyable fix commands) and its
+/// organizations with their access (1.0), then the accounts FX Vault can't use. The gh path and
+/// version are in Advanced.
 struct AccountsSettingsScreen: View {
     let preferences: PreferencesViewModel
 
@@ -22,102 +23,95 @@ private struct AccountsSettingsContent: View {
 
     var body: some View {
         PreferencesPage {
-            PreferencesSection(String(localized: "settings.accounts.gh.section", defaultValue: "GitHub CLI")) {
-                if let installation = viewModel.installation {
-                    PreferencesRow(String(localized: "settings.accounts.gh.path", defaultValue: "Path")) {
-                        Text(verbatim: installation.resolvedPath)
-                            .fxTextStyle(.monoName)
-                            .foregroundStyle(Theme.Colors.mutedText)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                            .textSelection(.enabled)
+            VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
+                PreferencesSection(String(localized: "settings.accounts.github.section", defaultValue: "GitHub")) {
+                    if viewModel.accounts.isEmpty {
+                        PreferencesBlock {
+                            emptyState
+                        }
                     }
-                    HairlineDivider()
-                    PreferencesRow(String(localized: "settings.accounts.gh.version", defaultValue: "Version")) {
-                        Text(verbatim: installation.version.description)
-                            .fxTextStyle(.monoName)
-                            .foregroundStyle(Theme.Colors.mutedText)
+                    ForEach(Array(viewModel.accounts.enumerated()), id: \.element.id) { index, account in
+                        if index > 0 {
+                            HairlineDivider()
+                        }
+                        AccountRow(account: account, viewModel: viewModel)
                     }
-                } else if viewModel.isLoading {
-                    PreferencesBlock {
-                        ProgressView()
-                            .controlSize(.small)
+                    ForEach(viewModel.unusableAccounts.indices, id: \.self) { index in
+                        HairlineDivider()
+                        UnusableAccountRow(account: viewModel.unusableAccounts[index])
                     }
-                } else {
-                    PreferencesBlock {
-                        Text(String(localized: "settings.accounts.gh.missing", defaultValue: "The GitHub CLI was not found."))
-                            .fxTextStyle(.body)
-                            .foregroundStyle(Theme.Colors.mutedText)
-                    }
-                }
-                if let error = viewModel.error {
-                    HairlineDivider()
-                    PreferencesBlock {
-                        InlineErrorView(error: error)
+                    if let error = viewModel.error {
+                        HairlineDivider()
+                        PreferencesBlock {
+                            InlineErrorView(error: error)
+                        }
                     }
                 }
                 if !viewModel.tokenVariables.isEmpty {
-                    HairlineDivider()
                     TokenVariableNote(variables: viewModel.tokenVariables) { viewModel.copy($0) }
                 }
-            }
-            if viewModel.accounts.isEmpty, !viewModel.isLoading {
-                PreferencesSection(String(localized: "settings.accounts.section", defaultValue: "Accounts")) {
-                    PreferencesBlock {
-                        Text(String(
-                            localized: "settings.accounts.empty.message",
-                            defaultValue: "Accounts logged in to the GitHub CLI appear here, with their scopes and SSH aliases."
-                        ))
-                        .fxTextStyle(.body)
-                        .foregroundStyle(Theme.Colors.mutedText)
-                        .fixedSize(horizontal: false, vertical: true)
-                    }
+                if let copied = viewModel.copiedCommand {
+                    PreferencesFootnote(String(
+                        localized: "settings.accounts.copied",
+                        defaultValue: "Copied \(copied). Run it in Terminal, then Re-check."
+                    ))
                 }
-            }
-            ForEach(viewModel.accounts) { account in
-                AccountSection(account: account, viewModel: viewModel)
             }
             if !viewModel.unmappedAliases.isEmpty {
                 UnmappedAliasesSection(aliases: viewModel.unmappedAliases, viewModel: viewModel)
-            }
-            if !viewModel.unusableAccounts.isEmpty {
-                UnusableAccountsSection(accounts: viewModel.unusableAccounts)
-            }
-            if let copied = viewModel.copiedCommand {
-                Text(String(localized: "settings.accounts.copied", defaultValue: "Copied \(copied). Run it in Terminal, then Re-check."))
-                    .fxTextStyle(.caption)
-                    .foregroundStyle(Theme.Colors.mutedText)
-                    .padding(.horizontal, Theme.Spacing.xSmall)
             }
         }
         .task {
             await viewModel.load()
         }
     }
+
+    @ViewBuilder private var emptyState: some View {
+        if viewModel.isLoading {
+            ProgressView()
+                .controlSize(.small)
+        } else if viewModel.installation == nil {
+            emptyText(String(localized: "settings.accounts.gh.missing", defaultValue: "The GitHub CLI was not found."))
+        } else {
+            emptyText(String(
+                localized: "settings.accounts.empty.message",
+                defaultValue: "Accounts logged in to the GitHub CLI appear here, with their scopes and SSH aliases."
+            ))
+        }
+    }
+
+    private func emptyText(_ text: String) -> some View {
+        Text(text)
+            .fxTextStyle(.body)
+            .foregroundStyle(Theme.Colors.mutedText)
+            .fixedSize(horizontal: false, vertical: true)
+    }
 }
 
-/// The gentle note when the user's shell exports `GH_TOKEN` or `GITHUB_TOKEN` (v0.3.1): gh in
-/// Terminal uses that token, FX Vault only the accounts gh stores.
+/// The note under the accounts when the user's shell exports `GH_TOKEN` or `GITHUB_TOKEN`
+/// (v0.3.1): gh in Terminal uses that token, FX Vault only the accounts gh stores.
 private struct TokenVariableNote: View {
     let variables: [ShellVariableName]
     let onCopy: (String) -> Void
 
     var body: some View {
-        PreferencesBlock {
+        VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
             Label {
                 Text(String(
                     localized: "settings.accounts.tokenVariable.note",
                     defaultValue: "Your shell sets \(variables.localizedList). gh in Terminal uses that token instead of the accounts listed here; FX Vault ignores it and uses only the accounts gh stores. To store one, run:"
                 ))
-                .fxTextStyle(.callout)
-                .foregroundStyle(Theme.Colors.mutedText)
+                .fxTextStyle(.formNote)
+                .foregroundStyle(Theme.Colors.ink)
                 .fixedSize(horizontal: false, vertical: true)
             } icon: {
                 Image(systemName: "info.circle")
-                    .foregroundStyle(Theme.Colors.mutedText)
+                    .font(Theme.Typography.label)
+                    .foregroundStyle(Theme.Colors.ink)
             }
             CommandRow(command: GHSetupViewModel.environmentLoginCommand, onCopy: onCopy)
         }
+        .padding(.horizontal, Theme.Spacing.xSmall)
     }
 }
 
@@ -132,13 +126,13 @@ private struct UnmappedAliasesSection: View {
             ForEach(aliases) { host in
                 PreferencesBlock(spacing: Theme.Spacing.xxSmall) {
                     Text(verbatim: host.alias)
-                        .fxTextStyle(.mono)
+                        .font(Theme.Typography.monoMetaEmphasized)
                         .foregroundStyle(Theme.Colors.ink)
                         .textSelection(.enabled)
                     if let hostName = host.hostName {
                         Text(verbatim: hostName)
-                            .fxTextStyle(.caption)
-                            .foregroundStyle(Theme.Colors.mutedText)
+                            .fxTextStyle(.formNote)
+                            .foregroundStyle(Theme.Colors.subtleText)
                     }
                 }
                 .accessibilityElement(children: .combine)
@@ -149,198 +143,230 @@ private struct UnmappedAliasesSection: View {
                     localized: "settings.accounts.unmapped.message",
                     defaultValue: "No account here uses these aliases. If one is the key of a GitHub account that is not logged in to the GitHub CLI, log that account in, choose Check Again, then pick the alias in that account's SSH alias menu. gh keeps your other accounts; the new one becomes gh's active account in Terminal (gh auth switch changes it back)."
                 ))
-                .fxTextStyle(.callout)
-                .foregroundStyle(Theme.Colors.mutedText)
+                .fxTextStyle(.formNote)
+                .foregroundStyle(Theme.Colors.subtleText)
                 .fixedSize(horizontal: false, vertical: true)
                 CommandRow(command: GHSetupViewModel.loginCommand) { viewModel.copy($0) }
                 Button(String(localized: "settings.accounts.unmapped.checkAgain", defaultValue: "Check Again")) {
                     Task { await viewModel.checkAgain() }
                 }
-                .fxButtonStyle(.secondary)
+                .fxButtonStyle(.outline, size: .compact)
                 .disabled(viewModel.isLoading)
             }
         }
     }
 }
 
-/// The accounts gh lists that FX Vault cannot use, each with the reason (v0.3.1).
-private struct UnusableAccountsSection: View {
-    let accounts: [GHUnusableAccountModel]
-
-    var body: some View {
-        PreferencesSection(
-            String(localized: "settings.accounts.unusable.section", defaultValue: "Accounts FX Vault can't use"),
-            footnote: String(
-                localized: "settings.accounts.unusable.footnote",
-                defaultValue: "gh lists these accounts, but FX Vault does not accept their names, so their repositories are not shown."
-            )
-        ) {
-            ForEach(accounts.indices, id: \.self) { index in
-                if index > 0 {
-                    HairlineDivider()
-                }
-                PreferencesBlock(spacing: Theme.Spacing.xxSmall) {
-                    Text(verbatim: accounts[index].displayTitle)
-                        .fxTextStyle(.mono)
-                        .foregroundStyle(Theme.Colors.ink)
-                        .textSelection(.enabled)
-                    Text(accounts[index].reasonText)
-                        .fxTextStyle(.caption)
-                        .foregroundStyle(Theme.Colors.mutedText)
-                }
-                .accessibilityElement(children: .combine)
-            }
-        }
-    }
-}
-
-/// An account's organizations (1.0, B4): each with its access chip, an SSO page link where
-/// GitHub gave one, and the commands that add `admin:org` when one needs it.
-private struct AccountOrganizationsBlock: View {
-    let organizations: [OrgAccessModel]
-    let adminOrgCommands: [String]
-    let onCopy: (String) -> Void
+/// An account gh lists that FX Vault cannot use (v0.3.1): its login, quiet, and why.
+private struct UnusableAccountRow: View {
+    let account: GHUnusableAccountModel
 
     var body: some View {
         PreferencesBlock {
-            SectionLabel(String(localized: "settings.accounts.organizations", defaultValue: "Organizations"))
-            ForEach(organizations) { organization in
-                HStack(spacing: Theme.Spacing.small) {
-                    Text(verbatim: organization.login)
-                        .fxTextStyle(.mono)
-                        .foregroundStyle(Theme.Colors.ink)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if let url = organization.status.ssoURL {
-                        Link(String(localized: "settings.accounts.org.openSSO", defaultValue: "Open SSO Page"), destination: url)
-                            .fxTextStyle(.caption)
-                    }
-                    StatusChip(title: organization.status.title, tint: organization.status.tint)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityIdentifier(AccessibilityID.Accounts.organization(organization.login))
-            }
-            if !adminOrgCommands.isEmpty {
-                Text(String(
-                    localized: "settings.accounts.org.adminOrgFix",
-                    defaultValue: "Organization secrets need admin:org. Run these in Terminal, approve in the browser, then Re-check:"
-                ))
-                .fxTextStyle(.caption)
-                .foregroundStyle(Theme.Colors.mutedText)
-                .fixedSize(horizontal: false, vertical: true)
-                ForEach(adminOrgCommands, id: \.self) { command in
-                    CommandRow(command: command, onCopy: onCopy)
-                }
+            HStack(spacing: Theme.Spacing.small) {
+                AccountSymbol(systemName: Theme.Symbols.person)
+                Text(verbatim: account.displayTitle)
+                    .font(Theme.Typography.monoMetaEmphasized)
+                    .foregroundStyle(Theme.Colors.subtleText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+                PreferencesStatus(
+                    title: String(localized: "settings.accounts.unusable.row", defaultValue: "Can’t use · \(account.reasonText)"),
+                    mark: .needsYou
+                )
+                Spacer(minLength: 0)
             }
         }
+        .accessibilityElement(children: .combine)
     }
 }
 
-/// One account: login with Test and Re-check, token state, scopes, fix commands, SSH alias.
-private struct AccountSection: View {
+/// The 14 pt column of an account's symbols, so the 13 pt person and the 11 pt organizations
+/// line up (board Settings-Accounts).
+private struct AccountSymbol: View {
+    let systemName: String
+    var isSubline = false
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(isSubline ? Theme.Typography.label : Theme.Typography.callout)
+            .foregroundStyle(Theme.Colors.mutedText)
+            .frame(width: Theme.Layout.settingsSymbolWidth)
+            .accessibilityHidden(true)
+    }
+}
+
+/// One account (board Settings-Accounts): its login and SSH alias with **Re-check** and
+/// **Test**, then a line each for the token, the scopes and every organization.
+private struct AccountRow: View {
     let account: GHAccountSummaryModel
     let viewModel: AccountsSettingsViewModel
 
     var body: some View {
-        PreferencesSection(String(localized: "settings.accounts.account.section", defaultValue: "Account")) {
+        PreferencesBlock(spacing: 0) {
             HStack(spacing: Theme.Spacing.small) {
+                AccountSymbol(systemName: Theme.Symbols.person)
                 Text(verbatim: account.account.login)
-                    .fxTextStyle(.mono)
+                    .font(Theme.Typography.monoMetaEmphasized)
                     .foregroundStyle(Theme.Colors.ink)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityAddTraits(.isHeader)
+                aliasMenu
+                Spacer(minLength: Theme.Spacing.small)
                 if viewModel.isBusy(account) {
                     ProgressView()
                         .controlSize(.small)
                 }
-                Button(String(localized: "settings.accounts.ssh.test", defaultValue: "Test")) {
-                    Task { await viewModel.test(account) }
-                }
-                .fxButtonStyle(.secondary)
-                .disabled(account.account.sshHostAlias == nil || viewModel.isBusy(account))
                 Button(String(localized: "settings.accounts.recheck", defaultValue: "Re-check")) {
                     Task { await viewModel.recheck(account) }
                 }
-                .fxButtonStyle(.secondary)
+                .fxButtonStyle(.outline, size: .compact)
                 .disabled(viewModel.isBusy(account) || !account.isLoggedIn)
+                Button(String(localized: "settings.accounts.ssh.test", defaultValue: "Test")) {
+                    Task { await viewModel.test(account) }
+                }
+                .fxButtonStyle(.outline, size: .compact)
+                .disabled(account.account.sshHostAlias == nil || viewModel.isBusy(account))
             }
-            .padding(.vertical, Theme.Spacing.medium)
-            .padding(.horizontal, Theme.Spacing.large)
-            HairlineDivider()
-            PreferencesRow(String(localized: "settings.accounts.token", defaultValue: "Token")) {
-                StatusChip(title: account.tokenStateTitle, tint: account.tokenStateTint)
+            .frame(minHeight: Theme.Layout.settingsAccountLineHeight)
+            subline(symbol: "key", name: String(localized: "settings.accounts.token", defaultValue: "Token")) {
+                PreferencesStatus(title: account.tokenStateTitle, mark: account.tokenStateMark)
             }
-            HairlineDivider()
-            PreferencesRow(String(localized: "settings.accounts.scopes", defaultValue: "Scopes")) {
-                StatusChip(title: account.scopesTitle, tint: account.scopesTint)
+            subline(symbol: "checklist", name: String(localized: "settings.accounts.scopes", defaultValue: "Scopes")) {
+                PreferencesStatus(title: account.scopesTitle, mark: account.scopesMark)
             }
             if let commands = viewModel.fixCommands[account.id], !commands.isEmpty {
-                HairlineDivider()
-                PreferencesBlock {
-                    Text(String(
-                        localized: "settings.accounts.scopes.fix",
-                        defaultValue: "Run these in Terminal to add the missing scopes:"
-                    ))
-                    .fxTextStyle(.caption)
-                    .foregroundStyle(Theme.Colors.mutedText)
-                    ForEach(commands, id: \.self) { command in
-                        CommandRow(command: command) { viewModel.copy($0) }
-                    }
-                }
-            }
-            if let organizations = viewModel.organizations[account.id], !organizations.isEmpty {
-                HairlineDivider()
-                AccountOrganizationsBlock(
-                    organizations: organizations,
-                    adminOrgCommands: viewModel.adminOrgCommands[account.id] ?? [],
-                    onCopy: { viewModel.copy($0) }
+                commandList(
+                    String(localized: "settings.accounts.scopes.fix", defaultValue: "Run these in Terminal to add the missing scopes:"),
+                    commands: commands
                 )
             }
-            HairlineDivider()
-            PreferencesRow(String(localized: "settings.accounts.ssh.alias", defaultValue: "SSH alias")) {
-                Picker(String(localized: "settings.accounts.ssh.alias", defaultValue: "SSH alias"), selection: aliasBinding) {
-                    Text(String(localized: "settings.accounts.ssh.none", defaultValue: "None")).tag(String?.none)
-                    ForEach(viewModel.aliasChoices) { host in
-                        Text(verbatim: host.alias).tag(String?.some(host.alias))
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .fixedSize()
-                .disabled(viewModel.isBusy(account) || !account.isLoggedIn)
+            ForEach(viewModel.organizations[account.id] ?? []) { organization in
+                organizationLine(organization)
+            }
+            if let commands = viewModel.adminOrgCommands[account.id], !commands.isEmpty {
+                commandList(
+                    String(
+                        localized: "settings.accounts.org.adminOrgFix",
+                        defaultValue: "Organization secrets need admin:org. Run these in Terminal, approve in the browser, then Re-check:"
+                    ),
+                    commands: commands
+                )
             }
             if let result = viewModel.testResults[account.id] {
-                HairlineDivider()
-                PreferencesBlock {
-                    testResultLabel(result.localizedMessage, isVerified: result.isVerified)
-                }
+                testResultLabel(result.localizedMessage, isVerified: result.isVerified)
             } else if account.account.isSSHAliasVerified, let login = account.account.sshVerifiedLogin {
-                HairlineDivider()
-                PreferencesBlock {
-                    testResultLabel(
-                        SSHAliasTestResultModel.authenticatedAsAccount(login: login).localizedMessage,
-                        isVerified: true
-                    )
-                }
+                testResultLabel(
+                    SSHAliasTestResultModel.authenticatedAsAccount(login: login).localizedMessage,
+                    isVerified: true
+                )
             }
         }
+    }
+
+    /// The SSH alias as the board writes it, quiet beside the login, and the menu to change it.
+    private var aliasMenu: some View {
+        let label = String(localized: "settings.accounts.ssh.alias", defaultValue: "SSH alias")
+        let alias = account.account.sshHostAlias
+        return Menu {
+            Picker(label, selection: aliasBinding) {
+                Text(String(localized: "settings.accounts.ssh.none", defaultValue: "None")).tag(String?.none)
+                ForEach(viewModel.aliasChoices) { host in
+                    Text(verbatim: host.alias).tag(String?.some(host.alias))
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } label: {
+            HStack(spacing: Theme.Spacing.xxSmall) {
+                Text(alias ?? String(localized: "settings.accounts.ssh.noAlias", defaultValue: "No SSH alias"))
+                    .font(Theme.Typography.monoLabel)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Image(systemName: "chevron.up.chevron.down")
+                    .imageScale(.small)
+                    .font(Theme.Typography.label)
+            }
+            .foregroundStyle(Theme.Colors.subtleText)
+            .contentShape(.rect)
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .fixedSize()
+        .disabled(viewModel.isBusy(account) || !account.isLoggedIn)
+        .help(label)
+        .accessibilityLabel(Text(label))
+        .accessibilityValue(Text(alias ?? String(localized: "settings.accounts.ssh.none", defaultValue: "None")))
+    }
+
+    private func subline(symbol: String, name: String, @ViewBuilder status: () -> some View) -> some View {
+        HStack(spacing: Theme.Spacing.small) {
+            AccountSymbol(systemName: symbol, isSubline: true)
+            Text(name)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
+            status()
+            Spacer(minLength: 0)
+        }
+        .frame(minHeight: Theme.Layout.settingsSublineHeight)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// An organization and its access ("example-org ● Ready"), with the SSO page when GitHub
+    /// gave one.
+    private func organizationLine(_ organization: OrgAccessModel) -> some View {
+        HStack(spacing: Theme.Spacing.small) {
+            AccountSymbol(systemName: Theme.Symbols.organization, isSubline: true)
+            Text(verbatim: organization.login)
+                .fxTextStyle(.monoMeta)
+                .foregroundStyle(Theme.Colors.ink)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
+            PreferencesStatus(title: organization.status.title, mark: organization.status.mark)
+            if let url = organization.status.ssoURL {
+                Link(destination: url) {
+                    Text(String(localized: "settings.accounts.org.openSSO", defaultValue: "Open SSO Page"))
+                        .font(Theme.Typography.labelEmphasized)
+                        .underline()
+                        .foregroundStyle(Theme.Colors.ink)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(minHeight: Theme.Layout.settingsSublineHeight)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(AccessibilityID.Accounts.organization(organization.login))
+    }
+
+    private func commandList(_ lead: String, commands: [String]) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+            Text(lead)
+                .fxTextStyle(.formNote)
+                .foregroundStyle(Theme.Colors.subtleText)
+                .fixedSize(horizontal: false, vertical: true)
+            ForEach(commands, id: \.self) { command in
+                CommandRow(command: command) { viewModel.copy($0) }
+            }
+        }
+        .padding(.vertical, Theme.Spacing.xSmall)
     }
 
     private func testResultLabel(_ message: String, isVerified: Bool) -> some View {
         Label {
             Text(message)
-                .fxTextStyle(.callout)
+                .fxTextStyle(.caption)
                 .foregroundStyle(Theme.Colors.ink)
                 .fixedSize(horizontal: false, vertical: true)
         } icon: {
             Image(systemName: isVerified ? "checkmark.circle" : "exclamationmark.triangle")
                 .foregroundStyle(isVerified ? Theme.Colors.success : Theme.Colors.warning)
         }
+        .padding(.top, Theme.Spacing.xSmall)
     }
 
     private var aliasBinding: Binding<String?> {

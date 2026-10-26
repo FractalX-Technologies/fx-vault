@@ -15,11 +15,25 @@ struct RingDot: View {
     }
 }
 
+/// A filled 6 pt dot beside a state: one that is fine (`success`) or over (`hairlineStrong`)
+/// (boards Share-OpenPreview, Settings-Accounts, Settings-Sharing).
+struct StatusDot: View {
+    let color: Color
+
+    var body: some View {
+        Circle()
+            .fill(color)
+            .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
+            .accessibilityHidden(true)
+    }
+}
+
 #Preview {
     HStack(spacing: Theme.Spacing.medium) {
         RingDot()
         RingDot(color: Theme.Colors.hairlineStrong)
         RingDot(color: Theme.Colors.success, size: Theme.Layout.syncDoneMarkSize)
+        StatusDot(color: Theme.Colors.success)
     }
     .padding(Theme.Spacing.xxLarge)
     .background(Theme.Colors.card)

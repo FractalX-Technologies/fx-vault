@@ -1,7 +1,8 @@
 import SwiftUI
 import VaultCore
 
-/// Preferences › Security: Touch ID, master password, recovery key, clipboard (unlocked only).
+/// Preferences › Security (board Settings-Security): Touch ID, then the master password and a new
+/// recovery key, unlocked only. Reset vault stays in Advanced: it works while the vault is locked.
 struct SecuritySettingsScreen: View {
     let preferences: PreferencesViewModel
     @Bindable var viewModel: SecuritySettingsViewModel
@@ -25,13 +26,10 @@ struct SecuritySettingsScreen: View {
 
     private var form: some View {
         PreferencesPage {
-            PreferencesSection(
-                String(localized: "settings.security.touchID.section", defaultValue: "Touch ID"),
-                footnote: touchIDFootnote
-            ) {
-                PreferencesRow(String(localized: "settings.security.touchID.toggle", defaultValue: "Unlock with Touch ID")) {
+            PreferencesSection(nil, footnote: touchIDFootnote) {
+                PreferencesRow(touchIDLabel) {
                     Toggle(
-                        String(localized: "settings.security.touchID.toggle", defaultValue: "Unlock with Touch ID"),
+                        touchIDLabel,
                         isOn: Binding(
                             get: { viewModel.isBiometricsEnabled },
                             set: { viewModel.requestTouchID(enabled: $0) }
@@ -39,35 +37,33 @@ struct SecuritySettingsScreen: View {
                     )
                     .labelsHidden()
                     .toggleStyle(.switch)
+                    .controlSize(.mini)
                     .disabled(!viewModel.canToggleTouchID && !viewModel.isBiometricsEnabled)
                 }
             }
-            PreferencesSection(String(localized: "settings.security.password.section", defaultValue: "Master password")) {
-                PreferencesBlock {
-                    HStack(spacing: Theme.Spacing.small) {
-                        Button(String(localized: "settings.security.changePassword", defaultValue: "Change Master Password…")) {
-                            viewModel.present(.changePassword)
-                        }
-                        .fxButtonStyle(.secondary)
-                        Button(String(localized: "settings.security.newRecoveryKey", defaultValue: "Create New Recovery Key…")) {
-                            viewModel.present(.newRecoveryKey)
-                        }
-                        .fxButtonStyle(.secondary)
+            PreferencesSection(nil) {
+                PreferencesRow(String(localized: "settings.security.password.section", defaultValue: "Master password")) {
+                    Button(String(localized: "settings.security.changePassword", defaultValue: "Change Master Password…")) {
+                        viewModel.present(.changePassword)
                     }
+                    .fxButtonStyle(.outline, size: .compact)
                 }
-            }
-            PreferencesSection(String(localized: "settings.security.clipboard.section", defaultValue: "Clipboard")) {
-                PreferencesBlock {
-                    Text(String(
-                        localized: "settings.security.clipboard.info",
-                        defaultValue: "Copied values stay on this Mac (no Universal Clipboard), are hidden from clipboard managers, and are cleared after \(Timeouts.clipboardClear.wholeSeconds) seconds or when FX Vault locks, unless you copied something else since."
-                    ))
-                    .fxTextStyle(.callout)
-                    .foregroundStyle(Theme.Colors.mutedText)
-                    .fixedSize(horizontal: false, vertical: true)
+                HairlineDivider()
+                PreferencesRow(
+                    String(localized: "settings.security.recoveryKey", defaultValue: "Recovery key"),
+                    detail: String(localized: "settings.security.recoveryKey.detail", defaultValue: "Your current key stops working")
+                ) {
+                    Button(String(localized: "settings.security.newRecoveryKey.short", defaultValue: "New Recovery Key…")) {
+                        viewModel.present(.newRecoveryKey)
+                    }
+                    .fxButtonStyle(.outline, size: .compact)
                 }
             }
         }
+    }
+
+    private var touchIDLabel: String {
+        String(localized: "settings.security.touchID.toggle", defaultValue: "Unlock with Touch ID")
     }
 
     private var touchIDFootnote: String {

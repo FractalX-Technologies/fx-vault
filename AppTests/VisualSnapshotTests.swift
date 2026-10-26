@@ -495,6 +495,46 @@ struct VisualSnapshotTests {
             SecuritySettingsScreen(preferences: preferences, viewModel: preferences.security)
         }
     }
+
+    /// Boards Settings-General, -Accounts and -Advanced, and Reset-Confirm.
+    @Test func preferencesGeneralTab() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let preferences = PreferencesViewModel(app: harness.app)
+        try await SnapshotOutput.write("preferences-general", size: Self.settingsSize) {
+            GeneralSettingsView(viewModel: preferences)
+        }
+    }
+
+    @Test func preferencesAccountsTab() async throws {
+        let harness = try await AccountsSettingsViewModelTests.ready()
+        let preferences = PreferencesViewModel(app: harness.app)
+        await preferences.accounts.load()
+        try await SnapshotOutput.write("preferences-accounts", size: Self.settingsSize) {
+            AccountsSettingsScreen(preferences: preferences)
+        }
+    }
+
+    @Test func preferencesAdvancedTab() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let preferences = PreferencesViewModel(app: harness.app)
+        try await SnapshotOutput.write("preferences-advanced", size: Self.settingsSize) {
+            AdvancedSettingsView(viewModel: preferences)
+        }
+    }
+
+    @Test func preferencesResetVault() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let preferences = PreferencesViewModel(app: harness.app)
+        preferences.beginResetVault()
+        preferences.resetPassword = "correct horse battery"
+        preferences.resetConfirmationText = PreferencesViewModel.resetConfirmationWord
+        #expect(preferences.canResetVault)
+        try await SnapshotOutput.write("preferences-reset", size: CGSize(width: Theme.Layout.resetDialogWidth, height: 380)) {
+            ResetVaultSheet(viewModel: preferences)
+        }
+    }
+
+    private static let settingsSize = CGSize(width: Theme.Layout.settingsWidth, height: SnapshotOutput.settingsHeight)
 }
 
 // MARK: - Main window data
