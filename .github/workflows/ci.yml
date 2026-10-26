@@ -48,6 +48,9 @@ jobs:
       - name: Secret scan
         run: scripts/check-secrets.sh
 
+      - name: Release script tests
+        run: scripts/tests/release-publish-only.test.sh
+
   # Non-blocking: the preview Xcode 27 image (matches the dev machine; can queue).
   xcode-27:
     name: xcode-27

@@ -3,8 +3,8 @@
 #
 #   scripts/release-local.sh [options] <version>
 #
-# Official mode (default): Developer ID signing and notarization on Bryan's Mac.
-# Nothing is signed or notarized on GitHub unless the optional CI secrets exist.
+# Official mode (default): Developer ID signing and notarization, in the release workflow's
+# signed job (organization secrets) or on the maintainer's Mac.
 #   1. Preflight: tools, Config/Local.xcconfig (includes Signed.xcconfig), effective
 #      build settings, provisioning profile, signing identity, notary keychain profile,
 #      optional clean-tree check, `xcodegen generate`, optional tests (scripts/ci-local.sh).
@@ -21,6 +21,9 @@
 #   5. Writes dist/FXVault-<version>.dmg and dist/FXVault-<version>.dmg.sha256.
 #   6. With --publish only: uploads both files to the GitHub release v<version>.
 #
+# Publish-only mode (--publish-only): uploads a DMG and .sha256 built earlier (in --output-dir)
+# without building, so the job that holds the signing keys never needs `contents: write`.
+#
 # Ad-hoc mode (--adhoc): for forks and the CI verification artifact. No Apple account,
 # no profile, no notarization, no Touch ID. Writes dist/FXVault-<version>-adhoc.dmg.
 #
@@ -32,6 +35,8 @@
 #                            (local verification only; nothing is written to dist/)
 #   --publish                upload to GitHub release v<version> (implies
 #                            --require-clean; tag v<version> must be pushed and be HEAD)
+#   --publish-only           only publish the DMG and .sha256 already in --output-dir
+#                            (checks the sha256, the tag and the release like --publish)
 #   --prerelease             mark a newly created GitHub release as a pre-release
 #                            (automatic when the version has a -suffix)
 #   --profile <x>            provisioning profile: file path, UUID or name
@@ -101,6 +106,7 @@ run_tests=true
 require_clean=false
 notarize=true
 publish=false
+publish_only=false
 prerelease=false
 profile_arg=""
 identity_arg=""
@@ -121,6 +127,7 @@ while [[ $# -gt 0 ]]; do
     --require-clean) require_clean=true ;;
     --skip-notarize) notarize=false ;;
     --publish) publish=true; require_clean=true ;;
+    --publish-only) publish_only=true; publish=true; require_clean=true ;;
     --prerelease) prerelease=true ;;
     --profile) need_value "$@"; profile_arg="$2"; shift ;;
     --identity) need_value "$@"; identity_arg="$2"; shift ;;
@@ -769,10 +776,28 @@ EOF
 
 # ---------------------------------------------------------------- main
 
+# The publish job's path: nothing is built, and the files must still match their checksum.
+publish_existing() {
+  step "Publish FX Vault $version from $output_dir"
+  [[ -f "$DIST_DMG" && -f "$DIST_SHA" ]] || die "no $DMG_NAME to publish in $output_dir (and its .sha256)"
+  (cd "$output_dir" && shasum -a 256 -c "$DMG_NAME.sha256" >/dev/null 2>&1) \
+    || die "$DMG_NAME does not match $DMG_NAME.sha256"
+  pass "$DMG_NAME matches its sha256"
+  require_tool gh "brew install gh"
+  check_git
+  check_publish_target
+  publish_release
+}
+
 main() {
   local dmg_work
   rm -rf "$BUILD_DIR"
   mkdir -p "$LOG_DIR" "$WORK_DIR"
+
+  if [[ "$publish_only" == true ]]; then
+    publish_existing
+    return
+  fi
 
   step "Preflight ($mode build of FX Vault $version)"
   [[ ! -e "$DIST_DMG" ]] || die "$DIST_DMG already exists: remove it, or bump the version"

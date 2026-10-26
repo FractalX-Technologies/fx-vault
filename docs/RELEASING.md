@@ -18,7 +18,7 @@ publisher per version. The cask bump stays manual (step 6).
 
 | File | Role |
 |------|------|
-| `scripts/release-local.sh` | Preflight, archive, export, gates, notarize, staple, DMG, sha256, optional `gh release` upload |
+| `scripts/release-local.sh` | Preflight, archive, export, gates, notarize, staple, DMG, sha256, optional `gh release` upload; `--publish-only` uploads a DMG built earlier |
 | `scripts/make-dmg.sh` | Builds the DMG: the app plus an `Applications` link, ULFO format, checked with `hdiutil verify` and a test mount |
 | `scripts/bump-cask.sh` | Writes `version` and `sha256` into the cask in a tap checkout. It never pushes |
 | `ci/ExportOptions-DeveloperID.plist` | `developer-id`, manual signing, team `QYKC498D5D`, profile `FX Vault Developer ID` |
@@ -286,8 +286,8 @@ On a `v*` tag push, or by hand with `workflow_dispatch` and an optional `version
 
    It uploads `FXVault-<version>-adhoc.dmg` and its `.sha256` as a 14-day workflow
    artifact. This DMG is **not** a release asset.
-3. **`signed`**: in environment `release` (deployments from `v*` tags only), only on
-   `FractalX-Technologies/fx-vault`. It needs `adhoc` to succeed, and fails with the names
+3. **`signed`**: on tags only, in environment `release` (deployments from `v*` tags only),
+   only on `FractalX-Technologies/fx-vault`. It needs `adhoc` to succeed, and fails with the names
    of any secret or variable below that the repository can't read. It:
    - mints a read-only token of the `fractalx-ci-reader` GitHub App for `ios-certificates`
    - runs `bundle exec fastlane mac developer_id` in `ci/` (gems from `ci/Gemfile.lock`):
@@ -297,9 +297,18 @@ On a `v*` tag push, or by hand with `workflow_dispatch` and an optional `version
      token can't write
    - writes `Config/Local.xcconfig` with that profile's UUID
    - stores the API key as `fxvault-notary` in the temporary keychain
-   - runs `scripts/release-local.sh --skip-tests --publish`; it publishes only on tags
-   - attests the DMG with `actions/attest`
-   - deletes the keychain, the profile and the key, even if a step failed
+   - runs `scripts/release-local.sh --skip-tests` and uploads the DMG and `.sha256` as a
+     30-day artifact
+   - deletes the keychain, both copies of the profile and the key, even if a step failed
+
+   The job only reads the repository (`contents: read`): fastlane's gems run next to the
+   signing keys, installed with `bundle install` against the lockfile's checksums, never
+   from a cache.
+4. **`publish`**: on the tag whose name is `v<version>`, in environment `release`, with no
+   signing secret. It downloads the artifact, attests the DMG with `actions/attest` and runs
+   `scripts/release-local.sh --publish-only`, which checks the sha256, the tag and the
+   release, then uploads both files. Only this job gets `contents: write`, `id-token: write`
+   and `attestations: write`.
 
    | Secret / variable | Where | Content |
    |-------------------|-------|---------|
@@ -316,8 +325,8 @@ Build provenance attestations (`gh attestation verify`) exist only for releases 
 signed. A local release is verified with its `.sha256`, `spctl` and `stapler validate`.
 
 All actions are pinned to full commit SHAs. The workflow's default permission is
-`contents: read`. Only the `signed` job gets `contents: write`, `id-token: write` and
-`attestations: write`.
+`contents: read`. A ruleset limits creating, moving and deleting `v*` tags to the
+repository's admins.
 
 ## Forks and ad-hoc builds
 
