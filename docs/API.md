@@ -167,7 +167,8 @@ Input: operation, exit code, stderr with token patterns redacted (values are red
 display), the `-i` status when present, and for `gh api -i` calls the `errors[]` details of the
 response body (`APIResponseParser.errorDetails`, at most `GHConstants.maxErrorDetailCount`): gh
 prints only the body's top-level `message` on stderr (see Observed behavior). Status sources:
-native `HTTP (\d{3}): ` anywhere in stderr; `gh api`'s `^gh: (.*) \(HTTP (\d{3})\)$` or
+native `HTTP (\d{3}): ` or `HTTP (\d{3}) \(` (gh's form for a response with no message)
+anywhere in stderr; `gh api`'s `^gh: (.*) \(HTTP (\d{3})\)$` or
 `^gh: HTTP (\d{3})$`; `GraphQL:` messages by fragment; the `-i` status line. Rules, in order:
 
 1. 401 or "Bad credentials" → `.tokenRevoked` (before rule 2, because a native 401 also prints a
@@ -240,7 +241,7 @@ case-insensitive, seeded once from the journal's write start times over the last
 Recorded on 2026-10-15 with gh 2.102.0 on macOS 27 against github.com (API version
 2026-03-10). Names are placeholders: `owner-a` is the gh account, `Example-Org` its Free-plan
 organization. Only **read** calls were made; the write facts below are still open (see
-"Pending: write spike").
+"Pending: write spike"), except those recorded under "Organization writes, 2026-10-26".
 
 **Discovery (A1–A3, A5, B1).**
 - **Enterprise Managed Users** (reported 2026-10-15 for 0.3.0, gh 2.102.0): `gh auth status`
@@ -272,9 +273,6 @@ organization. Only **read** calls were made; the write facts below are still ope
   stdout still holds the error body wrapped in the slurp array,
   `[{"message":"Not Found",…,"status":"404"}]`). FX Vault reads B5 only for custom policies, and
   the executor treats a B5 404 as "no patterns".
-- C6/C8/C11/C13 on a name GitHub no longer has (gh 2.102, seen 2026-10-26): `failed to delete
-  secret <n>: HTTP 404 (https://api.github.com/…)`, with no `: Not Found` (GitHub's DELETE 404
-  has no message); exit 1. `GHStderrClassifier` reads `HTTP nnn:` and `HTTP nnn (` alike.
 - B7/B9 for a missing environment: `failed to get secrets: HTTP 404: Not Found
   (https://api.github.com/repos/<o>/<r>/environments/<e>/secrets?per_page=100)` (same for
   variables), exit 1.
@@ -328,6 +326,16 @@ empty body. The executor now classifies a C3 404 on a visible repository as `.pl
 (test `a404OnAPatternPostOfAVisibleRepositoryIsPlanGated`). The facts below that the suite did
 not assert explicitly stay open.
 
+**Organization writes, 2026-10-26 (gh 2.102.0).** Throwaway `FXVAULT_CHECK_*` items on a real
+organization, deleted afterwards:
+- C10 with `--visibility=selected --repos=<bare name>` reaches `<org>/<name>` (B14 lists it).
+- C12 twice upserts (the second value wins), and an upsert also changes the visibility.
+- C6/C8/C11/C13 on a name GitHub no longer has: `failed to delete secret <n>: HTTP 404
+  (https://api.github.com/…)`, exit 1, with no `: Not Found`. gh prints `HTTP nnn (url)` for
+  any response without a message; `GHStderrClassifier` reads it as the status.
+- B12–B15 and the Azure listings decode real data: `LiveSourcesTests` (`FXV_LIVE_ORG=<org>`,
+  `FXV_LIVE_AZ=1`).
+
 **Still open from the write spike (Q6).** The write run above did not record these facts explicitly. Until a run confirms that a
 C2 PUT without `reviewers`/`wait_timer` keeps them, preflight blocks a policy change on any
 existing environment that B3 lists with rules other than `branch_policy`
@@ -339,7 +347,7 @@ results here. The opt-in suite
 FXV_LIVE_E2E_REPORT=<file.json> swift test --filter LiveE2E`: identical-value `gh secret set` and
 `gh variable set` and `updatedAt`; trailing CRLF, double LF, inner LF and surrounding spaces of
 a variable through gh; empty values; C3 POST of an existing pattern; whether a PUT without
-`reviewers` keeps them; whether DELETE removes an environment's secrets; a 422 PUT; 404 deletes;
+`reviewers` keeps them; whether DELETE removes an environment's secrets; a 422 PUT;
 and on the Free organization's private repository the stderr of an environment PUT with a
 custom policy, a branch-policy POST and environment secret and variable sets, with how
 `GHStderrClassifier` reads each. The report replaces the account and organization names.

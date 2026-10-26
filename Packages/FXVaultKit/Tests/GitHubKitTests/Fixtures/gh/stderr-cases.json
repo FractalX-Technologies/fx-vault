@@ -227,6 +227,14 @@
   "synthetic": false
  },
  {
+  "name": "native 502 without a message",
+  "operation": "C5",
+  "exitCode": 1,
+  "stderr": "failed to set secret FXV_FIXTURE_TOKEN: HTTP 502 (https://api.github.com/repos/owner-a/repo-a/actions/secrets/FXV_FIXTURE_TOKEN)\n",
+  "expected": "serverError(502)",
+  "synthetic": true
+ },
+ {
   "name": "gh api 404 with -i status",
   "operation": "B4",
   "exitCode": 1,

@@ -7,8 +7,8 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Fixed
 
-- **Deleting what GitHub no longer has.** Sync recognises gh 2.102's `HTTP 404 (…)` (no message)
-  as not found again, so deleting a secret or variable already gone from GitHub finishes.
+- **Deleting what GitHub no longer has.** Sync reads gh's `HTTP nnn (…)` (an error with no
+  message) as its status, so deleting a secret or variable already gone from GitHub finishes.
 
 ### Changed
 
