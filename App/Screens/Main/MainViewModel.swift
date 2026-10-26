@@ -149,7 +149,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// nothing selected.
     var breadcrumb: [String] {
         if let vault = sidebar.selectedKeyVault {
-            return [SidebarCopy.azureSection, vault.title]
+            // The sidebar's tree: a vault without a saved subscription sits directly under Azure.
+            return [SidebarCopy.azureSection] + [vault.subscription?.name, vault.title].compactMap(\.self)
         }
         if let folder = sidebar.selectedFolder {
             return [FolderCopy.sectionTitle, folder.name]

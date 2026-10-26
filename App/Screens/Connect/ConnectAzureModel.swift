@@ -189,7 +189,12 @@ final class ConnectAzureModel {
                 let id: DestinationID
                 if let existing = try existingVault(vault) {
                     id = existing
-                    try data.destinations.setSubscription(vault.subscription, of: id)
+                    // Only the sidebar's grouping: the import goes on without it.
+                    do {
+                        try data.destinations.setSubscription(vault.subscription, of: id)
+                    } catch {
+                        AppLog.ui.error("Key Vault subscription not saved")
+                    }
                 } else {
                     id = try data.destinations.createDestination(
                         repositoryID: nil,

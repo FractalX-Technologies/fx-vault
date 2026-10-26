@@ -1168,7 +1168,7 @@ AppTests).
     own are observed (`observeDestinations(repositoryID: nil)`, `SidebarViewModel.keyVaults`) and
     listed by `SidebarKeyVaultsSection`; `selectedKeyVaultID` is a fourth exclusive selection, and
     `MainViewModel` builds a `DestinationDetailViewModel` for it (no scope column, path `Azure ›
-    name` since D6c2); `open(destinationID:)` selects one there. B8c2a: `KeyVaultContextMenu` (its
+    name` since D6c2, `Azure › subscription › name` once its subscription is saved, D6c6); `open(destinationID:)` selects one there. B8c2a: `KeyVaultContextMenu` (its
     row and the detail's Actions button) asks for Remove from FX Vault, confirmed in the sidebar
     (`pendingKeyVaultRemoval`, `confirmKeyVaultRemoval()`, `deleteDestination`). v0.3.0 draws the sidebar
     and scope rows itself (`.fxRowBackground`, docs/DESIGN.md) instead of a native `List`
@@ -1191,9 +1191,11 @@ AppTests).
     items FX Vault cannot use), and the same `ConfigTableView` through `ConfigTableModel` with
     the Status column under SECRETS · n (Key Vault holds secrets only). Copy To lists the repository's
     scopes, the folders and the other destinations; ⌘C / ⌘V and `.env` import work as for scopes.
-    Refresh is disabled offline. After a Refresh, a Key Vault of its own without a subscription
-    gets it through `FeatureDependencies.azureDiscovery` (D6c6; no `az` call at launch), so the
-    sidebar's `SidebarAzureModel` groups it.
+    Refresh is disabled offline. After a Refresh's spinner, in a task of its own, a Key Vault of
+    its own without a subscription gets it through `KeyVaultSubscriptionLookup`
+    (`AppContainer.keyVaultSubscriptions`, D6c6; no `az` call at launch; a vault no subscription
+    lists is not looked up again that session, a failed `az` is), so the sidebar's
+    `SidebarAzureModel` groups it.
   - `RepoDetailViewModel` (`Main/RepoDetail`): the place header (1.0 D6c3, `Main/Place`:
     `PlaceHeader` with `headerTitle`, `headerSubline` built by `PlaceCopy`, Refreshing… or the
     drift line, and ⋯ More, whose item actions are `PlaceItemMoreItems` (shared with Key Vaults

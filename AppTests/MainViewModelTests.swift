@@ -219,6 +219,11 @@ struct MainViewModelTests {
         #expect(main.scopeList == nil)
         #expect(main.breadcrumb == [SidebarCopy.azureSection, "kv-example-prod"], "named like its sidebar section")
         #expect(main.canImportEnv)
+        // Once its subscription is saved (1.0 D6c6), the path follows the tree.
+        try harness.data.destinations.setSubscription(KeyVaultSubscriptionModel(id: UUID(), name: "Example Production"), of: vaultID)
+        #expect(await TestFixtures.eventually {
+            main.breadcrumb == [SidebarCopy.azureSection, "Example Production", "kv-example-prod"]
+        })
 
         main.sidebar.selectedKeyVaultID = nil
         #expect(main.destinationDetail == nil, "deselecting closes the vault")

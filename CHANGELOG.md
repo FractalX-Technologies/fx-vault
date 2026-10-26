@@ -112,8 +112,8 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   organization you imported or selected. Lock and Settings sit at the bottom
   of the sidebar; Add Repository by Name… is on an owner's menu and New Environment… on a
   repository's.
-- **Azure by subscription.** The sidebar lists Azure › subscription › vault; each subscription
-  opens and closes, and searching a subscription's name finds its vaults. Connect Azure keeps
+- **Azure by subscription.** The sidebar and the toolbar's path read Azure › subscription ›
+  vault; each subscription opens and closes, and searching a subscription's name finds its vaults. Connect Azure keeps
   each vault's subscription; a vault connected before shows directly under Azure until its first
   Refresh.
 - **Jump anywhere (⌘K).** The toolbar's search button, Edit › Jump Anywhere or ⌘K opens a
@@ -123,7 +123,7 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   what you typed, with where each one is; ↩ opens that place with the row selected. Values are
   never searched.
 - **A quieter toolbar.** The toolbar shows the path of the selected place (`GitHub › owner ›
-  repository › environment`, `Azure › vault`, `Folders › name`), the ⌘K search button and Sync.
+  repository › environment`, `Azure › subscription › vault`, `Folders › name`), the ⌘K search button and Sync.
   New Repository (⌘N, and now on an owner's menu with the owner preselected), Import .env
   (⇧⌘I) and Share Project (⌥⌘S) stay in the File menu. With nothing selected, the window says
   "Choose a place" with the pending changes and the ⌘K hint. "Your recovery key wasn't saved"

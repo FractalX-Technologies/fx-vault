@@ -109,6 +109,16 @@ enum AccessibilityID {
             "main.ownerToggle.\(login)"
         }
 
+        /// An Azure subscription's row under Azure in the sidebar (1.0 D6c6).
+        static func subscription(_ name: String) -> String {
+            "main.subscription.\(name)"
+        }
+
+        /// The chevron that opens or closes a subscription (1.0 D6c6).
+        static func subscriptionToggle(_ name: String) -> String {
+            "main.subscriptionToggle.\(name)"
+        }
+
         /// The toolbar's search button that opens the ⌘K jump palette (1.0).
         static let jumpAnywhere = "main.jumpAnywhere"
     }

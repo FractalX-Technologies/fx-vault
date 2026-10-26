@@ -419,7 +419,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   `MainToolbarPanel` (`MainToolbar.swift`), no native toolbar items. The selected place's path
   (`MainViewModel.breadcrumb`) in sans `.callout`: the steps `mutedText`, the separators
   `faintText`, the last step `.calloutEmphasized` ink (`GitHub › owner › repo › environment`,
-  `Azure › vault` or `Folders › name`), or "FX Vault" in `mutedText` with nothing selected, then
+  `Azure › subscription › vault` or `Folders › name`), or "FX Vault" in `mutedText` with nothing selected, then
   the DEV chip in Debug builds. It takes the panel's free width; a long path drops its first
   steps down to the last one, then shows the app name. Then the search button (`magnifyingglass`
   + `KeyHint("⌘K")`, `.ghost` `.compact`) and `SyncToolbarButton`. 16 pt before the path, 8 pt
@@ -452,8 +452,11 @@ foreground color, so `.primary` text still turns white on selected rows.
   clicked.
 - Azure › subscription › vault (1.0 D6c6, board Main2-Repository): the vaults without a saved
   subscription first, directly under Azure (`key`, level 0), then one row per subscription by
-  name (`cloud`, sans title, chevron; open by default and while searching) with its vaults at
-  level 1 (context menu and the detail's Actions: Remove from FX Vault…). The bottom of the sidebar holds
+  name (`cloud`, sans title, chevron; open by default, while searching and when one of its vaults
+  is selected) with its vaults at level 1 (context menu and the detail's Actions: Remove from FX
+  Vault…). Departures: a vault saved before 1.0 stays directly under Azure until its Refresh
+  finds the subscription; no "Needs Key Vault Secrets User" subline under a vault row (a vault FX
+  Vault can't read says so when it is read). The bottom of the sidebar holds
   the listing state or the last notice in `.label`, then Lock and Settings as quiet icons.
 - Home (nothing selected; board Main2-Home): `EmptyStateView` with `square.3.layers.3d`, "Choose
   a place", the pending changes ("4 pending changes", or "No pending changes") and

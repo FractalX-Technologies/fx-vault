@@ -317,6 +317,11 @@ struct SidebarViewModelTests {
         #expect(!sidebar.isExpanded(subscription: production.id))
         sidebar.toggle(subscription: production.id)
         #expect(sidebar.isExpanded(subscription: production.id))
+
+        // A jump into a closed subscription (⌘K, a linked copy's place) opens it.
+        sidebar.toggle(subscription: production.id)
+        sidebar.select(keyVaultID: shared)
+        #expect(sidebar.isExpanded(subscription: production.id), "the selected vault shows")
     }
 
     @Test func selectingARepositoryWaitsForTheVaultObservation() async throws {

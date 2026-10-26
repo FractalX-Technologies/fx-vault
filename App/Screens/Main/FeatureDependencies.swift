@@ -81,8 +81,8 @@ struct FeatureDependencies {
     let destinations: DestinationRepository
     /// Destination Sync, Refresh and import (v0.8.0).
     let destinationSync: DestinationSyncRepository
-    /// Azure's subscriptions and Key Vaults (read-only `az`; a Refresh finds a vault's subscription).
-    let azureDiscovery: AzureDiscoveryRepository
+    /// A Key Vault's subscription, looked up after its Refresh (1.0 D6c6).
+    let keyVaultSubscriptions: KeyVaultSubscriptionLookup
     /// Staging, owners, templates and name checks. Clone through ``cloner``.
     let creation: RepoCreationRepository
     let cloner: any RepoCloning
@@ -125,7 +125,7 @@ struct FeatureDependencies {
         organizationSync = data.organizationSync
         destinations = data.destinations
         destinationSync = data.destinationSync
-        azureDiscovery = data.azureDiscovery
+        keyVaultSubscriptions = container.keyVaultSubscriptions
         creation = data.creation
         cloner = data.cloner
         reauth = container.reauth

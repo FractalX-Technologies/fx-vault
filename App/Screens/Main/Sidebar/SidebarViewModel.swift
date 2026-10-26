@@ -69,8 +69,12 @@ final class SidebarViewModel {
     var selectedKeyVaultID: DestinationID? {
         didSet {
             guard selectedKeyVaultID != oldValue else { return }
-            if selectedKeyVaultID != nil {
+            if let selectedKeyVaultID {
                 clearSelection(except: .keyVault)
+                // A jump (⌘K, a linked copy's place) into a closed subscription shows the row.
+                if let subscription = keyVault(selectedKeyVaultID)?.subscription {
+                    collapsedSubscriptionIDs.remove(subscription.id)
+                }
             }
             onChange?()
         }

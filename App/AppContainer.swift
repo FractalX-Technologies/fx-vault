@@ -71,6 +71,8 @@ final class AppContainer {
     let connectivity: ConnectivityMonitor
     /// Whether GitHub answers the gh calls the app makes (fed by the view models).
     let gitHubReachability = GitHubReachability()
+    /// A Key Vault's subscription found after its Refresh (1.0 D6c6), with the session's misses.
+    let keyVaultSubscriptions: KeyVaultSubscriptionLookup
 
     init(
         mode: Mode,
@@ -90,6 +92,7 @@ final class AppContainer {
         self.vaultManager = vaultManager
         self.data = data
         reauth = ReauthGate(manager: vaultManager)
+        keyVaultSubscriptions = KeyVaultSubscriptionLookup(discovery: data.azureDiscovery, destinations: data.destinations)
         self.preferences = preferences
         self.clipboard = clipboard
         self.autoLock = autoLock
