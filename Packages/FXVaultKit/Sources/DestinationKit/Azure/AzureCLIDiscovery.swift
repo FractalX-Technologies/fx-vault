@@ -138,6 +138,13 @@ public struct AzureCLIDiscovery: Sendable {
         return result
     }
 
+    /// A name `az` lists, as Settings and the sidebar show it: without bidi controls or
+    /// invisible characters, within what a saved subscription keeps; nil when nothing is left.
+    private static func displayName(_ name: String) -> String? {
+        let cleaned = DisplayNameSanitizer.sanitize(name, maxBytes: Limits.maxSubscriptionNameLength)
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
     static func arguments(subscriptionID: UUID) -> [String] {
         keyVaultListArguments + [subscriptionFlag, subscriptionID.uuidString.lowercased()] + AzureCLIRunner.outputArguments
     }
@@ -155,13 +162,12 @@ public struct AzureCLIDiscovery: Sendable {
                   let state = entry.string(.key(stateField)),
                   let isDefault = entry.bool(.key(defaultField))
             else { throw .decoding }
-            // Optional: older `az` versions list no tenant name.
-            let tenantName = entry.string(.key(tenantNameField)).map { DisplayNameSanitizer.sanitize($0) }
             let subscription = AzureSubscriptionModel(
                 id: id,
-                name: name,
+                name: displayName(name) ?? id.uuidString.lowercased(),
                 tenantID: tenant.uuidString.lowercased(),
-                tenantName: tenantName?.isEmpty == false ? tenantName : nil,
+                // Optional: older `az` versions list no tenant name.
+                tenantName: entry.string(.key(tenantNameField)).flatMap(displayName),
                 state: AzureSubscriptionState(listed: state),
                 isDefault: isDefault
             )

@@ -87,6 +87,17 @@ struct AzureDiscoveryTests {
         #expect(blank.map(\.tenantName) == [nil])
     }
 
+    /// A subscription name is cleaned like the tenant's; one with nothing left shows its id.
+    @Test func aSubscriptionNameIsCleaned() throws {
+        func listed(_ name: String) -> String {
+            #"[{"id":"00000000-0000-0000-0000-000000000009","name":"\#(name)","tenantId":"00000000-0000-0000-0000-0000000000a1","state":"Enabled","isDefault":true}]"#
+        }
+        let cleaned = try AzureCLIDiscovery.parseSubscriptions(stdout: TestValues.secret(listed(" Example\u{202E} Production\u{200B} ")))
+        #expect(cleaned.map(\.name) == ["Example Production"])
+        let blank = try AzureCLIDiscovery.parseSubscriptions(stdout: TestValues.secret(listed("\u{200B}\u{202E}")))
+        #expect(blank.map(\.name) == ["00000000-0000-0000-0000-000000000009"])
+    }
+
     @Test func aSubscriptionListedTwiceKeepsTheDefaultEntry() throws {
         let id = "00000000-0000-0000-0000-000000000009"
         let json = "[\(Self.subscriptionJSON(id: id)),\(Self.subscriptionJSON(id: id, tenant: "00000000-0000-0000-0000-0000000000a2", isDefault: true))]"

@@ -38,13 +38,20 @@ struct AzureAccountsTests {
         return harness
     }
 
+    /// One id per subscription name, as Azure gives them.
+    private static let subscriptionIDs = [
+        "Example Production": FakeAzureOutput.syntheticID(0x01),
+        "Example Staging": FakeAzureOutput.syntheticID(0x02),
+        "Labs Dev": FakeAzureOutput.syntheticID(0x03),
+    ]
+
     private static func vault(_ name: String, tenant: String?, subscription: String?) -> DestinationModel {
         DestinationModel(
             repositoryID: nil,
             target: .azureKeyVault(vaultName: name, tenantID: tenant),
             stage: nil,
             sortOrder: 0,
-            subscription: subscription.map { KeyVaultSubscriptionModel(id: UUID(), name: $0) },
+            subscription: subscription.map { KeyVaultSubscriptionModel(id: subscriptionIDs[$0] ?? UUID(), name: $0) },
             createdAt: .distantPast,
             updatedAt: .distantPast
         )
@@ -180,6 +187,77 @@ struct AzureAccountsTests {
         #expect(azure.requirement == nil && azure.copiedCommand == nil)
         await azure.load()
         #expect(azure.tenants.isEmpty, "nothing is listed while locked")
+    }
+
+    /// A lock while Add Vaults reads the first vault, then a quick unlock and a new sheet: the
+    /// rest is not imported, and the new sheet is left alone.
+    @Test(.timeLimit(.minutes(1))) func aLockDuringAddVaultsStopsTheImportAndLeavesALaterSheet() async throws {
+        let harness = try await Self.scripted()
+        // The first list answers 429: the import waits on the test's clock until it advances.
+        harness.transport.enqueue(
+            .status(429, headers: ["Retry-After": "1"]),
+            method: .get,
+            pathPrefix: "/secrets",
+            host: "kv-example-prod.vault.azure.net"
+        )
+        // Held: its lock observer resets the group.
+        let accounts = AccountsSettingsViewModel(app: harness.app)
+        let azure = accounts.azure
+        await azure.load()
+        azure.chooseVaults(try #require(azure.tenants.first))
+        let chooser = try #require(azure.chooser)
+        await chooser.load()
+        for vault in chooser.subscriptions.flatMap(\.vaults) {
+            chooser.toggle(vault)
+        }
+        #expect(chooser.selectedVaults.map(\.name) == ["kv-example-prod", "kv-example-shared"])
+
+        let sleepers = harness.clock.sleeperCount
+        let importing = Task { await azure.addChosenVaults() }
+        await harness.clock.waitForSleepers(count: sleepers + 1)
+        harness.app.lock(trigger: .manual)
+        try await harness.vaultManager.unlock(password: testPassword)
+        harness.app.didUnlock()
+        await azure.load()
+        azure.chooseVaults(try #require(azure.tenants.first))
+        let later = try #require(azure.chooser)
+        harness.clock.advance(by: .seconds(1))
+        await importing.value
+
+        #expect(azure.chooser === later, "the sheet opened after the lock stays open")
+        #expect(azure.importResult == nil && !azure.isImporting && azure.importingName == nil)
+        let saved = try harness.data.destinations.destinations(repositoryID: nil).map(\.target.displayName)
+        #expect(!saved.contains("kv-example-shared"), "nothing after the lock is imported")
+        withExtendedLifetime(accounts) {}
+    }
+
+    @Test func aTenantThatIsNotAnIDLogsInWithoutIt() {
+        #expect(AzureAccountsCopy.loginCommand(tenantID: Self.labs) == "az login --tenant \(Self.labs)")
+        #expect(AzureAccountsCopy.loginCommand(tenantID: "contoso.onmicrosoft.com") == "az login --tenant contoso.onmicrosoft.com")
+        #expect(AzureAccountsCopy.loginCommand(tenantID: "x; rm -rf ~") == "az login")
+        #expect(AzureAccountsCopy.loginCommand(tenantID: nil) == "az login")
+    }
+
+    /// Two vaults that saved one subscription under different names count as one subscription.
+    @Test func vaultsCountBySubscriptionNotByName() {
+        let id = UUID()
+        func vault(_ name: String, subscription: String) -> DestinationModel {
+            DestinationModel(
+                repositoryID: nil,
+                target: .azureKeyVault(vaultName: name, tenantID: Self.example),
+                stage: nil,
+                sortOrder: 0,
+                subscription: KeyVaultSubscriptionModel(id: id, name: subscription),
+                createdAt: .distantPast,
+                updatedAt: .distantPast
+            )
+        }
+        let rows = AzureTenantRowModel.rows(
+            vaults: [vault("kv-a", subscription: "Example Production"), vault("kv-b", subscription: "Example Prod")],
+            listed: [],
+            requirement: .notInstalled
+        )
+        #expect(rows.first?.subline == "Example Prod · 2 vaults")
     }
 
     @Test func countsReadInEnglish() {

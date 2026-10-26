@@ -1,4 +1,5 @@
 import Foundation
+import VaultCore
 
 /// Words and commands of Settings › Accounts › Azure (1.0 S1b; board Settings-Accounts).
 nonisolated enum AzureAccountsCopy {
@@ -9,15 +10,16 @@ nonisolated enum AzureAccountsCopy {
     static let noVaults = String(localized: "settings.accounts.azure.noVaults", defaultValue: "No vaults in FX Vault")
     static let chooseVaults = String(localized: "settings.accounts.azure.chooseVaults", defaultValue: "Choose Vaults…")
     static let signOut = String(localized: "settings.accounts.azure.signOut", defaultValue: "Sign out of Azure")
-    static let checkAgain = String(localized: "settings.accounts.azure.checkAgain", defaultValue: "Check Again")
     static let chooseTitle = String(localized: "settings.accounts.azure.choose.title", defaultValue: "Choose vaults")
     static let add = String(localized: "settings.accounts.azure.choose.add", defaultValue: "Add Vaults")
 
     /// Interactive in Terminal, so Settings gives them to copy and never runs them.
     static let logoutCommand = "az logout"
 
+    /// `az login --tenant <id>`; plain `az login` for a tenant that is neither an id nor a
+    /// domain, so nothing else ever lands in the command the user pastes into Terminal.
     static func loginCommand(tenantID: String?) -> String {
-        guard let tenantID else { return DestinationSyncCopy.azLoginCommand }
+        guard let tenantID, DestinationRules.isValidTenantID(tenantID) else { return DestinationSyncCopy.azLoginCommand }
         return "\(DestinationSyncCopy.azLoginCommand) --tenant \(tenantID)"
     }
 
@@ -51,11 +53,6 @@ nonisolated enum AzureAccountsCopy {
 
     static func copied(_ command: String) -> String {
         String(localized: "settings.accounts.azure.copied", defaultValue: "Copied \(command). Run it in Terminal, then Check Again.")
-    }
-
-    /// A listed vault Choose Vaults… leaves alone: "westeurope · In FX Vault".
-    static func vaultSaved(location: String) -> String {
-        String(localized: "settings.accounts.azure.choose.saved", defaultValue: "\(location) · In FX Vault")
     }
 
     /// After Add Vaults: "Added 2 vaults with 5 secrets."

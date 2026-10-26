@@ -37,6 +37,11 @@ enum ConnectCopy {
         ))
     }
 
+    /// A listed vault Choose Vaults… leaves alone (1.0 S1b): "westeurope · In FX Vault".
+    static func vaultSaved(location: String) -> String {
+        String(localized: "connect.azure.vault.saved", defaultValue: "\(location) · In FX Vault")
+    }
+
     static func total(secrets: Int, variables: Int) -> String {
         String(inflected: AttributedString(
             localized: "connect.summary.total",

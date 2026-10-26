@@ -145,13 +145,14 @@ FXVault/
 │   │                                # (+ QuickVaultShortcutRecorder), Security(+ViewModel),
 │   │                                # ResetVaultSheet (+ its Security card; board Reset-Confirm),
 │   │                                # Accounts(+ViewModel), AzureAccounts Section/ViewModel/Copy
-│   │                                # (the Azure group and Choose Vaults…, 1.0 S1b), Advanced,
+│   │                                # (the Azure group and Choose Vaults…, 1.0 S1b),
+│   │                                # CommandCheckSteps (a command, then Check Again), Advanced,
 │   │                                # SharingSettingsScreen/ViewModel (the sent log; v0.9.0)
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell (+ FileSecretChip, F1), RecoveryKeyGridView,
 │   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,
 │   │   │                            # PasswordStrengthMeter, NewPasswordFields,
 │   │   │                            # WindowAccessor, WindowDragArea, EscapeKeyMonitor (onEscapeKey),
-│   │   │                            # CommandRow (+ Run), CommandOutputView,
+│   │   │                            # CommandRow (+ Run, inline style), CommandOutputView,
 │   │   │                            # SetupCommandList (+ SetupCommandRunState),
 │   │   │                            # ErrorAlert, ConfigEditorSheet
 │   │   │                            # (+ ConfigEditorNote, ConfigSheet footer/field/list),

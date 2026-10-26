@@ -19,13 +19,14 @@ struct AzureTenantRowModel: Identifiable, Hashable {
     let tenantID: String?
     /// `tenantDisplayName` from `az`; nil while the tenant is not signed in.
     let name: String?
-    /// Saved vaults by subscription name, in name order.
+    /// Saved vaults by subscription, in name order.
     let subscriptions: [SubscriptionVaults]
     /// Saved vaults whose subscription FX Vault doesn't know yet.
     let otherVaultCount: Int
     let signIn: SignIn
 
     struct SubscriptionVaults: Hashable {
+        let id: UUID
         let name: String
         let vaultCount: Int
     }
@@ -76,13 +77,10 @@ struct AzureTenantRowModel: Identifiable, Hashable {
         let signedIn = Set(listed.map(\.tenantID))
         let rows = order.map { tenant in
             let saved = vaultsByTenant[tenant] ?? []
-            let counts = Dictionary(grouping: saved.compactMap(\.subscription?.name), by: { $0 }).mapValues(\.count)
             return AzureTenantRowModel(
                 tenantID: tenant,
                 name: listed.first { $0.tenantID == tenant && $0.tenantName != nil }?.tenantName,
-                subscriptions: counts.keys
-                    .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
-                    .map { SubscriptionVaults(name: $0, vaultCount: counts[$0] ?? 0) },
+                subscriptions: subscriptionVaults(saved),
                 otherVaultCount: saved.count(where: { $0.subscription == nil }),
                 signIn: signIn(tenant: tenant, signedIn: signedIn, requirement: requirement)
             )
@@ -91,6 +89,19 @@ struct AzureTenantRowModel: Identifiable, Hashable {
             if (lhs.signIn == .signedIn) != (rhs.signIn == .signedIn) { return lhs.signIn == .signedIn }
             return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
         }
+    }
+
+    /// By subscription id: two vaults may have saved one subscription under different names,
+    /// and the last one wins, as in the sidebar (``SidebarAzureModel``).
+    private static func subscriptionVaults(_ saved: [DestinationModel]) -> [SubscriptionVaults] {
+        Dictionary(grouping: saved.compactMap(\.subscription), by: \.id)
+            .map { id, subscriptions in
+                SubscriptionVaults(id: id, name: subscriptions.last?.name ?? "", vaultCount: subscriptions.count)
+            }
+            .sorted { lhs, rhs in
+                let byName = lhs.name.localizedStandardCompare(rhs.name)
+                return byName == .orderedSame ? lhs.id.uuidString < rhs.id.uuidString : byName == .orderedAscending
+            }
     }
 
     private static func signIn(tenant: String?, signedIn: Set<String>, requirement: ConnectAzureModel.Requirement?) -> SignIn {
@@ -121,6 +132,8 @@ final class AzureAccountsViewModel {
     private(set) var importResult: ConnectAzureModel.ImportResult?
 
     @ObservationIgnored private let app: AppViewModel
+    /// The running Add Vaults; a lock cancels it, so the vault being read stops fetching.
+    @ObservationIgnored private var importTask: Task<ConnectAzureModel.ImportResult, Never>?
 
     init(app: AppViewModel) {
         self.app = app
@@ -147,6 +160,7 @@ final class AzureAccountsViewModel {
     /// Lists which tenants `az` is signed in to, then the saved vaults.
     func load() async {
         guard app.phase == .unlocked, !isLoading else { return }
+        let lockCount = app.lockCount
         isLoading = true
         defer { isLoading = false }
         var listed: [AzureSubscriptionModel] = []
@@ -157,8 +171,8 @@ final class AzureAccountsViewModel {
         } catch {
             found = ConnectAzureModel.requirement(for: error)
         }
-        // A lock while `az` ran has already cleared the group.
-        guard app.phase == .unlocked else { return }
+        // A lock while `az` ran has already cleared the group, even if an unlock followed.
+        guard app.lockCount == lockCount, app.phase == .unlocked else { return }
         let vaults = (try? data.destinations.destinations(repositoryID: nil)) ?? []
         requirement = found
         tenants = AzureTenantRowModel.rows(vaults: vaults, listed: listed, requirement: found)
@@ -184,12 +198,19 @@ final class AzureAccountsViewModel {
 
     /// **Add Vaults**: imports the checked vaults as Key Vaults of their own, then lists again.
     func addChosenVaults() async {
-        guard let chooser, !isImporting, !chooser.selectedVaults.isEmpty else { return }
+        guard let chooser, importTask == nil, !chooser.selectedVaults.isEmpty else { return }
+        let lockCount = app.lockCount
         isImporting = true
-        let result = await chooser.importSelected { self.importingName = $0 }
+        let task = Task { [weak self] in
+            await chooser.importSelected { self?.importingName = $0 }
+        }
+        importTask = task
+        let result = await task.value
+        // A lock reset the group, and a sheet opened since is not this import's to close.
+        guard app.lockCount == lockCount, importTask == task else { return }
+        importTask = nil
         isImporting = false
         importingName = nil
-        guard app.phase == .unlocked else { return }
         importResult = result
         closeChooser()
         await load()
@@ -202,6 +223,8 @@ final class AzureAccountsViewModel {
 
     /// The vault locked: nothing about Azure stays in memory.
     func reset() {
+        importTask?.cancel()
+        importTask = nil
         closeChooser()
         tenants = []
         requirement = nil

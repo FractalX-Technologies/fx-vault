@@ -233,11 +233,13 @@ final class ConnectAzureModel {
     // MARK: - Import
 
     /// Adds each chosen vault as a Key Vault of its own (or reuses the one already there) and
-    /// imports its secrets with their values. `progress` names the vault being read.
+    /// imports its secrets with their values. `progress` names the vault being read. A lock ends
+    /// it, even when a quick Touch ID unlock follows while a vault is read.
     func importSelected(progress: (String) -> Void) async -> ImportResult {
+        let lockCount = app.lockCount
         var result = ImportResult()
         for vault in selectedVaults {
-            guard app.phase == .unlocked else { break }
+            guard app.lockCount == lockCount, app.phase == .unlocked, !Task.isCancelled else { break }
             progress(vault.name)
             do {
                 let id: DestinationID

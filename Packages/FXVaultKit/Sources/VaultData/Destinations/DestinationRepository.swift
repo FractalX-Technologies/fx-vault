@@ -98,8 +98,11 @@ public struct DestinationRepository: Sendable {
         }
     }
 
+    /// Cleaned as `az`'s names are (no bidi controls or invisible characters), whoever passes
+    /// it: a stored name is shown in the sidebar and Settings.
     private static func validSubscription(_ subscription: KeyVaultSubscriptionModel) -> KeyVaultSubscriptionModel? {
-        let name = subscription.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        // No byte cut here: a name over the limit is refused, not shortened.
+        let name = DisplayNameSanitizer.sanitize(subscription.name, maxBytes: .max)
         guard (1...Limits.maxSubscriptionNameLength).contains(name.unicodeScalars.count) else { return nil }
         return KeyVaultSubscriptionModel(id: subscription.id, name: name)
     }
