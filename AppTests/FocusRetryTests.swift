@@ -26,6 +26,19 @@ struct FocusRetryTests {
         #expect(asks == 2)
     }
 
+    /// A newer request cancels the loop (the sidebar's `task(id:)`): it stops asking at once.
+    @Test func stopsWhenCancelled() async {
+        let asks = Counter()
+        let task = Task {
+            await FocusRetry.take(isFocused: { false }) {
+                asks.value += 1
+            }
+        }
+        task.cancel()
+        #expect(!(await task.value))
+        #expect(asks.value <= 1)
+    }
+
     /// A field that never takes the focus (the window is not key) is given up after the timeout.
     @Test func givesUpAfterTheTimeout() async {
         var asks = 0
