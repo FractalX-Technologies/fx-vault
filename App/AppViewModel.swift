@@ -505,10 +505,27 @@ final class AppViewModel {
         mainWindowOpener = opener
     }
 
+    /// Locked, and the island is the unlock UI: recovery and the one-time Touch ID offer need the
+    /// window instead.
+    var unlocksInIsland: Bool {
+        phase == .locked && !lockScreen.isShowingRecoveryReset && lockScreen.touchIDOffer == nil
+    }
+
+    /// Lock FX Vault (⌃⌘L) and the menu bar's Lock Now: only an unlocked vault.
+    var canLock: Bool {
+        phase == .unlocked
+    }
+
+    /// Something to sync and no Sync running: what Sync (⇧⌘S) and the menu bar's Review Sync
+    /// share. Sync adds the unlock, gh and the network.
+    var hasChangesToSync: Bool {
+        pendingChangeCount > 0 && !isSyncing
+    }
+
     /// **Open FX Vault** (the menu bar item): the main window, or the island while locked (the
-    /// window would only close again). Recovery and the Touch ID offer keep the window.
+    /// window would only close again).
     func openFXVault() {
-        guard phase == .locked, island != nil, !lockScreen.isShowingRecoveryReset, lockScreen.touchIDOffer == nil else {
+        guard unlocksInIsland, island != nil else {
             requestMainWindow()
             return
         }
@@ -516,9 +533,9 @@ final class AppViewModel {
         presentIsland()
     }
 
-    /// The menu bar item lists Review Sync only with something pending in a vault that exists.
+    /// The menu bar item lists Review Sync only with changes to sync in a vault that exists.
     var offersSyncReview: Bool {
-        pendingChangeCount > 0 && phase != .onboarding
+        hasChangesToSync && phase != .onboarding
     }
 
     /// **Review Sync · N pending…** (the menu bar item): FX Vault on the Sync review, after the
@@ -571,7 +588,7 @@ final class AppViewModel {
         mainWindow = window
         container.autoLock.observeClose(of: window)
         // FX Vault starts locked, and the Dock reopens the window: the island unlocks instead.
-        if phase == .locked, !lockScreen.isShowingRecoveryReset, lockScreen.touchIDOffer == nil {
+        if unlocksInIsland {
             Task { self.presentIsland() }
         }
     }

@@ -29,7 +29,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         didSet {
             if activeSheet == nil {
                 presentNextPendingImport()
-                presentRequestedSyncReview()
+                presentRequestedSyncReview(after: oldValue)
             } else {
                 // A menu command or an opened .fxvault file can bring a sheet over the palette; it
                 // would come back stale when the sheet goes.
@@ -304,8 +304,13 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     }
 
     /// Opens the Sync review the menu bar asked for (``AppViewModel/requestSyncReview()``),
-    /// unless another sheet is on screen (it follows when that one closes).
-    func presentRequestedSyncReview() {
+    /// unless another sheet is on screen (it follows when that one closes). Asked while the Sync
+    /// sheet is up (`closedSheet` when it just closed), the request was for that sheet: it ends.
+    func presentRequestedSyncReview(after closedSheet: MainSheet? = nil) {
+        if case .sync? = closedSheet ?? activeSheet {
+            _ = app.takeSyncReviewRequest()
+            return
+        }
         guard activeSheet == nil, app.takeSyncReviewRequest() else { return }
         sync()
     }
@@ -357,7 +362,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
 
     /// Disabled at 0, while locked, while a sync runs (§10 Toolbar) and while offline.
     var canSync: Bool {
-        pendingChangeCount > 0 && isUnlocked && !isSyncing && app.ghStatus.isReady && isOnline
+        app.hasChangesToSync && isUnlocked && app.ghStatus.isReady && isOnline
     }
 
     func sync() {

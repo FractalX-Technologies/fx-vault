@@ -1,21 +1,25 @@
 import XCTest
 
 /// The menu bar item (board MenuBar): its menu locks the vault, and Open FX Vault while locked
-/// is the island, not the window. The menu never shows a name.
+/// is the island, not the window. The menu lists its items only, never a name.
 final class MenuBarUITests: VaultUITestCase {
+    /// The UI-testing build is a Debug build ("FX Vault Dev"), and its onboarded vault has
+    /// nothing pending, so Review Sync is hidden.
+    private let expectedTitles = ["Open FX Vault Dev", "Lock Now", "Settings…", "Quit FX Vault Dev"]
+
     @MainActor
     func testLockNowShowsTheIslandAndOpenKeepsIt() throws {
         let app = launch()
         let sidebar = try onboard(app)
 
-        click(menuBarItem(AccessibilityID.MenuBar.lockNow, title: "Lock Now", in: app))
+        let menu = openMenuBarMenu(app)
+        XCTAssertEqual(itemTitles(of: menu), expectedTitles)
+        click(menu.menuItems[AccessibilityID.MenuBar.lockNow])
         let field = app.secureTextFields[AccessibilityID.Island.password]
         XCTAssertTrue(field.waitForExistence(timeout: timeout), "Lock Now never showed the island")
         XCTAssertTrue(sidebar.waitForNonExistence(timeout: timeout), "The main window stayed open while locked")
 
-        let open = menuBarItem(AccessibilityID.MenuBar.open, title: "Open FX Vault", in: app)
-        XCTAssertFalse(app.menuItems["api-service"].exists, "The menu shows a name")
-        click(open)
+        click(openMenuBarMenu(app).menuItems[AccessibilityID.MenuBar.open])
         XCTAssertTrue(field.waitForExistence(timeout: timeout), "Open FX Vault didn't bring the island")
         XCTAssertFalse(sidebar.exists, "Open FX Vault opened the window while locked")
         type(password, into: field)
@@ -23,15 +27,19 @@ final class MenuBarUITests: VaultUITestCase {
         _ = mainSidebar(app)
     }
 
-    /// Opens the menu bar item's menu and returns one of its items. SwiftUI may not hand the
-    /// identifier to the NSMenuItem, so the title (a Debug build's name ends in "Dev") also matches.
+    /// Clicks the menu bar item and returns its open menu.
     @MainActor
-    private func menuBarItem(_ identifier: String, title: String, in app: XCUIApplication) -> XCUIElement {
-        click(app.statusItems.firstMatch)
-        let item = app.menuItems.matching(NSPredicate(
-            format: "identifier == %@ OR title BEGINSWITH %@", identifier, title
-        )).firstMatch
-        XCTAssertTrue(item.waitForExistence(timeout: timeout), "The menu bar item has no \(title)")
-        return item
+    private func openMenuBarMenu(_ app: XCUIApplication) -> XCUIElement {
+        let item = app.statusItems.firstMatch
+        click(item)
+        let menu = item.menus.firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: timeout), "The menu bar item opened no menu")
+        return menu
+    }
+
+    /// The titles of `menu`'s items, separators left out.
+    @MainActor
+    private func itemTitles(of menu: XCUIElement) -> [String] {
+        menu.menuItems.allElementsBoundByIndex.map(\.title).filter { !$0.isEmpty }
     }
 }
