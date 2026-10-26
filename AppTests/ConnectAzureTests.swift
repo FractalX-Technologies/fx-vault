@@ -127,6 +127,48 @@ struct ConnectAzureTests {
         #expect(await TestFixtures.eventually { (try? destinations.destination(id)?.subscription) == Self.productionSubscription })
     }
 
+    /// The lookup runs after the Refresh's spinner and never turns into its error: a failed `az`
+    /// is tried again at the next Refresh, a vault no subscription lists is not, this session.
+    @Test func aFailedOrMissedLookupLeavesTheRefreshAlone() async throws {
+        let harness = try await Self.scripted()
+        harness.runner.replaceStub(argumentsPrefix: ["account", "list"], with: .success("[]"))
+        let destinations = harness.data.destinations
+        let id = try destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-example-prod", tenantID: "00000000-0000-0000-0000-0000000000b2"),
+            stage: nil
+        )
+        let model = DestinationDetailViewModel(
+            destination: try #require(try destinations.destination(id)),
+            dependencies: harness.dependencies(recorder: ActionRecorder())
+        ) {
+            try? destinations.destination(id)
+        }
+        let accountLists = { harness.runner.invocations.filter { $0.arguments.starts(with: ["account", "list"]) }.count }
+
+        model.refreshNow()
+        #expect(await TestFixtures.eventually { accountLists() == 1 })
+        #expect(await TestFixtures.eventually { !model.isRefreshing })
+        #expect(model.refresh != nil)
+        #expect(model.alert == nil, "a failed lookup is not the Refresh's error")
+        #expect(try destinations.destination(id)?.subscription == nil)
+
+        // Signed in, but the vault's tenant has no subscription listing it: a miss, remembered.
+        harness.runner.replaceStub(argumentsPrefix: ["account", "list"], with: .success(FakeAzureOutput.accountList([Self.production])))
+        model.refreshNow()
+        #expect(await TestFixtures.eventually { accountLists() == 2 })
+        #expect(await TestFixtures.eventually { !model.isRefreshing })
+        let lookup = harness.container.keyVaultSubscriptions
+        #expect(await TestFixtures.eventually {
+            (try? destinations.destination(id)).flatMap { $0 }.map { !lookup.needsLookup($0) } == true
+        })
+        model.refreshNow()
+        #expect(await TestFixtures.eventually { !model.isRefreshing && model.refresh != nil })
+        #expect(await !TestFixtures.eventually(timeout: .milliseconds(300)) { accountLists() > 2 }, "no third lookup")
+        #expect(model.alert == nil)
+        #expect(try destinations.destination(id)?.subscription == nil)
+    }
+
     @Test func skipImportsGitHubOnlyAndNothingCheckedOpensTheVault() async throws {
         let harness = try await Self.scripted()
         let connect = harness.app.makeConnectViewModel()

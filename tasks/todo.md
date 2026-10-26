@@ -2392,9 +2392,17 @@ Review D6c6 — Azure › subscription › vault (2026-10-26, automatic):
 - VaultStore: migration `v20_key_vault_subscriptions` (additive): `destinations.subscription_id` (36 chars) and `subscription_name` (1–255), both NULL for vaults saved before; `DestinationRecord.subscription` / `setSubscription(_:)`.
 - VaultCore: `KeyVaultSubscriptionModel` (id, name), `DestinationModel.subscription`, `Limits.maxSubscriptionNameLength`. VaultData: `createDestination(…, subscription:)`, `setSubscription(_:of:)` (trimmed; an empty or too long name is not saved; unchanged is a no-op); `AzureDiscoveryRepository.subscription(ofVaultNamed:tenantID:)` (name and tenant case-insensitive).
 - App: Connect Azure saves each vault's subscription (a reused vault gets it through `setSubscription`); a Key Vault's Refresh looks up a missing one (`FeatureDependencies.azureDiscovery`), a failure is logged without names and the vault stays under Azure; no `az` at launch. Sidebar: `SidebarAzureModel` (ungrouped vaults first, then subscriptions by name), `SidebarTreeRow` per subscription (`Theme.Symbols.subscription`, open by default and while searching, `toggle(subscription:)`), vaults at level 1; the search matches a subscription's name.
-- Departures: the toolbar path stays `Azure › vault` (no subscription step); no "Needs Key Vault Secrets User" subline on a subscription (the role is checked per vault at read).
+- Departures: no "Needs Key Vault Secrets User" subline under a vault row (the board's; a vault FX Vault can't read says so when it is read).
 - Tests written, not run yet: `MigrationTests` (identifiers, latest, `keyVaultsGainAnEmptySubscription`), `DestinationRepositoryTests.aKeyVaultKeepsItsSubscription`, `AzureDiscoveryRepositoryTests.aVaultIsFoundInTheSubscriptionThatListsIt`, `SidebarViewModelTests.keyVaultsGroupUnderTheirSubscription`, `ConnectAzureTests` (import saves it, a reused vault gets it, `refreshingAVaultSavesItsSubscription`).
 - Docs: README, CHANGELOG, DESIGN, ARCHITECTURE, DATABASE (v20), STRUCTURE, RELEASING step 61.
+- Review (1g, 2026-10-26):
+  - Selecting a vault (⌘K, a linked copy's place) opens its subscription.
+  - Test ids `AccessibilityID.Main.subscription(_:)` / `subscriptionToggle(_:)`.
+  - `KeyVaultSubscriptionLookup` (App/Managers, held by `AppContainer`): runs after the Refresh's spinner, in its own task; a miss is remembered for the session, a failed `az` is tried again at the next Refresh.
+  - The toolbar path is `Azure › subscription › vault` once the subscription is saved.
+  - Connect: a reused vault whose subscription can't be saved is still imported (logged without names).
+  - `SidebarAzureModel` / `SidebarSubscriptionModel` moved to `SidebarModels.swift`.
+  - Tests written, not run yet: `SidebarViewModelTests.keyVaultsGroupUnderTheirSubscription` (a selection opens it), `ConnectAzureTests.aFailedOrMissedLookupLeavesTheRefreshAlone`, `MainViewModelTests.aKeyVaultOfItsOwnOpensFromTheSidebar` (the path).
 
 Review B7b — organization Refresh and Changed on GitHub (2026-10-26, automatic):
 - VaultData: `OrganizationRepository+Drift`: `refresh(organizationID:)` (B12/B13 again through the importing account, finishes tombstones GitHub no longer has, records `last_refreshed_at`; `OrgRefreshModel` with findings, skipped names, `listedAt`) and `resolve(_:option:organizationID:)` (lists again, recomputes the findings in the write transaction, `.stale` when one moved). `OrgDriftModel` reuses `DriftKind` and `DriftResolutionOption`; errors reuse `DriftRepositoryError`. `OrgItemKey` and `OrganizationRepository.listItems` are now shared with import and `OrganizationSyncRepository` (its private copies removed); `OrganizationStore.updateOrganization`.

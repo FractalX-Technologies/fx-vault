@@ -460,14 +460,15 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
-    /// A Key Vault of its own (B8b3) selected under AZURE KEY VAULT.
+    /// A Key Vault of its own (B8b3) selected under Azure › its subscription (D6c6).
     @Test func mainStandaloneKeyVault() async throws {
         let (harness, main) = try await MainSnapshotFixture.make()
         let destinations = harness.data.destinations
         let id = try destinations.createDestination(
             repositoryID: nil,
             target: .azureKeyVault(vaultName: "kv-example-shared", tenantID: nil),
-            stage: nil
+            stage: nil,
+            subscription: KeyVaultSubscriptionModel(id: try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001")), name: "Example Production")
         )
         for name in ["DATABASE_URL", "STRIPE_SECRET_KEY"] {
             try destinations.addItem(destinationID: id, kind: .secret, name: name, value: SecretBytes(utf8: "FXV_SNAPSHOT_\(name)"))

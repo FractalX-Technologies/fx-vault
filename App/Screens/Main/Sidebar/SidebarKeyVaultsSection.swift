@@ -25,11 +25,11 @@ struct SidebarKeyVaultsSection: View {
                         title: group.subscription.name,
                         titleStyle: .sans,
                         isSelected: false,
+                        accessibilityID: AccessibilityID.Main.subscription(group.subscription.name),
+                        toggleAccessibilityID: AccessibilityID.Main.subscriptionToggle(group.subscription.name),
                         onToggle: { sidebar.toggle(subscription: group.id) }
                     ) {
                         sidebar.toggle(subscription: group.id)
-                    } trailing: {
-                        EmptyView()
                     }
                     if isExpanded {
                         ForEach(group.vaults) { vault in
@@ -81,42 +81,5 @@ struct KeyVaultContextMenu: View {
         Button(DestinationCopy.removeMenu, role: .destructive) {
             sidebar.pendingKeyVaultRemoval = vault
         }
-    }
-}
-
-/// The Azure section's rows (1.0 D6c6). Pure, so the grouping is tested without the window.
-struct SidebarAzureModel: Equatable {
-    /// Vaults without a saved subscription, directly under Azure, in the observed order.
-    let ungrouped: [DestinationModel]
-    /// One group per subscription, by name; each keeps its vaults in the observed order.
-    let subscriptions: [SidebarSubscriptionModel]
-
-    init(vaults: [DestinationModel]) {
-        ungrouped = vaults.filter { $0.subscription == nil }
-        var groups: [UUID: SidebarSubscriptionModel] = [:]
-        for vault in vaults {
-            guard let subscription = vault.subscription else { continue }
-            // Two vaults may have saved one subscription under different names: the last one wins.
-            let vaults = (groups[subscription.id]?.vaults ?? []) + [vault]
-            groups[subscription.id] = SidebarSubscriptionModel(subscription: subscription, vaults: vaults)
-        }
-        subscriptions = groups.values.sorted { lhs, rhs in
-            let byName = lhs.subscription.name.localizedStandardCompare(rhs.subscription.name)
-            return byName == .orderedSame ? lhs.id.uuidString < rhs.id.uuidString : byName == .orderedAscending
-        }
-    }
-
-    var isEmpty: Bool {
-        ungrouped.isEmpty && subscriptions.isEmpty
-    }
-}
-
-/// One Azure subscription and its vaults in the sidebar.
-struct SidebarSubscriptionModel: Identifiable, Equatable {
-    let subscription: KeyVaultSubscriptionModel
-    let vaults: [DestinationModel]
-
-    var id: UUID {
-        subscription.id
     }
 }
