@@ -7,7 +7,6 @@ import SwiftUI
 /// - `.info`: `card` fill with a brand dot (a Key Vault's Refresh result · Review).
 /// - `.warning`: `card` fill, hairline-strong border, warning symbol (a read-only scope, the
 ///   recovery-key notice; brand links stay above AA on `card`).
-/// - `.offline`: `surface2` fill, hairline-strong border, `wifi.slash` and the `OFFLINE` label.
 /// - `.danger`: `card` fill, danger symbol, for failures that need an action.
 ///
 /// ```swift
@@ -18,7 +17,6 @@ struct Banner: View {
     enum Tone: Sendable {
         case info
         case warning
-        case offline
         case danger
     }
 
@@ -41,12 +39,12 @@ struct Banner: View {
     let action: Action?
 
     /// - Parameters:
-    ///   - label: the mono uppercase label on the trailing side; `.offline` defaults to "Offline".
+    ///   - label: the mono uppercase label on the trailing side.
     ///   - systemImage: overrides the tone's symbol (`.info` shows a dot, not a symbol).
     init(_ tone: Tone, message: String, label: String? = nil, systemImage: String? = nil, action: Action? = nil) {
         self.tone = tone
         self.message = message
-        self.label = label ?? Self.defaultLabel(for: tone)
+        self.label = label
         self.systemImage = systemImage ?? Self.defaultSystemImage(for: tone)
         self.action = action
     }
@@ -62,7 +60,7 @@ struct Banner: View {
             if let label {
                 Text(label)
                     .fxTextStyle(.sectionLabel)
-                    .foregroundStyle(Self.labelColor(for: tone))
+                    .foregroundStyle(Theme.Colors.subtleText)
             }
             if let action {
                 Button(action.title, action: action.handler)
@@ -97,42 +95,31 @@ struct Banner: View {
 
     // MARK: Resolution (pure)
 
-    static func defaultLabel(for tone: Tone) -> String? {
-        tone == .offline ? String(localized: "banner.offline.label", defaultValue: "Offline") : nil
-    }
-
     static func defaultSystemImage(for tone: Tone) -> String? {
         switch tone {
         case .info: nil
         case .warning: "exclamationmark.triangle"
-        case .offline: "wifi.slash"
         case .danger: "exclamationmark.octagon"
         }
     }
 
-    static func background(for tone: Tone) -> Color {
-        switch tone {
-        case .info, .warning, .danger: Theme.Colors.card
-        case .offline: Theme.Colors.surface2
-        }
+    /// Every tone is on `card` since the `surface2` offline tone left (1.0 D6d: the main window's
+    /// connectivity notice is a ``MainStatusStrip``).
+    static func background(for _: Tone) -> Color {
+        Theme.Colors.card
     }
 
     static func border(for tone: Tone) -> Color {
         switch tone {
         case .info: Theme.Colors.hairline
-        case .warning, .offline, .danger: Theme.Colors.hairlineStrong
+        case .warning, .danger: Theme.Colors.hairlineStrong
         }
-    }
-
-    /// `subtleText` is under AA on `surface2`, so the label there is `mutedText`.
-    static func labelColor(for tone: Tone) -> Color {
-        background(for: tone) == Theme.Colors.surface2 ? Theme.Colors.mutedText : Theme.Colors.subtleText
     }
 
     static func symbolColor(for tone: Tone) -> Color {
         switch tone {
         case .info: Theme.Colors.brand
-        case .warning, .offline: Theme.Colors.warning
+        case .warning: Theme.Colors.warning
         case .danger: Theme.Colors.danger
         }
     }
@@ -140,7 +127,6 @@ struct Banner: View {
 
 #Preview {
     VStack(spacing: Theme.Spacing.medium) {
-        Banner(.offline, message: "No internet connection. Your changes stay in the vault; sync when you're back online.")
         Banner(.info, message: "2 changes on GitHub since your last sync", action: .init(title: "Review") {})
         Banner(.warning, message: "Touch ID needs your password after a restart.")
         Banner(.danger, message: "GitHub rejected the token.", action: .init(title: "Fix") {})

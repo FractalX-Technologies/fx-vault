@@ -77,7 +77,8 @@ enum DriftFixtures {
         itemID: ConfigItemID? = ConfigItemID(),
         updatedAt: Date? = nil,
         isConflict: Bool = false,
-        keepLocalUnavailable: DriftUnavailableReason? = nil
+        keepLocalUnavailable: DriftUnavailableReason? = nil,
+        acceptEffects: [DriftEffectModel] = []
     ) -> DriftModel {
         let scope = environment.map(RemoteScopeKeyModel.environment(named:)) ?? .repository
         let followUp: DriftFollowUpModel? = if kind == .secretModified, let itemID {
@@ -101,7 +102,7 @@ enum DriftFixtures {
             isConflict: isConflict,
             remoteUpdatedAt: updatedAt,
             keepLocal: keepLocal,
-            acceptGitHub: DriftResolutionModel(option: .acceptGitHub, effects: [], followUp: followUp)
+            acceptGitHub: DriftResolutionModel(option: .acceptGitHub, effects: acceptEffects, followUp: followUp)
         )
     }
 

@@ -197,8 +197,9 @@ struct DriftReviewViewModelTests {
 
         await model.choose(both.id, .acceptGitHub)
         #expect(fixture.service.resolutions.isEmpty)
-        #expect(model.confirmation == .replace(driftID: both.id, name: "API_TOKEN"))
+        #expect(model.confirmation == .replace(driftID: both.id, name: "API_TOKEN", isRenamed: false))
         #expect(model.confirmation?.title == "Replace your API_TOKEN with GitHub's?")
+        #expect(model.confirmation?.message == "Your value was never sent to GitHub. It is removed from FX Vault and cannot be recovered.")
         #expect(model.confirmation?.confirmTitle == "Use GitHub's")
 
         model.cancelConfirmation()
@@ -211,6 +212,32 @@ struct DriftReviewViewModelTests {
         await model.choose(empty.id, .acceptGitHub)
         #expect(model.confirmation == nil)
         #expect(fixture.service.resolutions.map(\.driftID) == [both.id, empty.id])
+    }
+
+    /// A synced item renamed to GitHub's new name: its value did reach GitHub under the old
+    /// name, which Accept detaches, so the question says that name is deleted there instead.
+    @Test func replacingARenamedItemSaysItsOldNameIsDeleted() async throws {
+        let itemID = ConfigItemID()
+        let renamed = DriftFixtures.item(
+            .remoteAdded,
+            .variable,
+            "BASE_URL",
+            itemID: itemID,
+            isConflict: true,
+            acceptEffects: [.detachSyncedIdentity(itemID: itemID)]
+        )
+        let fixture = try await Fixture(cached: DriftFixtures.report([renamed]))
+        let model = fixture.viewModel
+        await model.load()
+
+        await model.choose(renamed.id, .acceptGitHub)
+
+        #expect(model.confirmation == .replace(driftID: renamed.id, name: "BASE_URL", isRenamed: true))
+        #expect(
+            model.confirmation?.message
+                == "Your value is removed from FX Vault and cannot be recovered. Its old name is deleted on GitHub at the next Sync."
+        )
+        #expect(fixture.service.resolutions.isEmpty)
     }
 
     @Test func unavailableKeepLocalOffersFillValue() async throws {
