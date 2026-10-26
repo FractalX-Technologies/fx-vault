@@ -2279,6 +2279,16 @@ Review D6d-6 — Settings as the boards (2026-10-26, automatic):
 - Docs: DESIGN (Settings, snapshots), CHANGELOG, RELEASING steps 48 and 55, STRUCTURE.
 - Gates: build-for-testing OK, lint OK, strings ×2 (second run up to date), check-secrets OK in the worktree.
 
+Review D6d-5 and D6d-6 fixes (2026-10-26, automatic):
+- Counts copy: one helper, `PlaceCopy.counts(…, omitsZeroKinds:)`; `ProjectShareCopy.counts` calls it with `omitsZeroKinds: true`; `FolderCopy.counts` is gone (the folder destination and the sidebar's folders call `PlaceCopy`). Keys `projectShare.counts.*` and `folder.counts` left the catalog.
+- `DialogTag` is gone: `StatusChip.dialogTag(_:)` (18 pt, 6 pt corners, ink hairline, 11 pt medium) in Share-Pick, the tree and "Not verified"; the import preview's destinations show the stage in mono with that production tag (was a `.warning` chip). `StatusChip` and `StatusDotLabel` draw their dots with `StatusDot` (lane 1's `SidebarTreeRow` follows after the merge).
+- Share tree: `ShareScopeNodeModel.isProduction` is stored, true for a production environment and a destination at a production stage (as the file's production note counts them); a folder row carries its own counts (`ownCounts`); the lock reads its help to VoiceOver. `shareListContainer()` moved to `ShareImportPreviewView.swift`, its only user.
+- Dates: "FX Vault refuses it after 1 Nov, 14:02" and "Unlocked · created … · expires …" use `ProjectShareCopy.moment` (day and time, locale-aware; new keys).
+- Settings: "Show names" keys each name by kind and name (`SharingSettingsViewModel.NameModel`; a converted item can be both), secrets in ink and variables muted again; `SentShareSummaryModel.variableCount` beside `secretCount`; the clipboard row says it also clears when FX Vault locks; `GHStatusModel.inUse` / `needsInUseSentence` (unknown adds nothing: detection has not run, and `GHStatusRow` showed nothing for it either); `ResetVaultSheet`'s doc says it is internal for the snapshot; the reset snapshot types `testPassword` without its own expectation.
+- Tests (written, not run yet): `ProjectShareExportViewModelTests` `nothingCheckedCannotCreate`, `aDestinationAtAProductionStageIsTagged`, the folder row's counts, `subjectName == nil` with two repositories; `SharingImportViewModelTests` a damaged file is not `hasExpired`; `ProjectShareImportViewModelTests.aNameThatIsBothASecretAndAVariableIsListedTwice`; `AccountsSettingsViewModelTests.tokenMarksFollowTheState` (offline grey); `PreferencesViewModelTests.theInUseRowFollowsTheGHStatus`.
+- Docs: DESIGN (dialog forms, Share Securely, opening a file, Settings).
+- Gates: build-for-testing OK, lint OK, strings ×2 (second run up to date), check-secrets OK in the worktree.
+
 Review B6b3b — organizations in Sync (2026-10-25, automatic):
 - Badge: `AppViewModel.organizationPendingCounts` (observed from `OrganizationItemRepository`) joins the Sync count and the Dock badge.
 - Sync sheet: the toolbar Sync reviews each organization with pending changes (`OrganizationSyncRepository.review`), one summary group per organization (`OrgSyncPresentation`, "+ / ↑ / −" lines, blocked rows with Edit… for a missing value or empty list), its deletions in the deletion review, and runs them after GitHub and destinations; result rows per change. A repository's own Sync leaves organizations out.

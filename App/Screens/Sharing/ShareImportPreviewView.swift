@@ -349,3 +349,13 @@ struct ShareImportRepositoryButton: View {
         }
     }
 }
+
+extension View {
+    /// A native `List` of the import preview as a hairline container (16 pt corners, `card`
+    /// fill, no stripes), like the tables of the main window.
+    func shareListContainer() -> some View {
+        listStyle(.inset(alternatesRowBackgrounds: false))
+            .scrollContentBackground(.hidden)
+            .fxCardBackground(.container)
+    }
+}

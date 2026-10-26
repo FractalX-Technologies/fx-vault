@@ -38,13 +38,14 @@ nonisolated enum PlaceCopy {
 
     /// "6 secrets · 2 variables · 1 without value" (inflected). `variables` is nil for a place
     /// that holds secrets only (a Key Vault); "without value" shows only when some secret lacks one.
-    static func counts(secrets: Int, variables: Int?, withoutValue: Int = 0) -> String {
-        let secretsText = String(inflected: AttributedString(
+    /// `omitsZeroKinds` leaves out a kind with none, and nothing is "" (a share file's counts).
+    static func counts(secrets: Int, variables: Int?, withoutValue: Int = 0, omitsZeroKinds: Bool = false) -> String {
+        let secretsText = omitsZeroKinds && secrets == 0 ? nil : String(inflected: AttributedString(
             localized: "place.counts.secrets",
             defaultValue: "^[\(secrets) secret](inflect: true)"
         ))
-        let variablesText = variables.map { count in
-            String(inflected: AttributedString(
+        let variablesText = variables.flatMap { count in
+            omitsZeroKinds && count == 0 ? nil : String(inflected: AttributedString(
                 localized: "place.counts.variables",
                 defaultValue: "^[\(count) variable](inflect: true)"
             ))

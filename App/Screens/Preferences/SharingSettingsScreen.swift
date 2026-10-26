@@ -129,10 +129,10 @@ private struct SentShareRow: View {
                         .fxTextStyle(.formLabel)
                         .foregroundStyle(Theme.Colors.subtleText)
                     LazyVGrid(columns: Self.columns, alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                        ForEach(place.secretNames + place.variableNames, id: \.self) { name in
-                            Text(verbatim: name)
+                        ForEach(place.names) { name in
+                            Text(verbatim: name.name)
                                 .font(Theme.Typography.monoLabel)
-                                .foregroundStyle(Theme.Colors.mutedText)
+                                .foregroundStyle(name.kind == .secret ? Theme.Colors.ink : Theme.Colors.mutedText)
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                                 .textSelection(.enabled)

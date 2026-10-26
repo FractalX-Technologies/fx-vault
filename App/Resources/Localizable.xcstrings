@@ -12167,28 +12167,6 @@
         }
       }
     },
-    "projectShare.counts.secrets" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "^[%lld secret](inflect: true)"
-          }
-        }
-      }
-    },
-    "projectShare.counts.variables" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "^[%lld variable](inflect: true)"
-          }
-        }
-      }
-    },
     "projectShare.createFile" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12365,7 +12343,7 @@
         }
       }
     },
-    "projectShare.done.refusedAfter" : {
+    "projectShare.done.refusedAfter.time" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
@@ -12750,7 +12728,7 @@
         }
       }
     },
-    "projectShare.open.unlocked" : {
+    "projectShare.open.unlocked.time" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
@@ -13619,13 +13597,13 @@
         }
       }
     },
-    "settings.general.clipboard.detail" : {
+    "settings.general.clipboard.detail.lock" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Copied values stay on this Mac and are marked concealed; most clipboard managers skip them"
+            "value" : "Also clears when FX Vault locks. Copied values stay on this Mac and are marked concealed; most clipboard managers skip them"
           }
         }
       }

@@ -6,7 +6,8 @@ import VaultCore
 /// Tones follow the mockup: `.neutral` is a quiet `surface2` fill with muted text ("Synced");
 /// `.brand`, `.warning`, `.danger` and `.success` are outlined in their color ("Modified",
 /// "Will push", "Value missing"). A tag ("Private", "Admin") is a neutral outlined chip without a
-/// dot, 22 pt tall: `StatusChip.tag(_:)`.
+/// dot, 22 pt tall: `StatusChip.tag(_:)`; the 1.0 dialogs' tag (`production`) is
+/// `StatusChip.dialogTag(_:)`.
 ///
 /// ```swift
 /// StatusChip(status: row.status)
@@ -41,6 +42,10 @@ struct StatusChip: View {
     let palette: Palette
     let showsDot: Bool
     let height: CGFloat
+    /// Nil draws the pill; a radius draws a rounded tag (``dialogTag(_:)``).
+    private var cornerRadius: CGFloat?
+    private var font = Theme.Typography.caption
+    private var horizontalPadding = Theme.Layout.chipPaddingHorizontal
 
     init(title: String, tone: Tone = .neutral, fill: Fill? = nil, showsDot: Bool = true) {
         self.init(
@@ -83,33 +88,60 @@ struct StatusChip: View {
         )
     }
 
+    /// The 1.0 dialogs' tag beside a name (`production`, "Not verified"; board Share-Pick): 18 pt,
+    /// 6 pt corners, an ink hairline, 11 pt medium.
+    static func dialogTag(_ title: String) -> StatusChip {
+        var chip = StatusChip(
+            title: title,
+            palette: Palette(foreground: Theme.Colors.ink, background: nil, border: Theme.Colors.ink, dot: Theme.Colors.ink),
+            showsDot: false,
+            height: Theme.Layout.dialogTagHeight
+        )
+        chip.cornerRadius = Theme.Radius.token
+        chip.font = Theme.Typography.labelEmphasized
+        chip.horizontalPadding = Theme.Spacing.smallMinus
+        return chip
+    }
+
     var body: some View {
         HStack(spacing: Theme.Spacing.smallMinus) {
             if showsDot {
-                Circle()
-                    .fill(palette.dot)
-                    .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
-                    .accessibilityHidden(true)
+                StatusDot(color: palette.dot)
             }
             Text(title)
-                .font(Theme.Typography.caption)
+                .font(font)
                 .foregroundStyle(palette.foreground)
                 .lineLimit(1)
         }
-        .padding(.horizontal, Theme.Layout.chipPaddingHorizontal)
+        .padding(.horizontal, horizontalPadding)
         .frame(height: height)
         .background {
             if let background = palette.background {
-                Capsule.pill.fill(background)
+                shaped { $0.fill(background) } pill: { $0.fill(background) }
             }
         }
         .overlay {
             if let border = palette.border {
-                Capsule.pill.strokeBorder(border, lineWidth: Theme.Stroke.hairline)
+                shaped { $0.strokeBorder(border, lineWidth: Theme.Stroke.hairline) } pill: {
+                    $0.strokeBorder(border, lineWidth: Theme.Stroke.hairline)
+                }
             }
         }
         .fixedSize()
         .accessibilityElement(children: .combine)
+    }
+
+    /// Draws the chip's shape: the rounded tag when it has a radius, else the pill.
+    @ViewBuilder
+    private func shaped(
+        _ tag: (RoundedRectangle) -> some View,
+        pill: (Capsule) -> some View
+    ) -> some View {
+        if let cornerRadius {
+            tag(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        } else {
+            pill(Capsule.pill)
+        }
     }
 
     // MARK: Resolution (pure)
@@ -168,9 +200,7 @@ struct StatusDotLabel: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.smallMinus) {
-            Circle()
-                .fill(status.tint)
-                .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
+            StatusDot(color: status.tint)
             Text(status.localizedTitle)
                 .fxTextStyle(.caption)
                 .foregroundStyle(status == .synced ? Theme.Colors.mutedText : Theme.Colors.ink)
@@ -218,6 +248,7 @@ extension ConfigSyncStatus {
         ForEach(ConfigSyncStatus.allCases, id: \.self) { StatusChip(status: $0) }
         StatusChip.valueMissing
         StatusChip.tag("Private")
+        StatusChip.dialogTag("production")
     }
     .padding(Theme.Spacing.xxLarge)
     .background(Theme.Colors.card)

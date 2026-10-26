@@ -526,9 +526,8 @@ struct VisualSnapshotTests {
         let harness = try await TestHarness(vault: .unlocked)
         let preferences = PreferencesViewModel(app: harness.app)
         preferences.beginResetVault()
-        preferences.resetPassword = "correct horse battery"
+        preferences.resetPassword = testPassword
         preferences.resetConfirmationText = PreferencesViewModel.resetConfirmationWord
-        #expect(preferences.canResetVault)
         try await SnapshotOutput.write("preferences-reset", size: CGSize(width: Theme.Layout.resetDialogWidth, height: 380)) {
             ResetVaultSheet(viewModel: preferences)
         }

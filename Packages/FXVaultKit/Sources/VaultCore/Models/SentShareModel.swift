@@ -56,6 +56,11 @@ public struct SentShareSummaryModel: Codable, Sendable, Hashable {
     public var secretCount: Int {
         places.reduce(0) { $0 + $1.secretNames.count }
     }
+
+    /// Every variable name in the file.
+    public var variableCount: Int {
+        places.reduce(0) { $0 + $1.variableNames.count }
+    }
 }
 
 /// One place inside a sent file.

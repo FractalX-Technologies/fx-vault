@@ -173,6 +173,20 @@ struct ProjectShareSentLogTests {
         #expect(ProjectShareCopy.sentExpiry(entry.expiresAt, isExpired: false).hasPrefix("expires "))
     }
 
+    /// A converted item can carry one name as a secret and a variable: "Show names" keeps both,
+    /// keyed by kind, the secrets (to rotate) first.
+    @Test func aNameThatIsBothASecretAndAVariableIsListedTwice() {
+        let place = SharingSettingsViewModel.PlaceModel(
+            id: "0",
+            title: "owner-a/api · Repository level",
+            secretNames: ["API_KEY", "DB_URL"],
+            variableNames: ["API_KEY"]
+        )
+        #expect(place.names.map(\.kind) == [.secret, .secret, .variable])
+        #expect(place.names.map(\.name) == ["API_KEY", "DB_URL", "API_KEY"])
+        #expect(Set(place.names.map(\.id)).count == 3)
+    }
+
     /// A 0.9 teammates row still lists, its recipients unresolved (1.0 keeps no teammates).
     @Test func anExpiredZeroNineTeammatesEntryIsMarked() {
         let created = Date(timeIntervalSince1970: 1_800_000_000)

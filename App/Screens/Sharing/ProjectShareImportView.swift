@@ -131,7 +131,7 @@ private struct ProjectShareSenderView: View {
             Text(ProjectShareCopy.from(sender.displayName))
                 .fxTextStyle(.callout)
                 .foregroundStyle(Theme.Colors.ink)
-            DialogTag(title: ProjectShareCopy.unverified)
+            StatusChip.dialogTag(ProjectShareCopy.unverified)
                 .help(ProjectShareCopy.unverifiedHelp)
         }
         .accessibilityElement(children: .combine)
@@ -265,7 +265,12 @@ private struct ProjectShareDestinationPreview: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                     if let stage = destination.stage {
-                        StatusChip(title: stage, tone: StageRisk.isProduction(stage) ? .warning : .neutral)
+                        Text(verbatim: stage)
+                            .fxTextStyle(.monoMeta)
+                            .foregroundStyle(Theme.Colors.mutedText)
+                        if StageRisk.isProduction(stage) {
+                            StatusChip.dialogTag(ProjectShareCopy.productionTag)
+                        }
                     }
                     Spacer(minLength: 0)
                 }

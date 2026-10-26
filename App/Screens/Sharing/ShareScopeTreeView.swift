@@ -63,16 +63,6 @@ struct ShareScopeTreeView<Tree: ShareCheckTree>: View {
     }
 }
 
-extension View {
-    /// A native `List` inside the sharing sheets as a hairline container (16 pt corners, `card`
-    /// fill, no stripes), like the tables of the main window.
-    func shareListContainer() -> some View {
-        listStyle(.inset(alternatesRowBackgrounds: false))
-            .scrollContentBackground(.hidden)
-            .fxCardBackground(.container)
-    }
-}
-
 /// One row: the disclosure chevron, a tri-state checkbox, the symbol, the name (mono for names
 /// from GitHub and Azure), a production environment's tag and lock, then the counts.
 private struct ShareScopeTreeRow: View {
@@ -101,11 +91,12 @@ private struct ShareScopeTreeRow: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                     if node.isProduction {
-                        DialogTag(title: ProjectShareCopy.productionTag)
+                        StatusChip.dialogTag(ProjectShareCopy.productionTag)
                         Image(systemName: "lock")
                             .font(Theme.Typography.label)
                             .foregroundStyle(Theme.Colors.mutedText)
                             .help(ProjectShareCopy.productionTreeHelp)
+                            .accessibilityLabel(Text(ProjectShareCopy.productionTreeHelp))
                     }
                     notes
                 }

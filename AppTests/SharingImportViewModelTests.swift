@@ -65,6 +65,7 @@ struct SharingImportViewModelTests {
         await other.start()
         #expect(other.step == .failed)
         #expect(other.failure == SharingError.wrongPassphraseOrDamagedFile)
+        #expect(!other.hasExpired)
     }
 
     @Test func thePassphraseIsNormalized() async throws {
