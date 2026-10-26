@@ -73,14 +73,12 @@ final class CopyAllViewModel: LockObserving {
     /// Consumes the authorization: a failure needs a new check.
     private func copy() {
         guard let authorization = reauth.takeAuthorization() else { return }
-        var count = 0
         do {
-            let text = try dependencies.envFiles.copyAllText(of: place, authorization: authorization) { kind, items in
-                count += items
-                return CopyAllCopy.section(kind, count: items)
+            let copied = try dependencies.envFiles.copyAllText(of: place, authorization: authorization) { kind, count in
+                CopyAllCopy.section(kind, count: count)
             }
-            try dependencies.copy(text)
-            step = .done(count: count)
+            try dependencies.copy(copied.text)
+            step = .done(count: copied.valueCount)
         } catch {
             alert = error.presentation
         }

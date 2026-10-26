@@ -395,10 +395,12 @@ foreground color, so `.primary` text still turns white on selected rows.
   window's very top: the sidebar panel (`sidebarWidth` 264, its content `sidebarPanelTopInset`
   44 down), and beside it the toolbar panel (`toolbarPanelHeight` 44), the recovery-key strip
   and the detail. Dragging the gutter after the sidebar resizes it between `sidebarMinWidth`
-  (240) and `sidebarMaxWidth` (400), kept per Mac user (`PreferencesManager.sidebarWidth`); the
+  (240) and `sidebarMaxWidth` (400), saved per Mac user when the drag ends
+  (`PreferencesManager.sidebarWidth`); the
   screen's minimum is `mainScreenMinWidth` (the widest sidebar beside `detailMinWidth`) with the
   sidebar hidden too. The other gutters, the sidebar's top band and the toolbar panel's empty
-  part are title bar (`WindowDragArea`): they move the window, a double-click zooms or
+  part are title bar (`WindowDragArea`; not the path text, which keeps its tooltip, nor the
+  detail, which takes its own clicks): they move the window, a double-click zooms or
   minimizes as System Settings says, and they take the first click in an inactive window (the
   toolbar's buttons don't). While it shows, `MainWindowTitleBar` hides the title, makes the title bar
   transparent and gives the window an empty unified toolbar, so AppKit itself puts the traffic

@@ -108,6 +108,25 @@ struct MainWindowLayoutTests {
         withExtendedLifetime(harness) {}
     }
 
+    /// The gutters are window chrome; the detail's empty parts (around the home's empty state,
+    /// beside a title) take their own clicks, so they never drag or zoom the window.
+    @Test func onlyTheChromeMovesTheWindow() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let main = harness.app.makeMainViewModel()
+        let window = Self.window(showing: MainScreen(viewModel: main), contentSize: Self.defaultSize)
+        defer { window.close() }
+        #expect(await TestFixtures.eventually { window.toolbar?.identifier == MainWindowTitleBar.toolbarIdentifier })
+        window.layoutIfNeeded()
+        let inset = Theme.Layout.mainPanelInset
+
+        let gutter = CGPoint(x: inset / 2, y: Self.defaultSize.height / 2)
+        #expect(Self.view(at: gutter, in: window) is WindowDragArea.DragAreaView)
+        // The detail's bottom leading corner (window points start at the bottom).
+        let detailCorner = CGPoint(x: 2 * inset + Theme.Layout.sidebarWidth + Theme.Spacing.large, y: inset + Theme.Spacing.large)
+        #expect(!(Self.view(at: detailCorner, in: window) is WindowDragArea.DragAreaView))
+        withExtendedLifetime(harness) {}
+    }
+
     /// A double-click on the window's chrome does what System Settings › Desktop & Dock says.
     @Test func aDoubleClickOnTheChromeFollowsSystemSettings() {
         typealias Action = TitleBarDoubleClickAction
@@ -161,6 +180,12 @@ struct MainWindowLayoutTests {
         window.setContentSize(contentSize)
         window.layoutIfNeeded()
         return window
+    }
+
+    /// The view a click at `point` (window coordinates) lands on.
+    private static func view(at point: CGPoint, in window: NSWindow) -> NSView? {
+        guard let content = window.contentView, let frame = content.superview else { return nil }
+        return content.hitTest(frame.convert(point, from: nil))
     }
 
     /// A title bar button's frame from the window's top leading corner.

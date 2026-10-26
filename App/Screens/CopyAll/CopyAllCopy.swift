@@ -5,8 +5,9 @@ import VaultCore
 /// the ⋯ item, the confirmation sheet and the section titles of the copied text.
 nonisolated enum CopyAllCopy {
     static let title = String(localized: "copyAll.title", defaultValue: "Copy All")
-    // The fingerprint glyph says it visually; VoiceOver hears it (board aria-label).
-    static let accessibilityLabel = String(localized: "copyAll.accessibility", defaultValue: "Copy All, asks for Touch ID")
+    // The fingerprint glyph says it visually; VoiceOver hears it in the reauth sheet's own words,
+    // which hold with or without Touch ID.
+    static let accessibilityLabel = String(localized: "copyAll.accessibility", defaultValue: "Copy All, after you confirm it's you")
     static let help = String(
         localized: "copyAll.help",
         defaultValue: "Copy every value of this place as .env text. Asks for Touch ID or your master password."

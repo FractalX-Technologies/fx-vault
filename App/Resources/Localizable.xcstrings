@@ -1360,7 +1360,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Copy All, asks for Touch ID"
+            "value" : "Copy All, after you confirm it's you"
           }
         }
       }

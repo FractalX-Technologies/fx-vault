@@ -19,7 +19,7 @@ struct CopyAllButton: View {
 }
 
 /// Copy All in a place's ⋯ More (board Main2-Actions: after Export .env…). A menu item has no
-/// trailing lock glyph, so the help says it asks for Touch ID.
+/// trailing lock glyph, so the help says it asks for Touch ID or the master password.
 struct CopyAllMenuItem: View {
     let isEnabled: Bool
     let action: () -> Void

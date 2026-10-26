@@ -414,10 +414,23 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// The sidebar panel is hidden (View › Hide Sidebar, ⌃⌘S); Edit › Find brings it back.
     var isSidebarHidden = false
 
-    /// The sidebar panel's width, dragged on its trailing gutter (``PreferencesManager/sidebarWidth``).
+    /// The sidebar panel's width: the one being dragged on its trailing gutter, else the saved one
+    /// (``PreferencesManager/sidebarWidth``).
     var sidebarWidth: CGFloat {
-        get { CGFloat(app.container.preferences.sidebarWidth) }
-        set { app.container.preferences.sidebarWidth = Int(newValue.rounded()) }
+        draggedSidebarWidth ?? CGFloat(app.container.preferences.sidebarWidth)
+    }
+
+    /// The width while the gutter is dragged, within the tokens; saved once, when the drag ends.
+    private(set) var draggedSidebarWidth: CGFloat?
+
+    func dragSidebar(to width: CGFloat) {
+        draggedSidebarWidth = CGFloat(PreferencesManager.validatedSidebarWidth(Int(width.rounded())))
+    }
+
+    func endSidebarDrag() {
+        guard let width = draggedSidebarWidth else { return }
+        app.container.preferences.sidebarWidth = Int(width)
+        draggedSidebarWidth = nil
     }
 
     /// View › Hide Sidebar / Show Sidebar (⌃⌘S).
