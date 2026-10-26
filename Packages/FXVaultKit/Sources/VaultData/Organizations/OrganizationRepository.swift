@@ -187,7 +187,14 @@ public actor OrganizationRepository {
         schedulers: any GHSchedulerProviding
     ) async -> [String: [String]] {
         let selected = items.filter { $0.visibility == .selected }
-        guard !selected.isEmpty, let scheduler = try? await schedulers.scheduler(for: accountLogin) else { return [:] }
+        guard !selected.isEmpty else { return [:] }
+        let scheduler: GHCommandScheduler
+        do throws(GHError) {
+            scheduler = try await schedulers.scheduler(for: accountLogin)
+        } catch {
+            log.error("Organization items' repository lists were not read: \(error.logCode, privacy: .public)")
+            return [:]
+        }
         var lists: [String: [String]] = [:]
         for item in selected {
             do throws(GHError) {

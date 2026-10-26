@@ -72,6 +72,26 @@ struct OrganizationItemRepositoryTests {
         #expect(try await fixture.item("STRIPE_KEY").syncStatus == .modified)
     }
 
+    /// O1: reverting a deletion leaves the list GitHub returned, so the item still reaches its
+    /// repositories; only an access edit makes the list unknown again.
+    @Test func revertingADeletionKeepsGitHubsRepositoryList() async throws {
+        let base = try await OrganizationRepositoryTests.Fixture.make()
+        base.scriptLists()
+        base.scriptRepositories(.secret, of: "STRIPE_KEY", ["api", "web", "worker"])
+        let id = try await base.organizations.importOrganization(
+            login: OrganizationRepositoryTests.organization,
+            accountLogin: ConfigFixture.login
+        ).organization.id
+        let items = OrganizationItemRepository(session: base.harness.session, clock: base.harness.clock)
+        let stripe = try base.record("STRIPE_KEY", kind: .secret, of: id)
+
+        try items.deleteItems([stripe.id])
+        try items.revertItems([stripe.id])
+        let reverted = try base.record("STRIPE_KEY", kind: .secret, of: id)
+        #expect(reverted.syncStatus == .synced && reverted.selectedCount == 3)
+        #expect(try items.repositories(of: stripe.id) == ["api", "web", "worker"])
+    }
+
     /// B7a: a repository inherits the live items whose visibility reaches it. The fixture's
     /// NPM_TOKEN reaches all, FXV_FIXTURE_URL private repositories; STRIPE_KEY and REGION are
     /// `selected` with lists FX Vault never read, so they reach nothing.

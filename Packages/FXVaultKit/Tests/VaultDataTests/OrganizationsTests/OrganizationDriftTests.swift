@@ -89,15 +89,19 @@ struct OrganizationDriftTests {
         let base = try await OrganizationRepositoryTests.Fixture.make()
         base.scriptLists()
         base.scriptRepositories(.secret, of: "STRIPE_KEY", ["api", "web", "worker"])
-        base.scriptRepositories(.variable, of: "REGION", ["worker", "docs"])
+        // Three names under GitHub's count of 2, so Keep Local shows which one it keeps.
+        base.scriptRepositories(.variable, of: "REGION", ["worker", "docs", "api"])
         let id = try await base.organizations.importOrganization(
             login: OrganizationRepositoryTests.organization,
             accountLogin: ConfigFixture.login
         ).organization.id
-        func scriptGitHub(stripe: [String], region: [String]?) {
+        func scriptGitHub(stripe: [String]?, region: [String]?) {
             base.scriptLists()
-            base.scriptRepositories(.secret, of: "STRIPE_KEY", stripe)
+            if let stripe { base.scriptRepositories(.secret, of: "STRIPE_KEY", stripe) }
             if let region { base.scriptRepositories(.variable, of: "REGION", region) }
+        }
+        func readsList(_ path: String, since start: Int) -> Bool {
+            base.provider.runner.invocations.dropFirst(start).contains { $0.arguments.last?.contains(path) == true }
         }
 
         scriptGitHub(stripe: ["api", "web", "docs"], region: ["worker", "site"])
@@ -106,14 +110,19 @@ struct OrganizationDriftTests {
         #expect(refresh.findings.map(\.kind) == [.variableModified, .secretModified])
 
         // Accept GitHub takes its list; Keep Local keeps the vault's, pending for the next Sync.
-        scriptGitHub(stripe: ["api", "web", "docs"], region: ["worker", "site"])
+        // A resolution reads only the lists of the findings it resolves.
+        scriptGitHub(stripe: ["api", "web", "docs"], region: nil)
+        var start = base.provider.runner.invocations.count
         try await base.organizations.resolve(refresh.findings.filter { $0.name == "STRIPE_KEY" }, option: .acceptGitHub, organizationID: id)
         #expect(try base.repositories("STRIPE_KEY", kind: .secret, of: id) == ["api", "docs", "web"])
-        scriptGitHub(stripe: ["api", "web", "docs"], region: ["worker", "site"])
+        #expect(!readsList("/variables/REGION/repositories", since: start))
+        scriptGitHub(stripe: nil, region: ["worker", "site"])
+        start = base.provider.runner.invocations.count
         try await base.organizations.resolve(refresh.findings.filter { $0.name == "REGION" }, option: .keepLocal, organizationID: id)
+        #expect(!readsList("/secrets/STRIPE_KEY/repositories", since: start))
         let region = try base.record("REGION", kind: .variable, of: id)
-        #expect(region.repositoriesEdited && region.selectedCount == 2 && region.syncStatus == .modified)
-        #expect(try base.repositories("REGION", kind: .variable, of: id) == ["docs", "worker"])
+        #expect(region.repositoriesEdited && region.selectedCount == 3 && region.syncStatus == .modified)
+        #expect(try base.repositories("REGION", kind: .variable, of: id) == ["api", "docs", "worker"])
 
         // A list that could not be read is filled in by the next Refresh, without a finding.
         let unknown = try await OrganizationItemRepositoryTests.Fixture.make()
@@ -122,6 +131,33 @@ struct OrganizationDriftTests {
         unknown.base.scriptRepositories(.secret, of: "STRIPE_KEY", ["api", "web", "worker"])
         #expect(try await unknown.base.organizations.refresh(organizationID: unknown.organization.id).findings.isEmpty)
         #expect(try unknown.base.repositories("STRIPE_KEY", kind: .secret, of: unknown.organization.id) == ["api", "web", "worker"])
+    }
+
+    /// Keep Local over GitHub moving a `selected` item to `all`: the list the vault read becomes
+    /// the edited list, so the next Sync sends it instead of reading one GitHub no longer has.
+    @Test func keepLocalOverGitHubDroppingSelectedKeepsTheVaultsList() async throws {
+        let base = try await OrganizationRepositoryTests.Fixture.make()
+        base.scriptLists()
+        base.scriptRepositories(.variable, of: "REGION", ["worker", "docs"])
+        let id = try await base.organizations.importOrganization(
+            login: OrganizationRepositoryTests.organization,
+            accountLogin: ConfigFixture.login
+        ).organization.id
+        let movedToAll = OrganizationRepositoryTests.Fixture.variables.replacingOccurrences(
+            of: #""numSelectedRepos":2,"updatedAt":"2026-08-02T10:00:00Z","value":"eu-west","visibility":"selected""#,
+            with: #""numSelectedRepos":0,"updatedAt":"2026-08-02T10:00:00Z","value":"eu-west","visibility":"all""#
+        )
+
+        base.scriptLists(variables: movedToAll)
+        let refresh = try await base.organizations.refresh(organizationID: id)
+        let finding = try #require(refresh.findings.first { $0.name == "REGION" })
+        base.scriptLists(variables: movedToAll)
+        try await base.organizations.resolve([finding], option: .keepLocal, organizationID: id)
+
+        let region = try base.record("REGION", kind: .variable, of: id)
+        #expect(region.visibility == .selected && region.syncedVisibility == .all)
+        #expect(region.repositoriesEdited && region.selectedCount == 2 && region.syncStatus == .modified)
+        #expect(try base.repositories("REGION", kind: .variable, of: id) == ["docs", "worker"])
     }
 
     @Test func acceptGitHubTakesItsItemAndKeepLocalLeavesTheVaultsPending() async throws {

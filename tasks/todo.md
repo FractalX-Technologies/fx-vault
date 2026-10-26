@@ -2588,4 +2588,10 @@ Review O1 — selected organization items' repository lists (2026-10-26, automat
 - Assumption: a failed B14/B15 read only logs its code and leaves the list unknown (as before O1), so Import and Refresh never fail on it.
 - Behaviour change: `writesSendTheCompleteAccessThenTheListingConfirmsThem` expected an empty stored list after Sync; it now expects the sent names. A `selected` item now shows as inherited on the repositories GitHub lists, without an edit.
 - Tests: `importReadsGitHubsListOfEachSelectedItem`, `refreshComparesRepositoryNamesAndFillsAnUnknownList`, and the Sync expectation above; seen failing before the change (3 tests, 10 issues).
+- Review fixes:
+  - Revert clears the list only after an access edit, so reverting a deletion keeps GitHub's list (`revertingADeletionKeepsGitHubsRepositoryList`).
+  - Keep Local over GitHub moving a `selected` item to another visibility keeps the vault's list as an edited one (`keepLocalOverGitHubDroppingSelectedKeepsTheVaultsList`).
+  - `resolve` reads B14/B15 only for the findings it resolves.
+  - Each was seen failing (3 tests, 4 issues). Also: a scheduler failure is logged, and Keep Local's count is pinned to the stored list.
 - Docs: ARCHITECTURE, DATABASE, CHANGELOG.
+- Gates: org suites 24/24, the full package suite, the app org suites (15), lint, check-secrets. The live read-only `LiveSourcesTests` passed against the real org.
