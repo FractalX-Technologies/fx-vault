@@ -1,9 +1,10 @@
 import AppKit
 import SwiftUI
 
-/// Shows the quick vault (``QuickVaultViewModel``) in the island's panel, placed as the island is
-/// (``NotchPanelPresenter``) and kept out of screen capture. Losing the focus closes it, except while
-/// Touch ID or the password check runs; closing gives the focus back to the app it opened over.
+/// Shows the quick vault (``QuickVaultViewModel``) in the island's panel (``NotchPanelPresenter``),
+/// out of screen capture. Opening activates FX Vault, so an open main window comes forward behind
+/// it until it closes. Losing the focus closes it, except while Touch ID or the password check
+/// runs; esc and the shortcut give the focus back to the app it opened over.
 @MainActor
 final class QuickVaultController {
     private let model: QuickVaultViewModel
@@ -21,8 +22,8 @@ final class QuickVaultController {
         model.onShow = { [weak self] in
             self?.show()
         }
-        model.onHide = { [weak self] returnFocusTo in
-            self?.hide(returningFocusTo: returnFocusTo)
+        model.onHide = { [weak self] returnsFocus, app in
+            self?.hide(returningFocus: returnsFocus, to: app)
         }
         model.onSizeChange = { [weak self] size in
             self?.presenter.place(size: size)
@@ -35,6 +36,7 @@ final class QuickVaultController {
             NSApplication.didBecomeActiveNotification,
             NSApplication.didResignActiveNotification,
             NSWindow.didResignKeyNotification,
+            NSWindow.didBecomeKeyNotification,
         ]
         for name in names {
             observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
@@ -64,6 +66,11 @@ final class QuickVaultController {
         case NSWindow.didResignKeyNotification:
             guard let panel = presenter.panel, sender == ObjectIdentifier(panel) else { return }
             model.didLoseFocus()
+        case NSWindow.didBecomeKeyNotification:
+            // Another FX Vault window took the keys, also when the panel had none (after a check).
+            guard !showsAfterActivation, let panel = presenter.panel, panel.isVisible,
+                  sender != ObjectIdentifier(panel) else { return }
+            model.didLoseFocus()
         default:
             model.didLoseFocus()
         }
@@ -86,12 +93,25 @@ final class QuickVaultController {
     }
 
     /// Each open draws a new panel, so a value revealed last time never flashes in the old frame.
-    private func hide(returningFocusTo processID: pid_t?) {
+    private func hide(returningFocus: Bool, to app: (any QuickVaultReturnApp)?) {
         showsAfterActivation = false
         presenter.hide(dropping: true)
+        guard returningFocus, NSApp.isActive else { return }
         // That app comes forward even with FX Vault's main window open, which stays behind it.
-        guard let processID, let app = NSRunningApplication(processIdentifier: processID) else { return }
-        NSApp.yieldActivation(to: app)
-        _ = app.activate(from: .current, options: [])
+        if let app, app.takeKeysFromFXVault() {
+            return
+        }
+        // No app to go back to (opened from FX Vault, or it quit): without a window, step back.
+        let showsWindow = NSApp.windows.contains { $0.isVisible && $0.canBecomeMain }
+        if !showsWindow {
+            NSApp.hide(nil)
+        }
+    }
+}
+
+extension NSRunningApplication: QuickVaultReturnApp {
+    func takeKeysFromFXVault() -> Bool {
+        NSApp.yieldActivation(to: self)
+        return activate(from: .current, options: [])
     }
 }

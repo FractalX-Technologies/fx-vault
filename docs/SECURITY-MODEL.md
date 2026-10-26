@@ -295,9 +295,13 @@ check, copies at once. The value goes through `ClipboardManager` only (§7).
   for the unlock first, with no name, value or count. It closes when FX Vault resigns active or
   the panel loses the key, and on lock, dropping the places it read, the open place's lines and
   revealed values; a focus loss during the Touch ID or password check closes it when the check
-  ends without the focus back, so it never comes back with the place open. Esc and the shortcut
-  hand the keys to the app it opened over, never to FX Vault's main window (on a shared screen
-  that window would show the vault). Each open draws a new panel, so no earlier value flashes.
+  ends without the focus back, so it never comes back with the place open, and so does another
+  FX Vault window taking the keys. Opening it activates FX Vault: a main window already open
+  comes in front of the other app for as long as the quick vault is open, its names visible (its
+  values stay masked, and out of capture while one shows); a non-activating panel is a follow-up.
+  On close, esc and the shortcut hand the keys back to the app it opened over (skipped if that
+  app quit; with no FX Vault window either, FX Vault hides), so the main window goes behind it
+  again. Each open draws a new panel, so no earlier value flashes.
   Recent places are ids in memory only, never written. Revealed values follow N1's rules (not
   selectable, re-masked), and a Copy after the value masked again asks again.
 - **File secrets (1.0):** Choose… or a drop on a place reads one regular file (at most twice the

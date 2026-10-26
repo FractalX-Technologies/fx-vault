@@ -1149,12 +1149,15 @@ AppTests).
   secret not revealed asks `ReauthPurpose.copyValue`, then `copyValue(of:)` /
   `copyOrganizationValue(of:)` through `ClipboardManager`). `QuickVaultController` shows it in
   a `NotchIslandPanel` through `NotchPanelPresenter` (the island's too; a new panel each open)
-  and closes it on resign-active or the panel's resign-key. During a check that waits: the
-  check's end closes it when FX Vault is inactive or another of its windows has the keys
-  (`hasFocus`). `QuickVaultFocusReturn` keeps the app in front when the shortcut or the menu
-  asked (`noteRequest()`, also across the locked island); esc or the shortcut activates it again,
-  even with the main window open. `isQuickVaultShortcutRefused` is `register`'s false, for
-  Settings. ⌘K and the quick vault share `JumpResultsList` and `KeyHintLabel`.
+  and closes it on resign-active, the panel's resign-key or another window's become-key. During
+  a check that waits: the check's end closes it when FX Vault is inactive or another of its
+  windows has the keys (`hasFocus`). `QuickVaultFocusReturn` keeps the app in front when the
+  shortcut or the menu asked (`noteRequest()`, also across the locked island); esc or the
+  shortcut activates it again (`QuickVaultReturnApp`; not once it quit, then FX Vault hides when
+  no window of it shows), even with the main window open. Opening activates FX Vault, so an open
+  main window is in front while the quick vault is (a non-activating panel is a follow-up).
+  `isQuickVaultShortcutRefused` is `register`'s false, for Settings. ⌘K and the quick vault
+  share `JumpResultsList` and `KeyHintLabel`.
   `RepoPendingCountModel.pendingScopes` marks a scope waiting for Sync.
 - `Onboarding`, then `Connect` (`AppViewModel.isFirstConnectPending`, in memory only: a lock
   or relaunch goes to the main window; steps GitHub then Azure, `ConnectAzureModel` lists
