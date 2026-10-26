@@ -19,6 +19,7 @@ struct ResetVaultSection: View {
                 }
                 .fxButtonStyle(.outlineDestructive, size: .compact)
                 .disabled(!viewModel.canStartReset)
+                .accessibilityIdentifier(AccessibilityID.Settings.resetVault)
             }
         }
     }

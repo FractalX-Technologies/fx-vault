@@ -31,6 +31,11 @@ enum AccessibilityID {
         static func run(_ command: String) -> String {
             "setup.run.\(command)"
         }
+
+        /// A `CommandRow`'s command text.
+        static func command(_ command: String) -> String {
+            "setup.command.\(command)"
+        }
     }
 
     /// The notch island that unlocks a locked vault (1.0).
@@ -156,11 +161,14 @@ enum AccessibilityID {
 
         static let addAccount = "accounts.addAccount"
         static let addAccountCheckAgain = "accounts.addAccount.checkAgain"
+        static let unmappedCheckAgain = "accounts.unmapped.checkAgain"
     }
 
-    /// Settings › General.
+    /// Settings › General, Security and Advanced.
     enum Settings {
         static let quickVaultShortcut = "settings.quickVaultShortcut"
+        static let resetVault = "settings.resetVault"
+        static let revealVaultFolder = "settings.revealVaultFolder"
     }
 
     /// Share Project and its "Confirm it's you" step.

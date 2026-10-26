@@ -12,7 +12,8 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Open at login.** Settings › General adds FX Vault to the Login Items, and says when System
   Settings has to allow it first.
 - **Copy Diagnostics in Settings.** Settings › Advanced copies the gh report (versions, paths
-  and checks; no tokens, secret names or values) and names the Terminal command for the full one.
+  and checks; variable names and account names only) and gives the Terminal command for the full
+  one, with Copy.
 - **Add Account….** Settings › Accounts gives gh's login command for another GitHub account,
   with Check Again.
 

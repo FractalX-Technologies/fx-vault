@@ -19,10 +19,12 @@ import VaultData
 nonisolated enum DiagnoseCommand {
     static let argument = "--diagnose"
 
-    /// The command Settings › Advanced shows: this app's own executable, quoted for the shell.
+    /// The command Settings › Advanced shows: this app's own executable in single quotes, so a
+    /// pasted `$` or backtick in the path is never expanded (a `'` becomes `'\''`).
     static func terminalCommand(executablePath: String? = Bundle.main.executablePath) -> String {
         let path = executablePath ?? "/Applications/FX Vault.app/Contents/MacOS/FXVault"
-        return "\"\(path)\" \(argument)"
+        let quoted = "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
+        return "\(quoted) \(argument)"
     }
 
     /// True when `--diagnose` follows the executable path.

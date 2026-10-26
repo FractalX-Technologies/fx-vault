@@ -341,6 +341,10 @@ struct PreferencesViewModelTests {
         #expect(text.hasPrefix(GHDiagnosticsTextRenderer.title))
         #expect(text.contains(GHDiagnosticsTextRenderer.privacyLine))
         #expect(!harness.container.clipboard.ownsContents, "a plain copy, not a concealed value")
+
+        viewModel.copyCommand(DiagnoseCommand.terminalCommand())
+        #expect(harness.pasteboardString == DiagnoseCommand.terminalCommand())
+        #expect(!harness.container.clipboard.ownsContents)
     }
 
     /// Settings › Advanced, In use: a ready gh shows its version and path; checking and unknown

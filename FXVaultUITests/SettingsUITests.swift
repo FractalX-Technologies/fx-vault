@@ -26,7 +26,8 @@ final class SettingsUITests: VaultUITestCase {
         click(app.toolbars.buttons["Accounts"])
 
         click(app.buttons[AccessibilityID.Accounts.addAccount])
-        XCTAssertTrue(app.staticTexts["gh auth login"].waitForExistence(timeout: timeout))
+        let command = app.staticTexts[AccessibilityID.Setup.command("gh auth login")].firstMatch
+        XCTAssertTrue(command.waitForExistence(timeout: timeout))
         let checkAgain = app.buttons[AccessibilityID.Accounts.addAccountCheckAgain]
         click(checkAgain)
         XCTAssertTrue(checkAgain.waitForNonExistence(timeout: timeout), "Check Again closes the popover")
@@ -38,11 +39,12 @@ final class SettingsUITests: VaultUITestCase {
         try onboard(app)
         app.typeKey(",", modifierFlags: .command)
         click(app.toolbars.buttons["Security"])
-        XCTAssertTrue(app.buttons["Reset Vault…"].waitForExistence(timeout: timeout))
+        let reset = app.buttons[AccessibilityID.Settings.resetVault]
+        XCTAssertTrue(reset.waitForExistence(timeout: timeout))
 
         click(app.toolbars.buttons["Advanced"])
-        XCTAssertTrue(app.buttons["Reveal in Finder"].waitForExistence(timeout: timeout))
-        XCTAssertFalse(app.buttons["Reset Vault…"].exists, "Reset vault left Advanced")
+        XCTAssertTrue(app.buttons[AccessibilityID.Settings.revealVaultFolder].waitForExistence(timeout: timeout))
+        XCTAssertFalse(reset.exists, "Reset vault left Advanced")
     }
 
     /// A button reports its accessibility value as its value on macOS, sometimes in its label.

@@ -17,6 +17,7 @@ struct CommandRow: View {
                 .textSelection(.enabled)
                 .lineLimit(1)
                 .truncationMode(.middle)
+                .accessibilityIdentifier(AccessibilityID.Setup.command(command))
             Spacer(minLength: Theme.Spacing.small)
             if let onRun {
                 Button(String(localized: "command.run", defaultValue: "Run"), action: onRun)

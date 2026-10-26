@@ -109,30 +109,46 @@ private struct AddAccountButton: View {
                 Text(String(localized: "settings.accounts.add.title", defaultValue: "Add a GitHub account"))
                     .fxTextStyle(.bodyEmphasized)
                     .foregroundStyle(Theme.Colors.ink)
-                Text(String(
-                    localized: "settings.accounts.add.message",
-                    defaultValue: "Log it in to the GitHub CLI in Terminal, then choose Check Again. gh keeps your other accounts."
-                ))
-                .fxTextStyle(.formNote)
-                .foregroundStyle(Theme.Colors.subtleText)
-                .fixedSize(horizontal: false, vertical: true)
-                CommandRow(command: GHSetupViewModel.loginCommand) { viewModel.copy($0) }
-                HStack {
-                    Spacer(minLength: 0)
-                    Button(String(localized: "settings.accounts.unmapped.checkAgain", defaultValue: "Check Again")) {
-                        Task {
-                            await viewModel.checkAgain()
-                            isPresented = false
-                        }
-                    }
-                    .fxButtonStyle(.outline, size: .compact)
-                    .disabled(viewModel.isLoading)
-                    .accessibilityIdentifier(AccessibilityID.Accounts.addAccountCheckAgain)
+                GHLoginSteps(
+                    message: String(
+                        localized: "settings.accounts.add.message",
+                        defaultValue: "Log it in to the GitHub CLI in Terminal, then choose Check Again. gh keeps your other accounts."
+                    ),
+                    checkAgainID: AccessibilityID.Accounts.addAccountCheckAgain,
+                    viewModel: viewModel
+                ) {
+                    isPresented = false
                 }
             }
             .padding(Theme.Spacing.medium)
             .frame(width: Theme.Layout.settingsPopoverWidth)
         }
+    }
+}
+
+/// A gh login to run in Terminal: why, `gh auth login` with Copy, then Check Again, which reads
+/// the accounts again and calls `afterCheck` (Add Account…, SSH aliases without an account).
+private struct GHLoginSteps: View {
+    let message: String
+    let checkAgainID: String
+    let viewModel: AccountsSettingsViewModel
+    var afterCheck: () -> Void = {}
+
+    var body: some View {
+        Text(message)
+            .fxTextStyle(.formNote)
+            .foregroundStyle(Theme.Colors.subtleText)
+            .fixedSize(horizontal: false, vertical: true)
+        CommandRow(command: GHSetupViewModel.loginCommand) { viewModel.copy($0) }
+        Button(String(localized: "settings.accounts.unmapped.checkAgain", defaultValue: "Check Again")) {
+            Task {
+                await viewModel.checkAgain()
+                afterCheck()
+            }
+        }
+        .fxButtonStyle(.outline, size: .compact)
+        .disabled(viewModel.isLoading)
+        .accessibilityIdentifier(checkAgainID)
     }
 }
 
@@ -187,19 +203,14 @@ private struct UnmappedAliasesSection: View {
                 HairlineDivider()
             }
             PreferencesBlock {
-                Text(String(
-                    localized: "settings.accounts.unmapped.message",
-                    defaultValue: "No account here uses these aliases. If one is the key of a GitHub account that is not logged in to the GitHub CLI, log that account in, choose Check Again, then pick the alias in that account's SSH alias menu. gh keeps your other accounts; the new one becomes gh's active account in Terminal (gh auth switch changes it back)."
-                ))
-                .fxTextStyle(.formNote)
-                .foregroundStyle(Theme.Colors.subtleText)
-                .fixedSize(horizontal: false, vertical: true)
-                CommandRow(command: GHSetupViewModel.loginCommand) { viewModel.copy($0) }
-                Button(String(localized: "settings.accounts.unmapped.checkAgain", defaultValue: "Check Again")) {
-                    Task { await viewModel.checkAgain() }
-                }
-                .fxButtonStyle(.outline, size: .compact)
-                .disabled(viewModel.isLoading)
+                GHLoginSteps(
+                    message: String(
+                        localized: "settings.accounts.unmapped.message",
+                        defaultValue: "No account here uses these aliases. If one is the key of a GitHub account that is not logged in to the GitHub CLI, log that account in, choose Check Again, then pick the alias in that account's SSH alias menu. gh keeps your other accounts; the new one becomes gh's active account in Terminal (gh auth switch changes it back)."
+                    ),
+                    checkAgainID: AccessibilityID.Accounts.unmappedCheckAgain,
+                    viewModel: viewModel
+                )
             }
         }
     }
