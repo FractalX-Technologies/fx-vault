@@ -48,6 +48,18 @@ struct DriftConfirmationModel: Identifiable, Hashable {
     var id: String {
         driftID + option.rawValue
     }
+
+    /// "Accept GitHub" of a name added on both sides: GitHub's item replaces the vault's own value
+    /// (a repository's review and an organization's, 1.0 B7b).
+    static func replace(driftID: String, name: String) -> Self {
+        Self(
+            driftID: driftID,
+            option: .acceptGitHub,
+            title: DriftCopy.replaceTitle(name),
+            message: DriftCopy.replaceMessage,
+            confirmTitle: DriftCopy.replaceConfirm
+        )
+    }
 }
 
 /// The drift review of one repository (§7.7, D27, M5): each finding with Keep Local / Accept
@@ -172,7 +184,7 @@ final class DriftReviewViewModel {
     /// What each choice does; a name added on both sides (a conflicting add) keeps or replaces
     /// the vault's item, so it has its own texts.
     static func explanation(_ drift: DriftModel, _ option: DriftResolutionOption) -> String {
-        if drift.kind == .remoteAdded, drift.isConflict, case .item(let item) = drift.subject {
+        if let item = bothAddedItem(drift) {
             return option == .keepLocal
                 ? DriftCopy.bothAddedKeepLocal
                 : DriftCopy.bothAddedAcceptGitHub(item.kind, fillsValue: true)
@@ -180,9 +192,20 @@ final class DriftReviewViewModel {
         return option == .keepLocal ? DriftCopy.keepLocalExplanation(drift.kind) : DriftCopy.acceptGitHubExplanation(drift.kind)
     }
 
-    /// "Accept GitHub" of a remote deletion removes the local row and its value.
+    /// The item of a name GitHub added while the vault added (or renamed to) it too.
+    private static func bothAddedItem(_ drift: DriftModel) -> DriftItemSubjectModel? {
+        guard drift.kind == .remoteAdded, drift.isConflict, case .item(let item) = drift.subject else { return nil }
+        return item
+    }
+
+    /// "Accept GitHub" that loses the vault's data asks first: a remote deletion removes the
+    /// local row and its value; GitHub's item over one added here replaces the vault's value, as
+    /// an organization's review asks. Keep Local of that add needs the value (`DriftDetector`),
+    /// so only `.valueMissing` there means there is nothing to lose.
     static func needsConfirmation(_ drift: DriftModel, _ option: DriftResolutionOption) -> Bool {
-        option == .acceptGitHub && (drift.kind == .remoteDeleted || drift.kind == .environmentDeleted)
+        guard option == .acceptGitHub else { return false }
+        if drift.kind == .remoteDeleted || drift.kind == .environmentDeleted { return true }
+        return bothAddedItem(drift) != nil && drift.resolution(.keepLocal).unavailableReason != .valueMissing
     }
 
     /// Scopes and names that were not compared, and pushes that were never confirmed.
@@ -204,22 +227,23 @@ final class DriftReviewViewModel {
 
     // MARK: - Resolution
 
-    /// A choice button: asks first when the choice deletes local data.
+    /// A choice button: asks first when the choice loses local data.
     func choose(_ driftID: String, _ option: DriftResolutionOption) async {
         guard isOnline, let drift = drift(driftID), drift.resolution(option).isAvailable, !resolving.contains(driftID) else { return }
         if Self.needsConfirmation(drift, option) {
-            confirmation = DriftConfirmationModel(
-                driftID: driftID,
-                option: option,
-                title: DriftCopy.confirmationTitle(drift),
-                message: DriftCopy.confirmationMessage(drift)
-            )
+            confirmation = Self.bothAddedItem(drift).map { DriftConfirmationModel.replace(driftID: driftID, name: $0.name) }
+                ?? DriftConfirmationModel(
+                    driftID: driftID,
+                    option: option,
+                    title: DriftCopy.confirmationTitle(drift),
+                    message: DriftCopy.confirmationMessage(drift)
+                )
             return
         }
         await resolve(drift, option)
     }
 
-    /// The confirmed deletion.
+    /// The confirmed choice.
     func confirm() async {
         guard isOnline, let confirmation, let drift = drift(confirmation.driftID) else { return }
         self.confirmation = nil
