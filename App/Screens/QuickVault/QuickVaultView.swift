@@ -106,19 +106,11 @@ private struct QuickVaultPlaceView: View {
             Group {
                 if let request = place.reveal.request, let reauth = place.reveal.reauth {
                     QuickVaultConfirmView(
-                        title: NotesCopy.reveal(request.name),
-                        message: NotesCopy.revealMessage,
+                        title: request.title,
+                        message: request.message,
                         flow: place.reveal,
                         reauth: reauth,
                         onCancel: place.reveal.cancel
-                    )
-                } else if let request = place.copyRequest, let reauth = place.copyReauth {
-                    QuickVaultConfirmView(
-                        title: NotesCopy.copy(request.name),
-                        message: NotesCopy.copyMessage,
-                        flow: place,
-                        reauth: reauth,
-                        onCancel: place.cancelCopy
                     )
                 } else {
                     lines
@@ -130,12 +122,6 @@ private struct QuickVaultPlaceView: View {
                 Label(QuickVaultCopy.footer, systemImage: "eye.slash")
                     .fxTextStyle(.caption)
                     .foregroundStyle(Theme.Colors.mutedText)
-            }
-        }
-        // A Reveal asked over a Copy's confirmation replaces it: one question at a time.
-        .onChange(of: place.reveal.request) { _, request in
-            if request != nil {
-                place.cancelCopy()
             }
         }
     }

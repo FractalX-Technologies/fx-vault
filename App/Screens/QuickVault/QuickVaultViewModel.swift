@@ -297,7 +297,7 @@ final class QuickVaultViewModel: LockObserving {
         } else {
             dependencies.copyValue(of:)
         }
-        return QuickVaultPlaceViewModel(place: place, source: source, dependencies: dependencies, copyValue: copy)
+        return QuickVaultPlaceViewModel(place: place, source: source, copyValue: copy)
     }
 
     /// The quick vault opens no sheet and selects nothing; it follows locks like the window.

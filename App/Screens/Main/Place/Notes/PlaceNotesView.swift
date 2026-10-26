@@ -307,11 +307,11 @@ private struct NotesRevealDialog: View {
     let reveal: NotesRevealModel
 
     var body: some View {
-        DialogSheet(title: request.action == .copy ? NotesCopy.copy(request.name) : NotesCopy.reveal(request.name)) {
+        DialogSheet(title: request.title) {
             if let reauth = reveal.reauth {
                 ReauthView(
                     model: reauth,
-                    message: request.action == .copy ? NotesCopy.copyMessage : NotesCopy.revealMessage,
+                    message: request.message,
                     onTouchID: { await reveal.authenticateWithTouchID() },
                     onPassword: { await reveal.authenticateWithPassword() }
                 )

@@ -21,6 +21,15 @@ struct NotesRevealRequestModel: Identifiable, Hashable {
     let id: ConfigItemID
     let name: String
     var action = Action.reveal
+
+    /// The confirmation's title and message, the same in the main window and the quick vault.
+    var title: String {
+        action == .copy ? NotesCopy.copy(name) : NotesCopy.reveal(name)
+    }
+
+    var message: String {
+        action == .copy ? NotesCopy.copyMessage : NotesCopy.revealMessage
+    }
 }
 
 /// Reveal in a place's notes (1.0 B9; board Place-Reveal) and in its table (1.0 T1): "Confirm
