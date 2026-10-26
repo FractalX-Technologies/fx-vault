@@ -14,7 +14,7 @@ struct TouchIDSensorView: View {
         if let session {
             SensorRepresentable(context: session.context, controlSize: controlSize)
                 // A new check needs a new view: the pairing is made once, at creation.
-                .id(ObjectIdentifier(session))
+                .id(session.id)
                 .fixedSize()
                 .accessibilityHidden(true)
         } else {

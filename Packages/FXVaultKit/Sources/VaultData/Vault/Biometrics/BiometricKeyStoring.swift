@@ -28,6 +28,9 @@ public protocol BiometricKeyStoring: Sendable {
     /// lock invalidates it). Never prompts.
     func makeSession(prompt: BiometricPrompt) -> BiometricSession
 
+    /// True until a lock or a newer prompt invalidates the session's context.
+    func isCurrent(_ session: BiometricSession) -> Bool
+
     /// Runs the session's check: inside the `LAAuthenticationView` showing its context, else as
     /// the system prompt. Throws as ``load(account:prompt:)`` does (cancel, fallback, lockout).
     func evaluate(_ session: BiometricSession) async throws(VaultError)

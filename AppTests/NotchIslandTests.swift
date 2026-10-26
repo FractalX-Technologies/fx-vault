@@ -116,6 +116,41 @@ struct NotchIslandTests {
         }
     }
 
+    /// A sleep or screen lock while the island is up: Phase A only, yet one touch still unlocks
+    /// and the next activation may prompt again.
+    @Test func aSecondLockStillUnlocksWithOneTouch() async throws {
+        let harness = try await Self.lockedWithTouchID()
+        let lock = harness.app.lockScreen
+        lock.prepareIslandTouchID()
+        harness.biometrics.failNextEvaluation(with: .cancelled)
+        await lock.autoPromptIfAllowed(isAppActive: true, isSceneActive: true)
+        #expect(lock.hasAutoPrompted)
+
+        harness.app.lock(trigger: .manual)
+        #expect(!lock.hasAutoPrompted)
+        let evaluations = harness.biometrics.evaluationCount
+        await lock.unlockWithTouchID()
+        #expect(harness.app.phase == .unlocked)
+        #expect(harness.biometrics.evaluationCount == evaluations + 1)
+    }
+
+    /// The island showing again replaces a check a lock invalidated meanwhile, and keeps a live one.
+    @Test func theIslandReplacesAStaleCheckWhenItShows() async throws {
+        let harness = try await Self.lockedWithTouchID()
+        let lock = harness.app.lockScreen
+        lock.prepareIslandTouchID()
+        let first = try #require(lock.islandTouchID)
+        lock.prepareIslandTouchID()
+        #expect(lock.islandTouchID === first)
+
+        harness.vaultManager.lock()
+        lock.prepareIslandTouchID()
+        #expect(lock.islandTouchID !== first)
+        await lock.unlockWithTouchID()
+        #expect(harness.app.phase == .unlocked)
+        #expect(harness.biometrics.evaluationCount == 1)
+    }
+
     @Test func withoutTheIslandTouchIDUsesTheSystemPrompt() async throws {
         let harness = try await Self.lockedWithTouchID()
         let lock = harness.app.lockScreen

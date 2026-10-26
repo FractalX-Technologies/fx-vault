@@ -88,6 +88,10 @@ public struct KeychainManager: BiometricKeyStoring {
         BiometricSession(context: authManager.promptContext(for: prompt))
     }
 
+    public func isCurrent(_ session: BiometricSession) -> Bool {
+        authManager.isCurrent(session.context)
+    }
+
     public func evaluate(_ session: BiometricSession) async throws(VaultError) {
         try await authManager.evaluate(session.context)
     }

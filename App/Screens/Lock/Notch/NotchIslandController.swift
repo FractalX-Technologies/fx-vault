@@ -88,7 +88,7 @@ final class NotchIslandController {
         guard isPresented, NSApp.isActive else { return }
         model.notchHeight = NotchPanelPresenter.screenNotchHeight
         // Before the view shows and before the auto-prompt evaluates it.
-        if model.lock.islandTouchID == nil { model.lock.prepareIslandTouchID() }
+        model.lock.prepareIslandTouchID()
         presenter.show()
         Task {
             await model.lock.autoPromptIfAllowed(isAppActive: NSApp.isActive, isSceneActive: true)

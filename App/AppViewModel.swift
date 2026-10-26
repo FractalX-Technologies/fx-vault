@@ -169,7 +169,10 @@ final class AppViewModel {
         if leftPhase {
             phase = .locked
         }
-        guard leftPhase || state == .unlocked else { return }
+        guard leftPhase || state == .unlocked else {
+            lockScreen.vaultDidLockAgain()
+            return
+        }
         lockCount += 1
         lastLockTrigger = trigger
         // Phase B

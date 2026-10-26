@@ -8,6 +8,8 @@ public final class BiometricSession: @unchecked Sendable {
     // `LAContext` is thread-safe; the SDK doesn't mark it `Sendable`.
     /// For `LAAuthenticationView(context:)` only: ``BiometricKeyStoring`` evaluates it.
     public let context: LAContext
+    /// The view's identity: a new check needs a new `LAAuthenticationView`.
+    public let id = UUID()
 
     init(context: LAContext) {
         self.context = context
