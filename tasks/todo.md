@@ -1726,7 +1726,7 @@ Delivery already uses `NSSavePanel` or `NSSharingServicePicker` (`ShareFileDeliv
   - RELEASING: new manual rows on two Macs (remote pairing, a teammate file sent through a chat, a passphrase file, an expired file, the From Files review).
 
   **Verify:** `scripts/ci-local.sh` passes (XcodeGen 2.45.4 first on PATH); gitleaks on a scratch copy of the files to commit finds nothing. *Done: SHARING-PROTOCOL §1.4, §2.1, §5.1, §6.1, §8, §10.9; SECURITY-MODEL §10.5 and §11; DATABASE `v14_project_shares`; ARCHITECTURE decisions 118–137; DESIGN, STRUCTURE, README, CHANGELOG 0.9.0, RELEASING #45–48; strings synced (second run: no change); `.gitleaks.toml` lists the two new KAT fixtures. `scripts/ci-local.sh` passes: VaultCore 95, VaultCrypto 93, VaultStore 85, GitHubKit 186, EnvTools 145, SharingKit 367, SyncEngine 192, VaultData 428, DestinationKit 134, App 661 in 61 suites, lint and check-secrets. gitleaks on the 1,069 files to commit finds nothing (a UUID test constant named `linkToken` is joined at runtime).*
-- [ ] **Release 0.9.0**, only after Bryan's permission for the commit, tag, push and publish.
+- [x] **Release 0.9.0** (authorized by Bryan on 2026-10-17: "haz commit and push a prod y publica versión"). **Verify:** CI green; brew shows 0.9.0; spctl Notarized Developer ID; `--diagnose` passes. *Done: full `ci-local.sh` before the commit (XcodeGen 2.45.4 first on PATH); commit f2e9a31, CI green (macos-26, xcode-27, gitleaks), tag v0.9.0, the release ran the full ci-local again, app and DMG signed, notarized and stapled, published (sha256 c798b1ef…), cask 866e396 (pushed with gh's credential helper for that push only), `brew upgrade` here shows 0.9.0 (29), spctl Notarized Developer ID, `brew audit --cask --online` passes. Signed `--diagnose`: version 0.9.0 (29), access group QYKC498D5D.io.fractalx.fxvault, gh ready; the keychain probe failed with errSecInteractionNotAllowed because this Mac's screen was locked during the run (`CGSSessionScreenIsLocked`; no keychain, diagnostics or entitlement change since 0.8.0): rerun `--diagnose` unlocked. Pending: RELEASING #45–48 on two Macs.*
 
 **Review (2026-10-17).**
 - **Built:** project share files end to end:
@@ -1935,15 +1935,16 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [ ] B4b In-app Approve (D1's device code) through `gh auth refresh`: needs a check against a real gh login first (non-TTY behaviour, the browser step); reserved for Bryan's real account.
 - [x] B5 Organization list commands and store (additive migration); read-only organization node. Split: B5a GitHubKit listings [x]; B5b store and import [x]; B5c the read-only node and its e2e [x].
 - [x] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list. Split: B6a GitHubKit commands [x]; B6b1 local changes in the store (`v19`) [x]; B6b2 organization Sync in VaultData (review, run, confirm) [x]; B6b3a the editable organization detail and access picker [x]; B6b3b the Sync group and the badge [x].
-- [ ] D6 Design pass after B6b3b: compare every screen with the D1–D5 boards (snapshots side by side) and fix the gaps in small slices; list what waits for later features (notes, drift, settings, menu bar, quick vault, Share Securely).
+- [x] D6 Design pass after B6b3b: compare every screen with the D1–D5 boards (snapshots side by side) and fix the gaps in small slices; list what waits for later features (notes, drift, settings, menu bar, quick vault, Share Securely).
   - Gaps found 2026-10-25 (boards rendered with Playwright from `docs/design/mockup/v1/`, app from the snapshot suites): D6a tables as Main2/Org-Visibility (33 pt rows, sentence-case 12 pt headers, Status as a dot and text, not a chip); D6b Sync sheet as Sync-Review (one compact card per place with an icon and kind, `+ ~ − !` lines with a short detail, fixes inline, footer "N changes in M places · deletions · blocked" beside Cancel / Sync N Changes); D6c window chrome as Main2 (sidebar and toolbar as floating glass panels, breadcrumb from the provider, ⌘K search field and the Sync pill in the toolbar, sidebar search ⌘F, GitHub / Azure / Folders sections; the detail header "kind · parent · counts" with Copy All, Notes | Table and ⋯).
   - Waiting for their features: Notes view and file secrets (B9), inherited/shadowed names and drift marks (B7), Settings tabs, menu bar, quick vault (B10).
+  - Done 2026-10-26 (night run, `tasks/night.md`): D6a–D6d, every existing screen as its board; merged with PR #1.
 - [x] B7 Organization drift and verify; inherited and shadowed names on a repository. Split: B7a inherited and shadowed names [x]; B7b organization Refresh and Changed on GitHub [x].
 - [ ] Follow-up (after 1.0, B7a review): read each `selected` organization item's repository list (B14/B15) at import and Refresh, so an imported selected item shows as Inherited where it reaches and Refresh sees a list change directly.
 - [x] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source. Split: B8a discovery, package layer [x]; B8b1 Key Vaults of their own in the store (`v18`) [x]; B8b2 Connect Azure (requirements, subscriptions and vaults, import), the vaults in the first-import summary [x]; B8b3 the sidebar Azure node opening the vault (and Show in Sidebar for a linked copy there) [x]; B8c1 Sync of the vaults of their own (review, run, badge) [x]; B8c2a Remove from FX Vault for a vault of its own [x]; B8c2b dropped (2026-10-25, Bryan: 0.9's repository Key Vaults stay under their repositories; no migration).
-- [ ] B9 Notes view read-only, then editable with the change review.
-- [ ] B10 File secrets: picker and drop, base64 option, limits (GitHub 48 KiB, Key Vault 25 KiB), trailing-newline notice.
-- [ ] B11 New start, onboarding, notch unlock island (`LAAuthenticationView`), allowlisted setup-command runner and main window from D1–D2; macOS 26 deployment target.
+- [ ] B9 Notes view read-only, then editable with the change review: slices N1, N2 below.
+- [ ] B10 File secrets: picker and drop, base64 option, limits (GitHub 48 KiB, Key Vault 25 KiB), trailing-newline notice: slice F1 below.
+- [x] B11 (B11a–e; B11e2 is a waiver until a signed build) New start, onboarding, notch unlock island (`LAAuthenticationView`), allowlisted setup-command runner and main window from D1–D2; macOS 26 deployment target.
 
 Review D1 — start and onboarding (2026-10-25):
 - Boards: 16 in `docs/design/mockup/v1/` (Welcome light/dark, recovery reset, password, recovery key, confirm, Touch ID, GitHub setup, connect GitHub, connect Azure, first import, fill values, 4 notch states).
@@ -2534,3 +2535,49 @@ Review B11f — allowlisted setup commands (2026-10-25, automatic):
 - Tests: GitHubKit `SetupCommandTests` (allowlist, environment, trusted brew argv, untrusted brew never runs — seen failing with the trust check removed, redacted last lines); app `SetupCommandRunTests` (run and output, failure message, no Run without Homebrew); snapshot `gh-setup-run` checked. No UI test: the UI-testing gh is always ready, so the setup screen never shows there (unit and snapshot cover it).
 - Docs: API.md H, README (first launch), CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE.
 - Gates: XcodeGen drift OK; `swift test` 1,345 green; `xcodebuild test` 584 app tests green; Release build OK; no UI-testing code; UI tests ×2 green (7 tests); lint OK; check-secrets OK in the worktree; strings synced.
+
+## FX Vault 1.0: remaining slices (2026-10-26)
+
+Bryan (2026-10-26): "Mergea todo sí y realiza todo lo pendiente que puedas hacer tú". PR #1 merged (rebase).
+- Mode: automatic.
+- Real gh/az: reads, plus throwaway writes (`FXVAULT_CHECK_*`).
+- Each slice: its own branch off `main` → PR → CI green → merge.
+- 1.0 release: not now, it stays Bryan's.
+
+Settled for every slice:
+- Testing: lean, per memory `lighter-slice-testing`. One test seen failing, the slice's own suites, lint, strings and check-secrets. e2e once per batch, run by the orchestrator.
+- Look: the boards in `docs/design/mockup/v1/` win; renders in the orchestrator's scratchpad `boards-rest/`.
+- Docs: DESIGN, CHANGELOG under `## Unreleased (1.0)`, README when behaviour changes.
+
+Lane A (one builder):
+- [ ] N1 Notes read-only. Notes | Table switch, Notes the default, on every place with values.
+  - `# Secrets · N` with masked tokens and `no value`; `# Variables` in plain text.
+  - `# From <org> · N · read only` with visibility, `overrides <org>`, and the change marks (○ changed on GitHub, ● pending).
+  - Reveal behind reauth, remask after `Timeouts.revealRemask`.
+  - Boards: Main2-Repository, Place-Reveal, KV-Place.
+- [ ] N2 Notes editing. `NSTextView` (TextKit 2) where each value is one whole token, Set value…, pasting `KEY=value` lines, inline errors and Key Vault name rules, then Review ⌘S → pending changes.
+  - Boards: Place-Edit, Place-SecretValue, Place-Paste, Place-Errors, KV-NameRules, Place-Review.
+- [ ] Q1 Quick vault from the notch (⌃⌥V, a registered hot key): search, recent places, a place's lines with Copy, Reveal with Touch ID, Expand ⌘↩, closes on focus loss, hidden from capture.
+  - Boards: QuickVault-Search, -Place, -Locked, -Expanding.
+
+Lane B (one builder):
+- [ ] S1 Settings as the boards: General (quick vault shortcut, open at login, lock when the screen locks, sound effects), Security, Accounts, Advanced.
+  - Boards: Settings-*.
+- [ ] M1 Menu bar item: Quick Vault, Open FX Vault, Review Sync · N pending…, Lock Now, Settings…, Quit.
+  - Board: MenuBar.
+- [ ] F1 File secrets: picker and drop, exact text or Base64, per-source limits, the trailing-newline notice, and the Notes file line `APNS_KEY = file AuthKey.p8 · 6 lines`.
+  - Boards: Place-FileDrop, Place-FileSheet.
+
+Orchestrator:
+- [ ] G1 Real gh/az checks.
+  - Reads: org lists, `az account list`, `az keyvault list`.
+  - Throwaway writes: `gh secret set --org --visibility=selected --repos=<bare name>`, and org `variable set` twice (upsert).
+  - A Key Vault secret set, then delete, through the live tests (`FXV_LIVE_E2E`, `FXV_LIVE_DEST_KEYVAULT`).
+  - A failing check gets its fix with a test.
+- [ ] O1 Follow-up of the B7a review: read each `selected` organization item's repositories (B14/B15) at import and Refresh.
+- [ ] Not doable here:
+  - B4b (`gh auth refresh` changes Bryan's real gh token);
+  - B11e2 Touch ID inside the island (signed build and sensor);
+  - the RELEASING manual rows;
+  - tag and release.
+
