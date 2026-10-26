@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// New Repository (⌘N, §10 `CreateRepoScreen`): owner, name with a live availability check,
-/// description, visibility, README, `.gitignore` and license templates, staged environments,
-/// secrets and variables, and Clone to my Mac. Create stages everything in the vault; the next
-/// Sync creates it on GitHub.
+/// New Repository (⌘N, §10 `CreateRepoScreen`, board NewRepo): owner, name with a live
+/// availability check, description, visibility, README, `.gitignore` and license templates,
+/// staged environments, secrets and variables, and Clone to my Mac. Stage Repository keeps
+/// everything in the vault; the next Sync creates it on GitHub.
 ///
 /// UI feature contract entry view (ARCHITECTURE.md): presented by `MainScreen` for
 /// `MainSheet.createRepository`. The init signature is fixed.
@@ -64,12 +64,12 @@ struct CreateRepoScreen: View {
                     Button(String(localized: "common.close", defaultValue: "Close")) {
                         dismiss()
                     }
-                    .fxButtonStyle(.secondary, size: .large)
+                    .fxButtonStyle(.outline, size: .dialog)
                     .keyboardShortcut(.cancelAction)
                     Button(String(localized: "createRepo.retry", defaultValue: "Try Again")) {
                         Task { await viewModel.load() }
                     }
-                    .fxButtonStyle(.primary, size: .large)
+                    .fxButtonStyle(.primary, size: .dialog)
                     .keyboardShortcut(.defaultAction)
                 }
             }
@@ -99,7 +99,7 @@ struct CreateRepoScreen: View {
             Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
                 dismiss()
             }
-            .fxButtonStyle(.secondary, size: .large)
+            .fxButtonStyle(.outline, size: .dialog)
             .keyboardShortcut(.cancelAction)
         }
         .frame(maxWidth: .infinity)

@@ -236,7 +236,9 @@ SecureField(passwordLabel, text: $password).focused($focused).fxInputField(.pill
 
 44 pt, `card` fill, `hairlineStrong` border; 2 pt `brand` border while focused, `danger` while
 `isInvalid`. `.pill` pairs with a pill button on one line (lock, search); `.rounded` (12 pt) is
-for forms. Names and keys use `isMonospaced: true`.
+for forms; `.dialog` is the 1.0 dialog forms' field (boards NewRepo, NewEnvironment): 28 pt, 7 pt
+`Radius.field` corners, mono at 12 pt, a 1 pt `brand` (ink) border while focused. Names and keys
+use `isMonospaced: true`.
 
 ### `SegmentedPill`
 
@@ -251,6 +253,8 @@ SegmentedPill(selection: $viewModel.kind, segments: [
 peer views of the same content and for the Secret / Variable, visibility and branch-rule type
 choices of the editor sheets; settings keep native pickers. `.disabled` dims the whole control to
 40%; `Segment(isEnabled: false)` dims and locks one segment (Convert or Move to the same kind).
+`size: .small` is the 1.0 dialogs' control (boards NewRepo, NewEnvironment, Share-Pick): 22 pt
+segments with 6 pt `Radius.token` corners on an 8 pt track, 12 pt ink text, medium when chosen.
 
 ### `Banner`
 
@@ -333,6 +337,17 @@ subtitle 4 pt below, cards as `.fxDialogCard()` (`card` glass, hairline, 10 pt `
 10 pt apart), what a confirmation is about in `.fxDialogListBox()` (`surface`, 10 pt corners,
 24 pt rows), and the footer row without a rule (`ConfigSheetFooter(inset: SheetFooterInset.dialog)`)
 with `.dialog` buttons.
+
+Dialog forms (`DialogForm.swift`, boards NewRepo, NewEnvironment): `DialogSheet(title:footerNote:)`
+puts `SheetHeader.dialog` and the rows 14 pt apart over the footer. `DialogFormRow(label)` is the
+150 pt column of 11 pt medium muted labels (`.formLabel`, 7 pt down), 14 pt from the controls;
+`DialogFormNote` the 11 pt note 5 pt under them (`.formNote`; muted, warning or danger).
+Controls: `.fxInputField(.dialog)`, `DialogPopUp` (a menu with a check beside the chosen option,
+drawn by `DialogFieldButtonStyle`: 28 pt, `card`, `hairlineStrong`, chevrons; `display` can
+differ from the option title, ".gitignore: None"), `.dialogFieldChrome()` for a value without a
+menu (the SSH alias), `DialogSwitch` (a mini switch before its title), `DialogTokenChip`
+(`production ×`, 22 pt, 6 pt corners, mono) and the dashed `DialogAddChip`, laid out in a
+`FlowLayout`. Small actions in a row are `.compact` buttons (Add Rule, Try Again).
 
 `PassphraseView` (App/Components) is the generated passphrase card shared by onboarding and
 Share as File; `EmptyStateView` uses the light symbol, a `.headline` ink title and a `mutedText`
@@ -541,6 +556,25 @@ foreground color, so `.primary` text still turns white on selected rows.
   changes" in `.leadEmphasized`, "in A, B and C" in subtle `.caption`, up to three pending lines
   (a 7 pt ink ring, the change and its reason), warnings, and Done as the compact ink pill.
   Anything else keeps the full result (sections, fixes, clones).
+- New Repository (D6d, board NewRepo, 620 × 640, `CreateRepoFormView`): a dialog form. Create
+  with (only with two accounts) and Owner as mono pop-ups (the menu says Personal or
+  Organization), Name (mono field; "Probably available · GitHub confirms it at Sync", taken or
+  invalid in `danger`, Use name… as a `.compact` button), Description, Visibility as a `.small`
+  segmented control, Contents (Add README switch, ".gitignore: None" and "License: None"
+  pop-ups side by side), Environments to create as chips (the name opens its editor, the help
+  says its branch policy) with a dashed Add, Secrets and variables (not on the board: the staged
+  items in the grey list box, "secret · production" and the mask, Add Secret… / Add Variable…
+  ask for the scope once there are environments), Clone (switch, the account's SSH alias and
+  the folder as two boxes, "Optional · SSH alias and folder"). Footer: "Created on GitHub at the
+  next Sync.", Cancel, Stage Repository. After it, the staged dialog (title "billing-service is
+  ready to sync", a card with the counts, Sync Now… and Done).
+- New Environment (D6d, board NewEnvironment, 580 pt): "New Environment in api-service", Name
+  (mono field, "Not used in api-service yet"), Deployment branches (`BranchPolicyEditorView`:
+  the radio group; for selected branches and tags a grey box with each rule as a chip
+  `release/* · branch ×`, the type as a `.small` segmented control, the pattern field and Add
+  Rule, the fnmatch note), the plan note with Learn more. Footer as New Repository with Stage
+  Environment. Environment Settings and the New Repository's nested environment editor show the
+  same editor under their "Deployment Branches and Tags" label.
 - New Folder… and Rename… (v0.7.0) are a `ConfigEditorSheet` with one rounded name field and its
   live note (invalid, or "Another folder already has this name").
 - A received folder (v0.7.0), in Import Share: a `container` card with
@@ -740,6 +774,8 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 | Lock | `DotGridBackground`, `BrandMark`, `.display`, `FXTextField(.pill)`, `FXButtonStyle` |
 | Onboarding | `StepCounter`, `.largeTitle`, `.lead`, `FXTextField(.rounded)`, `SectionLabel` |
 | Sync-Review | `.fxSheetBackground`, `SyncSummaryCardView` (`.fxCardBackground(.container)`), `.leadEmphasized`, `.placeName`, `.monoMeta`, `FXLinkButtonStyle`, `FXButtonStyle(.large)` |
+| Sync-Delete, Sync-Progress, Sync-Done | `SyncDeletionsView` (`.fxDialogListBox`), `SyncRunView` (`SyncProgressPresentation`), `SyncDoneView`, `FXButtonStyle(.dialog)` |
+| NewRepo, NewEnvironment | `CreateRepoFormView`, `NewEnvironmentScreen`, `BranchPolicyEditorView`, `DialogForm.swift` |
 | FX Vault Destinations 3: Key Vault destination | `DestinationDetailScreen`, the RUNTIME rows of `ScopeListView` |
 | FX Vault Destinations 4: multi-provider Sync review | `DestinationSyncPresentation` sections in the Sync sheet |
 

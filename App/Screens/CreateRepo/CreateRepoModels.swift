@@ -182,6 +182,25 @@ nonisolated enum CreateRepoText {
         }
     }
 
+    static var none: String {
+        String(localized: "createRepo.none", defaultValue: "None")
+    }
+
+    /// ".gitignore: None", ".gitignore: Swift".
+    static func gitignoreDisplay(_ template: String?) -> String {
+        String(localized: "createRepo.gitignore.display", defaultValue: ".gitignore: \(template ?? none)")
+    }
+
+    /// "License: None", "License: MIT License".
+    static func licenseDisplay(_ name: String?) -> String {
+        String(localized: "createRepo.license.display", defaultValue: "License: \(name ?? none)")
+    }
+
+    /// The SSH alias box when the account has none mapped.
+    static var noAlias: String {
+        String(localized: "createRepo.clone.noAliasValue", defaultValue: "No SSH alias")
+    }
+
     /// "Environments: 2 · Secrets: 3 · Variables: 1" (counts only).
     static func contentSummary(environments: Int, secrets: Int, variables: Int) -> String {
         String(

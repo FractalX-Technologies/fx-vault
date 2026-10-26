@@ -6,6 +6,9 @@ enum FXInputShape: Sendable {
     case pill
     /// 12 pt corners. Forms and stacked fields (onboarding, editors, settings).
     case rounded
+    /// 28 pt with 7 pt corners, mono at 12 pt: the fields of a 1.0 dialog form (boards NewRepo,
+    /// NewEnvironment), focused with an ink hairline.
+    case dialog
 }
 
 private struct FXInputFieldModifier: ViewModifier {
@@ -20,19 +23,33 @@ private struct FXInputFieldModifier: ViewModifier {
             styled(content, in: .pill)
         case .rounded:
             styled(content, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+        case .dialog:
+            styled(content, in: RoundedRectangle(cornerRadius: Theme.Radius.field, style: .continuous))
         }
     }
 
     private func styled(_ content: Content, in inputShape: some InsettableShape) -> some View {
         content
             .textFieldStyle(.plain)
-            .font(isMonospaced ? Theme.Typography.monospaced : Theme.Typography.body)
+            .font(font)
             .foregroundStyle(Theme.Colors.ink)
-            .padding(.horizontal, Theme.Spacing.large)
-            .frame(minHeight: Theme.Layout.inputHeight)
+            .padding(.horizontal, isDialog ? Theme.Spacing.mediumMinus : Theme.Spacing.large)
+            .frame(minHeight: isDialog ? Theme.Layout.dialogFieldHeight : Theme.Layout.inputHeight)
             .background(Theme.Colors.card, in: inputShape)
             .overlay(inputShape.strokeBorder(borderColor, lineWidth: borderWidth))
             .animation(Theme.Durations.interactionAnimation, value: isFocused)
+    }
+
+    private var isDialog: Bool {
+        shape == .dialog
+    }
+
+    private var font: Font {
+        switch (isMonospaced, isDialog) {
+        case (true, true): Theme.Typography.monoMeta
+        case (true, false): Theme.Typography.monospaced
+        case (false, _): Theme.Typography.body
+        }
     }
 
     private var borderColor: Color {
@@ -41,14 +58,15 @@ private struct FXInputFieldModifier: ViewModifier {
     }
 
     private var borderWidth: CGFloat {
-        isFocused || isInvalid ? Theme.Layout.focusRingWidth : Theme.Stroke.hairline
+        isFocused || isInvalid ? (isDialog ? Theme.Stroke.hairline : Theme.Layout.focusRingWidth) : Theme.Stroke.hairline
     }
 }
 
 extension View {
     /// Styles a `TextField` or `SecureField` as a FractalX input: card fill, hairline-strong
-    /// border, 44 pt tall; brand border while `isFocused`, danger while `isInvalid`. Bind
-    /// `isFocused` to the caller's `@FocusState` (the modifier cannot observe focus itself).
+    /// border, 44 pt tall (28 for `.dialog`); brand border while `isFocused`, danger while
+    /// `isInvalid`. Bind `isFocused` to the caller's `@FocusState` (the modifier cannot observe
+    /// focus itself).
     ///
     /// ```swift
     /// @FocusState private var focused: Bool

@@ -34,7 +34,9 @@ struct CreateRepoEnvironmentSheet: View {
                     ConfigEditorNoteView(note: .error(error))
                 }
             }
-            BranchPolicyEditorView(form: $editor.policyForm, isEnabled: true)
+            ConfigSheetField(BranchPolicyEditorView.header) {
+                BranchPolicyEditorView(form: $editor.policyForm, isEnabled: true)
+            }
         }
     }
 }

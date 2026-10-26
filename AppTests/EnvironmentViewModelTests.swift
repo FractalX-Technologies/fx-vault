@@ -24,10 +24,13 @@ struct EnvironmentViewModelTests {
         #expect(model.canEdit)
         #expect(model.nameStatus == .empty)
         #expect(!model.canCreate)
+        let repository = try #require(model.directory?.repository)
+        #expect(model.title == "New Environment in \(repository.name)")
 
         model.name = "STAGING"
         #expect(model.nameStatus == .taken)
         #expect(model.nameStatus.note?.isError == true)
+        #expect(model.nameNote == model.nameStatus.note)
         model.name = " qa"
         #expect(model.nameStatus == .invalid(NameRule.leadingOrTrailingWhitespace.localizedMessage))
         model.name = "a/b"
@@ -36,6 +39,7 @@ struct EnvironmentViewModelTests {
         }
         model.name = "Producción"
         #expect(model.nameStatus == .available)
+        #expect(model.nameNote == .success("Not used in \(repository.name) yet"))
         #expect(model.canCreate)
 
         model.policy.choice = .selected

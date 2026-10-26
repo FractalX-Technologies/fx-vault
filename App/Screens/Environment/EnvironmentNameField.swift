@@ -8,6 +8,8 @@ struct EnvironmentNameField: View {
     let prompt: String?
     let isInvalid: Bool
     var isFocused: FocusState<Bool>.Binding
+    /// `.dialog` in a 1.0 dialog form (board NewEnvironment).
+    var shape: FXInputShape = .rounded
 
     var body: some View {
         TextField(
@@ -18,6 +20,6 @@ struct EnvironmentNameField: View {
         .focused(isFocused)
         .autocorrectionDisabled()
         .labelsHidden()
-        .fxInputField(.rounded, isFocused: isFocused.wrappedValue, isInvalid: isInvalid, isMonospaced: true)
+        .fxInputField(shape, isFocused: isFocused.wrappedValue, isInvalid: isInvalid, isMonospaced: true)
     }
 }

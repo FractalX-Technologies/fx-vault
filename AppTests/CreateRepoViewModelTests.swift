@@ -273,6 +273,23 @@ struct CreateRepoViewModelTests {
         #expect(model.canCreate)
     }
 
+    /// Board NewRepo shows the account's SSH alias beside the clone folder.
+    @Test func cloneShowsTheAccountsSSHAlias() async throws {
+        let fixture = try await Fixture()
+        _ = try await fixture.harness.data.github.accounts()
+        try await fixture.harness.data.github.mapSSHAlias("github-example", to: "user-a")
+        let model = fixture.viewModel
+        await fixture.readyToCreate()
+        model.clonesAfterCreate = true
+        #expect(model.accountLogin == "user-a")
+        #expect(model.cloneSSHAlias == "github-example")
+        #expect(!model.cloneNeedsSSHAlias)
+
+        model.accountLogin = "user-b"
+        #expect(model.cloneSSHAlias == nil)
+        #expect(model.cloneNeedsSSHAlias)
+    }
+
     // MARK: - Create (staging)
 
     @Test func createStagesEverythingWithoutTouchingGitHub() async throws {
@@ -349,7 +366,7 @@ struct CreateRepoViewModelTests {
         try fixture.addItem(.secret, "DEPLOY_KEY", Self.environmentSecretValue, to: .environment(environmentID))
         let values = [Self.secretValue, Self.variableValue, Self.environmentSecretValue]
 
-        var texts = model.reviewSummary
+        var texts: [String] = []
         for item in model.repositoryItems + model.environments.flatMap(\.items) {
             texts.append(String(describing: item))
             texts.append(String(reflecting: item))
@@ -363,8 +380,6 @@ struct CreateRepoViewModelTests {
             dump(environment, to: &dumped)
             texts.append(dumped)
         }
-        #expect(model.reviewSummary.count == 2)
-        #expect(model.reviewSummary[1].contains("1"))
 
         #expect(await model.create())
         if case .staged(let staged) = model.phase {

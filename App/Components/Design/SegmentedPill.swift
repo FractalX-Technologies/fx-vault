@@ -4,6 +4,8 @@ import SwiftUI
 /// selected segment as a `card` pill. Counts are SF Mono. Use it for 2 to 4 peer views of
 /// the same content and for the kind / visibility choices of the editor sheets; use a native
 /// `Picker` for settings. `.disabled` dims the whole control; `Segment.isEnabled` one segment.
+/// `.small` is the 1.0 dialogs' control (boards NewRepo, Share-Pick): 22 pt segments with 6 pt
+/// corners on an 8 pt track, 12 pt text.
 ///
 /// ```swift
 /// SegmentedPill(
@@ -16,6 +18,11 @@ import SwiftUI
 /// )
 /// ```
 struct SegmentedPill<Value: Hashable>: View {
+    enum Size: Sendable {
+        case regular
+        case small
+    }
+
     struct Segment: Identifiable {
         let value: Value
         let title: String
@@ -37,6 +44,7 @@ struct SegmentedPill<Value: Hashable>: View {
     @Binding var selection: Value
     let segments: [Segment]
     let accessibilityLabel: String
+    var size: Size = .regular
     @Namespace private var namespace
     @Environment(\.isEnabled) private var isEnabled
 
@@ -46,12 +54,33 @@ struct SegmentedPill<Value: Hashable>: View {
                 segmentButton(segment)
             }
         }
-        .padding(Theme.Layout.segmentTrackInset)
-        .background(Theme.Colors.surface2, in: .pill)
+        .padding(isSmall ? Theme.Layout.segmentTrackInsetSmall : Theme.Layout.segmentTrackInset)
+        .background(Theme.Colors.surface2, in: trackShape)
         .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
         .animation(Theme.Durations.spring, value: selection)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var isSmall: Bool {
+        size == .small
+    }
+
+    private var trackShape: AnyShape {
+        isSmall ? AnyShape(RoundedRectangle(cornerRadius: Theme.Radius.compactRow, style: .continuous)) : AnyShape(Capsule.pill)
+    }
+
+    private var segmentShape: AnyShape {
+        isSmall ? AnyShape(RoundedRectangle(cornerRadius: Theme.Radius.token, style: .continuous)) : AnyShape(Capsule.pill)
+    }
+
+    private func titleFont(isSelected: Bool) -> Font {
+        switch (isSmall, isSelected) {
+        case (true, true): Theme.Typography.captionEmphasized
+        case (true, false): Theme.Typography.caption
+        case (false, true): Theme.Typography.calloutEmphasized
+        case (false, false): Theme.Typography.callout
+        }
     }
 
     private func segmentButton(_ segment: Segment) -> some View {
@@ -61,25 +90,25 @@ struct SegmentedPill<Value: Hashable>: View {
         } label: {
             HStack(spacing: Theme.Spacing.smallMinus) {
                 Text(segment.title)
-                    .font(isSelected ? Theme.Typography.calloutEmphasized : Theme.Typography.callout)
-                    .foregroundStyle(isSelected ? Theme.Colors.ink : Theme.Colors.mutedText)
+                    .font(titleFont(isSelected: isSelected))
+                    .foregroundStyle(isSelected || isSmall ? Theme.Colors.ink : Theme.Colors.mutedText)
                 if let count = segment.count {
                     Text(count, format: .number)
                         .font(Theme.Typography.monoName)
                         .foregroundStyle(isSelected ? Theme.Colors.subtleText : Theme.Colors.mutedText)
                 }
             }
-            .padding(.horizontal, Theme.Spacing.large)
-            .frame(height: Theme.Layout.segmentHeight)
+            .padding(.horizontal, isSmall ? Theme.Spacing.medium : Theme.Spacing.large)
+            .frame(height: isSmall ? Theme.Layout.segmentHeightSmall : Theme.Layout.segmentHeight)
             .background {
                 if isSelected {
-                    Capsule.pill
+                    segmentShape
                         .fill(Theme.Colors.card)
-                        .overlay(Capsule.pill.strokeBorder(Theme.Colors.hairline, lineWidth: Theme.Stroke.hairline))
+                        .overlay(segmentShape.stroke(Theme.Colors.hairline, lineWidth: Theme.Stroke.hairline).padding(Theme.Stroke.hairline / 2))
                         .matchedGeometryEffect(id: "selection", in: namespace)
                 }
             }
-            .contentShape(.pill)
+            .contentShape(segmentShape)
         }
         .buttonStyle(.plain)
         .disabled(!segment.isEnabled)

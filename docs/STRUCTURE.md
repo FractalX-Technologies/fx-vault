@@ -137,7 +137,8 @@ FXVault/
 │   │                                # WindowBackground, SheetChrome (SheetHeader,
 │   │                                # SheetCallout, FXCheckboxRow, InlineErrorView,
 │   │                                # FXLinkButtonStyle, fxSheetContent), FlowLayout (v0.6.0),
-│   │                                # KeyHint (1.0)
+│   │                                # KeyHint (1.0), DialogChrome (DialogSheet, dialog cards),
+│   │                                # DialogForm (rows, notes, pop-ups, chips; 1.0 D6d)
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
 │   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe,
 │   │                                # ConnectivityMonitor (NWPathMonitor, path sources),

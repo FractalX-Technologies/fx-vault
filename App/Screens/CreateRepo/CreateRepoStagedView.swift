@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// After Create: the repository is staged in the vault and Sync creates it on GitHub. Names and
-/// counts only.
+/// After Stage Repository: the repository is staged in the vault and Sync creates it on GitHub
+/// (a 1.0 dialog; no board). Names and counts only.
 struct CreateRepoStagedView: View {
     let staged: CreateRepoStagedModel
     let canSyncNow: Bool
@@ -11,15 +11,14 @@ struct CreateRepoStagedView: View {
     let onDone: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
-            SheetHeader(
-                label: String(localized: "createRepo.staged.eyebrow", defaultValue: "Ready to sync"),
-                title: String(localized: "createRepo.staged.title", defaultValue: "\(staged.fullName) is ready to sync"),
-                subtitle: String(
-                    localized: "createRepo.staged.message",
-                    defaultValue: "Nothing is on GitHub yet. The next Sync creates the repository with its environments, secrets and variables in one run."
-                )
-            )
+        DialogSheet(
+            title: String(localized: "createRepo.staged.title", defaultValue: "\(staged.fullName) is ready to sync"),
+            subtitle: String(
+                localized: "createRepo.staged.message",
+                defaultValue: "Nothing is on GitHub yet. The next Sync creates the repository with its environments, secrets and variables in one run."
+            ),
+            footerNote: syncNowUnavailableReason
+        ) {
             VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                 Label {
                     Text(verbatim: contentSummary)
@@ -54,27 +53,17 @@ struct CreateRepoStagedView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .configSheetRowPadding()
-            .fxCardBackground(.container)
-            HStack(spacing: Theme.Spacing.mediumMinus) {
-                Group {
-                    if let syncNowUnavailableReason {
-                        Text(syncNowUnavailableReason)
-                            .fxTextStyle(.caption)
-                            .foregroundStyle(Theme.Colors.mutedText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Button(String(localized: "createRepo.staged.syncNow", defaultValue: "Sync Now…"), action: onSyncNow)
-                    .fxButtonStyle(.secondary, size: .large)
-                    .disabled(!canSyncNow)
-                Button(String(localized: "createRepo.staged.done", defaultValue: "Done"), action: onDone)
-                    .fxButtonStyle(.primary, size: .large)
-                    .keyboardShortcut(.defaultAction)
-            }
+            .padding(Theme.Spacing.medium)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fxDialogCard()
+        } actions: {
+            Button(String(localized: "createRepo.staged.syncNow", defaultValue: "Sync Now…"), action: onSyncNow)
+                .fxButtonStyle(.outline, size: .dialog)
+                .disabled(!canSyncNow)
+            Button(String(localized: "createRepo.staged.done", defaultValue: "Done"), action: onDone)
+                .fxButtonStyle(.primary, size: .dialog)
+                .keyboardShortcut(.defaultAction)
         }
-        .padding(Theme.Spacing.xxLarge)
     }
 
     private var contentSummary: String {

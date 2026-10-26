@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Name" : {
+
+    },
     "accounts.org.needsAdminOrg" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -562,6 +565,17 @@
         }
       }
     },
+    "branchPolicy.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Deployment branches"
+          }
+        }
+      }
+    },
     "branchPolicy.pattern.add" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -569,6 +583,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Add Rule"
+          }
+        }
+      }
+    },
+    "branchPolicy.pattern.chip" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
           }
         }
       }
@@ -595,13 +620,13 @@
         }
       }
     },
-    "branchPolicy.pattern.remove" : {
+    "branchPolicy.pattern.prompt" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Remove this rule"
+            "value" : "Branch or tag pattern"
           }
         }
       }
@@ -672,17 +697,6 @@
         }
       }
     },
-    "branchPolicy.rules.header" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Rules"
-          }
-        }
-      }
-    },
     "branchPolicy.selected" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -716,6 +730,17 @@
         }
       }
     },
+    "branchPolicy.type.branch.chip" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "branch"
+          }
+        }
+      }
+    },
     "branchPolicy.type.tag" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -723,6 +748,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Tag"
+          }
+        }
+      }
+    },
+    "branchPolicy.type.tag.chip" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "tag"
           }
         }
       }
@@ -1431,13 +1467,13 @@
         }
       }
     },
-    "createRepo.account" : {
+    "createRepo.account.label" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Account"
+            "value" : "Create with"
           }
         }
       }
@@ -1453,24 +1489,13 @@
         }
       }
     },
-    "createRepo.availability.probablyAvailable" : {
+    "createRepo.availability.probablyAvailableLine" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Probably available"
-          }
-        }
-      }
-    },
-    "createRepo.availability.probablyAvailable.detail" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "GitHub confirms the name when Sync creates the repository."
+            "value" : "Probably available · GitHub confirms it at Sync"
           }
         }
       }
@@ -1486,13 +1511,13 @@
         }
       }
     },
-    "createRepo.availability.unknown" : {
+    "createRepo.availability.unknownLine" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Could not check the name"
+            "value" : "Could not check the name. %@"
           }
         }
       }
@@ -1508,13 +1533,24 @@
         }
       }
     },
-    "createRepo.clone.change" : {
+    "createRepo.clone.alias" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Change…"
+            "value" : "SSH alias"
+          }
+        }
+      }
+    },
+    "createRepo.clone.chooseFolder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose…"
           }
         }
       }
@@ -1530,24 +1566,24 @@
         }
       }
     },
-    "createRepo.clone.noAlias" : {
+    "createRepo.clone.noAliasLine" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "No SSH alias mapped"
+            "value" : "No SSH alias mapped. Map one for this account in Settings › Accounts before you sync, or the clone is skipped."
           }
         }
       }
     },
-    "createRepo.clone.noAlias.detail" : {
+    "createRepo.clone.noAliasValue" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Map one for this account in Settings › Accounts before you sync, or the clone is skipped."
+            "value" : "No SSH alias"
           }
         }
       }
@@ -1563,6 +1599,17 @@
         }
       }
     },
+    "createRepo.clone.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Optional · SSH alias and folder"
+          }
+        }
+      }
+    },
     "createRepo.clone.panel.prompt" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -1574,13 +1621,13 @@
         }
       }
     },
-    "createRepo.create" : {
+    "createRepo.contents" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Create"
+            "value" : "Contents"
           }
         }
       }
@@ -1651,35 +1698,13 @@
         }
       }
     },
-    "createRepo.environment.add" : {
+    "createRepo.environment.addChip" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Add Environment…"
-          }
-        }
-      }
-    },
-    "createRepo.environment.branches" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Deployment branches"
-          }
-        }
-      }
-    },
-    "createRepo.environment.edit" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit…"
+            "value" : "Add"
           }
         }
       }
@@ -1717,24 +1742,24 @@
         }
       }
     },
-    "createRepo.environment.remove" : {
+    "createRepo.environment.removeNamed" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Remove Environment"
+            "value" : "Remove %@"
           }
         }
       }
     },
-    "createRepo.environments.empty" : {
+    "createRepo.environments.label" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Optional. For example production with its own secrets and a branch rule."
+            "value" : "Environments to create"
           }
         }
       }
@@ -1746,17 +1771,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "New repository"
-          }
-        }
-      }
-    },
-    "createRepo.footer.stagingNote" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Nothing is created on GitHub until you sync. Create saves the repository in your vault; Sync then creates it with its environments, secrets and variables in one run."
           }
         }
       }
@@ -1790,6 +1804,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : ".gitignore template"
+          }
+        }
+      }
+    },
+    "createRepo.gitignore.display" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : ".gitignore: %@"
           }
         }
       }
@@ -2003,6 +2028,17 @@
         }
       }
     },
+    "createRepo.items.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets and variables"
+          }
+        }
+      }
+    },
     "createRepo.kind.secret" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2032,6 +2068,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "License"
+          }
+        }
+      }
+    },
+    "createRepo.license.display" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "License: %@"
           }
         }
       }
@@ -2146,13 +2193,24 @@
         }
       }
     },
-    "createRepo.readme" : {
+    "createRepo.owners.loading" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Add a README"
+            "value" : "Loading organizations…"
+          }
+        }
+      }
+    },
+    "createRepo.readme.switch" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add README"
           }
         }
       }
@@ -2190,46 +2248,13 @@
         }
       }
     },
-    "createRepo.section.environments" : {
+    "createRepo.stage" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Environments"
-          }
-        }
-      }
-    },
-    "createRepo.section.options" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Visibility and Contents"
-          }
-        }
-      }
-    },
-    "createRepo.section.repository" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Repository"
-          }
-        }
-      }
-    },
-    "createRepo.section.repositoryItems" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Repository Secrets and Variables"
+            "value" : "Stage Repository"
           }
         }
       }
@@ -2252,17 +2277,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Done"
-          }
-        }
-      }
-    },
-    "createRepo.staged.eyebrow" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Ready to sync"
           }
         }
       }
@@ -2322,35 +2336,13 @@
         }
       }
     },
-    "createRepo.summary.gitignore" : {
+    "createRepo.templates.failedLine" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%@ .gitignore"
-          }
-        }
-      }
-    },
-    "createRepo.summary.readme" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "README"
-          }
-        }
-      }
-    },
-    "createRepo.templates.failed" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Templates could not be loaded"
+            "value" : "Templates could not be loaded. %@"
           }
         }
       }
@@ -4995,24 +4987,24 @@
         }
       }
     },
-    "environment.new.create" : {
+    "environment.new.nameFree" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Create"
+            "value" : "Not used in %@ yet"
           }
         }
       }
     },
-    "environment.new.subtitle" : {
+    "environment.new.stage" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "In %@. The next Sync creates it on GitHub."
+            "value" : "Stage Environment"
           }
         }
       }
@@ -5024,6 +5016,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "New Environment"
+          }
+        }
+      }
+    },
+    "environment.new.titleIn" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Environment in %@"
           }
         }
       }
@@ -9699,17 +9702,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Some environment features on private repositories depend on your GitHub plan."
-          }
-        }
-      }
-    },
-    "main.detail.planNote.learnMore" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Learn more"
           }
         }
       }
@@ -16552,6 +16544,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Copy the names and counts as plain text. Values are never included."
+          }
+        }
+      }
+    },
+    "sync.createdAtNextSync" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Created on GitHub at the next Sync."
           }
         }
       }
