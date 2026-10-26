@@ -157,6 +157,18 @@ nonisolated enum DriftCopy {
         }
     }
 
+    /// Asking before GitHub's item replaces the vault's own (a name added on both sides).
+    static func replaceTitle(_ name: String) -> String {
+        String(localized: "drift.replace.title", defaultValue: "Replace your \(name) with GitHub's?")
+    }
+
+    static let replaceMessage = String(
+        localized: "drift.replace.message",
+        defaultValue: "Your value was never sent to GitHub. It is removed from FX Vault and cannot be recovered."
+    )
+
+    static let replaceConfirm = String(localized: "drift.replace.confirm", defaultValue: "Use GitHub's")
+
     /// What "Accept GitHub" does for this kind of finding.
     static func acceptGitHubExplanation(_ kind: DriftKind) -> String {
         switch kind {

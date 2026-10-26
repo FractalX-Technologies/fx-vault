@@ -1341,7 +1341,8 @@ AppTests).
     <provider> for All).
   - `Drift` (§7.7): `DriftReviewViewModel` over `DriftServicing` (`LiveDriftService`): findings
     in the plan's wording, Keep Local / Accept GitHub (no default), confirmation before removing
-    local data, a secret's Accept GitHub chains to the item editor in fill mode, stale findings
+    local data (also before GitHub's item replaces one added here with a value,
+    `DriftConfirmationModel.replace`, as an organization's review), a secret's Accept GitHub chains to the item editor in fill mode, stale findings
     re-check. `DriftBannerView` (the drift line "N changed on GitHub · Review") under the place
     header.
   - `CreateRepo` (M4): `CreateRepoViewModel` (`LockObserving`) stages through

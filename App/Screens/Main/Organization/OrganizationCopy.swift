@@ -33,18 +33,6 @@ enum OrganizationCopy {
         defaultValue: "Your vault takes GitHub's access; the value stays."
     )
 
-    // MARK: Added on both sides (B7b)
-
-    static let replaceConfirm = String(localized: "organization.drift.replace.confirm", defaultValue: "Use GitHub's")
-    static let replaceMessage = String(
-        localized: "organization.drift.replace.message",
-        defaultValue: "Your value was never sent to GitHub. It is removed from FX Vault and cannot be recovered."
-    )
-
-    static func replaceTitle(_ name: String) -> String {
-        String(localized: "organization.drift.replace.title", defaultValue: "Replace your \(name) with GitHub's?")
-    }
-
     static func removeMessage(_ login: String) -> String {
         String(
             localized: "organization.remove.message",

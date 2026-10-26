@@ -185,6 +185,34 @@ struct DriftReviewViewModelTests {
         #expect(model.rows.isEmpty)
     }
 
+    /// GitHub's item over a name the vault added too replaces a value the vault never sent: it
+    /// asks first, as an organization's review ("Use GitHub's"); without a value it doesn't.
+    @Test func acceptingGitHubsItemOverOneAddedHereAsksFirst() async throws {
+        let both = DriftFixtures.item(.remoteAdded, .secret, "API_TOKEN", isConflict: true)
+        let empty = DriftFixtures.item(.remoteAdded, .secret, "EMPTY_KEY", isConflict: true, keepLocalUnavailable: .valueMissing)
+        let fixture = try await Fixture(cached: DriftFixtures.report([both, empty]))
+        let model = fixture.viewModel
+        await model.load()
+        #expect(model.rows.map(\.acceptGitHub.needsConfirmation) == [true, false])
+
+        await model.choose(both.id, .acceptGitHub)
+        #expect(fixture.service.resolutions.isEmpty)
+        #expect(model.confirmation == .replace(driftID: both.id, name: "API_TOKEN"))
+        #expect(model.confirmation?.title == "Replace your API_TOKEN with GitHub's?")
+        #expect(model.confirmation?.confirmTitle == "Use GitHub's")
+
+        model.cancelConfirmation()
+        #expect(fixture.service.resolutions.isEmpty)
+        await model.choose(both.id, .acceptGitHub)
+        await model.confirm()
+        #expect(fixture.service.resolutions == [FakeDriftService.Resolution(driftID: both.id, option: .acceptGitHub)])
+
+        // Nothing of the vault's to lose: no question.
+        await model.choose(empty.id, .acceptGitHub)
+        #expect(model.confirmation == nil)
+        #expect(fixture.service.resolutions.map(\.driftID) == [both.id, empty.id])
+    }
+
     @Test func unavailableKeepLocalOffersFillValue() async throws {
         let itemID = ConfigItemID()
         let drift = DriftFixtures.item(.secretModified, .secret, "API_TOKEN", itemID: itemID, keepLocalUnavailable: .valueMissing)

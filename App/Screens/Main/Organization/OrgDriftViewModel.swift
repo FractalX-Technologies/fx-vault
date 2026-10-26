@@ -110,13 +110,7 @@ final class OrgDriftViewModel {
         if Self.needsConfirmation(finding, option) {
             confirmation = finding.kind == .remoteDeleted
                 ? DriftConfirmationModel(driftID: id, option: option, title: DriftCopy.deleteItemTitle(finding.name), message: DriftCopy.deleteItemMessage)
-                : DriftConfirmationModel(
-                    driftID: id,
-                    option: option,
-                    title: OrganizationCopy.replaceTitle(finding.name),
-                    message: OrganizationCopy.replaceMessage,
-                    confirmTitle: OrganizationCopy.replaceConfirm
-                )
+                : .replace(driftID: id, name: finding.name)
             return
         }
         await resolve(finding, option)

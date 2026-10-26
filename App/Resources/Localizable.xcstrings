@@ -3708,6 +3708,39 @@
         }
       }
     },
+    "drift.replace.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use GitHub's"
+          }
+        }
+      }
+    },
+    "drift.replace.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your value was never sent to GitHub. It is removed from FX Vault and cannot be recovered."
+          }
+        }
+      }
+    },
+    "drift.replace.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Replace your %@ with GitHub's?"
+          }
+        }
+      }
+    },
     "drift.review.empty.message" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11822,39 +11855,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Your vault takes GitHub's access. GitHub never returns secret values, so its value is missing until you enter it."
-          }
-        }
-      }
-    },
-    "organization.drift.replace.confirm" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Use GitHub's"
-          }
-        }
-      }
-    },
-    "organization.drift.replace.message" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Your value was never sent to GitHub. It is removed from FX Vault and cannot be recovered."
-          }
-        }
-      }
-    },
-    "organization.drift.replace.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Replace your %@ with GitHub's?"
           }
         }
       }

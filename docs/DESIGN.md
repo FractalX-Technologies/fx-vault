@@ -611,8 +611,9 @@ foreground color, so `.primary` text still turns white on selected rows.
   the "Not compared" notes (names FX Vault can't hold), and a confirmation before Accept GitHub
   loses the vault's data: "Delete … from your vault?" for GitHub's deletion, "Replace your
   API_TOKEN with GitHub's?" (Use GitHub's) for an item added on both sides, whose texts say
-  Keep Local sends the vault's and Accept replaces it (`DriftCopy.bothAdded*`, also the
-  repository review's, where a secret then asks for its value). Accept GitHub of a secret whose
+  Keep Local sends the vault's and Accept replaces it (`DriftCopy.bothAdded*`; the repository
+  review has the same texts and the same "Use GitHub's" question, and a secret then asks for
+  its value). Accept GitHub of a secret whose
   date moved leaves it without a value (no fill step, unlike a repository's); under the same
   date it says the value stays.
 - Runtime destinations under the selected repository (v0.8.0, canvas "FX Vault Destinations"):
