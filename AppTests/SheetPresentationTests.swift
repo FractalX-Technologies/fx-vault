@@ -11,20 +11,22 @@ import Testing
 struct SheetPresentationTests {
     // MARK: - Sync footer
 
-    @Test func syncFooterMapsButtonsToPills() {
+    /// Boards Sync-Review, Sync-Progress, Sync-Delete: one ink pill, the rest outlined, the
+    /// deletion confirm red on the outline.
+    @Test func syncFooterMapsButtonsToTheBoardsButtons() {
         let cancel = SyncButtonModel(action: .close, title: "Cancel", isCancel: true)
         let sync = SyncButtonModel(action: .sync, title: "Sync 3", isDefault: true)
         let back = SyncButtonModel(action: .back, title: "Back", isCancel: true)
         let withoutDeleting = SyncButtonModel(action: .syncWithoutDeleting, title: "Sync Without Deleting")
-        let delete = SyncButtonModel(action: .confirmDeletions, title: "Delete 2 Items on GitHub", isDestructive: true)
-        let cancelRun = SyncButtonModel(action: .cancelRun, title: "Cancel")
+        let delete = SyncButtonModel(action: .confirmDeletions, title: "Delete 2", isDestructive: true)
+        let cancelRun = SyncButtonModel(action: .cancelRun, title: "Cancel After Current")
 
-        #expect(SyncFooterView.variant(for: cancel) == .secondary)
+        #expect(SyncFooterView.variant(for: cancel) == .outline)
         #expect(SyncFooterView.variant(for: sync) == .primary)
-        #expect(SyncFooterView.variant(for: back) == .secondary)
+        #expect(SyncFooterView.variant(for: back) == .outline)
         #expect(SyncFooterView.variant(for: withoutDeleting) == .outline)
-        #expect(SyncFooterView.variant(for: delete) == .destructive)
-        #expect(SyncFooterView.variant(for: cancelRun) == .secondary)
+        #expect(SyncFooterView.variant(for: delete) == .outlineDestructive)
+        #expect(SyncFooterView.variant(for: cancelRun) == .outline)
     }
 
     @Test func syncFooterKeepsTheDefaultAndCancelBindings() {

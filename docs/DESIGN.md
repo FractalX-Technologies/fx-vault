@@ -176,10 +176,14 @@ Button { … } label: { Label(lockTitle, systemImage: "lock") }
 | `.outline` | `hairlineStrong` border | Back, a folder's Copy To and Share Securely… |
 | `.ghost` | no chrome until hover | Inline and low-priority actions |
 | `.destructive` | `danger` fill, ground text | Only the final confirm of a destructive action |
+| `.outlineDestructive` | `hairlineStrong` border, `danger` text | A deletion confirm in a 1.0 dialog ("Delete 1", board Sync-Delete) |
 
 Sizes: `.regular` 34 pt / 13 pt text (inline, sheets), `.large` 42 pt / 14 pt (sheet
 footers, onboarding, lock), `.compact` 26 pt / 12 pt with 8 pt corners instead of the capsule (a
-place header's buttons). `.fxIconButtonStyle(size: .compact)` is the matching 26 pt square, the
+place header's buttons), `.dialog` 32 pt / 13 pt (the 1.0 dialogs, boards Sync-Review,
+Sync-Delete, NewRepo, Share-*: the primary stays an ink pill, every other variant has the 8 pt
+`compactRow` corners, as the boards draw Cancel). `FXButtonStyle.shape(for:variant:)` is the one
+place that picks the shape. `.fxIconButtonStyle(size: .compact)` is the matching 26 pt square, the
 header's ⋯ More. A pill keeps its title's width (never truncates next to flexible
 text). `isFullWidth: true` stretches the pill (lock Touch ID). Disabled pills
 fade to 40%. Always apply with `.fxButtonStyle` / `.fxIconButtonStyle` (they replace the system
@@ -321,6 +325,14 @@ One implementation each, in `SheetChrome.swift`; every sheet and full-window for
   40% when disabled ("Use recovery key", "Edit").
 - `.fxSheetContent(width:)`: the content of a system `.sheet`: 32 pt padding on
   `.fxSheetBackground()`, optionally at a fixed width.
+- `FXCheckboxRow(isBoxed: false)`: the checkbox alone on the sheet (the 1.0 dialogs).
+
+The 1.0 dialogs (D6d, `DialogChrome.swift`): `Theme.Layout.compactSheetInset` (22 pt) around the
+content, no eyebrow, `SheetHeader` with `.leadEmphasized` (15 pt semibold) and a `.callout`
+subtitle 4 pt below, cards as `.fxDialogCard()` (`card` glass, hairline, 10 pt `row` corners,
+10 pt apart), what a confirmation is about in `.fxDialogListBox()` (`surface`, 10 pt corners,
+24 pt rows), and the footer row without a rule (`ConfigSheetFooter(inset: SheetFooterInset.dialog)`)
+with `.dialog` buttons.
 
 `PassphraseView` (App/Components) is the generated passphrase card shared by onboarding and
 Share as File; `EmptyStateView` uses the light symbol, a `.headline` ink title and a `mutedText`
@@ -507,6 +519,28 @@ foreground color, so `.primary` text still turns white on selected rows.
 - Footer: "N changes in M places · D deletions · B blocked" in muted `.caption` (N counts what
   runs and what is blocked; an offline notice takes its place); the button says
   "Sync N Changes" with what runs. The write limit sits under the cards.
+- Every step is a 1.0 dialog (D6d): 600 pt, 22 pt inset, no eyebrow, `.fxDialogCard()` cards,
+  `.dialog` footer buttons (Cancel and Back outlined, the default an ink pill, the deletion
+  confirm `.outlineDestructive`).
+- The deletion check (board Sync-Delete): "Delete 1 secret?" (secrets, variables or items),
+  "Confirm before Sync starts. Deletions run after the other writes.", the deletions in
+  `.fxDialogListBox()` (`STRIPE_KEY` in `.monoMeta`, its place muted; an environment with its
+  symbol and what GitHub holds in it below, "not in your vault: will be lost" in `danger`), the
+  workflow notes, then "I understand this cannot be undone" as a plain checkbox. Buttons: Back,
+  Sync Without Deleting, "Delete N".
+- The run (board Sync-Progress): "Syncing" / "Keep FX Vault open until it finishes", a 4 pt ink
+  bar on a `hairline` track across the sheet, "Writing 5 of 8 · FX Vault writes 60 a minute ·
+  Locking stops after the current write." in muted `.caption`, then the summary's cards
+  (`SyncProgressPresentation`) whose symbol column shows each line's state: a 7 pt
+  `hairlineStrong` ring waiting, a mini spinner writing, a `success` check done, a `danger` cross
+  failed, a dash not run (blocked lines read `blocked · reason`, muted). The deletions leave
+  their cards for a last "Deletions · after the other writes" card with each place as the
+  detail. The footer has Cancel After Current.
+- The finish (board Sync-Done) when nothing failed, stopped or waits for a clone
+  (`SyncViewModel.done`): 420 pt, centered, a 44 pt `success` ring with a check, "Synced 8
+  changes" in `.leadEmphasized`, "in A, B and C" in subtle `.caption`, up to three pending lines
+  (a 7 pt ink ring, the change and its reason), warnings, and Done as the compact ink pill.
+  Anything else keeps the full result (sections, fixes, clones).
 - New Folder… and Rename… (v0.7.0) are a `ConfigEditorSheet` with one rounded name field and its
   live note (invalid, or "Another folder already has this name").
 - A received folder (v0.7.0), in Import Share: a `container` card with

@@ -9,8 +9,8 @@ struct SyncSummaryView: View {
 
     var body: some View {
         ScrollView {
-            // 12 pt between cards, as the board.
-            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
+            // 10 pt between cards, as the boards.
+            VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
                 if viewModel.waitsOnlyForHeldShares {
                     Banner(.info, message: HeldShareCopy.onlyHeld, systemImage: "info.circle")
                 } else if viewModel.executableCount == 0 {
@@ -41,8 +41,7 @@ struct SyncSummaryView: View {
                 limitSection
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Spacing.xxLarge)
-            .padding(.bottom, Theme.Spacing.xLarge)
+            .padding(.horizontal, Theme.Layout.compactSheetInset)
         }
     }
 
@@ -100,22 +99,7 @@ private struct SyncSummaryCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.smallMinus) {
-                Image(systemName: card.place.systemImage)
-                    .fxTextStyle(.caption)
-                    .foregroundStyle(Theme.Colors.mutedText)
-                    .accessibilityHidden(true)
-                Text(verbatim: card.place.name)
-                    .fxTextStyle(.placeName)
-                    .foregroundStyle(Theme.Colors.ink)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Text(verbatim: card.place.kind)
-                    .fxTextStyle(.caption)
-                    .foregroundStyle(Theme.Colors.mutedText)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isHeader)
+            SyncPlaceHeader(systemImage: card.place.systemImage, name: card.place.name, kind: card.place.kind)
             if let newRepository = card.newRepository {
                 SyncNoteRow(text: newRepository, systemImage: "plus.rectangle.on.folder", tint: Theme.Colors.brand)
             }
@@ -147,10 +131,37 @@ private struct SyncSummaryCardView: View {
                 SyncNoteRow(text: note, systemImage: "info.circle")
             }
         }
-        .padding(.horizontal, Theme.Spacing.large)
-        .padding(.vertical, Theme.Spacing.medium)
+        .padding(.horizontal, Theme.Spacing.medium)
+        .padding(.vertical, Theme.Spacing.mediumMinus)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .fxCardBackground(.container)
+        .fxDialogCard()
+    }
+}
+
+/// A card's header (boards Sync-Review, Sync-Progress): the place's symbol, its name in 12 pt
+/// semibold and its kind, muted.
+struct SyncPlaceHeader: View {
+    let systemImage: String
+    let name: String
+    let kind: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.smallMinus) {
+            Image(systemName: systemImage)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .accessibilityHidden(true)
+            Text(verbatim: name)
+                .fxTextStyle(.placeName)
+                .foregroundStyle(Theme.Colors.ink)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Text(verbatim: kind)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 }
 

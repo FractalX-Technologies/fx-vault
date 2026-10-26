@@ -48,6 +48,9 @@ final class SyncViewModel: LockObserving {
     var unknownContentsAcknowledged = false
 
     private(set) var progress = SyncRunProgressModel()
+    /// Where each change of the run is (board Sync-Progress), by change id (destination and
+    /// organization ids carry their prefix).
+    private(set) var changeStates: [String: SyncLineState] = [:]
     private(set) var outcome: SyncRunOutcomeModel?
     private(set) var resultSections: [SyncResultSectionModel] = []
     private(set) var clones: [SyncCloneRowModel] = []
@@ -66,6 +69,8 @@ final class SyncViewModel: LockObserving {
     @ObservationIgnored private var changeNames: [String: String] = [:]
     @ObservationIgnored private var environmentNames: [String: String] = [:]
     @ObservationIgnored private var repositoryModels: [RepoID: RepoModel] = [:]
+    /// The changes behind each line of the run's cards.
+    @ObservationIgnored private var lineChanges: [SyncLineKey: [String]] = [:]
     @ObservationIgnored private var didRequestRefresh = false
 
     /// - Parameters:
@@ -210,15 +215,60 @@ final class SyncViewModel: LockObserving {
         }
         changeNames = [:]
         environmentNames = [:]
+        lineChanges = [:]
         for repository in review.preflight.repositories {
             for change in repository.executable {
                 changeNames[change.id] = SyncCopy.changeName(change)
+                if let key = SyncProgressPresentation.key(change, group: .repository(repository.id)) {
+                    lineChanges[key, default: []].append(change.id)
+                }
             }
             for environment in repository.snapshot.environments {
                 let name = environment.syncedName ?? environment.name
                 environmentNames[RemoteScopeKeyModel.environment(named: name).journalKey] = name
             }
         }
+        for destinationReview in effectiveDestinationReviews {
+            let group = SyncGroupID(repositoryID: destinationReview.repositoryID)
+            for section in destinationReview.sections {
+                let place = DestinationSyncPresentation.place(section.destination).id
+                for change in section.changes {
+                    lineChanges[SyncLineKey(group: group, place: place, name: change.name), default: []]
+                        .append(Self.destinationChangeKey(change.id))
+                }
+            }
+        }
+        for organizationReview in organizationReviews {
+            let group = SyncGroupID.organization(organizationReview.organizationID)
+            let place = OrgSyncPresentation.placeID(organizationReview.organizationID)
+            for change in organizationReview.changes {
+                lineChanges[SyncLineKey(group: group, place: place, name: change.name), default: []]
+                    .append(Self.organizationChangeKey(change.itemID))
+            }
+        }
+    }
+
+    private static func destinationChangeKey(_ id: String) -> String {
+        "destination|\(id)"
+    }
+
+    private static func organizationChangeKey(_ id: ConfigItemID) -> String {
+        "organization|\(id.uuidString)"
+    }
+
+    // MARK: - Run cards (board Sync-Progress)
+
+    /// The run's cards: the summary's places and lines, the deletions last when they run.
+    var progressCards: [SyncProgressCardModel] {
+        SyncProgressPresentation.cards(repositories, includesDeletions: progress.includesDeletions)
+    }
+
+    /// Where a line of the run's cards is: waiting until its changes start.
+    func lineState(_ line: SyncProgressLineModel) -> SyncLineState {
+        guard !line.isBlocked else { return .skipped }
+        let ids = lineChanges[line.key] ?? []
+        guard !ids.isEmpty else { return .waiting }
+        return SyncLineState.combined(ids.map { changeStates[$0] })
     }
 
     /// Executable changes across repositories and their destinations.
@@ -346,7 +396,7 @@ final class SyncViewModel: LockObserving {
     var deletionRows: [SyncDeletionRepoModel] {
         guard let deletionPreviews else { return [] }
         return DestinationSyncPresentation.mergeDeletions(
-            SyncPresentationBuilder.deletions(deletionPreviews),
+            SyncPresentationBuilder.deletions(deletionPreviews) { [weak self] id in self?.repositoryModel(id)?.name },
             with: destinationReviews,
             fullName: fullName(of:)
         ) + OrgSyncPresentation.deletions(organizationReviews)
@@ -355,6 +405,33 @@ final class SyncViewModel: LockObserving {
     /// "Delete N items".
     var deletionTotal: Int {
         (deletionPreviews?.map(\.deletionCount).reduce(0, +)).map { $0 + destinationDeletionCount } ?? deletionCount
+    }
+
+    /// "Delete 2 secrets?" (board Sync-Delete): the kind when every deletion has the same one.
+    var deletionTitle: String {
+        SyncCopy.deletionTitle(count: deletionTotal, kind: deletionKind)
+    }
+
+    /// The one kind every deletion has (a Key Vault holds secrets), nil when they differ or an
+    /// environment goes.
+    private var deletionKind: ConfigKind? {
+        var kinds: Set<ConfigKind> = []
+        for repository in effectiveReview?.preflight.repositories ?? [] {
+            for change in repository.executable where change.kind.isDeletion {
+                switch change.kind {
+                case .deleteSecret: kinds.insert(.secret)
+                case .deleteVariable: kinds.insert(.variable)
+                default: return nil
+                }
+            }
+        }
+        if destinationReviews.contains(where: { !$0.deletions.isEmpty }) {
+            kinds.insert(.secret)
+        }
+        for review in organizationReviews {
+            kinds.formUnion(review.deletions.map(\.kind))
+        }
+        return kinds.count == 1 ? kinds.first : nil
     }
 
     var hasUnknownContents: Bool {
@@ -383,7 +460,11 @@ final class SyncViewModel: LockObserving {
         let activity = dependencies.actions.beginSyncActivity()
         defer { activity.end() }
 
-        progress = SyncRunProgressModel(total: includeDeletions ? executableCount : nonDeletionCount)
+        progress = SyncRunProgressModel(
+            total: includeDeletions ? executableCount : nonDeletionCount,
+            includesDeletions: includeDeletions
+        )
+        changeStates = [:]
         step = .progress
         let included = includedHeldShares
         let gitHubDeletions = effectiveReview?.deletionCount ?? review.deletionCount
@@ -427,7 +508,20 @@ final class SyncViewModel: LockObserving {
         for review in organizationReviews where !review.changes.isEmpty {
             progress.phase = .writing
             progress.currentName = review.login
-            results[review.organizationID] = await dependencies.organizationSync.run(review, includeDeletions: includeDeletions)
+            // An organization runs as one call: its lines spin together, then take their outcome.
+            for change in review.changes where includeDeletions || change.operation != .delete {
+                changeStates[Self.organizationChangeKey(change.itemID)] = .writing
+            }
+            let result = await dependencies.organizationSync.run(review, includeDeletions: includeDeletions)
+            for change in review.changes {
+                let key = Self.organizationChangeKey(change.itemID)
+                if let outcome = result.outcomes[change.itemID] {
+                    changeStates[key] = SyncLineState(outcome)
+                } else if changeStates[key] == .writing {
+                    changeStates[key] = .done
+                }
+            }
+            results[review.organizationID] = result
         }
         progress.currentName = nil
         progress.completed = progress.total
@@ -458,8 +552,10 @@ final class SyncViewModel: LockObserving {
                     switch event {
                     case .started(let id):
                         progress.currentName = names[id]
-                    case .finished:
+                        changeStates[Self.destinationChangeKey(id)] = .writing
+                    case .finished(let id, let outcome):
                         progress.completed = min(progress.total, progress.completed + 1)
+                        changeStates[Self.destinationChangeKey(id)] = SyncLineState(outcome)
                     }
                 }
             }
@@ -478,9 +574,11 @@ final class SyncViewModel: LockObserving {
         case .changeStarted(let changeID):
             progress.currentName = changeNames[changeID]
             progress.phase = .writing
-        case .changeFinished(_, let completed, let total):
+            changeStates[changeID] = .writing
+        case .changeFinished(let result, let completed, let total):
             progress.completed = completed
             progress.total = total
+            changeStates[result.change.id] = SyncLineState(result.outcome)
         case .verifying(let scope):
             progress.phase = .verifying(scope: scopeLabel(scope))
         case .finished(let result):
@@ -613,6 +711,23 @@ final class SyncViewModel: LockObserving {
         outcome?.result.warnings.compactMap(SyncCopy.warning) ?? []
     }
 
+    /// The short finish (board Sync-Done) when something synced and nothing failed, stopped or
+    /// waits for a clone; nil keeps the full result with its sections and fixes.
+    var done: SyncDoneModel? {
+        guard step == .result, stopReason == nil, clones.isEmpty,
+              !resultSections.contains(where: { $0.kind == .failed }),
+              let succeeded = resultSections.first(where: { $0.kind == .succeeded }), !succeeded.rows.isEmpty
+        else { return nil }
+        return SyncDoneModel(
+            syncedCount: succeeded.rows.count,
+            places: progressCards
+                .filter { $0.id != SyncProgressPresentation.deletionsID && $0.lines.contains { !$0.isBlocked } }
+                .map(\.name),
+            pending: resultSections.filter { $0.kind == .blocked || $0.kind == .skipped }.flatMap(\.rows),
+            warnings: warnings
+        )
+    }
+
     /// The fix of a clone row: Clone (again). Without a clone folder it asks for one first.
     func cloneFix(_ row: SyncCloneRowModel) -> SyncFixActionModel? {
         switch row.state {
@@ -739,10 +854,7 @@ final class SyncViewModel: LockObserving {
                 ),
                 SyncButtonModel(
                     action: .confirmDeletions,
-                    title: String(
-                        localized: "sync.button.confirmDeletions",
-                        defaultValue: "Delete \(deletionTotal) Items on GitHub"
-                    ),
+                    title: SyncCopy.deleteButtonTitle(count: deletionTotal),
                     isDestructive: true,
                     isEnabled: canConfirmDeletions
                 ),
@@ -753,7 +865,7 @@ final class SyncViewModel: LockObserving {
                     action: .cancelRun,
                     title: progress.isCancelling
                         ? String(localized: "sync.button.cancelling", defaultValue: "Cancelling…")
-                        : Self.cancelTitle,
+                        : SyncCopy.cancelAfterCurrent,
                     isEnabled: !progress.isCancelling && progress.phase != .cloning
                 ),
             ]

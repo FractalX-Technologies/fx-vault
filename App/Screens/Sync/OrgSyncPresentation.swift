@@ -8,14 +8,24 @@ import VaultData
 enum OrgSyncPresentation {
     // MARK: Summary
 
+    /// The id of an organization's card, which its run lines share (board Sync-Progress).
+    static func placeID(_ organizationID: OrganizationID) -> String {
+        "organization|\(organizationID.uuidString)"
+    }
+
+    /// "example-org · organization".
+    private static func place(_ review: OrgReviewModel) -> SyncPlaceModel {
+        SyncPlaceModel(
+            id: placeID(review.organizationID),
+            systemImage: Theme.Symbols.organization,
+            name: review.login,
+            kind: SyncCopy.organizationKind
+        )
+    }
+
     static func summary(_ reviews: [OrgReviewModel]) -> [SyncSummaryRepoModel] {
         reviews.filter { !$0.isEmpty }.map { review in
-            let place = SyncPlaceModel(
-                id: "organization|\(review.organizationID.uuidString)",
-                systemImage: Theme.Symbols.organization,
-                name: review.login,
-                kind: SyncCopy.organizationKind
-            )
+            let place = place(review)
             let scopes = review.changes.isEmpty ? [] : [SyncSummaryScopeModel(
                 place: place,
                 sentence: DestinationSyncCopy.sentence(writes: review.writes.count, deletions: review.deletions.count),
@@ -79,6 +89,7 @@ enum OrgSyncPresentation {
     static func deletions(_ reviews: [OrgReviewModel]) -> [SyncDeletionRepoModel] {
         reviews.compactMap { review in
             guard !review.deletions.isEmpty else { return nil }
+            let place = place(review)
             return SyncDeletionRepoModel(
                 id: .organization(review.organizationID),
                 fullName: review.login,
@@ -86,7 +97,9 @@ enum OrgSyncPresentation {
                     SyncIssueModel(
                         id: "organization|\(change.id.uuidString)",
                         title: DestinationSyncCopy.deletionTitle(name: change.name, destination: review.login),
-                        reason: ""
+                        reason: "",
+                        place: place,
+                        name: change.name
                     )
                 },
                 environments: []

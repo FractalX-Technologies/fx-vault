@@ -38,8 +38,7 @@ struct SyncResultView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Spacing.xxLarge)
-            .padding(.bottom, Theme.Spacing.xLarge)
+            .padding(.horizontal, Theme.Layout.compactSheetInset)
         }
     }
 
@@ -89,6 +88,69 @@ struct SyncResultView: View {
         SyncIssueRow(issue: issue, systemImage: section.kind.systemImage, tint: section.kind.tint) {
             viewModel.perform($0)
         }
+    }
+}
+
+/// The finish when nothing failed (board Sync-Done): a green check ring, "Synced 8 changes", the
+/// places, what stays pending with its reason, and Done. Narrow and centered.
+struct SyncDoneView: View {
+    let done: SyncDoneModel
+    let onDone: () -> Void
+
+    /// Past this many, the rest is one "and N more" line.
+    private static let pendingLimit = 3
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.medium) {
+            VStack(spacing: Theme.Spacing.mediumMinus) {
+                Image(systemName: "checkmark")
+                    .font(Theme.Typography.title2)
+                    .foregroundStyle(Theme.Colors.success)
+                    .frame(width: Theme.Layout.syncDoneMarkSize, height: Theme.Layout.syncDoneMarkSize)
+                    .overlay(Circle().strokeBorder(Theme.Colors.success, lineWidth: Theme.Layout.syncWaitingDotStroke))
+                    .accessibilityHidden(true)
+                Text(verbatim: SyncCopy.doneTitle(count: done.syncedCount))
+                    .fxTextStyle(.leadEmphasized)
+                    .foregroundStyle(Theme.Colors.ink)
+                    .accessibilityAddTraits(.isHeader)
+                if !done.places.isEmpty {
+                    centered(SyncCopy.donePlaces(done.places), color: Theme.Colors.subtleText)
+                }
+                ForEach(done.pending.prefix(Self.pendingLimit)) { issue in
+                    HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.smallMinus) {
+                        Circle()
+                            .strokeBorder(Theme.Colors.ink, lineWidth: Theme.Layout.syncWaitingDotStroke)
+                            .frame(width: Theme.Layout.syncWaitingDotSize, height: Theme.Layout.syncWaitingDotSize)
+                            .accessibilityHidden(true)
+                        Text(verbatim: SyncCopy.donePending(issue))
+                            .fxTextStyle(.caption)
+                            .foregroundStyle(Theme.Colors.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                if done.pending.count > Self.pendingLimit {
+                    centered(SyncCopy.donePendingMore(done.pending.count - Self.pendingLimit), color: Theme.Colors.mutedText)
+                }
+                ForEach(done.warnings, id: \.self) { warning in
+                    centered(warning, color: Theme.Colors.mutedText)
+                }
+            }
+            .padding(.top, Theme.Spacing.small)
+            .padding(.bottom, Theme.Spacing.xSmall)
+            Button(String(localized: "common.done", defaultValue: "Done"), action: onDone)
+                .fxButtonStyle(.primary, size: .dialog)
+                .keyboardShortcut(.defaultAction)
+        }
+        .padding(Theme.Layout.compactSheetInset)
+        .frame(width: Theme.Layout.syncDoneWidth)
+    }
+
+    private func centered(_ text: String, color: Color) -> some View {
+        Text(verbatim: text)
+            .fxTextStyle(.caption)
+            .foregroundStyle(color)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 

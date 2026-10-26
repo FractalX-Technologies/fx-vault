@@ -168,12 +168,15 @@ struct SheetCallout: View {
 }
 
 /// A confirmation as a checkbox on the callout row (board SyncReview: "I understand that…").
+/// `isBoxed: false` drops the row: the 1.0 dialogs draw the checkbox on the sheet (board
+/// Sync-Delete).
 struct FXCheckboxRow: View {
     let title: String
     @Binding var isOn: Bool
+    var isBoxed = true
 
     var body: some View {
-        Toggle(isOn: $isOn) {
+        let toggle = Toggle(isOn: $isOn) {
             Text(title)
                 .fxTextStyle(.body)
                 .foregroundStyle(Theme.Colors.ink)
@@ -181,7 +184,11 @@ struct FXCheckboxRow: View {
         }
         .toggleStyle(.checkbox)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .fxCalloutBackground()
+        if isBoxed {
+            toggle.fxCalloutBackground()
+        } else {
+            toggle
+        }
     }
 }
 

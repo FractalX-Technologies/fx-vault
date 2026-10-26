@@ -16292,6 +16292,17 @@
         }
       }
     },
+    "sync.button.cancelAfterCurrent" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cancel After Current"
+          }
+        }
+      }
+    },
     "sync.button.cancelling" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -16303,13 +16314,13 @@
         }
       }
     },
-    "sync.button.confirmDeletions" : {
+    "sync.button.deleteCount" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Delete %lld Items on GitHub"
+            "value" : "Delete %lld"
           }
         }
       }
@@ -16677,17 +16688,6 @@
         }
       }
     },
-    "sync.deletions.environment" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete environment %@"
-          }
-        }
-      }
-    },
     "sync.deletions.foreignRule.other" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -16765,13 +16765,46 @@
         }
       }
     },
-    "sync.deletions.title" : {
+    "sync.deletions.subtitle" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Review Deletions"
+            "value" : "Confirm before Sync starts. Deletions run after the other writes."
+          }
+        }
+      }
+    },
+    "sync.deletions.title.items" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete ^[%lld item](inflect: true)?"
+          }
+        }
+      }
+    },
+    "sync.deletions.title.secrets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete ^[%lld secret](inflect: true)?"
+          }
+        }
+      }
+    },
+    "sync.deletions.title.variables" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete ^[%lld variable](inflect: true)?"
           }
         }
       }
@@ -16963,24 +16996,35 @@
         }
       }
     },
-    "sync.eyebrow.review" : {
+    "sync.done.pendingMore" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Review before sync"
+            "value" : "and %lld more stay pending"
           }
         }
       }
     },
-    "sync.eyebrow.run" : {
+    "sync.done.places" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Sync"
+            "value" : "in %@"
+          }
+        }
+      }
+    },
+    "sync.done.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Synced ^[%lld change](inflect: true)"
           }
         }
       }
@@ -17601,6 +17645,17 @@
         }
       }
     },
+    "sync.progress.blocked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "blocked · %@"
+          }
+        }
+      }
+    },
     "sync.progress.cancelling" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -17634,24 +17689,123 @@
         }
       }
     },
-    "sync.progress.current" : {
+    "sync.progress.deletions" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Syncing %@…"
+            "value" : "Deletions"
           }
         }
       }
     },
-    "sync.progress.starting" : {
+    "sync.progress.deletions.kind" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Starting…"
+            "value" : "after the other writes"
+          }
+        }
+      }
+    },
+    "sync.progress.lock" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Locking stops after the current write."
+          }
+        }
+      }
+    },
+    "sync.progress.pace" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault writes %lld a minute"
+          }
+        }
+      }
+    },
+    "sync.progress.state.done" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "sync.progress.state.failed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Failed"
+          }
+        }
+      }
+    },
+    "sync.progress.state.skipped" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not run"
+          }
+        }
+      }
+    },
+    "sync.progress.state.waiting" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Waiting"
+          }
+        }
+      }
+    },
+    "sync.progress.state.writing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Writing"
+          }
+        }
+      }
+    },
+    "sync.progress.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep FX Vault open until it finishes"
+          }
+        }
+      }
+    },
+    "sync.progress.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Syncing"
           }
         }
       }
@@ -17667,13 +17821,13 @@
         }
       }
     },
-    "sync.progress.writing" : {
+    "sync.progress.writingCount" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Writing to GitHub…"
+            "value" : "Writing %1$lld of %2$lld"
           }
         }
       }
@@ -17920,17 +18074,6 @@
         }
       }
     },
-    "sync.subtitle.deletions" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "These are deleted on GitHub. Deleted secrets cannot be recovered from GitHub."
-          }
-        }
-      }
-    },
     "sync.subtitle.loading" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -17938,17 +18081,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Pushes your vault's pending changes to GitHub."
-          }
-        }
-      }
-    },
-    "sync.subtitle.progress" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Writing one change at a time. FX Vault stays unlocked until the sync ends."
           }
         }
       }
@@ -18345,17 +18477,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "FX Vault's own limit. Other gh or GitHub activity also counts toward GitHub's limits."
-          }
-        }
-      }
-    },
-    "sync.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Sync"
           }
         }
       }
