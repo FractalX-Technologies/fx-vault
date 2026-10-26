@@ -16,7 +16,7 @@ struct DestinationDetailScreen: View {
             DestinationDetailHeader(viewModel: viewModel, main: main)
             switch main.placeViewMode {
             case .notes:
-                PlaceNotesView(model: viewModel)
+                PlaceNotesContent(model: viewModel)
             case .table:
                 DestinationDetailControls(viewModel: viewModel)
                 ConfigTableView(viewModel: viewModel, emptyMessage: DestinationCopy.tableEmpty) { row in
@@ -55,8 +55,16 @@ private struct DestinationDetailHeader: View {
     let main: MainViewModel
 
     var body: some View {
+        if let edit = viewModel.notesEdit {
+            NotesEditHeader(title: viewModel.destination?.title ?? "", session: edit)
+        } else {
+            header
+        }
+    }
+
+    private var header: some View {
         let destination = viewModel.destination
-        PlaceHeader(title: destination?.title ?? "", subline: viewModel.subline) {
+        return PlaceHeader(title: destination?.title ?? "", subline: viewModel.subline) {
             if viewModel.isRefreshing {
                 PlaceRefreshingLine()
             } else if let refresh = viewModel.refresh, let destination {
@@ -72,6 +80,8 @@ private struct DestinationDetailHeader: View {
             }
             PlaceViewModePicker(main: main)
         } moreItems: {
+            NotesEditMenuItem(model: viewModel, main: main)
+            Divider()
             PlaceItemMoreItems(viewModel: viewModel, kinds: [.secret]) {
                 CopyAllMenuItem(isEnabled: viewModel.canCopyAll) {
                     viewModel.copyAll()

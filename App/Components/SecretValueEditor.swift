@@ -12,13 +12,15 @@ import VaultCore
 ///   and `gh variable set` strip them anyway, and a notice says so. SSH and PEM keys get a hint.
 struct SecretValueEditor: View {
     @Binding var value: String
+    /// Takes the keyboard when shown (Set value… in the notes editor, 1.0 N2).
+    var focusesOnAppear = false
     @State private var didStripTrailingNewlines = false
     @State private var isFocused = false
     @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            SecretTextViewRepresentable(text: $value) { stripped in
+            SecretTextViewRepresentable(text: $value, focusesOnAppear: focusesOnAppear) { stripped in
                 didStripTrailingNewlines = stripped
             } onFocusChange: { focused in
                 isFocused = focused
@@ -98,6 +100,7 @@ struct SecretValueEditor: View {
 /// The AppKit text view behind ``SecretValueEditor``.
 struct SecretTextViewRepresentable: NSViewRepresentable {
     @Binding var text: String
+    var focusesOnAppear = false
     let onCommit: (Bool) -> Void
     /// Called when the text view gains (`true`) or loses (`false`) first responder.
     var onFocusChange: (Bool) -> Void = { _ in }
@@ -111,6 +114,7 @@ struct SecretTextViewRepresentable: NSViewRepresentable {
         if let textView = scrollView.documentView as? SecretTextView {
             textView.delegate = context.coordinator
             textView.string = text
+            textView.focusesWhenShown = focusesOnAppear
             textView.onFirstResponderChange = { [coordinator = context.coordinator] focused in
                 coordinator.focusChanged(focused)
             }
@@ -176,6 +180,8 @@ final class SecretTextView: NSTextView {
     private(set) var hasSecureEventInput = false
     /// Observes first-responder changes (the SwiftUI frame draws its focus ring from it).
     var onFirstResponderChange: ((Bool) -> Void)?
+    /// Becomes first responder once it is in a window.
+    var focusesWhenShown = false
 
     /// A scroll view holding a configured ``SecretTextView``.
     static func makeScrollableEditor() -> NSScrollView {
@@ -201,24 +207,8 @@ final class SecretTextView: NSTextView {
     /// Turns off everything that could change the bytes or keep a copy (§5.11).
     func configureForSecrets() {
         isRichText = false
-        importsGraphics = false
         allowsUndo = false
-        allowsImageEditing = false
-        usesFindBar = false
-        usesFontPanel = false
-        usesRuler = false
-        smartInsertDeleteEnabled = false
-        isAutomaticQuoteSubstitutionEnabled = false
-        isAutomaticDashSubstitutionEnabled = false
-        isAutomaticTextReplacementEnabled = false
-        isAutomaticSpellingCorrectionEnabled = false
-        isContinuousSpellCheckingEnabled = false
-        isGrammarCheckingEnabled = false
-        isAutomaticTextCompletionEnabled = false
-        isAutomaticLinkDetectionEnabled = false
-        isAutomaticDataDetectionEnabled = false
-        inlinePredictionType = .no
-        writingToolsBehavior = .none
+        turnOffTextServices()
         font = Theme.Typography.nsMonospaced
         textColor = .labelColor
         drawsBackground = false
@@ -244,8 +234,13 @@ final class SecretTextView: NSTextView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if window == nil {
+        guard let window else {
             endSecureEventInput()
+            return
+        }
+        if focusesWhenShown {
+            focusesWhenShown = false
+            window.makeFirstResponder(self)
         }
     }
 
@@ -259,5 +254,30 @@ final class SecretTextView: NSTextView {
         guard hasSecureEventInput else { return }
         DisableSecureEventInput()
         hasSecureEventInput = false
+    }
+}
+
+extension NSTextView {
+    /// Substitutions, spelling and grammar, completion, detection, prediction, Writing Tools,
+    /// pictures and the font, ruler and find panels: none may change typed or pasted bytes
+    /// (§5.11; the notes editor, anton D3).
+    func turnOffTextServices() {
+        importsGraphics = false
+        allowsImageEditing = false
+        usesFindBar = false
+        usesFontPanel = false
+        usesRuler = false
+        smartInsertDeleteEnabled = false
+        isAutomaticQuoteSubstitutionEnabled = false
+        isAutomaticDashSubstitutionEnabled = false
+        isAutomaticTextReplacementEnabled = false
+        isAutomaticSpellingCorrectionEnabled = false
+        isContinuousSpellCheckingEnabled = false
+        isGrammarCheckingEnabled = false
+        isAutomaticTextCompletionEnabled = false
+        isAutomaticLinkDetectionEnabled = false
+        isAutomaticDataDetectionEnabled = false
+        inlinePredictionType = .no
+        writingToolsBehavior = .none
     }
 }

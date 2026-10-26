@@ -216,6 +216,15 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   and waiting for the next Sync. Notes | Table in the header switches to the table; a name
   opened from ⌘K opens the table. A click on a masked value reveals it after Touch ID or your
   master password, for 30 s, with the window kept out of screen capture.
+- **Notes editing.** Click a line, or choose ⋯ More › Edit Notes, to edit a place's notes as
+  text: type `KEY=value` lines under `# Secrets` or `# Variables`, rename, delete and move lines.
+  A secret's value is never typed into the text: the key after `=` opens Set value… (type, paste
+  or Generate), and a click on a value's token opens it again. Pasted `KEY=value` lines become
+  masked tokens and the clipboard is cleared; a copy from the notes writes `••••`. Each line says
+  what it does or why it can't be saved, with Key Vault's name rules in a Key Vault. Review ⌘S
+  lists what is added, changed and removed; Save turns it into pending changes, and nothing
+  reaches GitHub or Key Vault until Sync. Locking, another place or Table drops the edit.
+  An organization's notes stay read only.
 
 ### Removed
 

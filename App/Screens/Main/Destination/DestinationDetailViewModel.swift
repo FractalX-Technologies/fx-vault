@@ -28,6 +28,8 @@ final class DestinationDetailViewModel: LockObserving {
     let values: ConfigValueRevealer
     /// Reveal in the notes, after Touch ID or the master password (1.0 B9).
     let notesReveal: NotesRevealModel
+    /// The notes being edited (1.0 N2).
+    var notesEdit: NotesEditSession?
     let copyFlow: ItemCopyFlow
     var selection: Set<ConfigItemID> = []
     var alert: ErrorPresentationModel?
@@ -481,6 +483,7 @@ final class DestinationDetailViewModel: LockObserving {
     // MARK: - LockObserving
 
     func vaultDidLock() {
+        notesEdit?.finish()
         values.remaskAll()
         values.clearVariables()
         pendingDeletion = nil
@@ -511,6 +514,18 @@ extension DestinationDetailViewModel: NotesPlaceModel {
 
     var changedAtSourceTitle: String {
         destination.map { DestinationCopy.changedMark(provider: $0.provider) } ?? PlaceCopy.changedOnGitHubMark
+    }
+}
+
+extension DestinationDetailViewModel: NotesEditablePlaceModel {
+    func beginNotesEdit(at line: Int?) {
+        let destinations = dependencies.destinations
+        let destinationID = destinationID
+        let parent = destination?.provider.shortTitle
+        let target = NotesEditTargetModel(kind: .keyVault, title: notesPlaceName, parent: parent) { edits throws(ConfigRepositoryError) in
+            try destinations.applyEdits(edits, destinationID: destinationID)
+        }
+        startNotesEdit(target: target, caretLine: line)
     }
 }
 

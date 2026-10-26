@@ -4,9 +4,12 @@ import VaultCore
 /// A place's notes (1.0 B9; boards Main2-Repository, Place-Reveal, KV-Place): numbered
 /// `KEY = value` lines in sections, secrets as masked tokens until revealed (after Touch ID or
 /// the master password), variables in plaintext, the ○ / ● marks in the gutter and each line's
-/// note at its trailing edge. Read only.
+/// note at its trailing edge. Read only; where they can be edited, a click on a line of the
+/// place's own starts an edit there (1.0 N2).
 struct PlaceNotesView<Model: NotesPlaceModel>: View {
     let model: Model
+    /// Starts an edit at line N (from 1); nil where the notes can't be edited.
+    var onEdit: ((Int) -> Void)?
 
     var body: some View {
         let reveal = model.notesReveal
@@ -14,7 +17,12 @@ struct PlaceNotesView<Model: NotesPlaceModel>: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(model.notes.lines) { line in
-                    NotesLineView(line: line, reveal: reveal, changedTitle: changedTitle)
+                    NotesLineView(
+                        line: line,
+                        reveal: reveal,
+                        changedTitle: changedTitle,
+                        onEdit: onEdit.flatMap { edit in line.isInherited ? nil : { edit(line.number) } }
+                    )
                 }
             }
             .padding(.vertical, Theme.Spacing.smallMinus)
@@ -29,10 +37,12 @@ struct PlaceNotesView<Model: NotesPlaceModel>: View {
 }
 
 /// One line: the gutter, then a heading, nothing (a blank line) or `KEY = value` with its note.
-private struct NotesLineView: View {
+struct NotesLineView: View {
     let line: NotesLineModel
     let reveal: NotesRevealModel
     let changedTitle: String
+    /// A click on the line: an edit of the notes from it; nil where they can't be edited.
+    var onEdit: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -44,6 +54,7 @@ private struct NotesLineView: View {
         .padding(.trailing, Theme.Spacing.large)
         .frame(height: isRevealed ? Theme.Layout.notesRevealedLineHeight : Theme.Layout.notesLineHeight)
         .background(isRevealed ? Theme.Colors.surface2 : Color.clear)
+        .modifier(NotesLineEditGesture(onEdit: onEdit))
         .accessibilityElement(children: .contain)
     }
 
@@ -98,8 +109,25 @@ private struct NotesLineView: View {
     }
 }
 
+/// Click to edit: the text cursor over the line, and VoiceOver's Edit Notes action.
+private struct NotesLineEditGesture: ViewModifier {
+    let onEdit: (() -> Void)?
+
+    func body(content: Content) -> some View {
+        if let onEdit {
+            content
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onEdit)
+                .pointerStyle(.horizontalText)
+                .accessibilityAction(named: NotesEditCopy.edit, onEdit)
+        } else {
+            content
+        }
+    }
+}
+
 /// The line number, after the ○ (changed at the source) or ● (pending) mark.
-private struct NotesGutter: View {
+struct NotesGutter: View {
     let number: Int
     let mark: NotesMarkModel?
     let changedTitle: String

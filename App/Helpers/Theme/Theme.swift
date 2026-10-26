@@ -214,8 +214,24 @@ enum Theme {
         static let notesGutterWidth: CGFloat = 44
         /// A masked or revealed value's token.
         static let notesTokenHeight: CGFloat = 18
+        /// A token in the editor's text: as tall as fits a fixed 24 pt line with the text's
+        /// descent under it (1.0 N2).
+        static let notesEditTokenHeight: CGFloat = 16
         static let notesRemaskBarWidth: CGFloat = 48
         static let notesRemaskBarHeight: CGFloat = 2
+        /// The editor keeps this much of its width for the line notes (1.0 N2), at most…
+        static let notesNoteColumnWidth: CGFloat = 240
+        /// …and at most this share of a narrow column.
+        static let notesNoteColumnShare: CGFloat = 0.4
+        /// The dashes of a "Set value…" token's border.
+        static let notesTokenDash: [CGFloat] = [3, 2]
+        /// The wavy underline of a name a line can't save (board Place-Errors).
+        static let notesSquiggleWavelength: CGFloat = 4
+        static let notesSquiggleAmplitude: CGFloat = 1.5
+        /// Set value… (board Place-SecretValue).
+        static let notesValuePopoverWidth: CGFloat = 300
+        /// The dot before a line's error (board Place-Errors).
+        static let notesErrorDotSize: CGFloat = 5
 
         // MARK: Editor sheets (item editor, environment sheets)
 

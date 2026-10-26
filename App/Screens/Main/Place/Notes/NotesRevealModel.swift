@@ -64,6 +64,11 @@ final class NotesRevealModel: LockObserving, ReauthFlow {
         values.hide(id)
     }
 
+    /// Masks every revealed value (an edit of the notes starts, 1.0 N2).
+    func hideAll() {
+        values.remaskAll()
+    }
+
     func hideDate(of id: ConfigItemID) -> Date? {
         values.hideDates[id]
     }

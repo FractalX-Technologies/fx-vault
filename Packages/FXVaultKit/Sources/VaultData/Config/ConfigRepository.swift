@@ -255,6 +255,43 @@ public struct ConfigRepository: Sendable {
         Self.log.info("Push on next Sync requested for \(ids.count, privacy: .public) secrets")
     }
 
+    /// Saves the notes' edits of `scope` (1.0 N2) in one transaction; nothing is written when one
+    /// fails. A value for a value-missing secret fills it and, as Fill by default, pushes it on
+    /// the next Sync.
+    public func applyEdits(_ edits: PlaceItemEditsModel, repositoryID: RepoID, scope: ConfigScope) throws(ConfigRepositoryError) {
+        let normalized = try edits.normalized()
+        defer { normalized.wipe() }
+        try batch(repositoryID: repositoryID) { batch in
+            try batch.requireEditable(scope)
+            func requireInScope(_ id: ConfigItemID) throws {
+                guard let row = batch.row(id), row.scope == scope, !row.isDeleted else {
+                    throw ConfigRepositoryError.itemNotFound
+                }
+            }
+            for id in normalized.deletions {
+                try requireInScope(id)
+                try batch.delete(id)
+            }
+            for change in normalized.changes {
+                try requireInScope(change.id)
+                var id = change.id
+                if let name = change.name {
+                    id = try batch.rename(id, to: name)
+                }
+                guard let value = change.value else { continue }
+                if batch.row(id)?.hasValue == false {
+                    try batch.fill(id, value: value, pushOnNextSync: true, isUserRequest: true)
+                } else {
+                    try batch.editValue(id, value: value)
+                }
+            }
+            for addition in normalized.additions {
+                try batch.add(scope: scope, kind: addition.kind, name: addition.name, value: addition.value)
+            }
+        }
+        Self.log.info("Saved \(edits.count, privacy: .public) edits from the notes")
+    }
+
     // MARK: - Copy between scopes (v0.4.0) and repositories (v0.4.1)
 
     /// The names among `ids` that `scope` of `repositoryID` already holds (same kind, not

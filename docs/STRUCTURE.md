@@ -59,7 +59,10 @@ FXVault/
 │   │   │   │                        # DeleteItemsSheet (the "Delete?" dialog of every place),
 │   │   │   │                        # ItemNameModel (a name keyed by its kind); Notes/ (1.0 B9):
 │   │   │   │                        # PlaceNotesView, NotesPlaceModel, NotesModels, NotesCopy,
-│   │   │   │                        # NotesRevealModel, PlaceViewModePicker
+│   │   │   │                        # NotesRevealModel, PlaceViewModePicker; Notes/Edit/ (1.0 N2):
+│   │   │   │                        # NotesEditablePlaceModel, NotesEditSession, NotesTextView,
+│   │   │   │                        # NotesEditAnalysis, NotesTokenStore, NotesValuePopover,
+│   │   │   │                        # NotesReviewSheet, NotesEditorView, NotesEditHeader
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
 │   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel

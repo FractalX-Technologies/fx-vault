@@ -30,5 +30,8 @@ extension Theme {
 
         /// How long the notch island says "Unlocked" before it goes away.
         static let islandUnlocked: Duration = .milliseconds(900)
+
+        /// How long the notes editor's "3 values set from the clipboard" stays (board Place-Paste).
+        static let notesToast: Duration = .seconds(4)
     }
 }

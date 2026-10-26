@@ -1250,6 +1250,16 @@ AppTests).
     to Table). `PlaceNotesView` draws `NotesDocumentModel` from `NotesPlaceModel` (the four
     detail view models; `Screens/Main/Place/Notes/`); its Reveal asks `ReauthGate` (`.reveal`)
     through `NotesRevealModel`, then the place's `ConfigValueRevealer`.
+    1.0 N2: a repository scope, a folder and a Key Vault are `NotesEditablePlaceModel`s
+    (`Notes/Edit/`; an organization is not). `beginNotesEdit(at:)` hides revealed values and
+    starts a `NotesEditSession` from the notes' own lines (`notesEditOrigins`); `NotesTextView`
+    (TextKit 2) holds the text, each value an attachment whose bytes stay in `NotesTokenStore`;
+    `NotesEditAnalysis` reads the paragraphs into line notes, errors and a plan (`NotesEditPlaceKind`
+    adds Key Vault's names). Review shows `NotesReviewModel`; Save hands `PlaceItemEditsModel`
+    to `ConfigRepository.applyEdits(_:repositoryID:scope:)`, `FolderRepository.applyEdits` or
+    `DestinationRepository.applyEdits`, one batch each (pending until Sync; a folder at once).
+    Another scope, a lock, Table or another place ends the session and wipes its values; no
+    file drop is taken while it runs (`acceptsFileDrops`).
     The drift check runs when a repository opens (`DriftRepository.detectOnOpen`).
     v0.4.0 multi-selection: ⌘/⇧-click and ⌘A select rows (`selection`); with two or more
     selected, `RepoDetailSelectionActions` replaces the add actions ("N selected", Push on Next

@@ -21,7 +21,7 @@ struct RepoDetailScreen: View {
             }
             switch main.placeViewMode {
             case .notes:
-                PlaceNotesView(model: viewModel)
+                PlaceNotesContent(model: viewModel)
             case .table:
                 RepoDetailControls(viewModel: viewModel)
                 ConfigTableView(viewModel: viewModel)
@@ -138,6 +138,14 @@ private struct RepoDetailHeader: View {
     let main: MainViewModel
 
     var body: some View {
+        if let edit = viewModel.notesEdit {
+            NotesEditHeader(title: viewModel.headerTitle, session: edit)
+        } else {
+            header
+        }
+    }
+
+    private var header: some View {
         PlaceHeader(
             title: viewModel.headerTitle,
             subline: viewModel.headerSubline,
@@ -176,6 +184,8 @@ private struct RepoDetailMoreItems: View {
     let main: MainViewModel
 
     var body: some View {
+        NotesEditMenuItem(model: viewModel, main: main)
+        Divider()
         PlaceItemMoreItems(viewModel: viewModel) {
             placeItems
         }

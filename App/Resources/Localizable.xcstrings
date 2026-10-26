@@ -12090,6 +12090,787 @@
         }
       }
     },
+    "notesEdit.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Notes editor"
+          }
+        }
+      }
+    },
+    "notesEdit.edit" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Edit Notes"
+          }
+        }
+      }
+    },
+    "notesEdit.error.addEquals" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add = and a value"
+          }
+        }
+      }
+    },
+    "notesEdit.error.addName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a name"
+          }
+        }
+      }
+    },
+    "notesEdit.error.addValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a value"
+          }
+        }
+      }
+    },
+    "notesEdit.error.belongsIn" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Belongs under %@"
+          }
+        }
+      }
+    },
+    "notesEdit.error.bothBecome" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Both become %@ in Key Vault"
+          }
+        }
+      }
+    },
+    "notesEdit.error.characters" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use letters, digits and _"
+          }
+        }
+      }
+    },
+    "notesEdit.error.keyVaultTooLong" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Key Vault names are at most %lld characters"
+          }
+        }
+      }
+    },
+    "notesEdit.error.kindFixed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kind is fixed after Sync"
+          }
+        }
+      }
+    },
+    "notesEdit.error.leadingDigit" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Names can't start with a digit"
+          }
+        }
+      }
+    },
+    "notesEdit.error.oneValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "One value per line"
+          }
+        }
+      }
+    },
+    "notesEdit.error.reservedName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault reserves this name"
+          }
+        }
+      }
+    },
+    "notesEdit.error.reservedPrefix" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Names can't start with %@"
+          }
+        }
+      }
+    },
+    "notesEdit.error.sameInKeyVault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Same as %@ in Key Vault"
+          }
+        }
+      }
+    },
+    "notesEdit.error.sameName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Same name as line %lld"
+          }
+        }
+      }
+    },
+    "notesEdit.error.secretInText" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secret values are set with Set value…"
+          }
+        }
+      }
+    },
+    "notesEdit.error.setValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Set a value"
+          }
+        }
+      }
+    },
+    "notesEdit.error.tooLarge.gitHub" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ bytes · over GitHub's %2$@"
+          }
+        }
+      }
+    },
+    "notesEdit.error.tooLarge.keyVault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ bytes · over Key Vault's %2$@"
+          }
+        }
+      }
+    },
+    "notesEdit.error.tooLong" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Names are at most %lld characters"
+          }
+        }
+      }
+    },
+    "notesEdit.fixLines" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Fix ^[%lld line](inflect: true) to save"
+          }
+        }
+      }
+    },
+    "notesEdit.kind.secret" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "secret"
+          }
+        }
+      }
+    },
+    "notesEdit.kind.variable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "variable"
+          }
+        }
+      }
+    },
+    "notesEdit.menu.copy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "notesEdit.menu.cut" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cut"
+          }
+        }
+      }
+    },
+    "notesEdit.menu.selectAll" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Select All"
+          }
+        }
+      }
+    },
+    "notesEdit.note.comment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "comments aren't saved"
+          }
+        }
+      }
+    },
+    "notesEdit.note.newSecret" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "new · secret"
+          }
+        }
+      }
+    },
+    "notesEdit.note.newVariable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "new · variable"
+          }
+        }
+      }
+    },
+    "notesEdit.note.renamed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "renamed from %@"
+          }
+        }
+      }
+    },
+    "notesEdit.note.replacesValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "replaces value"
+          }
+        }
+      }
+    },
+    "notesEdit.note.savedAs" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "saved as %@"
+          }
+        }
+      }
+    },
+    "notesEdit.note.valueSet" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "value set"
+          }
+        }
+      }
+    },
+    "notesEdit.note.was" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "was %@"
+          }
+        }
+      }
+    },
+    "notesEdit.paste.values" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld value](inflect: true) set from the clipboard · clipboard cleared"
+          }
+        }
+      }
+    },
+    "notesEdit.removed.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "removed"
+          }
+        }
+      }
+    },
+    "notesEdit.removed.restore" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Put %@ back"
+          }
+        }
+      }
+    },
+    "notesEdit.removed.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Removed"
+          }
+        }
+      }
+    },
+    "notesEdit.removed.undo" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Undo"
+          }
+        }
+      }
+    },
+    "notesEdit.review" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Review"
+          }
+        }
+      }
+    },
+    "notesEdit.review.added" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Added · %lld"
+          }
+        }
+      }
+    },
+    "notesEdit.review.changed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Changed · %lld"
+          }
+        }
+      }
+    },
+    "notesEdit.review.count" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld change](inflect: true)"
+          }
+        }
+      }
+    },
+    "notesEdit.review.footer.folder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A folder saves at once and never sends anything by itself."
+          }
+        }
+      }
+    },
+    "notesEdit.review.footer.gitHub" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved changes stay pending until Sync. Removed items are deleted from GitHub at Sync."
+          }
+        }
+      }
+    },
+    "notesEdit.review.footer.keyVault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved changes stay pending until Sync. Removed secrets are deleted in Key Vault at Sync."
+          }
+        }
+      }
+    },
+    "notesEdit.review.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Review the changes before saving them (⌘S)"
+          }
+        }
+      }
+    },
+    "notesEdit.review.orgApplies" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@'s value applies after Sync"
+          }
+        }
+      }
+    },
+    "notesEdit.review.removed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Removed · %lld"
+          }
+        }
+      }
+    },
+    "notesEdit.review.save" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save"
+          }
+        }
+      }
+    },
+    "notesEdit.review.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Review changes to %@"
+          }
+        }
+      }
+    },
+    "notesEdit.section.secrets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets"
+          }
+        }
+      }
+    },
+    "notesEdit.section.variables" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Variables"
+          }
+        }
+      }
+    },
+    "notesEdit.subline" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Editing · secret values stay masked; click one to set it"
+          }
+        }
+      }
+    },
+    "notesEdit.subline.errors" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Editing · ^[%lld line](inflect: true) can't be saved"
+          }
+        }
+      }
+    },
+    "notesEdit.token.bytes" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ bytes"
+          }
+        }
+      }
+    },
+    "notesEdit.token.lines" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld line](inflect: true)"
+          }
+        }
+      }
+    },
+    "notesEdit.token.setValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Set value…"
+          }
+        }
+      }
+    },
+    "notesEdit.unsaved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld unsaved change](inflect: true)"
+          }
+        }
+      }
+    },
+    "notesEdit.value.done" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "notesEdit.value.generate" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Generate"
+          }
+        }
+      }
+    },
+    "notesEdit.value.generate.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A random value of 32 bytes, as 43 letters, digits, - and _"
+          }
+        }
+      }
+    },
+    "notesEdit.value.keepsCurrent" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Leave it empty to keep the current value."
+          }
+        }
+      }
+    },
+    "notesEdit.value.kind" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kind"
+          }
+        }
+      }
+    },
+    "notesEdit.value.kind.secret" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secret"
+          }
+        }
+      }
+    },
+    "notesEdit.value.kind.variable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Variable"
+          }
+        }
+      }
+    },
+    "notesEdit.value.kindFixed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The kind is fixed after its first Sync."
+          }
+        }
+      }
+    },
+    "notesEdit.value.paste" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paste"
+          }
+        }
+      }
+    },
+    "notesEdit.value.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ · value"
+          }
+        }
+      }
+    },
+    "notesEdit.value.titleUnnamed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Value"
+          }
+        }
+      }
+    },
     "onboarding.back" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
