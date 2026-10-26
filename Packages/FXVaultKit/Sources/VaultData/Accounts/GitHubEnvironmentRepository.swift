@@ -221,6 +221,34 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
         ScopeChecker.fixCommands(login: login, previousActiveLogin: activeLogin, scopes: [ScopeChecker.adminOrgScope])
     }
 
+    /// In-app Approve (1.0 B4b): `gh auth refresh` for `scopes` on `login`, which must be gh's
+    /// active account at the last ``accounts()`` (gh refreshes no other; FX Vault never runs
+    /// `gh auth switch`). `onDeviceCode` gets the code to show. On success the cached token is
+    /// dropped, so the next call reads the new one.
+    public func approveScopes(
+        _ scopes: [GHApprovalScope],
+        login: String,
+        codeWait: Duration = Timeouts.ghDeviceCodeWait,
+        onDeviceCode: @escaping @Sendable (GHDeviceCodeModel) -> Void
+    ) async throws(GHApprovalError) {
+        guard isActiveAccount(login) else { throw .notActiveAccount }
+        let auth: GHAuthService
+        do {
+            auth = try authService()
+        } catch {
+            throw .failed
+        }
+        Self.log.info("Approve: gh auth refresh for \(scopes.count, privacy: .public) scope(s)")
+        try await auth.approve(scopes: scopes, codeWait: codeWait, onDeviceCode: onDeviceCode)
+        tokenCache.invalidate(login: login)
+    }
+
+    /// True when `login` is gh's active account at the last ``accounts()``: the only one
+    /// ``approveScopes(_:login:codeWait:onDeviceCode:)`` can refresh.
+    public func isActiveAccount(_ login: String) -> Bool {
+        activeLogin.map { OwnerLoginValidator.foldKey($0) == OwnerLoginValidator.foldKey(login) } ?? false
+    }
+
     private var activeLogin: String? {
         lastStatuses.first(where: \.isActive)?.login
     }

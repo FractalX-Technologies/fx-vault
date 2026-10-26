@@ -101,6 +101,7 @@ FXVault/
 │   │   │   │                        # DestinationSettingsScreen, DestinationDriftScreen (Refresh
 │   │   │   │                        # findings, Keep Mine / Use Remote), RetiredDestinationsNotice
 │   │   │   │                        # (1.0: the Supabase and Vercel destinations v16 removed)
+│   │   │   ├── GHApproval/          # GHApprovalSheet/ViewModel (Approve through gh auth refresh)
 │   │   │   └── AddRepository/       # AddRepositorySheet/ViewModel (Add repository by name)
 │   │   ├── CopyAll/                 # CopyAllScreen/ViewModel, CopyAllCopy (Copy All after
 │   │   │                            # Touch ID or the master password, 1.0 D6c4)
@@ -296,7 +297,8 @@ FXVault/
 │   │   │   ├── Setup/               # SetupCommand (allowlist), SetupCommandRunner (Homebrew)
 │   │   │   ├── CLI/                 # GHLocator (+ GHLocatorReportModel, GHFileInspector),
 │   │   │   │                        # GHVersion, GHAuthService, GHTokenCache, AuthStatusDTO
-│   │   │   │                        # (account listing, unusable accounts), ScopeChecker
+│   │   │   │                        # (account listing, unusable accounts), ScopeChecker,
+│   │   │   │                        # GHScopeApproval (A7 scopes, device code parser)
 │   │   │   ├── Commands/            # GHCommand (GHOperation, GHArgumentPolicy), GHCommandService,
 │   │   │   │                        # GHCommandScheduler(+Extension), GHRepoRef, argv builders
 │   │   │   ├── API/                 # GHEnvironmentsAPI, GitHubPath, APIResponseParser, JSONValue

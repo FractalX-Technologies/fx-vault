@@ -1932,7 +1932,7 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B3d Remove Supabase and Vercel (DestinationKit remotes and account clients, connections, settings, Add Destination). Migration `v16_drop_runtime_providers` deletes their destinations, items, journal and tokens (Bryan, 2026-10-25: delete them) and keeps their names in `retired_destinations` for a one-time notice after unlock; nothing is deleted remotely. A 0.9 file that carries them imports without them, and the preview says so. Key Vault stays. e2e: smoke flow.
 - [x] B3b Share Securely: passphrase `.fxvault` export of an org, repository or environment, and the open/preview/held import, from D2's Share boards; **Send with AirDrop** of that file (system share, Bryan 2026-10-25).
 - [x] B4 `admin:org` scope check per organization and the refresh flow (copyable commands and Re-check).
-- [ ] B4b In-app Approve (D1's device code) through `gh auth refresh`: needs a check against a real gh login first (non-TTY behaviour, the browser step); reserved for Bryan's real account.
+- [x] B4b In-app Approve (D1's device code) through `gh auth refresh`: built against a fake gh; the real gh login (non-TTY wording, the browser step) is RELEASING #74 on Bryan's account.
 - [x] B5 Organization list commands and store (additive migration); read-only organization node. Split: B5a GitHubKit listings [x]; B5b store and import [x]; B5c the read-only node and its e2e [x].
 - [x] B6 Organization writes with visibility and repositories, always sending the synced visibility and full repository list. Split: B6a GitHubKit commands [x]; B6b1 local changes in the store (`v19`) [x]; B6b2 organization Sync in VaultData (review, run, confirm) [x]; B6b3a the editable organization detail and access picker [x]; B6b3b the Sync group and the badge [x].
 - [x] D6 Design pass after B6b3b: compare every screen with the D1–D5 boards (snapshots side by side) and fix the gaps in small slices; list what waits for later features (notes, drift, settings, menu bar, quick vault, Share Securely).
@@ -2635,6 +2635,8 @@ Orchestrator:
 - [ ] Not doable here:
   - B4b (`gh auth refresh` changes Bryan's real gh token);
   - B11e2's manual check on a signed build with a sensor (RELEASING #73; built and tested through fakes);
+  - B4b's manual check on Bryan's real gh login (RELEASING #74; built and tested with a fake gh);
+  - B11e2 Touch ID inside the island (signed build and sensor);
   - the RELEASING manual rows;
   - tag and release.
 
@@ -2751,3 +2753,11 @@ Review B11e2 — Touch ID inside the island (2026-10-26, automatic):
 - Tests: package `VaultBiometricsTests` (context reaches the read, failed or cancelled check reads nothing, a lock during or before the check, the rules, the `LAError` mapping); app `NotchIslandTests` (one touch through its own context, a cancel then a fresh check, a lock during the touch, the window path, no Touch ID). Seen failing under 7 mutations.
 - Waiver: tasks/waivers.md B11e2; manual check RELEASING #73.
 - Docs: CHANGELOG, README, ARCHITECTURE, SECURITY-MODEL §5, DESIGN, STRUCTURE.
+Review B4b — Approve in the app through `gh auth refresh` (2026-10-26, automatic):
+- GitHubKit: A7 `GHAuthService.refreshCommand(scopes:)` (`gh auth refresh -h github.com -s <scopes>`, scopes from `GHApprovalScope` only) and `approve(scopes:codeWait:onDeviceCode:)`; `CommandSpec.stderrObserver` (the runner reports stderr chunks while gh runs; stdout never); `GHDeviceCodeParser` (ANSI stripped, TTY or not) and `GHDeviceCodeWatcher`; `GHApprovalError` (cancelled, timedOut, failed, unrecognizedOutput, notActiveAccount); `Timeouts.ghAuthRefresh` 900 s and `ghDeviceCodeWait` 20 s. `FakeCommandRunner.Response` gains `streamedStderr` and `waitsForCancellation`.
+- VaultData: `GitHubEnvironmentRepository.approveScopes` (gh's active account only, the account's cached token dropped after a success) and `isActiveAccount`.
+- App: `SidebarOwnerProblem.approvalScopes`; `MainViewModel.approve(_:)` opens `MainSheet.ghApproval` for the active account, else Settings › Accounts as before; `GHApprovalSheet`/`GHApprovalViewModel` (code with Copy, Open github.com/login/device, Waiting for approval…, Check Again, Cancel, Try Again, Done); `GHApprovalError+Extension` (one generic message plus the command, the expiry its own).
+- Assumptions: a sheet rather than the board's inline row (a popover closes when the user goes to the browser, and that would stop gh); FX Vault never runs `gh auth switch`, so an inactive account keeps the Settings commands; no code within 20 s counts as unknown output.
+- Tests: package `ScopeApprovalTests`, `GitHubEnvironmentTests` (2), `ProcessRunnerTests` (the observer, a real child), `CommandBuilderTests` (A7 in the catalog); app `GHApprovalTests` (10). Seen failing under 10 mutations (ANSI strip, timeout mapping, no-code mapping, active check, token drop, observer, Check Again's scope check, the stale-run guard, the main window's active check, a scope outside the list).
+- Waiver: tasks/waivers.md B4b; manual check RELEASING #74.
+- Docs: CHANGELOG, README, ARCHITECTURE, SECURITY-MODEL §8, API (A7, timeouts), DESIGN, STRUCTURE.

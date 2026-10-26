@@ -294,7 +294,11 @@ private struct SpawnedChild: Sendable {
             state: ChildState(pid: pid),
             stdinFD: stdinPipe.write,
             stdoutCollector: OutputCollector(fileDescriptor: stdoutPipe.read, cap: spec.maxStdoutBytes),
-            stderrCollector: OutputCollector(fileDescriptor: stderrPipe.read, cap: spec.maxStderrBytes)
+            stderrCollector: OutputCollector(
+                fileDescriptor: stderrPipe.read,
+                cap: spec.maxStderrBytes,
+                observer: spec.stderrObserver
+            )
         )
     }
 
@@ -377,6 +381,7 @@ private final class OutputCollector: @unchecked Sendable {
 
     private let descriptor: Int32
     private let cap: Int
+    private let observer: (@Sendable (String) -> Void)?
     private let queue = DispatchQueue(label: "io.fractalx.fxvault.process-output")
     private let source: DispatchSourceRead
     /// Accessed only on `queue` until the source is cancelled, then only by `takeOutput()`.
@@ -384,9 +389,10 @@ private final class OutputCollector: @unchecked Sendable {
     private let scratch: UnsafeMutableRawBufferPointer
     private let state = OSAllocatedUnfairLock(initialState: State())
 
-    init(fileDescriptor: Int32, cap: Int) {
+    init(fileDescriptor: Int32, cap: Int, observer: (@Sendable (String) -> Void)? = nil) {
         descriptor = fileDescriptor
         self.cap = max(cap, 0)
+        self.observer = observer
         scratch = UnsafeMutableRawBufferPointer.allocate(
             byteCount: Self.chunkSize,
             alignment: MemoryLayout<UInt8>.alignment
@@ -462,6 +468,9 @@ private final class OutputCollector: @unchecked Sendable {
     }
 
     private func append(_ bytes: UnsafeRawBufferPointer) {
+        if let observer {
+            observer(String(decoding: bytes, as: UTF8.self))
+        }
         let room = cap - buffer.count
         if bytes.count > room {
             state.withLock { $0.isTruncated = true }

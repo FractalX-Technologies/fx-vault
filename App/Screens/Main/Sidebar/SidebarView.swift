@@ -306,8 +306,8 @@ private struct OwnerNodeView: View {
         return SidebarSubline(level: 0, text: copy.text, actionTitle: copy.action, help: help) {
             if case .ssoRequired(let url?) = problem {
                 openURL(url)
-            } else {
-                // In-app approval is B4b; until then Approve opens Settings › Accounts.
+            } else if !main.approve(owner) {
+                // Another account, or a problem gh can't approve here: Settings has the commands.
                 main.requestAccountsSettings()
                 openSettings()
             }

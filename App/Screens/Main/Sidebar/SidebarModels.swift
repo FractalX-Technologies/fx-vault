@@ -79,6 +79,22 @@ enum SidebarOwnerProblem: Hashable {
     case unavailable(GHError)
 }
 
+extension SidebarOwnerProblem {
+    /// What Approve asks gh for in the app (1.0 B4b), from the fixed list only; nil when the
+    /// problem has no in-app approval, or names a scope outside the list.
+    var approvalScopes: [GHApprovalScope]? {
+        switch self {
+        case .missingScopes(let names):
+            let scopes = names.compactMap { GHApprovalScope(rawValue: $0.lowercased()) }
+            return scopes.isEmpty || scopes.count != names.count ? nil : scopes
+        case .needsAdminOrg:
+            return [.adminOrg]
+        case .signedOut, .needsOrgAdmin, .ssoRequired, .unavailable:
+            return nil
+        }
+    }
+}
+
 /// One owner node under GitHub: an organization or a person, once across every gh account.
 struct SidebarOwnerModel: Identifiable, Hashable {
     /// The owner's fold key.

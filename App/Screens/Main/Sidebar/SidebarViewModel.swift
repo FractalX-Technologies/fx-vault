@@ -129,6 +129,13 @@ final class SidebarViewModel {
         SidebarGrouping.owners(input, query: searchText)
     }
 
+    /// True when `login` is gh's active account at the last reload: the only one `gh auth
+    /// refresh` can approve scopes for (1.0 B4b).
+    func isActiveAccount(_ login: String) -> Bool {
+        let key = OwnerLoginValidator.foldKey(login)
+        return input.accounts.contains { $0.id == key && $0.status?.isActive == true }
+    }
+
     /// Every owner node, whatever the search.
     private var allOwners: [SidebarOwnerModel] {
         SidebarGrouping.owners(input, query: "")

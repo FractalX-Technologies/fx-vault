@@ -29,6 +29,11 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
         public var isStdoutTruncated: Bool
         /// Throw this instead of returning a result.
         public var error: CommandRunnerError?
+        /// Sent to the spec's ``CommandSpec/stderrObserver`` before the call ends (a device code).
+        public var streamedStderr: String?
+        /// The process "keeps waiting" until the calling task is cancelled, then throws
+        /// `.cancelled` (gh polling for an approval that never comes).
+        public var waitsForCancellation: Bool
 
         public init(
             exitCode: Int32 = 0,
@@ -36,7 +41,9 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
             stderr: String = "",
             didTimeOut: Bool = false,
             isStdoutTruncated: Bool = false,
-            error: CommandRunnerError? = nil
+            error: CommandRunnerError? = nil,
+            streamedStderr: String? = nil,
+            waitsForCancellation: Bool = false
         ) {
             self.exitCode = exitCode
             self.stdout = stdout
@@ -44,6 +51,8 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
             self.didTimeOut = didTimeOut
             self.isStdoutTruncated = isStdoutTruncated
             self.error = error
+            self.streamedStderr = streamedStderr
+            self.waitsForCancellation = waitsForCancellation
         }
 
         /// Exit 0 with `stdout` as UTF-8.
@@ -101,6 +110,7 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
     /// The stderr of an unmatched call. Wrappers (a stateful GitHub simulator) match it, together
     /// with ``unmatchedExitCode``, to tell an unscripted call from a scripted failure.
     public static let unmatchedStderr = "fake: no stub"
+    private static let cancellationPoll: Duration = .milliseconds(10)
     private let state = OSAllocatedUnfairLock(initialState: State())
 
     public init() {}
@@ -175,6 +185,15 @@ public final class FakeCommandRunner: CommandRunning, Sendable {
         }
         guard let response = entry?.respond(invocation) else {
             return CommandResult(exitCode: Self.unmatchedExitCode, stdout: SecretBytes(count: 0), stderr: Self.unmatchedStderr)
+        }
+        if let streamed = response.streamedStderr {
+            spec.stderrObserver?(streamed)
+        }
+        if response.waitsForCancellation {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.cancellationPoll)
+            }
+            throw .cancelled
         }
         if let error = response.error {
             throw error

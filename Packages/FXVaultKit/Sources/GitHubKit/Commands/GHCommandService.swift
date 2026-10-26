@@ -81,7 +81,12 @@ public struct GHCommandService: Sendable {
     /// Runs `command` once. `token` is the account's token for operations that need one
     /// (ignored otherwise); it is not wiped here. The command's stdin value is copied into a
     /// payload the runner wipes; the command itself is not wiped.
-    public func execute(_ command: GHCommand, token: SecretBytes?) async throws(GHError) -> GHCommandOutput {
+    /// `stderrObserver` sees stderr while gh runs (A7's device code); see ``CommandSpec``.
+    public func execute(
+        _ command: GHCommand,
+        token: SecretBytes?,
+        stderrObserver: (@Sendable (String) -> Void)? = nil
+    ) async throws(GHError) -> GHCommandOutput {
         let operation = command.operation
         let effectiveToken = operation.requiresToken ? token : nil
         if operation.requiresToken && effectiveToken == nil {
@@ -94,7 +99,8 @@ public struct GHCommandService: Sendable {
             environment: environment,
             workingDirectory: workingDirectory,
             stdin: command.makeStdinPayload(),
-            timeout: operation.timeout
+            timeout: operation.timeout,
+            stderrObserver: stderrObserver
         )
 
         let result: CommandResult

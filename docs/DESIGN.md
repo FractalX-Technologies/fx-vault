@@ -446,7 +446,14 @@ foreground color, so `.primary` text still turns white on selected rows.
   Import); its chevron opens its repositories (`book.closed`), which list the ones in the vault
   and the selected one, the rest behind "Show N more" (`.label` subtle). A `SidebarSubline`
   (`.label` subtle, its action in `.labelEmphasized` ink) says what an owner needs: "Needs
-  admin:org · Approve", "Authorize SSO · Open", "Not logged in · Settings". Owners start
+  admin:org · Approve", "Authorize SSO · Open", "Not logged in · Settings". Approve opens the
+  GitHub approval sheet (1.0 B4b, board ConnectGitHub's code row): section label the owner,
+  `.title` "Approve admin:org on GitHub", a muted line naming the account; "Enter this code on
+  GitHub" (`.formLabel` muted), the code in `.passphraseWord` with an `.outline` Copy, `.outline`
+  "Open github.com/login/device", and "Waiting for approval…" (`.caption` muted with a small
+  spinner); Cancel and Check Again (primary). A failure shows `InlineErrorView` and the
+  command's `CommandRow` with Try Again; done says "Approved · checked again" with Done. A sheet,
+  not a popover, so it stays while the user is in the browser. Owners start
   collapsed; a selection opens its owner and a search opens all. New Repository… (the owner
   preselected) and Add Repository by Name… are on the owner's context menu, New Environment… on
   the repository's.

@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import os
 import Testing
 @testable import GitHubKit
 import VaultCore
@@ -53,6 +54,19 @@ struct ProcessRunnerTests {
         let result = try await runner.run(spec("/bin/cat", stdin: StdinPayload(transferring: payload)))
         #expect(result.exitCode == 0)
         #expect(result.stdout.count == size)
+    }
+
+    @Test func theStderrObserverSeesStderrOnlyWhileTheProcessRuns() async throws {
+        let seen = OSAllocatedUnfairLock(initialState: "")
+        var spec = spec("/bin/sh", ["-c", "echo out; echo code >&2; sleep 0.3; echo later >&2"])
+        spec.stderrObserver = { chunk in seen.withLock { $0 += chunk } }
+        let started = ContinuousClock.now
+        let result = try await runner.run(spec)
+        #expect(result.isSuccess)
+        #expect(seen.withLock { $0 } == "code\nlater\n")
+        #expect(result.stderr == "code\nlater\n", "the result still has all of stderr")
+        #expect(!seen.withLock { $0 }.contains("out"), "stdout may hold values: never observed")
+        #expect(ContinuousClock.now - started >= .milliseconds(300))
     }
 
     @Test func emptyStdinReadsEndOfFile() async throws {

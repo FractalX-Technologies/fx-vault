@@ -11,7 +11,8 @@ the secrets your code reads at runtime in Azure Key Vault.
 - **One vault for every account.** Every `gh` account you are logged in to, its organizations
   and their repositories in one sidebar tree, one node per organization or person whichever
   accounts see it, with each repository's environments under it, search (⌘F), and what an
-  owner needs under its name (Needs admin:org · Approve, Authorize SSO · Open); the Azure Key
+  owner needs under its name (Needs admin:org · Approve, Authorize SSO · Open; Approve runs
+  `gh auth refresh` for gh's active account and shows GitHub's one-time code); the Azure Key
   Vaults you connected are under **Azure** by subscription, and Lock and Settings at the bottom of the sidebar.
   The toolbar shows where you are; **⌘K** jumps to any organization, repository, environment,
   Key Vault or folder by typing part of its name, and finds secrets and variables by name (never

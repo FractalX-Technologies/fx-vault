@@ -599,6 +599,18 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         app.lock(trigger: .manual)
     }
 
+    /// An owner's Approve (1.0 B4b): the approval sheet when gh can add the scopes here (a
+    /// scope of the fixed list, on gh's active account, online). False leaves it to Settings ›
+    /// Accounts, whose commands switch accounts first.
+    func approve(_ owner: SidebarOwnerModel) -> Bool {
+        guard let scopes = owner.problem?.approvalScopes, sidebar.isActiveAccount(owner.accountLogin) else {
+            return false
+        }
+        let sheet = MainSheet.ghApproval(GHApprovalContext(login: owner.accountLogin, ownerLogin: owner.login, scopes: scopes))
+        present(sheet)
+        return activeSheet == sheet
+    }
+
     /// An owner's "Approve" or "Settings": Settings › Accounts has the commands that fix it. The
     /// view then opens the Settings window.
     func requestAccountsSettings() {
