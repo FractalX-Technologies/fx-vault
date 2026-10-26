@@ -138,11 +138,16 @@ final class QuickVaultViewModel: LockObserving {
     private func closeAfterTheCheckWithoutFocus() {
         guard checkWatch == nil else { return }
         checkWatch = Task { [weak self] in
-            let checks = Observations { @MainActor [weak self] in
-                self?.place?.isAuthorizing == true
-            }
-            for await isAuthorizing in checks where !isAuthorizing {
-                break
+            // Not `Observations`: Swift 6.3 (Xcode 26, CI's macos-26) crashes in IRGen on its
+            // closure. A close sets `place` to nil, so a cancelled watch wakes up and returns.
+            while self?.place?.isAuthorizing == true, !Task.isCancelled {
+                await withCheckedContinuation { continuation in
+                    withObservationTracking {
+                        _ = self?.place?.isAuthorizing
+                    } onChange: {
+                        continuation.resume()
+                    }
+                }
             }
             guard let self, !Task.isCancelled else { return }
             checkWatch = nil
