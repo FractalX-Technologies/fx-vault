@@ -29,3 +29,8 @@ xcuserdata/
 # Build output (skeleton additions)
 .spm/
 *.xcresult
+
+# fastlane run output (ci/fastlane): release-local.sh needs a clean tree after the lane
+ci/fastlane/README.md
+ci/fastlane/report.xml
+ci/fastlane/test_output/

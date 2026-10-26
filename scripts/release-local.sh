@@ -336,7 +336,9 @@ working_tree_is_clean() {
 check_git() {
   git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1 || die "$ROOT is not a git repository"
   if [[ "$require_clean" == true ]]; then
-    working_tree_is_clean || die "the working tree has uncommitted or untracked changes (git status)"
+    working_tree_is_clean \
+      || die "the working tree has uncommitted or untracked changes:
+$(git -C "$ROOT" status --porcelain --untracked-files=normal | head -n 20)"
     pass "working tree is clean"
   fi
   if [[ -z "$build_number" ]]; then

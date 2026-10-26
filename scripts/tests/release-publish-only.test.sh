@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT/scripts/release-local.sh"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP" "${stray:-}"' EXIT
 failures=0
 
 # expect_failure <name> <message> <args...>: the script must exit non-zero and print <message>.
@@ -31,6 +31,15 @@ printf 'built\n' > "$TMP/tampered/FXVault-9.9.9.dmg"
 printf 'changed\n' > "$TMP/tampered/FXVault-9.9.9.dmg"
 expect_failure "DMG that fails its sha256" "does not match FXVault-9.9.9.dmg.sha256" \
   --publish-only --output-dir "$TMP/tampered" 9.9.9
+
+mkdir -p "$TMP/built"
+printf 'built\n' > "$TMP/built/FXVault-9.9.9.dmg"
+(cd "$TMP/built" && shasum -a 256 FXVault-9.9.9.dmg > FXVault-9.9.9.dmg.sha256)
+stray="$ROOT/release-test-stray-$$.txt"
+touch "$stray"
+expect_failure "a dirty tree names its files" "release-test-stray-$$.txt" \
+  --publish-only --output-dir "$TMP/built" 9.9.9
+rm -f "$stray"
 
 expect_failure "publish-only with adhoc" "--publish needs the official signed build" \
   --publish-only --adhoc 9.9.9
