@@ -49,7 +49,8 @@ FXVault/
 │   │   │                            # Diagnostics, Check Again, Not Now)
 │   │   ├── Main/                    # MainScreen/ViewModel (glass panels, router),
 │   │   │                            # MainToolbar (the toolbar panel), MainWindowChrome (the
-│   │   │                            # hidden title bar and its empty toolbar, D6c2b)
+│   │   │                            # hidden title bar and its empty toolbar, D6c2b),
+│   │   │                            # PlaceSelectionModel (what Keep Editing goes back to, N2)
 │   │   │   ├── JumpPalette/         # the ⌘K palette (D6c2, D6c5): JumpPaletteModels (JumpPlaces,
 │   │   │   │                        # pure; places and names), JumpPaletteViewModel, JumpPaletteView,
 │   │   │   │                        # JumpPaletteCopy
@@ -62,7 +63,8 @@ FXVault/
 │   │   │   │                        # NotesRevealModel, PlaceViewModePicker; Notes/Edit/ (1.0 N2):
 │   │   │   │                        # NotesEditablePlaceModel, NotesEditSession, NotesTextView,
 │   │   │   │                        # NotesEditAnalysis, NotesTokenStore, NotesValuePopover,
-│   │   │   │                        # NotesReviewSheet, NotesEditorView, NotesEditHeader
+│   │   │   │                        # NotesReviewSheet, NotesEditorView, NotesEditHeader,
+│   │   │   │                        # NotesPasteParser, NotesClipboard, NotesDiscardConfirmation
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
 │   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel

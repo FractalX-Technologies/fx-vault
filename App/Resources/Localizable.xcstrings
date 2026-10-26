@@ -12101,6 +12101,50 @@
         }
       }
     },
+    "notesEdit.discard.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Discard"
+          }
+        }
+      }
+    },
+    "notesEdit.discard.keep" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep Editing"
+          }
+        }
+      }
+    },
+    "notesEdit.discard.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your edits to the notes and the values you set are dropped. Nothing was saved."
+          }
+        }
+      }
+    },
+    "notesEdit.discard.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Discard ^[%lld unsaved change](inflect: true)?"
+          }
+        }
+      }
+    },
     "notesEdit.edit" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12482,6 +12526,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "^[%lld value](inflect: true) set from the clipboard · clipboard cleared"
+          }
+        }
+      }
+    },
+    "notesEdit.paste.valuesKept" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld value](inflect: true) set from the clipboard"
           }
         }
       }

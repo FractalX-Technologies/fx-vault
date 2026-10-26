@@ -295,10 +295,6 @@ final class DestinationDetailViewModel: LockObserving {
         presentImport(.chooser)
     }
 
-    func validatePaste(_ providers: [NSItemProvider]) -> [NSItemProvider]? {
-        canEdit ? providers : nil
-    }
-
     func handlePaste(_ providers: [NSItemProvider]) async {
         guard canEdit else { return }
         if dependencies.clipboard.holdsItemNames {

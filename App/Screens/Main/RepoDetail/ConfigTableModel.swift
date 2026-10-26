@@ -61,9 +61,9 @@ protocol ConfigTableModel: AnyObject, Observable {
     func heldHelp(for row: ConfigRowModel) -> String
     /// Add File Secret… (1.0 F1): the sheet for this place, with the `url` of a dropped file.
     func addFileSecret(from url: URL?)
-    /// A file dropped on the place opens Add file secret: an editable place, not while its
-    /// notes are edited (1.0 N2).
-    var acceptsFileDrops: Bool { get }
+    /// Writes from outside the notes editor (a dropped file, ⌘V of copied items or `.env` text,
+    /// Import .env…): an editable place, not while its notes are edited (1.0 N2).
+    var acceptsOutsideEdits: Bool { get }
     /// The largest value the place stores (25,600 bytes in a Key Vault), for the drop overlay.
     var maxValueBytes: Int { get }
     var alert: ErrorPresentationModel? { get set }
@@ -104,15 +104,21 @@ extension ConfigTableModel {
         HeldShareCopy.chipHelp(sender: nil)
     }
 
-    var acceptsFileDrops: Bool {
+    var acceptsOutsideEdits: Bool {
         canEdit
+    }
+
+    /// The ⌘V validator of the place's column: the providers while it takes outside edits, nil
+    /// (Paste disabled) otherwise.
+    func validatePaste(_ providers: [NSItemProvider]) -> [NSItemProvider]? {
+        acceptsOutsideEdits ? providers : nil
     }
 
     /// A file dropped on the place (1.0 F1; board Place-FileDrop): a .p8, .pem or .json file
     /// opens Add file secret with it. Any other is refused: a drop is quick to do by mistake,
     /// and Choose… in the sheet takes every file.
     func dropFile(_ url: URL) {
-        guard acceptsFileDrops else { return }
+        guard acceptsOutsideEdits else { return }
         guard url.isFileURL, FileSecretRules.isDroppable(fileName: url.lastPathComponent) else {
             alert = ErrorPresentationModel(title: FileSecretCopy.notDroppableTitle, message: FileSecretCopy.notDroppableMessage)
             return

@@ -17,7 +17,7 @@ private struct FileSecretDropTarget<Model: ConfigTableModel>: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onDrop(of: [.fileURL], isTargeted: $isTargeted) { providers in
-                guard viewModel.acceptsFileDrops else { return false }
+                guard viewModel.acceptsOutsideEdits else { return false }
                 Task {
                     if let url = await FileDropURL.url(from: providers) {
                         viewModel.dropFile(url)
@@ -26,7 +26,7 @@ private struct FileSecretDropTarget<Model: ConfigTableModel>: ViewModifier {
                 return true
             }
             .overlay {
-                if isTargeted, viewModel.acceptsFileDrops {
+                if isTargeted, viewModel.acceptsOutsideEdits {
                     FileSecretDropOverlay(limit: viewModel.maxValueBytes)
                 }
             }

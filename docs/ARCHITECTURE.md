@@ -1258,8 +1258,16 @@ AppTests).
     adds Key Vault's names). Review shows `NotesReviewModel`; Save hands `PlaceItemEditsModel`
     to `ConfigRepository.applyEdits(_:repositoryID:scope:)`, `FolderRepository.applyEdits` or
     `DestinationRepository.applyEdits`, one batch each (pending until Sync; a folder at once).
-    Another scope, a lock, Table or another place ends the session and wipes its values; no
-    file drop is taken while it runs (`acceptsFileDrops`).
+    Another scope, a lock, Table or another place ends the session and wipes its values; with
+    unsaved changes, another place, scope or Table first asks "Discard N unsaved changes?"
+    (`MainViewModel.discardRequest`: the sidebar and scope selections are held, Keep Editing puts
+    them back from `PlaceSelectionModel`, Discard ends the edit and follows them); a lock or
+    closing the window does not ask. Writes from outside the editor wait for it to end
+    (`ConfigTableModel.acceptsOutsideEdits`): a file drop, ⌘V of copied items or `.env` text
+    (the shared `validatePaste`) and Import .env… (`canImportEnv`). A value set on a line
+    (Done, a paste after `=`, a pasted name the section has) is one undo step: the line gets a
+    new token (`NotesTokenStore.replacement`), so the undo stack holds token ids only; Undo and
+    Redo refresh the notes from the undo manager's notifications.
     The drift check runs when a repository opens (`DriftRepository.detectOnOpen`).
     v0.4.0 multi-selection: ⌘/⇧-click and ⌘A select rows (`selection`); with two or more
     selected, `RepoDetailSelectionActions` replaces the add actions ("N selected", Push on Next

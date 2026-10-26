@@ -32,6 +32,7 @@ struct MainScreen: View {
                 MainSheetContent(sheet: sheet, main: viewModel)
             }
             .focusedSceneValue(\.mainViewModel, viewModel)
+            .notesDiscardConfirmation(viewModel)
             .task(id: viewModel.app.ghStatus) {
                 await viewModel.sidebar.reload()
             }

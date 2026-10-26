@@ -744,12 +744,6 @@ final class RepoDetailViewModel: LockObserving {
         presentImport(.chooser)
     }
 
-    /// The ⌘V validator: the providers while this scope can be edited, nil (Paste disabled)
-    /// otherwise.
-    func validatePaste(_ providers: [NSItemProvider]) -> [NSItemProvider]? {
-        canEdit ? providers : nil
-    }
-
     /// ⌘V in the detail column (`onPasteCommand`, a user action: the pasteboard is never read in the
     /// background). Reads the pasted plain text from the providers and opens the import preview
     /// prefilled with it, even for a single KEY=value line. Nothing is logged.

@@ -148,6 +148,18 @@ enum AccessibilityID {
         static let notesEditCancel = "place.notesEditCancel"
         static let notesReview = "place.notesReview"
         static let notesReviewSave = "place.notesReviewSave"
+        /// The edit header's "4 unsaved changes" or "Fix 4 lines to save".
+        static let notesEditStatus = "place.notesEditStatus"
+
+        /// A line of the read notes that a click edits, by its number (from 1).
+        static func notesLine(_ number: Int) -> String {
+            "place.notesLine.\(number)"
+        }
+
+        /// A Review section's title, by ``NotesReviewModel/Section`` id: added, changed, removed.
+        static func notesReviewSection(_ id: String) -> String {
+            "place.notesReview.\(id)"
+        }
     }
 
     /// The ⌘K jump palette (1.0).

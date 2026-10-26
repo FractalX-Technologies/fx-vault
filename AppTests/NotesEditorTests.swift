@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SwiftUI
 import Testing
 import VaultCore
 import VaultData
@@ -159,6 +160,154 @@ struct NotesEditorTests {
         defer { edits.wipe() }
         #expect(edits.additions.map(\.name) == ["STRIPE_KEY", "MAPBOX_TOKEN"])
         #expect(edits.additions.map { $0.value.utf8String() } == ["sk_test_1", "pk.2"])
+    }
+
+    /// Key material that reads as `name=value` to the `.env` parser: Base64 with its padding
+    /// and connection strings (short made-up keys).
+    nonisolated static let keyMaterial = [
+        "c2VjcmV0MTIzNDU2Nzg5MA==",
+        "Endpoint=sb://example.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=ZXhhbXBsZQ==",
+        "DefaultEndpointsProtocol=https;AccountName=example;AccountKey=ZXhhbXBsZQ==;EndpointSuffix=core.windows.net",
+    ]
+
+    /// Names are plaintext on disk, in gh's arguments and on GitHub (SECURITY-MODEL §7): a value
+    /// never becomes one, nor does a line without a value.
+    @Test(arguments: keyMaterial + ["NEW_KEY=", "API_KEY=="])
+    func pastedKeyMaterialIsNeverReadAsNames(_ text: String) {
+        #expect(NotesPasteParser.entries(in: text, place: .repository) == nil)
+    }
+
+    @Test func pastedAssignmentsStillReadAsLines() throws {
+        let entries = try #require(NotesPasteParser.entries(in: "A_KEY=one\nb_key=two\n", place: .repository))
+        defer { entries.forEach { $0.value.wipe() } }
+        #expect(entries.map(\.name) == ["A_KEY", "B_KEY"])
+        let single = try #require(NotesPasteParser.entries(in: "database_url=postgres://db.example.invalid/app", place: .repository))
+        defer { single.forEach { $0.value.wipe() } }
+        #expect(single.map(\.name) == ["DATABASE_URL"])
+    }
+
+    /// Board Place-Paste: one line among the secrets that is not a name opens Set value… with it,
+    /// on a new line whose name is still to type. The text never holds it.
+    @Test(arguments: keyMaterial)
+    func keyMaterialPastedAmongTheSecretsOpensSetValue(_ value: String) throws {
+        let (session, view) = Self.editor()
+        let pasteboard = Self.pasteboard()
+        defer { pasteboard.releaseGlobally() }
+        pasteboard.clearContents()
+        pasteboard.setString(value, forType: .string)
+
+        Self.newSecretLine(in: view)
+        #expect(view.readSelection(from: pasteboard, type: .string))
+        #expect(view.string == "# Secrets\nAPI_TOKEN = \(Self.token)\n = \(Self.token)\n\n# Variables\nLOG_LEVEL = info\n")
+        #expect(session.analysis.plan.additions.isEmpty)
+        let request = try #require(session.valueRequest)
+        #expect(session.currentText(of: request) == value)
+        #expect(pasteboard.string(forType: .string) == nil, "the value left the clipboard")
+    }
+
+    /// After a secret's `=` the whole paste is that line's value, even `KEY=value` lines.
+    @Test func aPasteAfterASecretsEqualsIsItsValue() {
+        let (session, view) = Self.editor()
+        let pasteboard = Self.pasteboard()
+        defer { pasteboard.releaseGlobally() }
+        let value = "A_KEY=one\nB_KEY=two"
+        pasteboard.clearContents()
+        pasteboard.setString(value, forType: .string)
+
+        view.setSelectedRange(NSRange(location: NSMaxRange(Self.range(of: "API_TOKEN = \(Self.token)", in: view)), length: 0))
+        #expect(view.readSelection(from: pasteboard, type: .string))
+        #expect(view.string == "# Secrets\nAPI_TOKEN = \(Self.token)\n\n# Variables\nLOG_LEVEL = info\n")
+        #expect(session.analysis.plan.additions.isEmpty)
+        #expect(session.toast == NotesEditCopy.pastedValues(1))
+        #expect(pasteboard.string(forType: .string) == nil)
+        let edits = session.makeEdits()
+        defer { edits.wipe() }
+        #expect(edits.changes.map { $0.value?.utf8String() } == [value])
+    }
+
+    /// Among the secrets, text of several lines that are not `KEY=value` is refused: it can only
+    /// be a value. A name pastes as text.
+    @Test func otherTextAmongTheSecretsIsANameOrNothing() {
+        let (session, view) = Self.editor()
+        let pasteboard = Self.pasteboard()
+        defer { pasteboard.releaseGlobally() }
+        Self.newSecretLine(in: view)
+        let before = view.string
+        pasteboard.clearContents()
+        pasteboard.setString("first part\nsecond part", forType: .string)
+        #expect(view.readSelection(from: pasteboard, type: .string))
+        #expect(view.string == before)
+        #expect(session.valueRequest == nil)
+        #expect(pasteboard.string(forType: .string) != nil, "nothing was read")
+
+        pasteboard.clearContents()
+        pasteboard.setString("STRIPE_KEY", forType: .string)
+        #expect(view.readSelection(from: pasteboard, type: .string))
+        #expect(view.string.contains("API_TOKEN = \(Self.token)\nSTRIPE_KEY\n"))
+    }
+
+    /// The key typed after a secret's `=` is the value's first character, not lost.
+    @Test func theKeyThatOpensSetValueStartsItsField() throws {
+        let (session, view) = Self.editor()
+        Self.newSecretLine(in: view)
+        Self.type("NEW_KEY=a", in: view)
+        let request = try #require(session.valueRequest)
+        #expect(session.currentText(of: request) == "a")
+        #expect(view.string.contains("NEW_KEY = \(Self.token)\n"))
+    }
+
+    /// A value set in place (Done, a paste after `=`, a pasted name the section has) is an undo
+    /// step: Undo puts the line's earlier value back.
+    @Test func aValueSetInPlaceUndoes() throws {
+        let (session, view) = Self.editor()
+        let original = view.string
+        let token = try #require(NotesEditText.paragraphs(of: view.attributedString()).flatMap(\.tokens).first)
+        session.commitValue("rotated", for: token)
+        #expect(session.analysis.plan.changes.count == 1)
+        #expect(session.undoManager.canUndo)
+
+        session.undoManager.undo()
+        #expect(session.changeCount == 0)
+        #expect(view.string == original)
+        let edits = session.makeEdits()
+        defer { edits.wipe() }
+        #expect(edits.changes.isEmpty)
+    }
+
+    /// The toast says the clipboard was cleared only when nothing was copied since the paste.
+    @Test func theClipboardIsClearedOnlyWhenUnchanged() {
+        let pasteboard = Self.pasteboard()
+        defer { pasteboard.releaseGlobally() }
+        pasteboard.clearContents()
+        pasteboard.setString("pasted", forType: .string)
+        let pasted = pasteboard.changeCount
+        pasteboard.clearContents()
+        pasteboard.setString("copied since", forType: .string)
+        #expect(!NotesClipboard.clear(pasteboard, ifStillAt: pasted))
+        #expect(pasteboard.string(forType: .string) == "copied since")
+        #expect(NotesClipboard.clear(pasteboard, ifStillAt: pasteboard.changeCount))
+        #expect(pasteboard.string(forType: .string) == nil)
+
+        let (session, _) = Self.editor()
+        session.didPasteValues(2, clearedClipboard: false)
+        #expect(session.toast == NotesEditCopy.pastedValuesKept(2))
+        session.didPasteValues(2, clearedClipboard: true)
+        #expect(session.toast == NotesEditCopy.pastedValues(2))
+    }
+
+    /// Set value… shows what is typed: its window stays out of screen capture (§5.11).
+    @Test func setValueStaysOutOfScreenCapture() async throws {
+        let (session, view) = Self.editor()
+        Self.newSecretLine(in: view)
+        Self.type("NEW_KEY=a", in: view)
+        let request = try #require(session.valueRequest)
+        let popover = NotesValuePopover(request: request, initialText: "a", hasVariables: true, session: session) {}
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        #expect(window.sharingType != .none)
+        window.contentView = NSHostingView(rootView: popover)
+        #expect(await TestFixtures.eventually { window.sharingType == .none })
     }
 
     /// A pasted name the section has sets that line's value; a variable's goes in as its text.

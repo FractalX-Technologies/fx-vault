@@ -2,7 +2,8 @@ import Foundation
 import VaultCore
 
 /// The values behind an edit's tokens (1.0 N2), kept out of the text. A value set while editing
-/// is normalized first (D32) and replaced, never undone; every value is wiped when the edit ends.
+/// is normalized first (D32); setting one in place makes a new token (``replacement(for:value:)``)
+/// so Undo brings the old one back by id. Every value is wiped when the edit ends.
 final class NotesTokenStore {
     /// How a token draws: its chip in the text.
     enum Display: Hashable {
@@ -59,6 +60,25 @@ final class NotesTokenStore {
         entries[id]?.value?.wipe()
         entries[id]?.value = normalized
         entries[id]?.isNew = true
+    }
+
+    /// A new token for `id`'s line holding `value`: the same item, kind and file, the value set
+    /// as by ``setValue(_:for:)``. The old token keeps what it had, for Undo.
+    func replacement(for id: NotesTokenID, value: SecretBytes) throws(ValidationError) -> NotesTokenID {
+        let entry = entries[id]
+        let fresh = make(
+            kind: entry?.kind ?? .secret,
+            origin: entry?.origin,
+            originHasValue: entry?.originHasValue ?? false,
+            file: entry?.file
+        )
+        do {
+            try setValue(value, for: fresh)
+        } catch {
+            entries[fresh] = nil
+            throw error
+        }
+        return fresh
     }
 
     func kind(of id: NotesTokenID) -> ConfigKind? {

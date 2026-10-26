@@ -260,15 +260,23 @@ Copy and Services can't put it on the clipboard around `ClipboardManager`.
   attachment holding an id); its bytes sit in the edit's `NotesTokenStore` as `SecretBytes`,
   normalized as in `SecretValueEditor` (D32), and are wiped when the edit is saved, cancelled,
   left for another scope or place, or locked. A secret's value is typed only in Set value…
-  (`SecretValueEditor`: secure event input, text services off); a key typed after a secret's
-  `=` opens it instead of reaching the text. The editor has substitutions, spelling,
-  completion, Writing Tools, inline predictions, drags and state restoration off; its undo
-  manager is the edit's own and holds text with token ids, never a value. Copy and Cut write
-  `••••` for a token (a variable's value is text, as in the read notes); a paste of `KEY=value`
-  lines reads the clipboard once as text on the user's ⌘V, turns each value into `SecretBytes`,
-  and clears the clipboard if nothing was copied since. Generate draws 32 bytes from
+  (`SecretValueEditor`: secure event input, text services off; its popover window is excluded
+  from screen capture); a key typed after a secret's `=` opens it, starting its field, instead
+  of reaching the text. The editor has substitutions, spelling, completion, Writing Tools,
+  inline predictions, drags and state restoration off; its undo manager is the edit's own and
+  holds text with token ids, never a value (a value set on a line gets a new token). Copy and
+  Cut write `••••` for a token (a variable's value is text, as in the read notes). A paste reads
+  the clipboard once as text on the user's ⌘V. After a secret's `=` all of it is that line's
+  value. Elsewhere it becomes lines only when it is all `KEY=value` lines with valid names and
+  values; a line with no value besides `=` (Base64's padding read as a name) and one line of
+  key material (a connection string, a long Base64-like name) are not, since names are
+  plaintext on disk, in gh's arguments and on GitHub. Among the secrets, other text is a name or
+  one line that opens Set value… with it, never text in the editor; several lines are refused.
+  Values become `SecretBytes`, and the clipboard is cleared if nothing was copied since (Set
+  value…'s Paste button clears it too). Generate draws 32 bytes from
   `SystemRandomNumberGenerator`. Revealed values are hidden when an edit starts. Save writes
-  pending changes only; nothing reaches GitHub or Key Vault before Sync.
+  pending changes only; nothing reaches GitHub or Key Vault before Sync. While an edit runs, a
+  file drop, ⌘V of copied items and Import .env… wait for it to end.
 - **File secrets (1.0):** Choose… or a drop on a place reads one regular file (at most twice the
   48,000-byte limit) with `SecretFileReader` (VaultCore, also the `.env` import's reader): the
   path is `stat`ed before it is opened, so a folder, a pipe or a device is never opened, then

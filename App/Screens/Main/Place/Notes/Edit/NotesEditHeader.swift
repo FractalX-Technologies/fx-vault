@@ -24,10 +24,12 @@ private struct NotesEditActions: View {
             Text(NotesEditCopy.fixLines(session.errorCount))
                 .fxTextStyle(.caption)
                 .foregroundStyle(Theme.Colors.danger)
+                .accessibilityIdentifier(AccessibilityID.Place.notesEditStatus)
         } else if session.changeCount > 0 {
             Text(NotesEditCopy.unsavedChanges(session.changeCount))
                 .fxTextStyle(.caption)
                 .foregroundStyle(Theme.Colors.subtleText)
+                .accessibilityIdentifier(AccessibilityID.Place.notesEditStatus)
         }
         // No Esc: one key would drop every edit.
         Button(NotesEditCopy.cancel) {
@@ -63,15 +65,15 @@ struct NotesEditMenuItem<Model: NotesEditablePlaceModel>: View {
 
     var body: some View {
         Button(NotesEditCopy.edit) {
-            main.placeViewMode = .notes
+            main.show(.notes)
             model.beginNotesEdit(at: nil)
         }
         .disabled(!model.canEditNotes)
     }
 }
 
-/// A place's notes: read only, or the editor while an edit runs. Leaving the editor any way
-/// (another place, Table, lock) drops the edit and wipes its values.
+/// A place's notes: read only, or the editor while an edit runs. Leaving the editor drops the
+/// edit and wipes its values; with unsaved changes, another place or Table asks first.
 struct PlaceNotesContent<Model: NotesEditablePlaceModel>: View {
     let model: Model
 

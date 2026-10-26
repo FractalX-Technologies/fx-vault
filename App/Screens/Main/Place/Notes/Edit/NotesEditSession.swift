@@ -34,10 +34,15 @@ struct NotesValueRequestModel: Identifiable, Hashable {
     let isSynced: Bool
     /// An existing secret: an empty field keeps its value.
     let keepsCurrentValue: Bool
+    /// What the field starts with: the key that opened it, or a pasted value. Never in the text.
+    var startText = ""
 }
 
 /// The editor's text view, as the edit drives it.
 protocol NotesEditorCommands: AnyObject {
+    /// Sets `value` on `token`'s line as one undo step; returns the token now on the line.
+    @discardableResult
+    func setValue(_ value: SecretBytes, on token: NotesTokenID) throws(ValidationError) -> NotesTokenID
     /// Redraws the tokens after a value was set.
     func tokensDidChange()
     /// Moves a new secret's line under `# Variables` with `value` as its text.
@@ -147,8 +152,8 @@ final class NotesEditSession {
 
     // MARK: - Set value…
 
-    /// Opens Set value… for the token on line `name`.
-    func requestValue(for id: NotesTokenID, name: String) {
+    /// Opens Set value… for the token on line `name`, its field starting with `startText`.
+    func requestValue(for id: NotesTokenID, name: String, startText: String = "") {
         guard let kind = tokens.kind(of: id) else { return }
         let origin = tokens.origin(of: id).flatMap { id in origins.first { $0.id == id } }
         valueRequest = NotesValueRequestModel(
@@ -157,12 +162,14 @@ final class NotesEditSession {
             kind: kind,
             isNew: origin == nil,
             isSynced: origin?.isSynced == true,
-            keepsCurrentValue: kind == .secret && origin?.hasValue == true
+            keepsCurrentValue: kind == .secret && origin?.hasValue == true,
+            startText: startText
         )
     }
 
-    /// The value a variable token starts Set value… with; a secret's starts empty.
+    /// What Set value… starts with: the request's own text, a variable's value, else nothing.
     func currentText(of request: NotesValueRequestModel) -> String {
+        guard request.startText.isEmpty else { return request.startText }
         guard let value = tokens.variableValue(request.id) else { return "" }
         defer { value.wipe() }
         return value.utf8String() ?? ""
@@ -175,12 +182,15 @@ final class NotesEditSession {
         let value = SecretBytes(utf8: text)
         defer { value.wipe() }
         do {
-            try tokens.setValue(value, for: id)
+            if let editor {
+                try editor.setValue(value, on: id)
+            } else {
+                try tokens.setValue(value, for: id)
+                refresh()
+            }
         } catch {
-            return
+            // Only line breaks: the line keeps what it had.
         }
-        refresh()
-        editor?.tokensDidChange()
     }
 
     /// Kind › Variable in Set value… for a new line: it moves under `# Variables`.
@@ -189,11 +199,12 @@ final class NotesEditSession {
         editor?.moveLineToVariables(token: id, value: text)
     }
 
-    /// Values a paste set (``NotesTextView``): the board's toast.
-    func didPasteValues(_ count: Int) {
+    /// Values a paste set (``NotesTextView``): the board's toast, which says the clipboard was
+    /// cleared only when it was (nothing was copied since).
+    func didPasteValues(_ count: Int, clearedClipboard: Bool) {
         refresh()
         editor?.tokensDidChange()
-        toast = NotesEditCopy.pastedValues(count)
+        toast = clearedClipboard ? NotesEditCopy.pastedValues(count) : NotesEditCopy.pastedValuesKept(count)
     }
 
     // MARK: - Removed items
