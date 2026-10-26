@@ -195,6 +195,38 @@
   "synthetic": false
  },
  {
+  "name": "native 404 without a message (gh 2.102, repository secret)",
+  "operation": "C6",
+  "exitCode": 1,
+  "stderr": "failed to delete secret FXV_FIXTURE_TOKEN: HTTP 404 (https://api.github.com/repos/owner-a/repo-a/actions/secrets/FXV_FIXTURE_TOKEN)\n",
+  "expected": "notFound",
+  "synthetic": false
+ },
+ {
+  "name": "native 404 without a message (gh 2.102, repository variable)",
+  "operation": "C8",
+  "exitCode": 1,
+  "stderr": "failed to delete variable FXV_FIXTURE_VAR: HTTP 404 (https://api.github.com/repos/owner-a/repo-a/actions/variables/FXV_FIXTURE_VAR)\n",
+  "expected": "notFound",
+  "synthetic": false
+ },
+ {
+  "name": "native 404 without a message (gh 2.102, organization secret)",
+  "operation": "C11",
+  "exitCode": 1,
+  "stderr": "failed to delete secret FXV_FIXTURE_TOKEN: HTTP 404 (https://api.github.com/orgs/org-a/actions/secrets/FXV_FIXTURE_TOKEN)\n",
+  "expected": "notFound",
+  "synthetic": false
+ },
+ {
+  "name": "native 404 without a message (gh 2.102, organization variable)",
+  "operation": "C13",
+  "exitCode": 1,
+  "stderr": "failed to delete variable FXV_FIXTURE_VAR: HTTP 404 (https://api.github.com/orgs/org-a/actions/variables/FXV_FIXTURE_VAR)\n",
+  "expected": "notFound",
+  "synthetic": false
+ },
+ {
   "name": "gh api 404 with -i status",
   "operation": "B4",
   "exitCode": 1,

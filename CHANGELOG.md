@@ -5,6 +5,11 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ## Unreleased (1.0)
 
+### Fixed
+
+- **Deleting what GitHub no longer has.** Sync recognises gh 2.102's `HTTP 404 (…)` (no message)
+  as not found again, so deleting a secret or variable already gone from GitHub finishes.
+
 ### Changed
 
 - **Review Sync.** The Sync summary is one card per place: the repository, each environment,
