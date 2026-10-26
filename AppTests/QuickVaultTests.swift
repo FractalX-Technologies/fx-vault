@@ -140,19 +140,19 @@ struct QuickVaultTests {
         place.copy(mode)
         #expect(harness.pasteboardString == Self.variableValue)
         #expect(place.copiedID == mode.id)
-        #expect(place.copyRequest == nil)
+        #expect(place.reveal.request == nil)
 
         place.copy(key)
-        #expect(place.copyRequest == NotesRevealRequestModel(id: key.id, name: "STRIPE_KEY"))
-        await place.start()
+        #expect(place.reveal.request == NotesRevealRequestModel(id: key.id, name: "STRIPE_KEY", action: .copy))
+        await place.reveal.start()
         #expect(harness.pasteboardString == Self.variableValue, "Touch ID is off: the password field waits")
-        place.copyReauth?.password = otherTestPassword
-        await place.authenticateWithPassword()
+        place.reveal.reauth?.password = otherTestPassword
+        await place.reveal.authenticateWithPassword()
         #expect(harness.pasteboardString == Self.variableValue)
-        place.copyReauth?.password = testPassword
-        await place.authenticateWithPassword()
+        place.reveal.reauth?.password = testPassword
+        await place.reveal.authenticateWithPassword()
         #expect(harness.pasteboardString == Self.secretValue)
-        #expect(place.copyRequest == nil)
+        #expect(place.reveal.request == nil)
         #expect(place.copiedID == key.id)
     }
 
@@ -167,7 +167,7 @@ struct QuickVaultTests {
         let place = try #require(quickVault.place)
 
         place.copy(key)
-        await place.start()
+        await place.reveal.start()
         #expect(harness.biometrics.lastPrompt == FeatureDependencies.reauthPrompt(for: .copyValue))
         #expect(harness.pasteboardString == Self.secretValue)
 
@@ -178,7 +178,7 @@ struct QuickVaultTests {
         #expect(revealed.value == .revealed(Self.secretValue))
         let loads = harness.biometrics.loadCount
         place.copy(revealed)
-        #expect(place.copyRequest == nil, "its value is on screen already")
+        #expect(place.reveal.request == nil, "its value is on screen already")
         #expect(harness.biometrics.loadCount == loads)
         #expect(harness.pasteboardString == Self.secretValue)
     }
@@ -232,15 +232,15 @@ struct QuickVaultTests {
         let lines = try await Self.lines(quickVault, count: 2)
         let place = try #require(quickVault.place)
         place.copy(try Self.line("STRIPE_KEY", in: lines))
-        place.copyReauth?.password = testPassword
+        place.reveal.reauth?.password = testPassword
         #expect(try Self.line("STRIPE_MODE", in: lines).value == .plain(Self.variableValue))
 
         harness.app.lock(trigger: .manual)
         #expect(!quickVault.isOpen)
         #expect(quickVault.place == nil)
         #expect(quickVault.results.isEmpty)
-        #expect(place.copyRequest == nil)
-        #expect(place.copyReauth == nil, "the typed password goes with it")
+        #expect(place.reveal.request == nil)
+        #expect(place.reveal.reauth == nil, "the typed password goes with it")
         #expect(try Self.line("STRIPE_MODE", in: place.lines).value == .masked, "the variable was dropped")
     }
 
@@ -388,7 +388,7 @@ struct QuickVaultTests {
             let prompt = CallGate()
             harness.biometrics.onNextLoad { prompt.wait() }
             place.copy(key)
-            let check = Task { await place.start() }
+            let check = Task { await place.reveal.start() }
             #expect(await TestFixtures.eventually { place.isAuthorizing })
 
             hasFocus = false
@@ -456,7 +456,7 @@ struct QuickVaultTests {
         #expect(await TestFixtures.eventually { (try? Self.line("STRIPE_KEY", in: place.lines).value) == .masked })
 
         place.copy(revealed)
-        #expect(place.copyRequest == NotesRevealRequestModel(id: key.id, name: "STRIPE_KEY"))
+        #expect(place.reveal.request == NotesRevealRequestModel(id: key.id, name: "STRIPE_KEY", action: .copy))
         #expect(harness.pasteboardString == nil)
     }
 

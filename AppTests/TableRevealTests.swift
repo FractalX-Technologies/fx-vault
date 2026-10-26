@@ -101,10 +101,19 @@ struct TableRevealTests {
         #expect(model.notesReveal.reauth == nil)
     }
 
-    @Test func aTouchIDResultAfterALockCopiesNothing() async throws {
+    /// What drops a request while Touch ID is still up.
+    enum Drop: CaseIterable {
+        case lock
+        case scope
+    }
+
+    @Test(arguments: Drop.allCases)
+    func aTouchIDResultAfterALockOrAnotherScopeCopiesNothing(_ drop: Drop) async throws {
         let fixture = try await RepoDetailViewModelTests.Fixture()
         let harness = fixture.harness
         try await harness.enableTouchID()
+        try harness.data.config.createEnvironment(in: fixture.repositoryID, name: "production")
+        let production = try EditorFixtures.environment(harness, fixture.repositoryID, named: "production")
         let model = fixture.viewModel
         let secret = try await fixture.secretRow()
 
@@ -113,7 +122,10 @@ struct TableRevealTests {
         model.copy(secret.id)
         let check = Task { await model.notesReveal.start() }
         #expect(await TestFixtures.eventually { model.notesReveal.reauth?.isAuthorizing == true })
-        harness.app.lock(trigger: .manual)
+        switch drop {
+        case .lock: harness.app.lock(trigger: .manual)
+        case .scope: model.select(scope: .environment(production.id))
+        }
         prompt.open()
         await check.value
         #expect(harness.pasteboardString == nil)
