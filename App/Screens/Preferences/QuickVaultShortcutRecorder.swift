@@ -20,7 +20,7 @@ struct QuickVaultShortcutRecorder: View {
             }
         } label: {
             Text(verbatim: isRecording ? prompt : shortcut.displayText)
-                .font(isRecording ? Theme.Typography.caption : Theme.Typography.body)
+                .fxTextStyle(isRecording ? .caption : .body)
                 .foregroundStyle(isRecording ? Theme.Colors.subtleText : Theme.Colors.ink)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity)
@@ -50,21 +50,23 @@ struct QuickVaultShortcutRecorder: View {
     private func startRecording() {
         isRecording = true
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            record(event)
+            // AppKit calls local monitors on the main thread; the event stays outside.
+            let keyCode = event.keyCode
+            let flags = event.modifierFlags
+            let characters = event.characters(byApplyingModifiers: [])
+            MainActor.assumeIsolated {
+                record(keyCode: keyCode, flags: flags, characters: characters)
+            }
             return nil
         }
     }
 
-    private func record(_ event: NSEvent) {
-        if event.keyCode == UInt16(kVK_Escape) {
+    private func record(keyCode: UInt16, flags: NSEvent.ModifierFlags, characters: String?) {
+        if keyCode == UInt16(kVK_Escape) {
             stopRecording()
             return
         }
-        guard let recorded = QuickVaultShortcutModel(
-            keyCode: event.keyCode,
-            modifierFlags: event.modifierFlags,
-            characters: event.characters(byApplyingModifiers: [])
-        ) else {
+        guard let recorded = QuickVaultShortcutModel(keyCode: keyCode, modifierFlags: flags, characters: characters) else {
             NSSound.beep()
             return
         }

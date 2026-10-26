@@ -13960,13 +13960,13 @@
         }
       }
     },
-    "settings.advanced.diagnostics.detail" : {
+    "settings.advanced.diagnostics.detail.names" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Versions, paths and checks · no secret names or values"
+            "value" : "Versions, paths and checks · variable names and account names only"
           }
         }
       }

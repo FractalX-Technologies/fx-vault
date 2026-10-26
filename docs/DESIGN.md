@@ -881,9 +881,9 @@ Reset vault's dialog (board Reset-Confirm) is a 380 pt `DialogSheet` with two 11
 28 pt mono fields and a danger-filled Erase Vault. Advanced: GitHub CLI (the gh path override
 field with Choose…, In use with the gh version and path and Check Again, any other gh state but
 checking and unknown as a `GHStatusRow` under it, a trusted gh with Revoke, the telemetry
-footnote), Diagnostics (Copy Diagnostics with an outline Copy that turns to "Copied", and the
-footnote "From Terminal:" with this app's executable and `--diagnose` in mono: `open -a … --args`
-prints nowhere), then Vault (Vault folder).
+footnote), Diagnostics (Copy Diagnostics with an outline Copy that turns to "Copied", then a
+row "From Terminal:" over a `CommandRow` with this app's executable in single quotes and
+`--diagnose`: `open -a … --args` prints nowhere), then Vault (Vault folder).
 
 Accounts (1.0, B4): one GitHub card. Each account is a block: the person symbol, the login in
 12 pt mono medium, its SSH alias as a quiet 11 pt mono menu, Re-check and Test; then 22 pt lines
@@ -892,7 +892,8 @@ underlined Open SSO Page link when GitHub gave one), each followed by its `Comma
 is needed, and the Test result. Accounts FX Vault can't use follow in the same card ("Can't use ·
 reason"). The `GH_TOKEN` note and its command sit under the card with Add Account… at its
 trailing edge: a 340 pt popover with `gh auth login` as a `CommandRow` and Check Again (gh logs
-accounts in interactively, so it stays Copy-only). SSH aliases without an account are their own
+accounts in interactively, so it stays Copy-only; the same `GHLoginSteps` as the SSH aliases
+without an account). SSH aliases without an account are their own
 group. The gh path and version are in Advanced. The board's Azure group is not built yet.
 
 Sharing (v0.9.0) has one group, "Files you shared", with the footnote "Names only; FX Vault keeps

@@ -70,15 +70,12 @@ struct AdvancedSettingsView: View {
                     }
                 }
             }
-            PreferencesSection(
-                String(localized: "settings.advanced.diagnostics.section", defaultValue: "Diagnostics"),
-                footnote: diagnoseFootnote
-            ) {
+            PreferencesSection(String(localized: "settings.advanced.diagnostics.section", defaultValue: "Diagnostics")) {
                 PreferencesRow(
                     String(localized: "ghSetup.copyDiagnostics", defaultValue: "Copy Diagnostics"),
                     detail: String(
-                        localized: "settings.advanced.diagnostics.detail",
-                        defaultValue: "Versions, paths and checks · no secret names or values"
+                        localized: "settings.advanced.diagnostics.detail.names",
+                        defaultValue: "Versions, paths and checks · variable names and account names only"
                     )
                 ) {
                     Button {
@@ -97,6 +94,15 @@ struct AdvancedSettingsView: View {
                         defaultValue: "Copy a report of which gh FX Vault found and why, for support. It contains no tokens or values."
                     ))
                 }
+                HairlineDivider()
+                // The full JSON report (Touch ID readiness too). It names the executable:
+                // `open -a … --args` would print nowhere.
+                PreferencesBlock(spacing: Theme.Spacing.smallMinus) {
+                    Text(String(localized: "settings.advanced.diagnostics.terminal", defaultValue: "From Terminal:"))
+                        .fxTextStyle(.formNote)
+                        .foregroundStyle(Theme.Colors.subtleText)
+                    CommandRow(command: DiagnoseCommand.terminalCommand()) { viewModel.copyCommand($0) }
+                }
             }
             PreferencesSection(String(localized: "settings.advanced.vault.section", defaultValue: "Vault")) {
                 PreferencesRow(String(localized: "settings.advanced.vault.folder", defaultValue: "Vault folder")) {
@@ -107,18 +113,10 @@ struct AdvancedSettingsView: View {
                     }
                     .fxButtonStyle(.outline, size: .compact)
                     .disabled(viewModel.vaultFolderURL == nil)
+                    .accessibilityIdentifier(AccessibilityID.Settings.revealVaultFolder)
                 }
             }
         }
-    }
-
-    /// "From Terminal: <this app's executable> --diagnose", the command in mono: `open -a …
-    /// --args` would print nowhere, so it names the executable.
-    private var diagnoseFootnote: AttributedString {
-        var command = AttributedString(DiagnoseCommand.terminalCommand())
-        command.font = Theme.Typography.monoLabel
-        let lead = String(localized: "settings.advanced.diagnostics.terminal", defaultValue: "From Terminal:")
-        return AttributedString(lead + " ") + command
     }
 
     private var overrideLabel: String {

@@ -179,6 +179,11 @@ final class PreferencesViewModel: LockObserving {
         hasCopiedDiagnostics = true
     }
 
+    /// Copy on a command row (the `--diagnose` command): plain text, never cleared.
+    func copyCommand(_ command: String) {
+        app.container.clipboard.copyCommand(command)
+    }
+
     /// The vault folder, or nil for an in-memory vault (previews, tests).
     var vaultFolderURL: URL? {
         app.container.vaultDirectory
