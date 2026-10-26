@@ -196,8 +196,8 @@ public enum GHStderrClassifier {
 
     // MARK: - Status extraction
 
-    /// The first `HTTP nnn: ` or `HTTP nnn (` anywhere in `text` (native commands). gh 2.102
-    /// drops `: <message>` when GitHub's body has none, as on a DELETE 404 (seen 2026-10-26).
+    /// The first `HTTP nnn: ` or `HTTP nnn (` anywhere in `text` (native commands). gh prints
+    /// `HTTP nnn (url)` when the response has no message (seen on a DELETE 404, gh 2.102).
     static func nativeStatus(in text: String) -> Int? {
         let marker = "HTTP "
         var searchRange = text.startIndex..<text.endIndex

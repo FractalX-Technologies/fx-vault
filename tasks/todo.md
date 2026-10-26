@@ -110,7 +110,7 @@ FX Vault is a native SwiftUI app for macOS 14 and later.
 - swift-sodium has no upstream CI. It is used only for Argon2id (one file), and every known-answer test comes from an independent implementation.
 - `xcode-27` is a preview runner and can queue. Its job does not block merges, and the release workflow can fall back to `macos-26` (Xcode 26.6).
 - Some write behavior is unverified: whether an identical-value `gh secret set` changes `updatedAt`, environment DELETE and its variables, whether fields omitted from an environment PUT keep existing reviewers, Free-plan private errors as gh prints them, value normalization through gh (including empty values), gh's stderr for 403/404/422/SAML/rate limits, whether a WRITE collaborator can manage repo-level secrets and variables, and the response to an already-existing branch-policy POST. The M3 write spike covers these (Q6).
-- gh's stderr wording is not a stable interface. The classifier matches `HTTP (\d{3}):` (native), `gh: … (HTTP nnn)` / `gh: HTTP nnn` (`gh api`) and `GraphQL:` forms plus short fragments, and the fixtures are re-recorded when the gh floor moves.
+- gh's stderr wording is not a stable interface. The classifier matches `HTTP (\d{3}):` and `HTTP (\d{3}) (` (native), `gh: … (HTTP nnn)` / `gh: HTTP nnn` (`gh api`) and `GraphQL:` forms plus short fragments, and the fixtures are re-recorded when the gh floor moves.
 - Only one gh account is logged in today, so a second one is needed to demo multi-account support (Bryan action in Phase 0).
 
 **Noticed outside scope:** `admin-fractalx/fnx-mac` release.yml uses `runs-on: macos-14`, which retires 2026-11-02, and its actions are unpinned. The `fnx` cask has a postflight that does nothing (`"\#{appdir}"`). This is flagged as a separate task.
@@ -946,7 +946,7 @@ Alert copy: *"Secret API_TOKEN was changed on GitHub on Oct 12"*.
 ### E. Error classification (`GHStderrClassifier`, in priority order)
 
 Input: the exit code, the redacted stderr, and for `API -i` calls the status line. The status comes from:
-- native commands: `HTTP (\d{3}): ` anywhere in stderr (unanchored, because gh wraps it, e.g. `failed to delete secret X: HTTP 404: Not Found (…)`);
+- native commands: `HTTP (\d{3}): ` or `HTTP (\d{3}) (` anywhere in stderr (unanchored, because gh wraps it, e.g. `failed to delete secret X: HTTP 404: Not Found (…)`; with no message gh prints `HTTP 404 (…)`);
 - `gh api` (no `HTTP nnn:` form; it prints `gh: …` and adds no "Try authenticating" line): `^gh: (.*) \(HTTP (\d{3})\)$` or `^gh: HTTP (\d{3})$`; a `gh: <errors> (<message>)` line has no status and is matched by fragments only;
 - a `GraphQL: <message>` line (repo list, some creates, and `failed to look up repository O/R: GraphQL: …` before environment variable sets);
 - the `-i` status line.
