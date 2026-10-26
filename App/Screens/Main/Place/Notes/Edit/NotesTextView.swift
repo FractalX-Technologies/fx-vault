@@ -459,11 +459,12 @@ extension NotesTextView {
             return true
         }
         let place = session.target.kind
-        if place.nameProblem(trimmed) == nil, !NotesPasteParser.looksLikeValue(trimmed) {
+        let isValue = NotesPasteParser.isValue(pastedWord: trimmed)
+        if place.nameProblem(trimmed) == nil, !isValue {
             return insertFragment(plain(trimmed))
         }
         let name = String(trimmed.dropLast()).trimmingCharacters(in: .whitespaces)
-        if trimmed.hasSuffix("="), !name.isEmpty, place.nameProblem(name) == nil, !NotesPasteParser.looksLikeValue(name) {
+        if trimmed.hasSuffix("="), !name.isEmpty, place.nameProblem(name) == nil, !isValue {
             let line = NSMutableAttributedString(attributedString: plain("\(name) = "))
             line.append(NotesEditText.token(session.tokens.make(kind: .secret), renderer: session))
             return insertFragment(line)

@@ -183,15 +183,25 @@ struct NotesEditorTests {
 
     nonisolated static let base62 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
+    nonisolated static let hex = "abcdef0123456789"
+
     /// Values GitHub takes as names too: a 32-byte key in Base64 with one `=`, unpadded Base64,
-    /// 40 hex digits, a GitHub token and a Stripe key.
+    /// 40 hex digits, GitHub and Stripe tokens, and lowercase-hex tokens the classifier has no
+    /// prefix for (Shopify, DigitalOcean, Supabase).
     nonisolated static let valuesThatPassAsNames = [
         fixture(43, alphabet: base62, leading: 52, seed: 1) + "=",
         fixture(47, alphabet: base62, leading: 52, seed: 2),
-        fixture(40, alphabet: "abcdef0123456789", leading: 6, seed: 3),
+        fixture(40, alphabet: hex, leading: 6, seed: 3),
         "ghp" + "_" + fixture(36, alphabet: base62, leading: 62, seed: 4),
         "sk" + "_live_" + fixture(24, alphabet: base62, leading: 62, seed: 5),
+        "shp" + "at_" + fixture(32, alphabet: hex, leading: 16, seed: 9),
+        "dop" + "_v1_" + fixture(64, alphabet: hex, leading: 16, seed: 10),
+        "sbp" + "_" + fixture(40, alphabet: hex, leading: 16, seed: 11),
     ]
+
+    /// Short keys under the entropy check's 20 characters: a word in both cases with a digit,
+    /// and Base64 with its padding.
+    nonisolated static let shortValues = ["r8Kq2mXz9TfA", "dGVzdEtleTE="]
 
     /// Names are plaintext on disk, in gh's arguments and on GitHub (SECURITY-MODEL §7): a value
     /// never becomes one, nor does a line without a value.
@@ -222,7 +232,7 @@ struct NotesEditorTests {
     }
 
     /// A value that is a valid name too (a token, a Base64 or hex key) is still a value.
-    @Test(arguments: valuesThatPassAsNames)
+    @Test(arguments: valuesThatPassAsNames + shortValues)
     func aValueThatPassesAsANameOpensSetValue(_ value: String) throws {
         let name = value.hasSuffix("=") ? String(value.dropLast()) : value
         #expect(NotesEditPlaceKind.repository.nameProblem(name) == nil, "the fixture reads as a name")
@@ -239,26 +249,45 @@ struct NotesEditorTests {
         ]
         for value in values {
             #expect(NotesEditPlaceKind.keyVault.nameProblem(value) == nil, "the fixture reads as a name")
-            let target = NotesEditTargetModel(kind: .keyVault, title: "kv-example-prod", parent: nil) { _ in }
-            let session = NotesEditSession(target: target, origins: [])
-            let view = NotesTextView(session: session)
-            view.setSelectedRange(NSRange(location: (view.string as NSString).length, length: 0))
+            let (session, view) = Self.keyVaultEditor()
             try Self.expectPasteOpensSetValue(value, in: session, view)
         }
+    }
+
+    /// An empty Key Vault's editor, the insertion point at the end.
+    static func keyVaultEditor() -> (NotesEditSession, NotesTextView) {
+        let target = NotesEditTargetModel(kind: .keyVault, title: "kv-example-prod", parent: nil) { _ in }
+        let session = NotesEditSession(target: target, origins: [])
+        let view = NotesTextView(session: session)
+        view.setSelectedRange(NSRange(location: (view.string as NSString).length, length: 0))
+        return (session, view)
     }
 
     /// Names that look random to the entropy check alone still paste as names.
     @Test(arguments: ["STRIPE_SECRET_KEY", "AWS_S3_BUCKET_NAME_2", "GOOGLE_APPLICATION_CREDENTIALS_JSON_B64", "aws_s3_bucket_name_2"])
     func namesStillPasteAsNames(_ name: String) {
         let (session, view) = Self.editor()
+        Self.newSecretLine(in: view)
+        Self.expectPasteIsAName(name, in: session, view)
+        #expect(view.string.contains("API_TOKEN = \(Self.token)\n\(name)\n"))
+    }
+
+    /// A Key Vault's names, dashes included, still paste as names.
+    @Test(arguments: ["Db-Password1", "STRIPE_SECRET_KEY", "AWS_S3_BUCKET_NAME_2"])
+    func keyVaultNamesStillPasteAsNames(_ name: String) {
+        let (session, view) = Self.keyVaultEditor()
+        Self.expectPasteIsAName(name, in: session, view)
+    }
+
+    /// Pastes `name` at the insertion point: it goes in as text, and the clipboard keeps it.
+    static func expectPasteIsAName(_ name: String, in session: NotesEditSession, _ view: NotesTextView) {
         let pasteboard = Self.pasteboard()
         defer { pasteboard.releaseGlobally() }
         pasteboard.clearContents()
         pasteboard.setString(name, forType: .string)
 
-        Self.newSecretLine(in: view)
         #expect(view.readSelection(from: pasteboard, type: .string))
-        #expect(view.string.contains("API_TOKEN = \(Self.token)\n\(name)\n"))
+        #expect(view.string.contains("\(name)\n") || view.string.hasSuffix(name))
         #expect(session.valueRequest == nil)
         #expect(pasteboard.string(forType: .string) == name)
     }

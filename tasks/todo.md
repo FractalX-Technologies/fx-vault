@@ -2486,6 +2486,11 @@ Review N2 — Notes editing (2026-10-26, automatic):
   - The discard dialog's binding runs Keep Editing a turn later, so a close before Discard's action does nothing once Discard answered.
   - Keep Editing clears `pendingScope` and `pendingDestination`; a ⌘K row waits for Discard (`discardResumes`) instead of being selected before the answer.
   - Tests seen failing first: `aValueThatPassesAsANameOpensSetValue` (5 fixtures made at run time), `aKeyVaultTakesDashedKeysAsValues` (`xoxb-`, `sk-proj-`), `pastedKeyMaterialIsNeverReadAsNames` (+5), `namesStillPasteAsNames` and `pastedAssignmentsStillReadAsLines` (the entropy check alone), `keepEditingLeavesNothingPending`. UI `testLeavingWithAnUnsavedChangeAsksFirst` (Keep Editing, then Discard) passes with and without the deferred Keep Editing: macOS 26 runs Discard's action before it closes the dialog, so the `Task` is a guard, not a fix seen failing.
+- Fixes after the third review (2026-10-26):
+  - Snake case in one case stays a name only while no `_`-separated segment is 16+ characters with a digit, so `shpat_`/`dop_v1_`/`sbp_` + hex (no classifier prefix) are values; `CredentialClassifier` is unchanged (shared with import).
+  - `NotesPasteParser.isValue(pastedWord:)` for one pasted word: also Base64 with its padding (a length in fours ending in `=`, both cases: `dGVzdEtleTE=`) and a short key (8+ characters, no `_` or `-`, both cases and a digit). Assumption: the padded-Base64 rule is mine, for the review's own `dGVzdEtleTE=` example, which has no digit. A Key Vault name like `DbPassword1` opens Set value… (cancel and type it).
+  - Waivers: the deferred Keep Editing can't be seen failing on macOS 26; a kebab-case Key Vault name with high entropy opens Set value….
+  - Tests seen failing first: `aValueThatPassesAsANameOpensSetValue` (Shopify, DigitalOcean, Supabase, `r8Kq2mXz9TfA`, `dGVzdEtleTE=`), `pastedKeyMaterialIsNeverReadAsNames` (the three hex tokens), `keepEditingLeavesNothingPending` (a destination in another repository); `keyVaultNamesStillPasteAsNames` (`Db-Password1`, `STRIPE_SECRET_KEY`, `AWS_S3_BUCKET_NAME_2`) guards the names.
 
 Review B6b3b — organizations in Sync (2026-10-25, automatic):
 - Badge: `AppViewModel.organizationPendingCounts` (observed from `OrganizationItemRepository`) joins the Sync count and the Dock badge.

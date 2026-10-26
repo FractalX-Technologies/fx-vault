@@ -56,16 +56,35 @@ enum NotesPasteParser {
         return isConnectionString || looksLikeValue(name)
     }
 
-    /// Pasted text that passes as a name but is a value (`CredentialClassifier`, §5.13): a known
-    /// token (`ghp_…`, `sk_live_…`, `xoxb-…`) or a random-looking one with a lowercase letter
-    /// (Base64, hex). Snake case in one case (`aws_s3_bucket_name_2`) stays a name; so does
-    /// uppercase Base32 (tasks/waivers.md).
+    /// A segment of snake case this long with a digit is a token's body (`shpat_` + 32 hex).
+    static let tokenSegmentMinLength = 16
+    /// A word this long in both cases with a digit is a key even below the entropy check's 20.
+    static let shortKeyMinLength = 8
+
+    /// Text that passes as a name but is a value (`CredentialClassifier`, §5.13): a known token
+    /// (`ghp_…`, `xoxb-…`) or a random-looking one with a lowercase letter (Base64, hex). Snake
+    /// case in one case stays a name unless a segment is a token's body (`aws_s3_bucket_name_2`
+    /// stays, `sbp_` + 40 hex does not); uppercase Base32 stays a name too (tasks/waivers.md).
     static func looksLikeValue(_ text: String) -> Bool {
         let reasons = CredentialClassifier.valueReasons(in: text)
         if reasons.contains(where: { $0 != .highEntropy }) {
             return true
         }
         guard reasons.contains(.highEntropy), text.contains(where: \.isLowercase) else { return false }
-        return !text.contains("_") || text.contains(where: \.isUppercase)
+        guard text.contains("_"), !text.contains(where: \.isUppercase) else { return true }
+        return text.split(separator: "_").contains { $0.count >= tokenSegmentMinLength && $0.contains(where: \.isNumber) }
+    }
+
+    /// One pasted word (a trailing `=` aside) that is a value: ``looksLikeValue(_:)``, Base64
+    /// with its padding, or a short key (8+ characters, no `_` or `-`, both cases and a digit:
+    /// `r8Kq2mXz9TfA`). A Key Vault name like `DbPassword1` opens Set value… too; the user
+    /// cancels it and types the name.
+    static func isValue(pastedWord word: String) -> Bool {
+        let body = word.hasSuffix("=") ? String(word.dropLast()) : word
+        let hasBothCases = body.contains(where: \.isLowercase) && body.contains(where: \.isUppercase)
+        let isPaddedBase64 = word.hasSuffix("=") && word.count.isMultiple(of: 4) && hasBothCases
+        let isShortKey = body.count >= shortKeyMinLength && !body.contains("_") && !body.contains("-")
+            && hasBothCases && body.contains(where: \.isNumber)
+        return isPaddedBase64 || isShortKey || looksLikeValue(body)
     }
 }
