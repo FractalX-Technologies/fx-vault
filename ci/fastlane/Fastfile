@@ -1,0 +1,51 @@
+default_platform(:mac)
+
+BUNDLE_ID = "io.fractalx.fxvault"
+TEAM_ID = "QYKC498D5D"
+
+platform :mac do
+  # Signing material for the release workflow's signed job, from the organization's secrets: the Developer ID
+  # certificate from match (read-only) into a temporary keychain, and a Developer ID profile for the app made with
+  # the App Store Connect API key. The profile stays out of match: the CI token can't write to it, and sigh reuses
+  # the profile it made on the first run.
+  lane :developer_id do
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("APP_STORE_CONNECT_API_KEY_ID"),
+      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+      key_content: ENV.fetch("APP_STORE_CONNECT_API_KEY_CONTENT")
+    )
+    keychain = ENV.fetch("SIGNING_KEYCHAIN_NAME")
+    password = ENV.fetch("SIGNING_KEYCHAIN_PASSWORD")
+    create_keychain(
+      name: keychain,
+      password: password,
+      default_keychain: false,
+      unlock: true,
+      timeout: 21_600,
+      lock_when_sleeps: false,
+      add_to_search_list: true
+    )
+    match(
+      type: "developer_id",
+      platform: "macos",
+      app_identifier: [BUNDLE_ID],
+      team_id: TEAM_ID,
+      readonly: true,
+      skip_provisioning_profiles: true,
+      keychain_name: keychain,
+      keychain_password: password,
+      api_key: api_key
+    )
+    sigh(
+      developer_id: true,
+      platform: "macos",
+      app_identifier: BUNDLE_ID,
+      team_id: TEAM_ID,
+      provisioning_name: "FX Vault Developer ID CI",
+      output_path: ENV.fetch("PROFILE_OUTPUT_DIR"),
+      filename: "fxvault-developer-id.provisionprofile",
+      skip_install: true,
+      api_key: api_key
+    )
+  end
+end

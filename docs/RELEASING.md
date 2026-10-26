@@ -10,11 +10,11 @@ and the cask is in [FractalX-Technologies/homebrew-tap](https://github.com/Fract
 brew install --cask fractalx-technologies/tap/fx-vault
 ```
 
-**Signing and notarization run only on the maintainer's Mac** (tasks/todo.md D25, Q1). No
-certificate, provisioning profile or App Store Connect key is stored on GitHub. The
-`Release` workflow builds an **ad-hoc** DMG from every tag, but that DMG is only for
-verification. The workflow's signed job is optional and is skipped unless the
-`release` environment has secrets (see [CI](#ci-releaseyml)).
+**CI signs, notarizes and publishes each `v*` tag** with the organization's signing
+material (see [CI](#ci-releaseyml)): the Developer ID certificate from fastlane match
+(`FractalX-Technologies/ios-certificates`) and the organization's App Store Connect API key.
+`scripts/release-local.sh --publish` on the maintainer's Mac stays the fallback. Use one
+publisher per version. The cask bump stays manual (step 6).
 
 | File | Role |
 |------|------|
@@ -23,7 +23,8 @@ verification. The workflow's signed job is optional and is skipped unless the
 | `scripts/bump-cask.sh` | Writes `version` and `sha256` into the cask in a tap checkout. It never pushes |
 | `ci/ExportOptions-DeveloperID.plist` | `developer-id`, manual signing, team `QYKC498D5D`, profile `FX Vault Developer ID` |
 | `Casks/fx-vault.rb` | Cask template. The tap holds the canonical copy |
-| `.github/workflows/release.yml` | On `v*` tags: tests and the ad-hoc DMG artifact, plus the optional signed path |
+| `.github/workflows/release.yml` | On `v*` tags: tests and the ad-hoc DMG artifact, then the signed, notarized and published DMG |
+| `ci/fastlane/Fastfile`, `ci/Gemfile*` | The `signed` job's lane: match certificate, Developer ID profile, temporary keychain |
 
 ## One-time setup (release Mac)
 
@@ -98,7 +99,9 @@ names.
    git push origin v0.1.0
    ```
 
-   The push starts `Release`, which builds and uploads the ad-hoc verification DMG.
+   The push starts `Release`: the ad-hoc verification DMG, then the `signed` job signs,
+   notarizes and publishes `FXVault-<version>.dmg` to the tag's release. When it succeeds,
+   skip steps 3 and 4 and go on to step 5.
 3. **Optional rehearsal.** This runs the signed build without notarizing:
 
    ```sh
@@ -106,7 +109,7 @@ names.
    ```
 
    It runs every gate up to the signed DMG and writes nothing to `dist/`.
-4. **Build, notarize and publish:**
+4. **Fallback: build, notarize and publish on the Mac** (only if the `signed` job failed and published nothing):
 
    ```sh
    scripts/release-local.sh --publish 0.1.0
@@ -283,28 +286,34 @@ On a `v*` tag push, or by hand with `workflow_dispatch` and an optional `version
 
    It uploads `FXVault-<version>-adhoc.dmg` and its `.sha256` as a 14-day workflow
    artifact. This DMG is **not** a release asset.
-3. **`signed`**: optional, in environment `release`. It needs `adhoc` to succeed. It does
-   real work only when all six secrets below are set (job-level `HAS_SIGNING` and
-   `HAS_NOTARY`); otherwise it records a notice and does nothing. With the secrets set, it:
-   - imports the `.p12` into a temporary keychain
-   - installs the profile and writes `Config/Local.xcconfig`
-   - stores the notary key as `fxvault-notary` in the temporary keychain
+3. **`signed`**: in environment `release` (deployments from `v*` tags only), only on
+   `FractalX-Technologies/fx-vault`. It needs `adhoc` to succeed, and fails with the names
+   of any secret or variable below that the repository can't read. It:
+   - mints a read-only token of the `fractalx-ci-reader` GitHub App for `ios-certificates`
+   - runs `bundle exec fastlane mac developer_id` in `ci/` (gems from `ci/Gemfile.lock`):
+     a temporary keychain, the Developer ID certificate from match (read-only, no profiles),
+     and the Developer ID profile *FX Vault Developer ID CI* through the API key. sigh makes
+     it on the first run and downloads it after that; it stays out of match, which the CI
+     token can't write
+   - writes `Config/Local.xcconfig` with that profile's UUID
+   - stores the API key as `fxvault-notary` in the temporary keychain
    - runs `scripts/release-local.sh --skip-tests --publish`; it publishes only on tags
    - attests the DMG with `actions/attest`
    - deletes the keychain, the profile and the key, even if a step failed
 
-   | Secret / variable | Content |
-   |-------------------|---------|
-   | `MACOS_CERT_P12_BASE64` | base64 of the Developer ID Application `.p12`. Export it from Keychain Access; an OpenSSL 3 export needs `-legacy`, or `security import` rejects it |
-   | `MACOS_CERT_PASSWORD` | the `.p12` password |
-   | `MACOS_PROFILE_BASE64` | base64 of the *FX Vault Developer ID* profile |
-   | `ASC_KEY_P8_BASE64`, `ASC_KEY_ID`, `ASC_ISSUER_ID` | App Store Connect Team API key |
-   | `APPLE_TEAM_ID` (variable) | `QYKC498D5D`, also the default |
+   | Secret / variable | Where | Content |
+   |-------------------|-------|---------|
+   | `MATCH_PASSWORD` | organization secret, selected repositories | match's passphrase |
+   | `APP_STORE_CONNECT_API_KEY_CONTENT` | organization secret, selected repositories | the `.p8` text of the Team API key |
+   | `CI_APP_PRIVATE_KEY` | organization secret, selected repositories | `fractalx-ci-reader`'s private key |
+   | `APP_STORE_CONNECT_API_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`, `CI_APP_CLIENT_ID` | repository variables | copies of the organization's; its variables reach private repositories only, and this one is public |
+   | `APPLE_TEAM_ID` | repository variable, optional | `QYKC498D5D`, also the default |
 
-**Current decision: none of these secrets are set.** Use only one publisher per version,
-either the Mac or CI. Build provenance attestations (`gh attestation verify`) exist only
-for releases that CI signed. A local release is verified with its `.sha256`, `spctl` and
-`stapler validate`.
+   The organization secrets list `fx-vault` among their selected repositories, so any
+   workflow here can read them: changes to `.github/` need review like signing code.
+
+Build provenance attestations (`gh attestation verify`) exist only for releases that CI
+signed. A local release is verified with its `.sha256`, `spctl` and `stapler validate`.
 
 All actions are pinned to full commit SHAs. The workflow's default permission is
 `contents: read`. Only the `signed` job gets `contents: write`, `id-token: write` and

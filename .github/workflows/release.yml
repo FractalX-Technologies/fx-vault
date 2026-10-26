@@ -1,10 +1,10 @@
 name: Release
 
-# Official releases are signed and notarized on the maintainer's Mac with
-# scripts/release-local.sh --publish (docs/RELEASING.md); no Apple certificate or key
-# is stored on GitHub. This workflow always builds an ad-hoc universal DMG from the
-# tag as a verification artifact. The signed job only does real work when the
-# `release` environment holds all six signing and notarization secrets.
+# On a v* tag: an ad-hoc universal DMG (the tests and a verification artifact), then the
+# official DMG, signed with the organization's Developer ID certificate (fastlane match,
+# ios-certificates), notarized with its App Store Connect API key, and published to the
+# tag's release. scripts/release-local.sh --publish on the maintainer's Mac stays the
+# fallback (docs/RELEASING.md). The cask bump stays manual: nothing here writes to the tap.
 
 on:
   push:
@@ -86,8 +86,10 @@ jobs:
           retention-days: 14
 
   signed:
-    name: Signed and notarized DMG (optional)
+    name: Signed and notarized DMG
     needs: [meta, adhoc]
+    # Forks have neither the organization's signing secrets nor its match repo.
+    if: github.repository == 'FractalX-Technologies/fx-vault'
     runs-on: macos-26
     timeout-minutes: 90
     environment: release
@@ -98,110 +100,116 @@ jobs:
     env:
       VERSION: ${{ needs.meta.outputs.version }}
       TEAM_ID: ${{ vars.APPLE_TEAM_ID || 'QYKC498D5D' }}
-      HAS_SIGNING: ${{ secrets.MACOS_CERT_P12_BASE64 != '' && secrets.MACOS_CERT_PASSWORD != '' && secrets.MACOS_PROFILE_BASE64 != '' }}
-      HAS_NOTARY: ${{ secrets.ASC_KEY_P8_BASE64 != '' && secrets.ASC_KEY_ID != '' && secrets.ASC_ISSUER_ID != '' }}
+      # Repository variables: the organization's are private-only, and this repository is public.
+      APP_STORE_CONNECT_API_KEY_ID: ${{ vars.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ vars.APP_STORE_CONNECT_ISSUER_ID }}
+      CI_APP_CLIENT_ID: ${{ vars.CI_APP_CLIENT_ID }}
+      MATCH_REPOSITORY: ios-certificates
+      SIGNING_KEYCHAIN_NAME: fxvault-signing.keychain # in ~/Library/Keychains, as create_keychain and match name it
+      BUNDLE_FROZEN: "true" # gems come from ci/Gemfile.lock, never resolved in a job that holds signing keys
     steps:
-      - name: Check signing credentials
+      - name: Check the organization's signing settings
+        env:
+          HAS_MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD != '' }}
+          HAS_ASC_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT != '' }}
+          HAS_CI_APP_KEY: ${{ secrets.CI_APP_PRIVATE_KEY != '' }}
         run: |
-          if [[ "$HAS_SIGNING" == "true" && "$HAS_NOTARY" == "true" ]]; then
-            echo "Signing and notarization secrets found: building the official DMG in CI."
-          elif [[ "$HAS_SIGNING" == "true" || "$HAS_NOTARY" == "true" ]]; then
-            echo "::warning::Only some signing/notarization secrets are set; the signed CI build is skipped."
-          else
-            echo "::notice::No signing secrets: official releases are signed on the maintainer's Mac (scripts/release-local.sh)."
+          missing=()
+          [[ "$HAS_MATCH_PASSWORD" == "true" ]] || missing+=("secret MATCH_PASSWORD")
+          [[ "$HAS_ASC_KEY" == "true" ]] || missing+=("secret APP_STORE_CONNECT_API_KEY_CONTENT")
+          [[ "$HAS_CI_APP_KEY" == "true" ]] || missing+=("secret CI_APP_PRIVATE_KEY")
+          [[ -n "$APP_STORE_CONNECT_API_KEY_ID" ]] || missing+=("variable APP_STORE_CONNECT_API_KEY_ID")
+          [[ -n "$APP_STORE_CONNECT_ISSUER_ID" ]] || missing+=("variable APP_STORE_CONNECT_ISSUER_ID")
+          [[ -n "$CI_APP_CLIENT_ID" ]] || missing+=("variable CI_APP_CLIENT_ID")
+          if (( ${#missing[@]} )); then
+            printf '::error::Not available to this repository: %s (docs/RELEASING.md, CI)\n' "${missing[@]}"
+            exit 1
           fi
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true'
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - uses: ./.github/actions/setup-toolchain
-        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true'
         with:
           xcode-glob: Xcode_26*.app
 
-      - name: Import the Developer ID certificate into a temporary keychain
-        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true'
-        env:
-          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
-          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
-        run: |
-          set -euo pipefail
-          umask 077
-          keychain="$RUNNER_TEMP/fxvault-signing.keychain-db"
-          keychain_password="$(openssl rand -base64 32)"
-          echo "::add-mask::$keychain_password"
-          security create-keychain -p "$keychain_password" "$keychain"
-          echo "SIGNING_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
-          security set-keychain-settings -lut 21600 "$keychain"
-          security unlock-keychain -p "$keychain_password" "$keychain"
-          printf '%s' "$MACOS_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
-          security import "$RUNNER_TEMP/developer-id.p12" -k "$keychain" -f pkcs12 \
-            -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
-          rm -f "$RUNNER_TEMP/developer-id.p12"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
-            -k "$keychain_password" "$keychain" > /dev/null
-          existing=()
-          while IFS= read -r line; do
-            line="${line#"${line%%[![:space:]]*}"}"
-            line="${line%\"}"
-            existing+=("${line#\"}")
-          done < <(security list-keychains -d user)
-          security list-keychains -d user -s "$keychain" "${existing[@]}"
-          security find-identity -v -p codesigning "$keychain" | tail -n 1
+      - uses: ruby/setup-ruby@b1da4809b005e0178fe08a1d57317bffc00b7b4c # v1.332.0
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+          working-directory: ci
 
-      - name: Install the provisioning profile and enable signed settings
-        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true'
+      - name: Token for the match repository
+        id: token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ env.MATCH_REPOSITORY }}
+          permission-contents: read
+
+      # The keychain's password lives only in this step: create_keychain leaves it unlocked for the job.
+      - name: Developer ID certificate (match) and profile (App Store Connect API) into a temporary keychain
+        working-directory: ci
         env:
-          MACOS_PROFILE_BASE64: ${{ secrets.MACOS_PROFILE_BASE64 }}
+          APP_TOKEN: ${{ steps.token.outputs.token }}
+          MATCH_GIT_URL: https://github.com/${{ github.repository_owner }}/${{ env.MATCH_REPOSITORY }}.git
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
         run: |
           set -euo pipefail
-          profile="$RUNNER_TEMP/fxvault.provisionprofile"
-          printf '%s' "$MACOS_PROFILE_BASE64" | base64 --decode > "$profile"
+          auth="$(printf 'x-access-token:%s' "$APP_TOKEN" | base64 | tr -d '\n')"
+          echo "::add-mask::$auth"
+          export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+            GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth"
+          SIGNING_KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+          echo "::add-mask::$SIGNING_KEYCHAIN_PASSWORD"
+          export SIGNING_KEYCHAIN_PASSWORD PROFILE_OUTPUT_DIR="$RUNNER_TEMP"
+          bundle exec fastlane mac developer_id
+          echo "SIGNING_KEYCHAIN=$HOME/Library/Keychains/$SIGNING_KEYCHAIN_NAME-db" >> "$GITHUB_ENV"
+
+      - name: Use the profile in the signed settings
+        run: |
+          set -euo pipefail
+          profile="$RUNNER_TEMP/fxvault-developer-id.provisionprofile"
           uuid="$(security cms -D -i "$profile" | plutil -extract UUID raw -o - -)"
-          profiles_dir="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
-          mkdir -p "$profiles_dir"
-          cp "$profile" "$profiles_dir/$uuid.provisionprofile"
-          rm -f "$profile"
-          echo "INSTALLED_PROFILE=$profiles_dir/$uuid.provisionprofile" >> "$GITHUB_ENV"
-          printf '%s\n' '#include "Signed.xcconfig"' > Config/Local.xcconfig
+          printf '#include "Signed.xcconfig"\nPROVISIONING_PROFILE_SPECIFIER = %s\n' "$uuid" > Config/Local.xcconfig
+          echo "PROFILE_FILE=$profile" >> "$GITHUB_ENV"
+          echo "Profile $uuid"
 
       - name: Store notarytool credentials in the temporary keychain
-        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true'
         env:
-          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
         run: |
           set -euo pipefail
           umask 077
           key="$RUNNER_TEMP/AuthKey.p8"
-          printf '%s' "$ASC_KEY_P8_BASE64" | base64 --decode > "$key"
-          xcrun notarytool store-credentials fxvault-notary --key "$key" --key-id "$ASC_KEY_ID" \
-            --issuer "$ASC_ISSUER_ID" --keychain "$SIGNING_KEYCHAIN" > /dev/null
+          printf '%s\n' "$APP_STORE_CONNECT_API_KEY_CONTENT" > "$key"
+          xcrun notarytool store-credentials fxvault-notary --key "$key" \
+            --key-id "$APP_STORE_CONNECT_API_KEY_ID" --issuer "$APP_STORE_CONNECT_ISSUER_ID" \
+            --keychain "$SIGNING_KEYCHAIN" > /dev/null
           rm -f "$key"
 
       - name: Archive, export, gates, notarize, staple, DMG (and publish on tags)
-        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          args=(--skip-tests --team-id "$TEAM_ID" --notary-keychain "$SIGNING_KEYCHAIN")
+          # The ad-hoc job already ran the tests on this commit.
+          args=(--skip-tests --team-id "$TEAM_ID" --profile "$PROFILE_FILE" --notary-keychain "$SIGNING_KEYCHAIN")
           if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" == "v$VERSION" ]]; then
             args+=(--publish --repo "$GITHUB_REPOSITORY")
           fi
           scripts/release-local.sh "${args[@]}" "$VERSION"
 
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true'
         with:
           subject-path: dist/FXVault-${{ needs.meta.outputs.version }}.dmg
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true'
         with:
           name: FXVault-${{ needs.meta.outputs.version }}
           path: |
@@ -213,6 +221,5 @@ jobs:
       - name: Remove signing material
         if: always()
         run: |
-          if [[ -n "${SIGNING_KEYCHAIN:-}" ]]; then security delete-keychain "$SIGNING_KEYCHAIN" || true; fi
-          if [[ -n "${INSTALLED_PROFILE:-}" ]]; then rm -f "$INSTALLED_PROFILE"; fi
-          rm -f Config/Local.xcconfig "$RUNNER_TEMP/developer-id.p12" "$RUNNER_TEMP/AuthKey.p8"
+          security delete-keychain "$HOME/Library/Keychains/$SIGNING_KEYCHAIN_NAME-db" 2>/dev/null || true
+          rm -f Config/Local.xcconfig "${PROFILE_FILE:-}" "$RUNNER_TEMP/fxvault-developer-id.provisionprofile" "$RUNNER_TEMP/AuthKey.p8"
