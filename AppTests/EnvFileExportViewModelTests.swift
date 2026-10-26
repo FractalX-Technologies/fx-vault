@@ -88,7 +88,7 @@ struct EnvFileExportViewModelTests {
         #expect(model.exportedCount == 2)
         #expect(model.repositoryName == "\(TestFixtures.owner)/\(TestFixtures.repoName)")
         #expect(model.scopeTitle == "Repository")
-        #expect(model.placeTitle == "\(TestFixtures.owner)/\(TestFixtures.repoName)")
+        #expect(model.placeTitle == TestFixtures.repoName, "the bare name, as the boards and the Delete sheet")
         #expect(model.showsTouchIDButton)
         #expect(model.defaultAction == .touchID)
         model.password = "typed"
@@ -111,7 +111,7 @@ struct EnvFileExportViewModelTests {
             envFiles: EnvFileFixtures.repository(harness, git: .outsideRepository),
             touchIDStatus: nil
         )
-        #expect(await TestFixtures.eventually { model.placeTitle == "\(TestFixtures.owner)/\(TestFixtures.repoName) › staging" })
+        #expect(await TestFixtures.eventually { model.placeTitle == "\(TestFixtures.repoName) › staging" })
     }
 
     @Test func wrongPasswordStaysOnAuthenticationAndClearsTheField() async throws {

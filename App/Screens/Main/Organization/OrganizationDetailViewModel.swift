@@ -176,6 +176,13 @@ final class OrganizationDetailViewModel {
         refresh?.findings ?? []
     }
 
+    /// Names Refresh could not compare: the review lists them, and the status line does when
+    /// there is nothing to review.
+    var skippedNote: String? {
+        guard let refresh, refresh.findings.isEmpty, !refresh.skippedNames.isEmpty else { return nil }
+        return DriftCopy.skipped(refresh.skippedNames.map(\.name))
+    }
+
     func isChangedOnGitHub(_ row: OrgItemModel) -> Bool {
         refresh?.changedItemIDs.contains(row.id) == true
     }

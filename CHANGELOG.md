@@ -60,7 +60,10 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   changed leaves it without a value, since GitHub never returns one (one whose only change is
   who can use it keeps its value). Taking GitHub's deletion, or GitHub's item over one you
   added here too, asks first. A deletion GitHub already made is finished on Refresh, and what
-  your own Sync just deleted is not reported as added while GitHub catches up.
+  your own Sync just deleted is not reported as added while GitHub catches up. For a name
+  added on both sides, a repository's review now says the same: Keep Local sends yours at the
+  next Sync (it said the name would be deleted on GitHub). With nothing to review, the
+  organization's status line still names what GitHub lists that FX Vault can't store.
 - **Inherited organization secrets and variables.** When a repository's organization is in
   the vault, its Secrets and Variables tabs also list, muted and read only, what the
   organization gives it ("example-org · all repos", "· private and internal", "· selected"),

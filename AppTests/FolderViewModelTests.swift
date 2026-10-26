@@ -105,6 +105,20 @@ struct FolderViewModelTests {
         #expect(try fixture.harness.data.folders.items(folderID: fixture.folderID).map(\.name) == ["API_URL"])
     }
 
+    /// The selection bar counts the folder's own rows, as a repository's: one row and an id whose
+    /// row is gone (deleted elsewhere) show none.
+    @Test func theSelectionBarNeedsTwoOfTheFoldersRows() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.folder
+        #expect(await fixture.waitForFolderRows(["FIREBASE_API_KEY"]))
+        let row = try #require(model.rows.first)
+
+        model.selection = [row.id, ConfigItemID()]
+
+        #expect(model.selectedRows.map(\.name) == ["FIREBASE_API_KEY"])
+        #expect(!model.showsSelectionActions)
+    }
+
     // MARK: - Copy and paste (F5, F6)
 
     @Test func aRepositoryItemPastedIntoTheFolderIsLinked() async throws {

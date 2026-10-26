@@ -35,14 +35,6 @@ enum OrganizationCopy {
 
     // MARK: Added on both sides (B7b)
 
-    static let conflictKeepLocal = String(
-        localized: "organization.drift.conflict.keepLocal",
-        defaultValue: "Yours is sent on the next Sync, replacing GitHub's."
-    )
-    static let conflictAccept = String(
-        localized: "organization.drift.conflict.accept",
-        defaultValue: "GitHub's replaces yours here; a secret arrives without its value."
-    )
     static let replaceConfirm = String(localized: "organization.drift.replace.confirm", defaultValue: "Use GitHub's")
     static let replaceMessage = String(
         localized: "organization.drift.replace.message",

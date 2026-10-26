@@ -172,7 +172,7 @@ private struct DestinationDetailControls: View {
 
     @ViewBuilder
     private var actions: some View {
-        if viewModel.selection.count > 1 {
+        if viewModel.showsSelectionActions {
             let rows = viewModel.selectedRows
             HStack(spacing: Theme.Spacing.mediumMinus) {
                 Text(String(localized: "main.detail.selection.count", defaultValue: "\(rows.count) selected"))

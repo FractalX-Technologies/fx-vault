@@ -533,12 +533,12 @@ foreground color, so `.primary` text still turns white on selected rows.
   a 440 pt `DialogSheet` titled "Delete 2 secrets from api-service › production?" (secrets,
   variables or items; the place as the toolbar names it), the names in `.fxDialogListBox()`
   (`.monoMeta`; each says "secret" or "variable" when both are listed; it scrolls past
-  `dialogListMaxHeight`), then `DialogSentence` notes: what the next Sync does on GitHub or in Key Vault
-  ("which asks again"), the ones never synced removed now, and "GitHub can’t undo this" when one is
-  on GitHub (with "FX Vault has no copy of secrets without a value" when such a secret is there) or "Key Vault
-  keeps deleted secrets recoverable for up to 90 days" (and "Their linked copies elsewhere stay"
-  when one is linked); a folder says its items go now. Cancel
-  outlined (Esc) and the red `.destructive` Delete; Return does nothing.
+  `dialogListMaxHeight`), then `DialogSentence` notes: what the next Sync does on GitHub or in
+  Key Vault ("which asks again"), the ones never synced removed now, and "GitHub can’t undo
+  this" when one is on GitHub (with "FX Vault has no copy of secrets without a value" when such
+  a secret is there) or "Key Vault keeps deleted secrets recoverable for up to 90 days" (and
+  "Their linked copies elsewhere stay" when one is linked); a folder says its items go now.
+  Cancel outlined (Esc) and the red `.destructive` Delete; Return does nothing.
 - An environment row's context menu (board Main2-Actions): Rename…, Duplicate Environment…,
   Share Securely…, Refresh, Revert Changes (only when there is a change to undo; not on the
   board), | Delete Environment….
@@ -589,7 +589,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   visibility's caption, and for Selected one `FXCheckboxRow` per repository.
 - Organization Refresh (1.0, B7b; no board, the repository's and Key Vault's pattern): Refresh
   in ⋯ More (after Copy All) lists the organization again. The status line says Refreshing…,
-  then "Nothing changed on GitHub" in `mutedText` or the drift line ("2 changed on GitHub · 1
+  then "Nothing changed on GitHub" in `mutedText` (with the "not compared" sentence below it
+  when GitHub lists names FX Vault can't hold) or the drift line ("2 changed on GitHub · 1
   also changed in your vault · Review", `DriftBannerView`). A row whose date, visibility or
   repository count differs on GitHub, or that GitHub deleted or also added, says "○ Changed on
   GitHub" (`RingDot`, `ink`) in Status, its own status as help. Review opens `OrgDriftScreen`:
@@ -598,9 +599,10 @@ foreground color, so `.primary` text still turns white on selected rows.
   the "Not compared" notes (names FX Vault can't hold), and a confirmation before Accept GitHub
   loses the vault's data: "Delete … from your vault?" for GitHub's deletion, "Replace your
   API_TOKEN with GitHub's?" (Use GitHub's) for an item added on both sides, whose texts say
-  Keep Local sends the vault's and Accept replaces it. Accept GitHub of a secret whose date
-  moved leaves it without a value (no fill step, unlike a repository's); under the same date it
-  says the value stays.
+  Keep Local sends the vault's and Accept replaces it (`DriftCopy.bothAdded*`, also the
+  repository review's, where a secret then asks for its value). Accept GitHub of a secret whose
+  date moved leaves it without a value (no fill step, unlike a repository's); under the same
+  date it says the value stays.
 - Runtime destinations under the selected repository (v0.8.0, canvas "FX Vault Destinations"):
   after the environments, `SectionLabel` RUNTIME with an Experimental `StatusChip.tag`, then one 2-line
   row per destination: the provider symbol in `monoLabel` `mutedText`

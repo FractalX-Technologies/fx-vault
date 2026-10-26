@@ -86,9 +86,9 @@ final class OrgDriftViewModel {
         let isBothAdded = finding.kind == .remoteAdded && finding.itemID != nil
         switch option {
         case .keepLocal:
-            return isBothAdded ? OrganizationCopy.conflictKeepLocal : DriftCopy.keepLocalExplanation(finding.kind)
+            return isBothAdded ? DriftCopy.bothAddedKeepLocal : DriftCopy.keepLocalExplanation(finding.kind)
         case .acceptGitHub:
-            if isBothAdded { return OrganizationCopy.conflictAccept }
+            if isBothAdded { return DriftCopy.bothAddedAcceptGitHub(finding.itemKind, fillsValue: false) }
             guard finding.kind == .secretModified else { return DriftCopy.acceptGitHubExplanation(finding.kind) }
             return finding.isRemoteDateChanged ? OrganizationCopy.acceptSecretChange : OrganizationCopy.acceptAccessChange
         }

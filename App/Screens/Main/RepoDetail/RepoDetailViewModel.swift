@@ -381,17 +381,6 @@ final class RepoDetailViewModel: LockObserving {
 
     // MARK: - Selection (v0.4.0)
 
-    /// The selected rows of the visible kind, in table order.
-    var selectedRows: [ConfigRowModel] {
-        rows(for: selection)
-    }
-
-    /// The selection bar needs two of the scope's own rows: selected inherited rows (B7a) have
-    /// nothing to count, copy or delete.
-    var showsSelectionActions: Bool {
-        selectedRows.count > 1
-    }
-
     /// The table: the scope's own rows (one that overrides an organization item says so), then
     /// the organization's items this repository gets and nothing here overrides, read only
     /// (board Place-Table). Actions only ever see ``rows``.
