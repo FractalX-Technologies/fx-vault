@@ -62,8 +62,11 @@ struct RepoDetailInheritedTests {
         // API_TOKEN keeps the organization's out.
         let scopes = try harness.data.config.scopes(repositoryID: id)
         model.select(scope: try #require(scopes.first { $0.environment?.name == "production" }).scope)
-        #expect(await TestFixtures.eventually { model.tableRows.map(\.name) == ["REGION"] })
-        #expect(model.tableRows.first?.overrides == owner)
+        // Until production's own items arrive, the organization's REGION is the only row (inherited).
+        #expect(await TestFixtures.eventually {
+            model.tableRows.map(\.name) == ["REGION"] && model.tableRows.first?.overrides == owner
+        })
+        #expect(model.tableRows.first?.inherited == nil)
         model.kind = .secret
         #expect(await TestFixtures.eventually { model.tableRows.map(\.name) == ["DEPLOY_KEY", "NPM_TOKEN"] })
     }
