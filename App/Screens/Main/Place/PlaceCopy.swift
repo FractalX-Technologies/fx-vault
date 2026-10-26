@@ -58,7 +58,12 @@ nonisolated enum PlaceCopy {
 
     /// "api-service › production" (the Sync review, the "Delete?" and Export .env titles).
     static func environmentPlace(repository: String, environment: String) -> String {
-        String(localized: "sync.place.environmentName", defaultValue: "\(repository) › \(environment)")
+        path([repository, environment])
+    }
+
+    /// "example-org › api-service › staging": the steps as the toolbar's path joins them.
+    static func path(_ steps: [String]) -> String {
+        steps.joined(separator: " › ")
     }
 
     /// "2 changed on GitHub" (board Main2-Repository).

@@ -293,6 +293,9 @@ enum Theme {
         static let linkedPopoverWidth: CGFloat = 380
         /// Tallest the linked copies list grows before it scrolls.
         static let linkedListMaxHeight: CGFloat = 280
+        /// A linked copy that can't be updated has no checkbox; its path still lines up (board
+        /// Folder-LinkedUpdate: 12 pt inset, the 14 pt box, 10 pt gap).
+        static let linkedUpdateBlockedInset: CGFloat = 36
         /// Height of the repository list in "Copy to Another Repository".
         static let copyTargetListHeight: CGFloat = 320
     }

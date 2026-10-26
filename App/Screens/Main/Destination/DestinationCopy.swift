@@ -1,3 +1,4 @@
+import DestinationKit
 import Foundation
 import VaultCore
 import VaultData
@@ -87,21 +88,41 @@ nonisolated enum DestinationCopy {
         String(localized: "destination.detail.noStage", defaultValue: "No stage")
     }
 
-    static var targetLabel: String {
-        String(localized: "destination.detail.target", defaultValue: "Target")
-    }
-
-    static var rulesLabel: String {
-        String(localized: "destination.detail.rules", defaultValue: "Names and values")
-    }
-
+    /// The footnote under the table (board KV-Place).
     static func rules(for provider: DestinationProvider) -> String {
         switch provider {
         case .azureKeyVault:
             String(
-                localized: "destination.rules.keyVault",
-                defaultValue: "Secrets only. Key Vault names allow letters, digits and dashes: FX Vault keeps your names and writes DATABASE-URL for DATABASE_URL. Deletes are soft deletes."
+                localized: "destination.rules.keyVault.footnote",
+                defaultValue: "Key Vault names use dashes: FX Vault keeps DATABASE_URL and writes DATABASE-URL. Deleted secrets stay recoverable in Key Vault."
             )
+        }
+    }
+
+    /// "2 changed in Key Vault": Refresh's findings as the header's line (board KV-Place).
+    static func changed(_ count: Int, provider: DestinationProvider) -> String {
+        String(localized: "destination.detail.changed", defaultValue: "\(count) changed in \(provider.shortTitle)")
+    }
+
+    static func reviewHelp(provider: DestinationProvider) -> String {
+        String(localized: "destination.detail.review.help", defaultValue: "Keep your version or take \(provider.shortTitle)’s for each change")
+    }
+
+    /// The secrets Refresh found that FX Vault leaves out, by reason (board KV-Place).
+    static func hidden(_ count: Int, reason: DestinationUnusableReason) -> String {
+        switch (reason, count) {
+        case (.managed, 1):
+            String(localized: "destination.hidden.managed.one", defaultValue: "1 certificate-backed secret is hidden · managed by Key Vault")
+        case (.managed, _):
+            String(localized: "destination.hidden.managed", defaultValue: "\(count) certificate-backed secrets are hidden · managed by Key Vault")
+        case (.disabled, 1):
+            String(localized: "destination.hidden.disabled.one", defaultValue: "1 disabled secret is hidden · not editable")
+        case (.disabled, _):
+            String(localized: "destination.hidden.disabled", defaultValue: "\(count) disabled secrets are hidden · not editable")
+        case (.invalidName, 1):
+            String(localized: "destination.hidden.invalidName.one", defaultValue: "1 secret is hidden · its name can’t be used in FX Vault")
+        case (.invalidName, _):
+            String(localized: "destination.hidden.invalidName", defaultValue: "\(count) secrets are hidden · their names can’t be used in FX Vault")
         }
     }
 
@@ -109,12 +130,6 @@ nonisolated enum DestinationCopy {
         count == 1
             ? String(localized: "destination.detail.drift.one", defaultValue: "1 change in \(provider.title) since your last sync")
             : String(localized: "destination.detail.drift", defaultValue: "\(count) changes in \(provider.title) since your last sync")
-    }
-
-    static func unusableBanner(_ count: Int) -> String {
-        count == 1
-            ? String(localized: "destination.detail.unusable.one", defaultValue: "1 item in the destination cannot be used by FX Vault")
-            : String(localized: "destination.detail.unusable", defaultValue: "\(count) items in the destination cannot be used by FX Vault")
     }
 
     static var noDrift: String {

@@ -2685,6 +2685,17 @@
         }
       }
     },
+    "destination.detail.changed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld changed in %2$@"
+          }
+        }
+      }
+    },
     "destination.detail.drift" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2773,13 +2784,13 @@
         }
       }
     },
-    "destination.detail.rules" : {
+    "destination.detail.review.help" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Names and values"
+            "value" : "Keep your version or take %@’s for each change"
           }
         }
       }
@@ -2802,39 +2813,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Stage"
-          }
-        }
-      }
-    },
-    "destination.detail.target" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Target"
-          }
-        }
-      }
-    },
-    "destination.detail.unusable" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld items in the destination cannot be used by FX Vault"
-          }
-        }
-      }
-    },
-    "destination.detail.unusable.one" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1 item in the destination cannot be used by FX Vault"
           }
         }
       }
@@ -2868,6 +2846,72 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Destinations are new: Sync and Refresh may still change."
+          }
+        }
+      }
+    },
+    "destination.hidden.disabled" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld disabled secrets are hidden · not editable"
+          }
+        }
+      }
+    },
+    "destination.hidden.disabled.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 disabled secret is hidden · not editable"
+          }
+        }
+      }
+    },
+    "destination.hidden.invalidName" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld secrets are hidden · their names can’t be used in FX Vault"
+          }
+        }
+      }
+    },
+    "destination.hidden.invalidName.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 secret is hidden · its name can’t be used in FX Vault"
+          }
+        }
+      }
+    },
+    "destination.hidden.managed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld certificate-backed secrets are hidden · managed by Key Vault"
+          }
+        }
+      }
+    },
+    "destination.hidden.managed.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1 certificate-backed secret is hidden · managed by Key Vault"
           }
         }
       }
@@ -2982,13 +3026,13 @@
         }
       }
     },
-    "destination.rules.keyVault" : {
+    "destination.rules.keyVault.footnote" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Secrets only. Key Vault names allow letters, digits and dashes: FX Vault keeps your names and writes DATABASE-URL for DATABASE_URL. Deletes are soft deletes."
+            "value" : "Key Vault names use dashes: FX Vault keeps DATABASE_URL and writes DATABASE-URL. Deleted secrets stay recoverable in Key Vault."
           }
         }
       }
@@ -8768,17 +8812,6 @@
         }
       }
     },
-    "itemEditor.linked.row" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$@ (%3$@)"
-          }
-        }
-      }
-    },
     "itemEditor.move.kind" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10088,6 +10121,39 @@
         }
       }
     },
+    "main.linked.blocked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "can’t update"
+          }
+        }
+      }
+    },
+    "main.linked.blocked.environmentDeleted" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "can’t update · environment deleted"
+          }
+        }
+      }
+    },
+    "main.linked.blocked.readOnly" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "can’t update · read only"
+          }
+        }
+      }
+    },
     "main.linked.differs" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11001,6 +11067,17 @@
         }
       }
     },
+    "main.table.linked.places" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld place](inflect: true)"
+          }
+        }
+      }
+    },
     "main.table.linked.show" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11745,6 +11822,50 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Import this organization's own secrets and variables. Secrets arrive without values: GitHub never returns them. Reading them needs admin:org and the organization's admin role."
+          }
+        }
+      }
+    },
+    "organization.reach.all" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "all repos"
+          }
+        }
+      }
+    },
+    "organization.reach.private" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "private and internal"
+          }
+        }
+      }
+    },
+    "organization.reach.selected" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "selected"
+          }
+        }
+      }
+    },
+    "organization.reach.selectedCount" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "selected · ^[%lld repo](inflect: true)"
           }
         }
       }
@@ -17652,17 +17773,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "environment"
-          }
-        }
-      }
-    },
-    "sync.place.environmentName" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ › %2$@"
           }
         }
       }

@@ -8,7 +8,7 @@ final class OrganizationUITests: VaultUITestCase {
     func testImportingAnOrganizationListsItsItemsWithTheirVisibility() throws {
         let app = launch()
         let table = try importExampleOrganization(app)
-        for text in ["NPM_TOKEN", "STRIPE_KEY", "REGION", "All repositories", "Selected · 3 repositories", "Private and internal repositories"] {
+        for text in ["NPM_TOKEN", "STRIPE_KEY", "REGION", "all repos", "selected · 3 repos", "private and internal"] {
             XCTAssertTrue(table.staticTexts[text].waitForExistence(timeout: timeout), "\(text) is not in the table")
         }
         XCTAssertFalse(app.buttons[AccessibilityID.Main.importOrganization].exists)

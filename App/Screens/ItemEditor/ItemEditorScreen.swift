@@ -215,19 +215,11 @@ private struct ItemEditorForm: View {
 
     private var linkedField: some View {
         ConfigSheetField(String(localized: "itemEditor.linked.header", defaultValue: "Linked copies")) {
-            ForEach(viewModel.linkedCopies) { copy in
-                FXCheckboxRow(
-                    title: String(
-                        localized: "itemEditor.linked.row",
-                        defaultValue: "\(copy.placeName) · \(copy.placeDetail(itemName: viewModel.item?.name ?? "")) (\(copy.comparison.title))"
-                    ),
-                    isOn: Binding(
-                        get: { viewModel.linkedSelection.contains(copy.itemID) && copy.isEditable },
-                        set: { viewModel.setLinkedCopy(copy.itemID, included: $0) }
-                    )
+            LinkedUpdateList(copies: viewModel.linkedCopies, canEdit: viewModel.canEdit) { copy in
+                Binding(
+                    get: { viewModel.linkedSelection.contains(copy.itemID) && copy.isEditable },
+                    set: { viewModel.setLinkedCopy(copy.itemID, included: $0) }
                 )
-                .disabled(!copy.isEditable || !viewModel.canEdit)
-                .help(copy.editBlock?.presentation.message ?? "")
             }
             ConfigEditorNoteView(note: .info(String(
                 localized: "itemEditor.linked.note",
