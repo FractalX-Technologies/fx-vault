@@ -19,7 +19,10 @@ enum SidebarCopy {
 
     /// The help of a count of secrets without a value (a repository, a scope, a Key Vault).
     static func valueMissingHelp(_ count: Int) -> String {
-        String(localized: "main.scopes.valueMissing.help", defaultValue: "\(count) secrets have no value in FX Vault")
+        String(inflected: AttributedString(
+            localized: "main.scopes.valueMissing.help",
+            defaultValue: "^[\(count) secret](inflect: true) without a value in FX Vault"
+        ))
     }
 
     static func expand(_ name: String) -> String {

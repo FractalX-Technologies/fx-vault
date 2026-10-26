@@ -290,7 +290,8 @@ struct SidebarViewModelTests {
         try harness.data.config.fillValue(secret.id, value: SecretBytes(utf8: EditorFixtures.secretValue), pushOnNextSync: false)
         #expect(await TestFixtures.eventually { harness.app.valueMissingCount(of: id) == 1 })
         #expect(harness.app.valueMissingCount(of: RepoID()) == 0)
-        #expect(SidebarCopy.valueMissingHelp(2) == "2 secrets have no value in FX Vault")
+        #expect(SidebarCopy.valueMissingHelp(2) == "2 secrets without a value in FX Vault")
+        #expect(SidebarCopy.valueMissingHelp(1) == "1 secret without a value in FX Vault")
     }
 
     /// 1.0 D6c6 (board Main2-Repository): Azure › subscription › vault. A vault imported before
