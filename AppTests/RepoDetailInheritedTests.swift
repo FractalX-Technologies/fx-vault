@@ -11,21 +11,33 @@ import VaultData
 @Suite("Inherited organization items")
 struct RepoDetailInheritedTests {
     /// The imported Example-Org/example-repo (private) with Example-Org in the vault: NPM_TOKEN
-    /// (all), STRIPE_KEY (selected, list unknown), REGION (private, eu-west) and an added
-    /// API_TOKEN (all) that the repository's own API_TOKEN overrides.
-    @Test func theOrganizationsItemsAreReadOnlyRowsAndAnOwnItemOverridesOne() async throws {
+    /// (all), STRIPE_KEY (selected, list unknown) and REGION (private, eu-west).
+    @MainActor
+    struct Fixture {
+        let harness: TestHarness
+        let repositoryID: RepoID
+        let organization: OrganizationModel
+        let recorder: ActionRecorder
+        let model: RepoDetailViewModel
+
+        /// The organization's own secret `name` (all repositories).
+        func addOrganizationSecret(_ name: String) throws {
+            _ = try harness.data.organizationItems.addItem(
+                organizationID: organization.id,
+                kind: .secret,
+                name: name,
+                value: SecretBytes(utf8: EditorFixtures.secretValue),
+                access: .all
+            )
+        }
+    }
+
+    static func fixture() async throws -> Fixture {
         let (harness, id) = try await EditorFixtures.importedHarness()
         let owner = TestFixtures.owner
         harness.runner.stub(argumentsPrefix: ["secret", "list", "--org=\(owner)"], with: .success(OrganizationViewModelTests.secrets))
         harness.runner.stub(argumentsPrefix: ["variable", "list", "--org=\(owner)"], with: .success(OrganizationViewModelTests.variables))
         let organization = try await harness.data.organizations.importOrganization(login: owner, accountLogin: TestFixtures.account).organization
-        _ = try harness.data.organizationItems.addItem(
-            organizationID: organization.id,
-            kind: .secret,
-            name: "API_TOKEN",
-            value: SecretBytes(utf8: EditorFixtures.secretValue),
-            access: .all
-        )
         let recorder = ActionRecorder()
         let model = RepoDetailViewModel(
             repositoryID: id,
@@ -34,6 +46,15 @@ struct RepoDetailInheritedTests {
             scopeSummary: { scope in try? harness.data.config.scopes(repositoryID: id).first { $0.scope == scope } }
         )
         model.kind = .secret
+        return Fixture(harness: harness, repositoryID: id, organization: organization, recorder: recorder, model: model)
+    }
+
+    /// Plus an organization API_TOKEN (all) that the repository's own API_TOKEN overrides.
+    @Test func theOrganizationsItemsAreReadOnlyRowsAndAnOwnItemOverridesOne() async throws {
+        let fixture = try await Self.fixture()
+        let (harness, id, model, recorder) = (fixture.harness, fixture.repositoryID, fixture.model, fixture.recorder)
+        let owner = TestFixtures.owner
+        try fixture.addOrganizationSecret("API_TOKEN")
 
         #expect(await TestFixtures.eventually { model.tableRows.map(\.name) == ["API_TOKEN", "NPM_TOKEN"] })
         let own = try #require(model.tableRows.first)
@@ -57,6 +78,9 @@ struct RepoDetailInheritedTests {
         let region = try #require(model.tableRows.last)
         #expect(region.inherited?.scope == "\(owner) · private and internal")
         #expect(await TestFixtures.eventually { model.display(for: region) == .plain("eu-west") })
+        // Locking drops the organization's variables too.
+        model.vaultDidLock()
+        #expect(model.display(for: region) == .masked)
 
         // In production its own REGION overrides the organization's, and the repository level's
         // API_TOKEN keeps the organization's out.
@@ -69,5 +93,25 @@ struct RepoDetailInheritedTests {
         #expect(model.tableRows.first?.inherited == nil)
         model.kind = .secret
         #expect(await TestFixtures.eventually { model.tableRows.map(\.name) == ["DEPLOY_KEY", "NPM_TOKEN"] })
+    }
+
+    /// Selected inherited rows have nothing to count, copy or delete: no selection bar, no ⌘C.
+    @Test func selectingInheritedRowsOffersNoSelectionActions() async throws {
+        let fixture = try await Self.fixture()
+        let model = fixture.model
+        try fixture.addOrganizationSecret("SENTRY_DSN")
+        #expect(await TestFixtures.eventually { model.tableRows.map(\.name) == ["API_TOKEN", "NPM_TOKEN", "SENTRY_DSN"] })
+        let inherited = model.tableRows.filter { $0.inherited != nil }.map(\.id)
+        #expect(inherited.count == 2)
+
+        model.selection = Set(inherited)
+        #expect(!model.showsSelectionActions)
+        #expect(!model.canCopySelection)
+
+        // With one of the scope's own rows, ⌘C copies it; the bar still needs two of them.
+        let own = try #require(model.tableRows.first)
+        model.selection.insert(own.id)
+        #expect(model.canCopySelection)
+        #expect(!model.showsSelectionActions)
     }
 }

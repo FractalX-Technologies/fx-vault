@@ -68,7 +68,7 @@ private struct RepoDetailControls: View {
 
     @ViewBuilder
     private var selectionActions: some View {
-        if viewModel.selection.count > 1 {
+        if viewModel.showsSelectionActions {
             RepoDetailSelectionActions(viewModel: viewModel)
         }
     }

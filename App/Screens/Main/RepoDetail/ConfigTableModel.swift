@@ -78,6 +78,11 @@ extension ConfigTableModel {
         add()
     }
 
+    /// ⌘C needs a selected row of the place's own: an inherited one (B7a) is not copied.
+    var canCopySelection: Bool {
+        !rows(for: selection).isEmpty
+    }
+
     /// What a place's Copy To copies (1.0 D6c3): the selected rows, or the open tab's rows when
     /// none is selected; never a deleted one.
     var placeCopyRows: [ConfigRowModel] {

@@ -66,7 +66,8 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   organization gives it ("example-org · all repos", "· private and internal", "· selected"),
   marked Inherited. An item of the repository or environment with the same name says
   "Overrides example-org" beside its status. A `selected` item shows once FX Vault knows its
-  repository list (after it was edited here).
+  repository list (after it was edited here). On GitHub Free, private repositories can't use
+  organization items, but FX Vault doesn't know the plan and still lists them there.
 - **Edit organization secrets and variables.** The organization view gains Add Secret, Add
   Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
   with the organization's repositories). A Selected item keeps GitHub's repository list until

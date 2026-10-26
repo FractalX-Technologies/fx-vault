@@ -141,9 +141,7 @@ public struct OrganizationStore: Sendable {
         else { return nil }
         var items: [OrgItemModel] = []
         for record in try orderedItems(organizationID: organization.id).fetchAll(db) where !record.isDeleted {
-            let selected = record.visibility == .selected
-                ? try String.fetchAll(db, sql: "SELECT name FROM org_item_repositories WHERE item_id = ?", arguments: [record.id.uuidString])
-                : []
+            let selected = record.visibility == .selected ? try repositories(itemID: record.id, db: db) : []
             if record.visibility.reaches(repositoryName: repositoryName, isPrivate: isPrivate, selectedRepositories: selected) {
                 items.append(record.model)
             }
@@ -153,8 +151,12 @@ public struct OrganizationStore: Sendable {
 
     /// The repository list stored for an item (`repositories_edited`), by name.
     public func fetchRepositories(itemID: ConfigItemID, in tx: StoreTransaction) throws -> [String] {
+        try Self.repositories(itemID: itemID, db: tx.db)
+    }
+
+    private static func repositories(itemID: ConfigItemID, db: Database) throws -> [String] {
         try String.fetchAll(
-            tx.db,
+            db,
             sql: "SELECT name FROM org_item_repositories WHERE item_id = ? ORDER BY name COLLATE NOCASE",
             arguments: [itemID.uuidString]
         )
