@@ -600,8 +600,9 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     }
 
     /// An owner's Approve (1.0 B4b): the approval sheet when gh can add the scopes here (a
-    /// scope of the fixed list, on gh's active account, online). False leaves it to Settings ›
-    /// Accounts, whose commands switch accounts first.
+    /// scope of the fixed list, on gh's active account at the last reload; the router refuses
+    /// the sheet offline, `needsInternet`). False leaves it to Settings › Accounts, whose
+    /// commands switch accounts first.
     func approve(_ owner: SidebarOwnerModel) -> Bool {
         guard let scopes = owner.problem?.approvalScopes, sidebar.isActiveAccount(owner.accountLogin) else {
             return false

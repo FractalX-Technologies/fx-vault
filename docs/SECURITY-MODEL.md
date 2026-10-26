@@ -352,8 +352,9 @@ trusted for that path (below). Details: [API.md](API.md).
 - **In-app Approve (A7, 1.0 B4b).** `gh auth refresh -h github.com -s <scopes>` is the only gh
   command FX Vault runs that changes the user's gh login, and only from Approve on a sidebar line.
   The scopes come from a fixed list (`GHApprovalScope`: `repo`, `read:org`, `admin:org`), never
-  from typed text or gh's output; it runs only for gh's active account (FX Vault never runs `gh
-  auth switch`), without `GH_TOKEN`, with stdin closed. While it runs, stderr is read only for
+  from typed text or gh's output; it runs only for gh's active account, read again just before
+  the run (FX Vault never runs `gh auth switch`), without `GH_TOKEN`, with stdin closed. gh's
+  exit 0 alone is not an approval: `gh auth status` must then list the scopes on that login. While it runs, stderr is read only for
   the one-time device code (`GHDeviceCodeParser`), which is shown and never logged; stdout is
   never observed and nothing gh prints is kept or shown. The log names the scope count only. No
   code within 20 s, a non-zero exit, Cancel, a lock and the 15-minute expiry stop gh; the cached

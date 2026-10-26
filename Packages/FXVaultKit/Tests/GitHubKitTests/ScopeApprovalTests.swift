@@ -55,6 +55,14 @@ struct ScopeApprovalTests {
         #expect(throws: GHError.self) { try GHAuthService.refreshCommand(scopes: []) }
     }
 
+    @Test func aBroaderScopeCounts() {
+        #expect(GHApprovalScope.areGranted([.readOrg], by: ["repo", "admin:org"]), "admin:org covers read:org")
+        #expect(GHApprovalScope.areGranted([.repo, .readOrg], by: ["Repo", "write:org"]))
+        #expect(!GHApprovalScope.areGranted([.adminOrg], by: ["repo", "read:org", "write:org"]))
+        #expect(!GHApprovalScope.areGranted([.repo], by: ["gist"]))
+        #expect(GHApprovalScope.areGranted([.adminOrg], by: ["admin:org"]))
+    }
+
     // MARK: - The device code
 
     @Test(arguments: [ttyOutput, pipedOutput])

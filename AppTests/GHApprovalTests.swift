@@ -22,6 +22,14 @@ struct GHApprovalTests {
     ]}}
     """
 
+    /// After `gh auth switch -u user-b` in Terminal.
+    static let userBActive = """
+    {"hosts":{"github.com":[
+     {"state":"success","active":false,"host":"github.com","login":"user-a","tokenSource":"keyring","scopes":"gist, read:org, repo","gitProtocol":"ssh"},
+     {"state":"success","active":true,"host":"github.com","login":"user-b","tokenSource":"keyring","scopes":"gist","gitProtocol":"ssh"}
+    ]}}
+    """
+
     struct Fixture {
         let harness: TestHarness
         let recorder: ActionRecorder
@@ -72,6 +80,7 @@ struct GHApprovalTests {
 
     @Test func ghFinishingApprovesAndReloadsTheSidebar() async throws {
         let fixture = try await Self.fixture(FakeCommandRunner.Response(streamedStderr: Self.pipedOutput))
+        fixture.harness.stubAuthStatus(Self.approvedStatus)
         let cache = fixture.harness.data.github.tokenCache
         cache.store(SecretBytes(utf8: TestFixtures.token), for: "user-a")
         fixture.model.start()
@@ -79,6 +88,23 @@ struct GHApprovalTests {
         #expect(fixture.model.phase == .approved)
         #expect(fixture.recorder.refreshes == [.catalog])
         #expect(cache.token(for: "user-a") == nil, "the refreshed token is read again")
+    }
+
+    @Test func ghExitingZeroWithoutTheScopesShowsTheErrorAndTheCommand() async throws {
+        let fixture = try await Self.fixture(FakeCommandRunner.Response(streamedStderr: Self.pipedOutput))
+        fixture.model.start()
+        #expect(await Self.ended(fixture.model))
+        #expect(fixture.model.phase == .failed(.failed))
+        #expect(fixture.recorder.refreshes.isEmpty)
+    }
+
+    @Test func aSwitchInTerminalSinceTheSidebarLoadedRunsNoRefresh() async throws {
+        let fixture = try await Self.fixture(FakeCommandRunner.Response(streamedStderr: Self.pipedOutput))
+        fixture.harness.stubAuthStatus(Self.userBActive)
+        fixture.model.start()
+        #expect(await Self.ended(fixture.model))
+        #expect(fixture.model.phase == .failed(.notActiveAccount))
+        #expect(!fixture.harness.runner.invocations.contains { $0.arguments.starts(with: Self.refresh) })
     }
 
     // MARK: - Check Again and Cancel

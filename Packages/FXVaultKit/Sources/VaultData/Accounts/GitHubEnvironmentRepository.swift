@@ -222,15 +222,20 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
     }
 
     /// In-app Approve (1.0 B4b): `gh auth refresh` for `scopes` on `login`, which must be gh's
-    /// active account at the last ``accounts()`` (gh refreshes no other; FX Vault never runs
-    /// `gh auth switch`). `onDeviceCode` gets the code to show. On success the cached token is
-    /// dropped, so the next call reads the new one.
+    /// active account when it starts (A3 read again: a `gh auth switch` in Terminal since the
+    /// sidebar loaded counts; FX Vault never switches). `onDeviceCode` gets the code to show.
+    /// gh's exit 0 is not trusted alone: A3 must then list the scopes on `login`, else `.failed`.
     public func approveScopes(
         _ scopes: [GHApprovalScope],
         login: String,
         codeWait: Duration = Timeouts.ghDeviceCodeWait,
         onDeviceCode: @escaping @Sendable (GHDeviceCodeModel) -> Void
     ) async throws(GHApprovalError) {
+        do {
+            _ = try await accounts()
+        } catch {
+            throw .failed
+        }
         guard isActiveAccount(login) else { throw .notActiveAccount }
         let auth: GHAuthService
         do {
@@ -240,7 +245,18 @@ public actor GitHubEnvironmentRepository: GHSchedulerProviding {
         }
         Self.log.info("Approve: gh auth refresh for \(scopes.count, privacy: .public) scope(s)")
         try await auth.approve(scopes: scopes, codeWait: codeWait, onDeviceCode: onDeviceCode)
+        // gh replaced the active account's token, whichever account that turned out to be.
         tokenCache.invalidate(login: login)
+        guard await hasScopes(scopes, login: login) else { throw .failed }
+    }
+
+    /// Reads A3 again: true when gh lists `scopes` on `login` (Check Again, and the check after
+    /// gh's exit). Nil-safe: an unreadable A3 is false.
+    public func hasScopes(_ scopes: [GHApprovalScope], login: String) async -> Bool {
+        guard let accounts = try? await accounts() else { return false }
+        let key = OwnerLoginValidator.foldKey(login)
+        guard let list = accounts.first(where: { $0.id == key })?.status?.scopeList else { return false }
+        return GHApprovalScope.areGranted(scopes, by: list)
     }
 
     /// True when `login` is gh's active account at the last ``accounts()``: the only one

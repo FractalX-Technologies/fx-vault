@@ -1225,6 +1225,9 @@ AppTests).
     `GitHubEnvironmentRepository.approveScopes` (A7 through `GHAuthService.approve`, whose
     `CommandSpec.stderrObserver` feeds `GHDeviceCodeWatcher`), shows the code, ends on gh's exit,
     Check Again (`gh auth status` lists the scopes), Cancel or a lock, then reloads the sidebar.
+    `approveScopes` reads A3 again before gh runs (`.notActiveAccount` after a switch in
+    Terminal) and after its exit 0 (`hasScopes`, `GHApprovalScope.areGranted` over
+    `ScopeChecker`'s rule, so `admin:org` also covers `read:org`), else `.failed`.
     1.0: vault organizations
     are observed too (`SidebarInputModel.vaultOrganizations`); an organization group carries its
     `OrganizationModel` and is its own place (`selectedOrganizationOwnerID`; a repository, a folder
