@@ -9,6 +9,7 @@
 #   4. the XCUITest suite (FXVaultUITests scheme, UITesting configuration), twice
 #   5. scripts/lint.sh
 #   6. scripts/check-secrets.sh
+#   7. scripts/tests/release-publish-only.test.sh
 #
 # FXVAULT_SKIP_UI_TESTS=1 skips step 4 (macOS may ask once to allow UI automation; README).
 #
@@ -111,5 +112,8 @@ scripts/lint.sh
 
 step "check-secrets"
 scripts/check-secrets.sh
+
+step "release script tests"
+scripts/tests/release-publish-only.test.sh
 
 printf '\nci-local: all checks passed\n'
