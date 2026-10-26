@@ -20,13 +20,21 @@ public actor OrganizationRepository {
     let session: VaultSession
     let schedulers: any GHSchedulerProviding
     let clock: any VaultClock
+    /// What Sync deleted lately, shared with ``OrganizationSyncRepository`` (D28).
+    let deletions: OrgDeletionLog
 
     static let log = Logger(subsystem: ConfigConstants.logSubsystem, category: "organizations")
 
-    public init(session: VaultSession, schedulers: any GHSchedulerProviding, clock: any VaultClock = SystemClock()) {
+    public init(
+        session: VaultSession,
+        schedulers: any GHSchedulerProviding,
+        clock: any VaultClock = SystemClock(),
+        deletions: OrgDeletionLog = OrgDeletionLog()
+    ) {
         self.session = session
         self.schedulers = schedulers
         self.clock = clock
+        self.deletions = deletions
     }
 
     var store: OrganizationStore {

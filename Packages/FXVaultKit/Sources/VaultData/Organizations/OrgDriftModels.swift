@@ -18,8 +18,13 @@ public struct OrgDriftModel: Sendable, Hashable, Identifiable {
     public let remoteUpdatedAt: Date?
     /// The vault has its own pending change of the item too.
     public let isConflict: Bool
-    /// Keep Local sends the item again, which needs its value (a pending deletion needs none).
+    /// Keep Local sends the vault's item, which needs its value (a deletion needs none).
     public let canKeepLocal: Bool
+    /// The vault's row holds a value (Accept GitHub of an add on both sides replaces it).
+    public let hasLocalValue: Bool
+    /// GitHub's `updatedAt` differs from the vault's (always for a row GitHub added): a secret's
+    /// value may have changed, so Accept GitHub leaves it without one.
+    public let isRemoteDateChanged: Bool
 
     public init(
         organizationID: OrganizationID,
@@ -29,7 +34,9 @@ public struct OrgDriftModel: Sendable, Hashable, Identifiable {
         itemID: ConfigItemID?,
         remoteUpdatedAt: Date?,
         isConflict: Bool,
-        canKeepLocal: Bool
+        canKeepLocal: Bool,
+        hasLocalValue: Bool,
+        isRemoteDateChanged: Bool
     ) {
         self.organizationID = organizationID
         self.kind = kind
@@ -39,6 +46,8 @@ public struct OrgDriftModel: Sendable, Hashable, Identifiable {
         self.remoteUpdatedAt = remoteUpdatedAt
         self.isConflict = isConflict
         self.canKeepLocal = canKeepLocal
+        self.hasLocalValue = hasLocalValue
+        self.isRemoteDateChanged = isRemoteDateChanged
     }
 
     public var id: String {

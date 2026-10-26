@@ -593,8 +593,12 @@ foreground color, so `.primary` text still turns white on selected rows.
   GitHub" (`RingDot`, `ink`) in Status, its own status as help. Review opens `OrgDriftScreen`:
   the drift review's size and `DriftFindingRow`s (ORGANIZATION, "Secret NPM_TOKEN was changed
   on GitHub on Oct 20", Keep Local / Accept GitHub with what each does), Done in the footer,
-  and the "Delete … from your vault?" confirmation before taking GitHub's deletion. Accept GitHub
-  of a changed secret leaves it without a value (no fill step, unlike a repository's).
+  the "Not compared" notes (names FX Vault can't hold), and a confirmation before Accept GitHub
+  loses the vault's data: "Delete … from your vault?" for GitHub's deletion, "Replace your
+  API_TOKEN with GitHub's?" (Use GitHub's) for an item added on both sides, whose texts say
+  Keep Local sends the vault's and Accept replaces it. Accept GitHub of a secret whose date
+  moved leaves it without a value (no fill step, unlike a repository's); under the same date it
+  says the value stays.
 - Runtime destinations under the selected repository (v0.8.0, canvas "FX Vault Destinations"):
   after the environments, `SectionLabel` RUNTIME with an Experimental `StatusChip.tag`, then one 2-line
   row per destination: the provider symbol in `monoLabel` `mutedText`

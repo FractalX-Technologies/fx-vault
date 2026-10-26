@@ -39,7 +39,7 @@ extension OrganizationRepository {
     ///
     /// - Throws: `.organizationNotFound`, `.github` when a list fails or a row has no visibility.
     public func refresh(organizationID: OrganizationID) async throws(RepoCatalogError) -> OrgRefreshModel {
-        guard var organization = try perform({
+        guard let organization = try perform({
             try session.database.read { tx in try store.fetchOrganization(id: organizationID, in: tx) }
         }) else {
             throw .organizationNotFound
@@ -47,8 +47,7 @@ extension OrganizationRepository {
         let listing = try await list(organization)
         defer { listing.wipe() }
         let now = clock.now
-        organization.lastRefreshedAt = now
-        let refreshed = organization
+        let suppressed = deletions.recentKeys(organizationID: organizationID, now: now)
         let store = store
         let rows = try perform {
             try session.database.write { tx in
@@ -57,21 +56,30 @@ extension OrganizationRepository {
                 for id in gone {
                     try store.deleteItem(id: id, in: tx)
                 }
-                try store.updateOrganization(refreshed, in: tx)
+                try store.recordRefresh(organizationID: organizationID, at: now, in: tx)
                 return rows.filter { !gone.contains($0.id) }
             }
         }
-        let findings = Self.findings(organizationID: organizationID, rows: rows, listed: listing.items)
+        let findings = Self.findings(organizationID: organizationID, rows: rows, listed: listing.items, suppressed: suppressed)
         Self.log.info("Refreshed an organization: \(findings.count, privacy: .public) differences")
         return OrgRefreshModel(organizationID: organizationID, findings: findings, skippedNames: listing.skipped, listedAt: now)
     }
 
-    /// How the vault's rows differ from GitHub's listing, by name then kind.
-    static func findings(organizationID: OrganizationID, rows: [OrgItemRecord], listed: [String: ListedItem]) -> [OrgDriftModel] {
+    /// How the vault's rows differ from GitHub's listing, by name then kind. A name only GitHub
+    /// lists that this Mac's Sync just deleted (`suppressed`) is GitHub lagging, not an add.
+    static func findings(
+        organizationID: OrganizationID,
+        rows: [OrgItemRecord],
+        listed: [String: ListedItem],
+        suppressed: Set<String>
+    ) -> [OrgDriftModel] {
         let rowsByKey = Dictionary(rows.map { (OrgItemKey.make($0.kind, $0.name), $0) }, uniquingKeysWith: { first, _ in first })
         var findings: [OrgDriftModel] = []
         for (key, item) in listed {
             let row = rowsByKey[key]
+            if row == nil, suppressed.contains(key) {
+                continue
+            }
             if row == nil || row?.syncedVisibility == nil {
                 findings.append(finding(.remoteAdded, organizationID: organizationID, item: item, row: row))
             } else if let row, differs(row, item) {
@@ -96,8 +104,10 @@ extension OrganizationRepository {
     }
 
     private static func finding(_ kind: DriftKind, organizationID: OrganizationID, item: ListedItem?, row: OrgItemRecord?) -> OrgDriftModel {
-        // Keep Local writes the item again, which needs its value, unless the vault deletes it.
-        let canKeepLocal = kind == .remoteAdded || row?.isDeleted == true || row?.valueCiphertext != nil
+        let hasLocalValue = row?.valueCiphertext != nil
+        // Keep Local writes the vault's item, which needs its value, unless the vault deletes it
+        // (a pending deletion, or the deletion Keep Local stores for an item only GitHub has).
+        let canKeepLocal = row == nil || row?.isDeleted == true || hasLocalValue
         return OrgDriftModel(
             organizationID: organizationID,
             kind: kind,
@@ -106,7 +116,9 @@ extension OrganizationRepository {
             itemID: row?.id,
             remoteUpdatedAt: item?.updatedAt,
             isConflict: row.map { $0.syncStatus != .synced } ?? false,
-            canKeepLocal: canKeepLocal
+            canKeepLocal: canKeepLocal,
+            hasLocalValue: hasLocalValue,
+            isRemoteDateChanged: row.map { item?.updatedAt != $0.remoteUpdatedAt } ?? true
         )
     }
 
@@ -139,16 +151,19 @@ extension OrganizationRepository {
         }
         defer { listing.wipe() }
         let now = clock.now
+        let suppressed = deletions.recentKeys(organizationID: organizationID, now: now)
         let store = store
         do {
             try session.write { keys, tx in
                 let rows = try store.fetchItemRecords(organizationID: organizationID, in: tx)
                 let current = Dictionary(
-                    Self.findings(organizationID: organizationID, rows: rows, listed: listing.items).map { ($0.id, $0) },
+                    Self.findings(organizationID: organizationID, rows: rows, listed: listing.items, suppressed: suppressed).map { ($0.id, $0) },
                     uniquingKeysWith: { first, _ in first }
                 )
                 for finding in findings {
-                    guard finding.organizationID == organizationID, let held = current[finding.id], held.itemID == finding.itemID else {
+                    // The finding the user reviewed: the same row and the same GitHub date.
+                    guard finding.organizationID == organizationID, let held = current[finding.id],
+                          held.itemID == finding.itemID, held.remoteUpdatedAt == finding.remoteUpdatedAt else {
                         throw DriftRepositoryError.stale
                     }
                     if option == .keepLocal, !held.canKeepLocal {
@@ -222,9 +237,11 @@ extension OrganizationRepository {
         try store.updateItem(row, in: tx)
     }
 
-    /// Accept GitHub: the row becomes GitHub's item. A secret loses its value here: GitHub never
-    /// returns one, so the vault's may no longer be GitHub's.
+    /// Accept GitHub: the row becomes GitHub's item. GitHub never returns a secret's value, so
+    /// one whose date moved loses the vault's (it may no longer be GitHub's); while the date
+    /// stands only the access changed, and the value and its fingerprints stay.
     private static func take(_ listed: ListedItem, into row: inout OrgItemRecord, keys: borrowing UnlockedKeys) throws {
+        let isDateChanged = listed.updatedAt != row.remoteUpdatedAt
         row.visibility = listed.visibility
         row.syncedVisibility = listed.visibility
         row.selectedCount = listed.selectedCount
@@ -234,7 +251,7 @@ extension OrganizationRepository {
         if let value = listed.value {
             try OrgFieldCipher.setValue(value, on: &row, keys: keys)
             row.syncedFingerprint = row.valueFingerprint
-        } else {
+        } else if isDateChanged {
             row.valueCiphertext = nil
             row.valueFingerprint = nil
             row.syncedFingerprint = nil

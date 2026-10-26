@@ -11749,6 +11749,17 @@
         }
       }
     },
+    "organization.drift.acceptAccess" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your vault takes GitHub's access; the value stays."
+          }
+        }
+      }
+    },
     "organization.drift.acceptSecret" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11756,6 +11767,61 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Your vault takes GitHub's access. GitHub never returns secret values, so its value is missing until you enter it."
+          }
+        }
+      }
+    },
+    "organization.drift.conflict.accept" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub's replaces yours here; a secret arrives without its value."
+          }
+        }
+      }
+    },
+    "organization.drift.conflict.keepLocal" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Yours is sent on the next Sync, replacing GitHub's."
+          }
+        }
+      }
+    },
+    "organization.drift.replace.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use GitHub's"
+          }
+        }
+      }
+    },
+    "organization.drift.replace.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your value was never sent to GitHub. It is removed from FX Vault and cannot be recovered."
+          }
+        }
+      }
+    },
+    "organization.drift.replace.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Replace your %@ with GitHub's?"
           }
         }
       }

@@ -15,7 +15,12 @@ struct OrganizationSyncRepositoryTests {
         static func make() async throws -> Fixture {
             let base = try await OrganizationItemRepositoryTests.Fixture.make()
             let harness = base.base.harness
-            return Fixture(base: base, sync: OrganizationSyncRepository(session: harness.session, schedulers: base.base.provider, clock: harness.clock))
+            return Fixture(base: base, sync: OrganizationSyncRepository(
+                session: harness.session,
+                schedulers: base.base.provider,
+                clock: harness.clock,
+                deletions: base.base.deletions
+            ))
         }
 
         var runner: FakeCommandRunner { base.base.provider.runner }

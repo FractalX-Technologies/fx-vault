@@ -122,6 +122,8 @@ struct VaultDataComponents {
         let remotes = LiveDestinationRemoteProvider(
             factory: DestinationRemoteFactory(transport: transport, azureTokens: azureTokens, clock: clock)
         )
+        // One log: Refresh skips what this Sync just deleted (D28).
+        let organizationDeletions = OrgDeletionLog()
         return VaultDataComponents(
             session: session,
             github: github,
@@ -145,9 +147,9 @@ struct VaultDataComponents {
             drift: DriftRepository(session: session, schedulers: github, clock: clock, writePolicy: writePolicy),
             sharing: sharing,
             folders: FolderRepository(session: session, clock: clock),
-            organizations: OrganizationRepository(session: session, schedulers: github, clock: clock),
+            organizations: OrganizationRepository(session: session, schedulers: github, clock: clock, deletions: organizationDeletions),
             organizationItems: OrganizationItemRepository(session: session, clock: clock),
-            organizationSync: OrganizationSyncRepository(session: session, schedulers: github, clock: clock),
+            organizationSync: OrganizationSyncRepository(session: session, schedulers: github, clock: clock, deletions: organizationDeletions),
             destinations: DestinationRepository(session: session, clock: clock),
             destinationSync: DestinationSyncRepository(session: session, remotes: remotes, clock: clock),
             azureTokens: azureTokens,

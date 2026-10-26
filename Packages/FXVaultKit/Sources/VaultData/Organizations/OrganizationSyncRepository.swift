@@ -20,13 +20,21 @@ public actor OrganizationSyncRepository {
     private let session: VaultSession
     private let schedulers: any GHSchedulerProviding
     private let clock: any VaultClock
+    /// Deletions Refresh must not report as added while GitHub still lists them (D28).
+    private let deletions: OrgDeletionLog
 
     private static let log = Logger(subsystem: ConfigConstants.logSubsystem, category: "organizations")
 
-    public init(session: VaultSession, schedulers: any GHSchedulerProviding, clock: any VaultClock = SystemClock()) {
+    public init(
+        session: VaultSession,
+        schedulers: any GHSchedulerProviding,
+        clock: any VaultClock = SystemClock(),
+        deletions: OrgDeletionLog = OrgDeletionLog()
+    ) {
         self.session = session
         self.schedulers = schedulers
         self.clock = clock
+        self.deletions = deletions
     }
 
     private var store: OrganizationStore {
@@ -138,6 +146,7 @@ public actor OrganizationSyncRepository {
                 return .failed(error)
             }
             try? write { tx in try store.deleteItem(id: item.id, in: tx) }
+            deletions.record(OrgItemKey.make(item.kind, item.name), organizationID: item.organizationID, at: clock.now)
             return .done
         }
         let access: GHOrgRepositoryAccess
