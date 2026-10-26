@@ -57,23 +57,30 @@ struct ItemEditBatch {
 
     // MARK: - Edits
 
-    /// Adds an item, or revives a tombstone of the same name. Returns the row holding it.
+    /// Adds an item, or revives a tombstone of the same name. Returns the row holding it. `file`
+    /// is the file the value came from (1.0 F1).
     @discardableResult
-    mutating func add(scope: ConfigScope, kind: ConfigKind, name: String, value: SecretBytes) throws -> ConfigItemID {
+    mutating func add(
+        scope: ConfigScope,
+        kind: ConfigKind,
+        name: String,
+        value: SecretBytes,
+        file: FileSecretModel? = nil
+    ) throws -> ConfigItemID {
         try requireEditable(scope)
         try requireCapacity(adding: kind, to: scope)
         let keys = keys
         let outcome = try planner.add(scope: scope, kind: kind, name: name) { keys.fingerprint(value, rowID: $0) }
-        try commit(outcome, value: value)
+        try commit(outcome, value: value, file: file)
         return try holder(scope: scope, kind: kind, name: name, in: outcome)
     }
 
-    /// Replaces the local value.
-    mutating func editValue(_ id: ConfigItemID, value: SecretBytes) throws {
+    /// Replaces the local value (`file`: the file it came from, as for ``add(scope:kind:name:value:file:)``).
+    mutating func editValue(_ id: ConfigItemID, value: SecretBytes, file: FileSecretModel? = nil) throws {
         let current = try existing(id)
         try requireEditable(current.scope)
         let keys = keys
-        try commit(try planner.editValue(id) { keys.fingerprint(value, rowID: $0) }, value: value)
+        try commit(try planner.editValue(id) { keys.fingerprint(value, rowID: $0) }, value: value, file: file)
     }
 
     /// Renames an item. Returns the row now holding the name (a revived tombstone, §7.1).
@@ -106,7 +113,13 @@ struct ItemEditBatch {
     /// Fills a value-missing secret (§7.1, §7.8). `isUserRequest` records the push as the
     /// user's explicit choice (`force_push_requested_at := now`, D27); a share import passes
     /// false.
-    mutating func fill(_ id: ConfigItemID, value: SecretBytes, pushOnNextSync: Bool, isUserRequest: Bool) throws {
+    mutating func fill(
+        _ id: ConfigItemID,
+        value: SecretBytes,
+        pushOnNextSync: Bool,
+        isUserRequest: Bool,
+        file: FileSecretModel? = nil
+    ) throws {
         let current = try existing(id)
         try requireEditable(current.scope)
         let keys = keys
@@ -115,7 +128,7 @@ struct ItemEditBatch {
             pushOnNextSync: pushOnNextSync,
             requestedAt: isUserRequest ? now : nil
         ) { keys.fingerprint(value, rowID: $0) }
-        try commit(outcome, value: value)
+        try commit(outcome, value: value, file: file)
     }
 
     /// Push on Next Sync: the next Sync re-sends the secret's local value even if unchanged.
@@ -183,8 +196,8 @@ struct ItemEditBatch {
 
     // MARK: - Private
 
-    private mutating func commit(_ outcome: ItemEditOutcomeModel, value: SecretBytes?) throws {
-        try writer.apply(outcome.mutations, newValue: value, keys: keys, in: tx)
+    private mutating func commit(_ outcome: ItemEditOutcomeModel, value: SecretBytes?, file: FileSecretModel? = nil) throws {
+        try writer.apply(outcome.mutations, newValue: value, newFile: file, keys: keys, in: tx)
         planner = outcome.planner
     }
 

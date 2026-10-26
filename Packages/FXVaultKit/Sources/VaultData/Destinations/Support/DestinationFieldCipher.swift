@@ -17,9 +17,14 @@ enum DestinationFieldCipher {
     }
 
     /// Stores `value` sealed under the row's current identity, with its row-bound fingerprint.
+    /// Another value drops the file label (v21); a re-seal for a rename keeps it.
     static func setValue(_ value: SecretBytes, on record: inout DestinationItemRecord, keys: borrowing UnlockedKeys) throws(CryptoError) {
         record.valueCiphertext = try keys.seal(value, for: valueAAD(of: record))
-        record.valueFingerprint = keys.fingerprint(value, rowID: record.id)
+        let fingerprint = keys.fingerprint(value, rowID: record.id)
+        if fingerprint != record.valueFingerprint {
+            record.file = nil
+        }
+        record.valueFingerprint = fingerprint
     }
 
     /// Re-seals the value after the row's name or kind changed (`old` is the row before).

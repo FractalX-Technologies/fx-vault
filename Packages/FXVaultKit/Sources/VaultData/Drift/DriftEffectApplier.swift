@@ -143,6 +143,7 @@ struct DriftEffectApplier {
             if replace {
                 updated.valueCiphertext = nil
                 updated.valueFingerprint = nil
+                updated.file = nil
             } else {
                 updated.forcePush = true
             }

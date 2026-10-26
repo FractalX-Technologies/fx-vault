@@ -574,6 +574,7 @@ public actor DestinationSyncRepository {
             row.valueCiphertext = nil
             row.valueFingerprint = nil
             row.syncedFingerprint = nil
+            row.file = nil
         }
     }
 

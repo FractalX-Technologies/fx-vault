@@ -28,9 +28,9 @@ struct MigrationTests {
             "v7_journal_fingerprints", "v8_force_push_requested_at", "v9_item_links", "v10_teammates",
             "v11_spaces", "v12_folders", "v13_destinations", "v14_project_shares",
             "v15_drop_teammates", "v16_drop_runtime_providers", "v17_organizations", "v18_standalone_key_vaults",
-            "v19_org_item_changes", "v20_key_vault_subscriptions",
+            "v19_org_item_changes", "v20_key_vault_subscriptions", "v21_file_secrets",
         ])
-        #expect(Migration.latest == .v20KeyVaultSubscriptions)
+        #expect(Migration.latest == .v21FileSecrets)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -175,6 +175,42 @@ struct MigrationTests {
                 try tx.db.execute(sql: "UPDATE destinations SET subscription_name = '' WHERE id = ?", arguments: [id])
             }
         }
+    }
+
+    /// v21: items saved before it came from no file; `file_detail` takes only valid JSON with a
+    /// 1–255 character file name and a known encoding, on the three item tables.
+    @Test func itemsGainAnEmptyFileDetail() throws {
+        let database = try DatabaseFactory.unmigratedInMemory()
+        try VaultMigrator.migrate(database, upTo: .v20KeyVaultSubscriptions)
+        try Self.seed(database, upTo: .v20KeyVaultSubscriptions)
+        try VaultMigrator.migrate(database)
+        let tables = [
+            ("config_items", Self.seedItemID), ("folder_items", Self.seedFolderItemID),
+            ("destination_items", Self.seedDestinationItemID),
+        ]
+        for (table, id) in tables {
+            let detail = try database.read { tx in
+                try String.fetchOne(tx.db, sql: "SELECT file_detail FROM \(table) WHERE id = ?", arguments: [id])
+            }
+            #expect(detail == nil)
+            let valid = #"{"fileName":"AuthKey.p8","lineCount":6,"encoding":"text"}"#
+            try database.write { tx in
+                try tx.db.execute(sql: "UPDATE \(table) SET file_detail = ? WHERE id = ?", arguments: [valid, id])
+            }
+            for invalid in [
+                "not json", #"{"fileName":"","encoding":"text"}"#, #"{"fileName":"AuthKey.p8","encoding":"hex"}"#,
+                #"{"encoding":"base64"}"#, #"{"fileName":7,"encoding":"text"}"#,
+                #"{"fileName":"AuthKey.p8","lineCount":"6","encoding":"text"}"#,
+            ] {
+                #expect(throws: (any Error).self, "\(table): \(invalid)") {
+                    try database.write { tx in
+                        try tx.db.execute(sql: "UPDATE \(table) SET file_detail = ? WHERE id = ?", arguments: [invalid, id])
+                    }
+                }
+            }
+        }
+        let item = try database.read { tx in try #require(try ConfigItemRecord.fetchOne(tx.db, key: Self.seedItemID)) }
+        #expect(item.file == FileSecretModel(fileName: "AuthKey.p8", lineCount: 6, encoding: .text))
     }
 
     @Test func migratingTwiceIsANoOp() throws {

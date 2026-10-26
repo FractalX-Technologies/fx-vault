@@ -107,6 +107,15 @@ struct ItemCopySource {
         try Self.setLinkID(link, itemIDs: linkID == nil ? [id, copyID] : [copyID], database: database, in: tx)
     }
 
+    /// The file the value came from (v21): copies and linked updates carry it with the value.
+    var file: FileSecretModel? {
+        switch row {
+        case .config(let record): record.file
+        case .folder(let record): record.file
+        case .destination(let record): record.file
+        }
+    }
+
     /// The repository record, for callers that need repository-only facts; nil for a folder item.
     var configRecord: ConfigItemRecord? {
         if case .config(let record) = row { return record }

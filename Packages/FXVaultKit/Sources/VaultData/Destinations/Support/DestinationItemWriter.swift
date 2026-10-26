@@ -64,7 +64,8 @@ struct DestinationItemWriter {
         kind: ConfigKind,
         name: String,
         value: SecretBytes,
-        linkID: ItemLinkID? = nil
+        linkID: ItemLinkID? = nil,
+        file: FileSecretModel? = nil
     ) throws -> ConfigItemID {
         let destination = try requireDestination(destinationID)
         let storedKind = destination.provider.storedKind(for: kind)
@@ -79,6 +80,7 @@ struct DestinationItemWriter {
             revived.linkID = linkID ?? current.linkID
             revived.updatedAt = now
             try DestinationFieldCipher.setValue(value, on: &revived, keys: keys)
+            revived.file = file ?? revived.file
             try store.updateItem(revived, in: tx)
             try touch(destination)
             return revived.id
@@ -97,19 +99,21 @@ struct DestinationItemWriter {
             updatedAt: now
         )
         try DestinationFieldCipher.setValue(value, on: &record, keys: keys)
+        record.file = file
         try store.insertItem(record, in: tx)
         try touch(destination)
         return record.id
     }
 
-    /// Replaces an item's value. A value the user types releases a share file's hold (v0.9.0):
-    /// it is no longer the file's value.
-    func editValue(_ id: ConfigItemID, value: SecretBytes) throws {
+    /// Replaces an item's value (`file`: the file it came from). A value the user types releases
+    /// a share file's hold (v0.9.0): it is no longer the file's value.
+    func editValue(_ id: ConfigItemID, value: SecretBytes, file: FileSecretModel? = nil) throws {
         var record = try existing(id)
         guard !record.isDeleted else { throw ConfigRepositoryError.itemNotFound }
         let destination = try requireDestination(record.destinationID)
         try requireSize(value, provider: destination.provider)
         try DestinationFieldCipher.setValue(value, on: &record, keys: keys)
+        record.file = file ?? record.file
         record.shareHold = nil
         record.updatedAt = now
         try store.updateItem(record, in: tx)
@@ -163,7 +167,14 @@ struct DestinationItemWriter {
         tombstone.shareHold = nil
         tombstone.updatedAt = now
         try store.updateItem(tombstone, in: tx)
-        let renamedID = try add(destinationID: record.destinationID, kind: storedKind, name: validName, value: value, linkID: record.linkID)
+        let renamedID = try add(
+            destinationID: record.destinationID,
+            kind: storedKind,
+            name: validName,
+            value: value,
+            linkID: record.linkID,
+            file: record.file
+        )
         // A held row stays held under its new name: the value is still the share file's.
         if let hold = record.shareHold {
             try store.setShareHold(hold, itemIDs: [renamedID], in: tx)

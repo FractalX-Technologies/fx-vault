@@ -49,6 +49,8 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
     /// `share_hold`: the share file this row came from while Sync's From Files review has not
     /// released it (v0.9.0); a held row never enters a sync plan. Nil when not held.
     public var shareHold: SharePackageID?
+    /// `file_detail` (v21): the file the value came from, as JSON; nil for a typed value.
+    public var file: FileSecretModel?
 
     public init(
         id: ConfigItemID = ConfigItemID(),
@@ -71,6 +73,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         shareOrigin: ShareOriginModel? = nil,
         linkID: ItemLinkID? = nil,
         shareHold: SharePackageID? = nil,
+        file: FileSecretModel? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -94,6 +97,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         self.shareOrigin = shareOrigin
         self.linkID = linkID
         self.shareHold = shareHold
+        self.file = file
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -127,6 +131,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
             shareOrigin: shareOrigin,
             linkID: linkID,
             shareHold: shareHold,
+            file: file,
             createdAt: createdAt,
             updatedAt: updatedAt
         )
@@ -160,6 +165,7 @@ public struct ConfigItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         case shareOrigin = "provenance_detail"
         case linkID = "link_id"
         case shareHold = "share_hold"
+        case file = "file_detail"
     }
 
     public static func databaseDateEncodingStrategy(for column: String) -> DatabaseDateEncodingStrategy {
@@ -199,6 +205,8 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
     public var linkID: ItemLinkID?
     /// `share_hold` (v0.9.0): held rows stay out of every sync plan.
     public var shareHold: SharePackageID?
+    /// `file_detail` (v21).
+    public var file: FileSecretModel?
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -223,6 +231,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
         shareOrigin: ShareOriginModel?,
         linkID: ItemLinkID? = nil,
         shareHold: SharePackageID? = nil,
+        file: FileSecretModel? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -246,6 +255,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
         self.shareOrigin = shareOrigin
         self.linkID = linkID
         self.shareHold = shareHold
+        self.file = file
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -295,6 +305,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
             syncStatus: ConfigSyncStatus.derive(syncFacts),
             linkID: linkID,
             heldBy: shareHold,
+            file: file,
             createdAt: createdAt,
             updatedAt: updatedAt
         )
@@ -321,6 +332,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
         case shareOrigin = "provenance_detail"
         case linkID = "link_id"
         case shareHold = "share_hold"
+        case file = "file_detail"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -348,6 +360,7 @@ public struct ConfigItemState: Codable, Sendable, Hashable, Identifiable, Fetcha
             CodingKeys.shareOrigin,
             CodingKeys.linkID,
             CodingKeys.shareHold,
+            CodingKeys.file,
             CodingKeys.createdAt,
             CodingKeys.updatedAt,
         ]

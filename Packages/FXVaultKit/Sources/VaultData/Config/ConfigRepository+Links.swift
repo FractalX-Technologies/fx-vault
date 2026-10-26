@@ -108,19 +108,19 @@ extension ConfigRepository {
                 )
                 for record in records {
                     if record.valueCiphertext == nil {
-                        try batch.fill(record.id, value: value, pushOnNextSync: true, isUserRequest: true)
+                        try batch.fill(record.id, value: value, pushOnNextSync: true, isUserRequest: true, file: source.file)
                     } else {
-                        try batch.editValue(record.id, value: value)
+                        try batch.editValue(record.id, value: value, file: source.file)
                     }
                 }
             }
             let folderWriter = FolderItemWriter(store: FolderStore(database: database), keys: keys, tx: tx, now: now)
             for record in folderTargets {
-                try folderWriter.editValue(record.id, value: value)
+                try folderWriter.editValue(record.id, value: value, file: source.file)
             }
             let destinationWriter = DestinationItemWriter(store: DestinationStore(database: database), keys: keys, tx: tx, now: now)
             for record in destinationTargets {
-                try destinationWriter.editValue(record.id, value: value)
+                try destinationWriter.editValue(record.id, value: value, file: source.file)
             }
             return repositoryTargets.count + folderTargets.count + destinationTargets.count
         }

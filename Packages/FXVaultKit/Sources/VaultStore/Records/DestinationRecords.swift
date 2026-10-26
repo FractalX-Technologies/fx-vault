@@ -205,6 +205,8 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
     /// `share_hold` (v0.9.0): the share file this row came from while Sync's From Files review
     /// has not released it; a held row is never written to the destination. Nil when not held.
     public var shareHold: SharePackageID?
+    /// `file_detail` (v21): the file the value came from, as JSON; nil for a typed value.
+    public var file: FileSecretModel?
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -225,6 +227,7 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
         preWriteVersion: String? = nil,
         linkID: ItemLinkID? = nil,
         shareHold: SharePackageID? = nil,
+        file: FileSecretModel? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -244,6 +247,7 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
         self.preWriteVersion = preWriteVersion
         self.linkID = linkID
         self.shareHold = shareHold
+        self.file = file
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -294,6 +298,7 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
             linkID: linkID,
             linkCount: linkCount,
             heldBy: shareHold,
+            file: file,
             createdAt: createdAt,
             updatedAt: updatedAt
         )
@@ -316,6 +321,7 @@ public struct DestinationItemRecord: Codable, Sendable, Hashable, FetchableRecor
         case preWriteVersion = "pre_write_version"
         case linkID = "link_id"
         case shareHold = "share_hold"
+        case file = "file_detail"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }

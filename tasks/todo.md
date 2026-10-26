@@ -2583,6 +2583,12 @@ Lane B (one builder):
   - Board: MenuBar.
 - [ ] F1 File secrets: picker and drop, exact text or Base64, per-source limits, the trailing-newline notice, and the Notes file line `APNS_KEY = file AuthKey.p8 · 6 lines`.
   - Boards: Place-FileDrop, Place-FileSheet.
+  - Plan (2026-10-26):
+    - VaultCore: `FileSecretModel` (file name, line count, encoding) and `FileSecretRules` (facts of a file, Exact text or Base64, the stored size, a name from the file name, accepted extensions).
+    - VaultStore: migration `v21_file_secrets`, a plaintext JSON `file_detail` on `config_items`, `folder_items` and `destination_items`, like `provenance_detail`; records, projections and models carry it.
+    - VaultData: add and replace take an optional file; the label follows the value (a changed value or no value clears it; rename, move and re-seal keep it; copies carry it).
+    - App: the Add file secret sheet (Choose…, Store as, notices, the limits line) over the item editor's name checks; drop `.p8`, `.pem`, `.json` on a place; Add File Secret… in ⋯ More; the Table's file chip.
+    - Docs: DATABASE v21, SECURITY-MODEL (plaintext), DESIGN, CHANGELOG, README, ARCHITECTURE, STRUCTURE, RELEASING.
 
 Orchestrator:
 - [ ] G1 Real gh/az checks.

@@ -513,4 +513,31 @@ enum MigrationSQL {
         ALTER TABLE destinations ADD COLUMN subscription_name TEXT
           CHECK (subscription_name IS NULL OR length(subscription_name) BETWEEN 1 AND 255);
         """
+
+    // MARK: v21_file_secrets (1.0, tasks/todo.md F1). Additive.
+
+    /// The file a secret's value came from (`FileSecretModel` as JSON: name, lines, encoding) on
+    /// the three item tables. Plaintext metadata like item names; NULL for a typed value. The
+    /// CHECK uses IS and coalesce because a NULL there passes; it is spelled out per table, as a
+    /// frozen migration shares no text with later code.
+    static let v21FileSecrets = """
+        ALTER TABLE config_items ADD COLUMN file_detail TEXT
+          CHECK (file_detail IS NULL OR (json_valid(file_detail)
+            AND json_type(file_detail, '$.fileName') IS 'text'
+            AND length(json_extract(file_detail, '$.fileName')) BETWEEN 1 AND 255
+            AND coalesce(json_extract(file_detail, '$.encoding'), '') IN ('text', 'base64')
+            AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')));
+        ALTER TABLE folder_items ADD COLUMN file_detail TEXT
+          CHECK (file_detail IS NULL OR (json_valid(file_detail)
+            AND json_type(file_detail, '$.fileName') IS 'text'
+            AND length(json_extract(file_detail, '$.fileName')) BETWEEN 1 AND 255
+            AND coalesce(json_extract(file_detail, '$.encoding'), '') IN ('text', 'base64')
+            AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')));
+        ALTER TABLE destination_items ADD COLUMN file_detail TEXT
+          CHECK (file_detail IS NULL OR (json_valid(file_detail)
+            AND json_type(file_detail, '$.fileName') IS 'text'
+            AND length(json_extract(file_detail, '$.fileName')) BETWEEN 1 AND 255
+            AND coalesce(json_extract(file_detail, '$.encoding'), '') IN ('text', 'base64')
+            AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')));
+        """
 }

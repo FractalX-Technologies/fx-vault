@@ -71,6 +71,8 @@ public struct FolderItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
     /// `value_fp`: the row-bound HMAC fingerprint of the value.
     public var valueFingerprint: Data
     public var linkID: ItemLinkID?
+    /// `file_detail` (v21): the file the value came from, as JSON; nil for a typed value.
+    public var file: FileSecretModel?
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -82,6 +84,7 @@ public struct FolderItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         valueCiphertext: Data,
         valueFingerprint: Data,
         linkID: ItemLinkID? = nil,
+        file: FileSecretModel? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -92,6 +95,7 @@ public struct FolderItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         self.valueCiphertext = valueCiphertext
         self.valueFingerprint = valueFingerprint
         self.linkID = linkID
+        self.file = file
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -105,6 +109,7 @@ public struct FolderItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
             name: name,
             linkID: linkID,
             linkCount: linkCount,
+            file: file,
             createdAt: createdAt,
             updatedAt: updatedAt
         )
@@ -118,6 +123,7 @@ public struct FolderItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
         case valueCiphertext = "value_ct"
         case valueFingerprint = "value_fp"
         case linkID = "link_id"
+        case file = "file_detail"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }

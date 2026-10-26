@@ -52,7 +52,14 @@ struct FolderItemWriter {
     /// - Throws: `.validation` for an invalid name or one the folder already has for `kind`
     ///   (`.duplicateName`), `.folderFull`, `.folderNotFound`.
     @discardableResult
-    func add(folderID: FolderID, kind: ConfigKind, name: String, value: SecretBytes, linkID: ItemLinkID? = nil) throws -> ConfigItemID {
+    func add(
+        folderID: FolderID,
+        kind: ConfigKind,
+        name: String,
+        value: SecretBytes,
+        linkID: ItemLinkID? = nil,
+        file: FileSecretModel? = nil
+    ) throws -> ConfigItemID {
         try touch(try requireFolder(folderID))
         let validName = try GitHubNameValidator.validate(name)
         let items = try store.fetchItemRecords(folderID: folderID, in: tx)
@@ -74,14 +81,16 @@ struct FolderItemWriter {
             updatedAt: now
         )
         try FolderFieldCipher.setValue(value, on: &record, keys: keys)
+        record.file = file
         try store.insertItem(record, in: tx)
         return record.id
     }
 
-    /// Replaces an item's value.
-    func editValue(_ id: ConfigItemID, value: SecretBytes) throws {
+    /// Replaces an item's value; `file` is the file it came from (a typed value has none).
+    func editValue(_ id: ConfigItemID, value: SecretBytes, file: FileSecretModel? = nil) throws {
         var record = try existing(id)
         try FolderFieldCipher.setValue(value, on: &record, keys: keys)
+        record.file = file ?? record.file
         record.updatedAt = now
         try store.updateItem(record, in: tx)
         try touch(try requireFolder(record.folderID))
