@@ -473,7 +473,7 @@ public struct ConfigRepository: Sendable {
     }
 
     /// Pending and blocked counts per repository and in total: the "Sync N" label and the dock
-    /// badge (§10 Toolbar).
+    /// badge (§10 Toolbar); with each repository's secrets without a value (the sidebar).
     public func observePendingCounts() -> AsyncThrowingStream<PendingCountsModel, any Error> {
         ObservationMapper.map(store.observeAllPendingInputs()) { all in
             Self.pendingCounts(all)
@@ -491,9 +491,12 @@ public struct ConfigRepository: Sendable {
         var counts: [RepoID: RepoPendingCountModel] = [:]
         for inputs in all {
             let changeSet = ChangeSetBuilder.build(RepoSnapshotMapper.snapshot(inputs))
+            // The scope list's own counts, so the repository row adds up what its scopes show.
+            let liveScopes = scopeSummaries(inputs).filter { $0.environment?.isDeleted != true }
             counts[inputs.repository.id] = RepoPendingCountModel(
                 pending: changeSet.pendingCount,
-                blocked: changeSet.blocked.count
+                blocked: changeSet.blocked.count,
+                valueMissing: liveScopes.reduce(0) { $0 + $1.valueMissingCount }
             )
         }
         return PendingCountsModel(repositories: counts)

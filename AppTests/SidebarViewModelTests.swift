@@ -280,6 +280,19 @@ struct SidebarViewModelTests {
         #expect(sidebar.selectedRepo?.importedRepoID == id)
     }
 
+    /// 1.0 D6d (board Main2-Repository: "api-service 3"): a repository row counts the secrets its
+    /// scopes have without a value, and the count follows a fill.
+    @Test func aRepositoryCountsItsSecretsWithoutAValue() async throws {
+        let (harness, id) = try await EditorFixtures.importedHarness()
+        // Imported from GitHub: API_TOKEN (repository level) and DEPLOY_KEY (production), names only.
+        #expect(await TestFixtures.eventually { harness.app.valueMissingCount(of: id) == 2 })
+        let secret = try await EditorFixtures.item(harness, id, named: "API_TOKEN")
+        try harness.data.config.fillValue(secret.id, value: SecretBytes(utf8: EditorFixtures.secretValue), pushOnNextSync: false)
+        #expect(await TestFixtures.eventually { harness.app.valueMissingCount(of: id) == 1 })
+        #expect(harness.app.valueMissingCount(of: RepoID()) == 0)
+        #expect(SidebarCopy.valueMissingHelp(2) == "2 secrets have no value in FX Vault")
+    }
+
     /// 1.0 D6c6 (board Main2-Repository): Azure › subscription › vault. A vault imported before
     /// subscriptions were saved stays directly under Azure; a subscription matches the search.
     @Test func keyVaultsGroupUnderTheirSubscription() async throws {

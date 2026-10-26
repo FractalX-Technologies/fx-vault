@@ -348,8 +348,11 @@ private struct RepoNodeView: View {
                     .help(badge.title)
                     .accessibilityLabel(badge.title)
             }
-            if let id = repo.importedRepoID, main.app.pendingChangeCount(of: id) > 0 {
-                SidebarPendingDot()
+            if let id = repo.importedRepoID {
+                SidebarValueMissingCount(count: main.app.valueMissingCount(of: id))
+                if main.app.pendingChangeCount(of: id) > 0 {
+                    SidebarPendingDot()
+                }
             }
         }
         .id(repo.id)

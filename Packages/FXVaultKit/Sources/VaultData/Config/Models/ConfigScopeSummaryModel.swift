@@ -44,10 +44,14 @@ public struct RepoPendingCountModel: Sendable, Hashable {
     public let pending: Int
     /// Changes that cannot run (value missing, rename needing values).
     public let blocked: Int
+    /// Live secrets without a value, at the repository level and in its live environments: the
+    /// sidebar's count after the repository (1.0 D6d, board Main2-Repository).
+    public let valueMissing: Int
 
-    public init(pending: Int, blocked: Int) {
+    public init(pending: Int, blocked: Int, valueMissing: Int = 0) {
         self.pending = pending
         self.blocked = blocked
+        self.valueMissing = valueMissing
     }
 }
 

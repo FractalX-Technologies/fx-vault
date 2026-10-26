@@ -2407,6 +2407,13 @@ Review D6c6 — Azure › subscription › vault (2026-10-26, automatic):
   - `SidebarAzureModel` / `SidebarSubscriptionModel` moved to `SidebarModels.swift`.
   - Tests written, not run yet: `SidebarViewModelTests.keyVaultsGroupUnderTheirSubscription` (a selection opens it), `ConnectAzureTests.aFailedOrMissedLookupLeavesTheRefreshAlone`, `MainViewModelTests.aKeyVaultOfItsOwnOpensFromTheSidebar` (the path).
 
+Review D6d-0 — the sidebar's "N without value" (2026-10-26, automatic):
+- VaultData: `RepoPendingCountModel.valueMissing`: live secrets without a value at the repository level and in live environments, summed from `scopeSummaries` inside `pendingCounts(_:)` (the existing all-repositories observation; no new query).
+- App: `AppViewModel.valueMissingCount(of:)`; `SidebarValueMissingCount` (nothing at zero) on the repository row before its pending dot, and now on environment and Key Vault rows too; one help text `SidebarCopy.valueMissingHelp(_:)` (`DestinationCopy.valueMissingHelp` and the scope list's inline copy removed).
+- Snapshots: the imported repository of the Main snapshots gains its count (re-record at the final run).
+- Tests written, not run yet: package `ConfigEnvironmentTests.aRepositoryCountsItsSecretsWithoutAValue` (variables, tombstones and a deleted environment left out); `SidebarViewModelTests.aRepositoryCountsItsSecretsWithoutAValue` (imported 2, a fill makes 1).
+- Docs: CHANGELOG, DESIGN, ARCHITECTURE, RELEASING step 63.
+
 Review B7b — organization Refresh and Changed on GitHub (2026-10-26, automatic):
 - VaultData: `OrganizationRepository+Drift`: `refresh(organizationID:)` (B12/B13 again through the importing account, finishes tombstones GitHub no longer has, records `last_refreshed_at`; `OrgRefreshModel` with findings, skipped names, `listedAt`) and `resolve(_:option:organizationID:)` (lists again, recomputes the findings in the write transaction, `.stale` when one moved). `OrgDriftModel` reuses `DriftKind` and `DriftResolutionOption`; errors reuse `DriftRepositoryError`. `OrgItemKey` and `OrganizationRepository.listItems` are now shared with import and `OrganizationSyncRepository` (its private copies removed); `OrganizationStore.updateOrganization`.
 - Changed on GitHub: a listed `updatedAt` or visibility that differs from the synced one, or the count of a `selected` item while FX Vault keeps GitHub's own list (a count Revert forgot is unknown, not changed); an item only GitHub has, or both added (a conflict); a synced item GitHub no longer has. Lists themselves are not read (B14/B15), as agreed.

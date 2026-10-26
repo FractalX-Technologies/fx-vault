@@ -553,7 +553,9 @@ one `VaultSession.write` and throws `ConfigRepositoryError`.
   `ItemWriteResultModel.didStripTrailingNewlines`).
 - Reads and streams: `changeSet(repositoryID:)`, `scopes(repositoryID:)`, `pendingCounts()`,
   `observeRepositories()`, `observeScopes(repositoryID:)`, `observeItems(repositoryID:scope:)`
-  (each model with its `linkCount`), `observePendingCounts()`. `itemNames(matching:limit:)`
+  (each model with its `linkCount`), `observePendingCounts()` (each repository's
+  `RepoPendingCountModel` also counts its live secrets without a value, `valueMissing`, from the
+  scope summaries; `AppViewModel.valueMissingCount(of:)` feeds the sidebar, 1.0 D6d). `itemNames(matching:limit:)`
   (1.0 D6c5, ⌘K): live names from every holder through `VaultStore.ItemNameStore` (one
   `UNION ALL` over the four item tables, a destination's only for a Key Vault of its own, no
   value column), `[ItemNameMatchModel]` with an

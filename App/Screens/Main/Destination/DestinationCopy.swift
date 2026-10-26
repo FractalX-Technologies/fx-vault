@@ -56,13 +56,6 @@ nonisolated enum DestinationCopy {
         )
     }
 
-    static func valueMissingHelp(_ count: Int) -> String {
-        String(
-            localized: "destination.valueMissing.help",
-            defaultValue: "\(count) secrets have no value in FX Vault"
-        )
-    }
-
     // MARK: Detail
 
     static var eyebrow: String {

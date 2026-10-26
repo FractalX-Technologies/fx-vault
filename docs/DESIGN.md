@@ -436,6 +436,9 @@ foreground color, so `.primary` text still turns white on selected rows.
   user's own names, folders, in `.caption`), `subtleText` for a repository not in the vault and
   for a deleted environment (struck through), marks on the right (a `SidebarCount` in
   `monoLabel` subtle, the 6 pt `brand` `SidebarPendingDot`), `.fxRowBackground(style: .sidebar)` when selected.
+  A repository, an environment and a Key Vault show `SidebarValueMissingCount`: how many secrets
+  have no value in FX Vault, nothing at zero (1.0 D6d, board Main2-Repository "api-service 3"); a
+  repository's adds up its repository level and live environments.
 - GitHub has no account level: one node per owner (`Theme.Symbols`: `building.2` or `person`) across every gh
   account, organizations first, then people. An organization's node is its place (selecting it opens its secrets and variables, or
   Import); its chevron opens its repositories (`book.closed`), which list the ones in the vault

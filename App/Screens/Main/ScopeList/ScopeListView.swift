@@ -137,7 +137,7 @@ private struct DestinationRow: View {
             .padding(.vertical, Theme.Spacing.xSmall)
             Spacer(minLength: 0)
             if destination.valueMissingCount > 0 {
-                let help = DestinationCopy.valueMissingHelp(destination.valueMissingCount)
+                let help = SidebarCopy.valueMissingHelp(destination.valueMissingCount)
                 Image(systemName: "exclamationmark.triangle")
                     .font(Theme.Typography.monoLabel)
                     .foregroundStyle(Theme.Colors.warning)
@@ -234,15 +234,7 @@ private struct ScopeRow: View {
             accessibilityID: AccessibilityID.Main.environment(scope.title),
             action: action
         ) {
-            if scope.valueMissingCount > 0 {
-                SidebarCount(
-                    value: scope.valueMissingCount,
-                    help: String(
-                        localized: "main.scopes.valueMissing.help",
-                        defaultValue: "\(scope.valueMissingCount) secrets have no value in FX Vault"
-                    )
-                )
-            }
+            SidebarValueMissingCount(count: scope.valueMissingCount)
             if scope.hasPendingChanges {
                 SidebarPendingDot()
             }
