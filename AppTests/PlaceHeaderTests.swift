@@ -163,4 +163,57 @@ struct PlaceHeaderTests {
         #expect(await TestFixtures.eventually { model.rows.first?.isDeleted == true }, "an imported secret waits for Sync")
         #expect(!model.canDeleteSelection, "only a pending deletion is selected")
     }
+
+    /// Lists `kv-example-prod` with DATABASE-URL, a disabled and a certificate-backed secret
+    /// (board KV-Place), and returns the imported Key Vault.
+    static func keyVaultWithHiddenSecrets(_ harness: TestHarness) async throws -> DestinationID {
+        try harness.installFakeAZ()
+        let vault = "kv-example-prod"
+        harness.transport.stubKeyVault(vault, secrets: ["DATABASE-URL": "postgres://example"])
+        let attributes = #""attributes":{"enabled":true,"created":1789990000,"updated":1790000000}"#
+        let list = """
+            {"value":[\
+            {"id":"https://\(vault).vault.azure.net/secrets/DATABASE-URL",\(attributes)},\
+            {"id":"https://\(vault).vault.azure.net/secrets/legacy-smtp-password",\(attributes.replacingOccurrences(of: "true", with: "false"))},\
+            {"id":"https://\(vault).vault.azure.net/secrets/tls-cert","managed":true,\(attributes)}\
+            ],"nextLink":null}
+            """
+        // The latest stub wins: the listing, then the one value read again.
+        harness.transport.stub(.json(list), method: .get, pathPrefix: "/secrets")
+        harness.transport.stub(
+            .json(FakeAzureOutput.secret(vaultName: vault, name: "DATABASE-URL", value: "postgres://example")),
+            method: .get,
+            pathPrefix: "/secrets/DATABASE-URL"
+        )
+        let id = try harness.data.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: vault, tenantID: nil),
+            stage: nil
+        )
+        _ = try await harness.data.destinationSync.importRemote(destinationID: id)
+        return id
+    }
+
+    /// Refresh's unusable secrets become the footnotes, one per reason, their names as help.
+    @Test func aKeyVaultRefreshSaysWhatItHides() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: MainViewModelTests.ready)
+        let id = try await Self.keyVaultWithHiddenSecrets(harness)
+        let destinations = harness.data.destinations
+        let model = DestinationDetailViewModel(
+            destination: try #require(try destinations.destination(id)),
+            dependencies: harness.dependencies(recorder: ActionRecorder())
+        ) {
+            try? destinations.destination(id)
+        }
+        #expect(await TestFixtures.eventually { model.rows.map(\.name) == ["DATABASE_URL"] })
+
+        model.refreshNow()
+        #expect(await TestFixtures.eventually { !model.isRefreshing })
+        let notes = try #require(model.refresh?.hiddenNotes)
+        #expect(notes.map(\.text) == [
+            "1 certificate-backed secret is hidden · managed by Key Vault",
+            "1 disabled secret is hidden · not editable",
+        ])
+        #expect(notes.map(\.names) == [["tls-cert"], ["legacy-smtp-password"]])
+    }
 }

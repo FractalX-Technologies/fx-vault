@@ -76,7 +76,7 @@ private struct OrganizationItemsTable: View {
                     .fxTableCell()
             }
             TableColumn(ConfigTableFormat.header(OrganizationCopy.visibility)) { row in
-                TableMetaText(row.visibility.title(selectedCount: row.selectedRepositoryCount))
+                TableMetaText(row.visibility.reachTitle(selectedCount: row.selectedRepositoryCount))
                     .fxTableCell()
             }
             TableColumn(ConfigTableFormat.header(String(localized: "main.table.status", defaultValue: "Status"))) { row in

@@ -1,3 +1,4 @@
+import DestinationKit
 import Foundation
 import Observation
 import VaultCore
@@ -472,8 +473,19 @@ final class DestinationDetailViewModel: LockObserving {
 
 extension DestinationDetailViewModel: ConfigTableModel {}
 
-/// Refresh's result as the banner shows it.
+/// Refresh's result as the header's line and the footnotes show it.
 struct DestinationRefreshPresentationModel: Equatable {
+    /// One footnote: "2 certificate-backed secrets are hidden · managed by Key Vault", with the
+    /// remote names as its help.
+    struct HiddenNoteModel: Equatable, Identifiable {
+        let text: String
+        let names: [String]
+
+        var id: String {
+            text
+        }
+    }
+
     let findings: [DestinationDriftModel]
     let unusable: [DestinationUnusableItemModel]
     let listedAt: Date
@@ -482,6 +494,23 @@ struct DestinationRefreshPresentationModel: Equatable {
         findings = result.findings
         unusable = result.unusable
         listedAt = result.listedAt
+    }
+
+    /// The unusable secrets by reason (board KV-Place): certificate-backed, disabled, then names
+    /// FX Vault can't use.
+    var hiddenNotes: [HiddenNoteModel] {
+        let groups: [(DestinationUnusableReason?, [DestinationUnusableItemModel])] = [
+            (.managed, unusable.filter { $0.reason == .managed }),
+            (.disabled, unusable.filter { $0.reason == .disabled }),
+            (nil, unusable.filter { $0.reason != .managed && $0.reason != .disabled }),
+        ]
+        return groups.compactMap { reason, items in
+            guard let first = items.first else { return nil }
+            return HiddenNoteModel(
+                text: DestinationCopy.hidden(items.count, reason: reason ?? first.reason),
+                names: items.map(\.remoteName)
+            )
+        }
     }
 }
 

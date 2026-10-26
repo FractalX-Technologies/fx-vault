@@ -3,9 +3,9 @@ import VaultCore
 import VaultData
 
 /// Column 3 for a Key Vault (v0.8.0; board KV-Place): the header (name, "Key Vault · counts",
-/// ⋯ More); a card with the stage, the target and the provider's rules; the Refresh banner; the
-/// Secrets label (Key Vault holds secrets only) with the selection's actions; and the table with
-/// the Status column.
+/// Refresh's findings as its status line, ⋯ More); the Secrets label (Key Vault holds secrets
+/// only) with the selection's actions; the table with the Status column; then the footnotes:
+/// what Refresh left hidden and how Key Vault names and deletes.
 struct DestinationDetailScreen: View {
     @Bindable var viewModel: DestinationDetailViewModel
     let main: MainViewModel
@@ -16,16 +16,13 @@ struct DestinationDetailScreen: View {
                 MainConnectivityBanner(banner: banner, main: main)
             }
             DestinationDetailHeader(viewModel: viewModel, main: main)
-            if let destination = viewModel.destination {
-                DestinationInfoCard(destination: destination)
-            }
-            DestinationRefreshBanner(viewModel: viewModel)
             DestinationDetailControls(viewModel: viewModel)
             ConfigTableView(viewModel: viewModel, emptyMessage: DestinationCopy.tableEmpty) { row in
                 DestinationRowActions(row: row, viewModel: viewModel)
             } selectionMenu: { rows in
                 DestinationSelectionMenu(rows: rows, viewModel: viewModel)
             }
+            DestinationFootnotes(viewModel: viewModel)
             if let notice = viewModel.notice {
                 Text(notice)
                     .font(Theme.Typography.caption)
@@ -58,6 +55,8 @@ private struct DestinationDetailHeader: View {
         PlaceHeader(title: destination?.title ?? "", subline: viewModel.subline) {
             if viewModel.isRefreshing {
                 PlaceRefreshingLine()
+            } else if let refresh = viewModel.refresh, let destination {
+                DestinationRefreshLine(refresh: refresh, provider: destination.provider, onReview: viewModel.reviewDifferences)
             }
         } accessories: {
             if destination?.repositoryID != nil {
@@ -92,70 +91,53 @@ private struct DestinationDetailHeader: View {
     }
 }
 
-/// STAGE, TARGET and the provider's rules in one card.
-private struct DestinationInfoCard: View {
-    let destination: DestinationModel
+/// Refresh's findings in the header (board KV-Place): "2 changed in Key Vault · Review" as a
+/// repository's drift line, or that nothing changed.
+private struct DestinationRefreshLine: View {
+    let refresh: DestinationRefreshPresentationModel
+    let provider: DestinationProvider
+    let onReview: () -> Void
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: Theme.Spacing.xLarge) {
-                fields
-            }
-            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-                fields
-            }
-        }
-        .padding(Theme.Spacing.largePlus)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .fxCardBackground(.container)
-    }
-
-    @ViewBuilder
-    private var fields: some View {
-        field(DestinationCopy.stageLabel, value: destination.stage ?? DestinationCopy.noStage, isMono: false)
-        field(DestinationCopy.targetLabel, value: destination.targetDescription, isMono: true)
-        VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
-            SectionLabel(DestinationCopy.rulesLabel)
-            Text(DestinationCopy.rules(for: destination.provider))
-                .font(Theme.Typography.caption)
+        if refresh.findings.isEmpty {
+            Text(DestinationCopy.noDrift)
+                .fxTextStyle(.caption)
                 .foregroundStyle(Theme.Colors.mutedText)
-                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            DriftBannerView(
+                message: DestinationCopy.changed(refresh.findings.count, provider: provider),
+                reviewHelp: DestinationCopy.reviewHelp(provider: provider),
+                onReview: onReview
+            )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func field(_ label: String, value: String, isMono: Bool) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
-            SectionLabel(label)
-            Text(verbatim: value)
-                .font(isMono ? Theme.Typography.monoMeta : Theme.Typography.callout)
-                .foregroundStyle(Theme.Colors.ink)
-                .textSelection(.enabled)
-                .lineLimit(2)
-        }
-        .fixedSize(horizontal: true, vertical: false)
     }
 }
 
-/// What the last Refresh found: changes to review, items FX Vault cannot use, or nothing.
-private struct DestinationRefreshBanner: View {
+/// Under the table (board KV-Place): the secrets Refresh found but FX Vault can't use, one line
+/// per reason with their names as help, then how Key Vault names and deletes.
+private struct DestinationFootnotes: View {
     let viewModel: DestinationDetailViewModel
 
     var body: some View {
-        if let refresh = viewModel.refresh, let destination = viewModel.destination {
-            if !refresh.findings.isEmpty {
-                Banner(
-                    .info,
-                    message: DestinationCopy.driftBanner(refresh.findings.count, provider: destination.provider),
-                    action: .init(title: DestinationCopy.review) { viewModel.reviewDifferences() }
-                )
-            } else {
-                Banner(.info, message: DestinationCopy.noDrift, systemImage: "checkmark.circle")
+        if let destination = viewModel.destination {
+            VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
+                ForEach(viewModel.refresh?.hiddenNotes ?? []) { note in
+                    Label {
+                        Text(note.text)
+                    } icon: {
+                        Image(systemName: "lock")
+                    }
+                    .labelStyle(.titleAndIcon)
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.subtleText)
+                    .help(note.names.joined(separator: ", "))
+                }
+                Text(DestinationCopy.rules(for: destination.provider))
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.subtleText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            if !refresh.unusable.isEmpty {
-                Banner(.warning, message: DestinationCopy.unusableBanner(refresh.unusable.count), systemImage: "exclamationmark.triangle")
-                    .help(refresh.unusable.map(\.remoteName).joined(separator: ", "))
-            }
+            .padding(.horizontal, Theme.Spacing.large)
         }
     }
 }

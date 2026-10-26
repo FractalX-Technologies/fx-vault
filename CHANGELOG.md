@@ -43,6 +43,14 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   asks again, and has a red Delete; Return no longer deletes. Export .env is titled with its
   place, keeps its steps, shows the warnings in one box with Add to .gitignore beside its note,
   and ends each step on "Saved readable only by you."
+- **Folder, Key Vault and organization views as the boards.** A linked item's tag says
+  "3 places". Typing a new value for a linked item lists each copy by its path
+  ("api-service › production") with a checkbox and whether its value is the same or differs;
+  copies that can't take it say why. A Key Vault's header says "No changes since your last
+  sync" or "2 changed in Key Vault" with Review, and the secrets FX Vault leaves alone
+  (disabled, managed by Key Vault) and the naming rules are footnotes under the table instead
+  of a card and banners. An organization's Visibility column says what each item reaches:
+  "all repos", "private and internal" or "selected · 3 repos".
 - **Edit organization secrets and variables.** The organization view gains Add Secret, Add
   Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
   with the organization's repositories). A Selected item keeps GitHub's repository list until

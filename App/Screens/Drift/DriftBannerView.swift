@@ -9,18 +9,29 @@ import VaultData
 /// drift check of the open repository found something (`report.count > 0`) and calls
 /// `onReview` to present `MainSheet.driftReview`. The init signature is fixed.
 struct DriftBannerView: View {
-    private let report: DriftReportModel
+    private let message: String
+    private let reviewHelp: String
     private let onReview: () -> Void
 
     init(report: DriftReportModel, onReview: @escaping () -> Void) {
-        self.report = report
+        self.init(
+            message: Self.message(count: report.count, conflictCount: report.conflicts.count),
+            reviewHelp: String(localized: "drift.banner.review.help", defaultValue: "Keep your version or take GitHub's for each change"),
+            onReview: onReview
+        )
+    }
+
+    /// The same line for a Key Vault's Refresh (board KV-Place): "2 changed in Key Vault".
+    init(message: String, reviewHelp: String, onReview: @escaping () -> Void) {
+        self.message = message
+        self.reviewHelp = reviewHelp
         self.onReview = onReview
     }
 
     var body: some View {
         HStack(spacing: Theme.Spacing.smallMinus) {
             RingDot()
-            Text(Self.message(count: report.count, conflictCount: report.conflicts.count))
+            Text(message)
                 .fxTextStyle(.caption)
                 .foregroundStyle(Theme.Colors.mutedText)
                 .lineLimit(1)
@@ -37,10 +48,7 @@ struct DriftBannerView: View {
             }
             .buttonStyle(.plain)
             .pointerStyle(.link)
-            .help(String(
-                    localized: "drift.banner.review.help",
-                    defaultValue: "Keep your version or take GitHub's for each change"
-                ))
+            .help(reviewHelp)
         }
         .accessibilityElement(children: .contain)
     }

@@ -95,7 +95,8 @@ FXVault/
 │   │   │                            # ItemFillChoiceField, ItemEditorReadOnlyName,
 │   │   │                            # CredentialWarningView; shared with the organization editor),
 │   │   │                            # ItemEditorModels, ItemEditorError, ConfigRepository+Editor,
-│   │   │                            # ConfigKind+ItemEditor, CredentialReason+ItemEditor extensions
+│   │   │                            # ConfigKind+ItemEditor, CredentialReason+ItemEditor extensions,
+│   │   │                            # LinkedUpdateList (which linked copies take a new value, 1.0)
 │   │   ├── Environment/             # New / Settings / Rename / Duplicate Environment Screen+ViewModel,
 │   │   │                            # EnvironmentDirectoryModel, EnvironmentPlanNoteView,
 │   │   │                            # EnvironmentNameField (mono name input)

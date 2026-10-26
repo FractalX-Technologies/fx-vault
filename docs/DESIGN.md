@@ -526,8 +526,9 @@ foreground color, so `.primary` text still turns white on selected rows.
   Next Sync and Revert as outline pills when some rows allow them, Delete… as an outline pill
   (the destructive style stays for the dialog's final confirm), and Deselect as an outline
   circle.
-- Linked copies (v0.4.1): a linked row shows `LinkedChip` after its name, a `brand` outlined
-  capsule (`tagHeight`) with the `link` symbol (`monoLabel`) and the count (`monoMeta`). Its
+- Linked copies (v0.4.1; 1.0 board Folder-View): a linked row shows `LinkedChip` after its
+  name, a tag with a `hairlineStrong` outline and `Theme.Radius.token` corners
+  (`dialogTagHeight`) saying "3 places" in `Theme.Typography.label` `mutedText`. Its
   popover (`LinkedCopiesPopover`, `Theme.Layout.linkedPopoverWidth`) has a `SectionLabel`, the
   name in `.monoName`, one row per place (repository in `.monoName`, "scope · account" in
   `.monoMeta`, the copy's own name only when it differs, a `StatusChip`: Same value `.success`,
@@ -550,7 +551,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   Selected, the detail shows the Import prompt (`EmptyStateView`, primary Import) or
   the place header (the login, "Organization · 14 secrets · 6 variables · 3 without value", ⋯
   More with New Secret, New Variable and Remove from Vault…) above a `.fxTable()`: Name (struck through when deleted), Kind, Value
-  (`MaskedValueCell`, no eye), Visibility, Status (`StatusDotLabel`), Updated; the row menu
+  (`MaskedValueCell`, no eye), Visibility as its reach ("all repos", "private and internal",
+  "selected · 3 repos"; board Org-UsedBy), Status (`StatusDotLabel`), Updated; the row menu
   Copy Value, Edit…, Revert / Revert Access, Delete… (B6b3a). The item editor is a
   `ConfigEditorSheet` (ORGANIZATION, the name or New Secret/Variable): Kind `SegmentedPill` on
   add, `ItemNameField` (or the read-only name), `SecretValueEditor`, `ItemFillChoiceField` for a
@@ -565,13 +567,14 @@ foreground color, so `.primary` text still turns white on selected rows.
   count in `monoLabel` subtle, on `.fxRowBackground(style: .sidebar)`. "Add Destination" is a dashed
   `hairlineStrong` row. A destination's context menu (and the detail's
   ••• menu): Settings…, Export .env…, Remove from FX Vault… (destructive confirmation).
-- Destination detail (v0.8.0; board KV-Place): the place header (the name, "Key Vault · 32
-  secrets", a runtime destination "Key Vault · Runtime · stage · …" with its Experimental tag;
-  Refresh in ⋯ More, disabled offline). A
-  `container` card holds STAGE (`.callout`), TARGET (`.monoMeta`) and NAMES AND VALUES (the
-  provider's rules in `.caption` `mutedText`), side by side or stacked. The Refresh banner is
-  `.info` with Review ("2 changes in Key Vault since your last sync"), `.info` with a checkmark
-  when nothing changed, and a `.warning` for items FX Vault cannot use (their names as help).
+- Destination detail (v0.8.0; 1.0 boards KV-Place, KV-NameRules): the place header (the name,
+  "Key Vault · 32 secrets", a runtime destination "Key Vault · Runtime · stage · …" with its
+  Experimental tag; Refresh in ⋯ More, disabled offline). After a Refresh the header's status
+  line says "No changes since your last sync" in `mutedText`, or "2 changed in Key Vault" with
+  Review (`DriftBannerView`). There is no info card: the stage is in the subline and the target
+  in Settings. Under the table, `DestinationFootnotes` in `.caption` `subtleText`: one `lock` line
+  per kind of secret FX Vault leaves alone ("1 disabled secret is hidden · not editable", their
+  names as help), then the provider's rules ("Key Vault names use dashes: …").
   Then the same table as a repository with the Status column: Key Vault holds secrets only, so
   a `SectionLabel` "SECRETS · 4" takes the place of the Secrets / Variables `SegmentedPill`. Add
   actions, multi-selection and the linked chip are unchanged.
@@ -654,9 +657,11 @@ foreground color, so `.primary` text still turns white on selected rows.
   the chosen repository's scopes indented as radio rows (`.fxRowBackground(style: .scope)` when
   chosen; a `lock` symbol with the reason as help when read-only). After the copy the list gives
   way to an info `Banner` with the outcome and "Show …".
-- The item editor's "Linked copies" field (v0.4.1) appears under the value once a new value is
-  typed: one `FXCheckboxRow` per place ("owner/name · scope · account (Same value)") and an info
-  note.
+- The item editor's "Linked copies" field (v0.4.1; 1.0 board Folder-LinkedUpdate) appears under
+  the value once a new value is typed: `LinkedUpdateList`, a hairline box of 34 pt rows (a
+  checkbox, the place's path "owner › repo › environment" in `.monoMeta`, and "● Same value" /
+  "○ Differs" / "Value missing"; a copy that can't take the value has no checkbox, a subtle path
+  and "can’t update · read only"), then an info note.
 - Add Destination (v0.8.0) is a `ConfigEditorSheet` (`destinationSheetWidth`, eyebrow RUNTIME):
   STAGE as a rounded field with a Stages menu (the repository's environments) and its note;
   then VAULT NAME (with a note that FX Vault reaches it through the user's `az login`) and TENANT
@@ -891,6 +896,7 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 | Sync-Delete, Sync-Progress, Sync-Done | `SyncDeletionsView` (`.fxDialogListBox`), `SyncRunView` (`SyncProgressPresentation`), `SyncDoneView`, `FXButtonStyle(.dialog)` |
 | NewRepo, NewEnvironment | `CreateRepoFormView`, `NewEnvironmentScreen`, `BranchPolicyEditorView`, `DialogForm.swift` |
 | Main2-Delete, Main2-DeleteKeyVault, Main2-Export | `DeleteItemsSheet`, `EnvExportDialog`, `DialogNoteBox`, `DialogStackedField` |
+| Folder-View, Folder-LinkedUpdate, KV-Place, KV-NameRules, Org-UsedBy | `LinkedChip`, `LinkedUpdateList`, `DestinationDetailScreen` (`DestinationFootnotes`), `OrgVisibility.reachTitle` |
 | FX Vault Destinations 3: Key Vault destination | `DestinationDetailScreen`, the RUNTIME rows of `ScopeListView` |
 | FX Vault Destinations 4: multi-provider Sync review | `DestinationSyncPresentation` sections in the Sync sheet |
 

@@ -482,6 +482,23 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
+    /// A Key Vault after Refresh (board KV-Place): the header's line, the hidden secrets and
+    /// the names footnote under the table.
+    @Test func mainKeyVaultRefreshed() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let id = try await PlaceHeaderTests.keyVaultWithHiddenSecrets(harness)
+        #expect(await TestFixtures.eventually { main.sidebar.keyVault(id) != nil })
+        main.sidebar.selectedKeyVaultID = id
+        let vault = try #require(main.destinationDetail)
+        #expect(await TestFixtures.eventually { vault.items.count == 1 })
+        vault.refreshNow()
+        #expect(await TestFixtures.eventually { vault.refresh != nil })
+        try await SnapshotOutput.write("main-keyvault-refreshed", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
     @Test func addDestinationSheet() async throws {
         let (harness, main) = try await MainSnapshotFixture.make()
         let scopes = try #require(main.scopeList)

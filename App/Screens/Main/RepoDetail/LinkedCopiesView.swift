@@ -2,9 +2,9 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// The Linked chip of a table row (v0.4.1, tasks/todo.md L3): a link symbol and the number of
-/// places that share the item's link. A click opens ``LinkedCopiesPopover``; the row menu's Show
-/// Linked Copies opens the same popover.
+/// The Linked chip of a table row (v0.4.1; board Folder-View): a link symbol and "3 places", the
+/// places that share the item's link, in an 18 pt outlined tag. A click opens
+/// ``LinkedCopiesPopover``; the row menu's Show Linked Copies opens the same popover.
 struct LinkedChip<Model: ConfigTableModel>: View {
     let row: ConfigRowModel
     @Bindable var viewModel: Model
@@ -13,18 +13,19 @@ struct LinkedChip<Model: ConfigTableModel>: View {
         Button {
             viewModel.showLinkedCopies(of: row)
         } label: {
+            let shape = RoundedRectangle(cornerRadius: Theme.Radius.token, style: .continuous)
             HStack(spacing: Theme.Spacing.xSmall) {
                 Image(systemName: "link")
                     .font(Theme.Typography.monoLabel)
                     .accessibilityHidden(true)
-                Text(verbatim: "\(row.linkCount)")
-                    .font(Theme.Typography.monoMeta)
+                Text(LinkedChipText.places(row.linkCount))
+                    .font(Theme.Typography.label)
             }
-            .foregroundStyle(Theme.Colors.brand)
+            .foregroundStyle(Theme.Colors.mutedText)
             .padding(.horizontal, Theme.Spacing.smallMinus)
-            .frame(height: Theme.Layout.tagHeight)
-            .overlay(Capsule.pill.strokeBorder(Theme.Colors.brand, lineWidth: Theme.Stroke.hairline))
-            .contentShape(Capsule.pill)
+            .frame(height: Theme.Layout.dialogTagHeight)
+            .overlay(shape.strokeBorder(Theme.Colors.hairlineStrong, lineWidth: Theme.Stroke.hairline))
+            .contentShape(shape)
         }
         .buttonStyle(.plain)
         .fixedSize()
@@ -46,6 +47,11 @@ struct LinkedChip<Model: ConfigTableModel>: View {
 
 /// The Linked chip's help text.
 enum LinkedChipText {
+    /// "3 places" (inflected).
+    static func places(_ count: Int) -> String {
+        String(inflected: AttributedString(localized: "main.table.linked.places", defaultValue: "^[\(count) place](inflect: true)"))
+    }
+
     static func help(count: Int) -> String {
         String(localized: "main.table.linked.help", defaultValue: "Linked copy: the same item is in \(count) places")
     }
@@ -158,6 +164,35 @@ extension LinkedCopyModel {
         }
         let named = name == itemName ? parts : [parts[0], name] + parts.dropFirst()
         return named.joined(separator: " · ")
+    }
+}
+
+extension LinkedCopyModel {
+    /// "example-org › api-service › staging", a folder's name, or "example-org › api-service ›
+    /// kv-example-prod" (board Folder-LinkedUpdate).
+    var placePath: String {
+        switch place {
+        case .scope(_, _, let fullName, _, let environmentName):
+            PlaceCopy.path(fullName.split(separator: "/").map(String.init) + [environmentName].compactMap { $0 })
+        case .folder(_, let name):
+            name
+        case .destination(_, _, let repositoryFullName, _, let displayName, _):
+            PlaceCopy.path((repositoryFullName?.split(separator: "/").map(String.init) ?? []) + [displayName])
+        }
+    }
+
+    /// Why this copy can't take the new value, short: "read only", "environment deleted".
+    var blockedNote: String? {
+        switch editBlock {
+        case nil:
+            nil
+        case .readOnly?:
+            String(localized: "main.linked.blocked.readOnly", defaultValue: "can’t update · read only")
+        case .environmentDeleted?:
+            String(localized: "main.linked.blocked.environmentDeleted", defaultValue: "can’t update · environment deleted")
+        default:
+            String(localized: "main.linked.blocked", defaultValue: "can’t update")
+        }
     }
 }
 

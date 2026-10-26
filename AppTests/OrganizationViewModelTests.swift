@@ -78,6 +78,11 @@ struct OrganizationViewModelTests {
         #expect(OrgVisibility.private.title(selectedCount: nil) == "Private and internal repositories")
         #expect(OrgVisibility.selected.title(selectedCount: 3) == "Selected · 3 repositories")
         #expect(OrgVisibility.selected.title(selectedCount: nil) == "Selected repositories")
+        // The table's short form (boards Org-UsedBy, Main2-Repository).
+        #expect(OrgVisibility.all.reachTitle(selectedCount: nil) == "all repos")
+        #expect(OrgVisibility.private.reachTitle(selectedCount: nil) == "private and internal")
+        #expect(OrgVisibility.selected.reachTitle(selectedCount: 1) == "selected · 1 repo")
+        #expect(OrgVisibility.selected.reachTitle(selectedCount: 3) == "selected · 3 repos")
         #expect(PlaceCopy.counts(secrets: 2, variables: 1, withoutValue: 0) == "2 secrets · 1 variable")
         #expect(PlaceCopy.counts(secrets: 1, variables: 2, withoutValue: 2) == "1 secret · 2 variables · 2 without value")
         #expect(PlaceCopy.counts(secrets: 32, variables: nil) == "32 secrets", "a Key Vault holds secrets only")
