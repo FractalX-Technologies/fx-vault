@@ -430,7 +430,9 @@ struct SyncViewModelTests {
         // Neither button is the default (Return does nothing); deleting needs the checkbox.
         #expect(model.buttons.allSatisfy { !$0.isDefault })
         let confirm = try #require(model.buttons.first { $0.action == .confirmDeletions })
-        #expect(confirm.title == "Delete 2 Items on GitHub")
+        #expect(confirm.title == "Delete 2")
+        #expect(model.deletionTitle == "Delete 2 items?")
+        #expect(model.deletionRows.first?.items.map(\.name) == ["OLD_TOKEN"])
         #expect(confirm.isDestructive)
         #expect(!confirm.isEnabled)
         await model.startSync(includeDeletions: true)
@@ -488,6 +490,40 @@ struct SyncViewModelTests {
         #expect(model.step == .result)
     }
 
+    /// Board Sync-Done: a run where nothing failed ends on the short finish, with the places and
+    /// what stays pending; a failure keeps the full result.
+    @Test func aRunWithoutFailuresEndsOnTheShortFinish() async throws {
+        let token = SyncFixtures.set(.secret, "API_TOKEN")
+        let url = SyncFixtures.set(.variable, "BASE_URL")
+        let review = SyncFixtures.review([SyncFixtures.preflight(executable: [url, token])])
+        let fixture = try await Fixture(review: .success(review))
+        let model = fixture.viewModel
+        await model.load()
+        let run = await fixture.startRun()
+        fixture.service.run.finish(SyncFixtures.outcome([
+            SyncChangeResultModel(change: token, outcome: .succeeded(.verified)),
+            SyncChangeResultModel(change: url, outcome: .blocked(.change(.valueMissing))),
+        ]))
+        await run.value
+
+        let done = try #require(model.done)
+        #expect(done.syncedCount == 1)
+        #expect(done.places == [TestFixtures.repoName])
+        #expect(done.pending.map(\.reason) == [SyncCopy.blockReason(.change(.valueMissing))])
+        #expect(SyncCopy.doneTitle(count: done.syncedCount) == "Synced 1 change")
+
+        let failing = try await Fixture(review: .success(review))
+        await failing.viewModel.load()
+        let failedRun = await failing.startRun()
+        failing.service.run.finish(SyncFixtures.outcome([
+            SyncChangeResultModel(change: token, outcome: .succeeded(.verified)),
+            SyncChangeResultModel(change: url, outcome: .failed(.valueMissing)),
+        ]))
+        await failedRun.value
+        #expect(failing.viewModel.step == .result)
+        #expect(failing.viewModel.done == nil)
+    }
+
     @Test func syncWithoutDeletingLeavesThemOut() async throws {
         let review = SyncFixtures.review([SyncFixtures.preflight(executable: [
             SyncFixtures.set(.variable, "BASE_URL"),
@@ -525,14 +561,22 @@ struct SyncViewModelTests {
         #expect(model.blocksDismissal)
 
         let fake = fixture.service.run
+        // Board Sync-Progress: the summary's lines go from a ring to a spinner to a check.
+        let lines = model.progressCards.flatMap(\.lines)
+        let tokenLine = try #require(lines.first { $0.name == "API_TOKEN" })
+        let urlLine = try #require(lines.first { $0.name == "BASE_URL" })
+        #expect(model.lineState(tokenLine) == .waiting)
         fake.send(.started(total: 2))
         fake.send(.changeStarted(changeID: token.id))
         #expect(await TestFixtures.eventually { model.progress.currentName == "API_TOKEN" })
+        #expect(model.lineState(tokenLine) == .writing)
         fake.send(.changeFinished(SyncChangeResultModel(change: token, outcome: .succeeded(.verified)), completed: 1, total: 2))
         fake.send(.verifying(.repository))
         #expect(await TestFixtures.eventually { model.progress.phase == .verifying(scope: "Repository") })
         #expect(model.progress.completed == 1)
         #expect(model.progress.fraction == 0.5)
+        #expect(model.lineState(tokenLine) == .done)
+        #expect(model.lineState(urlLine) == .waiting)
 
         // Cancel stops after the call in flight.
         #expect(model.buttons.map(\.action) == [.cancelRun])

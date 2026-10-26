@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// The Sync sheet (§10 Sheets): Summary → Deletions (live fetch) → Progress → Result. Holds a
-/// SyncActivity for the whole run (``SyncViewModel``).
+/// The Sync sheet (§10 Sheets; boards Sync-Review, Sync-Delete, Sync-Progress, Sync-Done):
+/// Summary → Deletions (live fetch) → Progress → Result. Holds a SyncActivity for the whole run
+/// (``SyncViewModel``).
 ///
 /// UI feature contract entry view (ARCHITECTURE.md): presented by `MainScreen` for
 /// `MainSheet.sync`. The init signature is fixed. Dismiss with `@Environment(\.dismiss)`.
@@ -24,14 +25,34 @@ struct SyncScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
+        Group {
+            if let done = viewModel.done {
+                SyncDoneView(done: done) { dismiss() }
+            } else {
+                steps
+            }
+        }
+        .fxSheetBackground()
+        .interactiveDismissDisabled(viewModel.blocksDismissal)
+        .errorAlert($viewModel.alert)
+        .task {
+            // Only a sheet that has not loaded yet: a view model shown mid-run (previews, the
+            // snapshots of boards Sync-Progress and Sync-Done) keeps its step.
+            guard viewModel.step == .loading else { return }
+            await viewModel.load()
+        }
+    }
+
+    /// Every step but the short finish: the 1.0 dialog (boards Sync-Review, Sync-Progress,
+    /// Sync-Delete): 22 pt inset, the compact title, the step, then the footer with no rule.
+    private var steps: some View {
         VStack(spacing: 0) {
             header
-                .padding(.horizontal, Theme.Spacing.xxLarge)
-                .padding(.top, Theme.Spacing.xxLarge)
-                .padding(.bottom, Theme.Spacing.xLarge)
+                .padding(.horizontal, Theme.Layout.compactSheetInset)
+                .padding(.top, Theme.Layout.compactSheetInset)
+                .padding(.bottom, Theme.Spacing.mediumMinus)
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            HairlineDivider()
             SyncFooterView(
                 buttons: viewModel.buttons,
                 notice: footerNotice
@@ -48,21 +69,17 @@ struct SyncScreen: View {
             minHeight: Theme.Layout.syncSheetMinHeight,
             idealHeight: Theme.Layout.syncSheetIdealHeight
         )
-        .fxSheetBackground()
-        .interactiveDismissDisabled(viewModel.blocksDismissal)
-        .errorAlert($viewModel.alert)
-        .task {
-            await viewModel.load()
-        }
     }
 
+    /// No eyebrow on any step (the 1.0 boards): the title says it.
     private var header: some View {
         SheetHeader(
-            label: eyebrow,
+            label: nil,
             title: title,
             subtitle: subtitle,
-            titleStyle: viewModel.step == .summary ? .leadEmphasized : .title,
-            subtitleStyle: viewModel.step == .summary ? .callout : .body
+            titleStyle: .leadEmphasized,
+            subtitleStyle: .callout,
+            subtitleSpacing: Theme.Spacing.xSmall
         ) {
             if viewModel.step == .summary || viewModel.step == .result {
                 Button {
@@ -80,22 +97,10 @@ struct SyncScreen: View {
     }
 
     /// The summary's counts sit in the footer (board Sync-Review) unless a notice (offline) needs
-    /// it. The deletions footer needs its width for three pills.
+    /// it. The deletions footer needs its width for three buttons.
     private var footerNotice: String? {
         if let notice = viewModel.footerNotice { return notice }
         return viewModel.step == .summary ? viewModel.summaryCountsLine : nil
-    }
-
-    /// The summary has no eyebrow (board Sync-Review): its title already says it.
-    private var eyebrow: String? {
-        switch viewModel.step {
-        case .summary:
-            nil
-        case .loading, .failed, .deletions:
-            String(localized: "sync.eyebrow.review", defaultValue: "Review before sync")
-        case .progress, .result:
-            String(localized: "sync.eyebrow.run", defaultValue: "Sync")
-        }
     }
 
     @ViewBuilder
@@ -117,7 +122,7 @@ struct SyncScreen: View {
         case .deletions:
             SyncDeletionsView(viewModel: viewModel)
         case .progress:
-            SyncRunView(progress: viewModel.progress, writeBudgetLine: viewModel.writeBudgetLine)
+            SyncRunView(viewModel: viewModel)
         case .result:
             SyncResultView(viewModel: viewModel)
         }
@@ -126,15 +131,15 @@ struct SyncScreen: View {
     private var title: String {
         switch viewModel.step {
         case .deletions:
-            String(localized: "sync.deletions.title", defaultValue: "Review Deletions")
+            viewModel.deletionTitle
+        case .progress:
+            SyncCopy.progressTitle
         case .result:
             viewModel.stopReason == nil
                 ? String(localized: "sync.result.title", defaultValue: "Sync Finished")
                 : String(localized: "sync.result.title.stopped", defaultValue: "Sync Stopped")
-        case .summary:
+        case .summary, .loading, .failed:
             String(localized: "sync.title.summary", defaultValue: "Review Sync")
-        default:
-            String(localized: "sync.title", defaultValue: "Sync")
         }
     }
 
@@ -148,15 +153,9 @@ struct SyncScreen: View {
                 defaultValue: "Names only · values go through gh and az, never shown"
             )
         case .deletions:
-            String(
-                localized: "sync.subtitle.deletions",
-                defaultValue: "These are deleted on GitHub. Deleted secrets cannot be recovered from GitHub."
-            )
+            SyncCopy.deletionSubtitle
         case .progress:
-            String(
-                localized: "sync.subtitle.progress",
-                defaultValue: "Writing one change at a time. FX Vault stays unlocked until the sync ends."
-            )
+            SyncCopy.progressSubtitle
         case .result:
             String(
                 localized: "sync.subtitle.result",

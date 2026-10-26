@@ -23,6 +23,23 @@ struct DesignComponentTests {
         #expect(FXButtonStyle.palette(for: .destructive, isHovered: false).fill == Theme.Colors.danger)
     }
 
+    /// The 1.0 dialogs (boards Sync-Delete, NewRepo): 32 pt, the primary a pill, the others 8 pt
+    /// rounded rectangles; the deletion confirm is red on the outline.
+    @Test func dialogButtonsAreTheBoardsButtons() {
+        let frame = CGRect(x: 0, y: 0, width: 120, height: Theme.Layout.buttonHeightDialog)
+        let pill = Capsule.pill.path(in: frame)
+        let rounded = RoundedRectangle(cornerRadius: Theme.Radius.compactRow, style: .continuous).path(in: frame)
+        #expect(FXButtonStyle.height(for: .dialog) == Theme.Layout.buttonHeightDialog)
+        #expect(FXButtonStyle.shape(for: .dialog, variant: .primary).path(in: frame) == pill)
+        #expect(FXButtonStyle.shape(for: .dialog, variant: .outline).path(in: frame) == rounded)
+        #expect(FXButtonStyle.shape(for: .dialog, variant: .outlineDestructive).path(in: frame) == rounded)
+        #expect(FXButtonStyle.shape(for: .regular, variant: .outline).path(in: frame) == pill)
+        #expect(FXButtonStyle.font(for: .primary, size: .dialog) == Theme.Typography.bodyEmphasized)
+        #expect(FXButtonStyle.font(for: .outline, size: .dialog) == Theme.Typography.callout)
+        let red = FXButtonStyle.palette(for: .outlineDestructive, isHovered: false)
+        #expect(red == .init(fill: nil, foreground: Theme.Colors.danger, border: Theme.Colors.hairlineStrong))
+    }
+
     @Test func buttonSizesAndEmphasis() {
         #expect(FXButtonStyle.height(for: .regular) == Theme.Layout.buttonHeightRegular)
         #expect(FXButtonStyle.height(for: .large) == Theme.Layout.buttonHeightLarge)
@@ -40,8 +57,8 @@ struct DesignComponentTests {
         #expect(FXButtonStyle.font(for: .outline, size: .compact) == Theme.Typography.caption)
         let rect = CGRect(x: 0, y: 0, width: 80, height: 26)
         let rounded = RoundedRectangle(cornerRadius: Theme.Radius.compactRow, style: .continuous).path(in: rect)
-        #expect(FXButtonStyle.shape(for: .compact).path(in: rect) == rounded)
-        #expect(FXButtonStyle.shape(for: .regular).path(in: rect) == Capsule.pill.path(in: rect))
+        #expect(FXButtonStyle.shape(for: .compact, variant: .outline).path(in: rect) == rounded)
+        #expect(FXButtonStyle.shape(for: .regular, variant: .outline).path(in: rect) == Capsule.pill.path(in: rect))
         #expect(FXIconButtonStyle.side(for: .compact) == 26)
         #expect(FXIconButtonStyle.shape(for: .compact).path(in: rect) == rounded)
     }

@@ -27,6 +27,9 @@ enum Theme {
         /// Folder-View): 26 pt, 10 pt sides.
         static let buttonHeightCompact: CGFloat = 26
         static let buttonPaddingCompact: CGFloat = 10
+        /// The 1.0 dialogs' buttons (boards Sync-Progress, Sync-Delete, NewRepo, Share-*): 32 pt,
+        /// the primary a pill, the others 8 pt rounded rectangles.
+        static let buttonHeightDialog: CGFloat = 32
         /// Circular icon buttons (toolbar-style New, Share, Lock).
         static let iconButtonSize: CGFloat = 32
         /// Text fields and secure fields.
@@ -81,6 +84,10 @@ enum Theme {
         static let settingsWidth: CGFloat = 560
         static let settingsMinHeight: CGFloat = 360
         static let sheetWidth: CGFloat = 440
+        /// The inset of the 1.0 dialogs (boards Sync-Progress, Sync-Delete, NewRepo, Share-*).
+        static let compactSheetInset: CGFloat = 22
+        /// A row of a dialog's grey list box (board Sync-Delete).
+        static let dialogListRowHeight: CGFloat = 24
 
         // MARK: Onboarding, lock and recovery
 
@@ -160,15 +167,20 @@ enum Theme {
 
         // MARK: Sync sheet
 
-        /// Wide enough for "Delete N Items on GitHub" next to the other footer buttons and for a
-        /// scope line with its item names.
-        static let syncSheetWidth: CGFloat = 620
+        /// Boards Sync-Review and Sync-Progress.
+        static let syncSheetWidth: CGFloat = 600
         /// The `+ ~ − !` column of the Sync summary lines (board Sync-Review).
         static let syncSymbolWidth: CGFloat = 14
         static let syncSheetMinHeight: CGFloat = 360
         static let syncSheetIdealHeight: CGFloat = 520
-        /// The progress bar's width in the progress step.
-        static let syncProgressWidth: CGFloat = 360
+        /// The run's bar, full width (board Sync-Progress).
+        static let syncProgressHeight: CGFloat = 4
+        /// A line still waiting in the progress cards: a 7 pt ring (board Sync-Progress).
+        static let syncWaitingDotSize: CGFloat = 7
+        static let syncWaitingDotStroke: CGFloat = 1.5
+        /// The finished run when everything ran (board Sync-Done): 420 pt, a 44 pt check ring.
+        static let syncDoneWidth: CGFloat = 420
+        static let syncDoneMarkSize: CGFloat = 44
 
         // MARK: Drift review sheet
 

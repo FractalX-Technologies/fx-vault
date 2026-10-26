@@ -1,14 +1,15 @@
 import SwiftUI
 
-/// Step 2 (§7.5): every deletion, the live contents of each environment being deleted (names
-/// GitHub has that the vault does not are marked "will be lost"), and the acknowledgements.
-/// Neither footer button is the default and Return does nothing.
+/// Step 2 (§7.5, board Sync-Delete): every deletion in the grey list box, `STRIPE_KEY  api-service ›
+/// production`, an environment with what GitHub holds in it (names the vault does not have are
+/// marked "will be lost"), then the acknowledgements as plain checkboxes. Neither footer button
+/// is the default and Return does nothing.
 struct SyncDeletionsView: View {
     @Bindable var viewModel: SyncViewModel
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
                 if viewModel.deletionPreviews == nil {
                     HStack(spacing: Theme.Spacing.small) {
                         ProgressView()
@@ -21,51 +22,30 @@ struct SyncDeletionsView: View {
                         .foregroundStyle(Theme.Colors.mutedText)
                     }
                 } else {
-                    ForEach(viewModel.deletionRows) { repository in
-                        repositoryBlock(repository)
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+                        ForEach(viewModel.deletionRows) { group in
+                            ForEach(group.items) { item in
+                                SyncDeletionItemRow(item: item, groupName: group.fullName)
+                            }
+                            ForEach(group.environments) { environment in
+                                SyncDeletionEnvironmentRow(environment: environment, groupName: group.fullName)
+                            }
+                        }
+                    }
+                    .fxDialogListBox()
+                    ForEach(viewModel.deletionRows.flatMap(\.environments)) { environment in
+                        note(String(
+                            localized: "sync.deletions.workflowWarning",
+                            defaultValue: "Workflows that still reference \(environment.name) will recreate it empty."
+                        ))
                     }
                     acknowledgements
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Spacing.xxLarge)
-            .padding(.bottom, Theme.Spacing.xLarge)
+            .padding(.horizontal, Theme.Layout.compactSheetInset)
         }
         .onKeyPress(.return) { .handled }
-    }
-
-    private func repositoryBlock(_ repository: SyncDeletionRepoModel) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
-            Text(verbatim: repository.fullName)
-                .fxTextStyle(.monoName)
-                .foregroundStyle(Theme.Colors.ink)
-                .accessibilityAddTraits(.isHeader)
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(repository.items.enumerated()), id: \.element.id) { index, item in
-                    if index > 0 {
-                        HairlineDivider()
-                    }
-                    Label {
-                        Text(verbatim: item.title)
-                            .fxTextStyle(.body)
-                            .foregroundStyle(Theme.Colors.ink)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        Image(systemName: "trash")
-                            .foregroundStyle(Theme.Colors.danger)
-                    }
-                    .configSheetRowPadding()
-                }
-                ForEach(Array(repository.environments.enumerated()), id: \.element.id) { index, environment in
-                    if index > 0 || !repository.items.isEmpty {
-                        HairlineDivider()
-                    }
-                    SyncDeletionEnvironmentRow(environment: environment)
-                        .configSheetRowPadding()
-                }
-            }
-            .fxCardBackground(.container)
-        }
     }
 
     private var acknowledgements: some View {
@@ -76,39 +56,80 @@ struct SyncDeletionsView: View {
                         localized: "sync.deletions.unknownAck",
                         defaultValue: "Delete even though FX Vault could not see what some environments contain"
                     ),
-                    isOn: $viewModel.unknownContentsAcknowledged
+                    isOn: $viewModel.unknownContentsAcknowledged,
+                    isBoxed: false
                 )
             }
             FXCheckboxRow(
                 title: String(localized: "sync.deletions.ack", defaultValue: "I understand this cannot be undone"),
-                isOn: $viewModel.deletionsAcknowledged
+                isOn: $viewModel.deletionsAcknowledged,
+                isBoxed: false
             )
         }
     }
-}
 
-/// One environment being deleted with its live contents.
-private struct SyncDeletionEnvironmentRow: View {
-    let environment: SyncDeletionEnvironmentModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
-            Label {
-                Text(String(localized: "sync.deletions.environment", defaultValue: "Delete environment \(environment.name)"))
-                    .fxTextStyle(.bodyEmphasized)
-                    .foregroundStyle(Theme.Colors.ink)
-            } icon: {
-                Image(systemName: "trash")
-                    .foregroundStyle(Theme.Colors.danger)
-            }
-            contents
-            Text(String(
-                localized: "sync.deletions.workflowWarning",
-                defaultValue: "Workflows that still reference \(environment.name) will recreate it empty."
-            ))
-            .fxTextStyle(.caption)
+    private func note(_ text: String) -> some View {
+        Text(verbatim: text)
+            .fxTextStyle(.callout)
             .foregroundStyle(Theme.Colors.mutedText)
             .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// `STRIPE_KEY  api-service › production`: the mono name and its place, muted.
+private struct SyncDeletionItemRow: View {
+    let item: SyncIssueModel
+    let groupName: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
+            if let name = item.name {
+                Text(verbatim: name)
+                    .fxTextStyle(.monoMeta)
+                    .foregroundStyle(Theme.Colors.ink)
+                    .textSelection(.enabled)
+                Text(verbatim: item.place?.name ?? groupName)
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            } else {
+                Text(verbatim: item.title)
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.ink)
+            }
+        }
+        .frame(minHeight: Theme.Layout.dialogListRowHeight, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: item.title))
+    }
+}
+
+/// `production  api-service · environment`, then what GitHub holds in it, the branch rules and
+/// the other rules deleted with it.
+private struct SyncDeletionEnvironmentRow: View {
+    let environment: SyncDeletionEnvironmentModel
+    let groupName: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
+                Image(systemName: Theme.Symbols.environment)
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .accessibilityHidden(true)
+                Text(verbatim: environment.name)
+                    .fxTextStyle(.monoMeta)
+                    .foregroundStyle(Theme.Colors.ink)
+                Text(verbatim: SyncCopy.lineDetail(groupName, SyncCopy.environmentKind))
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .lineLimit(1)
+            }
+            .frame(minHeight: Theme.Layout.dialogListRowHeight, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            contents
+                .padding(.leading, Theme.Spacing.large)
         }
     }
 
@@ -117,22 +138,20 @@ private struct SyncDeletionEnvironmentRow: View {
         switch environment.contents {
         case .loaded(let items, let patterns, let foreignRules):
             ForEach(items) { item in
-                HStack(spacing: Theme.Spacing.small) {
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
                     Text(verbatim: item.title)
-                        .fxTextStyle(.monoName)
-                        .foregroundStyle(Theme.Colors.ink)
+                        .fxTextStyle(.monoMeta)
+                        .foregroundStyle(Theme.Colors.mutedText)
                         .textSelection(.enabled)
                     if item.willBeLost {
-                        StatusChip(
-                            title: String(
-                                localized: "sync.deletions.willBeLost",
-                                defaultValue: "not in your vault: will be lost"
-                            ),
-                            tone: .danger
-                        )
+                        Text(String(
+                            localized: "sync.deletions.willBeLost",
+                            defaultValue: "not in your vault: will be lost"
+                        ))
+                        .fxTextStyle(.caption)
+                        .foregroundStyle(Theme.Colors.danger)
                     }
                 }
-                .padding(.leading, Theme.Spacing.large)
             }
             if let patterns {
                 caption(String(localized: "sync.deletions.patterns", defaultValue: "Deployment branch rules: \(patterns)"))
@@ -149,15 +168,10 @@ private struct SyncDeletionEnvironmentRow: View {
                 defaultValue: "GitHub no longer has this environment; the deletion only confirms it."
             ))
         case .unknown(let reason):
-            Label {
-                Text(String(localized: "sync.deletions.unknown", defaultValue: "Contents unknown. \(reason)"))
-                    .fxTextStyle(.caption)
-                    .fixedSize(horizontal: false, vertical: true)
-            } icon: {
-                Image(systemName: "questionmark.diamond")
-            }
-            .foregroundStyle(Theme.Colors.danger)
-            .padding(.leading, Theme.Spacing.large)
+            Text(String(localized: "sync.deletions.unknown", defaultValue: "Contents unknown. \(reason)"))
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.danger)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -165,7 +179,6 @@ private struct SyncDeletionEnvironmentRow: View {
         Text(verbatim: text)
             .fxTextStyle(.caption)
             .foregroundStyle(Theme.Colors.mutedText)
-            .padding(.leading, Theme.Spacing.large)
             .fixedSize(horizontal: false, vertical: true)
     }
 }

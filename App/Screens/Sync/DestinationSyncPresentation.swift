@@ -146,7 +146,9 @@ enum DestinationSyncPresentation {
                     SyncIssueModel(
                         id: "destination|\(change.id)",
                         title: DestinationSyncCopy.deletionTitle(name: change.name, destination: section.destination.copyTargetTitle),
-                        reason: ""
+                        reason: "",
+                        place: place(section.destination),
+                        name: change.name
                     )
                 }
             }

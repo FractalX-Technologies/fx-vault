@@ -7,10 +7,12 @@ import SwiftUI
 /// - `.outline`: hairline-strong border, ink text. Clone, Paste multiple, Back.
 /// - `.ghost`: no chrome until hover. Toolbar-like and inline actions.
 /// - `.destructive`: danger fill, ground text. Only the final confirm of a destructive action.
+/// - `.outlineDestructive`: the outline with danger text (board Sync-Delete "Delete 1").
 ///
-/// Sizes: `.regular` (34 pt, 13 pt text), `.large` (42 pt, 14 pt text) and `.compact` (26 pt,
-/// 12 pt text, 8 pt corners: a place header's buttons). Disabled buttons fade to 40%; keyboard
-/// focus draws a brand ring outside the shape.
+/// Sizes: `.regular` (34 pt, 13 pt text), `.large` (42 pt, 14 pt text), `.compact` (26 pt,
+/// 12 pt text, 8 pt corners: a place header's buttons) and `.dialog` (32 pt, 13 pt text: the 1.0
+/// dialogs, where only the primary is a pill and the others have 8 pt corners). Disabled buttons
+/// fade to 40%; keyboard focus draws a brand ring outside the shape.
 ///
 /// ```swift
 /// Button("Sync 5 changes") { … }
@@ -25,12 +27,14 @@ struct FXButtonStyle: ButtonStyle {
         case outline
         case ghost
         case destructive
+        case outlineDestructive
     }
 
     enum Size: CaseIterable, Sendable {
         case regular
         case large
         case compact
+        case dialog
     }
 
     /// The colors of a variant, resolved per state (pure, for tests and previews).
@@ -77,6 +81,8 @@ struct FXButtonStyle: ButtonStyle {
             Palette(fill: isHovered ? Theme.Colors.surface2 : nil, foreground: Theme.Colors.ink, border: nil)
         case .destructive:
             Palette(fill: Theme.Colors.danger, foreground: Theme.Colors.onInk, border: nil)
+        case .outlineDestructive:
+            Palette(fill: isHovered ? Theme.Colors.surface : nil, foreground: Theme.Colors.danger, border: Theme.Colors.hairlineStrong)
         }
     }
 
@@ -85,20 +91,23 @@ struct FXButtonStyle: ButtonStyle {
         case .regular: Theme.Layout.buttonHeightRegular
         case .large: Theme.Layout.buttonHeightLarge
         case .compact: Theme.Layout.buttonHeightCompact
+        case .dialog: Theme.Layout.buttonHeightDialog
         }
     }
 
-    /// A capsule, or the compact size's rounded rectangle (board Main2-Repository).
-    static func shape(for size: Size) -> AnyShape {
+    /// A capsule, or the boards' 8 pt rounded rectangle: every `.compact` button (board
+    /// Main2-Repository) and the `.dialog` buttons but the primary pill (boards Sync-Delete, NewRepo).
+    static func shape(for size: Size, variant: Variant) -> AnyShape {
         switch size {
         case .regular, .large: AnyShape(Capsule.pill)
-        case .compact: AnyShape(RoundedRectangle(cornerRadius: Theme.Radius.compactRow, style: .continuous))
+        case .dialog where variant == .primary: AnyShape(Capsule.pill)
+        case .compact, .dialog: AnyShape(RoundedRectangle(cornerRadius: Theme.Radius.compactRow, style: .continuous))
         }
     }
 
     static func padding(for size: Size) -> CGFloat {
         switch size {
-        case .regular: Theme.Layout.buttonPaddingRegular
+        case .regular, .dialog: Theme.Layout.buttonPaddingRegular
         case .large: Theme.Layout.buttonPaddingLarge
         case .compact: Theme.Layout.buttonPaddingCompact
         }
@@ -110,6 +119,8 @@ struct FXButtonStyle: ButtonStyle {
         case .regular: return isEmphasized ? Theme.Typography.calloutEmphasized : Theme.Typography.callout
         case .large: return isEmphasized ? Theme.Typography.bodyEmphasized : Theme.Typography.body
         case .compact: return isEmphasized ? Theme.Typography.captionEmphasized : Theme.Typography.caption
+        // The boards' dialog buttons: 13 pt, the filled ones medium.
+        case .dialog: return isEmphasized ? Theme.Typography.bodyEmphasized : Theme.Typography.callout
         }
     }
 
@@ -118,7 +129,7 @@ struct FXButtonStyle: ButtonStyle {
         guard isHovered else { return 1 }
         switch variant {
         case .primary, .destructive: return Theme.Opacity.hovered
-        case .secondary, .outline, .ghost: return 1
+        case .secondary, .outline, .ghost, .outlineDestructive: return 1
         }
     }
 }
@@ -133,7 +144,7 @@ private struct FXButtonBody: View {
     var body: some View {
         let palette = FXButtonStyle.palette(for: style.variant, isHovered: isHovered && isEnabled)
         let basePadding = FXButtonStyle.padding(for: style.size)
-        let shape = FXButtonStyle.shape(for: style.size)
+        let shape = FXButtonStyle.shape(for: style.size, variant: style.variant)
         configuration.label
             .font(FXButtonStyle.font(for: style.variant, size: style.size))
             .lineLimit(1)
@@ -209,7 +220,7 @@ struct FXIconButtonStyle: ButtonStyle {
     static func shape(for size: Size) -> AnyShape {
         switch size {
         case .regular: AnyShape(Circle())
-        case .compact: FXButtonStyle.shape(for: .compact)
+        case .compact: FXButtonStyle.shape(for: .compact, variant: .outline)
         }
     }
 }
@@ -281,6 +292,7 @@ extension View {
                 Button {} label: { Text(verbatim: "Outline") }.fxButtonStyle(.outline, size: size)
                 Button {} label: { Text(verbatim: "Ghost") }.fxButtonStyle(.ghost, size: size)
                 Button {} label: { Text(verbatim: "Delete") }.fxButtonStyle(.destructive, size: size)
+                Button {} label: { Text(verbatim: "Delete 1") }.fxButtonStyle(.outlineDestructive, size: size)
                 Button {} label: { Text(verbatim: "Disabled") }.fxButtonStyle(.primary, size: size).disabled(true)
             }
         }

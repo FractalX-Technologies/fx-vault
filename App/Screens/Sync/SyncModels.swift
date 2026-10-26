@@ -284,6 +284,8 @@ struct SyncRunProgressModel: Equatable {
 
     var completed = 0
     var total = 0
+    /// False for Sync Without Deleting: the run's cards leave the deletions out.
+    var includesDeletions = true
     /// The change in flight (name only).
     var currentName: String?
     var phase: Phase = .starting
@@ -678,13 +680,24 @@ struct SyncDeletionRepoModel: Identifiable, Hashable {
 }
 
 extension SyncPresentationBuilder {
-    static func deletions(_ previews: [RepoDeletionPreviewModel]) -> [SyncDeletionRepoModel] {
+    /// `repositoryName` names an item's place as the summary does (`api-service › production`).
+    static func deletions(
+        _ previews: [RepoDeletionPreviewModel],
+        repositoryName: (RepoID) -> String? = { _ in nil }
+    ) -> [SyncDeletionRepoModel] {
         previews.map { preview in
-            SyncDeletionRepoModel(
+            let repository = repositoryName(preview.repositoryID) ?? preview.fullName
+            return SyncDeletionRepoModel(
                 id: .repository(preview.repositoryID),
                 fullName: preview.fullName,
                 items: preview.itemDeletions.map { change in
-                    SyncIssueModel(id: change.id, title: SyncCopy.changeTitle(change), reason: "")
+                    SyncIssueModel(
+                        id: change.id,
+                        title: SyncCopy.changeTitle(change),
+                        reason: "",
+                        place: place(change.scope, environmentName: environmentName(of: change), repository: repository),
+                        name: SyncCopy.changeName(change)
+                    )
                 },
                 environments: preview.environments.map(environment)
             )

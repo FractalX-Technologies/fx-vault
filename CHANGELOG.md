@@ -12,6 +12,11 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   it came from), blocked changes sit in their place's card with their fix, and the footer counts
   changes, places, deletions and blocked; the button says how many changes will run
   ("Sync 8 Changes").
+- **Sync run and finish.** While Sync runs, the sheet keeps the summary's cards and each line
+  turns from waiting to writing to done (or failed, or not run), with the deletions in a last
+  card; Cancel After Current stops after the write in flight. A run where nothing failed ends on
+  a short "Synced 8 changes" with the places and what stays pending. The deletion check reads
+  "Delete 1 secret?" and lists each name with its place.
 - **Edit organization secrets and variables.** The organization view gains Add Secret, Add
   Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
   with the organization's repositories). A Selected item keeps GitHub's repository list until

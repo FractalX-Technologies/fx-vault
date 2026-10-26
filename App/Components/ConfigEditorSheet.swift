@@ -82,17 +82,21 @@ struct ConfigSheetFooter<Actions: View>: View {
     /// A full sentence (offline, a notice); shown instead of `meta` in caption type.
     let notice: String?
     let isWorking: Bool
+    /// The padding around the row (``SheetFooterInset``).
+    let inset: EdgeInsets
     @ViewBuilder let actions: () -> Actions
 
     init(
         meta: String? = nil,
         notice: String? = nil,
         isWorking: Bool = false,
+        inset: EdgeInsets = SheetFooterInset.regular,
         @ViewBuilder actions: @escaping () -> Actions
     ) {
         self.meta = meta
         self.notice = notice
         self.isWorking = isWorking
+        self.inset = inset
         self.actions = actions
     }
 
@@ -112,8 +116,7 @@ struct ConfigSheetFooter<Actions: View>: View {
             }
             .fixedSize()
         }
-        .padding(.horizontal, Theme.Spacing.xxLarge)
-        .padding(.vertical, Theme.Spacing.largePlus)
+        .padding(inset)
     }
 
     @ViewBuilder private var leading: some View {
@@ -133,6 +136,25 @@ struct ConfigSheetFooter<Actions: View>: View {
                 .frame(width: 0, height: 0)
         }
     }
+}
+
+/// The padding around a sheet footer's row.
+enum SheetFooterInset {
+    /// The sheets' 32 pt sides and 20 pt above and below.
+    static let regular = EdgeInsets(
+        top: Theme.Spacing.largePlus,
+        leading: Theme.Spacing.xxLarge,
+        bottom: Theme.Spacing.largePlus,
+        trailing: Theme.Spacing.xxLarge
+    )
+    /// The 1.0 dialogs (boards Sync-Progress, Sync-Delete): their 22 pt inset at the sides and
+    /// below, 12 pt above (the content ends just before it).
+    static let dialog = EdgeInsets(
+        top: Theme.Spacing.medium,
+        leading: Theme.Layout.compactSheetInset,
+        bottom: Theme.Layout.compactSheetInset,
+        trailing: Theme.Layout.compactSheetInset
+    )
 }
 
 /// Lays out a sheet footer: the leading meta and the trailing pills on one row when the meta fits
