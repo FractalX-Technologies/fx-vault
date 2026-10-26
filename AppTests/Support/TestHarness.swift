@@ -265,12 +265,14 @@ final class TestHarness {
 
     /// Writes a placeholder `az` (the fake runner answers its calls) into the sandbox's `bin`,
     /// first on the probed PATH, so no test finds a real `az` in the Homebrew folders, and
-    /// scripts its access token. Call after ``installFakeGH(version:)``.
+    /// scripts its access token.
     func installFakeAZ() throws {
         let directory = sandbox.appendingPathComponent("bin", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let az = directory.appendingPathComponent("az", isDirectory: false)
         try Data("#!/bin/sh\nexit 1\n".utf8).write(to: az)
         try FileManager.default.setAttributes([.posixPermissions: TestFixtures.executableMode], ofItemAtPath: az.path)
+        try FileManager.default.setAttributes([.posixPermissions: TestFixtures.directoryMode], ofItemAtPath: directory.path)
         stubShellProbe(FakeGHOutput.shellProbe(ghPath: preferences.ghPathOverride, path: "\(directory.path):/usr/bin:/bin"))
         runner.stub(argumentsPrefix: ["account", "get-access-token"], with: .success(FakeAzureOutput.accessToken(expiresOn: .distantFuture)))
     }
