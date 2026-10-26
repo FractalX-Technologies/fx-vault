@@ -9,6 +9,8 @@ struct PlaceHeader<Status: View, Accessories: View, MoreItems: View>: View {
     var titleStyle: SidebarTitleStyle = .mono
     let subline: String
     var titleHelp: String?
+    /// ⋯ More; an edit of the notes has only its own buttons (board Place-Edit).
+    var showsMore = true
     @ViewBuilder let status: () -> Status
     @ViewBuilder let accessories: () -> Accessories
     @ViewBuilder let moreItems: () -> MoreItems
@@ -62,16 +64,18 @@ struct PlaceHeader<Status: View, Accessories: View, MoreItems: View>: View {
     @ViewBuilder
     private var actionItems: some View {
         accessories()
-        Menu {
-            moreItems()
-        } label: {
-            Label(PlaceCopy.more, systemImage: "ellipsis")
+        if showsMore {
+            Menu {
+                moreItems()
+            } label: {
+                Label(PlaceCopy.more, systemImage: "ellipsis")
+            }
+            .menuStyle(.button)
+            .menuIndicator(.hidden)
+            .fxIconButtonStyle(size: .compact)
+            .help(PlaceCopy.more)
+            .accessibilityIdentifier(AccessibilityID.Place.more)
         }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
-        .fxIconButtonStyle(size: .compact)
-        .help(PlaceCopy.more)
-        .accessibilityIdentifier(AccessibilityID.Place.more)
     }
 }
 
@@ -81,6 +85,7 @@ extension PlaceHeader where Status == EmptyView {
         titleStyle: SidebarTitleStyle = .mono,
         subline: String,
         titleHelp: String? = nil,
+        showsMore: Bool = true,
         @ViewBuilder accessories: @escaping () -> Accessories,
         @ViewBuilder moreItems: @escaping () -> MoreItems
     ) {
@@ -89,6 +94,7 @@ extension PlaceHeader where Status == EmptyView {
             titleStyle: titleStyle,
             subline: subline,
             titleHelp: titleHelp,
+            showsMore: showsMore,
             status: { EmptyView() },
             accessories: accessories,
             moreItems: moreItems

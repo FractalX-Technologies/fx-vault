@@ -142,6 +142,12 @@ enum AccessibilityID {
         static let viewMode = "place.viewMode"
         /// A place's notes (1.0 B9; board Main2-Repository).
         static let notes = "place.notes"
+        /// The notes editor's text, Set value…'s Done and the edit's header buttons (1.0 N2).
+        static let notesEditor = "place.notesEditor"
+        static let notesValueDone = "place.notesValueDone"
+        static let notesEditCancel = "place.notesEditCancel"
+        static let notesReview = "place.notesReview"
+        static let notesReviewSave = "place.notesReviewSave"
     }
 
     /// The ⌘K jump palette (1.0).

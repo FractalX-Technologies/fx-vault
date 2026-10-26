@@ -163,6 +163,39 @@ public struct FolderRepository: Sendable {
         Self.log.info("Deleted \(ids.count, privacy: .public) folder items")
     }
 
+    /// Saves the notes' edits of a folder (1.0 N2) in one transaction; nothing is written when
+    /// one fails.
+    public func applyEdits(_ edits: PlaceItemEditsModel, folderID: FolderID) throws(ConfigRepositoryError) {
+        let normalized = try edits.normalized()
+        defer { normalized.wipe() }
+        try write { keys, tx, now in
+            let writer = writer(keys, tx, now)
+            _ = try writer.requireFolder(folderID)
+            func requireInFolder(_ id: ConfigItemID) throws -> FolderItemRecord {
+                let record = try writer.existing(id)
+                guard record.folderID == folderID else { throw ConfigRepositoryError.itemNotFound }
+                return record
+            }
+            for id in normalized.deletions {
+                _ = try requireInFolder(id)
+                try writer.delete(id)
+            }
+            for change in normalized.changes {
+                let current = try requireInFolder(change.id)
+                if let name = change.name {
+                    try writer.update(change.id, name: name, kind: current.kind)
+                }
+                if let value = change.value {
+                    try writer.editValue(change.id, value: value)
+                }
+            }
+            for addition in normalized.additions {
+                try writer.add(folderID: folderID, kind: addition.kind, name: addition.name, value: addition.value)
+            }
+        }
+        Self.log.info("Saved \(edits.count, privacy: .public) folder edits from the notes")
+    }
+
     /// The decrypted value of a folder item, for Reveal, Copy and Edit. The caller wipes it.
     public func reveal(_ id: ConfigItemID) throws(ConfigRepositoryError) -> SecretBytes {
         try performConfig {

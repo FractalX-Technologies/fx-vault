@@ -26,6 +26,8 @@ final class FolderDetailViewModel: LockObserving {
     let values: ConfigValueRevealer
     /// Reveal in the notes, after Touch ID or the master password (1.0 B9).
     let notesReveal: NotesRevealModel
+    /// The notes being edited (1.0 N2).
+    var notesEdit: NotesEditSession?
     /// Copy and paste with "Replace or keep?".
     let copyFlow: ItemCopyFlow
     var selection: Set<ConfigItemID> = []
@@ -379,6 +381,7 @@ final class FolderDetailViewModel: LockObserving {
     // MARK: - LockObserving
 
     func vaultDidLock() {
+        notesEdit?.finish()
         values.remaskAll()
         values.clearVariables()
         pendingDeletion = nil
@@ -392,6 +395,17 @@ extension FolderDetailViewModel: ConfigTableModel {}
 extension FolderDetailViewModel: NotesPlaceModel {
     var notesPlaceName: String {
         folder?.name ?? ""
+    }
+}
+
+extension FolderDetailViewModel: NotesEditablePlaceModel {
+    func beginNotesEdit(at line: Int?) {
+        let folders = dependencies.folders
+        let folderID = folderID
+        let target = NotesEditTargetModel(kind: .folder, title: notesPlaceName, parent: PlaceCopy.folder) { edits throws(ConfigRepositoryError) in
+            try folders.applyEdits(edits, folderID: folderID)
+        }
+        startNotesEdit(target: target, caretLine: line)
     }
 }
 

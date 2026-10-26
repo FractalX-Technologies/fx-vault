@@ -75,6 +75,22 @@ extension Theme {
             NSFont.monospacedSystemFont(ofSize: Size.body, weight: .regular)
         }
 
+        /// The notes editor's text (1.0 N2): SF Mono at the callout size, as the read-only notes.
+        static var nsNotes: NSFont {
+            NSFont.monospacedSystemFont(ofSize: Size.callout, weight: .regular)
+        }
+
+        /// A section's `# Secrets` line in the notes editor: italic, as in the read-only notes.
+        static var nsNotesHeading: NSFont {
+            let descriptor = nsNotes.fontDescriptor.withSymbolicTraits(.italic)
+            return NSFont(descriptor: descriptor, size: Size.callout) ?? nsNotes
+        }
+
+        /// The label inside a notes token (`••••`, "Set value…").
+        static var nsNotesToken: NSFont {
+            NSFont.monospacedSystemFont(ofSize: Size.label, weight: .regular)
+        }
+
         // MARK: SF Symbols
 
         /// The symbol above an empty state.

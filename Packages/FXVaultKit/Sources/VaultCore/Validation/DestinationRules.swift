@@ -27,18 +27,24 @@ public enum DestinationRules {
     /// FX Vault's name for a name the provider listed, or nil when it cannot become a valid
     /// name (the caller lists such items as not usable with ``unusableReason(forRemoteName:provider:)``).
     public static func localName(forRemoteName remoteName: String, provider: DestinationProvider) -> String? {
-        let candidate = remoteName.replacingOccurrences(of: "-", with: "_").uppercased()
+        let candidate = localCandidate(forRemoteName: remoteName)
         guard GitHubNameValidator.isValid(candidate), violation(of: candidate, kind: .secret, provider: provider) == nil else {
             return nil
         }
         return candidate
     }
 
+    /// The name `remoteName` (or a name typed as Key Vault writes it) becomes in FX Vault: dashes to
+    /// underscores, uppercased. Not validated.
+    public static func localCandidate(forRemoteName remoteName: String) -> String {
+        remoteName.replacingOccurrences(of: "-", with: "_").uppercased()
+    }
+
     /// Why a listed remote name cannot be used, or nil when ``localName(forRemoteName:provider:)``
     /// accepts it.
     public static func unusableReason(forRemoteName remoteName: String, provider: DestinationProvider) -> ValidationError? {
         guard localName(forRemoteName: remoteName, provider: provider) == nil else { return nil }
-        let candidate = remoteName.replacingOccurrences(of: "-", with: "_").uppercased()
+        let candidate = localCandidate(forRemoteName: remoteName)
         if let rule = GitHubNameValidator.violation(in: candidate) {
             return .invalidName(rule)
         }

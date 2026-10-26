@@ -187,6 +187,8 @@ final class RepoDetailViewModel: LockObserving {
     let values: ConfigValueRevealer
     /// Reveal in the notes, after Touch ID or the master password (1.0 B9).
     let notesReveal: NotesRevealModel
+    /// The notes being edited (1.0 N2).
+    var notesEdit: NotesEditSession?
     var selection: Set<ConfigItemID> = []
     private(set) var driftReport: DriftReportModel?
     /// Why the last drift check failed (shown as a small note); nil otherwise.
@@ -576,6 +578,7 @@ final class RepoDetailViewModel: LockObserving {
     /// Shows another scope of the repository: masks everything and observes its items.
     func select(scope: ConfigScope) {
         guard scope != self.scope else { return }
+        notesEdit?.finish()
         self.scope = scope
         selection.removeAll()
         notesReveal.cancel()
@@ -1026,6 +1029,7 @@ final class RepoDetailViewModel: LockObserving {
     // MARK: - LockObserving
 
     func vaultDidLock() {
+        notesEdit?.finish()
         remaskAll()
         values.clearVariables()
         inheritedValues = [:]
@@ -1046,6 +1050,21 @@ extension RepoDetailViewModel: NotesPlaceModel {
 
     var changedAtSourceIDs: Set<ConfigItemID> {
         driftReport?.changedItemIDs(in: scope) ?? []
+    }
+}
+
+extension RepoDetailViewModel: NotesEditablePlaceModel {
+    /// The Review's subtitle names the repository above an environment, or the owner above the
+    /// repository's own scope.
+    func beginNotesEdit(at line: Int?) {
+        let config = dependencies.config
+        let repositoryID = repositoryID
+        let scope = scope
+        let parent = scope.level == .environment ? repository?.name : repository?.ownerLogin
+        let target = NotesEditTargetModel(kind: .repository, title: headerTitle, parent: parent) { edits throws(ConfigRepositoryError) in
+            try config.applyEdits(edits, repositoryID: repositoryID, scope: scope)
+        }
+        startNotesEdit(target: target, caretLine: line)
     }
 }
 

@@ -38,7 +38,9 @@ the secrets your code reads at runtime in Azure Key Vault.
 - **Notes.** Every place opens on its notes: numbered `# Secrets` and `# Variables` sections,
   secrets masked and variables in plain text, what a repository gets from its organization (read
   only), and marks for what changed on GitHub or waits for the next Sync. Revealing a secret
-  there asks Touch ID or your master password. Notes | Table switches to the table.
+  there asks Touch ID or your master password. Notes | Table switches to the table. Click a
+  line (or ⋯ More › Edit Notes) to edit the notes as text; a secret's value goes in Set value…,
+  never in the text, and Review ⌘S turns the edits into pending changes for the next Sync.
 - **File secrets.** Add a key file (`.p8`, `.pem`, `.json`) as a secret with ⋯ More › Add File
   Secret… or by dropping it on a place: stored as exact text or Base64 (binary files always),
   within GitHub's 48,000 bytes or Key Vault's 25,600 after Base64. The name comes from the file

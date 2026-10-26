@@ -193,6 +193,39 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
+    /// 1.0 N2 (boards Place-Edit, Place-Errors, Place-Review): the notes being edited, with a
+    /// changed variable, a new secret waiting for its value and a name GitHub refuses; then the
+    /// Review of a save.
+    @Test func mainWindowNotesEdit() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let detail = try #require(main.detail)
+        main.placeViewMode = .notes
+        detail.beginNotesEdit(at: nil)
+        let session = try #require(detail.notesEdit)
+        let editor = NotesTextView(session: session)
+        editor.frame = NSRect(x: 0, y: 0, width: 800, height: 600)
+        let secretsEnd = (editor.string as NSString).range(of: "\n\n# Variables").location
+        editor.setSelectedRange(NSRange(location: secretsEnd, length: 0))
+        NotesEditorTests.type("\nNEW_API_KEY=", in: editor)
+        editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+        NotesEditorTests.type("MY-KEY = x\nGITHUB_TOKEN = y\n", in: editor)
+        try await SnapshotOutput.write("main-notes-edit", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+
+        let fixed = (editor.string as NSString).range(of: "MY-KEY = x\nGITHUB_TOKEN = y\n")
+        editor.setSelectedRange(fixed)
+        NotesEditorTests.type("LOG_LEVEL = debug\n", in: editor)
+        let token = try #require(NotesEditText.paragraphs(of: editor.attributedString()).first { $0.text.hasPrefix("NEW_API_KEY") }?.tokens.first)
+        session.commitValue("FXV_SNAPSHOT_NEW", for: token)
+        session.requestReview()
+        let review = try #require(session.review)
+        try await SnapshotOutput.write("notes-review", size: CGSize(width: Theme.Layout.syncSheetWidth, height: SnapshotOutput.sheetHeight)) {
+            NotesReviewSheet(review: review, session: session)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
     // MARK: - Linked copies (v0.4.1)
 
     /// DATABASE_URL copied to the repository level and to staging: the Linked chip with 3.

@@ -83,6 +83,26 @@ struct SecretValueEditorTests {
         #expect(textView.undoManager == nil || !textView.allowsUndo)
     }
 
+    /// Set value… in the notes editor (1.0 N2) opens with the keyboard in its field, once: a later
+    /// move between windows leaves the focus where the user put it.
+    @Test func aFieldThatFocusesWhenShownTakesTheKeyboardOnce() {
+        let (textView, _, _) = makeEditor()
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200), styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        textView.focusesWhenShown = true
+        window.contentView?.addSubview(textView)
+        #expect(window.firstResponder === textView)
+        #expect(!textView.focusesWhenShown)
+
+        let plain = SecretTextView.makeScrollableEditor().documentView
+        window.makeFirstResponder(nil)
+        if let plain {
+            window.contentView?.addSubview(plain)
+        }
+        #expect(window.firstResponder !== plain, "only a field asked to focuses")
+    }
+
     @Test func secureEventInputFollowsFocus() {
         let (textView, _, _) = makeEditor()
         textView.beginSecureEventInput()

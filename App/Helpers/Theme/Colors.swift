@@ -87,6 +87,16 @@ extension Theme {
         /// the window's appearance.
         static let windowBackground = NSColor(resource: .ground)
 
+        /// The notes editor's AppKit text and tokens (1.0 N2). Dynamic, like ``windowBackground``.
+        enum Editor {
+            static let ink = NSColor(resource: .ink)
+            static let mutedText = NSColor(resource: .mutedText)
+            static let subtleText = NSColor(resource: .subtleText)
+            static let surface2 = NSColor(resource: .surface2)
+            static let hairlineStrong = NSColor(resource: .hairlineStrong)
+            static let danger = NSColor(resource: .danger)
+        }
+
         // MARK: Legacy names (v0.2 screens; the screen agents migrate them)
 
         /// Legacy name of ``brand``.

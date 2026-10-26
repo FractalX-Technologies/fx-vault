@@ -259,6 +259,42 @@ public struct DestinationRepository: Sendable {
         }
     }
 
+    /// Saves the notes' edits of a destination (1.0 N2) in one transaction; nothing is written
+    /// when one fails. They stay pending until the next Sync.
+    public func applyEdits(_ edits: PlaceItemEditsModel, destinationID: DestinationID) throws(ConfigRepositoryError) {
+        let normalized = try edits.normalized()
+        defer { normalized.wipe() }
+        try write { keys, tx, now in
+            let writer = writer(keys, tx, now)
+            _ = try writer.requireDestination(destinationID)
+            func requireInDestination(_ id: ConfigItemID) throws -> DestinationItemRecord {
+                let record = try writer.existing(id)
+                guard record.destinationID == destinationID, !record.isDeleted else {
+                    throw ConfigRepositoryError.itemNotFound
+                }
+                return record
+            }
+            for id in normalized.deletions {
+                _ = try requireInDestination(id)
+                try writer.delete(id)
+            }
+            for change in normalized.changes {
+                let current = try requireInDestination(change.id)
+                var holder = change.id
+                if let name = change.name {
+                    holder = try writer.update(change.id, name: name, kind: current.kind)
+                }
+                if let value = change.value {
+                    try writer.editValue(holder, value: value)
+                }
+            }
+            for addition in normalized.additions {
+                try writer.add(destinationID: destinationID, kind: addition.kind, name: addition.name, value: addition.value)
+            }
+        }
+        Self.log.info("Saved \(edits.count, privacy: .public) destination edits from the notes")
+    }
+
     /// Reverts pending deletions and adds.
     public func revertItems(_ ids: [ConfigItemID]) throws(ConfigRepositoryError) {
         try write { keys, tx, now in

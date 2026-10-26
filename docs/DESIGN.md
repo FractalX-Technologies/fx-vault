@@ -554,6 +554,49 @@ foreground color, so `.primary` text still turns white on selected rows.
   `subtleText`, not the board's lighter gray (below AA); the card keeps the table's
   16 pt `container` radius; Key Vault lines have no content-type chip, expiry or disabled lines;
   the table's eye still reveals without asking (it predates B9).
+- Notes editing (1.0 N2; boards Place-Edit, Place-Errors, KV-NameRules; `NotesEditorView`,
+  `NotesTextView`): a click on a line of the place's own (the text cursor, VoiceOver's Edit
+  Notes action) or ⋯ More › Edit Notes turns the notes into one TextKit 2 `NSTextView` in the
+  same card, 24 pt lines in `nsNotes` (SF Mono 13 pt), the caret's line on `surface`. Revealed
+  values hide first. The header keeps the name, says "Editing · secret values stay masked; click
+  one to set it", and swaps its buttons for "4 unsaved changes" (or "Fix 4 lines to save" in
+  `danger`), Cancel (`.outline`) and Review with a ⌘S keycap (`.primary`; ⌘S, no Esc: one key
+  would drop every edit); ⋯ More is gone while editing. `# Secrets` and `# Variables` stay whole
+  and first on their line. A value is one token (`NotesTokenAttachment`, 16 pt so lines stay
+  24 pt): `••••`, a dashed "Set value…" for a secret without one, "3 lines" for a multi-line
+  variable, "AuthKey.p8 · file · 6 lines" for a kept file secret. Single-line variables are
+  plain text. Each line's note sits at the trailing edge in `.caption` `subtleText` (at most
+  240 pt or 40 % of the width): "new · secret", "was info", "renamed from X", "replaces value",
+  "value set", "comments aren't saved"; a line that can't be saved gets a 5 pt `danger` dot, the
+  reason in `danger` and a wavy underline under the name: "Set a value", "Use letters, digits and
+  _", "Same name as line 2", "Belongs under Variables", "Kind is fixed after Sync", "N bytes ·
+  over GitHub's 48,000". A Key Vault adds its own (board KV-NameRules): dashes are taken as
+  underscores ("saved as CACHE_URL"), "Same as CACHE-URL in Key Vault", "Both become X in Key
+  Vault" and its 127-character limit. Removed items follow the text as "removed · Undo" rows, then
+  a repository's organization section, read only and numbered on.
+- Set value… (board Place-SecretValue; `NotesValuePopover`): an `NSPopover` at the token, 300 pt:
+  "NAME · value", the `SecretValueEditor` (focused, secure input, text services off), Paste (the
+  system `PasteButton`, so the clipboard is read only on that click), Generate (32 random bytes
+  as 43 base64url characters), Secret | Variable on a new GitHub line, "Leave it empty to keep
+  the current value." on an existing secret, and Done (⌘↩). It opens on a click on a token and
+  on any key typed after a secret's `=`; typing `=` after a new secret's name brings its token.
+- Paste (board Place-Paste): `KEY=value` lines from the clipboard become lines with masked
+  tokens, a name the section already has takes the new value ("replaces value"), and the
+  clipboard is cleared; a toast at the bottom says "3 values set from the clipboard · clipboard
+  cleared" for 4 s (`Theme.Durations.notesToast`). Other text pastes as text and stays on the
+  clipboard. Copy and Cut write `••••` for a token; pasting back into the editor brings the cut
+  line whole, a second copy as a new "Set value…" line.
+- Review (board Place-Review; `NotesReviewSheet`): ⌘S opens a `DialogSheet` "Review changes to
+  production", "api-service · 4 changes", with Added · N, Changed · N and Removed · N in hairline
+  boxes: `NAME` in `.monoName`, its kind, and the detail at the trailing edge ("info → debug",
+  "value set", "example-org's value applies after Sync"). The footer says nothing reaches GitHub
+  (or Key Vault) until Sync; a folder's says it saves at once. Cancel (Esc) goes back to the
+  editor, Save (Return) writes the pending changes and the notes read only again.
+- Departures from those boards: removed items are listed under the text, not kept in place
+  struck through; Set value… shows what is typed (the shared `SecretValueEditor`), not dots;
+  there is no Convert… link (a new secret's Kind does it); tokens are 16 pt, not the read
+  notes' 18 pt, to keep 24 pt lines; a file token has no doc symbol; another place, Table or a
+  lock drops the edit without asking; an organization's notes stay read only.
 - ⋯ More (board Main2-Actions), what each place offers, disabled when the account may not:
   New Secret, New Variable, Add File Secret… | Paste Multiple…, Import .env…, Export .env…, Copy All | Copy To
   (the selection, or the open tab when nothing is selected), Share Securely… | Deployment
@@ -1056,6 +1099,7 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 | Folder-View, Folder-LinkedUpdate, KV-Place, KV-NameRules, Org-UsedBy | `LinkedChip`, `LinkedUpdateList`, `DestinationDetailScreen` (`DestinationFootnotes`), `OrgVisibility.reachTitle` |
 | Place-FileSheet, Place-FileDrop | `FileSecretScreen`, `.fileSecretDropTarget`, `FileSecretChip` |
 | Main2-Repository, Place-Reveal, KV-Place (notes) | `PlaceNotesView`, `PlaceViewModePicker`, `NotesRevealModel`, `NotesDocumentModel`, `FXInkLinkButtonStyle` |
+| Place-Edit, Place-SecretValue, Place-Paste, Place-Errors, KV-NameRules, Place-Review (notes editing) | `NotesEditorView`, `NotesTextView`, `NotesValuePopover`, `NotesReviewSheet`, `NotesEditHeader`, `NotesEditAnalysis` |
 | FX Vault Destinations 3: Key Vault destination | `DestinationDetailScreen`, the RUNTIME rows of `ScopeListView` |
 | FX Vault Destinations 4: multi-provider Sync review | `DestinationSyncPresentation` sections in the Sync sheet |
 

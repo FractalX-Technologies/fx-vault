@@ -14,7 +14,7 @@ struct FolderDetailScreen: View {
             FolderDetailHeader(viewModel: viewModel, main: main)
             switch main.placeViewMode {
             case .notes:
-                PlaceNotesView(model: viewModel)
+                PlaceNotesContent(model: viewModel)
             case .table:
                 FolderDetailControls(viewModel: viewModel)
                 ConfigTableView(
@@ -59,6 +59,14 @@ private struct FolderDetailHeader: View {
     let main: MainViewModel
 
     var body: some View {
+        if let edit = viewModel.notesEdit {
+            NotesEditHeader(title: viewModel.folder?.name ?? "", titleStyle: .sans, session: edit)
+        } else {
+            header
+        }
+    }
+
+    private var header: some View {
         PlaceHeader(title: viewModel.folder?.name ?? "", titleStyle: .sans, subline: viewModel.subline) {
             CopyToMenu(title: PlaceCopy.copyTo, rows: viewModel.placeCopyRows, viewModel: viewModel, showsChevron: true)
                 .menuStyle(.button)
@@ -71,6 +79,8 @@ private struct FolderDetailHeader: View {
             .disabled(viewModel.items.isEmpty)
             PlaceViewModePicker(main: main)
         } moreItems: {
+            NotesEditMenuItem(model: viewModel, main: main)
+            Divider()
             PlaceItemMoreItems(viewModel: viewModel) {
                 CopyAllMenuItem(isEnabled: viewModel.canCopyAll) {
                     viewModel.copyAll()
