@@ -215,7 +215,7 @@ private struct ItemEditorForm: View {
 
     private var linkedField: some View {
         ConfigSheetField(String(localized: "itemEditor.linked.header", defaultValue: "Linked copies")) {
-            LinkedUpdateList(copies: viewModel.linkedCopies, canEdit: viewModel.canEdit) { copy in
+            LinkedUpdateList(copies: viewModel.linkedCopies, itemName: viewModel.item?.name ?? viewModel.name, canEdit: viewModel.canEdit) { copy in
                 Binding(
                     get: { viewModel.linkedSelection.contains(copy.itemID) && copy.isEditable },
                     set: { viewModel.setLinkedCopy(copy.itemID, included: $0) }

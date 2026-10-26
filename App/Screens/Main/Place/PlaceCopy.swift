@@ -61,9 +61,19 @@ nonisolated enum PlaceCopy {
         path([repository, environment])
     }
 
+    /// Between the steps of a place's path (the toolbar's title, the dialogs' titles).
+    static let pathSeparator = " › "
+
     /// "example-org › api-service › staging": the steps as the toolbar's path joins them.
     static func path(_ steps: [String]) -> String {
-        steps.joined(separator: " › ")
+        steps.joined(separator: pathSeparator)
+    }
+
+    /// The first three names, then "and N more".
+    static func names(_ names: [String]) -> String {
+        let shown = Array(names.prefix(3)).formatted(.list(type: .and))
+        guard names.count > 3 else { return shown }
+        return String(localized: "main.detail.delete.names.more", defaultValue: "\(names.prefix(3).joined(separator: ", ")) and \(names.count - 3) more")
     }
 
     /// "2 changed on GitHub" (board Main2-Repository).

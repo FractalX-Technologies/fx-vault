@@ -34,18 +34,9 @@ final class SharingSettingsViewModel: LockObserving {
 
         /// "Show names": the secrets first (the ones to rotate), then the variables. A converted
         /// item can carry one name as both, so a name is keyed by its kind too.
-        var names: [NameModel] {
-            secretNames.map { NameModel(kind: .secret, name: $0) }
-                + variableNames.map { NameModel(kind: .variable, name: $0) }
-        }
-    }
-
-    struct NameModel: Identifiable, Hashable {
-        let kind: ConfigKind
-        let name: String
-
-        var id: Self {
-            self
+        var names: [ItemNameModel] {
+            secretNames.map { ItemNameModel(kind: .secret, name: $0) }
+                + variableNames.map { ItemNameModel(kind: .variable, name: $0) }
         }
     }
 

@@ -154,6 +154,33 @@ struct CopyToRepositoryViewModelTests {
         #expect(differs.itemID == inStaging.id)
     }
 
+    /// A copy in a repository the account can't write (WRITE is read-only by default) has no
+    /// checkbox, says why, and keeps its value when the item is saved.
+    @Test func aReadOnlyCopyIsLeftAlone() async throws {
+        let (harness, readOnlyID) = try await EditorFixtures.importedHarness(permission: "WRITE")
+        let config = harness.data.config
+        let baseURL = try await EditorFixtures.item(harness, readOnlyID, named: "BASE_URL")
+        let otherID = try await harness.stageRepository(name: "other-repo")
+        try config.copyItems([baseURL.id], to: .repository, repositoryID: otherID, conflicts: .keep)
+        let copy = try await EditorFixtures.item(harness, otherID, named: "BASE_URL")
+
+        let editor = ItemEditorViewModel(
+            context: ItemEditorContext(repositoryID: otherID, scope: .repository, mode: .edit(copy.id)),
+            dependencies: harness.dependencies(recorder: ActionRecorder())
+        )
+        await editor.load()
+        let linked = try #require(editor.linkedCopies.first)
+        #expect(linked.itemID == baseURL.id)
+        #expect(linked.blockedNote == "can’t update · read only")
+        #expect(editor.linkedSelection.isEmpty, "a read-only copy is never checked")
+
+        editor.value = RepoDetailCopyTests.newValue
+        #expect(editor.save())
+        let kept = try config.reveal(baseURL.id)
+        defer { kept.wipe() }
+        #expect(kept.utf8String() == EditorFixtures.variableValue)
+    }
+
     @Test func uncheckingEveryCopyUpdatesOnlyTheItem() async throws {
         let fixture = try await Fixture()
         let config = fixture.harness.data.config

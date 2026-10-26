@@ -20,20 +20,25 @@ struct DeleteItemsSheetModel: Identifiable, Equatable {
         /// On GitHub or in the Key Vault: the next Sync deletes it there.
         let isOnRemote: Bool
         let hasValue: Bool
+        var isLinked = false
     }
 
     /// "Delete 2 secrets from api-service › production?"
     let title: String
-    let names: [String]
+    /// Keyed by kind too: a secret and a variable can share a name.
+    let names: [ItemNameModel]
+    /// Both kinds are listed (the title says "items"), so each row says its kind.
+    let showsKind: Bool
     let notes: [String]
 
-    var id: [String] {
+    var id: [ItemNameModel] {
         names
     }
 
     init(entries: [Entry], place: String, target: DeleteItemsTarget) {
         title = Self.title(entries, place: place)
-        names = entries.map(\.name)
+        names = entries.map { ItemNameModel(kind: $0.kind, name: $0.name) }
+        showsKind = Set(entries.map(\.kind)).count > 1
         notes = Self.notes(entries, target: target)
     }
 
@@ -55,18 +60,12 @@ struct DeleteItemsSheetModel: Identifiable, Equatable {
         let local = entries.count - onRemote
         switch target {
         case .folder:
-            return [FolderCopy.deleteItemsMessage]
+            return [FolderCopy.deleteItemsMessage(count: entries.count)]
         case .gitHub:
-            let missingValue = entries.contains { $0.kind == .secret && !$0.hasValue }
             return [
                 remoteNote(onRemote: onRemote, total: entries.count, target: target),
                 localNote(local, isTheOnlyOne: onRemote == 0),
-                missingValue
-                    ? String(
-                        localized: "delete.sheet.gitHub.irreversible.valueMissing",
-                        defaultValue: "GitHub can’t undo this, and FX Vault has no copy of secrets without a value."
-                    )
-                    : String(localized: "delete.sheet.gitHub.irreversible", defaultValue: "GitHub can’t undo this."),
+                irreversibleNote(entries),
             ].compactMap { $0 }
         case .keyVault:
             return [
@@ -78,8 +77,32 @@ struct DeleteItemsSheetModel: Identifiable, Equatable {
                         defaultValue: "Key Vault keeps deleted secrets recoverable for up to 90 days."
                     )
                     : nil,
+                linkedNote(entries),
             ].compactMap { $0 }
         }
+    }
+
+    /// Only what reaches GitHub is lost there; FX Vault never had the value of a secret GitHub
+    /// holds without one. nil when nothing listed is on GitHub.
+    private static func irreversibleNote(_ entries: [Entry]) -> String? {
+        let remote = entries.filter(\.isOnRemote)
+        if remote.isEmpty {
+            return nil
+        }
+        return remote.contains { $0.kind == .secret && !$0.hasValue }
+            ? String(
+                localized: "delete.sheet.gitHub.irreversible.valueMissing",
+                defaultValue: "GitHub can’t undo this, and FX Vault has no copy of secrets without a value."
+            )
+            : String(localized: "delete.sheet.gitHub.irreversible", defaultValue: "GitHub can’t undo this.")
+    }
+
+    /// A Key Vault delete leaves the item's linked copies in repositories and folders alone.
+    private static func linkedNote(_ entries: [Entry]) -> String? {
+        guard entries.contains(where: \.isLinked) else { return nil }
+        return entries.count == 1
+            ? String(localized: "delete.sheet.keyVault.linked.one", defaultValue: "Its linked copies elsewhere stay.")
+            : String(localized: "delete.sheet.keyVault.linked", defaultValue: "Their linked copies elsewhere stay.")
     }
 
     /// "They’re removed from GitHub at the next Sync, which asks again." nil when none is there.
@@ -137,7 +160,7 @@ struct DeleteItemsSheetModel: Identifiable, Equatable {
 
 extension DeleteItemsSheetModel.Entry {
     init(_ row: ConfigRowModel) {
-        self.init(name: row.name, kind: row.kind, isOnRemote: row.isSynced, hasValue: row.hasValue)
+        self.init(name: row.name, kind: row.kind, isOnRemote: row.isSynced, hasValue: row.hasValue, isLinked: row.isLinked)
     }
 
     init(_ item: OrgItemModel) {
@@ -146,8 +169,8 @@ extension DeleteItemsSheetModel.Entry {
 }
 
 /// The "Delete?" sheet (boards Main2-Delete, Main2-DeleteKeyVault): the names in the grey list
-/// box, what happens next, Cancel and the red Delete. Neither button is the default, so Return
-/// deletes nothing; Esc cancels.
+/// box (it scrolls past `dialogListMaxHeight`), what happens next, Cancel and the red Delete.
+/// Neither button is the default, so Return deletes nothing; Esc cancels.
 struct DeleteItemsSheet: View {
     let model: DeleteItemsSheetModel
     let cancel: () -> Void
@@ -155,23 +178,18 @@ struct DeleteItemsSheet: View {
 
     var body: some View {
         DialogSheet(title: model.title) {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(model.names, id: \.self) { name in
-                    Text(verbatim: name)
-                        .fxTextStyle(.monoMeta)
-                        .foregroundStyle(Theme.Colors.ink)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .frame(minHeight: Theme.Layout.dialogListRowHeight, alignment: .leading)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(model.names) { name in
+                        DeleteItemsNameRow(name: name, showsKind: model.showsKind)
+                    }
                 }
             }
+            .frame(maxHeight: Theme.Layout.dialogListMaxHeight)
             .fxDialogListBox()
             VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
                 ForEach(model.notes, id: \.self) { note in
-                    Text(verbatim: note)
-                        .fxTextStyle(.callout)
-                        .foregroundStyle(Theme.Colors.mutedText)
-                        .fixedSize(horizontal: false, vertical: true)
+                    DialogSentence(note)
                 }
             }
         } actions: {
@@ -184,6 +202,29 @@ struct DeleteItemsSheet: View {
         }
         .frame(width: Theme.Layout.sheetWidth)
         .onKeyPress(.return) { .handled }
+    }
+}
+
+/// `STRIPE_KEY` in mono, and `secret` muted after it when both kinds are listed.
+private struct DeleteItemsNameRow: View {
+    let name: ItemNameModel
+    let showsKind: Bool
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
+            Text(verbatim: name.name)
+                .fxTextStyle(.monoMeta)
+                .foregroundStyle(Theme.Colors.ink)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            if showsKind {
+                Text(verbatim: SyncCopy.kindTitle(name.kind))
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: Theme.Layout.dialogListRowHeight, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
 

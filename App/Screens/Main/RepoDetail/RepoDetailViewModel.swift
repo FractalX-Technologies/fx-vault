@@ -519,6 +519,9 @@ final class RepoDetailViewModel: LockObserving {
         tasks.set("items", Task { [weak self] in
             do {
                 for try await items in stream {
+                    // A cancelled stream still hands over what it buffered: after a scope switch,
+                    // the previous scope's snapshot would overwrite the new one.
+                    guard !Task.isCancelled else { return }
                     self?.apply(items)
                 }
             } catch {

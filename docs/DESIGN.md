@@ -372,7 +372,9 @@ alias); `DialogSwitch` (a mini switch before its title; the title toggles it unl
 `DialogTokenChip` (`production ×`, 22 pt, 6 pt corners, mono) and the dashed `DialogAddChip`
 (its face, `DialogAddChipLabel`, also labels an add menu), laid out in a `FlowLayout`;
 `StatusChip.dialogTag` (`production`, 18 pt, 6 pt corners, an ink hairline, 11 pt medium) beside
-a name in a dialog list. Small actions in a row are `.compact` buttons (Add Rule, Try Again).
+a name in a dialog list; its `.quiet` tone (muted on `hairlineStrong`, 11 pt regular) with an
+optional symbol is a linked row's tag. A dialog's body sentence is `DialogSentence` (13 pt
+`mutedText`, wrapped). Small actions in a row are `.compact` buttons (Add Rule, Try Again).
 
 `PassphraseView` (App/Components) is the generated passphrase card of onboarding; `EmptyStateView` uses the light symbol, a `.headline` ink title and a `mutedText`
 `.callout` message.
@@ -505,10 +507,12 @@ foreground color, so `.primary` text still turns white on selected rows.
 - Delete… and Delete Selected… (boards Main2-Delete, Main2-DeleteKeyVault): `DeleteItemsSheet`,
   a 440 pt `DialogSheet` titled "Delete 2 secrets from api-service › production?" (secrets,
   variables or items; the place as the toolbar names it), the names in `.fxDialogListBox()`
-  (`.monoMeta`), then muted `.callout` notes: what the next Sync does on GitHub or in Key Vault
-  ("which asks again"), the ones never synced removed now, and "GitHub can’t undo this" (with
-  "FX Vault has no copy of secrets without a value" when such a secret is listed) or "Key Vault
-  keeps deleted secrets recoverable for up to 90 days"; a folder says its items go now. Cancel
+  (`.monoMeta`; each says "secret" or "variable" when both are listed; it scrolls past
+  `dialogListMaxHeight`), then `DialogSentence` notes: what the next Sync does on GitHub or in Key Vault
+  ("which asks again"), the ones never synced removed now, and "GitHub can’t undo this" when one is
+  on GitHub (with "FX Vault has no copy of secrets without a value" when such a secret is there) or "Key Vault
+  keeps deleted secrets recoverable for up to 90 days" (and "Their linked copies elsewhere stay"
+  when one is linked); a folder says its items go now. Cancel
   outlined (Esc) and the red `.destructive` Delete; Return does nothing.
 - An environment row's context menu (board Main2-Actions): Rename…, Duplicate Environment…,
   Share Securely…, Refresh, Revert Changes (only when there is a change to undo; not on the
@@ -527,8 +531,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   (the destructive style stays for the dialog's final confirm), and Deselect as an outline
   circle.
 - Linked copies (v0.4.1; 1.0 board Folder-View): a linked row shows `LinkedChip` after its
-  name, a tag with a `hairlineStrong` outline and `Theme.Radius.token` corners
-  (`dialogTagHeight`) saying "3 places" in `Theme.Typography.label` `mutedText`. Its
+  name, a `StatusChip.dialogTag(_:systemImage:tone: .quiet)`: the `link` symbol and "3 places"
+  in `mutedText` on a `hairlineStrong` outline. Its
   popover (`LinkedCopiesPopover`, `Theme.Layout.linkedPopoverWidth`) has a `SectionLabel`, the
   name in `.monoName`, one row per place (repository in `.monoName`, "scope · account" in
   `.monoMeta`, the copy's own name only when it differs, a `StatusChip`: Same value `.success`,
@@ -574,7 +578,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   Review (`DriftBannerView`). There is no info card: the stage is in the subline and the target
   in Settings. Under the table, `DestinationFootnotes` in `.caption` `subtleText`: one `lock` line
   per kind of secret FX Vault leaves alone ("1 disabled secret is hidden · not editable", their
-  names as help), then the provider's rules ("Key Vault names use dashes: …").
+  names as help; a name FX Vault can't use gets a `warning` triangle, since it never syncs), then
+  the provider's rules ("Key Vault names use dashes: …").
   Then the same table as a repository with the Status column: Key Vault holds secrets only, so
   a `SectionLabel` "SECRETS · 4" takes the place of the Secrets / Variables `SegmentedPill`. Add
   actions, multi-selection and the linked chip are unchanged.
@@ -659,7 +664,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   way to an info `Banner` with the outcome and "Show …".
 - The item editor's "Linked copies" field (v0.4.1; 1.0 board Folder-LinkedUpdate) appears under
   the value once a new value is typed: `LinkedUpdateList`, a hairline box of 34 pt rows (a
-  checkbox, the place's path "owner › repo › environment" in `.monoMeta`, and "● Same value" /
+  checkbox, the place's path "owner › repo › environment" in `.monoMeta`, then " · NAME" for a
+  renamed copy, and "● Same value" /
   "○ Differs" / "Value missing"; a copy that can't take the value has no checkbox, a subtle path
   and "can’t update · read only"), then an info note.
 - Add Destination (v0.8.0) is a `ConfigEditorSheet` (`destinationSheetWidth`, eyebrow RUNTIME):
@@ -843,8 +849,8 @@ Failures use `Banner(.danger)`.
   as every step's footer note, Cancel outlined and the step's default an ink pill. Warnings sit
   in a `DialogNoteBox` (hairline, 10 pt corners, no fill) of `DialogNote` rows (a 13 pt ink
   symbol, the 12 pt ink sentence; a committed file's octagon in `danger`); "Save to" and
-  "Saved to" are a `DialogStackedField` over the mono path in `dialogFieldChrome`; Add to
-  .gitignore is a `.compact` outline beside its note. Not built: the Include secrets / Include
+  "Saved to" are a `DialogStackedField` over the mono path in `dialogFieldChrome`; "Add /.env
+  to .gitignore" (the line it writes) is a `.compact` outline beside its note. Not built: the Include secrets / Include
   variables checkboxes and the one-step flow (path, warnings, Export with Touch ID): the steps
   stay ReauthGate, warnings, save panel, iCloud check, written.
 - `.env` import: File / Paste as a `SegmentedPill`; the preview `Table` uses `.fxTable()` and

@@ -125,7 +125,9 @@ private struct DestinationFootnotes: View {
                     Label {
                         Text(note.text)
                     } icon: {
-                        Image(systemName: "lock")
+                        // A name FX Vault can't use never syncs: a warning, not a quiet lock.
+                        Image(systemName: note.isWarning ? "exclamationmark.triangle" : "lock")
+                            .foregroundStyle(note.isWarning ? Theme.Colors.warning : Theme.Colors.subtleText)
                     }
                     .labelStyle(.titleAndIcon)
                     .fxTextStyle(.caption)
@@ -285,16 +287,6 @@ private struct DestinationSelectionMenu: View {
         Divider()
         Button(String(localized: "main.table.several.delete", defaultValue: "Delete \(rows.count)…"), role: .destructive) {
             viewModel.requestDeletion(of: rows)
-        }
-    }
-}
-
-extension DestinationModel {
-    /// The target as the info card shows it: the vault, and its tenant when one is set.
-    var targetDescription: String {
-        switch target {
-        case .azureKeyVault(let vaultName, let tenantID):
-            [vaultName, tenantID].compactMap { $0 }.joined(separator: " · ")
         }
     }
 }

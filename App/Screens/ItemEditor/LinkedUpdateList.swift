@@ -2,10 +2,12 @@ import SwiftUI
 import VaultData
 
 /// The linked copies a new value can update (board Folder-LinkedUpdate): one hairline box of
-/// 34 pt rows, each a checkbox, the place's path in mono and how its value compares; a copy that
-/// can't take it has no checkbox and says why, muted.
+/// 34 pt rows, each a checkbox, the place's path in mono (with the copy's name when it was
+/// renamed) and how its value compares; a copy that can't take it has no checkbox and says why.
 struct LinkedUpdateList: View {
     let copies: [LinkedCopyModel]
+    /// The edited item's name, so a renamed copy shows its own.
+    let itemName: String
     let canEdit: Bool
     let isIncluded: (LinkedCopyModel) -> Binding<Bool>
 
@@ -26,12 +28,12 @@ struct LinkedUpdateList: View {
     private func row(_ copy: LinkedCopyModel) -> some View {
         HStack(spacing: Theme.Spacing.mediumMinus) {
             if copy.isEditable {
-                Toggle(copy.placePath, isOn: isIncluded(copy))
+                Toggle(copy.placePath(itemName: itemName), isOn: isIncluded(copy))
                     .toggleStyle(.checkbox)
                     .labelsHidden()
                     .disabled(!canEdit)
             }
-            Text(verbatim: copy.placePath)
+            Text(verbatim: copy.placePath(itemName: itemName))
                 .fxTextStyle(.monoMeta)
                 .foregroundStyle(copy.isEditable ? Theme.Colors.ink : Theme.Colors.subtleText)
                 .lineLimit(1)

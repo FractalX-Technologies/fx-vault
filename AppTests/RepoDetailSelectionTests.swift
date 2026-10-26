@@ -65,7 +65,8 @@ struct RepoDetailSelectionTests {
         model.requestDeletion(of: model.selectedRows)
         let deletion = try #require(model.deletionSheet)
         #expect(deletion.title == "Delete 3 secrets from \(TestFixtures.repoName)?")
-        #expect(deletion.names == ["API_TOKEN", "NEW_A", "NEW_B"])
+        #expect(deletion.names.map(\.name) == ["API_TOKEN", "NEW_A", "NEW_B"])
+        #expect(!deletion.showsKind, "the title already says secrets")
         #expect(deletion.notes == [
             "One of them is removed from GitHub at the next Sync, which asks again.",
             "The 2 never synced are removed now.",
@@ -133,8 +134,25 @@ struct RepoDetailSelectionTests {
     }
 
     @Test func deletionNamesShowThreeThenACount() {
-        #expect(ConfigDeletionModel.names(["A", "B"]) == "A and B")
-        #expect(ConfigDeletionModel.names(["A", "B", "C"]) == "A, B, and C")
-        #expect(ConfigDeletionModel.names(["A", "B", "C", "D", "E"]) == "A, B, C and 2 more")
+        #expect(PlaceCopy.names(["A", "B"]) == "A and B")
+        #expect(PlaceCopy.names(["A", "B", "C"]) == "A, B, and C")
+        #expect(PlaceCopy.names(["A", "B", "C", "D", "E"]) == "A, B, C and 2 more")
+    }
+
+    /// An environment's sheet names it with its repository; GitHub's copy of a secret FX Vault
+    /// has no value for is the one thing the notes warn about.
+    @Test func anEnvironmentsDeletionNamesItWithItsRepository() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.viewModel
+        let scopes = try fixture.harness.data.config.scopes(repositoryID: fixture.repositoryID)
+        let production = try #require(scopes.first { $0.environment?.name == "production" }).scope
+        model.select(scope: production)
+        #expect(model.placeName == "\(TestFixtures.repoName) › production")
+
+        let rows = try await fixture.rows(count: 1)
+        model.requestDeletion(of: rows)
+        let deletion = try #require(model.deletionSheet)
+        #expect(deletion.title == "Delete 1 secret from \(TestFixtures.repoName) › production?")
+        #expect(deletion.notes.last == "GitHub can’t undo this, and FX Vault has no copy of secrets without a value.")
     }
 }

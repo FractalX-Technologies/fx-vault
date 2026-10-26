@@ -100,6 +100,20 @@ struct EnvFileExportViewModelTests {
         #expect(!FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
     }
 
+    @Test func anEnvironmentIsTitledWithItsRepository() async throws {
+        let harness = try await TestHarness(vault: .unlocked, signed: true)
+        let id = try await harness.stageRepository(environments: [RepoCreationEnvironmentDraftModel(name: "staging")])
+        let scopes = try harness.data.config.scopes(repositoryID: id)
+        let staging = try #require(scopes.first { $0.environment?.name == "staging" }).scope
+        let model = EnvExportViewModel(
+            context: EnvExportContext(repositoryID: id, scope: staging),
+            dependencies: harness.dependencies(recorder: ActionRecorder()),
+            envFiles: EnvFileFixtures.repository(harness, git: .outsideRepository),
+            touchIDStatus: nil
+        )
+        #expect(await TestFixtures.eventually { model.placeTitle == "\(TestFixtures.owner)/\(TestFixtures.repoName) › staging" })
+    }
+
     @Test func wrongPasswordStaysOnAuthenticationAndClearsTheField() async throws {
         let fixture = try await Fixture()
         let model = await fixture.viewModel()

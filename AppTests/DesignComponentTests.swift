@@ -95,6 +95,14 @@ struct DesignComponentTests {
         let modified = StatusChip.palette(tone: .brand, fill: .outlined)
         #expect(modified == .init(foreground: Theme.Colors.brand, background: nil, border: Theme.Colors.brand, dot: Theme.Colors.brand))
         #expect(StatusChip.palette(tone: .neutral, fill: .outlined).border == Theme.Colors.hairlineStrong)
+        // The dialogs' tag: ink for `production`, quiet for a linked row's "3 places".
+        #expect(StatusChip.dialogTagPalette(.ink).border == Theme.Colors.ink)
+        #expect(StatusChip.dialogTagPalette(.quiet) == .init(
+            foreground: Theme.Colors.mutedText,
+            background: nil,
+            border: Theme.Colors.hairlineStrong,
+            dot: Theme.Colors.mutedText
+        ))
     }
 
     @Test func legacyTintsMapToTones() {

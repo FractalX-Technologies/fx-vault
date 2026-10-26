@@ -39,16 +39,18 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   shared" as Active or Expired with their counts and expiry time, and Show names.
 - **Delete and Export .env as the boards.** Deleting secrets or variables opens a small
   dialog titled with the count and the place ("Delete 2 secrets from api-service ›
-  production?"), lists the names, says the next Sync deletes them on GitHub or in Key Vault and
+  production?"), lists the names (with their kind when a secret and a variable are both
+  listed; a long list scrolls), says the next Sync deletes them on GitHub or in Key Vault and
   asks again, and has a red Delete; Return no longer deletes. Export .env is titled with its
-  place, keeps its steps, shows the warnings in one box with Add to .gitignore beside its note,
-  and ends each step on "Saved readable only by you."
-- **Folder, Key Vault and organization views as the boards.** A linked item's tag says
-  "3 places". Typing a new value for a linked item lists each copy by its path
-  ("api-service › production") with a checkbox and whether its value is the same or differs;
-  copies that can't take it say why. A Key Vault's header says "No changes since your last
-  sync" or "2 changed in Key Vault" with Review, and the secrets FX Vault leaves alone
-  (disabled, managed by Key Vault) and the naming rules are footnotes under the table instead
+  place, keeps its steps, shows the warnings in one box with "Add /.env to .gitignore" beside
+  its note, and ends each step on "Saved readable only by you."
+- **Folder, Key Vault and organization views as the boards.** A linked item's tag shows a link
+  and "3 places". Typing a new value for a linked item lists each copy by its path
+  ("api-service › production", with its own name when it was renamed) with a checkbox and
+  whether its value is the same or differs; copies that can't take it say why. A Key Vault's
+  header says "No changes since your last sync" or "2 changed in Key Vault" with Review, and
+  the secrets FX Vault leaves alone (disabled, managed by Key Vault, or with a name FX Vault
+  can't use, marked as a warning) and the naming rules are footnotes under the table instead
   of a card and banners. An organization's Visibility column says what each item reaches:
   "all repos", "private and internal" or "selected · 3 repos".
 - **Edit organization secrets and variables.** The organization view gains Add Secret, Add

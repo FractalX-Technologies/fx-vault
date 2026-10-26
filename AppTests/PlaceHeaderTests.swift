@@ -175,7 +175,8 @@ struct PlaceHeaderTests {
             {"value":[\
             {"id":"https://\(vault).vault.azure.net/secrets/DATABASE-URL",\(attributes)},\
             {"id":"https://\(vault).vault.azure.net/secrets/legacy-smtp-password",\(attributes.replacingOccurrences(of: "true", with: "false"))},\
-            {"id":"https://\(vault).vault.azure.net/secrets/tls-cert","managed":true,\(attributes)}\
+            {"id":"https://\(vault).vault.azure.net/secrets/tls-cert","managed":true,\(attributes)},\
+            {"id":"https://\(vault).vault.azure.net/secrets/github-token",\(attributes)}\
             ],"nextLink":null}
             """
         // The latest stub wins: the listing, then the one value read again.
@@ -213,7 +214,9 @@ struct PlaceHeaderTests {
         #expect(notes.map(\.text) == [
             "1 certificate-backed secret is hidden · managed by Key Vault",
             "1 disabled secret is hidden · not editable",
+            "1 secret is hidden · its name can’t be used in FX Vault",
         ])
-        #expect(notes.map(\.names) == [["tls-cert"], ["legacy-smtp-password"]])
+        #expect(notes.map(\.names) == [["tls-cert"], ["legacy-smtp-password"], ["github-token"]])
+        #expect(notes.map(\.isWarning) == [false, false, true], "GITHUB_TOKEN never syncs")
     }
 }

@@ -31,10 +31,17 @@ enum FolderCopy {
         defaultValue: "Its secrets and variables are removed from this Mac. Copies you pasted into repositories stay where they are."
     )
 
-    static let deleteItemsMessage = String(
-        localized: "folder.deleteItems.message",
-        defaultValue: "They are removed from this folder now. Copies in repositories and other folders stay."
-    )
+    static func deleteItemsMessage(count: Int) -> String {
+        count == 1
+            ? String(
+                localized: "folder.deleteItems.message.one",
+                defaultValue: "It’s removed from this folder now. Copies in repositories and other folders stay."
+            )
+            : String(
+                localized: "folder.deleteItems.message",
+                defaultValue: "They are removed from this folder now. Copies in repositories and other folders stay."
+            )
+    }
 
     static let sendFolder = String(localized: "folder.sendFolder", defaultValue: "Send Folder")
 }

@@ -64,6 +64,23 @@ extension DialogNote where Accessory == EmptyView {
     }
 }
 
+/// A dialog's body sentence (boards Main2-Export, Main2-Delete, Sync-Delete): 13 pt
+/// `mutedText`, wrapped.
+struct DialogSentence: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(verbatim: text)
+            .fxTextStyle(.callout)
+            .foregroundStyle(Theme.Colors.mutedText)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
 extension SheetHeader {
     /// The title of a 1.0 dialog: no eyebrow, 15 pt semibold, the muted subtitle 4 pt below.
     static func dialog(_ title: String, subtitle: String? = nil, @ViewBuilder accessory: @escaping () -> Accessory) -> Self {
