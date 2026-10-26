@@ -75,13 +75,14 @@ struct AzureDiscoveryRepositoryTests {
         #expect(try await repository.subscription(ofVaultNamed: "KV-EXAMPLE-PROD", tenantID: nil) == .found(production))
         let tenant = "00000000-0000-0000-0000-0000000000A1"
         #expect(try await repository.subscription(ofVaultNamed: "kv-example-prod", tenantID: tenant) == .found(production))
-        #expect(try await repository.subscription(ofVaultNamed: "kv-example-prod", tenantID: "00000000-0000-0000-0000-0000000000b2") == .notListed)
+        // A tenant without a listed subscription may need its own login.
+        #expect(try await repository.subscription(ofVaultNamed: "kv-example-prod", tenantID: "00000000-0000-0000-0000-0000000000b2") == .incomplete)
         #expect(try await repository.subscription(ofVaultNamed: "kv-example-legacy", tenantID: nil) == .notListed)
+        #expect(try await repository.subscription(ofVaultNamed: "kv-example-legacy", tenantID: tenant) == .notListed)
 
         // One subscription's list failing: the vault may be there, so it is not "not listed".
         runner.replaceStub(argumentsPrefix: ["keyvault", "list"], with: .failure(stderr: "ERROR: (AuthorizationFailed) no role"))
         #expect(try await repository.subscription(ofVaultNamed: "kv-example-legacy", tenantID: nil) == .incomplete)
-        #expect(try await repository.subscription(ofVaultNamed: "kv-example-legacy", tenantID: "00000000-0000-0000-0000-0000000000b2") == .notListed)
     }
 
     @Test func aFailedProbeFallsBackToTheFixedFolders() async throws {

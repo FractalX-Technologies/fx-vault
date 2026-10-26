@@ -61,7 +61,8 @@ public struct AzureDiscoveryRepository: Sendable {
         if let entry {
             return .found(KeyVaultSubscriptionModel(id: entry.subscription.id, name: entry.subscription.name))
         }
-        let isComplete = candidates.allSatisfy { (try? $0.vaults.get()) != nil }
+        // A tenant with no subscription in the listing may need its own `az login`.
+        let isComplete = !candidates.isEmpty && candidates.allSatisfy { (try? $0.vaults.get()) != nil }
         return isComplete ? .notListed : .incomplete
     }
 
@@ -75,7 +76,7 @@ public enum KeyVaultSubscriptionMatchModel: Sendable, Equatable {
     case found(KeyVaultSubscriptionModel)
     /// Every subscription listed its vaults and none holds it.
     case notListed
-    /// Not found, but a subscription's vault list failed (a timeout, a tenant that needs its own
-    /// login): it may be there.
+    /// Not found, but a subscription's vault list failed (a timeout) or the vault's tenant has no
+    /// subscription in the listing (it needs its own login): it may be there.
     case incomplete
 }

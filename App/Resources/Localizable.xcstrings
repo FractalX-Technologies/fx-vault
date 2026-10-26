@@ -10523,7 +10523,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%lld secrets have no value in FX Vault"
+            "value" : "^[%lld secret](inflect: true) without a value in FX Vault"
           }
         }
       }

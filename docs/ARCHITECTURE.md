@@ -633,7 +633,7 @@ destination item never reaches GitHub except as a copy in a repository scope.
   `discover()` over `AzureCLIDiscovery`, read-only and without storage;
   `subscription(ofVaultNamed:tenantID:)` (D6c6) finds the subscription that lists a vault (name
   and tenant case-insensitive): `.found`, `.notListed`, or `.incomplete` when a subscription's
-  vault list failed. It and the token
+  vault list failed or the vault's tenant has no subscription listed. It and the token
   provider get their `AzureCLIRunner` from `ShellResolvingAzureCLI` (same shell probe).
 - Across places: `ItemCopySource` reads a row of any of the three tables and one `link_id` group
   spans them; `LinkedCopyPlaceModel.destination(…)`; `ConfigRepository+Links`,
