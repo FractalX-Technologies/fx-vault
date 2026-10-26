@@ -43,9 +43,10 @@ platform :mac do
       team_id: TEAM_ID,
       provisioning_name: "FX Vault Developer ID CI",
       output_path: ENV.fetch("PROFILE_OUTPUT_DIR"),
-      filename: "fxvault-developer-id.provisionprofile",
       skip_install: true,
       api_key: api_key
     )
+    # sigh's `filename` must end in .mobileprovision, even for macOS: copy to the name the workflow reads.
+    FileUtils.cp(lane_context[SharedValues::SIGH_PROFILE_PATH], File.join(ENV.fetch("PROFILE_OUTPUT_DIR"), "fxvault-developer-id.provisionprofile"))
   end
 end
