@@ -153,6 +153,35 @@ struct JumpPaletteTests {
         #expect(main.detail?.selection.isEmpty == true, "the row ⌘K opened was left behind")
     }
 
+    /// The same with another scope of that repository chosen before its scopes are listed.
+    @Test func anotherScopeOfItsRepositoryLeavesTheNameBehind() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: MainViewModelTests.ready)
+        let main = harness.app.makeMainViewModel()
+        let repoID = try await harness.stageRepository(name: "stripe-webhooks")
+        try harness.data.config.createEnvironment(in: repoID, name: "staging")
+        let staging = try EditorFixtures.environment(harness, repoID, named: "staging")
+        try harness.data.config.addItem(
+            repositoryID: repoID,
+            scope: .repository,
+            kind: .secret,
+            name: "STRIPE_KEY",
+            value: SecretBytes(utf8: EditorFixtures.secretValue)
+        )
+        #expect(await TestFixtures.eventually { !main.sidebar.owners.isEmpty })
+
+        main.showJumpPalette()
+        let palette = try #require(main.jumpPalette)
+        palette.query = "stripe_key"
+        palette.open(try #require(palette.items.first))
+        let scopes = try #require(main.scopeList)
+        scopes.select(scope: .environment(staging.id))
+        #expect(await TestFixtures.eventually { main.detail?.scope == .environment(staging.id) })
+
+        scopes.select(scope: .repository)
+        #expect(await TestFixtures.eventually { main.detail?.scope == .repository })
+        #expect(main.detail?.selection.isEmpty == true, "the row ⌘K opened was left behind")
+    }
+
     @Test func anOrganizationAndARepositoryOpenTheirSidebarPlaces() async throws {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: MainViewModelTests.ready)
         let main = harness.app.makeMainViewModel()

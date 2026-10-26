@@ -436,9 +436,12 @@ final class DestinationDetailViewModel: LockObserving {
         tasks.set("refresh", Task { [weak self] in
             do throws(DestinationSyncError) {
                 let result = try await sync.refresh(destinationID: destination.id)
+                // A lock while it ran: its result and its lookup are dropped.
+                guard !Task.isCancelled else { return }
                 self?.refresh = DestinationRefreshPresentationModel(result)
                 self?.isRefreshing = false
             } catch {
+                guard !Task.isCancelled else { return }
                 self?.alert = error.presentation(provider: destination.provider)
                 self?.isRefreshing = false
                 return
@@ -470,6 +473,9 @@ final class DestinationDetailViewModel: LockObserving {
         pendingDeletion = nil
         pendingCopy = nil
         linkedPopoverRowID = nil
+        tasks.cancel("refresh")
+        tasks.cancel("subscription")
+        isRefreshing = false
         refresh = nil
     }
 }

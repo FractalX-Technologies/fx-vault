@@ -41,8 +41,8 @@ public struct AzureDiscoveryRepository: Sendable {
     }
 
     /// The subscription whose listing holds the vault `name` (any case), in `tenantID` when given:
-    /// what a Refresh saves for a Key Vault imported before 1.0 D6c6. Nil when none lists it.
-    public func subscription(ofVaultNamed name: String, tenantID: String?) async throws(DestinationError) -> KeyVaultSubscriptionModel? {
+    /// what a Refresh saves for a Key Vault imported before 1.0 D6c6.
+    public func subscription(ofVaultNamed name: String, tenantID: String?) async throws(DestinationError) -> KeyVaultSubscriptionMatchModel {
         Self.subscription(ofVaultNamed: name, tenantID: tenantID, in: try await discover())
     }
 
@@ -50,16 +50,32 @@ public struct AzureDiscoveryRepository: Sendable {
         ofVaultNamed name: String,
         tenantID: String?,
         in listed: [AzureSubscriptionVaultsModel]
-    ) -> KeyVaultSubscriptionModel? {
-        let entry = listed.first { entry in
-            guard tenantID == nil || entry.subscription.tenantID.lowercased() == tenantID?.lowercased() else { return false }
+    ) -> KeyVaultSubscriptionMatchModel {
+        let candidates = listed.filter { entry in
+            tenantID == nil || entry.subscription.tenantID.lowercased() == tenantID?.lowercased()
+        }
+        let entry = candidates.first { entry in
             let vaults = (try? entry.vaults.get()) ?? []
             return vaults.contains { $0.name.caseInsensitiveCompare(name) == .orderedSame }
         }
-        return entry.map { KeyVaultSubscriptionModel(id: $0.subscription.id, name: $0.subscription.name) }
+        if let entry {
+            return .found(KeyVaultSubscriptionModel(id: entry.subscription.id, name: entry.subscription.name))
+        }
+        let isComplete = candidates.allSatisfy { (try? $0.vaults.get()) != nil }
+        return isComplete ? .notListed : .incomplete
     }
 
     private func discovery() async -> AzureCLIDiscovery {
         AzureCLIDiscovery(cli: await cli.resolve())
     }
+}
+
+/// Where a Key Vault's subscription search ended (1.0 D6c6).
+public enum KeyVaultSubscriptionMatchModel: Sendable, Equatable {
+    case found(KeyVaultSubscriptionModel)
+    /// Every subscription listed its vaults and none holds it.
+    case notListed
+    /// Not found, but a subscription's vault list failed (a timeout, a tenant that needs its own
+    /// login): it may be there.
+    case incomplete
 }

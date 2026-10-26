@@ -8,7 +8,8 @@ final class KeyVaultSubscriptionLookup {
     private let discovery: AzureDiscoveryRepository
     private let destinations: DestinationRepository
     // A vault no subscription lists is not looked up again this session: each lookup runs `az`
-    // once per subscription. A failed `az` (signed out) is tried again at the next Refresh.
+    // once per subscription. A failed `az` (signed out, one subscription's list failing) is
+    // tried again at the next Refresh.
     private var misses: Set<DestinationID> = []
 
     init(discovery: AzureDiscoveryRepository, destinations: DestinationRepository) {
@@ -28,11 +29,14 @@ final class KeyVaultSubscriptionLookup {
     func fillIfMissing(_ destination: DestinationModel) async {
         guard needsLookup(destination), case .azureKeyVault(let name, let tenantID) = destination.target else { return }
         do {
-            guard let subscription = try await discovery.subscription(ofVaultNamed: name, tenantID: tenantID) else {
+            switch try await discovery.subscription(ofVaultNamed: name, tenantID: tenantID) {
+            case .found(let subscription):
+                try destinations.setSubscription(subscription, of: destination.id)
+            case .notListed:
                 misses.insert(destination.id)
+            case .incomplete:
                 return
             }
-            try destinations.setSubscription(subscription, of: destination.id)
         } catch {
             AppLog.ui.error("Key Vault subscription lookup failed")
         }

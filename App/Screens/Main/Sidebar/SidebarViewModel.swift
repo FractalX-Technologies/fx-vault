@@ -541,13 +541,13 @@ final class SidebarViewModel {
         selectedRowID = repo.id
     }
 
-    /// Selects the row of a vault repository, now or as soon as the vault observation lists it
-    /// (a repository New Repository just staged). Clears the search so the row is visible.
     /// A repository asked for before its row was listed: the old selection still shows.
     var isSelectionPending: Bool {
         pendingSelection != nil
     }
 
+    /// Selects the row of a vault repository, now or as soon as the vault observation lists it
+    /// (a repository New Repository just staged). Clears the search so the row is visible.
     func select(repositoryID id: RepoID) {
         searchText = ""
         pendingSelection = id
