@@ -10,7 +10,7 @@ struct FolderDestinationView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.large) {
             HStack(spacing: Theme.Spacing.mediumMinus) {
-                Image(systemName: "folder")
+                Image(systemName: Theme.Symbols.folder)
                     .font(Theme.Typography.callout)
                     .foregroundStyle(Theme.Colors.ink)
                     .accessibilityHidden(true)
@@ -19,7 +19,7 @@ struct FolderDestinationView: View {
                     .foregroundStyle(Theme.Colors.ink)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                Text(FolderCopy.counts(secrets: model.secretCount, variables: model.variableCount))
+                Text(PlaceCopy.counts(secrets: model.secretCount, variables: model.variableCount))
                     .fxTextStyle(.monoMeta)
                     .foregroundStyle(Theme.Colors.mutedText)
             }
@@ -140,10 +140,10 @@ enum FolderDestinationCopy {
     /// "Saved 3 items in Mobile App." with what was kept.
     static func saved(_ result: FolderSaveResultModel, folderName: String) -> String {
         let changed = result.items.added + result.items.replaced
-        var text = String(AttributedString(
+        var text = String(inflected: AttributedString(
             localized: "folder.destination.saved",
             defaultValue: "Saved ^[\(changed) item](inflect: true) in \(folderName)."
-        ).characters)
+        ))
         if result.items.kept > 0 {
             text += " " + String(localized: "folder.destination.kept", defaultValue: "Kept \(result.items.kept) that the folder already had.")
         }

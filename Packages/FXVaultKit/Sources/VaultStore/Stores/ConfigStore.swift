@@ -32,6 +32,14 @@ public struct ConfigStore: Sendable {
         try Self.environments(repositoryID: repositoryID, db: tx.db)
     }
 
+    /// Every repository's environments (tombstones included) in one query, in the order of
+    /// ``fetchEnvironments(repositoryID:)`` within each repository.
+    public func fetchAllEnvironments() throws -> [EnvironmentModel] {
+        try database.read { tx in
+            try Self.attachPatterns(to: try Self.orderedEnvironments.fetchAll(tx.db), db: tx.db)
+        }
+    }
+
     public func fetchEnvironment(id: EnvironmentID) throws -> EnvironmentModel? {
         try database.read { try fetchEnvironment(id: id, in: $0) }
     }

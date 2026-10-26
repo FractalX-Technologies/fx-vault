@@ -266,7 +266,7 @@ pointer cursor, 40% when disabled).
 ### `BrandMark`, `DotGridBackground`, `StepCounter`
 
 ```swift
-BrandMark()                                                       // 18 pt ink
+BrandMark(size: Theme.Layout.brandMarkLarge)                      // 44 pt ink
 BrandMark(size: Theme.Layout.brandMarkLarge, center: .outlined)   // 44 pt, brand outlined center
 LockContent().background(DotGridBackground())
 StepCounter(current: 2, total: 5)                                 // "02 / 05"

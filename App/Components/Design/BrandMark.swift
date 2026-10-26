@@ -4,7 +4,7 @@ import SwiftUI
 /// an empty center. FX Vault's variant outlines the center cell in the brand blue: the vault.
 ///
 /// ```swift
-/// BrandMark()                                                      // 18 pt, ink, empty center
+/// BrandMark(size: Theme.Layout.brandMarkLarge)                     // ink, empty center
 /// BrandMark(size: Theme.Layout.brandMarkLarge, center: .outlined)  // lock and onboarding
 /// ```
 ///
@@ -21,7 +21,7 @@ struct BrandMark: View {
     let color: Color
     let center: Center
 
-    init(size: CGFloat = Theme.Layout.brandMarkSmall, color: Color = Theme.Colors.ink, center: Center = .empty) {
+    init(size: CGFloat, color: Color = Theme.Colors.ink, center: Center = .empty) {
         self.size = size
         self.color = color
         self.center = center
@@ -97,7 +97,6 @@ nonisolated struct BrandMarkCenterShape: Shape {
 
 #Preview {
     HStack(spacing: Theme.Spacing.xxLarge) {
-        BrandMark()
         BrandMark(size: Theme.Layout.brandMarkLarge)
         BrandMark(size: Theme.Layout.brandMarkLarge, center: .outlined)
     }

@@ -127,4 +127,69 @@ struct JumpPaletteTests {
         main.showJumpPalette()
         #expect(main.jumpPalette != nil)
     }
+
+    /// Edit › Find (⌘F) over the palette: the sidebar search takes the focus, so the palette goes.
+    @Test func findInTheSidebarClosesIt() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: MainViewModelTests.ready)
+        let main = harness.app.makeMainViewModel()
+        main.isSidebarHidden = true
+        main.showJumpPalette()
+        #expect(main.jumpPalette != nil)
+        main.findInSidebar()
+        #expect(main.jumpPalette == nil)
+        #expect(!main.isSidebarHidden)
+    }
+
+    /// The bold part of a name: the first word of the query found in it, whatever its case
+    /// and accents.
+    @Test func theHighlightIgnoresCaseAndAccents() throws {
+        let name = "api-service"
+        let range = try #require(JumpPlaces.highlight(in: name, query: "SERV"))
+        #expect(name[range] == "serv")
+        let accented = "Producción"
+        let accentedRange = try #require(JumpPlaces.highlight(in: accented, query: "produccion"))
+        #expect(accented[accentedRange] == "Producción")
+        #expect(JumpPlaces.highlight(in: name, query: "staging webhooks") == nil)
+        #expect(JumpPlaces.highlight(in: name, query: "") == nil)
+    }
+
+    @Test func aDeletedEnvironmentIsNotAPlace() {
+        let repositoryID = RepoID()
+        let date = Date(timeIntervalSince1970: 0)
+        let repository = SidebarRepoModel(
+            repoKey: "user-a/api-service",
+            accountLogin: "user-a",
+            ownerLogin: "user-a",
+            name: "api-service",
+            visibility: .private,
+            isArchived: false,
+            isFork: false,
+            isUnavailable: false,
+            importedRepoID: repositoryID,
+            existsOnGitHub: true
+        )
+        let owner = SidebarOwnerModel(
+            id: "user-a",
+            login: "user-a",
+            accountLogin: "user-a",
+            ownerType: .user,
+            isPersonal: true,
+            isTruncated: false,
+            repos: [repository],
+            organization: nil,
+            problem: nil
+        )
+        let places = JumpPlaces.places(JumpPlaceInputModel(owners: [owner], environments: [repositoryID: [
+            EnvironmentModel(repositoryID: repositoryID, name: "production", createdAt: date, updatedAt: date),
+            EnvironmentModel(repositoryID: repositoryID, name: "staging", isDeleted: true, createdAt: date, updatedAt: date),
+        ]]))
+        #expect(places.map(\.name) == ["api-service", "production"], "a personal account has no place; staging is deleted")
+    }
+
+    /// The home's line under "Choose a place" (board Main2-Home).
+    @Test func theHomeSaysHowManyChangesWait() {
+        #expect(MainCopy.homePendingChanges(0) == "No pending changes")
+        #expect(MainCopy.homePendingChanges(1) == "1 pending change")
+        #expect(MainCopy.homePendingChanges(3) == "3 pending changes")
+    }
 }

@@ -424,6 +424,14 @@ public struct ConfigRepository: Sendable {
         }
     }
 
+    /// The live environments of every repository in one read (1.0, the ⌘K palette), by
+    /// repository, each in the scopes column's order; deleted ones left out.
+    public func environmentsByRepository() throws(ConfigRepositoryError) -> [RepoID: [EnvironmentModel]] {
+        try performConfig {
+            Dictionary(grouping: try store.fetchAllEnvironments().filter { !$0.isDeleted }, by: \.repositoryID)
+        }
+    }
+
     // MARK: - Observation
 
     /// Every repository (sidebar), now and after each change.

@@ -42,10 +42,10 @@ struct SidebarFoldersSection: View {
             }
             ForEach(folders) { folder in
                 let isSelected = sidebar.selectedFolderID == folder.id
-                let counts = FolderCopy.counts(secrets: folder.secretCount, variables: folder.variableCount)
+                let counts = PlaceCopy.counts(secrets: folder.secretCount, variables: folder.variableCount)
                 SidebarTreeRow(
                     level: 0,
-                    systemImage: isSelected ? "folder.fill" : "folder",
+                    systemImage: isSelected ? Theme.Symbols.folderSelected : Theme.Symbols.folder,
                     title: folder.name,
                     titleStyle: .sans,
                     isSelected: isSelected

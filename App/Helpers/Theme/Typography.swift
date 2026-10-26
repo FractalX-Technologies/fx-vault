@@ -52,6 +52,8 @@ extension Theme {
         static let monospaced = Font.system(size: Size.body, design: .monospaced)
         /// 13 pt mono. Names in tables and lists.
         static let monoName = Font.system(size: Size.callout, design: .monospaced)
+        /// 13 pt mono, semibold. The typed part of a name in the ⌘K palette (board Main2-Search).
+        static let monoNameEmphasized = Font.system(size: Size.callout, weight: .semibold, design: .monospaced)
         /// 12 pt mono. Timestamps, counts, repository paths, metadata; names in the sidebar tree.
         static let monoMeta = Font.system(size: Size.caption, design: .monospaced)
         /// 12 pt mono, medium. The selected name in the sidebar tree.

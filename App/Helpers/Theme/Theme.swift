@@ -53,8 +53,7 @@ enum Theme {
         static let sidebarRowHeight: CGFloat = 28
         /// A shortcut chip (`⌘F`, ``KeyHint``).
         static let keyHintHeight: CGFloat = 18
-        /// The FractalX mark: toolbar 18, lock 44, onboarding 44, About 84.
-        static let brandMarkSmall: CGFloat = 18
+        /// The FractalX mark on the lock screen and in onboarding.
         static let brandMarkLarge: CGFloat = 44
         /// The dot grid behind the lock screen: one dot every 22 pt.
         static let dotGridSpacing: CGFloat = 22
@@ -255,12 +254,15 @@ enum Theme {
         static let sheetY: CGFloat = 24
     }
 
-    /// SF Symbols of the places FX Vault writes to, so the sidebar and the Sync summary draw a
-    /// place the same way (boards Main2, Sync-Review). A Key Vault's is its provider's.
+    /// SF Symbols of the places, so the sidebar, the ⌘K palette and the Sync summary draw a
+    /// place the same way (boards Main2, Main2-Search, Sync-Review). A Key Vault's is its
+    /// provider's.
     enum Symbols {
         static let organization = "building.2"
         static let person = "person"
         static let repository = "book.closed"
         static let environment = "smallcircle.filled.circle"
+        static let folder = "folder"
+        static let folderSelected = "folder.fill"
     }
 }

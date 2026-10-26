@@ -18,13 +18,17 @@ struct JumpPaletteOverlay: View {
                 }
                 .padding(.top, Theme.Spacing.xLarge)
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityAddTraits(.isModal)
+            .accessibilityAction(.escape) { main.closeJumpPalette() }
             .transition(.opacity)
         }
     }
 }
 
 /// The field, "Places" with the matches (the selected one with its ↩ key) and the keys in the
-/// footer. The field keeps the focus: ↑↓ move the selection, ↩ opens it, esc closes.
+/// footer. The field keeps the focus: ↑↓ move the selection, ↩ opens it, esc (the footer's
+/// close, the window's cancel action) closes.
 struct JumpPaletteView: View {
     @Bindable var palette: JumpPaletteViewModel
     let onClose: () -> Void
@@ -65,7 +69,6 @@ struct JumpPaletteView: View {
                 .onSubmit {
                     palette.open()
                 }
-                .onExitCommand(perform: onClose)
                 .accessibilityIdentifier(AccessibilityID.Jump.field)
         }
         .padding(.horizontal, Theme.Spacing.large)
@@ -110,15 +113,24 @@ struct JumpPaletteView: View {
 
     private var footer: some View {
         HStack(spacing: Theme.Spacing.large) {
-            footerHint(["↑", "↓"], JumpPaletteCopy.move)
-            footerHint(["↩"], JumpPaletteCopy.open)
-            footerHint(["esc"], JumpPaletteCopy.close)
+            HStack(spacing: Theme.Spacing.large) {
+                footerHint(["↑", "↓"], JumpPaletteCopy.move)
+                footerHint(["↩"], JumpPaletteCopy.open)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel([JumpPaletteCopy.move, JumpPaletteCopy.open].joined(separator: ", "))
+            // esc as the window's cancel action: the field's editor swallows esc before
+            // `onExitCommand` sees it, and a key equivalent is tried first.
+            Button(action: onClose) {
+                footerHint(["esc"], JumpPaletteCopy.close)
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.cancelAction)
+            .accessibilityLabel(JumpPaletteCopy.close)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Theme.Spacing.large)
         .padding(.vertical, Theme.Spacing.medium)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel([JumpPaletteCopy.move, JumpPaletteCopy.open, JumpPaletteCopy.close].joined(separator: ", "))
     }
 
     private func footerHint(_ keys: [String], _ text: String) -> some View {
@@ -171,10 +183,11 @@ private struct JumpPlaceRow: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    /// The name with the matched part in the emphasized weight of its style.
+    /// The name at 13 pt in either style (the detail beside it is 12), the matched part in the
+    /// emphasized weight.
     private var nameText: AttributedString {
         let (regular, emphasized) = switch place.titleStyle {
-        case .mono: (Theme.Typography.monoMeta, Theme.Typography.monoMetaEmphasized)
+        case .mono: (Theme.Typography.monoName, Theme.Typography.monoNameEmphasized)
         case .sans: (Theme.Typography.callout, Theme.Typography.calloutEmphasized)
         }
         func part(_ text: Substring, _ font: Font) -> AttributedString {
