@@ -1297,10 +1297,11 @@ AppTests).
   - `CreateRepo` (M4): `CreateRepoViewModel` (`LockObserving`) stages through
     `RepoCreationRepository.stage` (one transaction; nothing reaches GitHub before Sync). Owner
     picker from `creation.owners`, `RepoNameValidator` plus a 500 ms debounced availability
-    check on the injected clock, templates, inline staged environments (shared
-    `BranchPolicyEditorView`) and items (`SecretValueEditor`), "Clone to my Mac" (needs a clone
-    folder; warns without an SSH alias). After Create it selects the repository in the sidebar
-    (`actions.select`) and offers Sync Now… (`.sync([id])`).
+    check on the injected clock, templates, environments to create as chips (each opens the
+    nested editor with the shared `BranchPolicyEditorView`) and items (`SecretValueEditor`),
+    "Clone to my Mac" (needs a clone folder; shows the account's SSH alias, warns without one).
+    After Stage Repository it selects the repository in the sidebar (`actions.select`) and
+    offers Sync Now… (`.sync([id])`).
   - `EnvFile` (§5.12, M5, v0.1.1): import (file or paste → table with key fix, kind, conflict
     Skip / Overwrite plus Overwrite All, and target scope, preselected to the open scope →
     `EnvFileRepository.applyImport`). Paste mode shows the editor (`EnvPasteEditorView`, the

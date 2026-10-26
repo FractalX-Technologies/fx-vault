@@ -263,3 +263,23 @@ final class URLRecorder {
 final class Counter {
     var value = 0
 }
+
+/// Holds scripted calls (a fake `gh` or Key Vault answer) until the test opens it, so a test
+/// can see a run in the middle of a write. A call gives up after five seconds, so a failing
+/// test cannot hang the suite.
+final class CallGate: Sendable {
+    private let isOpen = OSAllocatedUnfairLock(initialState: false)
+    private let semaphore = DispatchSemaphore(value: 0)
+
+    func wait() {
+        guard !isOpen.withLock({ $0 }) else { return }
+        _ = semaphore.wait(timeout: .now() + .seconds(5))
+        // Passes the opening on to the next waiting call.
+        semaphore.signal()
+    }
+
+    func open() {
+        isOpen.withLock { $0 = true }
+        semaphore.signal()
+    }
+}

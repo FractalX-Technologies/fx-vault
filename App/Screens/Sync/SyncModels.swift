@@ -121,6 +121,9 @@ struct SyncChangeLineModel: Hashable {
     let name: String?
     let detail: String?
     let text: String
+    /// A secret and a variable can share a name in one scope (a conversion is − secret and
+    /// + variable): the run tells their lines apart by it.
+    var kind: ConfigKind?
 }
 
 /// One scope of the summary: its place, its counts sentence ("2 added, 1 modified in
@@ -662,6 +665,8 @@ struct SyncDeletionEnvironmentModel: Identifiable, Hashable {
 
     let id: String
     let name: String
+    /// Its repository, as an item deletion's place (`api-service`).
+    var place: String?
     let contents: Contents
 
     var lostCount: Int {
@@ -699,12 +704,12 @@ extension SyncPresentationBuilder {
                         name: SyncCopy.changeName(change)
                     )
                 },
-                environments: preview.environments.map(environment)
+                environments: preview.environments.map { environment($0, repository: repository) }
             )
         }
     }
 
-    private static func environment(_ preview: EnvironmentDeletionPreviewModel) -> SyncDeletionEnvironmentModel {
+    private static func environment(_ preview: EnvironmentDeletionPreviewModel, repository: String) -> SyncDeletionEnvironmentModel {
         let contents: SyncDeletionEnvironmentModel.Contents
         switch preview.contents {
         case .loaded(let model):
@@ -727,7 +732,7 @@ extension SyncPresentationBuilder {
         case .unknown(let error):
             contents = .unknown(reason: error.localizedMessage)
         }
-        return SyncDeletionEnvironmentModel(id: preview.id, name: preview.name, contents: contents)
+        return SyncDeletionEnvironmentModel(id: preview.id, name: preview.name, place: repository, contents: contents)
     }
 
     /// The rule types of GitHub's `protection_rules` (other than the branch policy), named for

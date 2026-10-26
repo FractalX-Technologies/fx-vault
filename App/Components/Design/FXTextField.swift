@@ -24,20 +24,26 @@ private struct FXInputFieldModifier: ViewModifier {
         case .rounded:
             styled(content, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
         case .dialog:
-            styled(content, in: RoundedRectangle(cornerRadius: Theme.Radius.field, style: .continuous))
+            text(content)
+                .dialogFieldChrome(border: borderColor, trailingInset: Theme.Spacing.mediumMinus)
+                .animation(Theme.Durations.interactionAnimation, value: isFocused)
         }
     }
 
     private func styled(_ content: Content, in inputShape: some InsettableShape) -> some View {
+        text(content)
+            .padding(.horizontal, Theme.Spacing.large)
+            .frame(minHeight: Theme.Layout.inputHeight)
+            .background(Theme.Colors.card, in: inputShape)
+            .overlay(inputShape.strokeBorder(borderColor, lineWidth: borderWidth))
+            .animation(Theme.Durations.interactionAnimation, value: isFocused)
+    }
+
+    private func text(_ content: Content) -> some View {
         content
             .textFieldStyle(.plain)
             .font(font)
             .foregroundStyle(Theme.Colors.ink)
-            .padding(.horizontal, isDialog ? Theme.Spacing.mediumMinus : Theme.Spacing.large)
-            .frame(minHeight: isDialog ? Theme.Layout.dialogFieldHeight : Theme.Layout.inputHeight)
-            .background(Theme.Colors.card, in: inputShape)
-            .overlay(inputShape.strokeBorder(borderColor, lineWidth: borderWidth))
-            .animation(Theme.Durations.interactionAnimation, value: isFocused)
     }
 
     private var isDialog: Bool {
@@ -52,21 +58,24 @@ private struct FXInputFieldModifier: ViewModifier {
         }
     }
 
+    /// A dialog field keeps the hairline and turns it ink when focused (boards NewRepo,
+    /// NewEnvironment); the others draw a brand ring.
     private var borderColor: Color {
         if isInvalid { return Theme.Colors.danger }
-        return isFocused ? Theme.Colors.brand : Theme.Colors.hairlineStrong
+        guard isFocused else { return Theme.Colors.hairlineStrong }
+        return isDialog ? Theme.Colors.ink : Theme.Colors.brand
     }
 
     private var borderWidth: CGFloat {
-        isFocused || isInvalid ? (isDialog ? Theme.Stroke.hairline : Theme.Layout.focusRingWidth) : Theme.Stroke.hairline
+        isFocused || isInvalid ? Theme.Layout.focusRingWidth : Theme.Stroke.hairline
     }
 }
 
 extension View {
     /// Styles a `TextField` or `SecureField` as a FractalX input: card fill, hairline-strong
-    /// border, 44 pt tall (28 for `.dialog`); brand border while `isFocused`, danger while
-    /// `isInvalid`. Bind `isFocused` to the caller's `@FocusState` (the modifier cannot observe
-    /// focus itself).
+    /// border, 44 pt tall (28 for `.dialog`); brand border (ink for `.dialog`) while `isFocused`,
+    /// danger while `isInvalid`. Bind `isFocused` to the caller's `@FocusState` (the modifier
+    /// cannot observe focus itself).
     ///
     /// ```swift
     /// @FocusState private var focused: Bool

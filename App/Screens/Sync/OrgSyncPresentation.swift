@@ -61,7 +61,8 @@ enum OrgSyncPresentation {
             symbol: symbol(change),
             name: change.name,
             detail: SyncCopy.lineDetail(SyncCopy.kindTitle(change.kind), change.operation == .delete ? SyncCopy.deletedOnGitHub : nil),
-            text: line(change)
+            text: line(change),
+            kind: change.kind
         )
     }
 

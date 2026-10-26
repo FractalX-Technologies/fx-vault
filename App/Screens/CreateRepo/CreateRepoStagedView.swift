@@ -55,7 +55,7 @@ struct CreateRepoStagedView: View {
             }
             .padding(Theme.Spacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .fxDialogCard()
+            .fxCardBackground(.dialog)
         } actions: {
             Button(String(localized: "createRepo.staged.syncNow", defaultValue: "Sync Now…"), action: onSyncNow)
                 .fxButtonStyle(.outline, size: .dialog)

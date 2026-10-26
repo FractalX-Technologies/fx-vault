@@ -237,7 +237,8 @@ SecureField(passwordLabel, text: $password).focused($focused).fxInputField(.pill
 44 pt, `card` fill, `hairlineStrong` border; 2 pt `brand` border while focused, `danger` while
 `isInvalid`. `.pill` pairs with a pill button on one line (lock, search); `.rounded` (12 pt) is
 for forms; `.dialog` is the 1.0 dialog forms' field (boards NewRepo, NewEnvironment): 28 pt, 7 pt
-`Radius.field` corners, mono at 12 pt, a 1 pt `brand` (ink) border while focused. Names and keys
+`Radius.field` corners, mono at 12 pt, an `ink` hairline while focused (`DialogFieldChrome`, the
+same box as the dialog pop-ups). Names and keys
 use `isMonospaced: true`.
 
 ### `SegmentedPill`
@@ -331,9 +332,9 @@ One implementation each, in `SheetChrome.swift`; every sheet and full-window for
   `.fxSheetBackground()`, optionally at a fixed width.
 - `FXCheckboxRow(isBoxed: false)`: the checkbox alone on the sheet (the 1.0 dialogs).
 
-The 1.0 dialogs (D6d, `DialogChrome.swift`): `Theme.Layout.compactSheetInset` (22 pt) around the
+The 1.0 dialogs (D6d, `DialogChrome.swift`): `Theme.Layout.dialogInset` (22 pt) around the
 content, no eyebrow, `SheetHeader` with `.leadEmphasized` (15 pt semibold) and a `.callout`
-subtitle 4 pt below, cards as `.fxDialogCard()` (`card` glass, hairline, 10 pt `row` corners,
+subtitle 4 pt below, cards as `.fxCardBackground(.dialog)` (`card` glass, hairline, 10 pt `row` corners,
 10 pt apart), what a confirmation is about in `.fxDialogListBox()` (`surface`, 10 pt corners,
 24 pt rows), and the footer row without a rule (`ConfigSheetFooter(inset: SheetFooterInset.dialog)`)
 with `.dialog` buttons.
@@ -341,13 +342,15 @@ with `.dialog` buttons.
 Dialog forms (`DialogForm.swift`, boards NewRepo, NewEnvironment): `DialogSheet(title:footerNote:)`
 puts `SheetHeader.dialog` and the rows 14 pt apart over the footer. `DialogFormRow(label)` is the
 150 pt column of 11 pt medium muted labels (`.formLabel`, 7 pt down), 14 pt from the controls;
-`DialogFormNote` the 11 pt note 5 pt under them (`.formNote`; muted, warning or danger).
-Controls: `.fxInputField(.dialog)`, `DialogPopUp` (a menu with a check beside the chosen option,
-drawn by `DialogFieldButtonStyle`: 28 pt, `card`, `hairlineStrong`, chevrons; `display` can
-differ from the option title, ".gitignore: None"), `.dialogFieldChrome()` for a value without a
-menu (the SSH alias), `DialogSwitch` (a mini switch before its title), `DialogTokenChip`
-(`production ×`, 22 pt, 6 pt corners, mono) and the dashed `DialogAddChip`, laid out in a
-`FlowLayout`. Small actions in a row are `.compact` buttons (Add Rule, Try Again).
+`ConfigEditorNoteView(style: .dialog)` the 11 pt note 5 pt under them (`.formNote`; muted,
+warning, or danger with its icon so an error does not rely on color alone; a confirmation stays
+muted). Controls share one 28 pt box, `DialogFieldChrome` (`card`, `hairlineStrong`, faded once
+when disabled): `.fxInputField(.dialog)`, `DialogPopUp` (a menu with a check beside the chosen
+option, drawn by `DialogFieldButtonStyle` with chevrons; `display` can differ from the option
+title, ".gitignore: None"), `.dialogFieldChrome()` alone for a value without a menu (the SSH
+alias); `DialogSwitch` (a mini switch before its title; the title toggles it unless disabled),
+`DialogTokenChip` (`production ×`, 22 pt, 6 pt corners, mono) and the dashed `DialogAddChip`,
+laid out in a `FlowLayout`. Small actions in a row are `.compact` buttons (Add Rule, Try Again).
 
 `PassphraseView` (App/Components) is the generated passphrase card shared by onboarding and
 Share as File; `EmptyStateView` uses the light symbol, a `.headline` ink title and a `mutedText`
@@ -534,27 +537,27 @@ foreground color, so `.primary` text still turns white on selected rows.
 - Footer: "N changes in M places · D deletions · B blocked" in muted `.caption` (N counts what
   runs and what is blocked; an offline notice takes its place); the button says
   "Sync N Changes" with what runs. The write limit sits under the cards.
-- Every step is a 1.0 dialog (D6d): 600 pt, 22 pt inset, no eyebrow, `.fxDialogCard()` cards,
+- Every step is a 1.0 dialog (D6d): 600 pt, 22 pt inset, no eyebrow, `.fxCardBackground(.dialog)` cards,
   `.dialog` footer buttons (Cancel and Back outlined, the default an ink pill, the deletion
   confirm `.outlineDestructive`).
 - The deletion check (board Sync-Delete): "Delete 1 secret?" (secrets, variables or items),
-  "Confirm before Sync starts. Deletions run after the other writes.", the deletions in
+  "Confirm before Sync starts. Deletions run after every write.", the deletions in
   `.fxDialogListBox()` (`STRIPE_KEY` in `.monoMeta`, its place muted; an environment with its
-  symbol and what GitHub holds in it below, "not in your vault: will be lost" in `danger`), the
+  symbol, its repository muted, and what GitHub holds in it below, "not in your vault: will be lost" in `danger`), the
   workflow notes, then "I understand this cannot be undone" as a plain checkbox. Buttons: Back,
   Sync Without Deleting, "Delete N".
 - The run (board Sync-Progress): "Syncing" / "Keep FX Vault open until it finishes", a 4 pt ink
   bar on a `hairline` track across the sheet, "Writing 5 of 8 · FX Vault writes 60 a minute ·
   Locking stops after the current write." in muted `.caption`, then the summary's cards
   (`SyncProgressPresentation`) whose symbol column shows each line's state: a 7 pt
-  `hairlineStrong` ring waiting, a mini spinner writing, a `success` check done, a `danger` cross
+  `hairlineStrong` `RingDot` waiting, a mini spinner writing, a `success` check done, a `danger` cross
   failed, a dash not run (blocked lines read `blocked · reason`, muted). The deletions leave
-  their cards for a last "Deletions · after the other writes" card with each place as the
+  their cards for a last "Deletions · after every write" card with each place as the
   detail. The footer has Cancel After Current.
 - The finish (board Sync-Done) when nothing failed, stopped or waits for a clone
-  (`SyncViewModel.done`): 420 pt, centered, a 44 pt `success` ring with a check, "Synced 8
+  (`SyncViewModel.done`): 420 pt, centered, a 44 pt `success` `RingDot` with a check, "Synced 8
   changes" in `.leadEmphasized`, "in A, B and C" in subtle `.caption`, up to three pending lines
-  (a 7 pt ink ring, the change and its reason), warnings, and Done as the compact ink pill.
+  (an ink `RingDot`, the change and its reason, "and N more pending"), warnings, and Done as the `.dialog` ink pill.
   Anything else keeps the full result (sections, fixes, clones).
 - New Repository (D6d, board NewRepo, 620 × 640, `CreateRepoFormView`): a dialog form. Create
   with (only with two accounts) and Owner as mono pop-ups (the menu says Personal or

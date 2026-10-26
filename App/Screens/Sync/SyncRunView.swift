@@ -26,7 +26,7 @@ struct SyncRunView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Layout.compactSheetInset)
+            .padding(.horizontal, Theme.Layout.dialogInset)
         }
     }
 
@@ -85,7 +85,7 @@ private struct SyncProgressCard: View {
         .padding(.horizontal, Theme.Spacing.medium)
         .padding(.vertical, Theme.Spacing.mediumMinus)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .fxDialogCard()
+        .fxCardBackground(.dialog)
     }
 }
 
@@ -137,9 +137,7 @@ private struct SyncLineStateGlyph: View {
                 ProgressView()
                     .controlSize(.mini)
             case .waiting:
-                Circle()
-                    .strokeBorder(Theme.Colors.hairlineStrong, lineWidth: Theme.Layout.syncWaitingDotStroke)
-                    .frame(width: Theme.Layout.syncWaitingDotSize, height: Theme.Layout.syncWaitingDotSize)
+                RingDot(color: Theme.Colors.hairlineStrong)
             case .failed:
                 Image(systemName: "xmark")
                     .fxTextStyle(.caption)

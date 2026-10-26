@@ -86,7 +86,8 @@ enum DestinationSyncPresentation {
                 change.remoteName == change.name ? nil : DestinationSyncCopy.asRemote(change.remoteName),
                 change.operation == .delete ? DestinationSyncCopy.deletedIn(provider) : nil
             ),
-            text: line(change)
+            text: line(change),
+            kind: change.kind
         )
     }
 

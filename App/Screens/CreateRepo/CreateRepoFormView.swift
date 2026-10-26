@@ -79,11 +79,11 @@ struct CreateRepoFormView: View {
                 HStack(spacing: Theme.Spacing.xSmall) {
                     ProgressView()
                         .controlSize(.mini)
-                    DialogFormNote(String(localized: "createRepo.owners.loading", defaultValue: "Loading organizations…"))
+                    ConfigEditorNoteView(note: .info(String(localized: "createRepo.owners.loading", defaultValue: "Loading organizations…")), style: .dialog)
                 }
             }
             if let warning = viewModel.ownersWarning {
-                DialogFormNote("\(warning.title). \(warning.message)", tone: .warning)
+                ConfigEditorNoteView(note: .warning("\(warning.title). \(warning.message)"), style: .dialog)
             }
         }
     }
@@ -165,9 +165,9 @@ struct CreateRepoFormView: View {
             }
             if let error = viewModel.templatesError {
                 HStack(spacing: Theme.Spacing.small) {
-                    DialogFormNote(
-                        String(localized: "createRepo.templates.failedLine", defaultValue: "Templates could not be loaded. \(error.message)"),
-                        tone: .warning
+                    ConfigEditorNoteView(
+                        note: .warning(String(localized: "createRepo.templates.failedLine", defaultValue: "Templates could not be loaded. \(error.message)")),
+                        style: .dialog
                     )
                     Spacer(minLength: 0)
                     Button(String(localized: "createRepo.retry", defaultValue: "Try Again")) {
@@ -227,19 +227,19 @@ struct CreateRepoFormView: View {
                 .accessibilityLabel(Text(String(localized: "createRepo.clone.destination", defaultValue: "Destination")))
                 .accessibilityValue(Text(verbatim: folderText))
             }
-            .opacity(viewModel.clonesAfterCreate ? 1 : Theme.Opacity.disabled)
+            // Each box fades itself once (DialogFieldChrome).
             .disabled(!viewModel.clonesAfterCreate)
-            DialogFormNote(String(localized: "createRepo.clone.note", defaultValue: "Optional · SSH alias and folder"))
+            ConfigEditorNoteView(note: .info(String(localized: "createRepo.clone.note", defaultValue: "Optional · SSH alias and folder")), style: .dialog)
             if viewModel.needsCloneFolder {
-                DialogFormNote(String(localized: "createRepo.clone.noFolder", defaultValue: "Choose a folder"), tone: .warning)
+                ConfigEditorNoteView(note: .warning(String(localized: "createRepo.clone.noFolder", defaultValue: "Choose a folder")), style: .dialog)
             }
             if viewModel.cloneNeedsSSHAlias {
-                DialogFormNote(
-                    String(
+                ConfigEditorNoteView(
+                    note: .warning(String(
                         localized: "createRepo.clone.noAliasLine",
                         defaultValue: "No SSH alias mapped. Map one for this account in Settings › Accounts before you sync, or the clone is skipped."
-                    ),
-                    tone: .warning
+                    )),
+                    style: .dialog
                 )
             }
         }
@@ -285,21 +285,21 @@ struct CreateRepoAvailabilityView: View {
             HStack(spacing: Theme.Spacing.xSmall) {
                 ProgressView()
                     .controlSize(.mini)
-                DialogFormNote(String(localized: "createRepo.availability.checking", defaultValue: "Checking the name…"))
+                ConfigEditorNoteView(note: .info(String(localized: "createRepo.availability.checking", defaultValue: "Checking the name…")), style: .dialog)
             }
         case .probablyAvailable:
-            DialogFormNote(String(
+            ConfigEditorNoteView(note: .info(String(
                 localized: "createRepo.availability.probablyAvailableLine",
                 defaultValue: "Probably available · GitHub confirms it at Sync"
-            ))
+            )), style: .dialog)
         case .taken:
-            DialogFormNote(
-                String(localized: "createRepo.availability.taken", defaultValue: "\(fullName) already exists"),
-                tone: .danger
+            ConfigEditorNoteView(
+                note: .error(String(localized: "createRepo.availability.taken", defaultValue: "\(fullName) already exists")),
+                style: .dialog
             )
         case .invalid(let rule):
             HStack(spacing: Theme.Spacing.small) {
-                DialogFormNote(rule.localizedMessage, tone: .danger)
+                ConfigEditorNoteView(note: .error(rule.localizedMessage), style: .dialog)
                 if let suggestedName {
                     Spacer(minLength: 0)
                     Button(String(localized: "createRepo.name.useSuggestion", defaultValue: "Use \(suggestedName)"), action: onUseSuggestion)
@@ -307,9 +307,9 @@ struct CreateRepoAvailabilityView: View {
                 }
             }
         case .unknown(let error):
-            DialogFormNote(
-                String(localized: "createRepo.availability.unknownLine", defaultValue: "Could not check the name. \(error.message)"),
-                tone: .warning
+            ConfigEditorNoteView(
+                note: .warning(String(localized: "createRepo.availability.unknownLine", defaultValue: "Could not check the name. \(error.message)")),
+                style: .dialog
             )
         }
     }

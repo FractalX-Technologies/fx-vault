@@ -35,7 +35,7 @@ struct BranchPolicyEditorView: View {
             .labelsHidden()
             .disabled(!isEnabled)
             if let warning = form.warning {
-                DialogFormNote(warning.message, tone: warning.dialogTone)
+                ConfigEditorNoteView(note: warning, style: .dialog)
             }
             if form.choice == .selected {
                 rules
@@ -62,17 +62,17 @@ struct BranchPolicyEditorView: View {
             }
             addRow
             if let note = form.newPatternNote {
-                DialogFormNote(note.message, tone: note.dialogTone)
+                ConfigEditorNoteView(note: note, style: .dialog)
             } else if form.hasUnaddedPattern {
-                DialogFormNote(String(
+                ConfigEditorNoteView(note: .info(String(
                     localized: "branchPolicy.pattern.unadded",
                     defaultValue: "Press Return or Add Rule to add this rule, or clear the field."
-                ))
+                )), style: .dialog)
             }
-            DialogFormNote(String(
+            ConfigEditorNoteView(note: .info(String(
                 localized: "branchPolicy.rules.footer",
                 defaultValue: "Patterns use fnmatch syntax, for example release/* for branches or v* for tags."
-            ))
+            )), style: .dialog)
         }
         .fxDialogListBox()
     }
@@ -118,7 +118,7 @@ private struct BranchPolicyEditorPreview: View {
         DialogFormRow(BranchPolicyEditorView.formLabel) {
             BranchPolicyEditorView(form: $form, isEnabled: true)
         }
-        .padding(Theme.Layout.compactSheetInset)
+        .padding(Theme.Layout.dialogInset)
         .frame(width: Theme.Layout.newEnvironmentSheetWidth)
         .fxSheetBackground()
     }

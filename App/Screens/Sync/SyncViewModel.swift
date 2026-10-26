@@ -233,7 +233,7 @@ final class SyncViewModel: LockObserving {
             for section in destinationReview.sections {
                 let place = DestinationSyncPresentation.place(section.destination).id
                 for change in section.changes {
-                    lineChanges[SyncLineKey(group: group, place: place, name: change.name), default: []]
+                    lineChanges[SyncLineKey(group: group, place: place, name: change.name, kind: change.kind), default: []]
                         .append(Self.destinationChangeKey(change.id))
                 }
             }
@@ -242,7 +242,7 @@ final class SyncViewModel: LockObserving {
             let group = SyncGroupID.organization(organizationReview.organizationID)
             let place = OrgSyncPresentation.placeID(organizationReview.organizationID)
             for change in organizationReview.changes {
-                lineChanges[SyncLineKey(group: group, place: place, name: change.name), default: []]
+                lineChanges[SyncLineKey(group: group, place: place, name: change.name, kind: change.kind), default: []]
                     .append(Self.organizationChangeKey(change.itemID))
             }
         }
@@ -513,12 +513,10 @@ final class SyncViewModel: LockObserving {
                 changeStates[Self.organizationChangeKey(change.itemID)] = .writing
             }
             let result = await dependencies.organizationSync.run(review, includeDeletions: includeDeletions)
+            // The run records an outcome for every change, a left-out deletion's too (skipped).
             for change in review.changes {
-                let key = Self.organizationChangeKey(change.itemID)
                 if let outcome = result.outcomes[change.itemID] {
-                    changeStates[key] = SyncLineState(outcome)
-                } else if changeStates[key] == .writing {
-                    changeStates[key] = .done
+                    changeStates[Self.organizationChangeKey(change.itemID)] = SyncLineState(outcome)
                 }
             }
             results[review.organizationID] = result

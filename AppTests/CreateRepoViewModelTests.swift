@@ -290,6 +290,14 @@ struct CreateRepoViewModelTests {
         #expect(model.cloneNeedsSSHAlias)
     }
 
+    /// Board NewRepo: the pop-ups read the field and its choice, "None" without one.
+    @Test func thePopUpsReadTheirFieldAndChoice() {
+        #expect(CreateRepoText.gitignoreDisplay(nil) == ".gitignore: None")
+        #expect(CreateRepoText.gitignoreDisplay("Swift") == ".gitignore: Swift")
+        #expect(CreateRepoText.licenseDisplay(nil) == "License: None")
+        #expect(CreateRepoText.licenseDisplay("MIT License") == "License: MIT License")
+    }
+
     // MARK: - Create (staging)
 
     @Test func createStagesEverythingWithoutTouchingGitHub() async throws {
@@ -356,7 +364,9 @@ struct CreateRepoViewModelTests {
         #expect(!model.hasUnsavedInput)
     }
 
-    @Test func valuesNeverAppearInSummariesDescriptionsOrGHCalls() async throws {
+    /// The values never reach what the sheet shows (scope titles, the environments' branch
+    /// policies, the staged counts), the items' descriptions or a gh call.
+    @Test func valuesNeverAppearInTheSheetsTextsDescriptionsOrGHCalls() async throws {
         let fixture = try await Fixture()
         let model = fixture.viewModel
         await fixture.readyToCreate()
@@ -374,17 +384,27 @@ struct CreateRepoViewModelTests {
             dump(item, to: &dumped)
             texts.append(dumped)
         }
+        texts.append(model.scopeTitle(for: .repository))
         for environment in model.environments {
             texts.append(String(describing: environment))
             var dumped = ""
             dump(environment, to: &dumped)
             texts.append(dumped)
+            texts.append(model.scopeTitle(for: .environment(environment.id)))
+            texts.append(CreateRepoText.policySummary(environment.policy))
         }
 
         #expect(await model.create())
-        if case .staged(let staged) = model.phase {
-            texts.append(String(describing: staged))
+        guard case .staged(let staged) = model.phase else {
+            Issue.record("Expected the staged page")
+            return
         }
+        texts.append(String(describing: staged))
+        texts.append(CreateRepoText.contentSummary(
+            environments: staged.environmentCount,
+            secrets: staged.secretCount,
+            variables: staged.variableCount
+        ))
         for text in texts {
             for value in values {
                 #expect(!text.contains(value), "A value leaked into: \(text.prefix(60))")

@@ -88,7 +88,7 @@ enum Theme {
         static let settingsMinHeight: CGFloat = 360
         static let sheetWidth: CGFloat = 440
         /// The inset of the 1.0 dialogs (boards Sync-Progress, Sync-Delete, NewRepo, Share-*).
-        static let compactSheetInset: CGFloat = 22
+        static let dialogInset: CGFloat = 22
         /// A row of a dialog's grey list box (board Sync-Delete).
         static let dialogListRowHeight: CGFloat = 24
         /// A 1.0 dialog form (boards NewRepo, NewEnvironment): a 150 pt label column, 28 pt
@@ -150,7 +150,8 @@ enum Theme {
         static let tableDateMinWidth: CGFloat = 128
         static let tableStatusMinWidth: CGFloat = 90
         static let statusDotSize: CGFloat = 6
-        /// The "changed on GitHub" ring of a place header (board Main2-Repository).
+        /// ``RingDot``: a place changed on GitHub (board Main2-Repository), a Sync line waiting or
+        /// pending (boards Sync-Progress, Sync-Done).
         static let changedDotSize: CGFloat = 7
         /// Width of the provider symbol in a destination row (v0.8.0), so names line up.
         static let destinationSymbolWidth: CGFloat = 16
@@ -188,9 +189,6 @@ enum Theme {
         static let syncSheetIdealHeight: CGFloat = 520
         /// The run's bar, full width (board Sync-Progress).
         static let syncProgressHeight: CGFloat = 4
-        /// A line still waiting in the progress cards: a 7 pt ring (board Sync-Progress).
-        static let syncWaitingDotSize: CGFloat = 7
-        static let syncWaitingDotStroke: CGFloat = 1.5
         /// The finished run when everything ran (board Sync-Done): 420 pt, a 44 pt check ring.
         static let syncDoneWidth: CGFloat = 420
         static let syncDoneMarkSize: CGFloat = 44
@@ -264,7 +262,7 @@ enum Theme {
     nonisolated enum Stroke {
         /// Every border and divider: 1 pt hairlines instead of shadows.
         static let hairline: CGFloat = 1
-        /// The "changed on GitHub" ring (board Main2-Repository).
+        /// The stroke of every ``RingDot`` (boards Main2-Repository, Sync-Progress, Sync-Done).
         static let changedDot: CGFloat = 1.5
         /// Dashed hairlines ("+ New Environment"): 4 pt dashes, 4 pt gaps.
         static let dashPattern: [CGFloat] = [4, 4]

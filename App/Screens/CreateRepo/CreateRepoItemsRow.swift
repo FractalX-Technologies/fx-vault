@@ -28,10 +28,10 @@ struct CreateRepoItemsRow: View {
                 addButton(.variable)
             }
             if lines.isEmpty {
-                DialogFormNote(String(
+                ConfigEditorNoteView(note: .info(String(
                     localized: "createRepo.items.empty",
                     defaultValue: "Optional. Values stay encrypted in your vault until Sync sends them to GitHub."
-                ))
+                )), style: .dialog)
             }
         }
     }

@@ -41,7 +41,7 @@ struct SyncSummaryView: View {
                 limitSection
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Layout.compactSheetInset)
+            .padding(.horizontal, Theme.Layout.dialogInset)
         }
     }
 
@@ -134,7 +134,7 @@ private struct SyncSummaryCardView: View {
         .padding(.horizontal, Theme.Spacing.medium)
         .padding(.vertical, Theme.Spacing.mediumMinus)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .fxDialogCard()
+        .fxCardBackground(.dialog)
     }
 }
 

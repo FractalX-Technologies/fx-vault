@@ -44,14 +44,14 @@ extension VisualSnapshotTests {
         )
         await viewModel.load()
         await viewModel.reviewDeletions()
-        #expect(viewModel.deletionTitle == "Delete 1 secret?")
         try await SnapshotOutput.write("sync-deletions", size: CGSize(width: Theme.Layout.syncSheetWidth, height: Self.syncDeletionsHeight)) {
             SyncScreen(viewModel: viewModel)
         }
 
         viewModel.deletionsAcknowledged = true
+        // The waits only time the renders; SyncViewModelTests asserts the states.
         let run = Task { await viewModel.startSync(includeDeletions: true) }
-        #expect(await TestFixtures.eventually { viewModel.step == .progress })
+        _ = await TestFixtures.eventually { viewModel.step == .progress }
         service.run.send(.started(total: 5))
         for change in [flags, level] {
             service.run.send(.changeStarted(changeID: change.id))
@@ -59,7 +59,7 @@ extension VisualSnapshotTests {
         }
         service.run.send(.changeStarted(changeID: jwt.id))
         let jwtLine = try #require(viewModel.progressCards.flatMap(\.lines).first { $0.name == "JWT_SECRET" })
-        #expect(await TestFixtures.eventually { viewModel.lineState(jwtLine) == .writing })
+        _ = await TestFixtures.eventually { viewModel.lineState(jwtLine) == .writing }
         try await SnapshotOutput.write("sync-progress", size: CGSize(width: Theme.Layout.syncSheetWidth, height: Self.syncProgressHeight)) {
             SyncScreen(viewModel: viewModel)
         }
@@ -68,7 +68,6 @@ extension VisualSnapshotTests {
             [flags, level, jwt, sentry, legacy].map { SyncChangeResultModel(change: $0, outcome: .succeeded(.verified)) }
         ))
         await run.value
-        #expect(viewModel.done?.syncedCount == 5)
         try await SnapshotOutput.write("sync-done", size: CGSize(width: Theme.Layout.syncDoneWidth, height: Self.syncDoneHeight)) {
             SyncScreen(viewModel: viewModel)
         }

@@ -9,18 +9,18 @@ struct EnvironmentPlanNoteView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Layout.dialogNoteSpacing) {
             if isPlanGated {
-                DialogFormNote(
-                    String(
+                ConfigEditorNoteView(
+                    note: .warning(String(
                         localized: "environment.planNote.gated",
                         defaultValue: "GitHub refused an environment change on this repository's plan. Environments and branch rules on private repositories may need a paid GitHub plan."
-                    ),
-                    tone: .warning
+                    )),
+                    style: .dialog
                 )
             } else {
-                DialogFormNote(String(
+                ConfigEditorNoteView(note: .info(String(
                     localized: "environment.planNote",
                     defaultValue: "Some environment features on private repositories depend on your GitHub plan."
-                ))
+                )), style: .dialog)
             }
             if let url = ExternalLinks.environmentPlans {
                 Link(String(localized: "environment.planNote.learnMore", defaultValue: "Learn more"), destination: url)

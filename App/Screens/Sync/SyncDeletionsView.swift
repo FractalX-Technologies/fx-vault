@@ -43,7 +43,7 @@ struct SyncDeletionsView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Layout.compactSheetInset)
+            .padding(.horizontal, Theme.Layout.dialogInset)
         }
         .onKeyPress(.return) { .handled }
     }
@@ -105,8 +105,9 @@ private struct SyncDeletionItemRow: View {
     }
 }
 
-/// `production  api-service · environment`, then what GitHub holds in it, the branch rules and
-/// the other rules deleted with it.
+/// `production  api-service` with the environment symbol, as an item's place (board
+/// Sync-Delete), then what GitHub holds in it, the branch rules and the other rules deleted
+/// with it.
 private struct SyncDeletionEnvironmentRow: View {
     let environment: SyncDeletionEnvironmentModel
     let groupName: String
@@ -121,10 +122,11 @@ private struct SyncDeletionEnvironmentRow: View {
                 Text(verbatim: environment.name)
                     .fxTextStyle(.monoMeta)
                     .foregroundStyle(Theme.Colors.ink)
-                Text(verbatim: SyncCopy.lineDetail(groupName, SyncCopy.environmentKind))
-                .fxTextStyle(.caption)
-                .foregroundStyle(Theme.Colors.mutedText)
-                .lineLimit(1)
+                Text(verbatim: environment.place ?? groupName)
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
             .frame(minHeight: Theme.Layout.dialogListRowHeight, alignment: .leading)
             .accessibilityElement(children: .combine)
