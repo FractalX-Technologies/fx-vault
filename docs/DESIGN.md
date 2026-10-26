@@ -476,7 +476,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   the window: the field's editor eats esc before SwiftUI sees it). Every typed word must be in the name or
   the owner and repository; names that start with a word come first, then names that contain
   one, then path matches. Then "Secrets by name" (1.0 D6c5) once something is typed: secrets and
-  variables whose name holds every word, up to 50, a name that starts with one first; the kind's
+  variables whose name holds every word (a repository's own destinations left out before the
+  limit), up to 50, a name that starts with one first; the kind's
   symbol (key, text), the mono name, where it is ("owner › repository › environment",
   "Folder · name", "Azure Key Vault · vault", "example-org · Organization"). ↑↓ cross both
   sections; ↩ opens the place with the row selected. "Names only" closes the footer.
@@ -516,7 +517,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   (Rename…, Share Securely…, Export .env…, Delete Folder…). The item actions are one section
   (`PlaceItemMoreItems`); Delete Selected… needs a selected row that is not already a pending
   deletion (`canDeleteSelection`); Copy All needs a live item (`canCopyAll`). A SwiftUI menu
-  item has no trailing lock glyph, so Copy All's help says it asks for Touch ID; Notes | Table
+  item has no trailing lock glyph, so Copy All's help says it asks for Touch ID or your master password; Notes | Table
   waits for B9.
 - Copy All (1.0 D6c4, `CopyAllScreen`): "Confirm it's you" (`ReauthView`, Touch ID tried at once,
   then the master password), then "Copied" with the count and the clipboard's clear delay. The

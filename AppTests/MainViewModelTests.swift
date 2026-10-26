@@ -91,6 +91,11 @@ struct MainViewModelTests {
         #expect(preferences.sidebarWidth == Int(Theme.Layout.sidebarMaxWidth))
         #expect(main.draggedSidebarWidth == nil)
         #expect(main.sidebarWidth == Theme.Layout.sidebarMaxWidth)
+
+        // The handle ends the drag again when its gesture state resets: nothing more is saved.
+        preferences.sidebarWidth = 300
+        main.endSidebarDrag()
+        #expect(preferences.sidebarWidth == 300)
     }
 
     @Test func newRepositoryAndNothingToShareYet() async throws {

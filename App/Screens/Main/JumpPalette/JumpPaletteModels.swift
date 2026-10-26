@@ -101,11 +101,11 @@ enum JumpPlaces {
             case .place(.scope(let repositoryID, let scope)):
                 guard let repo = repositories[repositoryID] else { return nil }
                 guard case .environment(let environmentID) = scope else {
-                    let detail = JumpPaletteCopy.path([repo.ownerLogin, repo.name])
+                    let detail = PlaceCopy.path([repo.ownerLogin, repo.name])
                     return JumpItemModel(match: match, detail: detail, target: .repositoryScope(repositoryID))
                 }
                 guard let environment = input.environments[repositoryID]?.first(where: { $0.id == environmentID }) else { return nil }
-                let detail = JumpPaletteCopy.path([repo.ownerLogin, repo.name, environment.name])
+                let detail = PlaceCopy.path([repo.ownerLogin, repo.name, environment.name])
                 return JumpItemModel(match: match, detail: detail, target: .environment(repositoryID, environmentID))
             case .place(.folder(let id)):
                 guard let folder = input.folders.first(where: { $0.id == id }) else { return nil }

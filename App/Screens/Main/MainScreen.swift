@@ -122,7 +122,8 @@ struct MainScreen: View {
 /// `sidebarMinWidth` and `sidebarMaxWidth`, saved per Mac user when the drag ends.
 private struct SidebarResizeHandle: View {
     let main: MainViewModel
-    @State private var startWidth: CGFloat?
+    // Resets itself when the drag ends or is cancelled (⌃⌘S mid-drag never calls onEnded).
+    @GestureState private var startWidth: CGFloat?
     @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
@@ -133,18 +134,23 @@ private struct SidebarResizeHandle: View {
             .pointerStyle(.columnResize)
             .gesture(
                 DragGesture(minimumDistance: 0, coordinateSpace: .global)
-                    .onChanged { drag in
-                        let start = startWidth ?? main.sidebarWidth
-                        startWidth = start
+                    .updating($startWidth) { drag, start, _ in
+                        let origin = start ?? main.sidebarWidth
+                        start = origin
                         // Global coordinates don't flip: right to left, the sidebar is on the right.
                         let delta = layoutDirection == .rightToLeft ? -drag.translation.width : drag.translation.width
-                        main.dragSidebar(to: start + delta)
+                        main.dragSidebar(to: origin + delta)
                     }
                     .onEnded { _ in
-                        startWidth = nil
                         main.endSidebarDrag()
                     }
             )
+            // A cancelled drag never reaches onEnded: it keeps, and saves, the width it shows.
+            .onChange(of: startWidth == nil) { _, isIdle in
+                if isIdle {
+                    main.endSidebarDrag()
+                }
+            }
             .accessibilityHidden(true)
     }
 }

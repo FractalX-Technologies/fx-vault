@@ -555,7 +555,8 @@ one `VaultSession.write` and throws `ConfigRepositoryError`.
   `observeRepositories()`, `observeScopes(repositoryID:)`, `observeItems(repositoryID:scope:)`
   (each model with its `linkCount`), `observePendingCounts()`. `itemNames(matching:limit:)`
   (1.0 D6c5, ⌘K): live names from every holder through `VaultStore.ItemNameStore` (one
-  `UNION ALL` over the four item tables, no value column), `[ItemNameMatchModel]` with an
+  `UNION ALL` over the four item tables, a destination's only for a Key Vault of its own, no
+  value column), `[ItemNameMatchModel]` with an
   `ItemHolderModel` (a place or an organization, VaultCore; also Copy All's input).
 - Copy and linked copies (v0.4.0, v0.4.1): `copyConflicts(_:to:repositoryID:)` and
   `copyItems(_:to:repositoryID:conflicts:)` take sources from any repository; `copyItems` links
