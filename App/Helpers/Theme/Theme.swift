@@ -100,6 +100,8 @@ enum Theme {
         static let settingsAccountLineHeight: CGFloat = 24
         static let settingsSublineHeight: CGFloat = 22
         static let settingsSymbolWidth: CGFloat = 14
+        /// Add Account…'s popover (Settings › Accounts).
+        static let settingsPopoverWidth: CGFloat = 340
         /// The lines under a sent file line up with its name, past the 13 pt icon (board Settings-Sharing).
         static let settingsNamesIndent: CGFloat = 22
         /// The Reset vault dialog (board Reset-Confirm).

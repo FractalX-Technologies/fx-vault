@@ -14,7 +14,7 @@ import VaultData
 ///   (``VaultDataComponents/makeOffline(session:runner:clock:sandbox:)``). SwiftUI previews use
 ///   it, and so does the app while it hosts the test bundle (nothing under `~/Library`, no shell
 ///   probe, no gh).
-/// - `test`: unit tests pass their own fakes to ``init(mode:vaultManager:data:preferences:clipboard:autoLock:ghStatusProbe:dockBadge:passphraseGenerator:vaultDirectory:clock:connectivity:)``.
+/// - `test`: unit tests pass their own fakes to ``init(mode:vaultManager:data:preferences:clipboard:autoLock:ghStatusProbe:dockBadge:passphraseGenerator:vaultDirectory:clock:connectivity:loginItem:)``.
 ///
 /// Order matters: the session first, then the repositories (``data``), then `VaultManager`,
 /// whose `onLock` purges the token cache of ``VaultDataComponents/github`` (§5.8 Phase A).
@@ -73,6 +73,8 @@ final class AppContainer {
     let gitHubReachability = GitHubReachability()
     /// A Key Vault's subscription found after its Refresh (1.0 D6c6), with the session's misses.
     let keyVaultSubscriptions: KeyVaultSubscriptionLookup
+    /// Open at login: `SMAppService` live, recorded everywhere else (never registers a test host).
+    let loginItem: any LoginItemControlling
 
     init(
         mode: Mode,
@@ -86,7 +88,8 @@ final class AppContainer {
         passphraseGenerator: PassphraseGenerator?,
         vaultDirectory: URL?,
         clock: any VaultClock,
-        connectivity: ConnectivityMonitor? = nil
+        connectivity: ConnectivityMonitor? = nil,
+        loginItem: (any LoginItemControlling)? = nil
     ) {
         self.mode = mode
         self.vaultManager = vaultManager
@@ -102,6 +105,7 @@ final class AppContainer {
         self.vaultDirectory = vaultDirectory
         self.clock = clock
         self.connectivity = connectivity ?? ConnectivityMonitor(source: FixedNetworkPathSource(), clock: clock)
+        self.loginItem = loginItem ?? RecordedLoginItem()
     }
 
     /// Whether this container behaves as the running app: the real vault, keychain and gh, or
@@ -172,7 +176,8 @@ final class AppContainer {
             passphraseGenerator: try? PassphraseGenerator.bundled(),
             vaultDirectory: session.databaseDirectory,
             clock: clock,
-            connectivity: ConnectivityMonitor(source: NWPathMonitorSource(), clock: clock)
+            connectivity: ConnectivityMonitor(source: NWPathMonitorSource(), clock: clock),
+            loginItem: LoginItemManager()
         )
     }
 

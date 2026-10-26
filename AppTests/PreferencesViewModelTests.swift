@@ -275,6 +275,74 @@ struct PreferencesViewModelTests {
         #expect(!viewModel.isVaultSettingsAvailable)
     }
 
+    // MARK: - Open at login and Copy Diagnostics
+
+    /// Settings › General, Open at login: the switch registers FX Vault with the system and
+    /// reads its state back from it, never from preferences.
+    @Test func openAtLoginRegistersWithTheSystem() async throws {
+        let harness = try await TestHarness(vault: .locked)
+        let viewModel = PreferencesViewModel(app: harness.app)
+        #expect(!viewModel.opensAtLogin)
+
+        viewModel.setOpensAtLogin(true)
+        #expect(harness.loginItem.status == .on)
+        #expect(viewModel.opensAtLogin)
+        #expect(viewModel.loginItemError == nil)
+
+        viewModel.setOpensAtLogin(false)
+        #expect(harness.loginItem.status == .off)
+        #expect(!viewModel.opensAtLogin)
+
+        try harness.loginItem.register()
+        #expect(!viewModel.opensAtLogin, "read again only when the tab appears")
+        viewModel.refreshLoginItem()
+        #expect(viewModel.opensAtLogin, "turned on in System Settings")
+    }
+
+    @Test func openAtLoginWaitingForApprovalOffersLoginItems() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        harness.loginItem.statusAfterRegister = .needsApproval
+        let viewModel = PreferencesViewModel(app: harness.app)
+
+        viewModel.setOpensAtLogin(true)
+        #expect(viewModel.loginItemStatus == .needsApproval)
+        #expect(viewModel.opensAtLogin)
+        viewModel.openLoginItemsSettings()
+        #expect(harness.loginItem.openedSystemSettings)
+    }
+
+    @Test func aRefusedRegistrationLeavesTheSwitchOffAndSaysSo() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        harness.loginItem.failure = CocoaError(.fileWriteNoPermission)
+        let viewModel = PreferencesViewModel(app: harness.app)
+
+        viewModel.setOpensAtLogin(true)
+        #expect(!viewModel.opensAtLogin)
+        let error = try #require(viewModel.loginItemError)
+        #expect(!error.message.isEmpty)
+
+        harness.loginItem.failure = nil
+        viewModel.setOpensAtLogin(true)
+        #expect(viewModel.opensAtLogin)
+        #expect(viewModel.loginItemError == nil)
+    }
+
+    /// Settings › Advanced, Diagnostics: the same plain gh report as the gh setup screen, in
+    /// every phase.
+    @Test func copyDiagnosticsCopiesTheGHReport() async throws {
+        let harness = try await TestHarness(vault: .locked)
+        let viewModel = PreferencesViewModel(app: harness.app)
+        #expect(!viewModel.hasCopiedDiagnostics)
+
+        await viewModel.copyDiagnostics()
+        #expect(viewModel.hasCopiedDiagnostics)
+        #expect(!viewModel.isCollectingDiagnostics)
+        let text = try #require(harness.pasteboardString)
+        #expect(text.hasPrefix(GHDiagnosticsTextRenderer.title))
+        #expect(text.contains(GHDiagnosticsTextRenderer.privacyLine))
+        #expect(!harness.container.clipboard.ownsContents, "a plain copy, not a concealed value")
+    }
+
     /// Settings › Advanced, In use: a ready gh shows its version and path; checking and unknown
     /// add nothing; every other state adds the status sentence under the row.
     @Test func theInUseRowFollowsTheGHStatus() {

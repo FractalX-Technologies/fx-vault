@@ -3,9 +3,8 @@ import SwiftUI
 import VaultData
 
 /// Preferences › Accounts (§10; board Settings-Accounts): each gh account with its SSH alias,
-/// **Re-check** and **Test**, its token and scopes (with copyable fix commands) and its
-/// organizations with their access (1.0), then the accounts FX Vault can't use. The gh path and
-/// version are in Advanced.
+/// **Re-check** and **Test**, its token, scopes and organizations (1.0), the accounts FX Vault
+/// can't use, then Add Account…. The gh path and version are in Advanced.
 struct AccountsSettingsScreen: View {
     let preferences: PreferencesViewModel
 
@@ -47,8 +46,13 @@ private struct AccountsSettingsContent: View {
                         }
                     }
                 }
-                if !viewModel.tokenVariables.isEmpty {
-                    TokenVariableNote(variables: viewModel.tokenVariables) { viewModel.copy($0) }
+                HStack(alignment: .top, spacing: Theme.Spacing.small) {
+                    if viewModel.tokenVariables.isEmpty {
+                        Spacer(minLength: 0)
+                    } else {
+                        TokenVariableNote(variables: viewModel.tokenVariables) { viewModel.copy($0) }
+                    }
+                    AddAccountButton(viewModel: viewModel)
                 }
                 if let copied = viewModel.copiedCommand {
                     PreferencesFootnote(String(
@@ -85,6 +89,50 @@ private struct AccountsSettingsContent: View {
             .fxTextStyle(.body)
             .foregroundStyle(Theme.Colors.mutedText)
             .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// **Add Account…** (board Settings-Accounts): gh logs accounts in, interactively, so FX Vault
+/// gives the command to run in Terminal and checks again (the in-app device flow is B4b).
+private struct AddAccountButton: View {
+    let viewModel: AccountsSettingsViewModel
+    @State private var isPresented = false
+
+    var body: some View {
+        Button(String(localized: "settings.accounts.add", defaultValue: "Add Account…")) {
+            isPresented = true
+        }
+        .fxButtonStyle(.outline, size: .compact)
+        .accessibilityIdentifier(AccessibilityID.Accounts.addAccount)
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                Text(String(localized: "settings.accounts.add.title", defaultValue: "Add a GitHub account"))
+                    .fxTextStyle(.bodyEmphasized)
+                    .foregroundStyle(Theme.Colors.ink)
+                Text(String(
+                    localized: "settings.accounts.add.message",
+                    defaultValue: "Log it in to the GitHub CLI in Terminal, then choose Check Again. gh keeps your other accounts."
+                ))
+                .fxTextStyle(.formNote)
+                .foregroundStyle(Theme.Colors.subtleText)
+                .fixedSize(horizontal: false, vertical: true)
+                CommandRow(command: GHSetupViewModel.loginCommand) { viewModel.copy($0) }
+                HStack {
+                    Spacer(minLength: 0)
+                    Button(String(localized: "settings.accounts.unmapped.checkAgain", defaultValue: "Check Again")) {
+                        Task {
+                            await viewModel.checkAgain()
+                            isPresented = false
+                        }
+                    }
+                    .fxButtonStyle(.outline, size: .compact)
+                    .disabled(viewModel.isLoading)
+                    .accessibilityIdentifier(AccessibilityID.Accounts.addAccountCheckAgain)
+                }
+            }
+            .padding(Theme.Spacing.medium)
+            .frame(width: Theme.Layout.settingsPopoverWidth)
+        }
     }
 }
 

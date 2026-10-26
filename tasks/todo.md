@@ -2561,7 +2561,7 @@ Lane A (one builder):
   - Boards: QuickVault-Search, -Place, -Locked, -Expanding.
 
 Lane B (one builder):
-- [ ] S1 Settings as the boards: General (quick vault shortcut, open at login, lock when the screen locks, sound effects), Security, Accounts, Advanced.
+- [x] S1 Settings as the boards: General (quick vault shortcut, open at login, lock when the screen locks, sound effects), Security, Accounts, Advanced. The Accounts board's Azure group waits for its own slice (Review S1).
   - Boards: Settings-*.
 - [ ] M1 Menu bar item: Quick Vault, Open FX Vault, Review Sync · N pending…, Lock Now, Settings…, Quit.
   - Board: MenuBar.
@@ -2595,3 +2595,17 @@ Review O1 — selected organization items' repository lists (2026-10-26, automat
   - Each was seen failing (3 tests, 4 issues). Also: a scheduler failure is logged, and Keep Local's count is pinned to the stored list.
 - Docs: ARCHITECTURE, DATABASE, CHANGELOG.
 - Gates: org suites 24/24, the full package suite, the app org suites (15), lint, check-secrets. The live read-only `LiveSourcesTests` passed against the real org.
+
+Review S1 — Settings as the boards (2026-10-26, automatic):
+- General (board Settings-General): Quick vault shortcut (`QuickVaultShortcutRecorder`, a 96 pt field box; click, press the keys, Esc cancels, a refused key beeps) and Open at login (mini switch; Open Login Items and a detail while System Settings must allow it; an inline error when the system refuses); Lock adds "Lock when the screen locks", a disabled switch that is always on; Sound effects "Follows system" before Clone folder.
+- Shortcut storage: `QuickVaultShortcutModel` (key code, modifiers, key label; `displayText` "⌃⌥V", `spokenText`, `carbonKeyCode`, `carbonModifiers` for Q1's `RegisterEventHotKey`); `PreferencesManager.quickVaultShortcut` in three `preferences.quickVaultShortcut.*` keys, ⌃⌥V when missing or invalid. A shortcut needs two modifiers, one of them ⌃ ⌥ or ⌘ (a hot key on ⌘X or ⇧X would take that key from every app).
+- Open at login: `LoginItemControlling` (`LoginItemManager` over `SMAppService.mainApp` live; `RecordedLoginItem` in previews, tests and UI tests), held by `AppContainer.loginItem`; the system is the only record, read again when General appears.
+- Security: Reset vault is the last card (`ResetVaultSection`, with `ResetVaultSheet` moved to `ResetVaultSheet.swift`); while locked, Security shows a note and that card only (the reset asks for the master password itself), so the locked reset of D6d-6 stays.
+- Advanced: Diagnostics with Copy Diagnostics (`AppViewModel.copyGHDiagnostics()`, shared with the gh setup screen) and the footnote "From Terminal:" with this app's executable and `--diagnose` (`DiagnoseCommand.terminalCommand`); Reset vault left.
+- Accounts: Add Account… under the card (beside the `GH_TOKEN` note): a popover with `gh auth login` and Check Again (gh logs in interactively; the in-app device flow is B4b).
+- `PreferencesSection` and `PreferencesFootnote` take an `AttributedString` footnote (the command in mono).
+- Not built (needs capabilities FX Vault lacks): the Accounts board's Azure group (tenant names, "Signed in as", per-tenant sign-in with `az login --tenant`, Choose Vaults… after onboarding, `az logout`); the org line's Approve (B4b).
+- Departures: the gh path override stays a field (D6d-6); Copy Diagnostics' detail says "no secret names or values" (the report names gh accounts); the Terminal command names the executable instead of `open -a … --args` (prints nowhere); the footnote keeps "always"; Copy turns to "Copied".
+- Tests: `QuickVaultShortcutTests` (default ⌃⌥V and its Carbon values, kept across launches, the two-modifier rule, named keys, hand-edited defaults, an invalid shortcut never stored), `PreferencesViewModelTests` (`openAtLoginRegistersWithTheSystem`, `openAtLoginWaitingForApprovalOffersLoginItems`, `aRefusedRegistrationLeavesTheSwitchOffAndSaysSo`, `copyDiagnosticsCopiesTheGHReport`), `DiagnosticReportTests.theTerminalCommandRunsTheExecutableItself`; seen failing with the two-modifier rule and the register call removed (13 issues in 2 suites). UI `SettingsUITests` (shortcut recorded, Add Account…, Reset vault on Security) written for the batch run. Waiver: the live `SMAppService` call (tasks/waivers.md; RELEASING #65).
+- Docs: DESIGN (Settings), CHANGELOG, README, ARCHITECTURE, STRUCTURE, RELEASING #65.
+- Gates: XcodeGen 2.45.4; app tests 58 in 4 suites green (`QuickVaultShortcutTests`, `PreferencesViewModelTests`, `DiagnosticReportTests`, `GHStatusProbeTests`); snapshots `preferences-*` rendered and checked against the boards; lint OK; check-secrets OK; strings ×2 (second run up to date). No package change.

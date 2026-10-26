@@ -246,6 +246,15 @@ struct DiagnosticReportTests {
         #expect(!DiagnoseCommand.isRequested(arguments: ["FXVault", "-NSDocumentRevisionsDebugMode", "YES"]))
     }
 
+    /// Settings › Advanced names the executable: `open -a … --args` would print nowhere.
+    @Test func theTerminalCommandRunsTheExecutableItself() {
+        #expect(
+            DiagnoseCommand.terminalCommand(executablePath: "/Applications/FX Vault.app/Contents/MacOS/FXVault")
+                == "\"/Applications/FX Vault.app/Contents/MacOS/FXVault\" --diagnose"
+        )
+        #expect(DiagnoseCommand.isRequested(arguments: ["/Applications/FX Vault.app/Contents/MacOS/FXVault", DiagnoseCommand.argument]))
+    }
+
     @Test func theGHSectionIsInTheReportWithExplicitNulls() throws {
         let report = DiagnosticReporter.makeReport(
             infoDictionary: Self.info,

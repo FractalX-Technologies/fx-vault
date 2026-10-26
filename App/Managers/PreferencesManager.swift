@@ -112,6 +112,9 @@ final class PreferencesManager {
         static let recoveryKeyConfirmationPending = "preferences.recoveryKeyConfirmationPending"
         static let touchIDOfferAnswered = "preferences.touchIDOfferAnswered"
         static let sidebarWidth = "preferences.sidebarWidth"
+        static let quickVaultKeyCode = "preferences.quickVaultShortcut.keyCode"
+        static let quickVaultModifiers = "preferences.quickVaultShortcut.modifiers"
+        static let quickVaultKey = "preferences.quickVaultShortcut.key"
         /// Settings of the nearby, teammate and shared-space features 1.0 removed.
         static let removed = [
             "preferences.nearbyDisplayName", "preferences.nearbyVisibility",
@@ -136,6 +139,11 @@ final class PreferencesManager {
         isRecoveryKeyConfirmationPending = store.bool(forKey: Key.recoveryKeyConfirmationPending)
         hasAnsweredTouchIDOffer = store.bool(forKey: Key.touchIDOfferAnswered)
         sidebarWidth = Self.validatedSidebarWidth(store.integer(forKey: Key.sidebarWidth))
+        quickVaultShortcut = Self.validatedShortcut(
+            keyCode: store.integer(forKey: Key.quickVaultKeyCode),
+            modifiers: store.integer(forKey: Key.quickVaultModifiers),
+            key: store.string(forKey: Key.quickVaultKey)
+        )
         // The display name shown to nearby Macs is personal data: don't leave it on disk.
         for key in Key.removed {
             store.removeValue(forKey: key)
@@ -158,6 +166,20 @@ final class PreferencesManager {
     static func validatedSidebarWidth(_ width: Int?) -> Int {
         guard let width else { return Int(Theme.Layout.sidebarWidth) }
         return min(max(width, Int(Theme.Layout.sidebarMinWidth)), Int(Theme.Layout.sidebarMaxWidth))
+    }
+
+    /// The quick vault's global shortcut (Settings › General). Always valid: anything else,
+    /// such as a hand-edited defaults file, reads as ⌃⌥V.
+    var quickVaultShortcut: QuickVaultShortcutModel {
+        didSet {
+            guard quickVaultShortcut.isValid else {
+                quickVaultShortcut = oldValue
+                return
+            }
+            store.set(Int(quickVaultShortcut.keyCode), forKey: Key.quickVaultKeyCode)
+            store.set(quickVaultShortcut.modifiers.rawValue, forKey: Key.quickVaultModifiers)
+            store.set(quickVaultShortcut.key, forKey: Key.quickVaultKey)
+        }
     }
 
     /// Inactivity auto-lock, in minutes. Always one of ``autoLockOptions``.
@@ -245,6 +267,12 @@ final class PreferencesManager {
     static func validatedAutoLockMinutes(_ minutes: Int?) -> Int {
         guard let minutes, autoLockOptions.contains(minutes) else { return Timeouts.autoLockDefaultMinutes }
         return minutes
+    }
+
+    static func validatedShortcut(keyCode: Int?, modifiers: Int?, key: String?) -> QuickVaultShortcutModel {
+        guard let keyCode, let code = UInt16(exactly: keyCode), let modifiers, let key else { return .standard }
+        let shortcut = QuickVaultShortcutModel(keyCode: code, modifiers: .init(rawValue: modifiers), key: key)
+        return shortcut.isValid ? shortcut : .standard
     }
 
     /// A uid no trusted gh can have (root never needs consent): written on revoke.

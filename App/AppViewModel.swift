@@ -428,6 +428,19 @@ final class AppViewModel {
         await refreshGHStatus()
     }
 
+    /// **Copy Diagnostics** (the gh setup screen, Settings › Advanced): collects the gh report
+    /// (shell probe facts, every candidate, the accounts gh lists; no token or value) and copies
+    /// it as plain text.
+    func copyGHDiagnostics() async {
+        let preferences = container.preferences
+        let model = await container.data.github.diagnostics(
+            overridePath: preferences.ghPathOverride,
+            trustedBinary: preferences.trustedGHBinary
+        )
+        let identity = DiagnosticReporter.versionAndBuild(infoDictionary: Bundle.main.infoDictionary)
+        container.clipboard.copyCommand(GHDiagnosticsTextRenderer.render(model, version: identity.version, build: identity.build))
+    }
+
     /// True when ``GHSetupScreen`` replaces the main window (after unlock, gh needs attention,
     /// and the user did not choose "Not Now").
     var showsGHSetup: Bool {

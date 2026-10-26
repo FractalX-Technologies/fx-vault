@@ -131,19 +131,12 @@ final class GHSetupViewModel {
         await app.trustGHBinary(GHTrustedBinaryModel(path: path, ownerUID: owner.uid))
     }
 
-    /// **Copy Diagnostics**: collects the gh report (shell probe facts, every candidate, the
-    /// accounts gh lists; no token or value) and copies it as plain text.
+    /// **Copy Diagnostics** (``AppViewModel/copyGHDiagnostics()``).
     func copyDiagnostics() async {
         guard !isCollectingDiagnostics else { return }
         isCollectingDiagnostics = true
         defer { isCollectingDiagnostics = false }
-        let preferences = app.container.preferences
-        let model = await app.container.data.github.diagnostics(
-            overridePath: preferences.ghPathOverride,
-            trustedBinary: preferences.trustedGHBinary
-        )
-        let identity = DiagnosticReporter.versionAndBuild(infoDictionary: Bundle.main.infoDictionary)
-        app.container.clipboard.copyCommand(GHDiagnosticsTextRenderer.render(model, version: identity.version, build: identity.build))
+        await app.copyGHDiagnostics()
         copiedCommand = nil
         hasCopiedDiagnostics = true
     }
