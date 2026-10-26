@@ -39,6 +39,9 @@ extension OrganizationRepository {
     ///
     /// - Throws: `.organizationNotFound`, `.github` when a list fails or a row has no visibility.
     public func refresh(organizationID: OrganizationID) async throws(RepoCatalogError) -> OrgRefreshModel {
+        // Declared before the first closure: Swift 6.3 rejects a closure that reads `store` above
+        // a later `let store` in the same scope ("captures 'store' before it is declared").
+        let store = store
         guard let organization = try perform({
             try session.database.read { tx in try store.fetchOrganization(id: organizationID, in: tx) }
         }) else {
@@ -48,7 +51,6 @@ extension OrganizationRepository {
         defer { listing.wipe() }
         let now = clock.now
         let suppressed = deletions.recentKeys(organizationID: organizationID, now: now)
-        let store = store
         let rows = try perform {
             try session.database.write { tx in
                 let rows = try store.fetchItemRecords(organizationID: organizationID, in: tx)
@@ -138,6 +140,7 @@ extension OrganizationRepository {
             throw .resolutionUnavailable(.valueMissing)
         }
         guard !session.isLocked else { throw .vault(.locked) }
+        let store = store // before the first closure, as in `refresh`
         let listing: Listing
         do throws(RepoCatalogError) {
             guard let organization = try perform({
@@ -152,7 +155,6 @@ extension OrganizationRepository {
         defer { listing.wipe() }
         let now = clock.now
         let suppressed = deletions.recentKeys(organizationID: organizationID, now: now)
-        let store = store
         do {
             try session.write { keys, tx in
                 let rows = try store.fetchItemRecords(organizationID: organizationID, in: tx)
