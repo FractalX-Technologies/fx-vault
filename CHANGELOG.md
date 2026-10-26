@@ -5,12 +5,27 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ## Unreleased (1.0)
 
+### Added
+
+- **Quick vault shortcut.** Settings › General records the global shortcut for the quick vault:
+  ⌃⌥V by default, any key with two modifiers, one of them Control, Option or Command.
+- **Open at login.** Settings › General adds FX Vault to the Login Items, and says when System
+  Settings has to allow it first.
+- **Copy Diagnostics in Settings.** Settings › Advanced copies the gh report (versions, paths
+  and checks; no tokens, secret names or values) and names the Terminal command for the full one.
+- **Add Account….** Settings › Accounts gives gh's login command for another GitHub account,
+  with Check Again.
+
 ### Fixed
 
 - **Deleting what GitHub no longer has.** Sync reads gh's `HTTP nnn (…)` (an error with no
   message) as its status, so deleting a secret or variable already gone from GitHub finishes.
 
 ### Changed
+
+- **Settings, second pass.** General shows "Lock when the screen locks" (always on) and "Sound
+  effects: Follows system"; Reset vault moved from Advanced to Security, where it stays while
+  the vault is locked.
 
 - **Review Sync.** The Sync summary is one card per place: the repository, each environment,
   each Key Vault, each organization. Its lines read `+ ~ −` with the kind (a rename says where

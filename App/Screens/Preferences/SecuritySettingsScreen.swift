@@ -2,25 +2,39 @@ import SwiftUI
 import VaultCore
 
 /// Preferences › Security (board Settings-Security): Touch ID, then the master password and a new
-/// recovery key, unlocked only. Reset vault stays in Advanced: it works while the vault is locked.
+/// recovery key, unlocked only, then Reset vault. While the vault is locked only Reset vault
+/// stays: it asks for the master password itself.
 struct SecuritySettingsScreen: View {
-    let preferences: PreferencesViewModel
+    @Bindable var preferences: PreferencesViewModel
     @Bindable var viewModel: SecuritySettingsViewModel
 
     var body: some View {
-        if preferences.isVaultSettingsAvailable {
-            form
-                .onAppear { viewModel.refresh() }
-                .sheet(item: $viewModel.activeSheet, onDismiss: {
-                    // Esc or a lock closed the sheet: drop typed passwords and any key on screen.
-                    if viewModel.activeSheet == nil {
-                        viewModel.dismissAll()
+        Group {
+            if preferences.isVaultSettingsAvailable {
+                form
+                    .onAppear { viewModel.refresh() }
+                    .sheet(item: $viewModel.activeSheet, onDismiss: {
+                        // Esc or a lock closed the sheet: drop typed passwords and any key on screen.
+                        if viewModel.activeSheet == nil {
+                            viewModel.dismissAll()
+                        }
+                    }) { sheet in
+                        SecuritySheetView(viewModel: viewModel, sheet: sheet)
                     }
-                }) { sheet in
-                    SecuritySheetView(viewModel: viewModel, sheet: sheet)
+            } else if preferences.canStartReset {
+                PreferencesPage {
+                    PreferencesFootnote(String(
+                        localized: "settings.security.locked.note",
+                        defaultValue: "Unlock FX Vault to change Touch ID, the master password and the recovery key."
+                    ))
+                    ResetVaultSection(viewModel: preferences)
                 }
-        } else {
-            VaultSettingsLockedView()
+            } else {
+                VaultSettingsLockedView()
+            }
+        }
+        .sheet(isPresented: $preferences.isShowingResetVault) {
+            ResetVaultSheet(viewModel: preferences)
         }
     }
 
@@ -59,6 +73,7 @@ struct SecuritySettingsScreen: View {
                     .fxButtonStyle(.outline, size: .compact)
                 }
             }
+            ResetVaultSection(viewModel: preferences)
         }
     }
 

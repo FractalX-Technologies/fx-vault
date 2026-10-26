@@ -151,7 +151,8 @@ A locked FX Vault has no window. When you switch to it, a small black island gro
 notch (on a screen without one, it floats under the menu bar): **Touch ID to unlock**, or **Use
 Password** for the master password. The island never shows names or values. After the unlock it
 says **Unlocked** and the main window opens; locking (⌃⌘L, sleep, idle) closes the window again.
-**Recovery Key…** in the island opens the recovery window.
+**Recovery Key…** in the island opens the recovery window. **Settings › General › Open at
+login** starts FX Vault, locked, when you log in to your Mac.
 
 ### Touch ID
 
@@ -255,7 +256,8 @@ your Terminal's environment, and only uses the accounts gh **stores**. First upd
    can revoke it in **Settings › Advanced**. A gh that other users can write to is never trusted.
    You can also point **Settings › Advanced › gh path override** at a gh you own.
 
-**Diagnostics.** **Copy Diagnostics** on the GitHub CLI setup screen copies a plain-text report:
+**Diagnostics.** **Copy Diagnostics** on the GitHub CLI setup screen and in **Settings ›
+Advanced** copies a plain-text report:
 which gh FX Vault found and why, your shell and whether the probe ran interactively, the
 **names** of `GH_TOKEN`, `GITHUB_TOKEN`, `GH_CONFIG_DIR`, `XDG_CONFIG_HOME` and `GH_HOST` if your
 shell sets them, and each account's login, state, token source and scopes. The same report is the

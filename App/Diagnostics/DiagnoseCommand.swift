@@ -19,6 +19,12 @@ import VaultData
 nonisolated enum DiagnoseCommand {
     static let argument = "--diagnose"
 
+    /// The command Settings › Advanced shows: this app's own executable, quoted for the shell.
+    static func terminalCommand(executablePath: String? = Bundle.main.executablePath) -> String {
+        let path = executablePath ?? "/Applications/FX Vault.app/Contents/MacOS/FXVault"
+        return "\"\(path)\" \(argument)"
+    }
+
     /// True when `--diagnose` follows the executable path.
     static func isRequested(arguments: [String]) -> Bool {
         #if FXVAULT_UI_TESTING

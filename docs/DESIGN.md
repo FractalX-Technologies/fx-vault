@@ -866,23 +866,34 @@ the window gets `.fxWindowBackground()`. `PreferencesLayout.swift` draws the tab
   valid), an ink `RingDot` where the user must act (Needs admin:org, Can't use), a
   `hairlineStrong` dot otherwise (Expired, Org secrets need an org admin).
 
-General: Lock (Lock after inactivity, with the footnote that FX Vault always locks on sleep,
-screen lock and window close), then Clipboard clears after (the fixed 30 s; also on lock) and Clone folder
-(`~/…` with Choose…). Security: Unlock with Touch ID with its footnote, then Master password and
-Recovery key; its password sheets keep the older sheet chrome. Advanced: GitHub CLI (the gh path
-override field with Choose…, In use with the gh version and path and Check Again, any other gh
-state but checking and unknown as a `GHStatusRow` under it, a trusted gh with Revoke, the telemetry footnote), then Vault
-(Vault folder, Reset vault). Reset vault stays in Advanced, unlike the board, because it works
-while the vault is locked; its dialog (board Reset-Confirm) is a 380 pt `DialogSheet` with two
-11 pt labels over 28 pt mono fields and a danger-filled Erase Vault.
+General (S1): a card with Quick vault shortcut (`QuickVaultShortcutRecorder`: a 96 pt field box
+showing "⌃⌥V"; click, then press the keys; an ink border and "Type shortcut" while it listens;
+Esc cancels; a key without two modifiers, one of them ⌃ ⌥ or ⌘, beeps) and Open at login (a mini
+switch over `SMAppService.mainApp`; while System Settings must allow it, the detail says so and
+Open Login Items sits beside the switch); then Lock (Lock after inactivity, and Lock when the
+screen locks as a disabled switch that is always on, with the footnote that FX Vault always locks
+on sleep, screen lock and window close); then Clipboard clears after (the fixed 30 s; also on
+lock), Sound effects ("Follows system") and Clone folder (`~/…` with Choose…). Security: Unlock
+with Touch ID with its footnote, then Master password and Recovery key; its password sheets keep
+the older sheet chrome; then Reset vault in a card of its own. While the vault is locked Security
+shows only a note and the Reset vault card (the reset asks for the master password itself).
+Reset vault's dialog (board Reset-Confirm) is a 380 pt `DialogSheet` with two 11 pt labels over
+28 pt mono fields and a danger-filled Erase Vault. Advanced: GitHub CLI (the gh path override
+field with Choose…, In use with the gh version and path and Check Again, any other gh state but
+checking and unknown as a `GHStatusRow` under it, a trusted gh with Revoke, the telemetry
+footnote), Diagnostics (Copy Diagnostics with an outline Copy that turns to "Copied", and the
+footnote "From Terminal:" with this app's executable and `--diagnose` in mono: `open -a … --args`
+prints nowhere), then Vault (Vault folder).
 
 Accounts (1.0, B4): one GitHub card. Each account is a block: the person symbol, the login in
 12 pt mono medium, its SSH alias as a quiet 11 pt mono menu, Re-check and Test; then 22 pt lines
 for Token, Scopes and each organization (`building.2`, mono login, `PreferencesStatus`, an
 underlined Open SSO Page link when GitHub gave one), each followed by its `CommandRow`s when a fix
 is needed, and the Test result. Accounts FX Vault can't use follow in the same card ("Can't use ·
-reason"). The `GH_TOKEN` note and its command sit under the card; SSH aliases without an account
-are their own group. The gh path and version are in Advanced.
+reason"). The `GH_TOKEN` note and its command sit under the card with Add Account… at its
+trailing edge: a 340 pt popover with `gh auth login` as a `CommandRow` and Check Again (gh logs
+accounts in interactively, so it stays Copy-only). SSH aliases without an account are their own
+group. The gh path and version are in Advanced. The board's Azure group is not built yet.
 
 Sharing (v0.9.0) has one group, "Files you shared", with the footnote "Names only; FX Vault keeps
 no copy of the file. If one leaks, rotate what's in it.": one row per export, newest first: the

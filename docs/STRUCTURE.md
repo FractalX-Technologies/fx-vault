@@ -132,9 +132,10 @@ FXVault/
 │   │   │                            # ProjectShareTreeModel, ProjectShareImportView/Editor (a
 │   │   │                            # bundle opened, board Share-OpenPreview), ProjectShareCopy
 │   │   └── Preferences/             # PreferencesScreen/ViewModel, PreferencesLayout (groups,
-│   │                                # rows, values and states; boards Settings-*), General,
-│   │                                # Security(+ViewModel), Accounts(+ViewModel), Advanced (with
-│   │                                # ResetVaultSheet, board Reset-Confirm),
+│   │                                # rows, values and states; boards Settings-*), General
+│   │                                # (+ QuickVaultShortcutRecorder), Security(+ViewModel),
+│   │                                # ResetVaultSheet (+ its Security card; board Reset-Confirm),
+│   │                                # Accounts(+ViewModel), Advanced,
 │   │                                # SharingSettingsScreen/ViewModel (the sent log; v0.9.0)
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
 │   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,
@@ -160,7 +161,8 @@ FXVault/
 │   │                                # pop-ups, chips, tags; 1.0 D6d), GlassPanel
 │   │                                # (fxGlassPanel, MainWindowGround; D6c2b)
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
-│   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe,
+│   │                                # PreferencesManager (+ QuickVaultShortcutModel),
+│   │                                # LoginItemManager, DockBadgeManager, GHStatusProbe,
 │   │                                # ConnectivityMonitor (NWPathMonitor, path sources),
 │   │                                # GitHubReachability
 │   ├── Helpers/

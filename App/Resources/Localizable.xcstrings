@@ -13707,6 +13707,39 @@
         }
       }
     },
+    "settings.accounts.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Account…"
+          }
+        }
+      }
+    },
+    "settings.accounts.add.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Log it in to the GitHub CLI in Terminal, then choose Check Again. gh keeps your other accounts."
+          }
+        }
+      }
+    },
+    "settings.accounts.add.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a GitHub account"
+          }
+        }
+      }
+    },
     "settings.accounts.copied" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -13912,6 +13945,50 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Can’t use · %@"
+          }
+        }
+      }
+    },
+    "settings.advanced.diagnostics.copied" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied"
+          }
+        }
+      }
+    },
+    "settings.advanced.diagnostics.detail" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Versions, paths and checks · no secret names or values"
+          }
+        }
+      }
+    },
+    "settings.advanced.diagnostics.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Diagnostics"
+          }
+        }
+      }
+    },
+    "settings.advanced.diagnostics.terminal" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From Terminal:"
           }
         }
       }
@@ -14235,6 +14312,127 @@
         }
       }
     },
+    "settings.general.openAtLogin" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open at login"
+          }
+        }
+      }
+    },
+    "settings.general.openAtLogin.failed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open at login could not be changed"
+          }
+        }
+      }
+    },
+    "settings.general.openAtLogin.needsApproval" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Allow FX Vault in System Settings › General › Login Items"
+          }
+        }
+      }
+    },
+    "settings.general.openAtLogin.openSettings" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open Login Items"
+          }
+        }
+      }
+    },
+    "settings.general.quickVault" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Quick vault shortcut"
+          }
+        }
+      }
+    },
+    "settings.general.quickVault.detail" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opens the quick vault from the notch"
+          }
+        }
+      }
+    },
+    "settings.general.quickVault.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click, then press the new shortcut. Use at least two of Control, Option, Shift and Command. Esc cancels."
+          }
+        }
+      }
+    },
+    "settings.general.quickVault.recording" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Type shortcut"
+          }
+        }
+      }
+    },
+    "settings.general.screenLock" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Lock when the screen locks"
+          }
+        }
+      }
+    },
+    "settings.general.sounds" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sound effects"
+          }
+        }
+      }
+    },
+    "settings.general.sounds.value" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Follows system"
+          }
+        }
+      }
+    },
     "settings.locked.message" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -14374,6 +14572,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Current master password"
+          }
+        }
+      }
+    },
+    "settings.security.locked.note" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock FX Vault to change Touch ID, the master password and the recovery key."
           }
         }
       }
@@ -16420,6 +16629,50 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Reading the file…"
+          }
+        }
+      }
+    },
+    "shortcut.command" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Command"
+          }
+        }
+      }
+    },
+    "shortcut.control" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Control"
+          }
+        }
+      }
+    },
+    "shortcut.option" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Option"
+          }
+        }
+      }
+    },
+    "shortcut.shift" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Shift"
           }
         }
       }

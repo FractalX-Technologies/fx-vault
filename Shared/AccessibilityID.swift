@@ -153,6 +153,14 @@ enum AccessibilityID {
         static func organization(_ login: String) -> String {
             "accounts.organization.\(login)"
         }
+
+        static let addAccount = "accounts.addAccount"
+        static let addAccountCheckAgain = "accounts.addAccount.checkAgain"
+    }
+
+    /// Settings › General.
+    enum Settings {
+        static let quickVaultShortcut = "settings.quickVaultShortcut"
     }
 
     /// Share Project and its "Confirm it's you" step.

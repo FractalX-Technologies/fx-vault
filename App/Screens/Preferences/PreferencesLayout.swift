@@ -27,10 +27,15 @@ struct PreferencesPage<Content: View>: View {
 /// `HairlineDivider()`), and an optional footnote.
 struct PreferencesSection<Content: View>: View {
     let title: String?
-    var footnote: String?
+    var footnote: AttributedString?
     @ViewBuilder let content: () -> Content
 
     init(_ title: String?, footnote: String? = nil, @ViewBuilder content: @escaping () -> Content) {
+        self.init(title, footnote: footnote.map { AttributedString($0) }, content: content)
+    }
+
+    /// A footnote with its own runs, such as a command in mono.
+    init(_ title: String?, footnote: AttributedString?, @ViewBuilder content: @escaping () -> Content) {
         self.title = title
         self.footnote = footnote
         self.content = content
@@ -59,9 +64,13 @@ struct PreferencesSection<Content: View>: View {
 
 /// The 11 pt note under a group's card.
 struct PreferencesFootnote: View {
-    let text: String
+    let text: AttributedString
 
     init(_ text: String) {
+        self.text = AttributedString(text)
+    }
+
+    init(_ text: AttributedString) {
         self.text = text
     }
 

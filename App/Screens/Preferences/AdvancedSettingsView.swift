@@ -3,8 +3,8 @@ import SwiftUI
 import VaultCore
 
 /// Preferences › Advanced (board Settings-Advanced): the gh path override, the gh in use, the gh
-/// trusted although another user owns it (with Revoke, v0.3.1), the telemetry note, the vault
-/// folder and Reset vault, which works in every phase (docs/DESIGN.md, "Settings").
+/// trusted although another user owns it (with Revoke, v0.3.1), the telemetry note, Copy
+/// Diagnostics and the vault folder. It works in every phase (docs/DESIGN.md, "Settings").
 struct AdvancedSettingsView: View {
     @Bindable var viewModel: PreferencesViewModel
     @FocusState private var isOverrideFocused: Bool
@@ -70,6 +70,34 @@ struct AdvancedSettingsView: View {
                     }
                 }
             }
+            PreferencesSection(
+                String(localized: "settings.advanced.diagnostics.section", defaultValue: "Diagnostics"),
+                footnote: diagnoseFootnote
+            ) {
+                PreferencesRow(
+                    String(localized: "ghSetup.copyDiagnostics", defaultValue: "Copy Diagnostics"),
+                    detail: String(
+                        localized: "settings.advanced.diagnostics.detail",
+                        defaultValue: "Versions, paths and checks · no secret names or values"
+                    )
+                ) {
+                    Button {
+                        Task { await viewModel.copyDiagnostics() }
+                    } label: {
+                        if viewModel.hasCopiedDiagnostics {
+                            Label(String(localized: "settings.advanced.diagnostics.copied", defaultValue: "Copied"), systemImage: "checkmark")
+                        } else {
+                            Label(String(localized: "command.copy", defaultValue: "Copy"), systemImage: "doc.on.doc")
+                        }
+                    }
+                    .fxButtonStyle(.outline, size: .compact)
+                    .disabled(viewModel.isCollectingDiagnostics)
+                    .help(String(
+                        localized: "ghSetup.copyDiagnostics.help",
+                        defaultValue: "Copy a report of which gh FX Vault found and why, for support. It contains no tokens or values."
+                    ))
+                }
+            }
             PreferencesSection(String(localized: "settings.advanced.vault.section", defaultValue: "Vault")) {
                 PreferencesRow(String(localized: "settings.advanced.vault.folder", defaultValue: "Vault folder")) {
                     Button(String(localized: "settings.advanced.vault.revealShort", defaultValue: "Reveal in Finder")) {
@@ -80,25 +108,17 @@ struct AdvancedSettingsView: View {
                     .fxButtonStyle(.outline, size: .compact)
                     .disabled(viewModel.vaultFolderURL == nil)
                 }
-                HairlineDivider()
-                PreferencesRow(
-                    String(localized: "settings.advanced.vault.resetRow", defaultValue: "Reset vault"),
-                    detail: String(
-                        localized: "settings.advanced.vault.reset.detail",
-                        defaultValue: "Erases everything stored in FX Vault on this Mac"
-                    )
-                ) {
-                    Button(String(localized: "settings.advanced.vault.reset", defaultValue: "Reset Vault…"), role: .destructive) {
-                        viewModel.beginResetVault()
-                    }
-                    .fxButtonStyle(.outlineDestructive, size: .compact)
-                    .disabled(!viewModel.canStartReset)
-                }
             }
         }
-        .sheet(isPresented: $viewModel.isShowingResetVault) {
-            ResetVaultSheet(viewModel: viewModel)
-        }
+    }
+
+    /// "From Terminal: <this app's executable> --diagnose", the command in mono: `open -a …
+    /// --args` would print nowhere, so it names the executable.
+    private var diagnoseFootnote: AttributedString {
+        var command = AttributedString(DiagnoseCommand.terminalCommand())
+        command.font = Theme.Typography.monoLabel
+        let lead = String(localized: "settings.advanced.diagnostics.terminal", defaultValue: "From Terminal:")
+        return AttributedString(lead + " ") + command
     }
 
     private var overrideLabel: String {
@@ -150,69 +170,5 @@ extension GHStatusModel {
         case .ready, .checking, .unknown: false
         default: true
         }
-    }
-}
-
-/// Reset vault (board Reset-Confirm): master password plus typing "reset" (D30). The final
-/// confirm is the one danger-filled button. Internal, not private, so the visual snapshot
-/// can render it.
-struct ResetVaultSheet: View {
-    @Bindable var viewModel: PreferencesViewModel
-    @FocusState private var focusedField: Field?
-
-    private enum Field {
-        case password
-        case confirmation
-    }
-
-    var body: some View {
-        DialogSheet(
-            title: String(localized: "settings.reset.title", defaultValue: "Reset vault?"),
-            subtitle: String(
-                localized: "settings.reset.subtitle",
-                defaultValue: "This permanently erases every repository, secret and variable stored in FX Vault on this Mac, and turns off Touch ID. Nothing on GitHub changes. This cannot be undone."
-            ),
-            isWorking: viewModel.isResetting
-        ) {
-            DialogStackedField(String(localized: "settings.reset.password", defaultValue: "Master password")) {
-                SecureField(text: $viewModel.resetPassword) {
-                    Text(String(localized: "settings.reset.password", defaultValue: "Master password"))
-                }
-                .textContentType(.password)
-                .focused($focusedField, equals: .password)
-                .fxInputField(.dialog, isFocused: focusedField == .password, isMonospaced: true)
-            }
-            DialogStackedField(confirmLabel) {
-                TextField(text: $viewModel.resetConfirmationText, prompt: Text(verbatim: PreferencesViewModel.resetConfirmationWord)) {
-                    Text(confirmLabel)
-                }
-                .autocorrectionDisabled()
-                .focused($focusedField, equals: .confirmation)
-                .fxInputField(.dialog, isFocused: focusedField == .confirmation, isMonospaced: true)
-            }
-            if let error = viewModel.resetError {
-                InlineErrorView(error: error)
-            }
-        } actions: {
-            Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
-                viewModel.cancelResetVault()
-            }
-            .fxButtonStyle(.outline, size: .dialog)
-            .keyboardShortcut(.cancelAction)
-            Button(String(localized: "settings.reset.submit", defaultValue: "Erase Vault"), role: .destructive) {
-                Task { await viewModel.resetVault() }
-            }
-            .fxButtonStyle(.destructive, size: .dialog)
-            .disabled(!viewModel.canResetVault)
-        }
-        .frame(width: Theme.Layout.resetDialogWidth)
-        .onAppear { focusedField = .password }
-    }
-
-    private var confirmLabel: String {
-        String(
-            localized: "settings.reset.confirm",
-            defaultValue: "Type \(PreferencesViewModel.resetConfirmationWord) to confirm"
-        )
     }
 }

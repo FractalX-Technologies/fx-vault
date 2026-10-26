@@ -4,12 +4,10 @@ import Observation
 import VaultCore
 import VaultData
 
-/// The Settings window (§10 Preferences), aware of the vault phase.
-///
-/// - **General** and **Advanced** hold no secrets and work in every phase.
-/// - **Security** and **Accounts** need the vault unlocked; otherwise they show "Unlock FX Vault
-///   to change these settings", and their sheets are dismissed on lock.
-/// - **Reset vault** (Advanced) needs an existing vault, the master password and the typed word.
+/// The Settings window (§10 Preferences), aware of the vault phase: General and Advanced hold no
+/// secrets and work in every phase; Security and Accounts need the vault unlocked (their sheets
+/// close on lock), except Reset vault, which needs an existing vault, the master password and
+/// the typed word.
 @Observable
 final class PreferencesViewModel: LockObserving {
     enum Tab: String, CaseIterable, Identifiable {
@@ -26,7 +24,15 @@ final class PreferencesViewModel: LockObserving {
 
     var selectedTab: Tab = .general
 
-    // Reset vault (Advanced)
+    // Open at login (General), as the system last reported it.
+    private(set) var loginItemStatus: LoginItemStatus
+    private(set) var loginItemError: ErrorPresentationModel?
+
+    // Copy Diagnostics (Advanced)
+    private(set) var isCollectingDiagnostics = false
+    private(set) var hasCopiedDiagnostics = false
+
+    // Reset vault (Security)
     var isShowingResetVault = false
     var resetPassword = ""
     var resetConfirmationText = ""
@@ -45,6 +51,7 @@ final class PreferencesViewModel: LockObserving {
         security = SecuritySettingsViewModel(app: app)
         accounts = AccountsSettingsViewModel(app: app)
         sharing = SharingSettingsViewModel(app: app)
+        loginItemStatus = app.container.loginItem.status
         app.addLockObserver(self)
     }
 
@@ -73,6 +80,45 @@ final class PreferencesViewModel: LockObserving {
     }
 
     // MARK: - General
+
+    var quickVaultShortcut: QuickVaultShortcutModel {
+        get { app.container.preferences.quickVaultShortcut }
+        set { app.container.preferences.quickVaultShortcut = newValue }
+    }
+
+    /// On while registered, also while System Settings still has to allow it.
+    var opensAtLogin: Bool {
+        loginItemStatus != .off
+    }
+
+    /// Reads the status again: the user can change it in System Settings at any time.
+    func refreshLoginItem() {
+        loginItemStatus = app.container.loginItem.status
+    }
+
+    /// **Open at login**: registers or unregisters FX Vault with `SMAppService`.
+    func setOpensAtLogin(_ isOn: Bool) {
+        let loginItem = app.container.loginItem
+        loginItemError = nil
+        do {
+            if isOn {
+                try loginItem.register()
+            } else {
+                try loginItem.unregister()
+            }
+        } catch {
+            loginItemError = ErrorPresentationModel(
+                title: String(localized: "settings.general.openAtLogin.failed", defaultValue: "Open at login could not be changed"),
+                message: error.localizedDescription
+            )
+        }
+        loginItemStatus = loginItem.status
+    }
+
+    /// **Open Login Items** when the system waits for the user's approval.
+    func openLoginItemsSettings() {
+        app.container.loginItem.openSystemSettings()
+    }
 
     var autoLockMinutes: Int {
         get { app.container.preferences.autoLockMinutes }
@@ -122,6 +168,15 @@ final class PreferencesViewModel: LockObserving {
     /// **Revoke**: FX Vault stops running the trusted gh and asks again when it finds it.
     func revokeTrustedGH() async {
         await app.revokeTrustedGHBinary()
+    }
+
+    /// **Copy Diagnostics** (``AppViewModel/copyGHDiagnostics()``).
+    func copyDiagnostics() async {
+        guard !isCollectingDiagnostics else { return }
+        isCollectingDiagnostics = true
+        defer { isCollectingDiagnostics = false }
+        await app.copyGHDiagnostics()
+        hasCopiedDiagnostics = true
     }
 
     /// The vault folder, or nil for an in-memory vault (previews, tests).

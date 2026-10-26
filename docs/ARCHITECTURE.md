@@ -1088,9 +1088,15 @@ AppTests).
 - `@Observable PreferencesManager(store:)`: `autoLockMinutes` / `autoLockTimeout`, clone folder,
   `ghPathOverride`, `trustedGHBinary` / `trustGHBinary(_:)` / `revokeTrustedGHBinary()` (v0.3.1,
   `preferences.trustedGHPath` and `preferences.trustedGHOwnerUID`, validated on read),
-  `isRecoveryKeyConfirmationPending`, `hasAnsweredTouchIDOffer`; `UserDefaultsPreferencesStore` (live) or
+  `isRecoveryKeyConfirmationPending`, `hasAnsweredTouchIDOffer`, `quickVaultShortcut` (1.0 S1:
+  `QuickVaultShortcutModel`, key code, modifiers and key label in three
+  `preferences.quickVaultShortcut.*` keys, ⌃⌥V when missing or invalid; `carbonKeyCode` and
+  `carbonModifiers` are what the quick vault registers); `UserDefaultsPreferencesStore` (live) or
   `InMemoryPreferencesStore`.
 - `DockBadgeDisplaying` (`DockBadgeManager`, `RecordedDockBadge`).
+- `LoginItemControlling` (1.0 S1, Open at login): `LoginItemManager` over `SMAppService.mainApp`
+  (live), `RecordedLoginItem` everywhere else, so no preview, test or UI test registers the app.
+  The system is the only record of the setting.
 - `ConnectivityMonitor(source:clock:debounce:)` (v0.2.0, `@Observable`): `isOnline`,
   `isConstrained`, `start()` (by `AppViewModel.init`), `stop()` (at quit),
   `addObserver(_ ConnectivityObserving)` (held weakly). The first path applies at once; later
