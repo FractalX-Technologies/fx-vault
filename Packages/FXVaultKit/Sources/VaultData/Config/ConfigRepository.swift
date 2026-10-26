@@ -134,19 +134,20 @@ public struct ConfigRepository: Sendable {
     // MARK: - Items
 
     /// Adds a secret or variable (§7.1). Adding the name of a deleted item revives that
-    /// tombstone. The value is normalized first (D32).
+    /// tombstone. The value is normalized first (D32); `file` is the file it came from (1.0 F1).
     @discardableResult
     public func addItem(
         repositoryID: RepoID,
         scope: ConfigScope,
         kind: ConfigKind,
         name: String,
-        value: SecretBytes
+        value: SecretBytes,
+        file: FileSecretModel? = nil
     ) throws(ConfigRepositoryError) -> ItemWriteResultModel {
         let normalized = try Self.normalize(value)
         defer { normalized.value.wipe() }
         let itemID = try batch(repositoryID: repositoryID) { batch in
-            try batch.add(scope: scope, kind: kind, name: name, value: normalized.value)
+            try batch.add(scope: scope, kind: kind, name: name, value: normalized.value, file: file)
         }
         return ItemWriteResultModel(itemID: itemID, didStripTrailingNewlines: normalized.didStripTrailingNewlines)
     }
@@ -326,12 +327,12 @@ public struct ConfigRepository: Sendable {
                         result.kept += 1
                         continue
                     case .replace:
-                        try batch.editValue(existing.id, value: value)
+                        try batch.editValue(existing.id, value: value, file: source.file)
                         copyID = existing.id
                         result.replaced += 1
                     }
                 } else {
-                    copyID = try batch.add(scope: scope, kind: source.kind, name: source.name, value: value)
+                    copyID = try batch.add(scope: scope, kind: source.kind, name: source.name, value: value, file: source.file)
                     result.added += 1
                 }
                 try source.link(copy: copyID, database: session.database, in: tx)

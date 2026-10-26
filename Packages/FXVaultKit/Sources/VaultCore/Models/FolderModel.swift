@@ -61,6 +61,8 @@ public struct FolderItemModel: Sendable, Hashable, Identifiable {
     /// How many live items (this one included) share ``linkID`` in folders and repositories, set
     /// by the item observation; 0 when not linked.
     public var linkCount: Int
+    /// Set when the value came from a file (1.0 F1): its name, lines and encoding, never content.
+    public var file: FileSecretModel?
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -71,6 +73,7 @@ public struct FolderItemModel: Sendable, Hashable, Identifiable {
         name: String,
         linkID: ItemLinkID? = nil,
         linkCount: Int = 0,
+        file: FileSecretModel? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -80,6 +83,7 @@ public struct FolderItemModel: Sendable, Hashable, Identifiable {
         self.name = name
         self.linkID = linkID
         self.linkCount = linkCount
+        self.file = file
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }

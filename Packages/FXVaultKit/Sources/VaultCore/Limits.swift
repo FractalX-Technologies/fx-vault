@@ -97,6 +97,15 @@ public enum Limits {
     /// Largest HTTP response body FX Vault reads from a provider.
     public static let maxDestinationResponseBytes = 16 * bytesPerMiB
 
+    // MARK: - File secrets (1.0 F1)
+
+    /// Largest file the Add file secret sheet reads. Local choice: twice GitHub's value limit, so
+    /// a file just over the limit is still measured and refused with its size.
+    public static let maxFileSecretReadBytes = 2 * maxValueBytes
+    /// Longest file name kept with a file secret, in characters (database CHECK, v21; macOS
+    /// file names are at most 255 UTF-8 bytes).
+    public static let maxFileSecretNameLength = 255
+
     // MARK: - Write throttle and retries (D12, §7.3)
 
     /// FX Vault's own cap on gh write commands per minute, per account.

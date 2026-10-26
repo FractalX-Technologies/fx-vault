@@ -120,12 +120,13 @@ public struct FolderRepository: Sendable {
         folderID: FolderID,
         kind: ConfigKind,
         name: String,
-        value: SecretBytes
+        value: SecretBytes,
+        file: FileSecretModel? = nil
     ) throws(ConfigRepositoryError) -> ItemWriteResultModel {
         let normalized = try Self.normalize(value)
         defer { normalized.value.wipe() }
         let id = try write { keys, tx, now in
-            try writer(keys, tx, now).add(folderID: folderID, kind: kind, name: name, value: normalized.value)
+            try writer(keys, tx, now).add(folderID: folderID, kind: kind, name: name, value: normalized.value, file: file)
         }
         return ItemWriteResultModel(itemID: id, didStripTrailingNewlines: normalized.didStripTrailingNewlines)
     }
@@ -227,12 +228,12 @@ public struct FolderRepository: Sendable {
                         result.kept += 1
                         continue
                     case .replace:
-                        try writer.editValue(existing.id, value: value)
+                        try writer.editValue(existing.id, value: value, file: source.file)
                         copyID = existing.id
                         result.replaced += 1
                     }
                 } else {
-                    copyID = try writer.add(folderID: folderID, kind: source.kind, name: source.name, value: value)
+                    copyID = try writer.add(folderID: folderID, kind: source.kind, name: source.name, value: value, file: source.file)
                     result.added += 1
                 }
                 try source.link(copy: copyID, database: session.database, in: tx)

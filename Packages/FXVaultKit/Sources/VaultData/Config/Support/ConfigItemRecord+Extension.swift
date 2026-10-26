@@ -8,6 +8,7 @@ extension ConfigItemRecord {
     mutating func clearValues() {
         valueCiphertext = nil
         valueFingerprint = nil
+        file = nil
         syncedValueCiphertext = nil
         syncedFingerprint = nil
     }

@@ -50,10 +50,15 @@ enum ConfigFieldCipher {
     }
 
     /// Stores `value` as the row's local value: `value_ct` sealed under the row's current
-    /// identity and `value_fp` computed for its id.
+    /// identity and `value_fp` computed for its id. Another value drops the file label (v21): it
+    /// describes the value, so a re-seal for a rename keeps it and a new value does not.
     static func setValue(_ value: SecretBytes, on record: inout ConfigItemRecord, keys: borrowing UnlockedKeys) throws(CryptoError) {
         record.valueCiphertext = try keys.seal(value, for: valueAAD(of: record))
-        record.valueFingerprint = keys.fingerprint(value, rowID: record.id)
+        let fingerprint = keys.fingerprint(value, rowID: record.id)
+        if fingerprint != record.valueFingerprint {
+            record.file = nil
+        }
+        record.valueFingerprint = fingerprint
     }
 
     /// Stores `value` as the row's synced value (`synced_value_ct`, `synced_fp`). The record

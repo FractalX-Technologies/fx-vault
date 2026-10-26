@@ -18,7 +18,9 @@ import VaultStore
 ///   takes over its `link_id` too (v0.4.1); every other edit keeps the stored link;
 /// - `share_hold` (v0.9.0) follows the item the same way, so moving or renaming a held row keeps
 ///   it held (the value is still the share file's), and is cleared when the row is deleted,
-///   reverted or given a new value: those are the user's own changes, never a share file's.
+///   reverted or given a new value: those are the user's own changes, never a share file's;
+/// - `file_detail` (v21) follows the value: the edit's file for a new value, the source's for a
+///   move, kept while the value is (``ConfigFieldCipher/setValue(_:on:keys:)`` drops it).
 ///
 /// Every plaintext is wiped before the method returns.
 struct ItemMutationWriter {
@@ -26,10 +28,12 @@ struct ItemMutationWriter {
     let repositoryID: RepoID
     let now: Date
 
-    /// Applies `mutations` in order. `newValue` is the edit's value (normalized), when it has one.
+    /// Applies `mutations` in order. `newValue` is the edit's value (normalized), when it has one,
+    /// and `newFile` the file it came from.
     func apply(
         _ mutations: [ItemMutationModel],
         newValue: SecretBytes?,
+        newFile: FileSecretModel? = nil,
         keys: borrowing UnlockedKeys,
         in tx: StoreTransaction
     ) throws {
@@ -43,6 +47,7 @@ struct ItemMutationWriter {
                 }
                 record.shareHold = Self.shareHold(row: row, source: source, kept: nil, before: before)
                 try fill(&record, row: row, source: source, stored: nil, before: before, newValue: newValue, keys: keys)
+                record.file = Self.file(of: source, current: record.file, newFile: newFile, before: before)
                 try store.insertItem(record, in: tx)
             case .update(let row, let source):
                 guard let stored = before[row.id] else { throw ConfigRepositoryError.itemNotFound }
@@ -53,6 +58,7 @@ struct ItemMutationWriter {
                 }
                 record.shareHold = Self.shareHold(row: row, source: source, kept: stored.shareHold, before: before)
                 try fill(&record, row: row, source: source, stored: stored, before: before, newValue: newValue, keys: keys)
+                record.file = Self.file(of: source, current: record.file, newFile: newFile, before: before)
                 try store.updateItem(record, in: tx)
             case .remove(let id):
                 try store.deleteItem(id: id, in: tx)
@@ -144,6 +150,21 @@ struct ItemMutationWriter {
         }
     }
 
+    /// The row's file label after its value was filled in: the edit's file for a new value, the
+    /// moved item's for a move, otherwise `current` (what the value fill left).
+    private static func file(
+        of source: ItemValueSourceModel,
+        current: FileSecretModel?,
+        newFile: FileSecretModel?,
+        before: [ConfigItemID: ConfigItemRecord]
+    ) -> FileSecretModel? {
+        switch source {
+        case .newValue, .newValueAsSynced: newFile ?? current
+        case .movedFrom(let sourceID): before[sourceID]?.file
+        case .syncedValue, .unchanged: current
+        }
+    }
+
     /// The link of the row an item moves from: `.some(link)` (possibly nil) for a move, `nil`
     /// when the item does not move.
     private func movedLink(
@@ -189,6 +210,7 @@ struct ItemMutationWriter {
         } else if !Self.keepsStoredValue(source: source, record: record, stored: stored) {
             record.valueCiphertext = nil
             record.valueFingerprint = nil
+            record.file = nil
         }
 
         // Synced value.

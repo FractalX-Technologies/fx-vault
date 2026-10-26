@@ -39,6 +39,8 @@ public struct ConfigItemModel: Sendable, Hashable, Identifiable {
     /// The share file this row is held under (v0.9.0, `share_hold`): Sync leaves it out until its
     /// From Files review includes the file. Nil when the row is not held.
     public var heldBy: SharePackageID?
+    /// Set when the value came from a file (1.0 F1): its name, lines and encoding, never content.
+    public var file: FileSecretModel?
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -60,6 +62,7 @@ public struct ConfigItemModel: Sendable, Hashable, Identifiable {
         linkID: ItemLinkID? = nil,
         linkCount: Int = 0,
         heldBy: SharePackageID? = nil,
+        file: FileSecretModel? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -80,6 +83,7 @@ public struct ConfigItemModel: Sendable, Hashable, Identifiable {
         self.linkID = linkID
         self.linkCount = linkCount
         self.heldBy = heldBy
+        self.file = file
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
