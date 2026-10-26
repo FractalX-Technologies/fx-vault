@@ -33,7 +33,7 @@ final class ConnectUITests: VaultUITestCase {
         click(vaultRow)
         let path = app.staticTexts[AccessibilityID.Main.breadcrumb]
         XCTAssertTrue(path.waitForExistence(timeout: timeout))
-        expect(path, toEndWith: "Azure › kv-example-prod")
+        expect(path, toEndWith: "Azure › Example Production › kv-example-prod")
 
         vaultRow.rightClick()
         click(app.menuItems["Remove from FX Vault…"])
