@@ -410,8 +410,13 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         present(.newEnvironment(NewEnvironmentContext(repositoryID: id)))
     }
 
-    /// The sidebar column is hidden (View › Hide Sidebar, ⌃⌘S); Edit › Find brings it back.
+    /// The sidebar panel is hidden (View › Hide Sidebar, ⌃⌘S); Edit › Find brings it back.
     var isSidebarHidden = false
+
+    /// View › Hide Sidebar / Show Sidebar (⌃⌘S).
+    func toggleSidebar() {
+        isSidebarHidden.toggle()
+    }
 
     /// Edit › Find (⌘F): closes the ⌘K palette (it would keep the focus), shows the sidebar if
     /// it was hidden, then focuses its search field.

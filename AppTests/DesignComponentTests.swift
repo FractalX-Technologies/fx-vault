@@ -63,6 +63,17 @@ struct DesignComponentTests {
         #expect(FXIconButtonStyle.shape(for: .compact).path(in: rect) == rounded)
     }
 
+    /// The toolbar panel's Sync (board Main2-Home): a 28 pt pill with 12 pt text, its badge 16 pt.
+    @Test func toolbarButtonsAreSmallPills() {
+        #expect(FXButtonStyle.height(for: .toolbar) == 28)
+        #expect(FXButtonStyle.font(for: .primary, size: .toolbar) == Theme.Typography.captionEmphasized)
+        let rect = CGRect(x: 0, y: 0, width: 80, height: 28)
+        #expect(FXButtonStyle.shape(for: .toolbar, variant: .primary).path(in: rect) == Capsule.pill.path(in: rect))
+        #expect(Theme.Layout.badgeHeight == 16)
+        #expect(SyncToolbarButton.trailingPadding(showsBadge: true) == 6)
+        #expect(SyncToolbarButton.trailingPadding(showsBadge: false) == 12)
+    }
+
     // MARK: Chips
 
     @Test func syncStatusesMapToChipTones() {

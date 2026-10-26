@@ -171,6 +171,16 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
+    /// 1.0 D6c2b: View › Hide Sidebar; the toolbar panel starts after the traffic lights.
+    @Test func mainWithTheSidebarHidden() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        main.toggleSidebar()
+        try await SnapshotOutput.write("main-sidebar-hidden", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
     /// v0.4.0: two rows selected, so the header shows the selection actions.
     @Test func mainWindowSelection() async throws {
         let (harness, main) = try await MainSnapshotFixture.make()
@@ -279,7 +289,7 @@ struct VisualSnapshotTests {
         main.sidebar.selectedFolderID = mobile
         try await SnapshotOutput.write(
             "main-sidebar-folders",
-            size: CGSize(width: Theme.Layout.sidebarIdealWidth, height: Theme.Layout.windowDefaultHeight)
+            size: CGSize(width: Theme.Layout.sidebarWidth, height: Theme.Layout.windowDefaultHeight)
         ) {
             SidebarView(main: main)
                 .background(Theme.Colors.surface)
@@ -320,7 +330,7 @@ struct VisualSnapshotTests {
         let (harness, main) = try await MainSnapshotFixture.make()
         try await SnapshotOutput.write(
             "main-sidebar",
-            size: CGSize(width: Theme.Layout.sidebarIdealWidth, height: Theme.Layout.windowDefaultHeight)
+            size: CGSize(width: Theme.Layout.sidebarWidth, height: Theme.Layout.windowDefaultHeight)
         ) {
             SidebarView(main: main)
                 .background(Theme.Colors.surface)
@@ -343,7 +353,7 @@ struct VisualSnapshotTests {
             main.sidebar.owners.contains { $0.problem == .needsAdminOrg }
         })
         let organization = try #require(main.sidebar.owners.first { $0.isOrganization })
-        let size = CGSize(width: Theme.Layout.sidebarIdealWidth, height: Theme.Layout.windowDefaultHeight)
+        let size = CGSize(width: Theme.Layout.sidebarWidth, height: Theme.Layout.windowDefaultHeight)
 
         main.sidebar.selectedRowID = nil
         main.sidebar.toggle(organization)

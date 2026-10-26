@@ -44,7 +44,9 @@ FXVault/
 │   │   ├── GHSetup/                 # GHSetupScreen/ViewModel (install, upgrade, untrusted, Trust
 │   │   │                            # This gh, login, GH_TOKEN, unusable accounts, Copy
 │   │   │                            # Diagnostics, Check Again, Not Now)
-│   │   ├── Main/                    # MainScreen/ViewModel (two columns, router), MainToolbar
+│   │   ├── Main/                    # MainScreen/ViewModel (glass panels, router),
+│   │   │                            # MainToolbar (the toolbar panel), MainWindowChrome (the
+│   │   │                            # hidden title bar and its empty toolbar, D6c2b)
 │   │   │   ├── JumpPalette/         # the ⌘K palette (D6c2): JumpPaletteModels (JumpPlaces,
 │   │   │   │                        # pure), JumpPaletteViewModel, JumpPaletteView, JumpPaletteCopy
 │   │   │   ├── Place/               # every place's header (D6c3): PlaceHeader (name, subline,
@@ -126,7 +128,8 @@ FXVault/
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
 │   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,
 │   │   │                            # PasswordStrengthMeter, NewPasswordFields,
-│   │   │                            # WindowAccessor, CommandRow (+ Run), CommandOutputView,
+│   │   │                            # WindowAccessor, EscapeKeyMonitor (onEscapeKey),
+│   │   │                            # CommandRow (+ Run), CommandOutputView,
 │   │   │                            # SetupCommandList (+ SetupCommandRunState),
 │   │   │                            # ErrorAlert, ConfigEditorSheet
 │   │   │                            # (+ ConfigEditorNote, ConfigSheet footer/field/list),
@@ -142,7 +145,8 @@ FXVault/
 │   │                                # FXLinkButtonStyle, fxSheetContent), FlowLayout (v0.6.0),
 │   │                                # KeyHint (1.0), RingDot, DialogChrome (DialogSheet,
 │   │                                # dialog list box), DialogForm (rows, the field box,
-│   │                                # pop-ups, chips, tags; 1.0 D6d)
+│   │                                # pop-ups, chips, tags; 1.0 D6d), GlassPanel
+│   │                                # (fxGlassPanel, MainWindowGround; D6c2b)
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
 │   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe,
 │   │                                # ConnectivityMonitor (NWPathMonitor, path sources),
@@ -151,6 +155,7 @@ FXVault/
 │   │   ├── AppIdentity.swift        # FX Vault vs FX Vault Dev (bundle id, window title, DEV)
 │   │   ├── AppLog.swift             # os.Logger categories
 │   │   ├── TaskBag.swift            # cancels a view model's tasks when it goes away
+│   │   ├── FocusRetry.swift         # asks for a field's focus until it lands (⌘K, ⌘F)
 │   │   ├── ExternalLinks.swift      # GitHub documentation links ("Learn more")
 │   │   ├── Extensions/              # localized error text (+Extension) for VaultError,
 │   │   │                            # ValidationError, GHError, GitError, GitHubEnvironmentError,

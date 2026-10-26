@@ -53,6 +53,13 @@ struct DesignTokenTests {
         Token(name: "DotGrid", light: RGBA(0x000000, alpha: 0.12), dark: RGBA(0xFFFFFF, alpha: 0.10)),
         Token(name: "Shadow", light: RGBA(0x000000, alpha: 0.12), dark: RGBA(0x000000, alpha: 0.40)),
         Token(name: "Scrim", light: RGBA(0x000000, alpha: 0.06), dark: RGBA(0x000000, alpha: 0.30)),
+        // The main window's chrome (board Main2-Home): panel shadow, soft ground and its corner glows.
+        Token(name: "PanelShadow", light: RGBA(0x000000, alpha: 0.08), dark: RGBA(0x000000, alpha: 0.40)),
+        Token(name: "MainGround", light: RGBA(0xF8F7F6), dark: RGBA(0x121214)),
+        Token(name: "MainGlowTopLeading", light: RGBA(0xFFFFFF), dark: RGBA(0x212124)),
+        Token(name: "MainGlowTopTrailing", light: RGBA(0xEBE9E6), dark: RGBA(0x1B1B1F)),
+        Token(name: "MainGlowBottomTrailing", light: RGBA(0xE6E5E3), dark: RGBA(0x1B1A1A)),
+        Token(name: "MainGlowBottomLeading", light: RGBA(0xF3EFEB), dark: RGBA(0x1B1A1A)),
         // The notch island continues the hardware notch: black in both appearances (board NotchUnlock).
         Token(name: "Island", light: RGBA(0x000000), dark: RGBA(0x000000)),
         Token(name: "IslandInk", light: RGBA(0xFFFFFF), dark: RGBA(0xFFFFFF)),
@@ -132,6 +139,7 @@ struct DesignTokenTests {
         #expect(Theme.Radius.sheet == 24)
         #expect(Theme.Radius.control == 12)
         #expect(Theme.Radius.row == 10)
+        #expect(Theme.Radius.panel == 14)
         #expect(Theme.Radius.compactRow == 8)
         #expect(Theme.Durations.interaction == 0.14)
         #expect(Theme.Layout.tableRowHeight == 34)

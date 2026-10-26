@@ -843,7 +843,7 @@ These depart from or refine the plan text (`tasks/todo.md`) and are implemented 
 | 66 | Accounts | No stored account and an exported `GH_TOKEN` / `GITHUB_TOKEN` is `GHStatusModel.environmentToken`: the setup screen explains it and offers `env -u GH_TOKEN -u GITHUB_TOKEN gh auth login` (BSD `env -u`, tested on macOS). Settings › Accounts shows a note while a token variable is exported. Unusable accounts take precedence over the token note |
 | 67 | Diagnostics | **Copy Diagnostics** (setup screen) and the `gh` section of `--diagnose` render one `GHDiagnosticsModel`: candidates (path, source, resolved path, version, accepted / rejected / notFound, reason, owner uid and name, consent, chosen), shell path and probe mode, variable names, override and trusted gh, accounts (login, state code, token source only when one of gh's known names, scopes, missing scopes), unusable accounts, A3 error code. `--diagnose` collects it before the app starts (a detached task the entry point waits for; no database, no token fetch). The copied text is fixed English, like the JSON keys: a support artifact, not interface text |
 | 68 | Status | `GHStatusModel` gains `.foreignOwner(path:owner:isHomebrew:)`, `.environmentToken(version:path:variables:)`, `.unusableAccounts(version:path:accounts:)`; `.outdated` carries the checked path and `.untrusted` the rejection, so the texts say what is wrong |
-| 69 | Layout | Every column of the main split view takes the window's height (`mainColumnHeight()`: `frame(minHeight: 0, maxHeight: .infinity)`). AppKit sizes the split view from each column's minimum height, which SwiftUI measures at zero width; a wrapped empty-state message measured about 1,000 pt, so the split view outgrew the window and was centered (sidebar under the title bar, footer below the window). The detail fits its narrowest column with `ViewThatFits` rows (header actions, tags, kind pill and add actions); the table scrolls sideways. `MainWindowLayoutTests` |
+| 69 | Layout | Every column of the main window takes the window's height (`mainColumnHeight()`: `frame(minHeight: 0, maxHeight: .infinity)`). SwiftUI measures a column's minimum height at zero width; a wrapped empty-state message measured about 1,000 pt, so the split view of the time outgrew the window and was centered (sidebar under the title bar, footer below the window). The split view itself gave way to glass panels in 1.0 D6c2b. The detail fits its narrowest column with `ViewThatFits` rows (header actions, tags, kind pill and add actions); the table scrolls sideways. `MainWindowLayoutTests` |
 | 70 | Accounts | FX Vault lists only gh's accounts, so an SSH alias whose key belongs to an account not logged in to gh had no place in Settings › Accounts. GitHub aliases that no account uses are listed with the `gh auth login` command and Check Again; mapping stays manual (no automatic `ssh -T` suggestions, v1.1 stretch) |
 ### As built in v0.4.0 (several rows at once, copy between scopes)
 
@@ -1232,13 +1232,19 @@ AppTests).
     repository's drift check (`reconnectTask`). Sidebar, repository detail, Add by name, the
     Sync sheet, Create Repository and the drift review report their gh outcomes to
     `GitHubReachability` (decision 50).
-  - Toolbar (`MainToolbar.swift`, D6c2): the selected place's path (`MainViewModel.breadcrumb`,
-    the system title removed), a DEV chip in Debug builds (decision 43), the ⌘K search button and
-    Sync (`SyncToolbarButton`, count in the label, disabled at 0, while locked, while syncing and
-    without gh), on the system's glass toolbar. Menu commands (`VaultCommands`): File › New
+  - Window chrome (`MainWindowChrome.swift`, D6c2b): the scene's title bar is hidden; while
+    `MainScreen` shows, `MainWindowTitleBar` gives the window an empty unified toolbar (AppKit
+    then places the traffic lights inside the sidebar panel) and puts the previous title bar
+    back when it goes. `MainScreen` lays out its own glass panels (`.fxGlassPanel()`) on
+    `MainWindowGround` instead of a `NavigationSplitView` (docs/DESIGN.md, "Main window").
+  - Toolbar panel (`MainToolbar.swift`, D6c2, D6c2b): the selected place's path
+    (`MainViewModel.breadcrumb`), a DEV chip in Debug builds (decision 43), the ⌘K search button
+    and Sync (`SyncToolbarButton`, count in the label, disabled at 0, while locked, while syncing
+    and without gh), on a glass panel; no native toolbar items. Menu commands (`VaultCommands`): File › New
     Repository… (⌘N; also an owner's menu, `newRepository(in:)` preselects the owner), Import
     .env… (⇧⌘I); File › Share Project… (⌥⌘S); Edit › Find (⌘F, the sidebar search) and Jump
-    Anywhere (⌘K); View › Hide Sidebar (⌃⌘S, `SidebarCommands`); Vault › Lock (⌃⌘L), Sync (⇧⌘S).
+    Anywhere (⌘K); View › Hide Sidebar (⌃⌘S, our own command before `.sidebar`:
+    `MainViewModel.toggleSidebar()`); Vault › Lock (⌃⌘L), Sync (⇧⌘S).
     Commands reach the window through `FocusedValues.mainViewModel`.
   - Jump palette (`Main/JumpPalette`, D6c2): `MainViewModel.showJumpPalette()` builds a
     `JumpPaletteViewModel` with the sidebar's places when it opens (`JumpPlaces.places`: every

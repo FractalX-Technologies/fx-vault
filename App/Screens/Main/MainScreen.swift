@@ -2,9 +2,10 @@ import AppKit
 import SwiftUI
 import VaultCore
 
-/// The main window (§10.4; boards Main2-Home, Main2-Repository, Main2-Search): a two-column split
-/// view (the sidebar tree and the selected place), the toolbar, the ⌘K jump palette over both and
-/// the sheet router of the UI feature contract. The banners sit at the top of the detail column.
+/// The main window (§10.4; boards Main2-Home, Main2-Repository, Main2-Search): the sidebar panel
+/// and, beside it, the toolbar panel, the recovery-key strip and the selected place, all on the
+/// soft ground under a hidden title bar (``MainWindowTitleBar``); the ⌘K jump palette over them
+/// and the sheet router of the UI feature contract.
 struct MainScreen: View {
     @State private var viewModel: MainViewModel
 
@@ -19,13 +20,13 @@ struct MainScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        splitView
+        panels
             .animation(Theme.Durations.spring, value: viewModel.connectivityBanner)
             .overlay {
                 JumpPaletteOverlay(main: viewModel)
             }
             .animation(Theme.Durations.interactionAnimation, value: viewModel.jumpPalette == nil)
-            .modifier(MainToolbarModifier(viewModel: viewModel))
+            .mainWindowChrome()
             .sheet(item: $viewModel.activeSheet) { sheet in
                 MainSheetContent(sheet: sheet, main: viewModel)
             }
@@ -65,37 +66,42 @@ struct MainScreen: View {
             }
     }
 
-    /// The two columns (sidebar tree, detail), each as tall as the window
-    /// (`mainColumnHeight()`).
-    private var splitView: some View {
-        NavigationSplitView(columnVisibility: sidebarVisibility) {
-            SidebarView(main: viewModel)
-                .mainColumnHeight()
-                .navigationSplitViewColumnWidth(min: Theme.Layout.sidebarMinWidth, ideal: Theme.Layout.sidebarIdealWidth)
-        } detail: {
-            DetailColumnView(main: viewModel)
-                .frame(minWidth: Theme.Layout.detailMinWidth)
-                .mainColumnHeight()
+    /// The panels, `mainPanelInset` from the window's edges and from each other, from the very
+    /// top of the window: the traffic lights sit in the sidebar panel's top inset, or before the
+    /// toolbar panel while the sidebar is hidden (View › Hide Sidebar slides it out).
+    private var panels: some View {
+        HStack(spacing: Theme.Layout.mainPanelInset) {
+            if !viewModel.isSidebarHidden {
+                SidebarView(main: viewModel)
+                    .padding(.top, Theme.Layout.sidebarPanelTopInset)
+                    .frame(width: Theme.Layout.sidebarWidth)
+                    .mainColumnHeight()
+                    .fxGlassPanel()
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+            }
+            VStack(spacing: Theme.Layout.mainPanelInset) {
+                MainToolbarPanel(viewModel: viewModel)
+                    .padding(.leading, viewModel.isSidebarHidden ? Theme.Layout.trafficLightsWidth : 0)
+                if viewModel.showsRecoveryKeyReminder {
+                    RecoveryKeyStrip(main: viewModel)
+                }
+                DetailColumnView(main: viewModel)
+                    .frame(minWidth: Theme.Layout.detailMinWidth)
+                    .mainColumnHeight()
+            }
         }
-    }
-
-    /// View › Hide Sidebar and Edit › Find (which brings the sidebar back) meet in
-    /// ``MainViewModel/isSidebarHidden``.
-    private var sidebarVisibility: Binding<NavigationSplitViewVisibility> {
-        Binding(
-            get: { viewModel.isSidebarHidden ? .detailOnly : .all },
-            set: { viewModel.isSidebarHidden = $0 == .detailOnly }
-        )
+        .padding(Theme.Layout.mainPanelInset)
+        .ignoresSafeArea()
+        .background(MainWindowGround())
+        .animation(Theme.Durations.spring, value: viewModel.isSidebarHidden)
     }
 }
 
 private extension View {
-    /// Lets a column of the main split view take any height the window gives it. AppKit sizes the
-    /// split view from each column's minimum height, which SwiftUI measures at zero width, where
-    /// an empty state's wrapping message is about 1,000 pt tall. The split view then grew taller
-    /// than the window and was centered in it: the top of every column slid under the title bar
-    /// (traffic lights, sidebar toggle) and the sidebar footer dropped below the window. Each
-    /// column scrolls or centers its own content; the window keeps its minimum size (RootScreen).
+    /// Lets a column take any height the window gives it. SwiftUI measures a column's minimum
+    /// height at zero width, where an empty state's wrapping message is about 1,000 pt tall; as a
+    /// minimum it grew the window past the screen (the split view before D6c2b was centered in
+    /// it, under the title bar). Each column scrolls or centers its own content.
     func mainColumnHeight() -> some View {
         frame(minHeight: 0, maxHeight: .infinity)
     }
@@ -160,28 +166,14 @@ private struct MainSheetContent: View {
     }
 }
 
-/// The detail column: the recovery-key banner, then the selected place (a repository scope, a
-/// destination, a folder or an organization), the Import prompt for a repository or organization
-/// not in the vault, or the home. The detail draws the connectivity banner itself (above its
-/// header); the other states show it here. No background of its own: the window's ground shows,
-/// and the system's floating sidebar and glass toolbar stay as macOS draws them.
+/// The detail under the toolbar panel: the selected place (a repository scope, a destination, a
+/// folder or an organization), the Import prompt for a repository or organization not in the
+/// vault, or the home. The detail draws the connectivity banner itself (above its header); the
+/// other states show it here. No background of its own: the window's soft ground shows.
 private struct DetailColumnView: View {
     let main: MainViewModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            if main.showsRecoveryKeyReminder {
-                RecoveryKeyBanner(main: main)
-                    .padding(.horizontal, Theme.Spacing.xLargePlus)
-                    .padding(.top, Theme.Spacing.large)
-            }
-            selectedPlace
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    @ViewBuilder
-    private var selectedPlace: some View {
         Group {
             if let folderDetail = main.folderDetail {
                 FolderDetailScreen(viewModel: folderDetail, main: main)
@@ -234,22 +226,36 @@ private struct MainHomeView: View {
     }
 }
 
-/// The recovery key was never confirmed as saved (board Main2-Home). The key that was shown
-/// cannot be shown again, so the button opens Settings › Security on a new one.
-private struct RecoveryKeyBanner: View {
+/// The recovery key was never confirmed as saved (board Main2-Home): a glass strip under the
+/// toolbar panel. The key that was shown cannot be shown again, so the button opens Settings ›
+/// Security on a new one (the board's "Show Key" is not offered).
+private struct RecoveryKeyStrip: View {
     let main: MainViewModel
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        Banner(
-            .warning,
-            message: MainCopy.recoveryKeyNotSaved,
-            systemImage: "key",
-            action: .init(title: MainCopy.createNewRecoveryKey) {
+        HStack(spacing: Theme.Spacing.small) {
+            Image(systemName: "key")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Colors.ink)
+                .accessibilityHidden(true)
+            Text(MainCopy.recoveryKeyNotSaved)
+                .fxTextStyle(.calloutEmphasized)
+                .foregroundStyle(Theme.Colors.ink)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 0)
+            Button(MainCopy.createNewRecoveryKey) {
                 main.createNewRecoveryKey()
                 openSettings()
             }
-        )
+            .fxButtonStyle(.secondary, size: .compact)
+        }
+        .padding(.leading, Theme.Spacing.mediumPlus)
+        .padding(.trailing, Theme.Spacing.smallMinus)
+        .frame(height: Theme.Layout.bannerStripHeight)
+        .fxGlassPanel(radius: Theme.Radius.row)
+        .accessibilityElement(children: .contain)
     }
 }
 

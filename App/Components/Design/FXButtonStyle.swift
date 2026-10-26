@@ -10,9 +10,10 @@ import SwiftUI
 /// - `.outlineDestructive`: the outline with danger text (board Sync-Delete "Delete 1").
 ///
 /// Sizes: `.regular` (34 pt, 13 pt text), `.large` (42 pt, 14 pt text), `.compact` (26 pt,
-/// 12 pt text, 8 pt corners: a place header's buttons) and `.dialog` (32 pt, 13 pt text: the 1.0
-/// dialogs, where only the primary is a pill and the others have 8 pt corners). Disabled buttons
-/// fade to 40%; keyboard focus draws a brand ring outside the shape.
+/// 12 pt text, 8 pt corners: a place header's buttons), `.dialog` (32 pt, 13 pt text: the 1.0
+/// dialogs, where only the primary is a pill and the others have 8 pt corners) and `.toolbar` (a
+/// 28 pt pill, 12 pt text: the toolbar panel's Sync). Disabled buttons fade to 40%; keyboard
+/// focus draws a brand ring outside the shape.
 ///
 /// ```swift
 /// Button("Sync 5 changes") { … }
@@ -35,6 +36,7 @@ struct FXButtonStyle: ButtonStyle {
         case large
         case compact
         case dialog
+        case toolbar
     }
 
     /// The colors of a variant, resolved per state (pure, for tests and previews).
@@ -92,6 +94,7 @@ struct FXButtonStyle: ButtonStyle {
         case .large: Theme.Layout.buttonHeightLarge
         case .compact: Theme.Layout.buttonHeightCompact
         case .dialog: Theme.Layout.buttonHeightDialog
+        case .toolbar: Theme.Layout.buttonHeightToolbar
         }
     }
 
@@ -99,7 +102,7 @@ struct FXButtonStyle: ButtonStyle {
     /// Main2-Repository) and the `.dialog` buttons but the primary pill (boards Sync-Delete, NewRepo).
     static func shape(for size: Size, variant: Variant) -> AnyShape {
         switch size {
-        case .regular, .large: AnyShape(Capsule.pill)
+        case .regular, .large, .toolbar: AnyShape(Capsule.pill)
         case .dialog where variant == .primary: AnyShape(Capsule.pill)
         case .compact, .dialog: AnyShape(RoundedRectangle(cornerRadius: Theme.Radius.compactRow, style: .continuous))
         }
@@ -110,6 +113,7 @@ struct FXButtonStyle: ButtonStyle {
         case .regular, .dialog: Theme.Layout.buttonPaddingRegular
         case .large: Theme.Layout.buttonPaddingLarge
         case .compact: Theme.Layout.buttonPaddingCompact
+        case .toolbar: Theme.Layout.buttonPaddingToolbar
         }
     }
 
@@ -118,7 +122,7 @@ struct FXButtonStyle: ButtonStyle {
         switch size {
         case .regular: return isEmphasized ? Theme.Typography.calloutEmphasized : Theme.Typography.callout
         case .large: return isEmphasized ? Theme.Typography.bodyEmphasized : Theme.Typography.body
-        case .compact: return isEmphasized ? Theme.Typography.captionEmphasized : Theme.Typography.caption
+        case .compact, .toolbar: return isEmphasized ? Theme.Typography.captionEmphasized : Theme.Typography.caption
         // The boards' dialog buttons: 13 pt, the filled ones medium.
         case .dialog: return isEmphasized ? Theme.Typography.bodyEmphasized : Theme.Typography.callout
         }

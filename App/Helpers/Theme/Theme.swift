@@ -30,14 +30,17 @@ enum Theme {
         /// The 1.0 dialogs' buttons (boards Sync-Progress, Sync-Delete, NewRepo, Share-*): 32 pt,
         /// the primary a pill, the others 8 pt rounded rectangles.
         static let buttonHeightDialog: CGFloat = 32
+        /// `.toolbar` pills in the main window's toolbar panel (board Main2-Home: Sync): 28 pt.
+        static let buttonHeightToolbar: CGFloat = 28
+        static let buttonPaddingToolbar: CGFloat = 12
         /// Circular icon buttons (toolbar-style New, Share, Lock).
         static let iconButtonSize: CGFloat = 32
         /// Text fields and secure fields.
         static let inputHeight: CGFloat = 44
-        /// The count badge in the toolbar Sync pill.
-        static let badgeHeight: CGFloat = 24
-        static let syncButtonLeadingPadding: CGFloat = 18
-        static let syncButtonTrailingPadding: CGFloat = 5
+        /// The count badge in the toolbar Sync pill (board Main2-Home: 16 pt, 12 / 6 pt sides).
+        static let badgeHeight: CGFloat = 16
+        static let syncButtonLeadingPadding: CGFloat = 12
+        static let syncButtonTrailingPadding: CGFloat = 6
         /// Status chips (with a dot) and tags (outline, no dot).
         static let chipHeight: CGFloat = 24
         static let tagHeight: CGFloat = 22
@@ -130,9 +133,21 @@ enum Theme {
 
         // MARK: Main window
 
-        /// The sidebar holds the whole tree (1.0): owner › repository › environment.
-        static let sidebarMinWidth: CGFloat = 240
-        static let sidebarIdealWidth: CGFloat = 280
+        /// The sidebar panel holds the whole tree (1.0): owner › repository › environment.
+        static let sidebarWidth: CGFloat = 264
+        /// The window chrome (1.0 D6c2b; board Main2-Home): the panels sit this far from the
+        /// window's edges and from each other.
+        static let mainPanelInset: CGFloat = 8
+        /// The sidebar panel's content starts under the traffic lights.
+        static let sidebarPanelTopInset: CGFloat = 44
+        static let toolbarPanelHeight: CGFloat = 44
+        /// The traffic lights from the window's leading edge (AppKit puts them 19 pt in): the
+        /// toolbar panel starts after them while the sidebar is hidden.
+        static let trafficLightsWidth: CGFloat = 80
+        /// The recovery-key strip under the toolbar panel.
+        static let bannerStripHeight: CGFloat = 36
+        /// How far each corner's glow reaches into the main window's ground.
+        static let groundGlowRadius: CGFloat = 720
         /// One level of the sidebar tree: owner › repository › environment (board Main2-Expanded).
         static let sidebarTreeIndent: CGFloat = 14
         /// The disclosure chevron's column and the symbol's, so names line up at every level.
@@ -144,10 +159,6 @@ enum Theme {
         static let sidebarSectionHeaderHeight: CGFloat = 22
         /// The search field at the top of the sidebar and the footer's icon buttons.
         static let sidebarControlHeight: CGFloat = 28
-        /// The toolbar title item (the selected place's path) at the detail column's leading edge.
-        /// A fixed width: the toolbar proposes no width, so the title picks the longest path that
-        /// fits it, and the toolbar buttons still fit beside it in the narrowest window.
-        static let toolbarTitleWidth: CGFloat = 340
         static let detailMinWidth: CGFloat = 420
         /// The ⌘K jump palette (board Main2-Search).
         static let jumpPaletteWidth: CGFloat = 600
@@ -301,11 +312,15 @@ enum Theme {
         static let brandMarkCenterFraction: CGFloat = 0.03
     }
 
-    /// The one soft shadow, for sheets drawn in the window (`Card` with `.sheet`). Everything
-    /// else is flat with hairlines.
+    /// The soft shadows: sheets drawn in the window (`Card` with `.sheet`) and the main window's
+    /// glass panels. Everything else is flat with hairlines.
     enum Shadow {
         static let sheetRadius: CGFloat = 32
         static let sheetY: CGFloat = 24
+        /// The main window's glass panels (board Main2-Home: CSS `0 8px 24px`; a SwiftUI shadow
+        /// radius is half the CSS blur).
+        static let panelRadius: CGFloat = 12
+        static let panelY: CGFloat = 8
     }
 
     /// SF Symbols of the places, so the sidebar, the ⌘K palette and the Sync summary draw a

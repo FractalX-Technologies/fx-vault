@@ -1,44 +1,33 @@
 import SwiftUI
 
-/// Installs the toolbar. The window title is drawn by ``MainToolbarTitle`` (the selected place's
-/// path), so the system title is removed.
-struct MainToolbarModifier: ViewModifier {
+/// The toolbar panel over the detail (§10 Toolbar; 1.0 D6c2b; boards Main2-Home, Main2-Repository,
+/// Main2-Search): the selected place's path, the ⌘K search button and the Sync pill on glass. No
+/// native toolbar items (the window's toolbar stays empty, ``MainWindowTitleBar``). New
+/// Repository, Import .env and Share are menu commands only: ⌘N (and an owner's menu), ⇧⌘I, ⌥⌘S.
+struct MainToolbarPanel: View {
     let viewModel: MainViewModel
 
-    func body(content: Content) -> some View {
-        content
-            .toolbar { MainToolbar(viewModel: viewModel) }
-            .toolbar(removing: .title)
-    }
-}
-
-/// The toolbar (§10 Toolbar; boards Main2-Home, Main2-Repository, Main2-Search), on the system's
-/// glass toolbar: the selected place's path as the title, the ⌘K search button on its own glass,
-/// then the ink Sync pill. New Repository, Import .env and Share left it in 1.0 (D6c2): they stay
-/// as ⌘N (and an owner's menu), ⇧⌘I and ⌥⌘S.
-private struct MainToolbar: ToolbarContent {
-    let viewModel: MainViewModel
-
-    var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
+    var body: some View {
+        HStack(spacing: Theme.Spacing.small) {
             MainToolbarTitle(viewModel: viewModel)
-        }
-        .sharedBackgroundVisibility(.hidden)
-        ToolbarItem(placement: .primaryAction) {
             JumpToolbarButton(viewModel: viewModel)
-        }
-        ToolbarSpacer(.fixed, placement: .primaryAction)
-        // The pill has its own ink fill; the shared glass would wrap it in a second capsule.
-        ToolbarItem(placement: .primaryAction) {
             MainSyncButton(viewModel: viewModel)
         }
-        .sharedBackgroundVisibility(.hidden)
+        .padding(.leading, Theme.Spacing.large)
+        .padding(.trailing, Theme.Spacing.small)
+        .frame(maxWidth: .infinity)
+        .frame(height: Theme.Layout.toolbarPanelHeight)
+        .contentShape(Rectangle())
+        // The panel is the window's title bar: dragging its empty part moves the window.
+        .gesture(WindowDragGesture())
+        .allowsWindowActivationEvents(true)
+        .fxGlassPanel()
     }
 }
 
 /// The selected place as a sans path (``MainViewModel/breadcrumb``): the steps muted, the last
-/// one semibold in ink; "FX Vault" with nothing selected; the DEV chip in Debug builds. It is
-/// `toolbarTitleWidth` wide: a long path drops its first steps down to the last one, then shows
+/// one semibold in ink; "FX Vault" with nothing selected; the DEV chip in Debug builds. It takes
+/// the panel's free width: a long path drops its first steps down to the last one, then shows
 /// the app name, rather than pushing the buttons.
 struct MainToolbarTitle: View {
     let viewModel: MainViewModel
@@ -55,8 +44,7 @@ struct MainToolbarTitle: View {
                 DevBuildBadge()
             }
         }
-        .frame(width: Theme.Layout.toolbarTitleWidth, alignment: .leading)
-        .padding(.horizontal, Theme.Spacing.small)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .help(path.joined(separator: Self.separator))
     }
 
@@ -104,6 +92,7 @@ struct MainToolbarTitle: View {
 }
 
 /// The search button with its ⌘K key (boards Main2-Home, Main2-Search): opens the jump palette.
+/// A quiet compact square until hover.
 private struct JumpToolbarButton: View {
     let viewModel: MainViewModel
 
@@ -113,14 +102,11 @@ private struct JumpToolbarButton: View {
         } label: {
             HStack(spacing: Theme.Spacing.smallMinus) {
                 Image(systemName: "magnifyingglass")
-                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
                 KeyHint("⌘K")
             }
-            .foregroundStyle(Theme.Colors.mutedText)
-            .padding(.horizontal, Theme.Spacing.small)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .fxButtonStyle(.ghost, size: .compact)
         .disabled(!viewModel.canJump)
         .help(JumpPaletteCopy.jumpAnywhereHelp)
         .accessibilityLabel(JumpPaletteCopy.jumpAnywhere)

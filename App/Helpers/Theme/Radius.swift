@@ -10,6 +10,8 @@ extension Theme {
         static let sheet: CGFloat = 24
         /// Tables and grouped lists inside a card or on the ground; the ⌘K jump palette.
         static let container: CGFloat = 16
+        /// The main window's sidebar and toolbar panels (board Main2-Home).
+        static let panel: CGFloat = 14
         /// Rounded inputs, banners, checkbox rows.
         static let control: CGFloat = 12
         /// Scope rows, color swatches.

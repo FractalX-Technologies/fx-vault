@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The ⌘K palette over the main window (board Main2-Search) while ``MainViewModel/jumpPalette``
-/// is set: a scrim that closes it on a click, and the palette under the toolbar.
+/// is set: a scrim that closes it on a click, and the palette centered under the toolbar panel.
 struct JumpPaletteOverlay: View {
     let main: MainViewModel
 
@@ -16,8 +16,10 @@ struct JumpPaletteOverlay: View {
                 JumpPaletteView(palette: palette) {
                     main.closeJumpPalette()
                 }
-                .padding(.top, Theme.Spacing.xLarge)
+                .padding(.top, Theme.Layout.mainPanelInset + Theme.Layout.toolbarPanelHeight + Theme.Spacing.largePlus)
             }
+            // Measured from the window's top, as the panels are (the title bar is hidden).
+            .ignoresSafeArea()
             .accessibilityElement(children: .contain)
             .accessibilityAddTraits(.isModal)
             .accessibilityAction(.escape) { main.closeJumpPalette() }

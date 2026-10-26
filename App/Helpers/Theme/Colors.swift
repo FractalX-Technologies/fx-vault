@@ -63,6 +63,15 @@ extension Theme {
         static let shadow = Color(.shadow)
         /// The dimmed window behind the ⌘K jump palette (board Main2-Search).
         static let scrim = Color(.scrim)
+        /// Under the main window's glass panels (board Main2-Home): black at 8% / 40%.
+        static let panelShadow = Color(.panelShadow)
+        /// The main window's soft ground (board Main2-Home): #F8F7F6 / #121214, lit from each
+        /// corner by a glow (``MainWindowGround``).
+        static let mainGround = Color(.mainGround)
+        static let mainGlowTopLeading = Color(.mainGlowTopLeading)
+        static let mainGlowTopTrailing = Color(.mainGlowTopTrailing)
+        static let mainGlowBottomTrailing = Color(.mainGlowBottomTrailing)
+        static let mainGlowBottomLeading = Color(.mainGlowBottomLeading)
         /// The notch island (``NotchIslandView``): black, white and dimmed white in both
         /// appearances, so it reads as part of the hardware notch.
         static let island = Color(.island)

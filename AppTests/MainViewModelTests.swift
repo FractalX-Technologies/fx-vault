@@ -63,6 +63,19 @@ struct MainViewModelTests {
         #expect(main.sidebar.searchFocusRequest == 1)
     }
 
+    /// View › Hide Sidebar (⌃⌘S) is the main window's own command since D6c2b (no split view to
+    /// toggle): it slides the panel out and back, and its title says what it will do.
+    @Test func hideSidebarTogglesThePanel() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
+        let main = harness.app.makeMainViewModel()
+        #expect(MainCopy.sidebarCommand(isSidebarHidden: main.isSidebarHidden) == "Hide Sidebar")
+        main.toggleSidebar()
+        #expect(main.isSidebarHidden)
+        #expect(MainCopy.sidebarCommand(isSidebarHidden: main.isSidebarHidden) == "Show Sidebar")
+        main.toggleSidebar()
+        #expect(!main.isSidebarHidden)
+    }
+
     @Test func newRepositoryAndNothingToShareYet() async throws {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
         let main = harness.app.makeMainViewModel()

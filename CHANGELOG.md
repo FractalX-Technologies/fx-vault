@@ -93,7 +93,12 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   New Repository (⌘N, and now on an owner's menu with the owner preselected), Import .env
   (⇧⌘I) and Share Project (⌥⌘S) stay in the File menu. With nothing selected, the window says
   "Choose a place" with the pending changes and the ⌘K hint. "Your recovery key wasn't saved"
-  moved from the sidebar to a banner over the selected place, with Create New Key….
+  moved from the sidebar to a strip under the toolbar, with Create New Key….
+- **Floating panels.** The main window has no title bar of its own: the sidebar and the toolbar
+  float as rounded glass panels on a soft ground, with the window's close, minimize and zoom
+  buttons inside the sidebar's top corner. View › Hide Sidebar (⌃⌘S) slides the sidebar out and
+  the toolbar starts after the window buttons; Edit › Find brings it back. The Sync button is a
+  smaller pill with the sync symbol and the pending count.
 - **A place's header and its ⋯ menu.** Every place opens with its name and one line saying what
   it is, where and how many (`Environment · api-service · 6 secrets · 2 variables · 1 without
   value`), then "N changed on GitHub · Review" when GitHub changed something. Its ⋯ menu holds
