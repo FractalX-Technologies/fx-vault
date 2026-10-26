@@ -256,10 +256,13 @@ Copy and Services can't put it on the clipboard around `ClipboardManager`.
   (1.0) asks Touch ID or the master password first, and the main window is excluded from screen
   capture while any value shows. Sheets that hold typed or
   decrypted values (`LockObserving`) wipe them on lock and on close.
-- **File secrets (1.0):** Choose… or a drop on a place reads one regular file (no folder, pipe
-  or device; at most twice the 48,000-byte limit) with `open`/`read` straight into
-  `SecretBytes`, never through `Data` or `String`; Base64 is written into a new buffer the same
-  way. The sheet wipes the bytes after Add, on close and on lock. The file itself is left where
+- **File secrets (1.0):** Choose… or a drop on a place reads one regular file (at most twice the
+  48,000-byte limit) with `SecretFileReader` (VaultCore, also the `.env` import's reader): the
+  path is `stat`ed before it is opened, so a folder, a pipe or a device is never opened, then
+  `open` (`O_NONBLOCK`, `O_NOCTTY`) and `read` straight into `SecretBytes`, never through `Data`
+  or `String`, off the main actor. A file that changes size or time while it is read is
+  refused, not stored cut off. Base64 is written into a new buffer the same way. The sheet
+  wipes the bytes after Add, on close and on lock, and throws away a read still running then. The file itself is left where
   it is: FX Vault never deletes or changes it. Logs carry counts only, never the file name, the
   same as item names.
 - **Files:** `.env` and `.fxvault` exports are written 0600 from creation (exclusive create, no

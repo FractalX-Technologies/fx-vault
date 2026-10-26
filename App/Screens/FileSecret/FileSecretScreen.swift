@@ -74,9 +74,9 @@ private struct FileSecretForm: View {
                 .accessibilityIdentifier(AccessibilityID.FileSecret.name)
             ConfigEditorNoteView(note: viewModel.nameNote ?? .info(FileSecretCopy.nameHint), style: .dialog)
         }
-        FileSecretFileRow(file: viewModel.file, isEnabled: viewModel.canEdit) {
+        FileSecretFileRow(file: viewModel.file, isReading: viewModel.isReading, isEnabled: viewModel.canEdit) {
             if let url = FileSecretPanels.chooseFile() {
-                viewModel.choose(url)
+                Task { await viewModel.choose(url) }
             }
         }
         if let note = viewModel.fileNote {
@@ -124,6 +124,7 @@ private struct FileSecretForm: View {
 /// The chosen file (board Place-FileSheet): its name in mono, its size and lines, then Choose….
 private struct FileSecretFileRow: View {
     let file: FileSecretViewModel.FileModel?
+    let isReading: Bool
     let isEnabled: Bool
     let onChoose: () -> Void
 
@@ -143,6 +144,9 @@ private struct FileSecretFileRow: View {
                     .foregroundStyle(Theme.Colors.mutedText)
                     .lineLimit(1)
                     .layoutPriority(1)
+            } else if isReading {
+                ProgressView()
+                    .controlSize(.small)
             } else {
                 Text(FileSecretCopy.noFile)
                     .fxTextStyle(.caption)

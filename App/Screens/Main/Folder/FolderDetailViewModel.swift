@@ -183,6 +183,10 @@ final class FolderDetailViewModel: LockObserving {
         dependencies.actions.present(.fileSecret(FileSecretContext(place: .folder(folderID), fileURL: url)))
     }
 
+    var maxValueBytes: Int {
+        DestinationRules.maxValueBytes(for: .folder(folderID), provider: nil)
+    }
+
     func edit(_ row: ConfigRowModel) {
         guard canEdit else { return }
         dependencies.actions.present(.itemEditor(ItemEditorContext(folderID: folderID, mode: .edit(row.id))))

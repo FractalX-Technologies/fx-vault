@@ -658,20 +658,25 @@ ALTER TABLE config_items ADD COLUMN file_detail TEXT
     AND json_type(file_detail, '$.fileName') IS 'text'
     AND length(json_extract(file_detail, '$.fileName')) BETWEEN 1 AND 255
     AND coalesce(json_extract(file_detail, '$.encoding'), '') IN ('text', 'base64')
-    AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')));
+    AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')
+    AND coalesce(json_extract(file_detail, '$.lineCount'), 0) >= 0
+    AND json_remove(file_detail, '$.fileName', '$.lineCount', '$.encoding') = '{}'));
 -- The same column and CHECK on folder_items and destination_items.
 ```
 
 - Additive. The file a secret's value came from (F1, Add file secret): `FileSecretModel` as JSON
-  (`fileName` without its folder, `lineCount` of a text file, `encoding` `text` or `base64`).
-  NULL for a typed value and for every row saved before v21. Plaintext like the item's name
-  (docs/SECURITY-MODEL.md); the file's content is the sealed value.
+  (`fileName` without its folder and without invisible or bidi characters, `lineCount` of a text
+  file, `encoding` `text` or `base64`). NULL for a typed value and for every row saved before
+  v21. Plaintext like the item's name (docs/SECURITY-MODEL.md); the file's content is the sealed
+  value. Being plaintext, the CHECK takes those three keys and no other (`json_remove` leaves
+  `{}`), and no negative `lineCount`.
 - The CHECK uses `IS` and `coalesce` because a CHECK that evaluates to NULL passes (a missing
   key would otherwise slip through, as with `key_wraps` above). It is spelled out per table: a
   frozen migration shares no text with later code.
 - The label follows the value (`ConfigFieldCipher.setValue` and its folder and destination
   twins): a value with another fingerprint drops it, so a typed value, a pull or a drift
-  replace leaves no stale file name; a rename, a move, a copy and a linked update carry it with
+  replace leaves no stale file name; a rename, a move, a copy, a linked update and Duplicate
+  Environment carry it with
   the value, and a pushed Key Vault rename gives it to the new row. Revert restores a value but
   not a label an edit dropped; `.env` files and share files carry no label.
 

@@ -200,7 +200,7 @@ final class DestinationDetailViewModel: LockObserving {
     }
 
     var maxValueBytes: Int {
-        destination.map { DestinationRules.maxValueBytes(for: $0.provider) } ?? Limits.maxKeyVaultValueBytes
+        DestinationRules.maxValueBytes(for: .destination(destinationID), provider: destination?.provider)
     }
 
     func edit(_ row: ConfigRowModel) {

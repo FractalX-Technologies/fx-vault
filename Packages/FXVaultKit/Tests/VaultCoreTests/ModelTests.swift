@@ -283,6 +283,14 @@ struct ConfigItemModelTests {
 
 @Suite("Limits and Timeouts")
 struct LimitsTests {
+    /// One rule for a place's value limit (1.0 F1): the item editor, Add file secret and the drop.
+    @Test func aPlaceTakesGitHubsOrItsProvidersLimit() {
+        #expect(DestinationRules.maxValueBytes(for: .scope(repositoryID: RepoID(), scope: .repository), provider: nil) == 48_000)
+        #expect(DestinationRules.maxValueBytes(for: .folder(FolderID()), provider: nil) == 48_000)
+        #expect(DestinationRules.maxValueBytes(for: .destination(DestinationID()), provider: .azureKeyVault) == 25_600)
+        #expect(DestinationRules.maxValueBytes(for: .destination(DestinationID()), provider: nil) == 25_600, "the smallest until it is read")
+    }
+
     @Test func planValues() {
         #expect(Limits.maxValueBytes == 48_000)
         #expect(Limits.writesPerMinute == 60)

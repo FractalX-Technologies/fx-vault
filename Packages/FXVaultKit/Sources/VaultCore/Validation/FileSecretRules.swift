@@ -71,17 +71,28 @@ public enum FileSecretRules {
         }
     }
 
-    /// The metadata kept with the item: the file's last path component (at most
-    /// ``Limits/maxFileSecretNameLength`` scalars, as the column's CHECK counts), its lines and
+    /// The metadata kept with the item: the file's shown name (``fileName(_:)``), its lines and
     /// the stored encoding.
     public static func model(fileName: String, facts: FactsModel, encoding: FileSecretEncoding) -> FileSecretModel {
-        let scalars = (fileName as NSString).lastPathComponent.unicodeScalars.prefix(Limits.maxFileSecretNameLength)
-        return FileSecretModel(
-            fileName: String(String.UnicodeScalarView(scalars)),
+        FileSecretModel(
+            fileName: self.fileName(fileName),
             lineCount: facts.lineCount,
             encoding: self.encoding(encoding, for: facts)
         )
     }
+
+    /// A file's name as the sheet, the table and the notes show it: the last path component
+    /// without control, bidi or invisible characters (as item names), cut to
+    /// ``Limits/maxFileSecretNameLength`` scalars as the column's CHECK counts. Never empty.
+    public static func fileName(_ path: String) -> String {
+        let cleaned = UnicodeScalarPolicy.removingDisallowedAndInvisible(from: (path as NSString).lastPathComponent)
+        let scalars = cleaned.unicodeScalars.prefix(Limits.maxFileSecretNameLength)
+        let name = String(String.UnicodeScalarView(scalars))
+        return name.isEmpty ? unnamedFile : name
+    }
+
+    /// The name kept for a file whose name has nothing visible left.
+    static let unnamedFile = "file"
 
     // MARK: - Names
 

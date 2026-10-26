@@ -7767,6 +7767,17 @@
         }
       }
     },
+    "fileSecret.error.changed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This file changed while FX Vault read it. Choose it again."
+          }
+        }
+      }
+    },
     "fileSecret.error.empty" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -7806,7 +7817,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This file is %1$@. A secret holds up to %2$@."
+            "value" : "This file is %1$@. This place holds up to %2$@."
           }
         }
       }

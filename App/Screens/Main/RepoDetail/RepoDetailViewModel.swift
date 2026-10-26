@@ -724,6 +724,10 @@ final class RepoDetailViewModel: LockObserving {
         dependencies.actions.present(.fileSecret(FileSecretContext(place: .scope(repositoryID: repositoryID, scope: scope), fileURL: url)))
     }
 
+    var maxValueBytes: Int {
+        DestinationRules.maxValueBytes(for: .scope(repositoryID: repositoryID, scope: scope), provider: nil)
+    }
+
     // MARK: - Import and paste (v0.1.1)
 
     /// "Paste Multiple…": the import sheet in paste mode, focused, rows defaulting to the tab's

@@ -58,28 +58,18 @@ public struct EnvFileRepository: Sendable {
 
     // MARK: - Import
 
-    /// Reads and plans a `.env` file. The file's bytes are wiped after parsing.
-    ///
-    /// - Throws: `.parse(.fileTooLarge)` above `EnvToolsLimits.maxEnvFileBytes`,
-    ///   `.fileUnreadable`.
+    /// Reads (``SecretFileReader``) and plans a `.env` file. The file's bytes are wiped after
+    /// parsing. Throws `.parse(.fileTooLarge)` above `EnvToolsLimits.maxEnvFileBytes`, otherwise
+    /// `.fileUnreadable` (also for a folder, a pipe or a file that changes while it is read).
     public func readFile(at url: URL) throws(EnvFileError) -> EnvImportPreviewModel {
-        let size: Int
+        let contents: SecretBytes
         do {
-            let attributes = try FileManager.default.attributesOfItem(atPath: url.path(percentEncoded: false))
-            size = (attributes[.size] as? NSNumber)?.intValue ?? 0
-        } catch {
-            throw .fileUnreadable
-        }
-        guard size <= EnvToolsLimits.maxEnvFileBytes else {
+            contents = try SecretFileReader.read(url, maxBytes: EnvToolsLimits.maxEnvFileBytes)
+        } catch .tooLarge {
             throw .parse(.fileTooLarge(limit: EnvToolsLimits.maxEnvFileBytes))
-        }
-        var data: Data
-        do {
-            data = try Data(contentsOf: url)
         } catch {
             throw .fileUnreadable
         }
-        let contents = SecretBytes(wipingSource: &data)
         defer { contents.wipe() }
         return try parse(contents)
     }

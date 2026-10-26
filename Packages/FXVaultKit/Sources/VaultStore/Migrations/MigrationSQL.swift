@@ -517,27 +517,33 @@ enum MigrationSQL {
     // MARK: v21_file_secrets (1.0, tasks/todo.md F1). Additive.
 
     /// The file a secret's value came from (`FileSecretModel` as JSON: name, lines, encoding) on
-    /// the three item tables. Plaintext metadata like item names; NULL for a typed value. The
-    /// CHECK uses IS and coalesce because a NULL there passes; it is spelled out per table, as a
-    /// frozen migration shares no text with later code.
+    /// the three item tables. Plaintext, so the CHECK takes those three keys only (json_remove
+    /// leaves `{}`); it uses IS and coalesce because a NULL there passes, and is spelled out per
+    /// table, as a frozen migration shares no text with later code.
     static let v21FileSecrets = """
         ALTER TABLE config_items ADD COLUMN file_detail TEXT
           CHECK (file_detail IS NULL OR (json_valid(file_detail)
             AND json_type(file_detail, '$.fileName') IS 'text'
             AND length(json_extract(file_detail, '$.fileName')) BETWEEN 1 AND 255
             AND coalesce(json_extract(file_detail, '$.encoding'), '') IN ('text', 'base64')
-            AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')));
+            AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')
+            AND coalesce(json_extract(file_detail, '$.lineCount'), 0) >= 0
+            AND json_remove(file_detail, '$.fileName', '$.lineCount', '$.encoding') = '{}'));
         ALTER TABLE folder_items ADD COLUMN file_detail TEXT
           CHECK (file_detail IS NULL OR (json_valid(file_detail)
             AND json_type(file_detail, '$.fileName') IS 'text'
             AND length(json_extract(file_detail, '$.fileName')) BETWEEN 1 AND 255
             AND coalesce(json_extract(file_detail, '$.encoding'), '') IN ('text', 'base64')
-            AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')));
+            AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')
+            AND coalesce(json_extract(file_detail, '$.lineCount'), 0) >= 0
+            AND json_remove(file_detail, '$.fileName', '$.lineCount', '$.encoding') = '{}'));
         ALTER TABLE destination_items ADD COLUMN file_detail TEXT
           CHECK (file_detail IS NULL OR (json_valid(file_detail)
             AND json_type(file_detail, '$.fileName') IS 'text'
             AND length(json_extract(file_detail, '$.fileName')) BETWEEN 1 AND 255
             AND coalesce(json_extract(file_detail, '$.encoding'), '') IN ('text', 'base64')
-            AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')));
+            AND coalesce(json_type(file_detail, '$.lineCount'), 'null') IN ('null', 'integer')
+            AND coalesce(json_extract(file_detail, '$.lineCount'), 0) >= 0
+            AND json_remove(file_detail, '$.fileName', '$.lineCount', '$.encoding') = '{}'));
         """
 }
