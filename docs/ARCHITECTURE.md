@@ -1341,7 +1341,7 @@ AppTests).
 **Components** (`App/Components`): `SecretValueEditor`, `MaskedValueCell` (display-only: masked /
 revealed / plain / missing, the view model owns reveal state), `CommandRow`,
 `RecoveryKeyGridView`, `PassphraseView`, `StatusChip`, `EmptyStateView`, `SyncToolbarButton`,
-`GHStatusRow`, `PasswordStrengthMeter`, `NewPasswordFields`, `WindowAccessor`,
+`GHStatusRow`, `PasswordStrengthMeter`, `NewPasswordFields`, `WindowAccessor`, `WindowDragArea`,
 `View.screenCaptureProtected()`, `View.errorAlert(_:)` (`ErrorAlert`). Shared by the feature
 sheets: `ConfigEditorSheet(eyebrow:title:subtitle:primaryTitle:isPrimaryEnabled:isWorking:width:
 onCancel:onPrimary:content:)` (v0.3.0 board SyncReview: eyebrow, 28 pt title and muted subtitle,

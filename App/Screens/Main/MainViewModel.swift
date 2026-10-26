@@ -413,6 +413,12 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// The sidebar panel is hidden (View › Hide Sidebar, ⌃⌘S); Edit › Find brings it back.
     var isSidebarHidden = false
 
+    /// The sidebar panel's width, dragged on its trailing gutter (``PreferencesManager/sidebarWidth``).
+    var sidebarWidth: CGFloat {
+        get { CGFloat(app.container.preferences.sidebarWidth) }
+        set { app.container.preferences.sidebarWidth = Int(newValue.rounded()) }
+    }
+
     /// View › Hide Sidebar / Show Sidebar (⌃⌘S).
     func toggleSidebar() {
         isSidebarHidden.toggle()

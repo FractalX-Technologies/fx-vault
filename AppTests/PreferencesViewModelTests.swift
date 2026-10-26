@@ -106,6 +106,22 @@ struct PreferencesViewModelTests {
         #expect(PreferencesManager(store: store).ghPathOverride == nil)
     }
 
+    /// The sidebar panel's dragged width (1.0 D6c2b review) stays between its tokens, from a drag
+    /// or a hand-edited defaults file, and comes back at the next launch.
+    @Test func theSidebarWidthIsClampedAndKept() {
+        let store = InMemoryPreferencesStore()
+        let preferences = PreferencesManager(store: store)
+        #expect(preferences.sidebarWidth == Int(Theme.Layout.sidebarWidth))
+        preferences.sidebarWidth = 10
+        #expect(preferences.sidebarWidth == Int(Theme.Layout.sidebarMinWidth))
+        preferences.sidebarWidth = 10_000
+        #expect(preferences.sidebarWidth == Int(Theme.Layout.sidebarMaxWidth))
+        preferences.sidebarWidth = 300
+        #expect(PreferencesManager(store: store).sidebarWidth == 300)
+        store.set(5, forKey: PreferencesManager.Key.sidebarWidth)
+        #expect(PreferencesManager(store: store).sidebarWidth == Int(Theme.Layout.sidebarMinWidth))
+    }
+
     /// 0.9's nearby name (personal data), visibility, mute and remote port go at the first launch.
     @Test func settingsOfTheRemovedFeaturesAreDeleted() {
         let store = InMemoryPreferencesStore()

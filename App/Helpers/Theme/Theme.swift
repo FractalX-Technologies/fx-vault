@@ -133,8 +133,11 @@ enum Theme {
 
         // MARK: Main window
 
-        /// The sidebar panel holds the whole tree (1.0): owner › repository › environment.
+        /// The sidebar panel holds the whole tree (1.0): owner › repository › environment. Its
+        /// trailing gutter resizes it between the min and max widths (`PreferencesManager`).
         static let sidebarWidth: CGFloat = 264
+        static let sidebarMinWidth: CGFloat = 240
+        static let sidebarMaxWidth: CGFloat = 400
         /// The window chrome (1.0 D6c2b; board Main2-Home): the panels sit this far from the
         /// window's edges and from each other.
         static let mainPanelInset: CGFloat = 8
@@ -160,6 +163,9 @@ enum Theme {
         /// The search field at the top of the sidebar and the footer's icon buttons.
         static let sidebarControlHeight: CGFloat = 28
         static let detailMinWidth: CGFloat = 420
+        /// The main screen's minimum: the widest sidebar beside the narrowest detail, with the
+        /// sidebar hidden too, so showing it again never pushes the detail past the window edge.
+        static let mainScreenMinWidth = 3 * mainPanelInset + sidebarMaxWidth + detailMinWidth
         /// The ⌘K jump palette (board Main2-Search).
         static let jumpPaletteWidth: CGFloat = 600
         static let jumpPaletteFieldHeight: CGFloat = 48

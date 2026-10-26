@@ -392,13 +392,20 @@ foreground color, so `.primary` text still turns white on selected rows.
   `MainWindowGround`, `mainPanelInset` (8) from the window's edges and from each other, from the
   window's very top: the sidebar panel (`sidebarWidth` 264, its content `sidebarPanelTopInset`
   44 down), and beside it the toolbar panel (`toolbarPanelHeight` 44), the recovery-key strip
-  and the detail. While it shows, `MainWindowTitleBar` hides the title, makes the title bar
+  and the detail. Dragging the gutter after the sidebar resizes it between `sidebarMinWidth`
+  (240) and `sidebarMaxWidth` (400), kept per Mac user (`PreferencesManager.sidebarWidth`); the
+  screen's minimum is `mainScreenMinWidth` (the widest sidebar beside `detailMinWidth`) with the
+  sidebar hidden too. The other gutters, the sidebar's top band and the toolbar panel's empty
+  part are title bar (`WindowDragArea`): they move the window, a double-click zooms or
+  minimizes as System Settings says, and they take the first click in an inactive window (the
+  toolbar's buttons don't). While it shows, `MainWindowTitleBar` hides the title, makes the title bar
   transparent and gives the window an empty unified toolbar, so AppKit itself puts the traffic
   lights 19 pt in, inside the sidebar panel, and keeps them there on resize, in full screen and
   on hover; leaving the main screen (the lock) restores the title bar. View › Hide Sidebar
   (⌃⌘S) is our own command (`MainViewModel.toggleSidebar()`): the sidebar panel slides out and
-  the toolbar panel starts `trafficLightsWidth` (80) in, after the lights; Edit › Find brings
-  it back.
+  the toolbar panel starts `trafficLightsWidth` (80) in, after the lights (not in full screen,
+  which hides them); Edit › Find brings it back. Two main screens may overlap while SwiftUI
+  swaps them: the title bar is counted per window, and the last one out restores it.
   Why (decision, 2026-10-26): on macOS 27 (26A428) `NavigationSplitView`, and an AppKit sidebar
   split item alike, draw the sidebar's glass full height with square corners, so the boards'
   floating sidebar cannot be had from the split view. Moving the traffic-light buttons by hand
@@ -412,7 +419,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   the DEV chip in Debug builds. It takes the panel's free width; a long path drops its first
   steps down to the last one, then shows the app name. Then the search button (`magnifyingglass`
   + `KeyHint("⌘K")`, `.ghost` `.compact`) and `SyncToolbarButton`. 16 pt before the path, 8 pt
-  after Sync. Dragging the panel's empty part moves the window (`WindowDragGesture`). New
+  after Sync. The panel's empty part is title bar (`WindowDragArea`, above). New
   Repository, Import .env and Share are menu commands only (⌘N, also on an owner's menu; ⇧⌘I;
   ⌥⌘S).
 - Sidebar (1.0, D6c1; boards Main2-Home, Main2-Expanded, Main2-Repository, Main2-Dark): the
