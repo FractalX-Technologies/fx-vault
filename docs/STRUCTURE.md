@@ -118,8 +118,10 @@ FXVault/
 │   │   │                            # Securely, boards Share-Pick and Share-Passphrase),
 │   │   │                            # ProjectShareTreeModel, ProjectShareImportView/Editor (a
 │   │   │                            # bundle opened, board Share-OpenPreview), ProjectShareCopy
-│   │   └── Preferences/             # PreferencesScreen/ViewModel, General, Security(+ViewModel),
-│   │                                # Accounts(+ViewModel), Advanced,
+│   │   └── Preferences/             # PreferencesScreen/ViewModel, PreferencesLayout (groups,
+│   │                                # rows, values and states; boards Settings-*), General,
+│   │                                # Security(+ViewModel), Accounts(+ViewModel), Advanced (with
+│   │                                # ResetVaultSheet, board Reset-Confirm),
 │   │                                # SharingSettingsScreen/ViewModel (the sent log; v0.9.0)
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
 │   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,

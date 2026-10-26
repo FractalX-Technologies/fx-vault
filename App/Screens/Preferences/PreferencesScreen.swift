@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The Settings window (§10 Preferences): General, Security, Accounts, Sharing (v0.9.0),
-/// Advanced.
+/// The Settings window (§10 Preferences; boards Settings-*): General, Security, Accounts,
+/// Sharing (v0.9.0), Advanced, as the system's toolbar tabs.
 struct PreferencesScreen: View {
     @State private var viewModel: PreferencesViewModel
 
@@ -19,17 +19,17 @@ struct PreferencesScreen: View {
                 .tag(PreferencesViewModel.Tab.general)
             SecuritySettingsScreen(preferences: viewModel, viewModel: viewModel.security)
                 .tabItem {
-                    Label(String(localized: "settings.tab.security", defaultValue: "Security"), systemImage: "lock.shield")
+                    Label(String(localized: "settings.tab.security", defaultValue: "Security"), systemImage: "lock")
                 }
                 .tag(PreferencesViewModel.Tab.security)
             AccountsSettingsScreen(preferences: viewModel)
                 .tabItem {
-                    Label(String(localized: "settings.tab.accounts", defaultValue: "Accounts"), systemImage: "person.2")
+                    Label(String(localized: "settings.tab.accounts", defaultValue: "Accounts"), systemImage: "person")
                 }
                 .tag(PreferencesViewModel.Tab.accounts)
             SharingSettingsScreen(viewModel: viewModel.sharing)
                 .tabItem {
-                    Label(ProjectShareCopy.settingsTab, systemImage: "paperplane")
+                    Label(ProjectShareCopy.settingsTab, systemImage: "square.and.arrow.up")
                 }
                 .tag(PreferencesViewModel.Tab.sharing)
             AdvancedSettingsView(viewModel: viewModel)

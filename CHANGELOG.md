@@ -29,6 +29,14 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   when FX Vault stops opening the file. Opening a file asks the six words in one field, lists
   what it adds with a dot per repository, and imports as held ("Import as Held"); an expired
   file says "This file expired" in a small dialog of its own.
+- **Settings as the boards.** The tabs are wider, with sentence-case group titles over rounded
+  cards and small outline buttons. General holds Lock after inactivity, the 30 s clipboard
+  clear and the clone folder; Security holds Touch ID, the master password and a new recovery
+  key; Advanced shows the gh in use beside the path override, and the vault folder and Reset
+  vault, whose dialog is smaller with Erase Vault in red. Accounts lists each account with its
+  SSH alias, token, scopes and organizations as dotted lines, and the accounts FX Vault can't
+  use in the same card; the gh path and version moved to Advanced. Sharing lists "Files you
+  shared" as Active or Expired with their counts and expiry time, and Show names.
 - **Edit organization secrets and variables.** The organization view gains Add Secret, Add
   Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
   with the organization's repositories). A Selected item keeps GitHub's repository list until

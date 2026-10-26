@@ -12420,17 +12420,6 @@
         }
       }
     },
-    "projectShare.expires" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Expires %@"
-          }
-        }
-      }
-    },
     "projectShare.expiry" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -13179,17 +13168,6 @@
         }
       }
     },
-    "settings.accounts.account.section" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Account"
-          }
-        }
-      }
-    },
     "settings.accounts.copied" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -13223,35 +13201,13 @@
         }
       }
     },
-    "settings.accounts.gh.path" : {
+    "settings.accounts.github.section" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Path"
-          }
-        }
-      }
-    },
-    "settings.accounts.gh.section" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "GitHub CLI"
-          }
-        }
-      }
-    },
-    "settings.accounts.gh.version" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Version"
+            "value" : "GitHub"
           }
         }
       }
@@ -13274,17 +13230,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Open SSO Page"
-          }
-        }
-      }
-    },
-    "settings.accounts.organizations" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Organizations"
           }
         }
       }
@@ -13322,17 +13267,6 @@
         }
       }
     },
-    "settings.accounts.section" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Accounts"
-          }
-        }
-      }
-    },
     "settings.accounts.ssh.alias" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -13340,6 +13274,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "SSH alias"
+          }
+        }
+      }
+    },
+    "settings.accounts.ssh.noAlias" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No SSH alias"
           }
         }
       }
@@ -13421,24 +13366,13 @@
         }
       }
     },
-    "settings.accounts.unusable.footnote" : {
+    "settings.accounts.unusable.row" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "gh lists these accounts, but FX Vault does not accept their names, so their repositories are not shown."
-          }
-        }
-      }
-    },
-    "settings.accounts.unusable.section" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Accounts FX Vault can't use"
+            "value" : "Can’t use · %@"
           }
         }
       }
@@ -13450,6 +13384,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Choose…"
+          }
+        }
+      }
+    },
+    "settings.advanced.gh.inUse" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "In use"
+          }
+        }
+      }
+    },
+    "settings.advanced.gh.inUse.version" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "gh %@ ·"
           }
         }
       }
@@ -13487,13 +13443,13 @@
         }
       }
     },
-    "settings.advanced.gh.requirement" : {
+    "settings.advanced.gh.requirement.short" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "FX Vault requires gh %@ or later."
+            "value" : "Needs gh %@ or later"
           }
         }
       }
@@ -13553,6 +13509,17 @@
         }
       }
     },
+    "settings.advanced.vault.folder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Vault folder"
+          }
+        }
+      }
+    },
     "settings.advanced.vault.reset" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -13564,13 +13531,35 @@
         }
       }
     },
-    "settings.advanced.vault.reveal" : {
+    "settings.advanced.vault.reset.detail" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Reveal Vault Folder in Finder"
+            "value" : "Erases everything stored in FX Vault on this Mac"
+          }
+        }
+      }
+    },
+    "settings.advanced.vault.resetRow" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reset vault"
+          }
+        }
+      }
+    },
+    "settings.advanced.vault.revealShort" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reveal in Finder"
           }
         }
       }
@@ -13619,13 +13608,35 @@
         }
       }
     },
-    "settings.general.autoLock.section" : {
+    "settings.general.clipboard" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Auto-lock"
+            "value" : "Clipboard clears after"
+          }
+        }
+      }
+    },
+    "settings.general.clipboard.detail" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied values stay on this Mac and are marked concealed; most clipboard managers skip them"
+          }
+        }
+      }
+    },
+    "settings.general.clipboard.seconds" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld s"
           }
         }
       }
@@ -13674,13 +13685,13 @@
         }
       }
     },
-    "settings.general.repositories.section" : {
+    "settings.general.lock.section" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Repositories"
+            "value" : "Lock"
           }
         }
       }
@@ -13714,17 +13725,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Type %@ to confirm"
-          }
-        }
-      }
-    },
-    "settings.reset.label" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Vault"
           }
         }
       }
@@ -13828,28 +13828,6 @@
         }
       }
     },
-    "settings.security.clipboard.info" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copied values stay on this Mac (no Universal Clipboard), are hidden from clipboard managers, and are cleared after %lld seconds or when FX Vault locks, unless you copied something else since."
-          }
-        }
-      }
-    },
-    "settings.security.clipboard.section" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Clipboard"
-          }
-        }
-      }
-    },
     "settings.security.currentPassword" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -13861,13 +13839,13 @@
         }
       }
     },
-    "settings.security.newRecoveryKey" : {
+    "settings.security.newRecoveryKey.short" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Create New Recovery Key…"
+            "value" : "New Recovery Key…"
           }
         }
       }
@@ -13912,6 +13890,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Master password"
+          }
+        }
+      }
+    },
+    "settings.security.recoveryKey" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Recovery key"
+          }
+        }
+      }
+    },
+    "settings.security.recoveryKey.detail" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your current key stops working"
           }
         }
       }
@@ -14026,17 +14026,6 @@
         }
       }
     },
-    "settings.security.touchID.section" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Touch ID"
-          }
-        }
-      }
-    },
     "settings.security.touchID.subtitle" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -14055,6 +14044,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Unlock with Touch ID"
+          }
+        }
+      }
+    },
+    "settings.sharing.active" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Active"
           }
         }
       }
@@ -14081,24 +14081,46 @@
         }
       }
     },
-    "settings.sharing.help" : {
+    "settings.sharing.expiredOn" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Every share file this Mac wrote, with the names it carried. Values are never kept here."
+            "value" : "expired %@"
           }
         }
       }
     },
-    "settings.sharing.mode.passphrase" : {
+    "settings.sharing.expiresOn" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Passphrase"
+            "value" : "expires %@"
+          }
+        }
+      }
+    },
+    "settings.sharing.footnote" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Names only; FX Vault keeps no copy of the file. If one leaks, rotate what’s in it."
+          }
+        }
+      }
+    },
+    "settings.sharing.hideNames" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide names"
           }
         }
       }
@@ -14110,17 +14132,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Teammates: %@"
-          }
-        }
-      }
-    },
-    "settings.sharing.names" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Names in this file"
           }
         }
       }
@@ -14158,35 +14169,24 @@
         }
       }
     },
-    "settings.sharing.rotate" : {
+    "settings.sharing.shared" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Rotate these secrets if the file leaked."
+            "value" : "Files you shared"
           }
         }
       }
     },
-    "settings.sharing.secrets" : {
+    "settings.sharing.showNames" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%lld secrets"
-          }
-        }
-      }
-    },
-    "settings.sharing.secrets.one" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1 secret"
+            "value" : "Show names"
           }
         }
       }
@@ -14198,17 +14198,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Sharing"
-          }
-        }
-      }
-    },
-    "settings.sharing.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Files you sent"
           }
         }
       }

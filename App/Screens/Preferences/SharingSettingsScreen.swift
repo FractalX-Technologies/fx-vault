@@ -1,8 +1,8 @@
 import SwiftUI
 import VaultCore
 
-/// Preferences › Sharing (v0.9.0): the share files this Mac sent, with the names to rotate if one
-/// leaks. See ``SharingSettingsViewModel``.
+/// Preferences › Sharing (v0.9.0; board Settings-Sharing): the share files this Mac sent, with
+/// the names to rotate if one leaks. See ``SharingSettingsViewModel``.
 struct SharingSettingsScreen: View {
     let viewModel: SharingSettingsViewModel
 
@@ -20,7 +20,7 @@ private struct SharingSettingsContent: View {
 
     var body: some View {
         PreferencesPage {
-            PreferencesSection(ProjectShareCopy.settingsTitle, footnote: ProjectShareCopy.settingsHelp) {
+            PreferencesSection(ProjectShareCopy.settingsTitle, footnote: ProjectShareCopy.settingsFootnote) {
                 if viewModel.entries.isEmpty {
                     PreferencesBlock {
                         Text(ProjectShareCopy.settingsEmpty)
@@ -57,26 +57,30 @@ private struct SharingSettingsContent: View {
     }
 }
 
-/// One sent file: date, expiry, recipients, repositories and stages, and the names inside.
+/// One sent file (board Settings-Sharing): when it was made and whether it still opens, what it
+/// holds and until when, then its names on demand, by place.
 private struct SentShareRow: View {
     let entry: SharingSettingsViewModel.EntryModel
     let onRemove: () -> Void
     @State private var showsNames = false
 
     var body: some View {
-        PreferencesBlock(spacing: Theme.Spacing.xSmall) {
-            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
+        PreferencesBlock(spacing: Theme.Spacing.xxSmall) {
+            HStack(spacing: Theme.Spacing.small) {
+                Image(systemName: "doc")
+                    .font(Theme.Typography.callout)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .frame(width: Theme.Layout.settingsNamesIndent - Theme.Spacing.small)
+                    .accessibilityHidden(true)
                 Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
-                    .fxTextStyle(.bodyEmphasized)
+                    .font(Theme.Typography.captionEmphasized)
                     .foregroundStyle(Theme.Colors.ink)
-                if entry.isExpired {
-                    StatusChip(title: ProjectShareCopy.expired, tone: .neutral)
-                } else {
-                    Text(ProjectShareCopy.expires(entry.expiresAt))
-                        .fxTextStyle(.monoMeta)
-                        .foregroundStyle(Theme.Colors.subtleText)
-                }
+                    .lineLimit(1)
                 Spacer(minLength: Theme.Spacing.small)
+                PreferencesStatus(
+                    title: entry.isExpired ? ProjectShareCopy.expired : ProjectShareCopy.active,
+                    mark: entry.isExpired ? .idle : .fine
+                )
                 Menu {
                     Button(ProjectShareCopy.removeEntry, role: .destructive, action: onRemove)
                 } label: {
@@ -84,49 +88,79 @@ private struct SentShareRow: View {
                 }
                 .menuStyle(.button)
                 .menuIndicator(.hidden)
-                .fxIconButtonStyle()
+                .fxIconButtonStyle(.ghost, size: .compact)
             }
-            Text(entry.recipients)
-                .fxTextStyle(.callout)
-                .foregroundStyle(Theme.Colors.ink)
-            if !entry.repositories.isEmpty || !entry.stages.isEmpty {
-                Text(verbatim: (entry.repositories + entry.stages).joined(separator: " · "))
-                    .fxTextStyle(.monoMeta)
+            Group {
+                Text(verbatim: detail)
+                    .fxTextStyle(.formNote)
                     .foregroundStyle(Theme.Colors.subtleText)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    showsNames.toggle()
+                } label: {
+                    Label(
+                        showsNames ? ProjectShareCopy.hideNames : ProjectShareCopy.showNames,
+                        systemImage: showsNames ? "arrowtriangle.down.fill" : "arrowtriangle.right.fill"
+                    )
+                    .labelStyle(SentShareDisclosureLabelStyle())
+                }
+                .buttonStyle(.plain)
+                if showsNames {
+                    names
+                }
             }
-            DisclosureGroup(isExpanded: $showsNames) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                    ShareNoteView(systemImage: "arrow.triangle.2.circlepath", text: ProjectShareCopy.rotateHint, tint: Theme.Colors.warning)
-                    ForEach(entry.places) { place in
-                        VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                            Text(verbatim: place.title)
-                                .fxTextStyle(.calloutEmphasized)
-                                .foregroundStyle(Theme.Colors.ink)
-                            if !place.secretNames.isEmpty {
-                                Text(verbatim: place.secretNames.joined(separator: ", "))
-                                    .fxTextStyle(.monoMeta)
-                                    .foregroundStyle(Theme.Colors.ink)
-                                    .textSelection(.enabled)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            if !place.variableNames.isEmpty {
-                                Text(verbatim: place.variableNames.joined(separator: ", "))
-                                    .fxTextStyle(.monoMeta)
-                                    .foregroundStyle(Theme.Colors.subtleText)
-                                    .textSelection(.enabled)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
+            .padding(.leading, Theme.Layout.settingsNamesIndent)
+        }
+    }
+
+    /// "example-org/api-service · staging · 18 secrets · 7 variables · expires 1 Nov, 14:02".
+    private var detail: String {
+        let parts = entry.repositories + entry.stages
+            + [ProjectShareCopy.counts(entry.counts), ProjectShareCopy.sentExpiry(entry.expiresAt, isExpired: entry.isExpired)]
+            + [entry.recipients].compactMap(\.self)
+        return parts.filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    private var names: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            ForEach(entry.places) { place in
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+                    Text(verbatim: place.title)
+                        .fxTextStyle(.formLabel)
+                        .foregroundStyle(Theme.Colors.subtleText)
+                    LazyVGrid(columns: Self.columns, alignment: .leading, spacing: Theme.Spacing.xxSmall) {
+                        ForEach(place.secretNames + place.variableNames, id: \.self) { name in
+                            Text(verbatim: name)
+                                .font(Theme.Typography.monoLabel)
+                                .foregroundStyle(Theme.Colors.mutedText)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .textSelection(.enabled)
                         }
                     }
                 }
-                .padding(.top, Theme.Spacing.xSmall)
-            } label: {
-                Text(verbatim: "\(ProjectShareCopy.namesInFile) · \(ProjectShareCopy.secretNames(entry.secretCount))")
-                    .fxTextStyle(.caption)
-                    .foregroundStyle(Theme.Colors.mutedText)
             }
         }
+        .padding(.top, Theme.Spacing.xSmall)
+    }
+
+    private static let columns = [
+        GridItem(.flexible(), spacing: Theme.Spacing.medium, alignment: .leading),
+        GridItem(.flexible(), spacing: Theme.Spacing.medium, alignment: .leading),
+    ]
+}
+
+/// "▸ Show names": an 11 pt ink link with a small triangle.
+private struct SentShareDisclosureLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: Theme.Spacing.xSmall) {
+            configuration.icon
+                .imageScale(.small)
+                .font(Theme.Typography.label)
+            configuration.title
+                .fxTextStyle(.formNote)
+        }
+        .foregroundStyle(Theme.Colors.ink)
+        .contentShape(.rect)
     }
 }

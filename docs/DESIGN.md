@@ -723,22 +723,45 @@ foreground color, so `.primary` text still turns white on selected rows.
 
 ### Settings
 
-Native `Settings` + `TabView` + `Form`; the window gets `.fxWindowBackground()`. Use
-`SectionLabel` for group titles inside custom sections, `StatusChip` for states, and
-`.fxButtonStyle(.secondary)` for row actions. Do not restyle native toggles and pickers.
+Boards Settings-*: the native `Settings` scene and `TabView` (toolbar tabs: `gearshape`, `lock`,
+`person`, `square.and.arrow.up`, `slider.horizontal.3`), 640 pt wide, at least 430 pt of content;
+the window gets `.fxWindowBackground()`. `PreferencesLayout.swift` draws the tabs:
 
-Accounts (1.0, B4): under each account's Scopes row, ORGANIZATIONS lists each organization in
-`.mono` with its `StatusChip`: Ready (`success`), Needs admin:org and Needs SSO authorization
-(`warning`, the latter with an Open SSO Page link), Org secrets need an org admin and Access
-unknown (`mutedText`); then, when one needs admin:org, the `CommandRow`s to run before
-Re-check.
+- `PreferencesPage`: 16/22 pt inset, groups 14 pt apart.
+- `PreferencesSection`: an optional `.groupTitle` (11 pt semibold, `subtleText`, sentence case:
+  "Lock", "GitHub CLI"), the rows in a `.fxCardBackground(.dialog)` card split by hairlines, an
+  optional `PreferencesFootnote` (11 pt `subtleText`).
+- `PreferencesRow`: 7/12 pt inset, a 13 pt label with an optional 11 pt detail, then its controls:
+  `.compact` outline buttons (`.outlineDestructive` for Reset Vault…), a mini switch, a
+  `DialogPopUp` 96 pt wide, a `PreferencesValue` (12 pt `mutedText`, mono for paths).
+- `PreferencesStatus`: a state's mark and 12 pt title: a `success` dot (Ready, Active, Token
+  valid), an ink `RingDot` where the user must act (Needs admin:org, Can't use), a
+  `hairlineStrong` dot otherwise (Expired, Org secrets need an org admin).
 
-Sharing (v0.9.0, tab symbol `paperplane`) has one section, FILES YOU SENT, with its footnote
-("Values are never kept here"): one row per export, newest first: the date in `.monoMeta`, an
-"Expired" neutral chip or "Expires …", a ••• menu with Remove from List (a confirmation that the
-sent file is not affected), the protection ("Passphrase"; a 0.9 row may say "Teammates: …"), the
-repositories and stages, and a disclosure "Names in this file · 4 secrets" with a `warning` note
-"Rotate these secrets if the file leaked." over the names per place.
+General: Lock (Lock after inactivity, with the footnote that FX Vault always locks on sleep,
+screen lock and window close), then Clipboard clears after (the fixed 30 s) and Clone folder
+(`~/…` with Choose…). Security: Unlock with Touch ID with its footnote, then Master password and
+Recovery key; its password sheets keep the older sheet chrome. Advanced: GitHub CLI (the gh path
+override field with Choose…, In use with the gh version and path and Check Again, any other gh
+state as a `GHStatusRow` under it, a trusted gh with Revoke, the telemetry footnote), then Vault
+(Vault folder, Reset vault). Reset vault stays in Advanced, unlike the board, because it works
+while the vault is locked; its dialog (board Reset-Confirm) is a 380 pt `DialogSheet` with two
+11 pt labels over 28 pt mono fields and a danger-filled Erase Vault.
+
+Accounts (1.0, B4): one GitHub card. Each account is a block: the person symbol, the login in
+12 pt mono medium, its SSH alias as a quiet 11 pt mono menu, Re-check and Test; then 22 pt lines
+for Token, Scopes and each organization (`building.2`, mono login, `PreferencesStatus`, an
+underlined Open SSO Page link when GitHub gave one), each followed by its `CommandRow`s when a fix
+is needed, and the Test result. Accounts FX Vault can't use follow in the same card ("Can't use ·
+reason"). The `GH_TOKEN` note and its command sit under the card; SSH aliases without an account
+are their own group. The gh path and version are in Advanced.
+
+Sharing (v0.9.0) has one group, "Files you shared", with the footnote "Names only; FX Vault keeps
+no copy of the file. If one leaks, rotate what's in it.": one row per export, newest first: the
+`doc` symbol, the date and time in 12 pt medium, Active or Expired, a ••• menu with Remove from
+List (a confirmation that the sent file is not affected); under it, the repositories, stages,
+counts and "expires 1 Nov, 14:02" (a 0.9 row adds "Teammates: …"), and Show names, which lists
+the names per place in two mono columns.
 
 ### `.env` and sharing (sheet pattern)
 
@@ -847,7 +870,9 @@ and `-only-testing:AppTests/HeldShareSnapshotTests`): `project-share-contents`,
 `project-share-open-passphrase` are added); `sync-held-one`, `sync-held-two`,
 `sync-held-only` and `main-held`. 1.0 removed the presence, teammates, pairing, shared-space
 and Nearby Chat renders with those screens; D6c2 adds `main-home` (nothing selected, with the
-recovery-key banner) and `main-jump` (the ⌘K palette). The toolbar's glass items and the
+recovery-key banner) and `main-jump` (the ⌘K palette); D6d adds `preferences-general`,
+`preferences-accounts`, `preferences-advanced` and `preferences-reset` beside
+`preferences-security`. The toolbar's glass items and the
 sidebar draw blank in these captures: `JumpPaletteUITests` (light) and `MainTreeUITests` (dark)
 attach screenshots of the running window instead.
 The offscreen window capture leaves the repository sidebar blank or black in some captures; the

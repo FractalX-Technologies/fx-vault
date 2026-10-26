@@ -20,11 +20,12 @@ extension GHAccountSummaryModel {
         }
     }
 
-    var tokenStateTint: Color {
+    /// Offline is nothing the user can fix here; a rejected token or no login is.
+    var tokenStateMark: PreferencesStatus.Mark {
         switch status?.state {
-        case .ok: Theme.Colors.success
-        case .offline: Theme.Colors.warning
-        case .reloginRequired, .unexpected, nil: Theme.Colors.danger
+        case .ok: .fine
+        case .offline: .idle
+        case .reloginRequired, .unexpected, nil: .needsYou
         }
     }
 
@@ -40,11 +41,11 @@ extension GHAccountSummaryModel {
         }
     }
 
-    var scopesTint: Color {
+    var scopesMark: PreferencesStatus.Mark {
         switch status?.scopes {
-        case .ok: Theme.Colors.success
-        case .missing: Theme.Colors.warning
-        case .unknown, nil: Theme.Colors.mutedText
+        case .ok: .fine
+        case .missing: .needsYou
+        case .unknown, nil: .idle
         }
     }
 }

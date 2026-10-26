@@ -36,6 +36,9 @@ struct AccountsSettingsViewModelTests {
         #expect(accounts.accounts.map(\.account.login) == ["user-a", "user-b"])
         #expect(accounts.accounts[0].scopesTitle == "OK")
         #expect(accounts.accounts[1].scopesTitle == "Missing: repo, read:org")
+        // Board Settings-Accounts: a green dot when fine, a ring where the user must act.
+        #expect(accounts.accounts[0].scopesMark == .fine)
+        #expect(accounts.accounts[1].scopesMark == .needsYou)
         #expect(accounts.fixCommands["user-a"] == nil)
         #expect(accounts.fixCommands["user-b"] == [
             "gh auth switch -h github.com -u user-b",
@@ -112,6 +115,8 @@ struct AccountsSettingsViewModelTests {
             OrgAccessModel(login: "example-labs", status: .needsOrgAdmin),
         ])
         #expect(accounts.organizations["user-a"]?.first?.status.title == "Needs admin:org")
+        // A ring where the user can add the scope; grey where only an org admin can act.
+        #expect(accounts.organizations["user-a"]?.map(\.status.mark) == [.needsYou, .idle])
         #expect(accounts.adminOrgCommands["user-a"] == [
             "gh auth switch -h github.com -u user-a",
             "gh auth refresh -h github.com -s admin:org",

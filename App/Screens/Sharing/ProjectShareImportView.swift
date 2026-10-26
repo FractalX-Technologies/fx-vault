@@ -199,17 +199,11 @@ private struct ProjectShareRepositoryRow: View {
     private var mark: some View {
         switch row.mark {
         case .inVault:
-            Circle()
-                .fill(Theme.Colors.success)
-                .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
-                .accessibilityHidden(true)
+            StatusDot(color: Theme.Colors.success)
         case .willImport:
             RingDot()
         case .skipped:
-            Circle()
-                .fill(Theme.Colors.hairlineStrong)
-                .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
-                .accessibilityHidden(true)
+            StatusDot(color: Theme.Colors.hairlineStrong)
         }
     }
 

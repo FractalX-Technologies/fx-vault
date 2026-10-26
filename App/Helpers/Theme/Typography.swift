@@ -45,6 +45,8 @@ extension Theme {
         static let label = Font.system(size: Size.label)
         /// 11 pt, medium. Sidebar section headers and the action of a subline.
         static let labelEmphasized = Font.system(size: Size.label, weight: .medium)
+        /// 11 pt, semibold. A Settings group's title.
+        static let labelSemibold = Font.system(size: Size.label, weight: .semibold)
 
         // MARK: SF Mono
 
@@ -186,6 +188,8 @@ extension Theme.TextStyle {
     static let monoMeta = Self(font: Typography.monoMeta, size: Typography.Size.caption)
     /// 12 pt mono, +0.06em. The onboarding step counter (`02 / 05`).
     static let monoCounter = Self(font: Typography.monoMeta, size: Typography.Size.caption, trackingEm: Typography.Tracking.counter)
+    /// 11 pt, semibold, sentence case. A Settings group's title ("Lock", "GitHub CLI").
+    static let groupTitle = Self(font: Typography.labelSemibold, size: Typography.Size.label)
     /// 11 pt, medium, sentence case. The sidebar's sections ("GitHub", "Azure", "Folders").
     static let sidebarSection = Self(font: Typography.labelEmphasized, size: Typography.Size.label)
     /// 11 pt mono, uppercase, +0.08em. Section labels (`ENVIRONMENT`, `MASTER PASSWORD`).

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SharingKit
 import VaultCore
 import VaultData
 
@@ -14,12 +15,13 @@ final class SharingSettingsViewModel: LockObserving {
         let createdAt: Date
         let expiresAt: Date
         let isExpired: Bool
-        /// "Passphrase", or for a 0.9 row "Teammates: Removed teammate 0123…".
-        let recipients: String
+        /// Nil for a passphrase file (every 1.0 file); a 0.9 row names its teammates
+        /// ("Teammates: Removed teammate 0123…").
+        let recipients: String?
         /// `owner/name` of each repository, in file order.
         let repositories: [String]
         let stages: [String]
-        let secretCount: Int
+        let counts: ShareItemCountModel
         /// Each place with its secret names, for "Rotate these".
         let places: [PlaceModel]
     }
@@ -84,8 +86,8 @@ final class SharingSettingsViewModel: LockObserving {
 
     static func entry(_ share: SentShareModel, now: Date) -> EntryModel {
         // 0.9 rows sealed for teammates outlive the teammates table (dropped in v15): ids only.
-        let recipients: String = switch share.mode {
-        case .passphrase: ProjectShareCopy.passphraseMode
+        let recipients: String? = switch share.mode {
+        case .passphrase: nil
         case .teammates: ProjectShareCopy.teammatesMode(share.recipientIDs.map(ProjectShareCopy.unknownTeammate))
         }
         var repositories: [String] = []
@@ -110,7 +112,10 @@ final class SharingSettingsViewModel: LockObserving {
             recipients: recipients,
             repositories: repositories,
             stages: share.summary.stages,
-            secretCount: share.summary.secretCount,
+            counts: ShareItemCountModel(
+                secrets: share.summary.secretCount,
+                variables: share.summary.places.reduce(0) { $0 + $1.variableNames.count }
+            ),
             places: places
         )
     }
