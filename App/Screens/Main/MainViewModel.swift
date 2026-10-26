@@ -194,12 +194,15 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         }
     }
 
-    /// Keep Editing (or Esc): the sidebar and the scopes go back to the place being edited.
+    /// Keep Editing (or Esc): the sidebar and the scopes go back to the place being edited, and
+    /// nothing asked for meanwhile (a ⌘K row, a scope or destination to open) is left pending.
     func keepEditingNotes() {
         guard discardRequest != nil else { return }
         discardRequest = nil
         discardResumes = []
         pendingRow = nil
+        pendingScope = nil
+        pendingDestination = nil
         let selection = shownSelection
         isRestoringSelection = true
         defer { isRestoringSelection = false }
@@ -686,8 +689,16 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         jump(to: item.target)
         // The row is selected in the table: the notes have no selection.
         show(.table)
-        pendingRow = item.match
-        selectPendingRow()
+        let selectRow = { [weak self] in
+            self?.pendingRow = item.match
+            self?.selectPendingRow()
+        }
+        // An edit with unsaved changes asks first: the row waits for Discard.
+        if discardRequest != nil {
+            discardResumes.append(selectRow)
+        } else {
+            selectRow()
+        }
     }
 
     /// The row ⌘K opened, until its place's detail exists.

@@ -449,8 +449,9 @@ extension NotesTextView {
     }
 
     /// Among the secrets, text that is not `KEY=value` lines: a name goes in as text (`NAME=`
-    /// with its token), one other line opens Set value… with it on a new line, and anything
-    /// else is refused, so a value never lands in the text, its undo or ``NotesEditSession/text``.
+    /// with its token), one other line (a value that passes as a name too) opens Set value…
+    /// with it on a new line, and anything else is refused, so a value never lands in the text,
+    /// its undo or ``NotesEditSession/text``.
     private func pasteAmongSecrets(_ text: String, pboard: NSPasteboard, changeCount: Int) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !trimmed.contains(where: \.isNewline) else {
@@ -458,11 +459,11 @@ extension NotesTextView {
             return true
         }
         let place = session.target.kind
-        if place.nameProblem(trimmed) == nil {
+        if place.nameProblem(trimmed) == nil, !NotesPasteParser.looksLikeValue(trimmed) {
             return insertFragment(plain(trimmed))
         }
         let name = String(trimmed.dropLast()).trimmingCharacters(in: .whitespaces)
-        if trimmed.hasSuffix("="), !name.isEmpty, place.nameProblem(name) == nil {
+        if trimmed.hasSuffix("="), !name.isEmpty, place.nameProblem(name) == nil, !NotesPasteParser.looksLikeValue(name) {
             let line = NSMutableAttributedString(attributedString: plain("\(name) = "))
             line.append(NotesEditText.token(session.tokens.make(kind: .secret), renderer: session))
             return insertFragment(line)

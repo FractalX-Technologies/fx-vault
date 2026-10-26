@@ -269,9 +269,12 @@ Copy and Services can't put it on the clipboard around `ClipboardManager`.
   the clipboard once as text on the user's ⌘V. After a secret's `=` all of it is that line's
   value. Elsewhere it becomes lines only when it is all `KEY=value` lines with valid names and
   values; a line with no value besides `=` (Base64's padding read as a name) and one line of
-  key material (a connection string, a long Base64-like name) are not, since names are
+  key material (a connection string, or a name that is a value) are not, since names are
   plaintext on disk, in gh's arguments and on GitHub. Among the secrets, other text is a name or
   one line that opens Set value… with it, never text in the editor; several lines are refused.
+  A pasted word that passes as a name is a value when `CredentialClassifier` finds a known token
+  prefix (`ghp_`, `sk_live_`, `xoxb-`, …) or high entropy with a lowercase letter (Base64, hex);
+  snake case in one case stays a name, and so does uppercase Base32 (a waiver).
   Values become `SecretBytes`, and the clipboard is cleared if nothing was copied since (Set
   value…'s Paste button clears it too). Generate draws 32 bytes from
   `SystemRandomNumberGenerator`. Revealed values are hidden when an edit starts. Save writes

@@ -190,6 +190,47 @@ struct NotesEditSessionTests {
         #expect(main.destinationDetail?.destinationID == vaultID)
     }
 
+    /// Keep Editing leaves nothing asked for meanwhile: a ⌘K row in the edited place is selected
+    /// only after Discard, and a scope asked for in another repository is not opened later.
+    @Test func keepEditingLeavesNothingPending() async throws {
+        let (harness, main, detail, _) = try await Self.mainWindow()
+        let otherID = try await harness.stageRepository(name: "web-app", environments: [RepoCreationEnvironmentDraftModel(name: "staging")])
+        let staging = try EditorFixtures.environment(harness, otherID, named: "staging")
+        #expect(await TestFixtures.eventually { main.sidebar.owners.flatMap(\.repos).contains { $0.importedRepoID == otherID } })
+        #expect(await TestFixtures.eventually { !detail.rows(of: .secret).isEmpty })
+        let secret = try #require(detail.rows(of: .secret).first)
+        let repositoryID = detail.repositoryID
+        let jump = JumpItemModel(
+            match: ItemNameMatchModel(id: secret.id, kind: .secret, name: secret.name, holder: .place(.scope(repositoryID: repositoryID, scope: .repository))),
+            detail: "",
+            target: .repositoryScope(repositoryID)
+        )
+        detail.beginNotesEdit(at: nil)
+        let (_, view) = try Self.editor(detail)
+        Self.appendLine("NEW_FLAG=on", in: view)
+
+        main.jump(to: jump)
+        #expect(main.discardRequest != nil)
+        #expect(detail.selection.isEmpty, "nothing is selected before the answer")
+        main.keepEditingNotes()
+        #expect(detail.selection.isEmpty)
+        #expect(main.placeViewMode == .notes)
+
+        main.open(repositoryID: otherID, scope: .environment(staging.id))
+        #expect(main.discardRequest != nil)
+        main.keepEditingNotes()
+        #expect(main.detail === detail)
+
+        main.jump(to: jump)
+        main.discardNotesEdit()
+        #expect(main.placeViewMode == .table)
+        #expect(detail.selection == [secret.id])
+
+        main.sidebar.select(repositoryID: otherID)
+        #expect(await TestFixtures.eventually { main.scopeList?.repositoryID == otherID && main.scopeList?.selectedScope != nil })
+        #expect(main.scopeList?.selectedScope?.scope == .repository, "staging was asked for before Keep Editing")
+    }
+
     @Test func lockingDropsTheEditAndItsValues() async throws {
         let fixture = try await RepoDetailViewModelTests.Fixture()
         let model = fixture.viewModel

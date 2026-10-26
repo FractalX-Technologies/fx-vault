@@ -589,8 +589,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   (`Theme.Durations.notesToast`), or "… set from the clipboard" alone when something was copied
   since. Lines without a value, and one line of key material (Base64 with its `=` padding, a
   connection string), are not `KEY=value` lines. Among the secrets, other text is a name
-  (pasted as text) or one line that opens Set value… with it on a new line; several lines
-  beep. Among the variables, other text pastes as text and stays on the clipboard. Copy and Cut
+  (pasted as text) or one line that opens Set value… with it on a new line, a token or a
+  random-looking key included even when it would pass as a name; several lines beep. Among the variables, other text pastes as text and stays on the clipboard. Copy and Cut
   write `••••` for a token; pasting back into the editor brings the cut line whole, a second
   copy as a new "Set value…" line.
 - Review (board Place-Review; `NotesReviewSheet`): ⌘S opens a `DialogSheet` "Review changes to

@@ -12,10 +12,6 @@ enum NotesPasteParser {
         let value: SecretBytes
     }
 
-    /// Names a single encoded line could look like: no `_`, this long, a digit and a lowercase
-    /// letter (Base64 or hex), which an environment variable's name hardly ever is.
-    static let encodedNameMinLength = 16
-
     /// The entries, or nil when the text is not only `KEY=value` lines. The caller wipes the values.
     static func entries(in text: String, place: NotesEditPlaceKind) -> [Entry]? {
         let contents = SecretBytes(utf8: text)
@@ -48,18 +44,28 @@ enum NotesPasteParser {
     }
 
     /// One `name=value` line, no space around its `=`, that is key material rather than an
-    /// assignment: a connection string (`Endpoint=sb://…;SharedAccessKey=…`) or a Base64 name.
+    /// assignment: a connection string (`Endpoint=sb://…;SharedAccessKey=…`) or a key as its name.
     private static func isEncodedLine(_ text: String, entries: [DotEnvEntryModel]) -> Bool {
         let line = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard entries.count == 1, let entry = entries.first, !line.contains(where: \.isNewline),
               let equals = line.firstIndex(of: "="), line[..<equals] == entry.key else { return false }
         let name = entry.key
-        let hasLowercase = name.contains(where: \.isLowercase)
-        let isConnectionString = hasLowercase && entry.value.withUnsafeBytes { bytes in
+        let isConnectionString = name.contains(where: \.isLowercase) && entry.value.withUnsafeBytes { bytes in
             bytes.contains(UInt8(ascii: ";")) && bytes.contains(UInt8(ascii: "="))
         }
-        let looksEncoded = name.count >= encodedNameMinLength && !name.contains("_")
-            && hasLowercase && name.contains(where: \.isNumber)
-        return isConnectionString || looksEncoded
+        return isConnectionString || looksLikeValue(name)
+    }
+
+    /// Pasted text that passes as a name but is a value (`CredentialClassifier`, §5.13): a known
+    /// token (`ghp_…`, `sk_live_…`, `xoxb-…`) or a random-looking one with a lowercase letter
+    /// (Base64, hex). Snake case in one case (`aws_s3_bucket_name_2`) stays a name; so does
+    /// uppercase Base32 (tasks/waivers.md).
+    static func looksLikeValue(_ text: String) -> Bool {
+        let reasons = CredentialClassifier.valueReasons(in: text)
+        if reasons.contains(where: { $0 != .highEntropy }) {
+            return true
+        }
+        guard reasons.contains(.highEntropy), text.contains(where: \.isLowercase) else { return false }
+        return !text.contains("_") || text.contains(where: \.isUppercase)
     }
 }

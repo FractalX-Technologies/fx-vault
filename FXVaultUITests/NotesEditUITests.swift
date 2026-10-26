@@ -6,21 +6,7 @@ import XCTest
 final class NotesEditUITests: VaultUITestCase {
     @MainActor
     func testTypedLinesBecomePendingChangesAfterReview() throws {
-        let app = launch()
-        let sidebar = try onboard(app)
-        revealRepositories(of: "example-org", in: sidebar)
-        click(sidebarRow("api-service", in: sidebar))
-        click(app.buttons[AccessibilityID.Main.importRepository])
-        let notes = app.descendants(matching: .any)[AccessibilityID.Place.notes]
-        XCTAssertTrue(notes.staticTexts["BASE_URL"].waitForExistence(timeout: timeout), "The import never showed the notes")
-
-        // A click on BASE_URL's line (4, under "# Variables") edits the notes, the caret at its end.
-        click(notes.descendants(matching: .any)[AccessibilityID.Place.notesLine(4)])
-        let editor = app.textViews[AccessibilityID.Place.notesEditor]
-        XCTAssertTrue(editor.waitForExistence(timeout: timeout), "A click on a line opened no editor")
-
-        editor.typeKey(.return, modifierFlags: [])
-        editor.typeText("LOG_FORMAT=json")
+        let (app, _, notes, editor) = try editBaseURLLine()
         // A new line under "# Secrets": ⌘↑, the end of the heading's line, Return.
         editor.typeKey(.upArrow, modifierFlags: .command)
         editor.typeKey(.rightArrow, modifierFlags: .command)
@@ -49,5 +35,44 @@ final class NotesEditUITests: VaultUITestCase {
         XCTAssertTrue(editor.waitForNonExistence(timeout: timeout), "Save left the editor open")
         XCTAssertTrue(notes.staticTexts["LOG_FORMAT"].waitForExistence(timeout: timeout), "LOG_FORMAT is not in the notes")
         XCTAssertTrue(notes.staticTexts["API_KEY"].exists, "API_KEY is not in the notes")
+    }
+
+    /// With an unsaved change, another scope asks first: Keep Editing stays in the edit, Discard
+    /// leaves it for the scope chosen.
+    @MainActor
+    func testLeavingWithAnUnsavedChangeAsksFirst() throws {
+        let (app, sidebar, _, editor) = try editBaseURLLine()
+        let staging = sidebar.buttons[AccessibilityID.Main.environment("staging")]
+        let path = app.staticTexts[AccessibilityID.Main.breadcrumb]
+
+        click(staging)
+        click(dialogButton("Keep Editing", in: app))
+        XCTAssertTrue(editor.exists, "Keep Editing left the edit")
+        expect(path, toEndWith: "api-service")
+
+        click(staging)
+        click(dialogButton("Discard", in: app))
+        XCTAssertTrue(editor.waitForNonExistence(timeout: timeout), "Discard kept the editor")
+        expect(path, toEndWith: "api-service › staging")
+    }
+
+    /// api-service imported, a click on BASE_URL's line (4, under "# Variables") and a new line
+    /// typed under it: one unsaved change.
+    @MainActor
+    private func editBaseURLLine() throws -> (app: XCUIApplication, sidebar: XCUIElement, notes: XCUIElement, editor: XCUIElement) {
+        let app = launch()
+        let sidebar = try onboard(app)
+        revealRepositories(of: "example-org", in: sidebar)
+        click(sidebarRow("api-service", in: sidebar))
+        click(app.buttons[AccessibilityID.Main.importRepository])
+        let notes = app.descendants(matching: .any)[AccessibilityID.Place.notes]
+        XCTAssertTrue(notes.staticTexts["BASE_URL"].waitForExistence(timeout: timeout), "The import never showed the notes")
+
+        click(notes.descendants(matching: .any)[AccessibilityID.Place.notesLine(4)])
+        let editor = app.textViews[AccessibilityID.Place.notesEditor]
+        XCTAssertTrue(editor.waitForExistence(timeout: timeout), "A click on a line opened no editor")
+        editor.typeKey(.return, modifierFlags: [])
+        editor.typeText("LOG_FORMAT=json")
+        return (app, sidebar, notes, editor)
     }
 }

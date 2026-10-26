@@ -170,9 +170,32 @@ struct NotesEditorTests {
         "DefaultEndpointsProtocol=https;AccountName=example;AccountKey=ZXhhbXBsZQ==;EndpointSuffix=core.windows.net",
     ]
 
+    /// Random-looking text made at run time, its first character among `alphabet`'s first
+    /// `leading`, so the secret scanners find no key in this file.
+    nonisolated static func fixture(_ count: Int, alphabet: String, leading: Int, seed: UInt64) -> String {
+        let characters = Array(alphabet)
+        var state = seed
+        return String((0..<count).map { index in
+            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return characters[Int(state >> 33) % (index == 0 ? leading : characters.count)]
+        })
+    }
+
+    nonisolated static let base62 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+    /// Values GitHub takes as names too: a 32-byte key in Base64 with one `=`, unpadded Base64,
+    /// 40 hex digits, a GitHub token and a Stripe key.
+    nonisolated static let valuesThatPassAsNames = [
+        fixture(43, alphabet: base62, leading: 52, seed: 1) + "=",
+        fixture(47, alphabet: base62, leading: 52, seed: 2),
+        fixture(40, alphabet: "abcdef0123456789", leading: 6, seed: 3),
+        "ghp" + "_" + fixture(36, alphabet: base62, leading: 62, seed: 4),
+        "sk" + "_live_" + fixture(24, alphabet: base62, leading: 62, seed: 5),
+    ]
+
     /// Names are plaintext on disk, in gh's arguments and on GitHub (SECURITY-MODEL §7): a value
     /// never becomes one, nor does a line without a value.
-    @Test(arguments: keyMaterial + ["NEW_KEY=", "API_KEY=="])
+    @Test(arguments: keyMaterial + ["NEW_KEY=", "API_KEY=="] + valuesThatPassAsNames.map { "\($0)=x" })
     func pastedKeyMaterialIsNeverReadAsNames(_ text: String) {
         #expect(NotesPasteParser.entries(in: text, place: .repository) == nil)
     }
@@ -181,9 +204,11 @@ struct NotesEditorTests {
         let entries = try #require(NotesPasteParser.entries(in: "A_KEY=one\nb_key=two\n", place: .repository))
         defer { entries.forEach { $0.value.wipe() } }
         #expect(entries.map(\.name) == ["A_KEY", "B_KEY"])
-        let single = try #require(NotesPasteParser.entries(in: "database_url=postgres://db.example.invalid/app", place: .repository))
-        defer { single.forEach { $0.value.wipe() } }
-        #expect(single.map(\.name) == ["DATABASE_URL"])
+        for line in ["database_url=postgres://db.example.invalid/app", "aws_s3_bucket_name_2=example-bucket"] {
+            let single = try #require(NotesPasteParser.entries(in: line, place: .repository))
+            defer { single.forEach { $0.value.wipe() } }
+            #expect(single.count == 1)
+        }
     }
 
     /// Board Place-Paste: one line among the secrets that is not a name opens Set value… with it,
@@ -191,14 +216,63 @@ struct NotesEditorTests {
     @Test(arguments: keyMaterial)
     func keyMaterialPastedAmongTheSecretsOpensSetValue(_ value: String) throws {
         let (session, view) = Self.editor()
+        Self.newSecretLine(in: view)
+        try Self.expectPasteOpensSetValue(value, in: session, view)
+        #expect(view.string == "# Secrets\nAPI_TOKEN = \(Self.token)\n = \(Self.token)\n\n# Variables\nLOG_LEVEL = info\n")
+    }
+
+    /// A value that is a valid name too (a token, a Base64 or hex key) is still a value.
+    @Test(arguments: valuesThatPassAsNames)
+    func aValueThatPassesAsANameOpensSetValue(_ value: String) throws {
+        let name = value.hasSuffix("=") ? String(value.dropLast()) : value
+        #expect(NotesEditPlaceKind.repository.nameProblem(name) == nil, "the fixture reads as a name")
+        let (session, view) = Self.editor()
+        Self.newSecretLine(in: view)
+        try Self.expectPasteOpensSetValue(value, in: session, view)
+    }
+
+    /// In a Key Vault a dash counts as `_`: Slack and OpenAI keys pass as names there.
+    @Test func aKeyVaultTakesDashedKeysAsValues() throws {
+        let values = [
+            "xox" + "b-" + Self.fixture(12, alphabet: "0123456789", leading: 9, seed: 6) + "-" + Self.fixture(24, alphabet: Self.base62, leading: 62, seed: 7),
+            "sk" + "-proj-" + Self.fixture(48, alphabet: Self.base62, leading: 62, seed: 8),
+        ]
+        for value in values {
+            #expect(NotesEditPlaceKind.keyVault.nameProblem(value) == nil, "the fixture reads as a name")
+            let target = NotesEditTargetModel(kind: .keyVault, title: "kv-example-prod", parent: nil) { _ in }
+            let session = NotesEditSession(target: target, origins: [])
+            let view = NotesTextView(session: session)
+            view.setSelectedRange(NSRange(location: (view.string as NSString).length, length: 0))
+            try Self.expectPasteOpensSetValue(value, in: session, view)
+        }
+    }
+
+    /// Names that look random to the entropy check alone still paste as names.
+    @Test(arguments: ["STRIPE_SECRET_KEY", "AWS_S3_BUCKET_NAME_2", "GOOGLE_APPLICATION_CREDENTIALS_JSON_B64", "aws_s3_bucket_name_2"])
+    func namesStillPasteAsNames(_ name: String) {
+        let (session, view) = Self.editor()
+        let pasteboard = Self.pasteboard()
+        defer { pasteboard.releaseGlobally() }
+        pasteboard.clearContents()
+        pasteboard.setString(name, forType: .string)
+
+        Self.newSecretLine(in: view)
+        #expect(view.readSelection(from: pasteboard, type: .string))
+        #expect(view.string.contains("API_TOKEN = \(Self.token)\n\(name)\n"))
+        #expect(session.valueRequest == nil)
+        #expect(pasteboard.string(forType: .string) == name)
+    }
+
+    /// Pastes `value` at the insertion point: it opens Set value… with it, adds no name, keeps
+    /// it out of the text and leaves the clipboard.
+    static func expectPasteOpensSetValue(_ value: String, in session: NotesEditSession, _ view: NotesTextView) throws {
         let pasteboard = Self.pasteboard()
         defer { pasteboard.releaseGlobally() }
         pasteboard.clearContents()
         pasteboard.setString(value, forType: .string)
 
-        Self.newSecretLine(in: view)
         #expect(view.readSelection(from: pasteboard, type: .string))
-        #expect(view.string == "# Secrets\nAPI_TOKEN = \(Self.token)\n = \(Self.token)\n\n# Variables\nLOG_LEVEL = info\n")
+        #expect(!view.string.contains(value) && !view.string.contains(String(value.prefix(12))))
         #expect(session.analysis.plan.additions.isEmpty)
         let request = try #require(session.valueRequest)
         #expect(session.currentText(of: request) == value)
