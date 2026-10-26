@@ -693,6 +693,17 @@ struct SyncViewModelTests {
         #expect(SyncLineState.combined([.done, .skipped]) == .done)
     }
 
+    /// The short finish's lines (board Sync-Done). Several places go through the locale's list
+    /// format, so only one place is compared whole.
+    @Test func theFinishLinesReadAsTheBoard() {
+        #expect(SyncCopy.donePendingMore(3) == "and 3 more pending")
+        let issue = SyncIssueModel(id: "pending", title: "Add secret DOCKER_PASSWORD", reason: "Value missing locally.")
+        #expect(SyncCopy.donePending(issue) == "Add secret DOCKER_PASSWORD · Value missing locally.")
+        #expect(SyncCopy.donePlaces(["api-service › production"]) == "in api-service › production")
+        let several = SyncCopy.donePlaces(["example-org", "kv-example-prod"])
+        #expect(several.hasPrefix("in example-org") && several.hasSuffix("kv-example-prod"))
+    }
+
     /// The run's cards: the deletions gather in a last card of their own, and only when they
     /// run.
     @Test func deletionsRunInTheLastCardOnlyWhenIncluded() throws {

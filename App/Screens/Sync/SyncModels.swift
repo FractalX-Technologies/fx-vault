@@ -122,8 +122,8 @@ struct SyncChangeLineModel: Hashable {
     let detail: String?
     let text: String
     /// A secret and a variable can share a name in one scope (a conversion is − secret and
-    /// + variable): the run tells their lines apart by it.
-    var kind: ConfigKind?
+    /// + variable): the run tells their lines apart by it. Nil only for a place line.
+    let kind: ConfigKind?
 }
 
 /// One scope of the summary: its place, its counts sentence ("2 added, 1 modified in
