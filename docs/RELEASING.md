@@ -23,7 +23,7 @@ publisher per version. The cask bump stays manual (step 6).
 | `scripts/bump-cask.sh` | Writes `version` and `sha256` into the cask in a tap checkout. It never pushes |
 | `ci/ExportOptions-DeveloperID.plist` | `developer-id`, manual signing, team `QYKC498D5D`, profile `FX Vault Developer ID` |
 | `Casks/fx-vault.rb` | Cask template. The tap holds the canonical copy |
-| `.github/workflows/release.yml` | On `v*` tags: tests and the ad-hoc DMG artifact, then the signed, notarized and published DMG |
+| `.github/workflows/release.yml` | On `v*` tags: the signed, notarized and published DMG (no tests) |
 | `ci/fastlane/Fastfile`, `ci/Gemfile*` | The `signed` job's lane: match certificate, Developer ID profile, temporary keychain |
 
 ## One-time setup (release Mac)
@@ -99,7 +99,7 @@ names.
    git push origin v0.1.0
    ```
 
-   The push starts `Release`: the ad-hoc verification DMG, then the `signed` job signs,
+   The push starts `Release`: the `signed` job signs,
    notarizes and publishes `FXVault-<version>.dmg` to the tag's release. When it succeeds,
    skip steps 3 and 4 and go on to step 5.
 3. **Optional rehearsal.** This runs the signed build without notarizing:
@@ -276,18 +276,8 @@ as release notes cite them.
 On a `v*` tag push, or by hand with `workflow_dispatch` and an optional `version` input:
 
 1. **`meta`**: works out the version (from the input or the tag) and validates it.
-2. **`adhoc`**: runs on `macos-26` and picks the newest GA `Xcode_26*.app` through
-   `.github/actions/setup-toolchain`. It runs
-   `scripts/release-local.sh --adhoc <version>`, which first runs the tests through
-   `scripts/ci-local.sh`, then the ad-hoc gates:
-   - entitlements without `keychain-access-groups` or `get-task-allow`
-   - hardened runtime
-   - a universal binary
-
-   It uploads `FXVault-<version>-adhoc.dmg` and its `.sha256` as a 14-day workflow
-   artifact. This DMG is **not** a release asset.
-3. **`signed`**: on tags only, in environment `release` (deployments from `v*` tags only),
-   only on `FractalX-Technologies/fx-vault`. It needs `adhoc` to succeed, and fails with the names
+2. **`signed`**: on tags only, on `macos-26`, with no tests (`ci.yml` gates `main` before a tag), in environment `release` (deployments from `v*` tags only),
+   only on `FractalX-Technologies/fx-vault`. It fails with the names
    of any secret or variable below that the repository can't read. It:
    - mints a read-only token of the `fractalx-ci-reader` GitHub App for `ios-certificates`
    - runs `bundle exec fastlane mac developer_id` in `ci/` (gems from `ci/Gemfile.lock`):
@@ -304,7 +294,7 @@ On a `v*` tag push, or by hand with `workflow_dispatch` and an optional `version
    The job only reads the repository (`contents: read`): fastlane's gems run next to the
    signing keys, installed with `bundle install` against the lockfile's checksums, never
    from a cache.
-4. **`publish`**: on the tag whose name is `v<version>`, in environment `release`, with no
+3. **`publish`**: on the tag whose name is `v<version>`, in environment `release`, with no
    signing secret. It downloads the artifact, attests the DMG with `actions/attest` and runs
    `scripts/release-local.sh --publish-only`, which checks the sha256, the tag and the
    release, then uploads both files. Only this job gets `contents: write`, `id-token: write`
@@ -340,8 +330,7 @@ scripts/release-local.sh --adhoc --skip-tests 0.1.0
 Ad-hoc builds limit what the app can do:
 - **No Touch ID.** The toggle is disabled and shows *"Touch ID requires the official signed
   release."* The keychain group needs a profile signed by the team (D14).
-- **Gatekeeper blocks the first open** of a downloaded ad-hoc build, such as the CI
-  artifact. To allow it, either:
+- **Gatekeeper blocks the first open** of a downloaded ad-hoc build. To allow it, either:
   - open System Settings > Privacy & Security and choose **Open Anyway** for FX Vault,
     then confirm, or
   - for a build you made or trust, run

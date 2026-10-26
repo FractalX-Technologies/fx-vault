@@ -1,9 +1,8 @@
 name: Release
 
-# On a v* tag: an ad-hoc universal DMG (the tests and a verification artifact), then the
-# official DMG, signed with the organization's Developer ID certificate (fastlane match,
-# ios-certificates), notarized with its App Store Connect API key, and published to the
-# tag's release. scripts/release-local.sh --publish on the maintainer's Mac stays the
+# On a v* tag: the official DMG, signed with the organization's Developer ID certificate
+# (fastlane match, ios-certificates), notarized with its App Store Connect API key, and
+# published to the tag's release. No tests here: ci.yml gates main before a tag. scripts/release-local.sh --publish on the maintainer's Mac stays the
 # fallback (docs/RELEASING.md). The cask bump stays manual: nothing here writes to the tap.
 
 on:
@@ -56,38 +55,9 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Version: $version"
 
-  adhoc:
-    name: Ad-hoc DMG (verification artifact)
-    needs: meta
-    runs-on: macos-26
-    timeout-minutes: 60
-    env:
-      VERSION: ${{ needs.meta.outputs.version }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0 # CFBundleVersion is the commit count
-          persist-credentials: false
-
-      - uses: ./.github/actions/setup-toolchain
-        with:
-          xcode-glob: Xcode_26*.app
-
-      - name: Tests, universal ad-hoc build, gates and DMG
-        run: scripts/release-local.sh --adhoc "$VERSION"
-
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: FXVault-${{ needs.meta.outputs.version }}-adhoc
-          path: |
-            dist/FXVault-${{ needs.meta.outputs.version }}-adhoc.dmg
-            dist/FXVault-${{ needs.meta.outputs.version }}-adhoc.dmg.sha256
-          if-no-files-found: error
-          retention-days: 14
-
   signed:
     name: Signed and notarized DMG
-    needs: [meta, adhoc]
+    needs: meta
     # Tags only (the release environment refuses other refs); forks have neither the
     # organization's signing secrets nor its match repo.
     if: github.repository == 'FractalX-Technologies/fx-vault' && github.ref_type == 'tag'
@@ -201,7 +171,6 @@ jobs:
 
       - name: Archive, export, gates, notarize, staple, DMG
         run: |
-          # The ad-hoc job already ran the tests on this commit.
           scripts/release-local.sh --skip-tests --require-clean --team-id "$TEAM_ID" --profile "$PROFILE_FILE" \
             --notary-keychain "$SIGNING_KEYCHAIN" "$VERSION"
 
