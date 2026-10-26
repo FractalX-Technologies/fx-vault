@@ -322,6 +322,9 @@ struct GHStderrClassifierTests {
     @Test func statusExtraction() {
         #expect(GHStderrClassifier.nativeStatus(in: "failed to delete secret X: HTTP 404: Not Found (url)") == 404)
         #expect(GHStderrClassifier.nativeStatus(in: "HTTP 4040: nope") == nil)
+        // gh 2.102 drops `: <message>` when GitHub's body has none (a DELETE 404).
+        #expect(GHStderrClassifier.nativeStatus(in: "failed to delete secret X: HTTP 404 (url)") == 404)
+        #expect(GHStderrClassifier.nativeStatus(in: "HTTP 404 errors are common") == nil)
         #expect(GHStderrClassifier.apiStatus(in: "gh: Not Found (HTTP 404)") == 404)
         #expect(GHStderrClassifier.apiStatus(in: "gh: HTTP 303") == 303)
         #expect(GHStderrClassifier.apiStatus(in: "gh: Validation Failed (HTTP 422)\nmore") == 422)

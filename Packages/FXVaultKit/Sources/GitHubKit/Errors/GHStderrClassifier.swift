@@ -39,8 +39,8 @@ public struct GHFailureContext: Sendable, Hashable {
 /// gh's wording is not a stable interface: the fixtures in `Tests/GitHubKitTests/Fixtures/gh`
 /// are re-recorded whenever the gh floor moves, and the M3 write spike re-checks the fragments.
 ///
-/// Status sources, in order: the `-i` status line; native `HTTP nnn: ` anywhere in stderr
-/// (gh wraps it, for example `failed to delete secret X: HTTP 404: Not Found (...)`); the
+/// Status sources, in order: the `-i` status line; native `HTTP nnn: ` or `HTTP nnn (` anywhere
+/// in stderr (`failed to delete secret X: HTTP 404: Not Found (...)`, or `HTTP 404 (...)`); the
 /// `gh api` line forms `gh: <message> (HTTP nnn)` and `gh: HTTP nnn`.
 public enum GHStderrClassifier {
     /// gh exit codes (`gh help exit-codes`).
@@ -196,12 +196,15 @@ public enum GHStderrClassifier {
 
     // MARK: - Status extraction
 
-    /// The first `HTTP nnn: ` anywhere in `text` (native commands).
+    /// The first `HTTP nnn: ` or `HTTP nnn (` anywhere in `text` (native commands). gh 2.102
+    /// drops `: <message>` when GitHub's body has none, as on a DELETE 404 (seen 2026-10-26).
     static func nativeStatus(in text: String) -> Int? {
         let marker = "HTTP "
         var searchRange = text.startIndex..<text.endIndex
         while let range = text.range(of: marker, range: searchRange) {
-            if let status = threeDigits(in: text, from: range.upperBound, followedBy: ":") {
+            if let status = threeDigits(in: text, from: range.upperBound, followedBy: ":")
+                ?? threeDigits(in: text, from: range.upperBound, followedBy: " (")
+            {
                 return status
             }
             searchRange = range.upperBound..<text.endIndex
@@ -234,11 +237,11 @@ public enum GHStderrClassifier {
         return nil
     }
 
-    private static func threeDigits(in text: String, from start: String.Index, followedBy terminator: Character)
+    private static func threeDigits(in text: String, from start: String.Index, followedBy terminator: String)
         -> Int?
     {
         guard let end = text.index(start, offsetBy: HTTPStatus.digitCount, limitedBy: text.endIndex),
-              end < text.endIndex, text[end] == terminator
+              text[end...].hasPrefix(terminator)
         else { return nil }
         let digits = text[start..<end]
         guard digits.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }

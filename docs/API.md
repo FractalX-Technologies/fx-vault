@@ -272,6 +272,9 @@ organization. Only **read** calls were made; the write facts below are still ope
   stdout still holds the error body wrapped in the slurp array,
   `[{"message":"Not Found",…,"status":"404"}]`). FX Vault reads B5 only for custom policies, and
   the executor treats a B5 404 as "no patterns".
+- C6/C8/C11/C13 on a name GitHub no longer has (gh 2.102, seen 2026-10-26): `failed to delete
+  secret <n>: HTTP 404 (https://api.github.com/…)`, with no `: Not Found` (GitHub's DELETE 404
+  has no message); exit 1. `GHStderrClassifier` reads `HTTP nnn:` and `HTTP nnn (` alike.
 - B7/B9 for a missing environment: `failed to get secrets: HTTP 404: Not Found
   (https://api.github.com/repos/<o>/<r>/environments/<e>/secrets?per_page=100)` (same for
   variables), exit 1.
