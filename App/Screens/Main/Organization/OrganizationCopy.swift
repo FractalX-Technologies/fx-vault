@@ -21,6 +21,12 @@ enum OrganizationCopy {
     )
     static let revertAccess = String(localized: "organization.table.revertAccess", defaultValue: "Revert Access")
     static let empty = String(localized: "organization.table.empty", defaultValue: "This organization has no secrets or variables.")
+    static let refreshFailedTitle = String(localized: "organization.refresh.failed", defaultValue: "Organization not refreshed")
+    /// Accept GitHub of a secret GitHub changed: no fill step follows, unlike a repository's.
+    static let acceptSecretChange = String(
+        localized: "organization.drift.acceptSecret",
+        defaultValue: "Your vault takes GitHub's access. GitHub never returns secret values, so its value is missing until you enter it."
+    )
 
     static func removeMessage(_ login: String) -> String {
         String(

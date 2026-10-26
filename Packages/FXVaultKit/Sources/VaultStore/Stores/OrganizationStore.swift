@@ -49,6 +49,11 @@ public struct OrganizationStore: Sendable {
         try organization.insert(tx.db)
     }
 
+    /// Replaces an organization row (Refresh records when it listed GitHub).
+    public func updateOrganization(_ organization: OrganizationRecord, in tx: StoreTransaction) throws {
+        try organization.update(tx.db)
+    }
+
     /// Removes an organization and its items. Returns false if there was none.
     @discardableResult
     public func deleteOrganization(id: OrganizationID) throws -> Bool {

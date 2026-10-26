@@ -11,25 +11,7 @@ nonisolated enum DriftCopy {
     static func title(_ drift: DriftModel, date: String?) -> String {
         switch drift.subject {
         case .item(let item):
-            let kind = kindTitle(item.kind)
-            switch (drift.kind, date) {
-            case (.secretModified, let date?), (.variableModified, let date?):
-                return String(
-                    localized: "drift.finding.modified.date",
-                    defaultValue: "\(kind) \(item.name) was changed on GitHub on \(date)"
-                )
-            case (.remoteAdded, let date?):
-                return String(
-                    localized: "drift.finding.added.date",
-                    defaultValue: "\(kind) \(item.name) was added on GitHub on \(date)"
-                )
-            case (.remoteAdded, nil):
-                return String(localized: "drift.finding.added", defaultValue: "\(kind) \(item.name) was added on GitHub")
-            case (.remoteDeleted, _):
-                return String(localized: "drift.finding.deleted", defaultValue: "\(kind) \(item.name) was deleted on GitHub")
-            default:
-                return String(localized: "drift.finding.modified", defaultValue: "\(kind) \(item.name) was changed on GitHub")
-            }
+            return itemTitle(drift.kind, itemKind: item.kind, name: item.name, date: date)
         case .environment(let environment):
             switch drift.kind {
             case .environmentAdded:
@@ -49,6 +31,38 @@ nonisolated enum DriftCopy {
                 )
             }
         }
+    }
+
+    /// One item's finding, in a repository or an organization (1.0 B7b).
+    static func itemTitle(_ kind: DriftKind, itemKind: ConfigKind, name: String, date: String?) -> String {
+        let title = kindTitle(itemKind)
+        switch (kind, date) {
+        case (.secretModified, let date?), (.variableModified, let date?):
+            return String(
+                localized: "drift.finding.modified.date",
+                defaultValue: "\(title) \(name) was changed on GitHub on \(date)"
+            )
+        case (.remoteAdded, let date?):
+            return String(
+                localized: "drift.finding.added.date",
+                defaultValue: "\(title) \(name) was added on GitHub on \(date)"
+            )
+        case (.remoteAdded, nil):
+            return String(localized: "drift.finding.added", defaultValue: "\(title) \(name) was added on GitHub")
+        case (.remoteDeleted, _):
+            return String(localized: "drift.finding.deleted", defaultValue: "\(title) \(name) was deleted on GitHub")
+        default:
+            return String(localized: "drift.finding.modified", defaultValue: "\(title) \(name) was changed on GitHub")
+        }
+    }
+
+    /// "Oct 12" (with the year when it is not the current one).
+    static func findingDate(_ date: Date?, now: Date, calendar: Calendar = .current) -> String? {
+        guard let date else { return nil }
+        let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
+        return sameYear
+            ? date.formatted(.dateTime.month(.abbreviated).day())
+            : date.formatted(.dateTime.month(.abbreviated).day().year())
     }
 
     /// "Secret" or "Variable" at the start of a sentence.
@@ -169,7 +183,7 @@ nonisolated enum DriftCopy {
     static func confirmationTitle(_ drift: DriftModel) -> String {
         switch drift.subject {
         case .item(let item):
-            String(localized: "drift.confirm.deleteItem.title", defaultValue: "Delete \(item.name) from your vault?")
+            deleteItemTitle(item.name)
         case .environment(let environment):
             String(
                 localized: "drift.confirm.deleteEnvironment.title",
@@ -181,10 +195,7 @@ nonisolated enum DriftCopy {
     static func confirmationMessage(_ drift: DriftModel) -> String {
         switch drift.subject {
         case .item:
-            String(
-                localized: "drift.confirm.deleteItem.message",
-                defaultValue: "GitHub no longer has it. Its value is removed from FX Vault and cannot be recovered."
-            )
+            deleteItemMessage
         case .environment:
             String(
                 localized: "drift.confirm.deleteEnvironment.message",
@@ -193,7 +204,20 @@ nonisolated enum DriftCopy {
         }
     }
 
+    static func deleteItemTitle(_ name: String) -> String {
+        String(localized: "drift.confirm.deleteItem.title", defaultValue: "Delete \(name) from your vault?")
+    }
+
+    static let deleteItemMessage = String(
+        localized: "drift.confirm.deleteItem.message",
+        defaultValue: "GitHub no longer has it. Its value is removed from FX Vault and cannot be recovered."
+    )
+
     static let confirmDelete = String(localized: "drift.confirm.delete", defaultValue: "Delete from Vault")
+
+    static let reviewTitle = String(localized: "drift.review.title", defaultValue: "Changes on GitHub")
+
+    static let nothingChanged = String(localized: "drift.review.empty.title", defaultValue: "Nothing changed on GitHub")
 
     // MARK: - Notes
 

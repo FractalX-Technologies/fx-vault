@@ -64,7 +64,7 @@ public actor OrganizationSyncRepository {
         var blocked: [OrgBlockedChangeModel] = []
         for item in pending {
             let change = Self.change(for: item)
-            if let reason = Self.blockReason(for: item, operation: change.operation, listed: listed[Self.key(item.kind, item.name)]) {
+            if let reason = Self.blockReason(for: item, operation: change.operation, listed: listed[OrgItemKey.make(item.kind, item.name)]) {
                 blocked.append(OrgBlockedChangeModel(change: change, reason: reason))
             } else {
                 changes.append(change)
@@ -200,7 +200,7 @@ public actor OrganizationSyncRepository {
         }
         var outcomes: [ConfigItemID: OrgChangeOutcome] = [:]
         for id in ids {
-            guard var item = try? loadItem(id), let entry = listed[Self.key(item.kind, item.name)] else {
+            guard var item = try? loadItem(id), let entry = listed[OrgItemKey.make(item.kind, item.name)] else {
                 outcomes[id] = .unconfirmed
                 continue
             }
@@ -227,22 +227,20 @@ public actor OrganizationSyncRepository {
     // MARK: - Support
 
     private func listing(_ organization: OrganizationRecord) async throws(GHError) -> [String: Listed] {
-        let scheduler = try await schedulers.scheduler(for: organization.accountLogin)
-        let secrets = try await scheduler.listOrganizationSecrets(organization.login)
-        let variables = try await scheduler.listOrganizationVariables(organization.login)
+        let (secrets, variables) = try await OrganizationRepository.listItems(
+            of: organization.login,
+            accountLogin: organization.accountLogin,
+            schedulers: schedulers
+        )
         defer { variables.forEach { $0.wipe() } }
         var listed: [String: Listed] = [:]
         for secret in secrets {
-            listed[Self.key(.secret, secret.name)] = Listed(updatedAt: secret.updatedAt, numSelectedRepos: secret.numSelectedRepos)
+            listed[OrgItemKey.make(.secret, secret.name)] = Listed(updatedAt: secret.updatedAt, numSelectedRepos: secret.numSelectedRepos)
         }
         for variable in variables {
-            listed[Self.key(.variable, variable.name)] = Listed(updatedAt: variable.updatedAt, numSelectedRepos: variable.numSelectedRepos)
+            listed[OrgItemKey.make(.variable, variable.name)] = Listed(updatedAt: variable.updatedAt, numSelectedRepos: variable.numSelectedRepos)
         }
         return listed
-    }
-
-    private static func key(_ kind: ConfigKind, _ name: String) -> String {
-        "\(kind.rawValue)|\(GitHubNameValidator.foldKey(name))"
     }
 
     private static func change(for item: OrgItemRecord) -> OrgChangeModel {

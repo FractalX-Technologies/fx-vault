@@ -144,7 +144,7 @@ final class DriftReviewViewModel {
         }
         return DriftFindingRowModel(
             id: drift.id,
-            title: DriftCopy.title(drift, date: dateText(drift.remoteUpdatedAt)),
+            title: DriftCopy.title(drift, date: DriftCopy.findingDate(drift.remoteUpdatedAt, now: dependencies.clock.now)),
             scope: DriftCopy.scope(drift),
             systemImage: DriftCopy.systemImage(drift.kind),
             isConflict: drift.isConflict,
@@ -172,16 +172,6 @@ final class DriftReviewViewModel {
     /// "Accept GitHub" of a remote deletion removes the local row and its value.
     static func needsConfirmation(_ drift: DriftModel, _ option: DriftResolutionOption) -> Bool {
         option == .acceptGitHub && (drift.kind == .remoteDeleted || drift.kind == .environmentDeleted)
-    }
-
-    /// "Oct 12" (with the year when it is not the current one).
-    private func dateText(_ date: Date?) -> String? {
-        guard let date else { return nil }
-        let calendar = Calendar.current
-        let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: dependencies.clock.now)
-        return sameYear
-            ? date.formatted(.dateTime.month(.abbreviated).day())
-            : date.formatted(.dateTime.month(.abbreviated).day().year())
     }
 
     /// Scopes and names that were not compared, and pushes that were never confirmed.

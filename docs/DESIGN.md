@@ -573,7 +573,7 @@ foreground color, so `.primary` text still turns white on selected rows.
 - Organizations (1.0, B5c; mockup Org-Visibility): the organization's own sidebar node.
   Selected, the detail shows the Import prompt (`EmptyStateView`, primary Import) or
   the place header (the login, "Organization · 14 secrets · 6 variables · 3 without value", ⋯
-  More with New Secret, New Variable and Remove from Vault…) above a `.fxTable()`: Name (struck through when deleted), Kind, Value
+  More with New Secret, New Variable, Copy All, Refresh and Remove from Vault…) above a `.fxTable()`: Name (struck through when deleted), Kind, Value
   (`MaskedValueCell`, no eye), Visibility as its reach ("all repos", "private and internal",
   "selected · 3 repos"; board Org-UsedBy), Status (`StatusDotLabel`), Updated; the row menu
   Copy Value, Edit…, Revert / Revert Access, Delete… (B6b3a). The item editor is a
@@ -581,6 +581,16 @@ foreground color, so `.primary` text still turns white on selected rows.
   add, `ItemNameField` (or the read-only name), `SecretValueEditor`, `ItemFillChoiceField` for a
   secret without a value, and ACCESS: a `SegmentedPill` All / Private / Selected, the
   visibility's caption, and for Selected one `FXCheckboxRow` per repository.
+- Organization Refresh (1.0, B7b; no board, the repository's and Key Vault's pattern): Refresh
+  in ⋯ More (after Copy All) lists the organization again. The status line says Refreshing…,
+  then "Nothing changed on GitHub" in `mutedText` or the drift line ("2 changed on GitHub · 1
+  also changed in your vault · Review", `DriftBannerView`). A row whose date, visibility or
+  repository count differs on GitHub, or that GitHub deleted or also added, says "○ Changed on
+  GitHub" (`RingDot`, `ink`) in Status, its own status as help. Review opens `OrgDriftScreen`:
+  the drift review's size and `DriftFindingRow`s (ORGANIZATION, "Secret NPM_TOKEN was changed
+  on GitHub on Oct 20", Keep Local / Accept GitHub with what each does), Done in the footer,
+  and the "Delete … from your vault?" confirmation before taking GitHub's deletion. Accept GitHub
+  of a changed secret leaves it without a value (no fill step, unlike a repository's).
 - Runtime destinations under the selected repository (v0.8.0, canvas "FX Vault Destinations"):
   after the environments, `SectionLabel` RUNTIME with an Experimental `StatusChip.tag`, then one 2-line
   row per destination: the provider symbol in `monoLabel` `mutedText`

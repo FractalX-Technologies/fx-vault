@@ -76,7 +76,8 @@ FXVault/
 │   │   │   ├── Folder/              # FolderDetailScreen/ViewModel (column 3 of a folder, v0.7.0)
 │   │   │   ├── Organization/        # 1.0: OrganizationDetailScreen/ViewModel (column 3 of an
 │   │   │   │                        # organization), OrgItemEditorScreen/ViewModel (add or edit
-│   │   │   │                        # an item and its access), OrganizationCopy
+│   │   │   │                        # an item and its access), OrgDriftScreen/ViewModel (B7b:
+│   │   │   │                        # Refresh's review), OrganizationCopy
 │   │   │   ├── Destination/         # v0.8.0: DestinationDetailScreen/ViewModel (column 3 of a
 │   │   │   │                        # destination), DestinationCopy,
 │   │   │   │                        # AddDestinationScreen/ViewModel (+ AddDestinationCopy),
@@ -108,7 +109,8 @@ FXVault/
 │   │   │                            # From Files (v0.9.0): SyncHeldSharesView,
 │   │   │                            # HeldSharePresentation, HeldShareCopy
 │   │   ├── Drift/                   # DriftReviewScreen/ViewModel, DriftService (seam), DriftCopy,
-│   │   │                            # DriftFindingRow, DriftBannerView
+│   │   │                            # DriftFindingRow, DriftBannerView, DriftSheetChrome (size and
+│   │   │                            # delete confirmation, shared with the organization review)
 │   │   ├── CreateRepo/              # CreateRepoScreen/ViewModel, CreateRepoFormView, item and
 │   │   │                            # environment editors (Sheet + ViewModel), ItemsSection,
 │   │   │                            # StagedView, CreateRepoModels
@@ -350,6 +352,11 @@ FXVault/
 │   │       │   │                    # ShellResolvingAzureTokens
 │   │       │   ├── Models/          # DestinationSyncModels
 │   │       │   └── Support/         # DestinationFieldCipher, DestinationItemWriter
+│   │       ├── Organizations/       # 1.0: OrganizationRepository (import, inherited items;
+│   │       │   │                    # +Drift: Refresh and resolve, B7b), OrganizationItemRepository,
+│   │       │   │                    # OrganizationSyncRepository, OrgDriftModels, OrgSyncModels,
+│   │       │   │                    # OrgItemAccessModel
+│   │       │   └── Support/         # OrgFieldCipher
 │   │       ├── EnvFiles/            # EnvFileRepository (+ Copy All's text), EnvFileError,
 │   │       │   │                    # EnvExportAuthorizationModel, ReauthGate+EnvExport,
 │   │       │   │                    # GitServiceGitignoreChecker
