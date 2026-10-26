@@ -179,6 +179,12 @@ the official signed release.") and every keychain call refuses with `.unsignedBu
   (never `kSecAttrAccessible` next to it); the read passes a fresh `LAContext` through
   `kSecUseAuthenticationContext` with the prompt as `localizedReason`; presence checks and
   listings ask for attributes only, through a context with `interactionNotAllowed`.
+- **The island's check (1.0 B11e2).** The notch island pairs that fresh context with an
+  `LAAuthenticationView` (`BiometricSession`), evaluates it there
+  (`.deviceOwnerAuthenticationWithBiometrics`, no reuse) and only then passes the same context to
+  the read, so one touch unlocks. The Touch ID rules run first, as for the prompt; a failed or
+  cancelled check reads nothing, and a lock invalidates the context, so a check from before it
+  can never read. The window's lock screen keeps the system prompt.
 - **`--diagnose`.** `"/Applications/FX Vault.app/Contents/MacOS/FXVault" --diagnose` prints JSON
   (version, build, signed with an access group, the group, biometry availability or reason) and
   adds then deletes a probe item with the exact Touch ID attributes under the service

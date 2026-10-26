@@ -7,6 +7,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Added
 
+- **Touch ID in the island.** On a signed build with a sensor, the island shows the system's
+  Touch ID glyph and one touch unlocks there, with no Touch ID dialog over it. The password,
+  the restart and 14-day rules and the window's lock screen are unchanged.
 - **Quick vault shortcut.** Settings › General records the global shortcut for the quick vault:
   ⌃⌥V by default, any key with two modifiers, one of them Control, Option or Command. Settings
   says so when another app holds the shortcut.

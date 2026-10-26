@@ -84,6 +84,29 @@ public struct KeychainManager: BiometricKeyStoring {
         return SecretBytes(wipingSource: &data)
     }
 
+    public func makeSession(prompt: BiometricPrompt) -> BiometricSession {
+        BiometricSession(context: authManager.promptContext(for: prompt))
+    }
+
+    public func evaluate(_ session: BiometricSession) async throws(VaultError) {
+        try await authManager.evaluate(session.context)
+    }
+
+    public func load(account: String, session: BiometricSession) throws(VaultError) -> SecretBytes {
+        let group = try requireAccessGroup()
+        // A lock (or a newer prompt) invalidated it after the touch: read nothing.
+        guard authManager.isCurrent(session.context) else { throw .cancelled }
+        let query = Self.readQuery(account: account, accessGroup: group, context: session.context)
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess else {
+            VaultManagerConstants.log.info("Touch ID item read with the island's check ended: \(status, privacy: .public)")
+            throw Self.loadError(for: status, isLockedOut: false)
+        }
+        guard var data = result as? Data else { throw .corrupted(.invalidStoredValue) }
+        return SecretBytes(wipingSource: &data)
+    }
+
     public func contains(account: String) throws(VaultError) -> Bool {
         guard let group = accessGroup else { return false }
         let query = Self.presenceQuery(account: account, accessGroup: group, context: authManager.silentContext())

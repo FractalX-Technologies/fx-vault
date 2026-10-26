@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 import VaultCore
 import VaultData
@@ -53,6 +54,83 @@ struct NotchIslandTests {
         let harness = try await TestHarness(vault: .locked)
         let model = NotchIslandModel(lock: harness.app.lockScreen)
         #expect(model.state == .password)
+    }
+
+    // MARK: - Touch ID in the island (1.0 B11e2)
+
+    private static func lockedWithTouchID() async throws -> TestHarness {
+        let harness = try await TestHarness(vault: .unlocked)
+        harness.preferences.hasAnsweredTouchIDOffer = true
+        try await harness.enableTouchID()
+        harness.app.lock(trigger: .manual)
+        return harness
+    }
+
+    @Test func oneTouchInTheIslandUnlocksThroughItsOwnContext() async throws {
+        let harness = try await Self.lockedWithTouchID()
+        let lock = harness.app.lockScreen
+        lock.prepareIslandTouchID()
+        let session = try #require(lock.islandTouchID)
+        await lock.unlockWithTouchID()
+        #expect(harness.app.phase == .unlocked)
+        #expect(harness.biometrics.evaluationCount == 1)
+        #expect(harness.biometrics.loadCount == 1)
+        #expect(harness.biometrics.lastLoadContext == ObjectIdentifier(session.context))
+        #expect(lock.islandTouchID == nil)
+    }
+
+    @Test func aCancelledTouchReadsNothingAndTheIslandGetsAFreshCheck() async throws {
+        let harness = try await Self.lockedWithTouchID()
+        let lock = harness.app.lockScreen
+        lock.prepareIslandTouchID()
+        let first = try #require(lock.islandTouchID)
+        harness.biometrics.failNextEvaluation(with: .cancelled)
+        await lock.unlockWithTouchID()
+        #expect(harness.app.phase == .locked)
+        #expect(harness.biometrics.loadCount == 0)
+        #expect(lock.error == nil)
+        let second = try #require(lock.islandTouchID)
+        #expect(second !== first)
+
+        await lock.unlockWithTouchID()
+        #expect(harness.app.phase == .unlocked)
+    }
+
+    /// A sleep or screen lock while the island is up runs Phase A only (already locked): the
+    /// manager's lock invalidates the context, so the touch reads nothing and is never reused.
+    @Test func aLockDuringTheTouchDropsTheIslandCheck() async throws {
+        let harness = try await Self.lockedWithTouchID()
+        let lock = harness.app.lockScreen
+        lock.prepareIslandTouchID()
+        let first = try #require(lock.islandTouchID)
+        let app = harness.app
+        harness.biometrics.onNextEvaluation {
+            DispatchQueue.main.sync { MainActor.assumeIsolated { app.lock(trigger: .manual) } }
+        }
+        await lock.unlockWithTouchID()
+        #expect(harness.app.phase == .locked)
+        #expect(harness.biometrics.loadCount == 0)
+        #expect(lock.islandTouchID !== first)
+        await #expect(throws: VaultError.cancelled) {
+            try await harness.vaultManager.unlockWithBiometrics(session: first)
+        }
+    }
+
+    @Test func withoutTheIslandTouchIDUsesTheSystemPrompt() async throws {
+        let harness = try await Self.lockedWithTouchID()
+        let lock = harness.app.lockScreen
+        lock.prepareIslandTouchID()
+        lock.dropIslandTouchID()
+        await lock.unlockWithTouchID()
+        #expect(harness.app.phase == .unlocked)
+        #expect(harness.biometrics.evaluationCount == 0)
+        #expect(harness.biometrics.loadCount == 1)
+    }
+
+    @Test func withoutTouchIDTheIslandHasNoCheck() async throws {
+        let harness = try await TestHarness(vault: .locked)
+        harness.app.lockScreen.prepareIslandTouchID()
+        #expect(harness.app.lockScreen.islandTouchID == nil)
     }
 
     /// Tests have no side effects: no island, and the window keeps the lock screen. The shared

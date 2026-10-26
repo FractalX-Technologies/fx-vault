@@ -1,4 +1,5 @@
 import Foundation
+import LocalAuthentication
 import os
 import VaultCore
 
@@ -24,6 +25,13 @@ public final class FakeBiometricKeyStore: BiometricKeyStoring {
         var deletedAccounts: [String] = []
         var lastPrompt: BiometricPrompt?
         var nextLoadAction: (@Sendable () -> Void)?
+        /// The session a lock hasn't invalidated yet, and the ones that passed their check.
+        var currentSession: ObjectIdentifier?
+        var evaluatedSessions: Set<ObjectIdentifier> = []
+        var nextEvaluationError: VaultError?
+        var nextEvaluationAction: (@Sendable () -> Void)?
+        var evaluationCount = 0
+        var lastLoadContext: ObjectIdentifier?
     }
 
     private let state = OSAllocatedUnfairLock(initialState: State())
@@ -58,6 +66,17 @@ public final class FakeBiometricKeyStore: BiometricKeyStoring {
         state.withLock { $0.nextLoadAction = action }
     }
 
+    /// The next ``evaluate(_:)`` throws `error` (cancel, fallback, a failed match). One shot.
+    public func failNextEvaluation(with error: VaultError) {
+        state.withLock { $0.nextEvaluationError = error }
+    }
+
+    /// Runs `action` during the next ``evaluate(_:)``, while the finger is "on the sensor" (a
+    /// lock arriving then, say). One shot.
+    public func onNextEvaluation(_ action: @escaping @Sendable () -> Void) {
+        state.withLock { $0.nextEvaluationAction = action }
+    }
+
     /// Every later ``store(_:account:)`` throws `error`; nil restores success.
     public func failStores(with error: VaultError?) {
         state.withLock { $0.storeError = error }
@@ -88,6 +107,16 @@ public final class FakeBiometricKeyStore: BiometricKeyStoring {
     /// Accounts passed to ``delete(account:)``, in call order.
     public var deletedAccounts: [String] {
         state.withLock { $0.deletedAccounts }
+    }
+
+    /// Number of ``evaluate(_:)`` calls (each a touch in the island).
+    public var evaluationCount: Int {
+        state.withLock { $0.evaluationCount }
+    }
+
+    /// The `LAContext` the last session read went through.
+    public var lastLoadContext: ObjectIdentifier? {
+        state.withLock { $0.lastLoadContext }
     }
 
     /// The prompt of the last read.
@@ -131,6 +160,61 @@ public final class FakeBiometricKeyStore: BiometricKeyStoring {
         return SecretBytes(wipingSource: &bytes)
     }
 
+    public func makeSession(prompt: BiometricPrompt) -> BiometricSession {
+        let session = BiometricSession(context: LAContext())
+        state.withLock { state in
+            state.currentSession = ObjectIdentifier(session)
+            state.lastPrompt = prompt
+        }
+        return session
+    }
+
+    public func evaluate(_ session: BiometricSession) async throws(VaultError) {
+        let action = state.withLock { state in
+            let action = state.nextEvaluationAction
+            state.nextEvaluationAction = nil
+            return action
+        }
+        action?()
+        let id = ObjectIdentifier(session)
+        let error: VaultError? = state.withLock { state in
+            state.evaluationCount += 1
+            if let error = state.nextEvaluationError {
+                state.nextEvaluationError = nil
+                return error
+            }
+            // As `LAContext.invalidate()` ends a check on screen.
+            guard state.currentSession == id else { return .cancelled }
+            state.evaluatedSessions.insert(id)
+            return nil
+        }
+        if let error { throw error }
+    }
+
+    public func load(account: String, session: BiometricSession) throws(VaultError) -> SecretBytes {
+        let action = state.withLock { state in
+            let action = state.nextLoadAction
+            state.nextLoadAction = nil
+            return action
+        }
+        action?()
+        let id = ObjectIdentifier(session)
+        let outcome: Result<Data, VaultError> = state.withLock { state in
+            state.loadCount += 1
+            state.lastLoadContext = ObjectIdentifier(session.context)
+            // The live read would prompt again without a passed check; a lock invalidated it.
+            guard state.currentSession == id, state.evaluatedSessions.contains(id) else {
+                return .failure(.cancelled)
+            }
+            guard !state.invalidated, let bytes = state.items[account] else {
+                return .failure(.biometryInvalidated)
+            }
+            return .success(bytes)
+        }
+        var bytes = try outcome.get()
+        return SecretBytes(wipingSource: &bytes)
+    }
+
     public func contains(account: String) throws(VaultError) -> Bool {
         state.withLock { $0.items[account] != nil }
     }
@@ -147,6 +231,9 @@ public final class FakeBiometricKeyStore: BiometricKeyStoring {
     }
 
     public func invalidateAuthentication() {
-        state.withLock { $0.invalidateCount += 1 }
+        state.withLock { state in
+            state.invalidateCount += 1
+            state.currentSession = nil
+        }
     }
 }

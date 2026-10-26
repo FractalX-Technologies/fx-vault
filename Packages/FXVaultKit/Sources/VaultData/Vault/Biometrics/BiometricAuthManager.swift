@@ -45,6 +45,38 @@ public final class BiometricAuthManager: Sendable {
         return context
     }
 
+    /// True while `context` is the current one: no lock and no newer prompt invalidated it.
+    func isCurrent(_ context: LAContext) -> Bool {
+        let id = ObjectIdentifier(context)
+        return current.withLock { $0.map { ObjectIdentifier($0.context) } == id }
+    }
+
+    /// Evaluates `context` for Touch ID, in the in-app view bound to it if one shows (1.0 B11e2).
+    func evaluate(_ context: LAContext) async throws(VaultError) {
+        guard isCurrent(context) else { throw .cancelled }
+        do {
+            _ = try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: context.localizedReason)
+        } catch {
+            let code = (error as NSError).code
+            throw Self.evaluationError(forLAErrorCode: code, isLockedOut: unavailableReason() == .lockout)
+        }
+    }
+
+    /// An evaluation's `LAError`, mapped as a keychain read's status is: a failed match sends
+    /// the user to the password field (or names the lockout), never deletes the item.
+    static func evaluationError(forLAErrorCode code: Int, isLockedOut: Bool) -> VaultError {
+        if LAError.Code(rawValue: code) == .authenticationFailed {
+            return isLockedOut ? .biometryUnavailable(.lockout) : .passwordFallbackRequested
+        }
+        if isPasswordFallback(laErrorCode: code) {
+            return .passwordFallbackRequested
+        }
+        if isCancellation(laErrorCode: code) {
+            return .cancelled
+        }
+        return .biometryUnavailable(unavailableReason(forLAErrorCode: code) ?? .notAvailable)
+    }
+
     /// A context that never shows UI, for presence checks and attribute queries (§5.5).
     func silentContext() -> LAContext {
         let context = LAContext()
