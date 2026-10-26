@@ -142,6 +142,8 @@ struct OrgItemEditorContext: Hashable {
 struct OrgDriftContext: Hashable {
     let organizationID: OrganizationID
     let findings: [OrgDriftModel]
+    /// Listed names FX Vault can't hold, so not compared.
+    var skippedNames: [String] = []
 }
 
 /// What ``ItemEditorScreen`` edits. `scope` is where the item is (or will be) and `kind` the

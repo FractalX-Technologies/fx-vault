@@ -12,7 +12,7 @@ extension View {
         )
     }
 
-    /// "Delete … from your vault?" before a resolution that deletes local data.
+    /// "Delete … from your vault?" (or another loss of local data) before the resolution.
     func driftConfirmationDialog(
         _ confirmation: DriftConfirmationModel?,
         confirm: @escaping () async -> Void,
@@ -25,8 +25,8 @@ extension View {
                 set: { if !$0 { cancel() } }
             ),
             presenting: confirmation
-        ) { _ in
-            Button(DriftCopy.confirmDelete, role: .destructive) {
+        ) { confirmation in
+            Button(confirmation.confirmTitle, role: .destructive) {
                 Task { await confirm() }
             }
             Button(String(localized: "common.cancel", defaultValue: "Cancel"), role: .cancel) {
@@ -34,6 +34,30 @@ extension View {
             }
         } message: { confirmation in
             Text(confirmation.message)
+        }
+    }
+}
+
+/// "Not compared": what the check left out (unreadable scopes, names FX Vault can't hold,
+/// pushes never confirmed), one muted line each; nothing when there is none.
+struct DriftNotesField: View {
+    let notes: [String]
+
+    var body: some View {
+        if !notes.isEmpty {
+            ConfigSheetField(String(localized: "drift.review.notes", defaultValue: "Not compared")) {
+                ForEach(notes, id: \.self) { note in
+                    Label {
+                        Text(verbatim: note)
+                            .fxTextStyle(.callout)
+                            .foregroundStyle(Theme.Colors.mutedText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "eye.slash")
+                            .foregroundStyle(Theme.Colors.subtleText)
+                    }
+                }
+            }
         }
     }
 }

@@ -42,6 +42,8 @@ struct DriftConfirmationModel: Identifiable, Hashable {
     let option: DriftResolutionOption
     let title: String
     let message: String
+    /// The destructive button: "Delete from Vault", or what replaces the vault's item.
+    var confirmTitle = DriftCopy.confirmDelete
 
     var id: String {
         driftID + option.rawValue

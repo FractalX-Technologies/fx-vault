@@ -356,7 +356,7 @@ FXVault/
 │   │       │   │                    # +Drift: Refresh and resolve, B7b), OrganizationItemRepository,
 │   │       │   │                    # OrganizationSyncRepository, OrgDriftModels, OrgSyncModels,
 │   │       │   │                    # OrgItemAccessModel
-│   │       │   └── Support/         # OrgFieldCipher
+│   │       │   └── Support/         # OrgFieldCipher, OrgDeletionLog (D28 for Refresh)
 │   │       ├── EnvFiles/            # EnvFileRepository (+ Copy All's text), EnvFileError,
 │   │       │   │                    # EnvExportAuthorizationModel, ReauthGate+EnvExport,
 │   │       │   │                    # GitServiceGitignoreChecker

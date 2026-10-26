@@ -652,15 +652,18 @@ read; a `selected` item reaches only through the `org_item_repositories` list FX
 (`.organizationAlreadyImported`, `.organizationNotFound`). Refresh (B7b,
 `OrganizationRepository+Drift`): `refresh(organizationID:)` lists B12/B13 again (the shared
 `listItems(of:accountLogin:schedulers:)`, also used by import and Sync), finishes deletions GitHub
-already made, records `last_refreshed_at` and returns `OrgRefreshModel` (not stored: the view
-keeps it). An `OrgDriftModel` reuses SyncEngine's `DriftKind` (`.secretModified` /
+already made, records only `last_refreshed_at` and returns `OrgRefreshModel` (not stored: the
+view keeps it). A name this Mac's Sync deleted within `Timeouts.recentDeletionSuppression` is not
+reported as added (D28): organization Sync keeps no journal, so `OrgDeletionLog` (in memory,
+one instance shared by both actors in `VaultDataComponents`) holds those deletions. An `OrgDriftModel` reuses SyncEngine's `DriftKind` (`.secretModified` /
 `.variableModified` when `updatedAt` or the visibility differs, or the count of a `selected` item
 whose list FX Vault doesn't hold; `.remoteAdded`; `.remoteDeleted`) and is keyed by
 `OrgItemKey` (kind and folded name). `resolve(_:option:organizationID:)` takes a
 `DriftResolutionOption`, lists again, and throws `DriftRepositoryError` (`.stale` when a finding
-moved, `.resolutionUnavailable(.valueMissing)` for Keep Local of a secret without its value).
+moved: another row, or another GitHub date than the one reviewed; `.resolutionUnavailable(.valueMissing)`
+for Keep Local without the vault's value).
 Accept GitHub writes GitHub's visibility, count, date and a variable's value as synced (a
-secret's value is dropped); Keep Local records GitHub's state as synced so the vault's item is
+secret whose date moved loses its value; under the same date it keeps it); Keep Local records GitHub's state as synced so the vault's item is
 pending over it (a remote add becomes a pending deletion, a remote deletion an add). `DEKRotator` re-seals organization
 values with the same `synced_fp` rule as destinations.
 

@@ -56,9 +56,11 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Refresh an organization.** ⋯ More › Refresh reads the organization from GitHub again and
   marks what changed there since FX Vault last read it ("Changed on GitHub": a new date,
   visibility or repository count, an item GitHub added or deleted). Review offers Keep Local or
-  Accept GitHub for each, as for a repository; taking GitHub's version of a changed secret
-  leaves it without a value, since GitHub never returns one. A deletion GitHub already made is
-  finished on Refresh.
+  Accept GitHub for each, as for a repository; taking GitHub's version of a secret GitHub
+  changed leaves it without a value, since GitHub never returns one (one whose only change is
+  who can use it keeps its value). Taking GitHub's deletion, or GitHub's item over one you
+  added here too, asks first. A deletion GitHub already made is finished on Refresh, and what
+  your own Sync just deleted is not reported as added while GitHub catches up.
 - **Inherited organization secrets and variables.** When a repository's organization is in
   the vault, its Secrets and Variables tabs also list, muted and read only, what the
   organization gives it ("example-org · all repos", "· private and internal", "· selected"),

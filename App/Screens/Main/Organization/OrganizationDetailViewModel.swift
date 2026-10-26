@@ -183,7 +183,11 @@ final class OrganizationDetailViewModel {
     /// Review: Keep Local or Accept GitHub for each finding.
     func reviewChanges() {
         guard let refresh, !refresh.findings.isEmpty else { return }
-        dependencies.actions.present(.orgDrift(OrgDriftContext(organizationID: organizationID, findings: refresh.findings)))
+        dependencies.actions.present(.orgDrift(OrgDriftContext(
+            organizationID: organizationID,
+            findings: refresh.findings,
+            skippedNames: refresh.skippedNames.map(\.name)
+        )))
     }
 
     /// Findings resolved in the review drop their marks until the next Refresh.

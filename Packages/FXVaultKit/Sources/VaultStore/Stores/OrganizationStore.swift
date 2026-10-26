@@ -49,9 +49,11 @@ public struct OrganizationStore: Sendable {
         try organization.insert(tx.db)
     }
 
-    /// Replaces an organization row (Refresh records when it listed GitHub).
-    public func updateOrganization(_ organization: OrganizationRecord, in tx: StoreTransaction) throws {
-        try organization.update(tx.db)
+    /// Records when Refresh listed the organization; nothing else of the row changes.
+    public func recordRefresh(organizationID: OrganizationID, at date: Date, in tx: StoreTransaction) throws {
+        try OrganizationRecord
+            .filter(key: organizationID.uuidString)
+            .updateAll(tx.db, OrganizationRecord.CodingKeys.lastRefreshedAt.set(to: DatabaseTimestamp.string(from: date)))
     }
 
     /// Removes an organization and its items. Returns false if there was none.

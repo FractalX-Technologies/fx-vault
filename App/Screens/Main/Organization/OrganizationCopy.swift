@@ -22,11 +22,36 @@ enum OrganizationCopy {
     static let revertAccess = String(localized: "organization.table.revertAccess", defaultValue: "Revert Access")
     static let empty = String(localized: "organization.table.empty", defaultValue: "This organization has no secrets or variables.")
     static let refreshFailedTitle = String(localized: "organization.refresh.failed", defaultValue: "Organization not refreshed")
-    /// Accept GitHub of a secret GitHub changed: no fill step follows, unlike a repository's.
+    /// Accept GitHub of a secret whose date moved: no fill step follows, unlike a repository's.
     static let acceptSecretChange = String(
         localized: "organization.drift.acceptSecret",
         defaultValue: "Your vault takes GitHub's access. GitHub never returns secret values, so its value is missing until you enter it."
     )
+    /// Accept GitHub of a secret whose date stands: only who can use it changed.
+    static let acceptAccessChange = String(
+        localized: "organization.drift.acceptAccess",
+        defaultValue: "Your vault takes GitHub's access; the value stays."
+    )
+
+    // MARK: Added on both sides (B7b)
+
+    static let conflictKeepLocal = String(
+        localized: "organization.drift.conflict.keepLocal",
+        defaultValue: "Yours is sent on the next Sync, replacing GitHub's."
+    )
+    static let conflictAccept = String(
+        localized: "organization.drift.conflict.accept",
+        defaultValue: "GitHub's replaces yours here; a secret arrives without its value."
+    )
+    static let replaceConfirm = String(localized: "organization.drift.replace.confirm", defaultValue: "Use GitHub's")
+    static let replaceMessage = String(
+        localized: "organization.drift.replace.message",
+        defaultValue: "Your value was never sent to GitHub. It is removed from FX Vault and cannot be recovered."
+    )
+
+    static func replaceTitle(_ name: String) -> String {
+        String(localized: "organization.drift.replace.title", defaultValue: "Replace your \(name) with GitHub's?")
+    }
 
     static func removeMessage(_ login: String) -> String {
         String(

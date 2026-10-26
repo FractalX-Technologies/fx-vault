@@ -15,13 +15,16 @@ struct OrganizationRepositoryTests {
     struct Fixture {
         let harness: ConfigHarness
         let provider: FakeSchedulerProvider
+        /// Shared with the fixture's Sync, as the app shares it.
+        let deletions: OrgDeletionLog
         let organizations: OrganizationRepository
 
         static func make() async throws -> Fixture {
             let harness = try await ConfigHarness.make()
             let provider = FakeSchedulerProvider()
-            let organizations = OrganizationRepository(session: harness.session, schedulers: provider, clock: harness.clock)
-            return Fixture(harness: harness, provider: provider, organizations: organizations)
+            let deletions = OrgDeletionLog()
+            let organizations = OrganizationRepository(session: harness.session, schedulers: provider, clock: harness.clock, deletions: deletions)
+            return Fixture(harness: harness, provider: provider, deletions: deletions, organizations: organizations)
         }
 
         var store: OrganizationStore {

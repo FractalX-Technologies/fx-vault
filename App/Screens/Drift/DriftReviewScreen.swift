@@ -104,21 +104,7 @@ struct DriftReviewScreen: View {
                             )
                         }
                     }
-                    if !viewModel.notes.isEmpty {
-                        ConfigSheetField(String(localized: "drift.review.notes", defaultValue: "Not compared")) {
-                            ForEach(viewModel.notes, id: \.self) { note in
-                                Label {
-                                    Text(verbatim: note)
-                                        .fxTextStyle(.callout)
-                                        .foregroundStyle(Theme.Colors.mutedText)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                } icon: {
-                                    Image(systemName: "eye.slash")
-                                        .foregroundStyle(Theme.Colors.subtleText)
-                                }
-                            }
-                        }
-                    }
+                    DriftNotesField(notes: viewModel.notes)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Theme.Spacing.xxLarge)
