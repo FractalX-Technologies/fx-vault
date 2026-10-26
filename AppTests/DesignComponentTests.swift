@@ -154,18 +154,11 @@ struct DesignComponentTests {
     // MARK: Banner, Sync button
 
     @Test func bannerTonesFollowTheMockup() {
-        #expect(Banner.defaultLabel(for: .offline) == "Offline")
-        #expect(Banner.defaultLabel(for: .info) == nil)
-        #expect(Banner.defaultSystemImage(for: .offline) == "wifi.slash")
         #expect(Banner.defaultSystemImage(for: .info) == nil, "info shows the brand dot")
-        #expect(Banner.background(for: .offline) == Theme.Colors.surface2)
-        #expect(Banner.border(for: .offline) == Theme.Colors.hairlineStrong)
         #expect(Banner.background(for: .info) == Theme.Colors.card)
         #expect(Banner.background(for: .warning) == Theme.Colors.card, "brand Review link stays AA")
         #expect(Banner.border(for: .warning) == Theme.Colors.hairlineStrong)
-        #expect(Banner.symbolColor(for: .offline) == Theme.Colors.warning)
-        #expect(Banner.labelColor(for: .offline) == Theme.Colors.mutedText, "AA on surface2")
-        #expect(Banner.labelColor(for: .info) == Theme.Colors.subtleText)
+        #expect(Banner.symbolColor(for: .warning) == Theme.Colors.warning)
     }
 
     @Test func syncPillHugsItsBadge() {
@@ -193,7 +186,7 @@ struct DesignComponentTests {
         #expect(Self.renders(Card { Text(verbatim: "Card") }, scheme: scheme))
         #expect(Self.renders(FXTextField(label: "Name", text: .constant("STRIPE_SECRET_KEY"), isMonospaced: true), scheme: scheme))
         #expect(Self.renders(SegmentedPill(selection: .constant(0), segments: [.init(value: 0, title: "Secrets", count: 5)], accessibilityLabel: "Kind"), scheme: scheme))
-        #expect(Self.renders(Banner(.offline, message: "Offline"), scheme: scheme))
+        #expect(Self.renders(Banner(.warning, message: "Read only", label: "Experimental"), scheme: scheme))
         #expect(Self.renders(BrandMark(size: Theme.Layout.brandMarkLarge, center: .outlined), scheme: scheme))
         #expect(Self.renders(StepCounter(current: 2, total: 5), scheme: scheme))
         #expect(Self.renders(DotGridBackground().frame(width: 88, height: 88), scheme: scheme))

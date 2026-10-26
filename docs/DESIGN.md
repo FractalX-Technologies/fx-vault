@@ -64,7 +64,7 @@ value below and fails if a color set has no dark variant or no test.
 |---|---|---|---|---|
 | `ground` (`onInk`) | Ground | `#FFFFFF` | `#000000` | Window background; text on an ink fill |
 | `surface` | Surface | `#F5F5F7` | `#1C1C1E` | Quiet panels, search field |
-| `surface2` | Surface2 | `#E8E8ED` | `#2C2C2E` | Secondary buttons, segmented track, selected sidebar row, offline banner, neutral chip |
+| `surface2` | Surface2 | `#E8E8ED` | `#2C2C2E` | Secondary buttons, segmented track, selected sidebar row, neutral chip |
 | `card` | Card | white 80% | `#1C1C1E` 72% | Cards, tables, sheets, inputs, selected segment: the more opaque glass inside a window |
 | `ink` | Ink | `#000000` | `#FFFFFF` | Primary text, primary button fill |
 | `mutedText` | MutedText | `#3F3F42` | `#AEAEB2` | Secondary text, paragraphs under headings, masked values |
@@ -274,11 +274,9 @@ Banner(.warning, message: text, label: "Experimental")
 ```
 
 12 pt corners in the content column (not edge to edge). `.info`: `card` + hairline + brand dot;
-`.warning`: `card` + `hairlineStrong` + warning symbol (a read-only scope, the recovery-key
-notice); `.offline`: `surface2` + `hairlineStrong` + `wifi.slash` + the `OFFLINE` mono label (the
-only `surface2` banner, so it reads apart from the others; since 1.0 the main window's
-connectivity notice is a `MainStatusStrip`, and `.offline` has no caller); `.danger`: `card` + `hairlineStrong` + danger
-symbol. The action is an emphasized `FXLinkButtonStyle` link (brand on `card` is 5.49:1 light;
+`.warning`: `card` + `hairlineStrong` + warning symbol (a read-only scope); `.danger`: `card` +
+`hairlineStrong` + danger symbol. The `.offline` tone (`surface2`, `OFFLINE` label) is gone in
+1.0: the main window's connectivity notice is a `MainStatusStrip`. The action is an emphasized `FXLinkButtonStyle` link (brand on `card` is 5.49:1 light;
 pointer cursor, 40% when disabled).
 
 ### `BrandMark`, `DotGridBackground`, `StepCounter`
@@ -478,6 +476,9 @@ foreground color, so `.primary` text still turns white on selected rows.
   its return re-checks GitHub. GitHub not responding: `exclamationmark.icloud`, "GitHub isn't
   responding · edits stay in the vault; try again in a moment", Retry (Retrying… while it runs).
   Before 1.0 it was a `Banner` above each place's header, missing on folders and organizations.
+  Departure: Main2-SyncFailed's toolbar pill ("● 2 failed · Review" in place of Sync) is not
+  built: no sync result is kept once the Sync sheet closes, failed changes stay pending and the
+  pill says Sync N again.
 - Jump palette (⌘K, Edit › Jump Anywhere or the toolbar's search button; board Main2-Search):
   over the window on `scrim` (a click outside closes it), `jumpPaletteWidth` wide under the
   toolbar, `.fxCardBackground(.popover)` (the `card` fill over `.regularMaterial`, so the text

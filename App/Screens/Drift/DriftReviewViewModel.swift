@@ -50,13 +50,14 @@ struct DriftConfirmationModel: Identifiable, Hashable {
     }
 
     /// "Accept GitHub" of a name added on both sides: GitHub's item replaces the vault's own value
-    /// (a repository's review and an organization's, 1.0 B7b).
-    static func replace(driftID: String, name: String) -> Self {
+    /// (a repository's review and an organization's, 1.0 B7b). `isRenamed`: a synced item renamed
+    /// to GitHub's name (an organization's never is).
+    static func replace(driftID: String, name: String, isRenamed: Bool) -> Self {
         Self(
             driftID: driftID,
             option: .acceptGitHub,
             title: DriftCopy.replaceTitle(name),
-            message: DriftCopy.replaceMessage,
+            message: DriftCopy.replaceMessage(isRenamed: isRenamed),
             confirmTitle: DriftCopy.replaceConfirm
         )
     }
@@ -198,6 +199,14 @@ final class DriftReviewViewModel {
         return item
     }
 
+    /// The vault's row was synced under another name: both choices first detach it, which
+    /// deletes that name on GitHub at the next Sync (`DriftDetector`'s conflict resolutions).
+    private static func detachesSyncedName(_ drift: DriftModel) -> Bool {
+        drift.resolution(.acceptGitHub).effects.contains {
+            if case .detachSyncedIdentity = $0 { true } else { false }
+        }
+    }
+
     /// "Accept GitHub" that loses the vault's data asks first: a remote deletion removes the
     /// local row and its value; GitHub's item over one added here replaces the vault's value, as
     /// an organization's review asks. Keep Local of that add needs the value (`DriftDetector`),
@@ -231,13 +240,16 @@ final class DriftReviewViewModel {
     func choose(_ driftID: String, _ option: DriftResolutionOption) async {
         guard isOnline, let drift = drift(driftID), drift.resolution(option).isAvailable, !resolving.contains(driftID) else { return }
         if Self.needsConfirmation(drift, option) {
-            confirmation = Self.bothAddedItem(drift).map { DriftConfirmationModel.replace(driftID: driftID, name: $0.name) }
-                ?? DriftConfirmationModel(
+            if let item = Self.bothAddedItem(drift) {
+                confirmation = .replace(driftID: driftID, name: item.name, isRenamed: Self.detachesSyncedName(drift))
+            } else {
+                confirmation = DriftConfirmationModel(
                     driftID: driftID,
                     option: option,
                     title: DriftCopy.confirmationTitle(drift),
                     message: DriftCopy.confirmationMessage(drift)
                 )
+            }
             return
         }
         await resolve(drift, option)

@@ -101,7 +101,7 @@ struct OrganizationDriftReviewTests {
 
         // Taking GitHub's API_TOKEN over the one added here asks first too; cancelling keeps it.
         await review.choose(both.id, .acceptGitHub)
-        #expect(review.confirmation == .replace(driftID: both.id, name: "API_TOKEN"))
+        #expect(review.confirmation == .replace(driftID: both.id, name: "API_TOKEN", isRenamed: false))
         #expect(review.confirmation?.confirmTitle == "Use GitHub's")
         review.cancelConfirmation()
         #expect(review.findings.contains { $0.name == "API_TOKEN" })

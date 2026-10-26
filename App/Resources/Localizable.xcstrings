@@ -452,17 +452,6 @@
         }
       }
     },
-    "banner.offline.label" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Offline"
-          }
-        }
-      }
-    },
     "biometry.unavailable.lockout" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -3726,6 +3715,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Your value was never sent to GitHub. It is removed from FX Vault and cannot be recovered."
+          }
+        }
+      }
+    },
+    "drift.replace.message.renamed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your value is removed from FX Vault and cannot be recovered. Its old name is deleted on GitHub at the next Sync."
           }
         }
       }

@@ -162,10 +162,19 @@ nonisolated enum DriftCopy {
         String(localized: "drift.replace.title", defaultValue: "Replace your \(name) with GitHub's?")
     }
 
-    static let replaceMessage = String(
-        localized: "drift.replace.message",
-        defaultValue: "Your value was never sent to GitHub. It is removed from FX Vault and cannot be recovered."
-    )
+    /// `isRenamed`: the vault's item was synced under another name, which Accept detaches (a
+    /// tombstone), so its value did reach GitHub and that name is deleted there.
+    static func replaceMessage(isRenamed: Bool) -> String {
+        isRenamed
+            ? String(
+                localized: "drift.replace.message.renamed",
+                defaultValue: "Your value is removed from FX Vault and cannot be recovered. Its old name is deleted on GitHub at the next Sync."
+            )
+            : String(
+                localized: "drift.replace.message",
+                defaultValue: "Your value was never sent to GitHub. It is removed from FX Vault and cannot be recovered."
+            )
+    }
 
     static let replaceConfirm = String(localized: "drift.replace.confirm", defaultValue: "Use GitHub's")
 
