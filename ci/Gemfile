@@ -1,0 +1,6 @@
+source "https://rubygems.org"
+
+# The release workflow's signing lane (ci/fastlane/Fastfile). Same pins as pipeline-templates' lanes.
+gem "fastlane", "2.241.1"
+# fastlane's `representable` requires it at load time; Bundler on Ruby 3.3+ refuses a transitive top-level require.
+gem "multi_json", "1.21.2"
