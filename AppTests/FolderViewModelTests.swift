@@ -66,6 +66,7 @@ struct FolderViewModelTests {
         #expect(model.display(for: row) == .masked)
 
         model.toggleReveal(row.id)
+        await TableRevealTests.confirm(model.notesReveal)
         #expect(model.display(for: row) == .revealed(EditorFixtures.secretValue))
         model.remaskAll()
         #expect(model.display(for: row) == .masked)

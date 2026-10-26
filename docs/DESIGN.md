@@ -552,8 +552,10 @@ foreground color, so `.primary` text still turns white on selected rows.
   capture" and the window is out of screen capture.
 - Departures from those boards: lines are 13 pt (no 12.5 pt token); line numbers in
   `subtleText`, not the board's lighter gray (below AA); the card keeps the table's
-  16 pt `container` radius; Key Vault lines have no content-type chip, expiry or disabled lines;
-  the table's eye still reveals without asking (it predates B9).
+  16 pt `container` radius; Key Vault lines have no content-type chip, expiry or disabled lines.
+- Table (1.0 T1): the eye and Copy Value on a secret open the same "Confirm it's you" sheet as
+  the notes' Reveal ("Reveal NAME" or "Copy NAME"); a secret that shows copies at once, and a
+  variable copies and shows as before.
 - Notes editing (1.0 N2; boards Place-Edit, Place-Errors, KV-NameRules; `NotesEditorView`,
   `NotesTextView`): a click on a line of the place's own (the text cursor, VoiceOver's Edit
   Notes action) or ⋯ More › Edit Notes turns the notes into one TextKit 2 `NSTextView` in the

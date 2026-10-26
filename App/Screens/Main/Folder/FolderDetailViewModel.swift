@@ -137,16 +137,10 @@ final class FolderDetailViewModel: LockObserving {
         values.isRevealed(id)
     }
 
+    /// The table's eye (1.0 T1): Hide, or Reveal after "Confirm it's you" as in the notes.
     func toggleReveal(_ id: ConfigItemID) {
-        if values.isRevealed(id) {
-            values.hide(id)
-            return
-        }
-        do {
-            try values.reveal(id)
-        } catch {
-            alert = error.presentation
-        }
+        guard let item = items.first(where: { $0.id == id }) else { return }
+        notesReveal.toggle(id, name: item.name)
     }
 
     /// Masks every revealed value (resign active, another selection, lock).
@@ -155,7 +149,15 @@ final class FolderDetailViewModel: LockObserving {
     }
 
     /// Copies the value through `ClipboardManager` (concealed, cleared after 30 s).
+    /// Copy Value: a secret asks first unless it shows (1.0 T1).
     func copy(_ id: ConfigItemID) {
+        guard let item = items.first(where: { $0.id == id }) else { return }
+        notesReveal.copy(id, name: item.name, kind: item.kind) { [weak self] id in
+            self?.copyNow(id)
+        }
+    }
+
+    private func copyNow(_ id: ConfigItemID) {
         do {
             try dependencies.copyValue(of: id)
             let name = items.first { $0.id == id }?.name ?? ""

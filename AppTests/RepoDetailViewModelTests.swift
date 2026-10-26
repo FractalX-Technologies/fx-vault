@@ -71,6 +71,7 @@ struct RepoDetailViewModelTests {
         let secret = try await fixture.secretRow()
 
         model.toggleReveal(secret.id)
+        await TableRevealTests.confirm(model.notesReveal)
         #expect(model.display(for: secret) == .revealed(Self.secretValue))
         await fixture.harness.clock.waitForSleepers(count: 1)
         fixture.harness.clock.advance(by: Timeouts.revealRemask)
@@ -84,15 +85,17 @@ struct RepoDetailViewModelTests {
         let secret = try await fixture.secretRow()
 
         model.toggleReveal(secret.id)
+        await TableRevealTests.confirm(model.notesReveal)
+        #expect(model.isRevealed(secret.id))
         model.toggleReveal(secret.id)
         #expect(!model.isRevealed(secret.id))
 
-        model.reveal(secret.id)
+        try model.values.reveal(secret.id)
         model.remaskAll()
         #expect(!model.isRevealed(secret.id))
         #expect(model.remaskTasks.isEmpty)
 
-        model.reveal(secret.id)
+        try model.values.reveal(secret.id)
         fixture.harness.app.lock(trigger: .manual)
         #expect(!model.isRevealed(secret.id))
         #expect(model.variableValues.isEmpty)
@@ -104,6 +107,7 @@ struct RepoDetailViewModelTests {
         let secret = try await fixture.secretRow()
 
         model.copy(secret.id)
+        await TableRevealTests.confirm(model.notesReveal)
         #expect(fixture.harness.pasteboardString == Self.secretValue)
         #expect(fixture.harness.container.clipboard.ownsContents)
         #expect(model.notice?.contains("API_TOKEN") == true)
@@ -121,9 +125,9 @@ struct RepoDetailViewModelTests {
         let model = fixture.viewModel
         let secret = try await fixture.secretRow()
         fixture.harness.vaultManager.lock()
-        model.reveal(secret.id)
+        #expect(throws: (any Error).self) { try model.values.reveal(secret.id) }
+        model.toggleReveal(secret.id)
         #expect(!model.isRevealed(secret.id))
-        #expect(model.alert != nil)
     }
 
     @Test func rowActionsPresentTheItemEditor() async throws {

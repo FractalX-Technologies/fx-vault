@@ -670,21 +670,11 @@ final class RepoDetailViewModel: LockObserving {
         values.isRevealed(id)
     }
 
+    /// The table's eye (1.0 T1): Hide, or Reveal after "Confirm it's you" as in the notes. The
+    /// scope's own secrets only: an inherited one never shows.
     func toggleReveal(_ id: ConfigItemID) {
-        if isRevealed(id) {
-            hide(id)
-        } else {
-            reveal(id)
-        }
-    }
-
-    /// Decrypts one secret for display and schedules its re-mask.
-    func reveal(_ id: ConfigItemID) {
-        do {
-            try values.reveal(id)
-        } catch {
-            alert = error.presentation
-        }
+        guard let item = items.first(where: { $0.id == id }) else { return }
+        notesReveal.toggle(id, name: item.name)
     }
 
     func hide(_ id: ConfigItemID) {
@@ -700,8 +690,16 @@ final class RepoDetailViewModel: LockObserving {
         dependencies.actions.present(.copyAll(CopyAllContext(place: .place(.scope(repositoryID: repositoryID, scope: scope)))))
     }
 
-    /// Copies the value through `ClipboardManager` (concealed, cleared after 30 s).
+    /// Copy Value: a secret asks first unless it shows (1.0 T1); see ``copyNow(_:)``.
     func copy(_ id: ConfigItemID) {
+        guard let item = items.first(where: { $0.id == id }) else { return }
+        notesReveal.copy(id, name: item.name, kind: item.kind) { [weak self] id in
+            self?.copyNow(id)
+        }
+    }
+
+    /// Copies the value through `ClipboardManager` (concealed, cleared after 30 s).
+    private func copyNow(_ id: ConfigItemID) {
         do {
             try dependencies.copyValue(of: id)
             let name = items.first { $0.id == id }?.name ?? ""

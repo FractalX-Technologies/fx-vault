@@ -43,7 +43,17 @@ nonisolated enum NotesCopy {
 
     static let revealMessage = String(
         localized: "notes.reveal.message",
-        defaultValue: "The value shows in the notes for \(Timeouts.revealRemask.wholeSeconds) seconds, then hides again."
+        defaultValue: "The value shows for \(Timeouts.revealRemask.wholeSeconds) seconds, then hides again."
+    )
+
+    /// "Confirm it's you" before a secret's Copy (the table, 1.0 T1; the quick vault, Q1).
+    static func copy(_ name: String) -> String {
+        String(localized: "quickVault.copy", defaultValue: "Copy \(name)")
+    }
+
+    static let copyMessage = String(
+        localized: "quickVault.copy.message",
+        defaultValue: "The value goes to the clipboard, which clears in \(Timeouts.clipboardClear.wholeSeconds) seconds."
     )
 
     /// "hides in 30 s" beside a revealed value (board Place-Reveal).

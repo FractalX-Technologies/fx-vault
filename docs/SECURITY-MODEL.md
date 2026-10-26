@@ -216,6 +216,11 @@ that isn't revealed, and its authorization is taken the same way (one request, t
 dropped by Cancel, a close or a lock); a variable, or a secret already revealed by its own
 check, copies at once. The value goes through `ClipboardManager` only (§7).
 
+The table's eye and Copy Value on a secret (1.0 T1) go through the same `NotesRevealModel`
+(`ReauthPurpose.reveal` and `.copyValue`): one request per click, taken the same way and
+dropped by Cancel, another scope, a lock or a newer request; a secret that shows copies at
+once, a variable copies at once, and an inherited secret is never revealed or copied there.
+
 ## 7. Values in use
 
 - `SecretBytes` holds values in memory: lock-protected, wiped on `wipe()` and `deinit`,
@@ -258,8 +263,9 @@ check, copies at once. The value goes through `ClipboardManager` only (§7).
 - **Display:** revealed cells re-mask after 30 s, when the app resigns active, on a scope change
   and on lock; windows are not restorable; recovery-key and passphrase views, the item editors
   and the `.env` import sheet are excluded from screen capture. A Reveal in a place's notes
-  (1.0) asks Touch ID or the master password first, and the main window is excluded from screen
-  capture while any value shows. Sheets that hold typed or
+  or its table, and the table's Copy Value of a secret (1.0), ask Touch ID or the master
+  password first, and the main window is excluded from screen capture while any value shows;
+  a revealed value is not selectable. Sheets that hold typed or
   decrypted values (`LockObserving`) wipe them on lock and on close.
 - **Notes editing (1.0):** a value never enters the editor's text. Each is a token (a text
   attachment holding an id); its bytes sit in the edit's `NotesTokenStore` as `SecretBytes`,

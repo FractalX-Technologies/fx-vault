@@ -27,6 +27,7 @@ struct OrganizationDetailScreen: View {
         }
         .fxPlaceColumn()
         .errorAlert($viewModel.alert)
+        .notesRevealSheet(viewModel.notesReveal)
         .deleteItemsSheet(viewModel.deletionSheet) {
             viewModel.pendingDeletion = nil
         } confirm: {
