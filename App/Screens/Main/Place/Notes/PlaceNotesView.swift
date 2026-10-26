@@ -32,7 +32,6 @@ struct PlaceNotesView<Model: NotesPlaceModel>: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(NotesCopy.accessibilityLabel(place: model.notesPlaceName))
         .accessibilityIdentifier(AccessibilityID.Place.notes)
-        .modifier(NotesRevealSheet(reveal: reveal))
     }
 }
 
@@ -277,7 +276,15 @@ private struct NotesRevealCountdown: View {
     }
 }
 
-/// "Confirm it's you" before a Reveal: the sheet of ``NotesRevealModel/request``.
+extension View {
+    /// "Confirm it's you" before a Reveal or a secret's Copy Value, in the notes or the table: on
+    /// the place's screen, so it shows in either mode.
+    func notesRevealSheet(_ reveal: NotesRevealModel) -> some View {
+        modifier(NotesRevealSheet(reveal: reveal))
+    }
+}
+
+/// The sheet of ``NotesRevealModel/request``.
 private struct NotesRevealSheet: ViewModifier {
     let reveal: NotesRevealModel
 
@@ -300,11 +307,11 @@ private struct NotesRevealDialog: View {
     let reveal: NotesRevealModel
 
     var body: some View {
-        DialogSheet(title: NotesCopy.reveal(request.name)) {
+        DialogSheet(title: request.action == .copy ? NotesCopy.copy(request.name) : NotesCopy.reveal(request.name)) {
             if let reauth = reveal.reauth {
                 ReauthView(
                     model: reauth,
-                    message: NotesCopy.revealMessage,
+                    message: request.action == .copy ? NotesCopy.copyMessage : NotesCopy.revealMessage,
                     onTouchID: { await reveal.authenticateWithTouchID() },
                     onPassword: { await reveal.authenticateWithPassword() }
                 )

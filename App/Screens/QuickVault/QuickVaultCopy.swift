@@ -23,10 +23,6 @@ nonisolated enum QuickVaultCopy {
         ])
     }
 
-    static func copy(_ name: String) -> String {
-        String(localized: "quickVault.copy", defaultValue: "Copy \(name)")
-    }
-
     static func copied(_ name: String) -> String {
         String(localized: "quickVault.copied", defaultValue: "Copied \(name)")
     }
@@ -35,9 +31,5 @@ nonisolated enum QuickVaultCopy {
     static let copySecretHelp = String(
         localized: "quickVault.copy.secretHelp",
         defaultValue: "Copy the value. Asks for Touch ID or your master password."
-    )
-    static let copyMessage = String(
-        localized: "quickVault.copy.message",
-        defaultValue: "The value goes to the clipboard, which clears in \(Timeouts.clipboardClear.wholeSeconds) seconds."
     )
 }

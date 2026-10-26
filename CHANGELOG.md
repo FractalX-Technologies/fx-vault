@@ -42,6 +42,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Changed
 
+- **The table asks first.** In the Table view, revealing a secret or copying its value asks for
+  Touch ID or your master password, as Reveal in the notes does, each time; the window stays
+  out of screen capture while a value shows. Variables copy and show as before.
 - **Settings, second pass.** General shows "Lock when the screen locks" (always on) and "Sound
   effects: Follows system"; Reset vault moved from Advanced to Security, where it stays while
   the vault is locked.

@@ -41,6 +41,7 @@ struct RepoDetailScreen: View {
         }
         .fileSecretDropTarget(viewModel)
         .errorAlert($viewModel.alert)
+        .notesRevealSheet(viewModel.notesReveal)
         .deleteItemsSheet(viewModel.deletionSheet) {
             viewModel.pendingDeletion = nil
         } confirm: {

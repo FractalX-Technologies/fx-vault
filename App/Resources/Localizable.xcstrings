@@ -12074,7 +12074,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "The value shows in the notes for %lld seconds, then hides again."
+            "value" : "The value shows for %lld seconds, then hides again."
           }
         }
       }

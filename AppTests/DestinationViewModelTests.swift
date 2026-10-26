@@ -100,6 +100,7 @@ struct DestinationViewModelTests {
         #expect(row.status == .added)
         #expect(model.display(for: row) == .masked)
         model.toggleReveal(row.id)
+        await TableRevealTests.confirm(model.notesReveal)
         #expect(model.display(for: row) == .revealed("https://api.example.invalid"))
 
         model.add()

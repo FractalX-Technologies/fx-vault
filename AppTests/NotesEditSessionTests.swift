@@ -38,7 +38,7 @@ struct NotesEditSessionTests {
         let fixture = try await RepoDetailViewModelTests.Fixture()
         let model = fixture.viewModel
         let secret = try await fixture.secretRow()
-        model.reveal(secret.id)
+        try model.values.reveal(secret.id)
         #expect(model.isRevealed(secret.id))
 
         model.beginNotesEdit(at: 2)

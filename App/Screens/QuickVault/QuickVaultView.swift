@@ -114,8 +114,8 @@ private struct QuickVaultPlaceView: View {
                     )
                 } else if let request = place.copyRequest, let reauth = place.copyReauth {
                     QuickVaultConfirmView(
-                        title: QuickVaultCopy.copy(request.name),
-                        message: QuickVaultCopy.copyMessage,
+                        title: NotesCopy.copy(request.name),
+                        message: NotesCopy.copyMessage,
                         flow: place,
                         reauth: reauth,
                         onCancel: place.cancelCopy
@@ -247,7 +247,7 @@ private struct QuickVaultLineView: View {
         }
         .fxIconButtonStyle(.ghost)
         .help(asks ? QuickVaultCopy.copySecretHelp : QuickVaultCopy.copyHelp)
-        .accessibilityLabel(isCopied ? QuickVaultCopy.copied(line.name) : QuickVaultCopy.copy(line.name))
+        .accessibilityLabel(isCopied ? QuickVaultCopy.copied(line.name) : NotesCopy.copy(line.name))
         .accessibilityIdentifier(AccessibilityID.QuickVault.copy)
     }
 }

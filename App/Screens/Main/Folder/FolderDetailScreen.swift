@@ -40,6 +40,7 @@ struct FolderDetailScreen: View {
             Task { await viewModel.handlePaste(providers) }
         }
         .fileSecretDropTarget(viewModel)
+        .notesRevealSheet(viewModel.notesReveal)
         .errorAlert($viewModel.alert)
         .deleteItemsSheet(viewModel.deletionSheet) {
             viewModel.pendingDeletion = nil
