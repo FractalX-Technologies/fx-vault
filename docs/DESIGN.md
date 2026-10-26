@@ -553,18 +553,40 @@ foreground color, so `.primary` text still turns white on selected rows.
 - Departures from those boards: lines are 13 pt (no 12.5 pt token); line numbers in
   `subtleText`, not the board's lighter gray (below AA); the card keeps the table's
   16 pt `container` radius; Key Vault lines have no content-type chip, expiry or disabled lines;
-  file lines wait for F1; the table's eye still reveals without asking (it predates B9).
+  the table's eye still reveals without asking (it predates B9).
 - ⋯ More (board Main2-Actions), what each place offers, disabled when the account may not:
-  New Secret, New Variable | Paste Multiple…, Import .env…, Export .env…, Copy All | Copy To
+  New Secret, New Variable, Add File Secret… | Paste Multiple…, Import .env…, Export .env…, Copy All | Copy To
   (the selection, or the open tab when nothing is selected), Share Securely… | Deployment
   Branches… (an environment; its help says the policy and the plan note), Clone…, Refresh |
   Delete Selected…. An organization: New Secret, New Variable | Copy All | Remove from Vault….
-  A Key Vault: New Secret | Paste Multiple…, Import .env…, Copy All | Copy To, Refresh | Delete
+  A Key Vault: New Secret, Add File Secret… | Paste Multiple…, Import .env…, Copy All | Copy To, Refresh | Delete
   Selected… | its own menu. A folder: the item actions with Copy All, then its own menu
   (Rename…, Share Securely…, Export .env…, Delete Folder…). The item actions are one section
   (`PlaceItemMoreItems`); Delete Selected… needs a selected row that is not already a pending
   deletion (`canDeleteSelection`); Copy All needs a live item (`canCopyAll`). A SwiftUI menu
   item has no trailing lock glyph, so Copy All's help says it asks for Touch ID or your master password.
+- Add file secret (1.0 F1; boards Place-FileSheet, Place-FileDrop; `FileSecretScreen`): a
+  460 pt `DialogSheet` ("Add file secret", "In X of Y" like the item editor): Name (mono, the
+  file's suggestion, `AuthKey_ABC123.p8` → `AUTH_KEY_P8`, replaced only while untouched; GitHub's
+  rules, plus Key Vault's in a Key Vault), the file row in a `.fxDialogListBox` (doc symbol,
+  the name in `monoMeta`, "· 66 bytes · 6 lines", Choose… as a `.ghost` `.compact` button),
+  Store as Exact text | Base64 (a `.small` `SegmentedPill`, Exact text disabled for a binary or
+  non-UTF-8 file, its hint under it), the trailing-line-break `DialogNoteBox` for Exact text,
+  then the limits line in `monoLabel` (`GitHub 48,000 bytes · Key Vault 25,600 · this file 66
+  bytes (88 as Base64)`). A size over the place's limit after Base64, an empty or unreadable
+  file is an error note under the file row, and Add stays disabled.
+- Drop on a place (board Place-FileDrop; `.fileSecretDropTarget`): a `.p8`, `.pem` or `.json`
+  file dragged over an editable place shows `.regularMaterial` with a dashed ink outline
+  (`Theme.Stroke.dropTarget`) 8 pt inside it, `doc.badge.plus`, "Drop to add as a file secret"
+  and ".p8, .pem, .json · up to N bytes" (the place's limit); the drop opens the sheet with the
+  file. Another file gets an alert saying which files a place takes (the URL loads after the
+  drop is accepted, so it cannot be refused in time). Read-only places show nothing.
+- A file secret's value while masked (`FileSecretChip`): the doc symbol and "AuthKey.p8 · 6
+  lines" in the table, "AuthKey.p8 · file · 6 lines" in the notes (· Base64 when stored so), on
+  `surface2` in place of the dots; VoiceOver reads "From the file AuthKey.p8, 6 lines". The
+  label follows the value: a typed, pulled or replaced value drops it. Departures: the sheet's
+  subtitle is the item editor's "In X of Y", not the board's breadcrumb; the drop title is the
+  15 pt `.leadEmphasized` (no 14 pt emphasized style).
 - Copy All (1.0 D6c4, `CopyAllScreen`): "Confirm it's you" (`ReauthView`, Touch ID tried at once,
   then the master password), then "Copied" with the count and the clipboard's clear delay. The
   text is the board's notes: `# Secrets · N`, `KEY=value` lines by name, a blank line,
@@ -1012,6 +1034,7 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 | NewRepo, NewEnvironment | `CreateRepoFormView`, `NewEnvironmentScreen`, `BranchPolicyEditorView`, `DialogForm.swift` |
 | Main2-Delete, Main2-DeleteKeyVault, Main2-Export | `DeleteItemsSheet`, `EnvExportDialog`, `DialogNoteBox`, `DialogStackedField` |
 | Folder-View, Folder-LinkedUpdate, KV-Place, KV-NameRules, Org-UsedBy | `LinkedChip`, `LinkedUpdateList`, `DestinationDetailScreen` (`DestinationFootnotes`), `OrgVisibility.reachTitle` |
+| Place-FileSheet, Place-FileDrop | `FileSecretScreen`, `.fileSecretDropTarget`, `FileSecretChip` |
 | Main2-Repository, Place-Reveal, KV-Place (notes) | `PlaceNotesView`, `PlaceViewModePicker`, `NotesRevealModel`, `NotesDocumentModel`, `FXInkLinkButtonStyle` |
 | FX Vault Destinations 3: Key Vault destination | `DestinationDetailScreen`, the RUNTIME rows of `ScopeListView` |
 | FX Vault Destinations 4: multi-provider Sync review | `DestinationSyncPresentation` sections in the Sync sheet |

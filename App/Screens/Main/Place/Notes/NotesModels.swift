@@ -38,6 +38,8 @@ struct NotesItemLineModel: Hashable {
     var canReveal: Bool
     /// An organization item a repository gets (B7a): drawn muted, never revealed.
     var isInherited = false
+    /// The file the value came from (1.0 F1): its chip stands in for the mask.
+    var file: FileSecretModel?
 }
 
 extension NotesItemLineModel {

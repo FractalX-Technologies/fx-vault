@@ -39,6 +39,7 @@ struct RepoDetailScreen: View {
         .onPasteCommand(of: [.plainText], validator: viewModel.validatePaste) { providers in
             Task { await viewModel.handlePaste(providers) }
         }
+        .fileSecretDropTarget(viewModel)
         .errorAlert($viewModel.alert)
         .deleteItemsSheet(viewModel.deletionSheet) {
             viewModel.pendingDeletion = nil

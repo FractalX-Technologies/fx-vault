@@ -86,7 +86,11 @@ Touch ID   the DEK in a data-protection keychain item (signed builds only, §5)
   groups may include folder items since v0.7.0 and destination items since v0.8.0) and
   preferences. Since v0.8.0 also each destination's target (`settings_json`: vault name and
   tenant) and stage, Key Vault's change markers (`remote_version`, `pre_write_version`) and the
-  destination journal (names, change markers, row-bound fingerprints). No group
+  destination journal (names, change markers, row-bound fingerprints). Since 1.0 also a file
+  secret's label (`file_detail`, v21), next to the item's name: the file name it came from, its
+  line count and its encoding. It stays plaintext because the place's tables and notes read
+  their rows from key-less observation streams, and because a sealed label would have to be
+  re-sealed on every rename and move, which today touch only names. No group
   fingerprint is stored: whether linked copies hold the same value is computed when it is shown
   (decrypted in memory, compared in constant time, wiped).
 - Repositories write ciphertext only through `VaultSession.write`, whose keys are checked
@@ -252,6 +256,12 @@ Copy and Services can't put it on the clipboard around `ClipboardManager`.
   (1.0) asks Touch ID or the master password first, and the main window is excluded from screen
   capture while any value shows. Sheets that hold typed or
   decrypted values (`LockObserving`) wipe them on lock and on close.
+- **File secrets (1.0):** Choose… or a drop on a place reads one regular file (no folder, pipe
+  or device; at most twice the 48,000-byte limit) with `open`/`read` straight into
+  `SecretBytes`, never through `Data` or `String`; Base64 is written into a new buffer the same
+  way. The sheet wipes the bytes after Add, on close and on lock. The file itself is left where
+  it is: FX Vault never deletes or changes it. Logs carry counts only, never the file name, the
+  same as item names.
 - **Files:** `.env` and `.fxvault` exports are written 0600 from creation (exclusive create, no
   symlinks, `F_FULLFSYNC`, atomic rename), with iCloud-sync and git-exposure warnings and a
   `.gitignore` offer.

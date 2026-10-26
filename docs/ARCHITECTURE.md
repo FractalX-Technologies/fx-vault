@@ -1331,6 +1331,16 @@ AppTests).
     checked; editing a synced secret offers "Push on Next Sync" (decisions 45–46). Secret →
     variable asks first (Cancel is the default). The typed value is wiped after save, on close
     and on lock.
+  - `FileSecret` (1.0 F1): `FileSecretViewModel` (`LockObserving`) adds one secret from a file
+    chosen in the sheet or dropped on a place (`.fileSecretDropTarget`, `ConfigTableModel.dropFile`,
+    `.p8`, `.pem` and `.json` only). `FileSecretReader` reads a regular file of at most
+    `Limits.maxFileSecretReadBytes` straight into `SecretBytes`; `FileSecretRules` (VaultCore)
+    measures it, picks Exact text or Base64 (binary files always Base64), checks the place's
+    limit after Base64 and suggests a name. The name field and the save are an inner
+    `ItemEditorViewModel` (`addItem(value:file:)`), so the name rules, Key Vault's included, are
+    New Secret's. The item keeps a `FileSecretModel` label (`file_detail`, v21) that the table
+    (`MaskedValueCell`) and the notes show in place of the mask. Bytes are wiped after Add, on
+    close and on lock.
   - `Environment` (§7.6, M4–M5): New / Settings / Rename / Duplicate, over
     `EnvironmentDirectoryModel` (fold-key name status: taken, reserved by a pending change,
     restores a deleted one). Settings edits the policy with `BranchPolicyEditorView` and shows
@@ -1454,6 +1464,7 @@ another route replaces the sheet; closing it sets `activeSheet` to nil (and open
 | `MainSheet` case | Folder | Entry view | Context |
 |---|---|---|---|
 | `.itemEditor` | `ItemEditor/` | `ItemEditorScreen` | `ItemEditorContext(repositoryID, scope, mode: .add(ConfigKind) / .edit(id) / .fill(id) / .move(id), fillMatchesGitHub = false)` |
+| `.fileSecret` (1.0) | `FileSecret/` | `FileSecretScreen` | `FileSecretContext(place: ItemPlaceModel, fileURL: URL? = nil)` (a dropped file, or nil for Choose…) |
 | `.newEnvironment` | `Environment/` | `NewEnvironmentScreen` | `NewEnvironmentContext(repositoryID)` |
 | `.environmentSettings` | `Environment/` | `EnvironmentSettingsScreen` | `EnvironmentContext(repositoryID, environmentID)` |
 | `.renameEnvironment` | `Environment/` | `RenameEnvironmentScreen` | `EnvironmentContext` |

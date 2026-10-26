@@ -36,6 +36,8 @@ struct ConfigRowModel: Identifiable, Hashable {
     var overrides: String?
     /// An organization item the repository inherits (1.0, B7a): read only, never in ``rows``.
     var inherited: InheritedRowModel?
+    /// The file the value came from (1.0 F1): the table and the notes show it while masked.
+    var file: FileSecretModel?
 
     init(_ item: ConfigItemModel) {
         id = item.id
@@ -49,6 +51,7 @@ struct ConfigRowModel: Identifiable, Hashable {
         syncedName = item.syncedName == item.name ? nil : item.syncedName
         linkCount = item.isLinked ? item.linkCount : 0
         heldBy = item.heldBy
+        file = item.file
     }
 
     /// An inherited row: GitHub gives the organization's item to this repository.
@@ -713,6 +716,12 @@ final class RepoDetailViewModel: LockObserving {
     func add() {
         guard canEdit else { return }
         present(.add(kind))
+    }
+
+    func addFileSecret(from url: URL?) {
+        guard canEdit else { return }
+        kind = .secret
+        dependencies.actions.present(.fileSecret(FileSecretContext(place: .scope(repositoryID: repositoryID, scope: scope), fileURL: url)))
     }
 
     // MARK: - Import and paste (v0.1.1)

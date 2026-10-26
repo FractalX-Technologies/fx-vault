@@ -7657,6 +7657,369 @@
         }
       }
     },
+    "fileSecret.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "fileSecret.binary" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "binary"
+          }
+        }
+      }
+    },
+    "fileSecret.bytes" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld byte](inflect: true)"
+          }
+        }
+      }
+    },
+    "fileSecret.choose" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose…"
+          }
+        }
+      }
+    },
+    "fileSecret.drop.detail" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · up to %2$@"
+          }
+        }
+      }
+    },
+    "fileSecret.drop.refused.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Drop a .p8, .pem or .json file. For any other file, choose More › Add File Secret…."
+          }
+        }
+      }
+    },
+    "fileSecret.drop.refused.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This file can't be dropped here"
+          }
+        }
+      }
+    },
+    "fileSecret.drop.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Drop to add as a file secret"
+          }
+        }
+      }
+    },
+    "fileSecret.encoding.base64" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Base64"
+          }
+        }
+      }
+    },
+    "fileSecret.encoding.text" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Exact text"
+          }
+        }
+      }
+    },
+    "fileSecret.error.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This file is empty: there is nothing to store."
+          }
+        }
+      }
+    },
+    "fileSecret.error.notAFile" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose a file, not a folder or a device."
+          }
+        }
+      }
+    },
+    "fileSecret.error.tooLarge" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Stored as %1$@, this file is %2$@. This place holds up to %3$@."
+          }
+        }
+      }
+    },
+    "fileSecret.error.tooLargeToRead" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This file is %1$@. A secret holds up to %2$@."
+          }
+        }
+      }
+    },
+    "fileSecret.error.unreadable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault could not read this file."
+          }
+        }
+      }
+    },
+    "fileSecret.label.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From the file %@"
+          }
+        }
+      }
+    },
+    "fileSecret.label.accessibility.details" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From the file %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "fileSecret.label.file" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "file"
+          }
+        }
+      }
+    },
+    "fileSecret.limits" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub %1$lld bytes · Key Vault %2$lld"
+          }
+        }
+      }
+    },
+    "fileSecret.limits.file" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "this file %1$@ (%2$lld as Base64)"
+          }
+        }
+      }
+    },
+    "fileSecret.lines" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld line](inflect: true)"
+          }
+        }
+      }
+    },
+    "fileSecret.menu" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add File Secret…"
+          }
+        }
+      }
+    },
+    "fileSecret.name" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "fileSecret.name.hint" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Letters, digits and _ · saved in capitals"
+          }
+        }
+      }
+    },
+    "fileSecret.noFile" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No file chosen"
+          }
+        }
+      }
+    },
+    "fileSecret.panel.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose the file to store as a secret. FX Vault reads it; the file is not changed."
+          }
+        }
+      }
+    },
+    "fileSecret.panel.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose"
+          }
+        }
+      }
+    },
+    "fileSecret.panel.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add File Secret"
+          }
+        }
+      }
+    },
+    "fileSecret.storeAs" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Store as"
+          }
+        }
+      }
+    },
+    "fileSecret.storeAs.base64Hint" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use Base64 if your workflow decodes it"
+          }
+        }
+      }
+    },
+    "fileSecret.storeAs.binary" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Binary files are stored as Base64."
+          }
+        }
+      }
+    },
+    "fileSecret.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add file secret"
+          }
+        }
+      }
+    },
+    "fileSecret.trailingLineBreaks" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trailing line breaks are removed."
+          }
+        }
+      }
+    },
     "folder.copiedItem.notice" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

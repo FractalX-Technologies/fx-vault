@@ -193,6 +193,16 @@ final class DestinationDetailViewModel: LockObserving {
         dependencies.actions.present(.itemEditor(ItemEditorContext(destinationID: destinationID, mode: .add(kind))))
     }
 
+    func addFileSecret(from url: URL?) {
+        guard canEdit else { return }
+        kind = .secret
+        dependencies.actions.present(.fileSecret(FileSecretContext(place: .destination(destinationID), fileURL: url)))
+    }
+
+    var maxValueBytes: Int {
+        destination.map { DestinationRules.maxValueBytes(for: $0.provider) } ?? Limits.maxKeyVaultValueBytes
+    }
+
     func edit(_ row: ConfigRowModel) {
         guard canEdit, !row.isDeleted else { return }
         let mode: ItemEditorContext.Mode = row.hasValue ? .edit(row.id) : .fill(row.id)
@@ -563,5 +573,6 @@ extension ConfigRowModel {
         syncedName = nil
         linkCount = item.isLinked ? item.linkCount : 0
         heldBy = item.heldBy
+        file = item.file
     }
 }

@@ -14,6 +14,10 @@ enum MainSheet: Hashable, Identifiable {
     /// Add, edit, fill or convert/move one secret or variable.
     case itemEditor(ItemEditorContext)
 
+    // FileSecret/ (1.0 F1)
+    /// Add file secret: a secret whose value is a file's text or its Base64.
+    case fileSecret(FileSecretContext)
+
     // Main/Organization/ (1.0)
     /// Add or edit an organization secret or variable, with who can use it.
     case orgItemEditor(OrgItemEditorContext)
@@ -83,6 +87,13 @@ enum MainSheet: Hashable, Identifiable {
 }
 
 // MARK: - Contexts
+
+/// Where ``FileSecretScreen`` adds the secret (1.0 F1), and the file dropped on the place; nil
+/// opens the sheet for Choose….
+struct FileSecretContext: Hashable {
+    let place: ItemPlaceModel
+    var fileURL: URL?
+}
 
 /// What ``CopyAllScreen`` copies (1.0 D6c4): a repository scope, folder, destination or
 /// organization.
@@ -172,6 +183,12 @@ struct ItemEditorContext: Hashable {
         place = .scope(repositoryID: repositoryID, scope: scope)
         self.mode = mode
         self.fillMatchesGitHub = fillMatchesGitHub
+    }
+
+    /// An item of any place (Add file secret, 1.0 F1).
+    init(place: ItemPlaceModel, mode: Mode) {
+        self.place = place
+        self.mode = mode
     }
 
     /// Add or edit an item of a folder.

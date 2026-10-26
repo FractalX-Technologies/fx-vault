@@ -52,7 +52,8 @@ extension NotesPlaceModel where Self: ConfigTableModel {
                 : nil,
             note: row.notesNote,
             canReveal: isOwn && row.kind == .secret && row.hasValue,
-            isInherited: !isOwn
+            isInherited: !isOwn,
+            file: row.file
         )
     }
 }

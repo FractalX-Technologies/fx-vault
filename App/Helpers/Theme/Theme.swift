@@ -107,6 +107,10 @@ enum Theme {
         /// The Reset vault dialog (board Reset-Confirm).
         static let resetDialogWidth: CGFloat = 380
         static let sheetWidth: CGFloat = 440
+        /// Add file secret (board Place-FileSheet).
+        static let fileSecretSheetWidth: CGFloat = 460
+        /// The drop overlay sits this far inside a place (board Place-FileDrop).
+        static let fileDropInset: CGFloat = 8
         /// The inset of the 1.0 dialogs (boards Sync-Progress, Sync-Delete, NewRepo, Share-*).
         static let dialogInset: CGFloat = 22
         /// A row of a dialog's grey list box (board Sync-Delete).
@@ -337,6 +341,8 @@ enum Theme {
         static let changedDot: CGFloat = 1.5
         /// Dashed hairlines ("+ New Environment"): 4 pt dashes, 4 pt gaps.
         static let dashPattern: [CGFloat] = [4, 4]
+        /// The dashed outline of a place a file is dragged over (board Place-FileDrop).
+        static let dropTarget: CGFloat = 1.5
         /// The outlined center cell of the brand mark, as a fraction of the mark's size.
         static let brandMarkCenterFraction: CGFloat = 0.03
     }

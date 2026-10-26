@@ -156,6 +156,16 @@ enum AccessibilityID {
         static let value = "itemEditor.value"
     }
 
+    /// Add file secret (1.0 F1; board Place-FileSheet).
+    enum FileSecret {
+        static let name = "fileSecret.name"
+        /// The file row: its name and facts, and Choose….
+        static let file = "fileSecret.file"
+        static let choose = "fileSecret.choose"
+        static let limits = "fileSecret.limits"
+        static let add = "fileSecret.add"
+    }
+
     /// Preferences › Accounts.
     enum Accounts {
         /// An organization row of an account (its login, then its access chip).

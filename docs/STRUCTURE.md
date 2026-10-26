@@ -99,6 +99,10 @@ FXVault/
 │   │   │                            # FolderNameScreen/ViewModel (New Folder…, Rename…),
 │   │   │                            # FolderDestinationModel/View (a received copy), FolderCopy,
 │   │   │                            # FolderRepository+Extension (v0.7.0)
+│   │   ├── FileSecret/              # FileSecretScreen/ViewModel (Add file secret, 1.0 F1),
+│   │   │                            # FileSecretReader (a file straight into SecretBytes),
+│   │   │                            # FileSecretPanels, FileSecretDropTarget (a drop on a place),
+│   │   │                            # FileSecretCopy
 │   │   ├── ItemEditor/              # ItemEditorScreen/ViewModel (add, edit, fill, convert/move),
 │   │   │                            # ItemEditorFields (ItemNameField, ItemValueRules,
 │   │   │                            # ItemFillChoiceField, ItemEditorReadOnlyName,
@@ -142,7 +146,7 @@ FXVault/
 │   │                                # ResetVaultSheet (+ its Security card; board Reset-Confirm),
 │   │                                # Accounts(+ViewModel), Advanced,
 │   │                                # SharingSettingsScreen/ViewModel (the sent log; v0.9.0)
-│   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
+│   ├── Components/                  # SecretValueEditor, MaskedValueCell (+ FileSecretChip, F1), RecoveryKeyGridView,
 │   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,
 │   │   │                            # PasswordStrengthMeter, NewPasswordFields,
 │   │   │                            # WindowAccessor, WindowDragArea, EscapeKeyMonitor (onEscapeKey),
@@ -218,6 +222,8 @@ FXVault/
 │   │                                # Variable, Copy To's rows
 │   ├── CopyAllTests.swift           # D6c4: Copy All asks ReauthGate first, copies the notes
 │   │                                # text, clears it after 30 s
+│   ├── FileSecretTests.swift        # 1.0 F1: the sheet over real temp files, Base64 and binary
+│   │                                # files, limits, the drop, the table and notes labels
 │   ├── MainScreenPresentationTests.swift # v0.3.0: column keyboard selection, initials, dates
 │   ├── VisualSnapshotTests.swift    # v0.3.0, opt-in (FXV_SNAPSHOTS_DIR): light/dark PNGs of the
 │   │                                # main screens for visual review (docs/DESIGN.md)
@@ -239,13 +245,14 @@ FXVault/
 │   │   │   │                        # ConfigKind, BranchPattern, DeploymentBranchPolicy,
 │   │   │   │                        # Folder/FolderItem, ItemPlace (v0.7.0), Destination
 │   │   │   │                        # (provider, target, destination, item; v0.8.0),
-│   │   │   │                        # SentShare, ShareExpiryChoice (v0.9.0)
+│   │   │   │                        # SentShare, ShareExpiryChoice (v0.9.0), FileSecret (1.0)
 │   │   │   ├── Validation/          # PathSegment, GitHubName, EnvironmentName, FolderName (v0.7.0), RepoName,
 │   │   │   │                        # OwnerLogin, GitHubHost, BranchPattern validators,
 │   │   │   │                        # DisplayNameSanitizer, ValueNormalizer, ScopeCapacity,
 │   │   │   │                        # NameAvailability, UnicodeScalarPolicy, DestinationRules
 │   │   │   │                        # (remote names, targets, PublicNamePrefixes; v0.8.0),
-│   │   │   │                        # StageRisk (production stages, v0.9.0)
+│   │   │   │                        # StageRisk (production stages, v0.9.0), FileSecretRules
+│   │   │   │                        # (Exact text or Base64, sizes, suggested names; 1.0)
 │   │   │   ├── Errors/              # VaultError, ValidationError
 │   │   │   └── Extensions/          # Duration+Extension
 │   │   ├── VaultCrypto/             # Argon2id (only Clibsodium import), KDFParameters,
