@@ -10,11 +10,20 @@ and the cask is in [FractalX-Technologies/homebrew-tap](https://github.com/Fract
 brew install --cask fractalx-technologies/tap/fx-vault
 ```
 
-**CI signs, notarizes and publishes each `v*` tag** with the organization's signing
-material (see [CI](#ci-releaseyml)): the Developer ID certificate from fastlane match
+**A release is one click:** Actions › Release › Run workflow on `main` with the version, or
+
+```sh
+gh workflow run release.yml --repo FractalX-Technologies/fx-vault --ref main -f version=1.0.1
+```
+
+CI builds the DMG and signs it with the organization's signing material (see
+[CI](#ci-releaseyml)): the Developer ID certificate from fastlane match
 (`FractalX-Technologies/ios-certificates`) and the organization's App Store Connect API key.
+It notarizes the DMG, tags `v<version>` once the signed build passes, publishes it to GitHub
+Releases and bumps the cask in the tap. The cask bump runs only once the tap App exists
+([Homebrew](#homebrew-the-tap-app)); until then it is step 6 by hand.
 `scripts/release-local.sh --publish` on the maintainer's Mac stays the fallback. Use one
-publisher per version. The cask bump stays manual (step 6).
+publisher per version.
 
 | File | Role |
 |------|------|
@@ -91,17 +100,10 @@ names.
    `gh api repos/FractalX-Technologies/fx-vault/private-vulnerability-reporting --jq .enabled`
    must print `true`. Before the first release with environment writes, run the LiveE2E write
    suite on a throwaway repository and record the results in docs/API.md (Q6).
-2. **Tag and push.**
-
-   ```sh
-   git switch main && git pull --ff-only
-   git tag -a v0.1.0 -m "FX Vault 0.1.0"
-   git push origin v0.1.0
-   ```
-
-   The push starts `Release`: the `signed` job signs,
-   notarizes and publishes `FXVault-<version>.dmg` to the tag's release. When it succeeds,
-   skip steps 3 and 4 and go on to step 5.
+2. **Run `Release` on `main`** with the version (above). It refuses a version whose tag
+   exists. Pushing a `v*` tag by hand (admins only, ruleset) runs the same jobs without
+   creating the tag. When the run succeeds, skip steps 3 and 4 and go on to step 5, or to
+   step 7 when the `cask` job ran.
 3. **Optional rehearsal.** This runs the signed build without notarizing:
 
    ```sh
@@ -273,11 +275,13 @@ as release notes cite them.
 
 ## CI (`release.yml`)
 
-On a `v*` tag push, or by hand with `workflow_dispatch` and an optional `version` input:
+With Run workflow on `main` (`workflow_dispatch`, a required `version` input), or on a
+`v*` tag push. One release runs at a time (`concurrency: release`).
 
-1. **`meta`**: works out the version (from the input or the tag) and validates it.
-2. **`signed`**: on tags only, on `macos-26`, with no tests (`ci.yml` gates `main` before a tag), in environment `release` (deployments from `v*` tags only),
-   only on `FractalX-Technologies/fx-vault`. It fails with the names
+1. **`meta`**: works out the version (from the input or the tag) and validates it. Run
+   workflow only works on `main`, and only for a version whose tag doesn't exist yet.
+2. **`signed`**: on `macos-26`, with no tests (`ci.yml` gates `main`), in environment
+   `release` (deployments from `main` and `v*` tags only), only on `FractalX-Technologies/fx-vault`. It fails with the names
    of any secret or variable below that the repository can't read. It:
    - mints a read-only token of the `fractalx-ci-reader` GitHub App for `ios-certificates`
    - runs `bundle exec fastlane mac developer_id` in `ci/` (gems from `ci/Gemfile.lock`):
@@ -294,8 +298,9 @@ On a `v*` tag push, or by hand with `workflow_dispatch` and an optional `version
    The job only reads the repository (`contents: read`): fastlane's gems run next to the
    signing keys, installed with `bundle install` against the lockfile's checksums, never
    from a cache.
-3. **`publish`**: on the tag whose name is `v<version>`, in environment `release`, with no
-   signing secret. It downloads the artifact, attests the DMG with `actions/attest` and runs
+3. **`publish`**: in environment `release`, with no signing secret. After Run workflow it
+   first creates the annotated tag `v<version>` on the built commit. The ruleset lets
+   GitHub Actions bypass it, so the tag only exists after a signed build passed. It downloads the artifact, attests the DMG with `actions/attest` and runs
    `scripts/release-local.sh --publish-only`, which checks the sha256, the tag and the
    release, then uploads both files. Only this job gets `contents: write`, `id-token: write`
    and `attestations: write`.
@@ -314,9 +319,30 @@ On a `v*` tag push, or by hand with `workflow_dispatch` and an optional `version
 Build provenance attestations (`gh attestation verify`) exist only for releases that CI
 signed. A local release is verified with its `.sha256`, `spctl` and `stapler validate`.
 
+4. **`cask`**: only when the repository variable `TAP_APP_CLIENT_ID` is set. It mints a
+   token of the tap App for `homebrew-tap` (Contents: write) and runs
+   `scripts/bump-cask.sh --check-release`, which requires the published DMG to have the
+   artifact's sha256. Then it commits `fx-vault <version>` to the tap and pushes. Without
+   the variable, `publish` ends with a notice to bump the cask by hand.
+
 All actions are pinned to full commit SHAs. The workflow's default permission is
 `contents: read`. A ruleset limits creating, moving and deleting `v*` tags to the
-repository's admins.
+repository's admins and GitHub Actions.
+
+### Homebrew: the tap App
+
+The `cask` job needs a GitHub App that can write to `homebrew-tap`: `fractalx-ci-reader`
+only reads. Done once, by an organization admin:
+
+1. Organization › Developer settings › GitHub Apps › New: webhook off, Repository
+   permissions › Contents: Read and write, installable only on this account. Install it on
+   `homebrew-tap` only.
+2. Store its client ID as the repository variable `TAP_APP_CLIENT_ID`, and its private key as
+   the secret `TAP_APP_PRIVATE_KEY` of the `release` environment, from the file:
+   `gh secret set TAP_APP_PRIVATE_KEY --env release --repo FractalX-Technologies/fx-vault < key.pem`.
+   Then delete the `.pem`.
+
+The next release bumps the cask on its own.
 
 ## Forks and ad-hoc builds
 
