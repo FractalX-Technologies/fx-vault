@@ -2542,6 +2542,28 @@
         }
       }
     },
+    "delete.sheet.keyVault.linked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Their linked copies elsewhere stay."
+          }
+        }
+      }
+    },
+    "delete.sheet.keyVault.linked.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Its linked copies elsewhere stay."
+          }
+        }
+      }
+    },
     "delete.sheet.keyVault.one" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2769,17 +2791,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "List the destination and show what changed there since the last sync"
-          }
-        }
-      }
-    },
-    "destination.detail.review" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Review"
           }
         }
       }
@@ -3895,24 +3906,24 @@
         }
       }
     },
-    "envExport.cloud.desktopAndDocuments.note" : {
+    "envExport.cloud.desktopAndDocuments.plaintext" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This folder syncs to iCloud (Desktop & Documents), so the file leaves this Mac and Spotlight indexes it."
+            "value" : "This folder syncs to iCloud (Desktop & Documents), so the plaintext file leaves this Mac and Spotlight indexes it."
           }
         }
       }
     },
-    "envExport.cloud.drive.note" : {
+    "envExport.cloud.drive.plaintext" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This folder syncs to iCloud Drive, so the file leaves this Mac and Spotlight indexes it."
+            "value" : "This folder syncs to iCloud Drive, so the plaintext file leaves this Mac and Spotlight indexes it."
           }
         }
       }
@@ -4071,13 +4082,13 @@
         }
       }
     },
-    "envExport.gitignore.add" : {
+    "envExport.gitignore.addLine" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Add to .gitignore"
+            "value" : "Add %@ to .gitignore"
           }
         }
       }
@@ -7620,6 +7631,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "They are removed from this folder now. Copies in repositories and other folders stay."
+          }
+        }
+      }
+    },
+    "folder.deleteItems.message.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It’s removed from this folder now. Copies in repositories and other folders stay."
           }
         }
       }

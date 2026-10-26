@@ -35,6 +35,14 @@ nonisolated extension DestinationModel {
         [provider.shortTitle, stage].compactMap { $0 }.joined(separator: " · ")
     }
 
+    /// The Settings sheet's subtitle: the vault, and its tenant when one is set.
+    var targetDescription: String {
+        switch target {
+        case .azureKeyVault(let vaultName, let tenantID):
+            [vaultName, tenantID].compactMap { $0 }.joined(separator: " · ")
+        }
+    }
+
     /// "Key Vault · kv-sample-prod" (Copy To menus, the review).
     var copyTargetTitle: String {
         "\(provider.shortTitle) · \(title)"

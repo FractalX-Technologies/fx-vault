@@ -236,6 +236,8 @@ struct RepoDetailCopyTests {
         #expect(copy.placeDetail(itemName: "NEW_A") == "staging · user-a")
         #expect(copy.placeDetail(itemName: "OTHER") == "staging · NEW_A · user-a")
         #expect(copy.placePath == "\(TestFixtures.owner) › \(TestFixtures.repoName) › staging")
+        #expect(copy.placePath(itemName: "NEW_A") == copy.placePath)
+        #expect(copy.placePath(itemName: "OTHER") == "\(TestFixtures.owner) › \(TestFixtures.repoName) › staging · NEW_A")
         #expect(copy.blockedNote == nil, "an editable copy has a checkbox, not a note")
 
         model.openLinkedCopy(copy)

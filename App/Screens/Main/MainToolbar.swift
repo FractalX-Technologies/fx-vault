@@ -46,7 +46,7 @@ struct MainToolbarTitle: View {
         .help(path.joined(separator: Self.separator))
     }
 
-    private static let separator = " › "
+    private static let separator = PlaceCopy.pathSeparator
 
     /// The rows to try, widest first: the path, its tails down to the last step, then the app name.
     static func fallbacks(_ path: [String]) -> [[String]] {

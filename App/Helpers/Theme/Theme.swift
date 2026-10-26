@@ -246,8 +246,8 @@ enum Theme {
         static let envImportPasteSheetHeight: CGFloat = 660
         /// Height of the parse issue list under the import table.
         static let envIssueListMaxHeight: CGFloat = 96
-        /// Height of a name list in the export warnings ("Skipped: …").
-        static let envNameListMaxHeight: CGFloat = 88
+        /// A dialog's list of names scrolls past this (the export's "Skipped: …", the "Delete?" list).
+        static let dialogListMaxHeight: CGFloat = 88
         /// The names under a dialog note line up with its sentence, past the 13 pt symbol.
         static let dialogNoteIndent: CGFloat = 21
         static let envImportIncludeColumnWidth: CGFloat = 28

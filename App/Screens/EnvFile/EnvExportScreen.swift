@@ -162,12 +162,12 @@ private struct EnvExportAuthenticateView: View {
                 ProgressView()
                     .controlSize(.small)
             } else if !viewModel.hasSomethingToExport {
-                EnvExportSentence(text: String(
+                DialogSentence(String(
                     localized: "envExport.nothing",
                     defaultValue: "This scope has no values to export. Secrets without a value in FX Vault are never exported."
                 ))
             } else {
-                EnvExportSentence(text: String(
+                DialogSentence(String(
                     localized: "envExport.auth.message",
                     defaultValue: "Exporting writes \(viewModel.exportedCount) values to a file in plaintext. Confirm it's you with Touch ID or your master password."
                 ))
@@ -249,12 +249,12 @@ private struct EnvExportCloudWarningView: View {
                     systemImage: "icloud",
                     text: choice.destination.cloudSyncStatus == .iCloudDesktopAndDocuments
                         ? String(
-                            localized: "envExport.cloud.desktopAndDocuments.note",
-                            defaultValue: "This folder syncs to iCloud (Desktop & Documents), so the file leaves this Mac and Spotlight indexes it."
+                            localized: "envExport.cloud.desktopAndDocuments.plaintext",
+                            defaultValue: "This folder syncs to iCloud (Desktop & Documents), so the plaintext file leaves this Mac and Spotlight indexes it."
                         )
                         : String(
-                            localized: "envExport.cloud.drive.note",
-                            defaultValue: "This folder syncs to iCloud Drive, so the file leaves this Mac and Spotlight indexes it."
+                            localized: "envExport.cloud.drive.plaintext",
+                            defaultValue: "This folder syncs to iCloud Drive, so the plaintext file leaves this Mac and Spotlight indexes it."
                         )
                 )
             }
@@ -320,7 +320,7 @@ private struct EnvExportDoneView: View {
     @ViewBuilder
     private func gitignoreOffer(relativePath: String) -> some View {
         switch viewModel.gitignoreState {
-        case .offered:
+        case .offered(let line):
             DialogNote(
                 systemImage: "exclamationmark.triangle",
                 text: String(
@@ -328,7 +328,8 @@ private struct EnvExportDoneView: View {
                     defaultValue: "This folder is a git working tree and \(relativePath) isn’t ignored."
                 )
             ) {
-                Button(String(localized: "envExport.gitignore.add", defaultValue: "Add to .gitignore")) {
+                // The line is named before the click: it is what gets written to the file.
+                Button(String(localized: "envExport.gitignore.addLine", defaultValue: "Add \(line) to .gitignore")) {
                     viewModel.addGitignoreEntry()
                 }
                 .fxButtonStyle(.outline, size: .compact)
@@ -352,18 +353,6 @@ private struct EnvExportDoneView: View {
         case .notApplicable:
             EmptyView()
         }
-    }
-}
-
-/// A body sentence of the dialog: 13 pt, muted, wrapped.
-private struct EnvExportSentence: View {
-    let text: String
-
-    var body: some View {
-        Text(verbatim: text)
-            .fxTextStyle(.callout)
-            .foregroundStyle(Theme.Colors.mutedText)
-            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -412,7 +401,7 @@ private struct EnvExportNameList: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .textSelection(.enabled)
             }
-            .frame(maxHeight: Theme.Layout.envNameListMaxHeight)
+            .frame(maxHeight: Theme.Layout.dialogListMaxHeight)
             .padding(.leading, Theme.Layout.dialogNoteIndent)
         }
     }

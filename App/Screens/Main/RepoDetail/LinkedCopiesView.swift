@@ -13,19 +13,9 @@ struct LinkedChip<Model: ConfigTableModel>: View {
         Button {
             viewModel.showLinkedCopies(of: row)
         } label: {
-            let shape = RoundedRectangle(cornerRadius: Theme.Radius.token, style: .continuous)
-            HStack(spacing: Theme.Spacing.xSmall) {
-                Image(systemName: "link")
-                    .font(Theme.Typography.monoLabel)
-                    .accessibilityHidden(true)
-                Text(LinkedChipText.places(row.linkCount))
-                    .font(Theme.Typography.label)
-            }
-            .foregroundStyle(Theme.Colors.mutedText)
-            .padding(.horizontal, Theme.Spacing.smallMinus)
-            .frame(height: Theme.Layout.dialogTagHeight)
-            .overlay(shape.strokeBorder(Theme.Colors.hairlineStrong, lineWidth: Theme.Stroke.hairline))
-            .contentShape(shape)
+            StatusChip.dialogTag(LinkedChipText.places(row.linkCount), systemImage: "link", tone: .quiet)
+                // The tag has no fill: the whole tag takes the click, not only its glyphs.
+                .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.token, style: .continuous))
         }
         .buttonStyle(.plain)
         .fixedSize()
@@ -179,6 +169,12 @@ extension LinkedCopyModel {
         case .destination(_, _, let repositoryFullName, _, let displayName, _):
             PlaceCopy.path((repositoryFullName?.split(separator: "/").map(String.init) ?? []) + [displayName])
         }
+    }
+
+    /// The path, then the copy's own name when it differs from `itemName` (a renamed copy):
+    /// "example-org › api-service › staging · OLD_TOKEN".
+    func placePath(itemName: String) -> String {
+        name == itemName ? placePath : PlaceCopy.subline([placePath, name])
     }
 
     /// Why this copy can't take the new value, short: "read only", "environment deleted".

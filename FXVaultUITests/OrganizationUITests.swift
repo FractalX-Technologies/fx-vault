@@ -31,7 +31,19 @@ final class OrganizationUITests: VaultUITestCase {
 
         table.staticTexts["NPM_TOKEN"].rightClick()
         click(app.menuItems["Delete…"])
-        click(app.buttons[AccessibilityID.Place.deleteConfirm])
+        let confirm = app.buttons[AccessibilityID.Place.deleteConfirm]
+        XCTAssertTrue(confirm.waitForExistence(timeout: timeout), "Delete… opened no sheet")
+        // Neither button is the default: Return keeps the sheet and deletes nothing.
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertFalse(table.staticTexts["Deleted"].waitForExistence(timeout: 2), "Return deleted NPM_TOKEN")
+        XCTAssertTrue(confirm.exists, "Return closed the sheet")
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(confirm.waitForNonExistence(timeout: timeout), "Esc did not close the sheet")
+        XCTAssertFalse(table.staticTexts["Deleted"].exists, "Esc deleted NPM_TOKEN")
+
+        table.staticTexts["NPM_TOKEN"].rightClick()
+        click(app.menuItems["Delete…"])
+        click(confirm)
         XCTAssertTrue(table.staticTexts["Deleted"].waitForExistence(timeout: timeout), "NPM_TOKEN is not pending deletion")
     }
 

@@ -52,7 +52,8 @@ FXVault/
 │   │   │   ├── Place/               # every place's header (D6c3): PlaceHeader (name, subline,
 │   │   │   │                        # status line, ⋯ More), PlaceCopy,
 │   │   │   │                        # PlaceItemMoreItems (⋯ item actions), PlaceRefreshingLine,
-│   │   │   │                        # DeleteItemsSheet (the "Delete?" dialog of every place)
+│   │   │   │                        # DeleteItemsSheet (the "Delete?" dialog of every place),
+│   │   │   │                        # ItemNameModel (a name keyed by its kind)
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
 │   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel
@@ -149,7 +150,7 @@ FXVault/
 │   │                                # SheetCallout, FXCheckboxRow, InlineErrorView,
 │   │                                # FXLinkButtonStyle, fxSheetContent), FlowLayout (v0.6.0),
 │   │                                # KeyHint (1.0), RingDot, DialogChrome (DialogSheet,
-│   │                                # dialog list box), DialogForm (rows, the field box,
+│   │                                # dialog list box, DialogNote, DialogSentence), DialogForm (rows, the field box,
 │   │                                # pop-ups, chips, tags; 1.0 D6d), GlassPanel
 │   │                                # (fxGlassPanel, MainWindowGround; D6c2b)
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,

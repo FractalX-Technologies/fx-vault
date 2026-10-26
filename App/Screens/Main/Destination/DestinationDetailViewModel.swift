@@ -480,6 +480,9 @@ struct DestinationRefreshPresentationModel: Equatable {
     struct HiddenNoteModel: Equatable, Identifiable {
         let text: String
         let names: [String]
+        /// Names FX Vault can't use: those secrets never sync (disabled and managed ones are
+        /// Key Vault's own choice).
+        let isWarning: Bool
 
         var id: String {
             text
@@ -508,7 +511,8 @@ struct DestinationRefreshPresentationModel: Equatable {
             guard let first = items.first else { return nil }
             return HiddenNoteModel(
                 text: DestinationCopy.hidden(items.count, reason: reason ?? first.reason),
-                names: items.map(\.remoteName)
+                names: items.map(\.remoteName),
+                isWarning: reason == nil
             )
         }
     }

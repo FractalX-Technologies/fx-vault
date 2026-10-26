@@ -136,10 +136,6 @@ nonisolated enum DestinationCopy {
         String(localized: "destination.detail.noDrift", defaultValue: "No changes since your last sync")
     }
 
-    static var review: String {
-        String(localized: "destination.detail.review", defaultValue: "Review")
-    }
-
     static var tableEmpty: String {
         String(
             localized: "destination.table.empty",

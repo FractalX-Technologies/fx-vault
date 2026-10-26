@@ -295,15 +295,6 @@ struct ConfigSelectionActionsModel {
     }
 }
 
-extension ConfigDeletionModel {
-    /// The first three names, then "and N more".
-    static func names(_ names: [String]) -> String {
-        let shown = Array(names.prefix(3)).formatted(.list(type: .and))
-        guard names.count > 3 else { return shown }
-        return String(localized: "main.detail.delete.names.more", defaultValue: "\(names.prefix(3).joined(separator: ", ")) and \(names.count - 3) more")
-    }
-}
-
 extension ItemCopyRequestModel {
     var title: String {
         conflicts.count == 1
@@ -320,7 +311,7 @@ extension ItemCopyRequestModel {
     var message: String {
         String(
             localized: "main.detail.copy.conflict.message",
-            defaultValue: "Replace sets the copied values there (\(ConfigDeletionModel.names(conflicts))); Keep Existing leaves them as they are. The other items are copied either way, as changes for the next Sync."
+            defaultValue: "Replace sets the copied values there (\(PlaceCopy.names(conflicts))); Keep Existing leaves them as they are. The other items are copied either way, as changes for the next Sync."
         )
     }
 }

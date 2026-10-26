@@ -30,6 +30,12 @@ struct StatusChip: View {
         case outlined
     }
 
+    /// The 1.0 dialogs' tag: ink (`production`) or quiet (a linked row's "3 places").
+    enum DialogTagTone: Hashable, Sendable {
+        case ink
+        case quiet
+    }
+
     /// The resolved colors of a chip (pure, for tests).
     struct Palette: Equatable {
         let foreground: Color
@@ -44,6 +50,8 @@ struct StatusChip: View {
     let height: CGFloat
     /// Nil draws the pill; a radius draws a rounded tag (``dialogTag(_:)``).
     private var cornerRadius: CGFloat?
+    /// A symbol before the title (``dialogTag(_:systemImage:tone:)``).
+    private var systemImage: String?
     private var font = Theme.Typography.caption
     private var horizontalPadding = Theme.Layout.chipPaddingHorizontal
 
@@ -89,18 +97,24 @@ struct StatusChip: View {
     }
 
     /// The 1.0 dialogs' tag beside a name (`production`, "Not verified"; board Share-Pick): 18 pt,
-    /// 6 pt corners, an ink hairline, 11 pt medium.
-    static func dialogTag(_ title: String) -> StatusChip {
-        var chip = StatusChip(
-            title: title,
-            palette: Palette(foreground: Theme.Colors.ink, background: nil, border: Theme.Colors.ink, dot: Theme.Colors.ink),
-            showsDot: false,
-            height: Theme.Layout.dialogTagHeight
-        )
+    /// 6 pt corners, an ink hairline, 11 pt medium. `.quiet` is muted on a `hairlineStrong` line
+    /// in 11 pt regular (board Folder-View: the link symbol and "3 places").
+    static func dialogTag(_ title: String, systemImage: String? = nil, tone: DialogTagTone = .ink) -> StatusChip {
+        var chip = StatusChip(title: title, palette: dialogTagPalette(tone), showsDot: false, height: Theme.Layout.dialogTagHeight)
         chip.cornerRadius = Theme.Radius.token
-        chip.font = Theme.Typography.labelEmphasized
+        chip.systemImage = systemImage
+        chip.font = tone == .ink ? Theme.Typography.labelEmphasized : Theme.Typography.label
         chip.horizontalPadding = Theme.Spacing.smallMinus
         return chip
+    }
+
+    static func dialogTagPalette(_ tone: DialogTagTone) -> Palette {
+        switch tone {
+        case .ink:
+            Palette(foreground: Theme.Colors.ink, background: nil, border: Theme.Colors.ink, dot: Theme.Colors.ink)
+        case .quiet:
+            Palette(foreground: Theme.Colors.mutedText, background: nil, border: Theme.Colors.hairlineStrong, dot: Theme.Colors.mutedText)
+        }
     }
 
     var body: some View {
@@ -108,10 +122,17 @@ struct StatusChip: View {
             if showsDot {
                 StatusDot(color: palette.dot)
             }
-            Text(title)
-                .font(font)
-                .foregroundStyle(palette.foreground)
-                .lineLimit(1)
+            HStack(spacing: Theme.Spacing.xSmall) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(Theme.Typography.monoLabel)
+                        .accessibilityHidden(true)
+                }
+                Text(title)
+                    .font(font)
+                    .lineLimit(1)
+            }
+            .foregroundStyle(palette.foreground)
         }
         .padding(.horizontal, horizontalPadding)
         .frame(height: height)

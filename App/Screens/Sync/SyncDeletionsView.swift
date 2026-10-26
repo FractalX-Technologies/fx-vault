@@ -34,7 +34,7 @@ struct SyncDeletionsView: View {
                     }
                     .fxDialogListBox()
                     ForEach(viewModel.deletionRows.flatMap(\.environments)) { environment in
-                        note(String(
+                        DialogSentence(String(
                             localized: "sync.deletions.workflowWarning",
                             defaultValue: "Workflows that still reference \(environment.name) will recreate it empty."
                         ))
@@ -66,13 +66,6 @@ struct SyncDeletionsView: View {
                 isBoxed: false
             )
         }
-    }
-
-    private func note(_ text: String) -> some View {
-        Text(verbatim: text)
-            .fxTextStyle(.callout)
-            .foregroundStyle(Theme.Colors.mutedText)
-            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
