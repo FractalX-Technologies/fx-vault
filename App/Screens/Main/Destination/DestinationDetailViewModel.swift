@@ -440,11 +440,28 @@ final class DestinationDetailViewModel: LockObserving {
             do throws(DestinationSyncError) {
                 let result = try await sync.refresh(destinationID: destination.id)
                 self?.refresh = DestinationRefreshPresentationModel(result)
+                await self?.saveSubscriptionIfMissing(destination)
             } catch {
                 self?.alert = error.presentation(provider: destination.provider)
             }
             self?.isRefreshing = false
         })
+    }
+
+    /// A Key Vault imported before 1.0 D6c6 has no subscription: its Refresh looks it up (`az`),
+    /// so the sidebar groups it under Azure › subscription. A failure leaves it under Azure.
+    private func saveSubscriptionIfMissing(_ destination: DestinationModel) async {
+        guard destination.repositoryID == nil, destination.subscription == nil,
+              case .azureKeyVault(let name, let tenantID) = destination.target
+        else { return }
+        do {
+            guard let subscription = try await dependencies.azureDiscovery.subscription(ofVaultNamed: name, tenantID: tenantID) else {
+                return
+            }
+            try dependencies.destinations.setSubscription(subscription, of: destination.id)
+        } catch {
+            AppLog.ui.error("Key Vault subscription lookup failed")
+        }
     }
 
     /// Review: the drift sheet for this destination.

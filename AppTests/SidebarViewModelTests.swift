@@ -280,6 +280,45 @@ struct SidebarViewModelTests {
         #expect(sidebar.selectedRepo?.importedRepoID == id)
     }
 
+    /// 1.0 D6c6 (board Main2-Repository): Azure › subscription › vault. A vault imported before
+    /// subscriptions were saved stays directly under Azure; a subscription matches the search.
+    @Test func keyVaultsGroupUnderTheirSubscription() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let sidebar = SidebarViewModel(app: harness.app)
+        let production = KeyVaultSubscriptionModel(id: UUID(), name: "Example Production")
+        let development = KeyVaultSubscriptionModel(id: UUID(), name: "Example Development")
+        func vault(_ name: String, _ subscription: KeyVaultSubscriptionModel?) throws -> DestinationID {
+            try harness.data.destinations.createDestination(
+                repositoryID: nil,
+                target: .azureKeyVault(vaultName: name, tenantID: nil),
+                stage: nil,
+                subscription: subscription
+            )
+        }
+        let prod = try vault("kv-example-prod", production)
+        let legacy = try vault("kv-example-legacy", nil)
+        let dev = try vault("kv-example-dev", development)
+        let shared = try vault("kv-example-shared", production)
+        #expect(await TestFixtures.eventually { sidebar.keyVaults.count == 4 })
+
+        let azure = sidebar.visibleAzure
+        #expect(azure.ungrouped.map(\.id) == [legacy])
+        #expect(azure.subscriptions.map(\.subscription) == [development, production], "by name")
+        #expect(azure.subscriptions.map { $0.vaults.map(\.id) } == [[dev], [prod, shared]])
+
+        #expect(sidebar.isExpanded(subscription: production.id), "open, as on the board")
+        sidebar.toggle(subscription: production.id)
+        #expect(!sidebar.isExpanded(subscription: production.id))
+        sidebar.searchText = "production"
+        #expect(sidebar.isExpanded(subscription: production.id), "a search opens every subscription")
+        #expect(sidebar.visibleAzure.subscriptions.map { $0.vaults.map(\.id) } == [[prod, shared]])
+        #expect(sidebar.visibleAzure.ungrouped.isEmpty)
+        sidebar.searchText = ""
+        #expect(!sidebar.isExpanded(subscription: production.id))
+        sidebar.toggle(subscription: production.id)
+        #expect(sidebar.isExpanded(subscription: production.id))
+    }
+
     @Test func selectingARepositoryWaitsForTheVaultObservation() async throws {
         let harness = try await TestHarness(vault: .unlocked)
         let sidebar = SidebarViewModel(app: harness.app)

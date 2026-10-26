@@ -22,6 +22,10 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
     public var stageKey: String?
     public var sortOrder: Int
     public var lastRefreshedAt: Date?
+    /// The Azure subscription of a Key Vault of its own (v20, 1.0), lowercased UUID text and its
+    /// name; nil until Connect Azure or a Refresh saves it.
+    public var subscriptionID: String?
+    public var subscriptionName: String?
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -32,6 +36,7 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
         stage: String?,
         sortOrder: Int,
         lastRefreshedAt: Date? = nil,
+        subscription: KeyVaultSubscriptionModel? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -46,6 +51,7 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
         self.lastRefreshedAt = lastRefreshedAt
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        setSubscription(subscription)
     }
 
     /// The target the settings describe. Throws ``StoreError/invalidStoredValue`` for a tampered
@@ -55,6 +61,17 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
             throw .invalidStoredValue
         }
         return target
+    }
+
+    /// The saved subscription; nil when either column is missing (a hand-edited row).
+    public var subscription: KeyVaultSubscriptionModel? {
+        guard let text = subscriptionID, let id = UUID(uuidString: text), let name = subscriptionName else { return nil }
+        return KeyVaultSubscriptionModel(id: id, name: name)
+    }
+
+    public mutating func setSubscription(_ subscription: KeyVaultSubscriptionModel?) {
+        subscriptionID = subscription?.id.uuidString.lowercased()
+        subscriptionName = subscription?.name
     }
 
     /// Replaces the stage (and its key).
@@ -77,6 +94,7 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
             stage: stage,
             sortOrder: sortOrder,
             lastRefreshedAt: lastRefreshedAt,
+            subscription: subscription,
             secretCount: secretCount,
             variableCount: variableCount,
             pendingCount: pendingCount,
@@ -96,6 +114,8 @@ public struct DestinationRecord: Codable, Sendable, Hashable, FetchableRecord, P
         case stageKey = "stage_key"
         case sortOrder = "sort_order"
         case lastRefreshedAt = "last_refreshed_at"
+        case subscriptionID = "subscription_id"
+        case subscriptionName = "subscription_name"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }

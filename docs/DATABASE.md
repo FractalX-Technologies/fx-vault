@@ -636,6 +636,19 @@ CREATE TABLE org_item_repositories (item_id TEXT NOT NULL REFERENCES org_items(i
   `synced_fp`, visibility differs, or the list was edited), else synced. A secret with no value
   is synced. No synced value is kept, so a changed value cannot be reverted (as destinations).
 
+### v20_key_vault_subscriptions (1.0)
+
+```sql
+ALTER TABLE destinations ADD COLUMN subscription_id TEXT
+  CHECK (subscription_id IS NULL OR length(subscription_id) = 36);
+ALTER TABLE destinations ADD COLUMN subscription_name TEXT
+  CHECK (subscription_name IS NULL OR length(subscription_name) BETWEEN 1 AND 255);
+```
+
+- Additive. The Azure subscription of a Key Vault of its own (D6c6), so the sidebar shows Azure ›
+  subscription › vault. Connect Azure saves it; vaults imported before v20 keep NULL (directly
+  under Azure) until a Refresh looks it up with `az`. FX Vault always writes both columns together.
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -652,7 +665,7 @@ CREATE TABLE org_item_repositories (item_id TEXT NOT NULL REFERENCES org_items(i
 | `folders` | `FolderRecord` | `FolderStore` | Unique by `name_key`, sidebar order, v0.7.0 |
 | `folder_items` | `FolderItemRecord` (with ciphertext; `FolderItemModel` without) | `FolderStore` | Always with a value; `link_id` groups span `config_items`, v0.7.0 |
 | `provider_connections` | — | — | Empty and unused since v16 (Supabase and Vercel tokens, v0.8.0) |
-| `destinations` | `DestinationRecord` (`DestinationSettings` in `settings_json`) | `DestinationStore` | Unique per repository by `target_key`, v0.8.0; a NULL `repository_id` is a Key Vault of its own, unique by `target_key` (v18, 1.0) |
+| `destinations` | `DestinationRecord` (`DestinationSettings` in `settings_json`) | `DestinationStore` | Unique per repository by `target_key`, v0.8.0; a NULL `repository_id` is a Key Vault of its own, unique by `target_key` (v18, 1.0); its Azure subscription (v20) |
 | `destination_items` | `DestinationItemRecord` (with ciphertext), `DestinationItemState` (without) | `DestinationStore` | Value optional for secrets; `link_id` groups span all three item tables, v0.8.0; `share_hold` (v0.9.0) |
 | `destination_journal` | `DestinationJournalRecord` | `DestinationStore` | Destination writes, names and push fingerprints only, v0.8.0 |
 | `retired_destinations` | — (labels as `String`) | `DestinationStore` | The one-time notice after v16, names only, 1.0 |

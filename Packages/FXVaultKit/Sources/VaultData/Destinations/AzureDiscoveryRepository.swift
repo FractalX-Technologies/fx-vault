@@ -40,6 +40,25 @@ public struct AzureDiscoveryRepository: Sendable {
         try await discovery().discover()
     }
 
+    /// The subscription whose listing holds the vault `name` (any case), in `tenantID` when given:
+    /// what a Refresh saves for a Key Vault imported before 1.0 D6c6. Nil when none lists it.
+    public func subscription(ofVaultNamed name: String, tenantID: String?) async throws(DestinationError) -> KeyVaultSubscriptionModel? {
+        Self.subscription(ofVaultNamed: name, tenantID: tenantID, in: try await discover())
+    }
+
+    static func subscription(
+        ofVaultNamed name: String,
+        tenantID: String?,
+        in listed: [AzureSubscriptionVaultsModel]
+    ) -> KeyVaultSubscriptionModel? {
+        let entry = listed.first { entry in
+            guard tenantID == nil || entry.subscription.tenantID.lowercased() == tenantID?.lowercased() else { return false }
+            let vaults = (try? entry.vaults.get()) ?? []
+            return vaults.contains { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        }
+        return entry.map { KeyVaultSubscriptionModel(id: $0.subscription.id, name: $0.subscription.name) }
+    }
+
     private func discovery() async -> AzureCLIDiscovery {
         AzureCLIDiscovery(cli: await cli.resolve())
     }

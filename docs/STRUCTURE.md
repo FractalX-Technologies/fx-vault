@@ -245,7 +245,7 @@ FXVault/
 │   │   │                            # DestinationFieldAAD v0.8.0)
 │   │   ├── VaultStore/              # (only GRDB import)
 │   │   │   ├── Database/            # VaultDatabase, DatabaseFactory, DatabaseTimestamp, StoreConstants
-│   │   │   ├── Migrations/          # VaultMigrator, MigrationSQL (v1–v15, frozen)
+│   │   │   ├── Migrations/          # VaultMigrator, MigrationSQL (v1–v20, frozen)
 │   │   │   ├── Records/             # Vault/KeyWrap, Account, Repository, Environment/BranchPattern,
 │   │   │   │                        # ConfigItem/ConfigItemState, SyncJournal/ImportedSharePackage,
 │   │   │   │                        # Folder/FolderItem (v0.7.0), Destination (destinations,

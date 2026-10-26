@@ -28,6 +28,7 @@ public enum VaultMigrator {
         case v17Organizations = "v17_organizations"
         case v18StandaloneKeyVaults = "v18_standalone_key_vaults"
         case v19OrgItemChanges = "v19_org_item_changes"
+        case v20KeyVaultSubscriptions = "v20_key_vault_subscriptions"
 
         /// The newest migration this build knows.
         public static var latest: Migration {
@@ -64,6 +65,7 @@ public enum VaultMigrator {
             case .v17Organizations: MigrationSQL.v17Organizations
             case .v18StandaloneKeyVaults: MigrationSQL.v18StandaloneKeyVaults
             case .v19OrgItemChanges: MigrationSQL.v19OrgItemChanges
+            case .v20KeyVaultSubscriptions: MigrationSQL.v20KeyVaultSubscriptions
             }
         }
     }

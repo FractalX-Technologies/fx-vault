@@ -36,6 +36,8 @@ final class SidebarViewModel {
     /// The owner nodes showing their repositories; collapsed by default, and a selection
     /// expands the nodes above it.
     private(set) var expandedOwnerIDs: Set<SidebarOwnerModel.ID> = []
+    /// Azure subscriptions the user closed (1.0 D6c6).
+    private(set) var collapsedSubscriptionIDs: Set<UUID> = []
     /// The owner nodes whose "Show N more" was clicked.
     private(set) var fullyShownOwnerIDs: Set<SidebarOwnerModel.ID> = []
     /// The folders (v0.7.0), in the user's order.
@@ -339,9 +341,27 @@ final class SidebarViewModel {
 
     // MARK: - Azure Key Vault (1.0)
 
-    /// The Key Vaults of their own whose name matches the search.
+    /// The Key Vaults of their own whose name, or whose subscription's, matches the search.
     var visibleKeyVaults: [DestinationModel] {
-        keyVaults.filter { matchesSearch($0.title) }
+        keyVaults.filter { vault in matchesSearch(vault.title) || vault.subscription.map { matchesSearch($0.name) } == true }
+    }
+
+    /// Azure › subscription › vault (1.0 D6c6, board Main2-Repository).
+    var visibleAzure: SidebarAzureModel {
+        SidebarAzureModel(vaults: visibleKeyVaults)
+    }
+
+    /// Subscriptions start open (the board); a search shows every one open.
+    func isExpanded(subscription id: UUID) -> Bool {
+        isSearching || !collapsedSubscriptionIDs.contains(id)
+    }
+
+    func toggle(subscription id: UUID) {
+        if collapsedSubscriptionIDs.contains(id) {
+            collapsedSubscriptionIDs.remove(id)
+        } else {
+            collapsedSubscriptionIDs.insert(id)
+        }
     }
 
     func keyVault(_ id: DestinationID) -> DestinationModel? {

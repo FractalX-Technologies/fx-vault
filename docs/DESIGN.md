@@ -450,8 +450,10 @@ foreground color, so `.primary` text still turns white on selected rows.
   a value and the pending dot, then the runtime destinations. Clicking the repository row again
   goes back to the repository scope; Up and Down walk the branch once one of its rows was
   clicked.
-- Azure lists the Key Vaults of their own flat (`key`, level 0; context menu and the detail's
-  Actions: Remove from FX Vault…) until the subscriptions of 1g. The bottom of the sidebar holds
+- Azure › subscription › vault (1.0 D6c6, board Main2-Repository): the vaults without a saved
+  subscription first, directly under Azure (`key`, level 0), then one row per subscription by
+  name (`cloud`, sans title, chevron; open by default and while searching) with its vaults at
+  level 1 (context menu and the detail's Actions: Remove from FX Vault…). The bottom of the sidebar holds
   the listing state or the last notice in `.label`, then Lock and Settings as quiet icons.
 - Home (nothing selected; board Main2-Home): `EmptyStateView` with `square.3.layers.3d`, "Choose
   a place", the pending changes ("4 pending changes", or "No pending changes") and

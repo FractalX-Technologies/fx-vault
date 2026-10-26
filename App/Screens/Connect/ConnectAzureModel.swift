@@ -26,6 +26,8 @@ final class ConnectAzureModel {
         let name: String
         let location: String
         let tenantID: String
+        /// Saved with the vault: the sidebar groups Azure › subscription › vault (1.0 D6c6).
+        let subscription: KeyVaultSubscriptionModel
 
         var id: String {
             name.lowercased()
@@ -109,12 +111,15 @@ final class ConnectAzureModel {
             .filter { $0.subscription.state != .disabled && $0.subscription.state != .deleted }
             .map { entry in
                 let tenantID = entry.subscription.tenantID
+                let subscription = KeyVaultSubscriptionModel(id: entry.subscription.id, name: entry.subscription.name)
                 switch entry.vaults {
                 case .success(let vaults):
                     return Subscription(
                         id: entry.subscription.id,
                         name: entry.subscription.name,
-                        vaults: vaults.map { Vault(name: $0.name, location: $0.location, tenantID: tenantID) },
+                        vaults: vaults.map {
+                            Vault(name: $0.name, location: $0.location, tenantID: tenantID, subscription: subscription)
+                        },
                         failure: nil
                     )
                 case .failure(let error):
@@ -181,11 +186,18 @@ final class ConnectAzureModel {
             guard app.phase == .unlocked else { break }
             progress(vault.name)
             do {
-                let id = try existingVault(vault) ?? data.destinations.createDestination(
-                    repositoryID: nil,
-                    target: .azureKeyVault(vaultName: vault.name, tenantID: vault.tenantID),
-                    stage: nil
-                )
+                let id: DestinationID
+                if let existing = try existingVault(vault) {
+                    id = existing
+                    try data.destinations.setSubscription(vault.subscription, of: id)
+                } else {
+                    id = try data.destinations.createDestination(
+                        repositoryID: nil,
+                        target: .azureKeyVault(vaultName: vault.name, tenantID: vault.tenantID),
+                        stage: nil,
+                        subscription: vault.subscription
+                    )
+                }
                 let imported = try await data.destinationSync.importRemote(destinationID: id)
                 result.vaultCount += 1
                 result.secretCount += imported.imported.count

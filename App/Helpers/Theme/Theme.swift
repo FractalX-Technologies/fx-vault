@@ -348,5 +348,7 @@ enum Theme {
         static let environment = "smallcircle.filled.circle"
         static let folder = "folder"
         static let folderSelected = "folder.fill"
+        /// An Azure subscription in the sidebar (board Main2-Repository).
+        static let subscription = "cloud"
     }
 }

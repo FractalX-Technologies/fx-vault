@@ -39,7 +39,8 @@ public struct DestinationRepository: Sendable {
     public func createDestination(
         repositoryID: RepoID?,
         target: DestinationTargetModel,
-        stage: String?
+        stage: String?,
+        subscription: KeyVaultSubscriptionModel? = nil
     ) throws(ConfigRepositoryError) -> DestinationID {
         let validTarget = try performConfig { try DestinationRules.validate(target) }
         let validStage = try Self.validStage(stage)
@@ -60,6 +61,7 @@ public struct DestinationRepository: Sendable {
                 target: validTarget,
                 stage: validStage,
                 sortOrder: try store.nextSortOrder(repositoryID: repositoryID, in: tx),
+                subscription: subscription.flatMap(Self.validSubscription),
                 createdAt: now,
                 updatedAt: now
             )
@@ -80,6 +82,26 @@ public struct DestinationRepository: Sendable {
             record.updatedAt = now
             try store.updateDestination(record, in: tx)
         }
+    }
+
+    /// Saves the Azure subscription a Key Vault of its own was found in (1.0 D6c6: Connect Azure,
+    /// Refresh), so the sidebar groups it under that subscription. A name that is empty or longer
+    /// than 255 characters is not saved.
+    public func setSubscription(_ subscription: KeyVaultSubscriptionModel, of id: DestinationID) throws(ConfigRepositoryError) {
+        guard let valid = Self.validSubscription(subscription) else { return }
+        try write { _, tx, now in
+            guard var record = try store.fetchDestination(id: id, in: tx) else { throw ConfigRepositoryError.destinationNotFound }
+            guard record.subscription != valid else { return }
+            record.setSubscription(valid)
+            record.updatedAt = now
+            try store.updateDestination(record, in: tx)
+        }
+    }
+
+    private static func validSubscription(_ subscription: KeyVaultSubscriptionModel) -> KeyVaultSubscriptionModel? {
+        let name = subscription.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (1...Limits.maxSubscriptionNameLength).contains(name.unicodeScalars.count) else { return nil }
+        return KeyVaultSubscriptionModel(id: subscription.id, name: name)
     }
 
     /// Removes a destination and its items from the vault. Nothing is deleted remotely; their

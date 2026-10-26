@@ -2380,6 +2380,14 @@ Review B7a — inherited and shadowed names on a repository (2026-10-26, automat
 - Docs: DESIGN (inherited rows), ARCHITECTURE (Organizations), CHANGELOG, RELEASING (step 60).
 - Gates: build-for-testing OK (app and the FXVaultKit package scheme), lint OK, strings ×2 (second run up to date), check-secrets OK in the worktree.
 
+Review D6c6 — Azure › subscription › vault (2026-10-26, automatic):
+- VaultStore: migration `v20_key_vault_subscriptions` (additive): `destinations.subscription_id` (36 chars) and `subscription_name` (1–255), both NULL for vaults saved before; `DestinationRecord.subscription` / `setSubscription(_:)`.
+- VaultCore: `KeyVaultSubscriptionModel` (id, name), `DestinationModel.subscription`, `Limits.maxSubscriptionNameLength`. VaultData: `createDestination(…, subscription:)`, `setSubscription(_:of:)` (trimmed; an empty or too long name is not saved; unchanged is a no-op); `AzureDiscoveryRepository.subscription(ofVaultNamed:tenantID:)` (name and tenant case-insensitive).
+- App: Connect Azure saves each vault's subscription (a reused vault gets it through `setSubscription`); a Key Vault's Refresh looks up a missing one (`FeatureDependencies.azureDiscovery`), a failure is logged without names and the vault stays under Azure; no `az` at launch. Sidebar: `SidebarAzureModel` (ungrouped vaults first, then subscriptions by name), `SidebarTreeRow` per subscription (`Theme.Symbols.subscription`, open by default and while searching, `toggle(subscription:)`), vaults at level 1; the search matches a subscription's name.
+- Departures: the toolbar path stays `Azure › vault` (no subscription step); no "Needs Key Vault Secrets User" subline on a subscription (the role is checked per vault at read).
+- Tests written, not run yet: `MigrationTests` (identifiers, latest, `keyVaultsGainAnEmptySubscription`), `DestinationRepositoryTests.aKeyVaultKeepsItsSubscription`, `AzureDiscoveryRepositoryTests.aVaultIsFoundInTheSubscriptionThatListsIt`, `SidebarViewModelTests.keyVaultsGroupUnderTheirSubscription`, `ConnectAzureTests` (import saves it, a reused vault gets it, `refreshingAVaultSavesItsSubscription`).
+- Docs: README, CHANGELOG, DESIGN, ARCHITECTURE, DATABASE (v20), STRUCTURE, RELEASING step 61.
+
 Review B6b3b — organizations in Sync (2026-10-25, automatic):
 - Badge: `AppViewModel.organizationPendingCounts` (observed from `OrganizationItemRepository`) joins the Sync count and the Dock badge.
 - Sync sheet: the toolbar Sync reviews each organization with pending changes (`OrganizationSyncRepository.review`), one summary group per organization (`OrgSyncPresentation`, "+ / ↑ / −" lines, blocked rows with Edit… for a missing value or empty list), its deletions in the deletion review, and runs them after GitHub and destinations; result rows per change. A repository's own Sync leaves organizations out.
