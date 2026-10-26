@@ -29,10 +29,24 @@ struct OrganizationDetailScreen: View {
         }
     }
 
-    /// The login, "Organization · counts", Copy All and ⋯ More: New Secret, New Variable, Copy
-    /// All, Remove from Vault… (board Org-Visibility; Refresh arrives with B7).
+    /// The login, "Organization · counts", the Refresh line, Copy All and ⋯ More: New Secret,
+    /// New Variable, Copy All, Refresh, Remove from Vault… (board Org-Visibility; B7b).
     private var header: some View {
         PlaceHeader(title: viewModel.organization?.login ?? "", subline: viewModel.subline) {
+            if viewModel.isRefreshing {
+                PlaceRefreshingLine()
+            } else if let refresh = viewModel.refresh {
+                if refresh.findings.isEmpty {
+                    Text(DriftCopy.nothingChanged)
+                        .fxTextStyle(.caption)
+                        .foregroundStyle(Theme.Colors.mutedText)
+                } else {
+                    DriftBannerView(count: refresh.findings.count, conflictCount: refresh.findings.filter(\.isConflict).count) {
+                        viewModel.reviewChanges()
+                    }
+                }
+            }
+        } accessories: {
             CopyAllButton(isEnabled: viewModel.canCopyAll) {
                 viewModel.copyAll()
             }
@@ -46,6 +60,10 @@ struct OrganizationDetailScreen: View {
             CopyAllMenuItem(isEnabled: viewModel.canCopyAll) {
                 viewModel.copyAll()
             }
+            Button(PlaceCopy.refresh) {
+                viewModel.refreshNow()
+            }
+            .disabled(viewModel.isRefreshing)
             if let organization = viewModel.organization {
                 Divider()
                 Button(OrganizationCopy.remove, role: .destructive) {
@@ -80,8 +98,15 @@ private struct OrganizationItemsTable: View {
                     .fxTableCell()
             }
             TableColumn(ConfigTableFormat.header(String(localized: "main.table.status", defaultValue: "Status"))) { row in
-                StatusDotLabel(status: row.syncStatus)
-                    .fxTableCell()
+                Group {
+                    if viewModel.isChangedOnGitHub(row) {
+                        ChangedOnGitHubLabel()
+                            .help(row.syncStatus.localizedTitle)
+                    } else {
+                        StatusDotLabel(status: row.syncStatus)
+                    }
+                }
+                .fxTableCell()
             }
             .width(Theme.Layout.tableStatusMinWidth)
             TableColumn(ConfigTableFormat.header(String(localized: "main.table.updated", defaultValue: "Updated"))) { row in
@@ -106,6 +131,21 @@ private struct OrganizationItemsTable: View {
             viewModel.requestDeletion(of: viewModel.rows(for: viewModel.selection))
         }
         .accessibilityIdentifier(AccessibilityID.Main.organizationTable)
+    }
+}
+
+/// "○ Changed on GitHub" (the sidebar's mark on boards Org-Visibility, Main2-Repository) for a
+/// row the last Refresh found changed; its own status is the help.
+private struct ChangedOnGitHubLabel: View {
+    var body: some View {
+        HStack(spacing: Theme.Spacing.smallMinus) {
+            RingDot()
+            Text(PlaceCopy.changedOnGitHubMark)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.ink)
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 

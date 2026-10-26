@@ -16,11 +16,12 @@ import VaultStore
 /// - Errors reuse ``RepoCatalogError``: an organization is imported like a repository.
 /// - Observation streams need no keys and work while locked.
 public actor OrganizationRepository {
-    private let session: VaultSession
-    private let schedulers: any GHSchedulerProviding
-    private let clock: any VaultClock
+    // Internal for the Refresh extension (OrganizationRepository+Drift).
+    let session: VaultSession
+    let schedulers: any GHSchedulerProviding
+    let clock: any VaultClock
 
-    private static let log = Logger(subsystem: ConfigConstants.logSubsystem, category: "organizations")
+    static let log = Logger(subsystem: ConfigConstants.logSubsystem, category: "organizations")
 
     public init(session: VaultSession, schedulers: any GHSchedulerProviding, clock: any VaultClock = SystemClock()) {
         self.session = session
@@ -28,7 +29,7 @@ public actor OrganizationRepository {
         self.clock = clock
     }
 
-    private var store: OrganizationStore {
+    var store: OrganizationStore {
         OrganizationStore(database: session.database)
     }
 
@@ -42,13 +43,10 @@ public actor OrganizationRepository {
         if let existing = try perform({ try store.fetchOrganization(login: login) }) {
             throw .organizationAlreadyImported(existing.id)
         }
-        let scheduler: GHCommandScheduler
         let listedSecrets: [GHSecretDTO]
         let listedVariables: [GHVariableListingModel]
-        do {
-            scheduler = try await schedulers.scheduler(for: accountLogin)
-            listedSecrets = try await scheduler.listOrganizationSecrets(login)
-            listedVariables = try await scheduler.listOrganizationVariables(login)
+        do throws(GHError) {
+            (listedSecrets, listedVariables) = try await Self.listItems(of: login, accountLogin: accountLogin, schedulers: schedulers)
         } catch {
             throw .github(error)
         }
@@ -150,10 +148,22 @@ public actor OrganizationRepository {
 
     // MARK: - Support
 
+    /// B12 and B13 through the account that imported the organization (import, Refresh and Sync).
+    static func listItems(
+        of login: String,
+        accountLogin: String,
+        schedulers: any GHSchedulerProviding
+    ) async throws(GHError) -> (secrets: [GHSecretDTO], variables: [GHVariableListingModel]) {
+        let scheduler = try await schedulers.scheduler(for: accountLogin)
+        let secrets = try await scheduler.listOrganizationSecrets(login)
+        let variables = try await scheduler.listOrganizationVariables(login)
+        return (secrets, variables)
+    }
+
     /// The listed rows the vault can hold, by validated name; the first of a repeated name wins.
     /// An organization listing always carries the visibility (B12/B13 ask for it), so a row
     /// without one means gh's output changed: fail rather than guess who can read the item.
-    private static func storable<Listing>(
+    static func storable<Listing>(
         _ listed: [Listing],
         kind: ConfigKind,
         name: KeyPath<Listing, String>,
@@ -173,7 +183,8 @@ public actor OrganizationRepository {
         return result
     }
 
-    private static func item(
+    /// A row as GitHub has it: synced, with its reach and GitHub's date.
+    static func item(
         organizationID: OrganizationID,
         kind: ConfigKind,
         name: String,
@@ -195,7 +206,7 @@ public actor OrganizationRepository {
         )
     }
 
-    private func perform<Result>(_ body: () throws -> Result) throws(RepoCatalogError) -> Result {
+    func perform<Result>(_ body: () throws -> Result) throws(RepoCatalogError) -> Result {
         try RepoCatalogError.perform(body)
     }
 }

@@ -26,7 +26,8 @@ the secrets your code reads at runtime in Azure Key Vault.
   organization's repositories); the row menu edits, deletes, reverts and copies a value. Changes
   wait in the vault with their status and count on the Sync button; the toolbar Sync sends them
   after the repositories (deletions only after the deletion review). A repository's own Sync
-  leaves them for later. Needs
+  leaves them for later. **Refresh** (⋯ menu) reads the organization again and marks what
+  changed on GitHub; Review keeps your version or takes GitHub's for each. Needs
   `admin:org` and the organization's admin role (see Settings › Accounts).
 - **Secrets and variables, repository and environment level.** Add, edit, rename, convert
   between secret and variable, move between scopes, fill values GitHub does not return, revert

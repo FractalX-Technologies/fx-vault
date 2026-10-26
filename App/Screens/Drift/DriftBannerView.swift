@@ -14,8 +14,13 @@ struct DriftBannerView: View {
     private let onReview: () -> Void
 
     init(report: DriftReportModel, onReview: @escaping () -> Void) {
+        self.init(count: report.count, conflictCount: report.conflicts.count, onReview: onReview)
+    }
+
+    /// The same line for an organization's Refresh (1.0 B7b).
+    init(count: Int, conflictCount: Int, onReview: @escaping () -> Void) {
         self.init(
-            message: Self.message(count: report.count, conflictCount: report.conflicts.count),
+            message: Self.message(count: count, conflictCount: conflictCount),
             reviewHelp: String(localized: "drift.banner.review.help", defaultValue: "Keep your version or take GitHub's for each change"),
             onReview: onReview
         )

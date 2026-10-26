@@ -88,6 +88,9 @@ nonisolated enum PlaceCopy {
         String(localized: "place.overrides.help", defaultValue: "\(organization) has an item of the same name; this one wins here")
     }
 
+    /// One row's mark (board Org-Visibility's sidebar): the last Refresh found it changed.
+    static let changedOnGitHubMark = String(localized: "place.drift.changedMark", defaultValue: "Changed on GitHub")
+
     /// "2 changed on GitHub" (board Main2-Repository).
     static func changedOnGitHub(_ count: Int) -> String {
         String(localized: "place.drift.changed", defaultValue: "\(count) changed on GitHub")

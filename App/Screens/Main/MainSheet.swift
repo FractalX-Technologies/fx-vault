@@ -17,6 +17,8 @@ enum MainSheet: Hashable, Identifiable {
     // Main/Organization/ (1.0)
     /// Add or edit an organization secret or variable, with who can use it.
     case orgItemEditor(OrgItemEditorContext)
+    /// Refresh's findings for one organization (B7b): Keep Local or Accept GitHub.
+    case orgDrift(OrgDriftContext)
 
     // CopyToRepository/
     /// Copy To › Another Repository… (v0.4.1): linked copies into any repository of the vault.
@@ -72,7 +74,7 @@ enum MainSheet: Hashable, Identifiable {
     /// (v0.2.0).
     var needsInternet: Bool {
         switch self {
-        case .sync, .createRepository, .addRepositoryByName, .addDestination, .destinationDrift:
+        case .sync, .createRepository, .addRepositoryByName, .addDestination, .destinationDrift, .orgDrift:
             true
         default:
             false
@@ -134,6 +136,12 @@ struct OrgItemEditorContext: Hashable {
     /// The organization's repositories the sidebar lists, offered for Selected access. Only
     /// names to pick from: GitHub checks them on Sync.
     let repositoryCandidates: [String]
+}
+
+/// Refresh's findings for one organization (1.0 B7b).
+struct OrgDriftContext: Hashable {
+    let organizationID: OrganizationID
+    let findings: [OrgDriftModel]
 }
 
 /// What ``ItemEditorScreen`` edits. `scope` is where the item is (or will be) and `kind` the

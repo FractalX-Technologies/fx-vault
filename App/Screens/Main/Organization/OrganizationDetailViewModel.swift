@@ -3,9 +3,9 @@ import Observation
 import VaultCore
 import VaultData
 
-/// Column 3 for an imported organization (1.0, B5c, B6b3a): its name and counts and the table of
-/// its secrets and variables with their visibility and sync status. Add, edit, delete and revert
-/// change the vault; the next Sync sends them.
+/// Column 3 for an imported organization (1.0, B5c, B6b3a, B7b): its name and counts and the
+/// table of its secrets and variables with their visibility and sync status. Add, edit, delete
+/// and revert change the vault; the next Sync sends them. Refresh marks what changed on GitHub.
 @Observable
 final class OrganizationDetailViewModel {
     let organizationID: OrganizationID
@@ -14,6 +14,9 @@ final class OrganizationDetailViewModel {
     /// Rows on GitHub waiting for the Delete confirmation.
     var pendingDeletion: [OrgItemModel]?
     var alert: ErrorPresentationModel?
+    /// The last Refresh (B7b), kept while this organization is open; nil before the first.
+    private(set) var refresh: OrgRefreshModel?
+    private(set) var isRefreshing = false
 
     @ObservationIgnored private let dependencies: FeatureDependencies
     @ObservationIgnored private let organizationProvider: () -> OrganizationModel?
@@ -142,6 +145,56 @@ final class OrganizationDetailViewModel {
         } catch {
             alert = error.presentation
         }
+    }
+
+    // MARK: - Refresh (B7b)
+
+    /// Lists the organization again and marks what changed on GitHub.
+    func refreshNow() {
+        guard !isRefreshing else { return }
+        guard dependencies.connectivity.isOnline else {
+            alert = ErrorPresentationModel(title: OrganizationCopy.refreshFailedTitle, message: ConnectivityCopy.offlineHelp)
+            return
+        }
+        isRefreshing = true
+        let organizations = dependencies.organizations
+        let id = organizationID
+        tasks.set("refresh", Task { [weak self] in
+            do throws(RepoCatalogError) {
+                let result = try await organizations.refresh(organizationID: id)
+                self?.refresh = result
+                self?.dependencies.gitHubReachability.recordSuccess()
+            } catch {
+                self?.dependencies.gitHubReachability.record(error)
+                self?.alert = error.presentation
+            }
+            self?.isRefreshing = false
+        })
+    }
+
+    var findings: [OrgDriftModel] {
+        refresh?.findings ?? []
+    }
+
+    func isChangedOnGitHub(_ row: OrgItemModel) -> Bool {
+        refresh?.changedItemIDs.contains(row.id) == true
+    }
+
+    /// Review: Keep Local or Accept GitHub for each finding.
+    func reviewChanges() {
+        guard let refresh, !refresh.findings.isEmpty else { return }
+        dependencies.actions.present(.orgDrift(OrgDriftContext(organizationID: organizationID, findings: refresh.findings)))
+    }
+
+    /// Findings resolved in the review drop their marks until the next Refresh.
+    func didResolve(_ ids: Set<String>) {
+        guard let refresh else { return }
+        self.refresh = OrgRefreshModel(
+            organizationID: refresh.organizationID,
+            findings: refresh.findings.filter { !ids.contains($0.id) },
+            skippedNames: refresh.skippedNames,
+            listedAt: refresh.listedAt
+        )
     }
 
     private func observeItems(_ organizations: OrganizationRepository) {

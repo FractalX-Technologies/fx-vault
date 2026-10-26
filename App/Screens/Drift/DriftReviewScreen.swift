@@ -25,31 +25,13 @@ struct DriftReviewScreen: View {
             HairlineDivider()
             footer
         }
-        .frame(
-            minWidth: Theme.Layout.driftSheetWidth,
-            idealWidth: Theme.Layout.driftSheetWidth,
-            maxWidth: Theme.Layout.driftSheetWidth,
-            minHeight: Theme.Layout.driftSheetMinHeight,
-            idealHeight: Theme.Layout.driftSheetIdealHeight
-        )
+        .driftSheetFrame()
         .fxSheetBackground()
         .errorAlert($viewModel.alert)
-        .confirmationDialog(
-            viewModel.confirmation?.title ?? "",
-            isPresented: Binding(
-                get: { viewModel.confirmation != nil },
-                set: { if !$0 { viewModel.cancelConfirmation() } }
-            ),
-            presenting: viewModel.confirmation
-        ) { _ in
-            Button(DriftCopy.confirmDelete, role: .destructive) {
-                Task { await viewModel.confirm() }
-            }
-            Button(String(localized: "common.cancel", defaultValue: "Cancel"), role: .cancel) {
-                viewModel.cancelConfirmation()
-            }
-        } message: { confirmation in
-            Text(confirmation.message)
+        .driftConfirmationDialog(viewModel.confirmation) {
+            await viewModel.confirm()
+        } cancel: {
+            viewModel.cancelConfirmation()
         }
         .task {
             await viewModel.load()
@@ -62,7 +44,7 @@ struct DriftReviewScreen: View {
     private var header: some View {
         SheetHeader(
             label: String(localized: "drift.review.eyebrow", defaultValue: "Drift review"),
-            title: String(localized: "drift.review.title", defaultValue: "Changes on GitHub"),
+            title: DriftCopy.reviewTitle,
             subtitle: subtitle
         ) {
             Button {
@@ -101,7 +83,7 @@ struct DriftReviewScreen: View {
         } else if viewModel.rows.isEmpty, viewModel.notes.isEmpty {
             EmptyStateView(
                 systemImage: "checkmark.circle",
-                title: String(localized: "drift.review.empty.title", defaultValue: "Nothing changed on GitHub"),
+                title: DriftCopy.nothingChanged,
                 message: String(
                     localized: "drift.review.empty.message",
                     defaultValue: "Your vault matches what GitHub has for this repository."
