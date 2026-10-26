@@ -49,31 +49,34 @@ enum FXRowStyle: Sendable {
     case sidebar
     /// Scopes: 36 pt, 10 pt corners, selected = `card` fill with a hairline.
     case scope
+    /// The ⌘K palette's places: 34 pt, otherwise as a sidebar row (board Main2-Search).
+    case palette
 
     var height: CGFloat {
         switch self {
         case .sidebar: Theme.Layout.sidebarRowHeight
         case .scope: Theme.Layout.scopeRowHeight
+        case .palette: Theme.Layout.jumpPaletteRowHeight
         }
     }
 
     var cornerRadius: CGFloat {
         switch self {
-        case .sidebar: Theme.Radius.compactRow
+        case .sidebar, .palette: Theme.Radius.compactRow
         case .scope: Theme.Radius.row
         }
     }
 
     func selectedFill() -> Color {
         switch self {
-        case .sidebar: Theme.Colors.surface2
+        case .sidebar, .palette: Theme.Colors.surface2
         case .scope: Theme.Colors.card
         }
     }
 
     func selectedBorder() -> Color? {
         switch self {
-        case .sidebar: nil
+        case .sidebar, .palette: nil
         case .scope: Theme.Colors.hairline
         }
     }
@@ -86,7 +89,7 @@ private struct FXRowBackground: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
         content
-            .padding(.horizontal, style == .sidebar ? Theme.Spacing.small : Theme.Spacing.mediumMinus)
+            .padding(.horizontal, style == .scope ? Theme.Spacing.mediumMinus : Theme.Spacing.small)
             .frame(maxWidth: .infinity, minHeight: style.height, alignment: .leading)
             .background {
                 if isSelected {

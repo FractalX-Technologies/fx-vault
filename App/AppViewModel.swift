@@ -66,6 +66,8 @@ final class AppViewModel {
     /// The Settings tab the main window asked for (the sidebar's "Approve" asks for Accounts);
     /// the Settings window switches to it and clears it.
     private(set) var requestedSettingsTab: PreferencesViewModel.Tab?
+    /// A Security sheet to open with that tab (the recovery-key banner asks for a new key).
+    private(set) var requestedSecuritySheet: SecuritySettingsViewModel.Sheet?
     /// True while a gh probe runs (the first one also shows ``GHStatusModel/checking``).
     private(set) var isCheckingGH = false
     /// Pending changes across all repositories (Sync button label and Dock badge).
@@ -438,12 +440,14 @@ final class AppViewModel {
         accountsRevision += 1
     }
 
-    func requestSettingsTab(_ tab: PreferencesViewModel.Tab) {
+    func requestSettingsTab(_ tab: PreferencesViewModel.Tab, securitySheet: SecuritySettingsViewModel.Sheet? = nil) {
+        requestedSecuritySheet = securitySheet
         requestedSettingsTab = tab
     }
 
     func clearSettingsTabRequest() {
         requestedSettingsTab = nil
+        requestedSecuritySheet = nil
     }
 
     // MARK: - Share files (§10 Scenes)

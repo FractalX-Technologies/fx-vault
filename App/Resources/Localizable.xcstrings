@@ -9065,6 +9065,160 @@
         }
       }
     },
+    "jump.anywhere" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Jump Anywhere"
+          }
+        }
+      }
+    },
+    "jump.anywhere.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Jump to a place (⌘K)"
+          }
+        }
+      }
+    },
+    "jump.anywhere.hint" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "to jump anywhere"
+          }
+        }
+      }
+    },
+    "jump.footer.close" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "to close"
+          }
+        }
+      }
+    },
+    "jump.footer.move" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "to move"
+          }
+        }
+      }
+    },
+    "jump.footer.open" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "to open"
+          }
+        }
+      }
+    },
+    "jump.noMatches" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No places match"
+          }
+        }
+      }
+    },
+    "jump.place.environment" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ › %2$@ › environment"
+          }
+        }
+      }
+    },
+    "jump.place.folder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folder"
+          }
+        }
+      }
+    },
+    "jump.place.organization" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub organization"
+          }
+        }
+      }
+    },
+    "jump.place.repository" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ › repository"
+          }
+        }
+      }
+    },
+    "jump.places" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Places"
+          }
+        }
+      }
+    },
+    "jump.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Jump to a place"
+          }
+        }
+      }
+    },
+    "jump.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Jump to"
+          }
+        }
+      }
+    },
     "lock.forgot" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9802,28 +9956,6 @@
         }
       }
     },
-    "main.detail.noSelection" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "No repository selected"
-          }
-        }
-      }
-    },
-    "main.detail.noSelection.message" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Select a repository in the sidebar to see its secrets and variables."
-          }
-        }
-      }
-    },
     "main.detail.notOnGitHub" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10055,6 +10187,39 @@
         }
       }
     },
+    "main.home.nothingPending" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No pending changes"
+          }
+        }
+      }
+    },
+    "main.home.pending" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld pending change](inflect: true)"
+          }
+        }
+      }
+    },
+    "main.home.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose a place"
+          }
+        }
+      }
+    },
     "main.import.button" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10198,13 +10363,24 @@
         }
       }
     },
-    "main.recoveryReminder" : {
+    "main.recoveryBanner" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Your recovery key was not saved. Create a new one in Settings › Security."
+            "value" : "Your recovery key wasn't saved"
+          }
+        }
+      }
+    },
+    "main.recoveryBanner.createKey" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create New Key…"
           }
         }
       }
@@ -18466,72 +18642,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Development build (FX Vault Dev). It uses the FX Vault Dev vault, not the vault of the installed FX Vault."
-          }
-        }
-      }
-    },
-    "toolbar.importEnv" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Import .env"
-          }
-        }
-      }
-    },
-    "toolbar.importEnv.help" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Import a .env file into the selected scope (⇧⌘I)"
-          }
-        }
-      }
-    },
-    "toolbar.newRepository" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "New Repository"
-          }
-        }
-      }
-    },
-    "toolbar.newRepository.help" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "New Repository (⌘N)"
-          }
-        }
-      }
-    },
-    "toolbar.share" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Share"
-          }
-        }
-      }
-    },
-    "toolbar.share.help" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Share configuration with a teammate"
           }
         }
       }

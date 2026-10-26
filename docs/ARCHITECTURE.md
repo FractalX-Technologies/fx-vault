@@ -1142,8 +1142,8 @@ AppTests).
     `AppViewModel.organizationPendingCounts`. B8b3: the Key Vaults of their
     own are observed (`observeDestinations(repositoryID: nil)`, `SidebarViewModel.keyVaults`) and
     listed by `SidebarKeyVaultsSection`; `selectedKeyVaultID` is a fourth exclusive selection, and
-    `MainViewModel` builds a `DestinationDetailViewModel` for it (no scope column, path `Azure Key
-    Vault › name`); `open(destinationID:)` selects one there. B8c2a: `KeyVaultContextMenu` (its
+    `MainViewModel` builds a `DestinationDetailViewModel` for it (no scope column, path `Azure ›
+    name` since D6c2); `open(destinationID:)` selects one there. B8c2a: `KeyVaultContextMenu` (its
     row and the detail's Actions button) asks for Remove from FX Vault, confirmed in the sidebar
     (`pendingKeyVaultRemoval`, `confirmKeyVaultRemoval()`, `deleteDestination`). v0.3.0 draws the sidebar
     and scope rows itself (`.fxRowBackground`, docs/DESIGN.md) instead of a native `List`
@@ -1230,15 +1230,23 @@ AppTests).
     repository's drift check (`reconnectTask`). Sidebar, repository detail, Add by name, the
     Sync sheet, Create Repository and the drift review report their gh outcomes to
     `GitHubReachability` (decision 50).
-  - Toolbar: the FractalX mark, the window title and the selected `owner / repo` in mono (the
-    system title is removed; the items hide the shared toolbar glass), a DEV
-    chip in Debug builds (decision 43), New Repository, Import .env, Share
-    (Share Project…), Lock,
+  - Toolbar (`MainToolbar.swift`, D6c2): the selected place's path (`MainViewModel.breadcrumb`,
+    the system title removed), a DEV chip in Debug builds (decision 43), the ⌘K search button and
     Sync (`SyncToolbarButton`, count in the label, disabled at 0, while locked, while syncing and
-    without gh). Menu commands (`VaultCommands`): File › New Repository… (⌘N), Import .env… (⇧⌘I);
-    File › Share Project… (⌥⌘S); Edit › Find (⌘F, the sidebar search); View › Hide Sidebar
-    (⌃⌘S, `SidebarCommands`); Vault › Lock (⌃⌘L), Sync (⇧⌘S). Commands reach the window through
-    `FocusedValues.mainViewModel`.
+    without gh), on the system's glass toolbar. Menu commands (`VaultCommands`): File › New
+    Repository… (⌘N; also an owner's menu, `newRepository(in:)` preselects the owner), Import
+    .env… (⇧⌘I); File › Share Project… (⌥⌘S); Edit › Find (⌘F, the sidebar search) and Jump
+    Anywhere (⌘K); View › Hide Sidebar (⌃⌘S, `SidebarCommands`); Vault › Lock (⌃⌘L), Sync (⇧⌘S).
+    Commands reach the window through `FocusedValues.mainViewModel`.
+  - Jump palette (`Main/JumpPalette`, D6c2): `MainViewModel.showJumpPalette()` builds a
+    `JumpPaletteViewModel` with the sidebar's places when it opens (`JumpPlaces.places`: every
+    owner whatever the search, the vault repositories' environments read from
+    `ConfigRepository`, the Key Vaults and folders); `JumpPlaces.filter` (pure) ranks them as
+    the query changes; ↩ calls `jump(to:)`, which clears the sidebar search and makes the
+    sidebar selection. Closed by esc, a click outside, ⌘K again, a sheet opening (`activeSheet`'s `didSet`; `canJump` keeps it off a sheet) or a lock.
+  - The recovery-key banner (`showsRecoveryKeyReminder`) sits over the detail since D6c2;
+    `createNewRecoveryKey()` asks `AppViewModel.requestSettingsTab(.security, securitySheet:
+    .newRecoveryKey)`, which `PreferencesViewModel.showRequestedTab()` presents once.
 - Feature sheets (all presented by the router below; each `XScreen` + `@Observable XViewModel`):
   - `ItemEditor` (§7.1, M3): `ItemEditorViewModel` (`LockObserving`) adds, edits, fills and
     converts or moves one item through `ConfigRepository`. Kind is locked once on GitHub; names

@@ -106,11 +106,16 @@ enum Theme {
         static let sidebarSectionHeaderHeight: CGFloat = 22
         /// The search field at the top of the sidebar and the footer's icon buttons.
         static let sidebarControlHeight: CGFloat = 28
-        /// The toolbar title item (mark and path) at the detail column's leading edge. A fixed
-        /// width: the toolbar proposes no width, so the title picks the longest path that fits
-        /// it, and the toolbar buttons still fit beside it in the narrowest window.
+        /// The toolbar title item (the selected place's path) at the detail column's leading edge.
+        /// A fixed width: the toolbar proposes no width, so the title picks the longest path that
+        /// fits it, and the toolbar buttons still fit beside it in the narrowest window.
         static let toolbarTitleWidth: CGFloat = 340
         static let detailMinWidth: CGFloat = 420
+        /// The ⌘K jump palette (board Main2-Search).
+        static let jumpPaletteWidth: CGFloat = 600
+        static let jumpPaletteFieldHeight: CGFloat = 48
+        static let jumpPaletteRowHeight: CGFloat = 34
+        static let jumpPaletteListMaxHeight: CGFloat = 340
         /// Detail table columns. Name and value are flexible from their minimums; the name starts
         /// at its ideal width so a long mono name ("STRIPE_SECRET_KEY") is not truncated; the value
         /// fits eight mask dots with the eye, or the "Value missing" chip. Date and status are

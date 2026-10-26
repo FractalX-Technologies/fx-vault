@@ -54,7 +54,7 @@ struct FXVaultApp: App {
 }
 
 /// The menu commands (§10 Toolbar): File › New Repository (⌘N), Import .env (⇧⌘I) and Share
-/// Project… (⌥⌘S), Edit › Find (⌘F), and the Vault menu with Lock (⌃⌘L) and Sync (⇧⌘S). Commands
+/// Project… (⌥⌘S), Edit › Find (⌘F) and Jump Anywhere (⌘K), and the Vault menu with Lock (⌃⌘L) and Sync (⇧⌘S). Commands
 /// that act on the main window reach it through the focused scene value
 /// (``FocusedValues/mainViewModel``).
 struct VaultCommands: Commands {
@@ -63,7 +63,7 @@ struct VaultCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button(String(localized: "menu.file.newRepository", defaultValue: "New Repository…")) {
+            Button(MainCopy.newRepository) {
                 main?.newRepository()
             }
             .keyboardShortcut("n", modifiers: .command)
@@ -97,6 +97,13 @@ struct VaultCommands: Commands {
             }
             .keyboardShortcut("f", modifiers: .command)
             .disabled(viewModel.phase != .unlocked || main == nil)
+
+            // ⌘K again closes the palette.
+            Button(JumpPaletteCopy.jumpAnywhere) {
+                main?.showJumpPalette()
+            }
+            .keyboardShortcut("k", modifiers: .command)
+            .disabled(main?.canJump != true)
         }
 
         CommandMenu(String(localized: "menu.vault", defaultValue: "Vault")) {

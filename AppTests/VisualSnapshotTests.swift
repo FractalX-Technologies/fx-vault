@@ -150,6 +150,27 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
+    /// 1.0 D6c2 (boards Main2-Home, Main2-Search): nothing selected, with the recovery-key
+    /// banner, the pending changes and the ⌘K hint; then the jump palette filtered to "pro".
+    @Test func mainHomeAndJumpPalette() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        harness.container.preferences.isRecoveryKeyConfirmationPending = true
+        main.sidebar.selectedRowID = nil
+        #expect(await TestFixtures.eventually { main.detail == nil })
+        try await SnapshotOutput.write("main-home", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+
+        main.showJumpPalette()
+        let palette = try #require(main.jumpPalette)
+        palette.query = "pro"
+        #expect(!palette.results.isEmpty)
+        try await SnapshotOutput.write("main-jump", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
     /// v0.4.0: two rows selected, so the header shows the selection actions.
     @Test func mainWindowSelection() async throws {
         let (harness, main) = try await MainSnapshotFixture.make()

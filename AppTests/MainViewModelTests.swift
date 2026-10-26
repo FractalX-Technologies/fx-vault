@@ -122,6 +122,18 @@ struct MainViewModelTests {
         #expect(main.activeSheet == (isAdmin ? .newEnvironment(NewEnvironmentContext(repositoryID: id)) : nil))
     }
 
+    /// 1.0 (D6c2): New Repository left the toolbar for an owner's context menu (⌘N stays).
+    @Test func newRepositoryFromAnOwnerPreselectsIt() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: Self.ready)
+        let main = harness.app.makeMainViewModel()
+        _ = try await harness.stageRepository()
+        #expect(await TestFixtures.eventually { !main.sidebar.owners.isEmpty })
+        let owner = try #require(main.sidebar.owners.first { $0.login == TestFixtures.owner })
+
+        main.newRepository(in: owner)
+        #expect(main.activeSheet == .createRepository(CreateRepoContext(accountLogin: TestFixtures.account, ownerLogin: TestFixtures.owner)))
+    }
+
     /// The sidebar tree (B11b): the repository row stands for the repository scope, its
     /// environments nest under it, and the toolbar path follows the selection.
     @Test func theRepositoryRowIsItsRepositoryScopeAndThePathFollowsTheSelection() async throws {
@@ -170,7 +182,7 @@ struct MainViewModelTests {
         #expect(detail.destinationID == vaultID)
         #expect(detail.repositoryID == nil)
         #expect(main.scopeList == nil)
-        #expect(main.breadcrumb == [MainCopy.azureSection, "kv-example-prod"])
+        #expect(main.breadcrumb == [SidebarCopy.azureSection, "kv-example-prod"], "named like its sidebar section")
         #expect(main.canImportEnv)
 
         main.sidebar.selectedKeyVaultID = nil

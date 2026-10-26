@@ -78,6 +78,7 @@ value below and fails if a color set has no dark variant or no test.
 | `inkBadge` | InkBadge | white 20% | black 12% | The count badge inside an ink pill |
 | `dotGrid` | DotGrid | black 12% | white 10% | Dots of `DotGridBackground` |
 | `shadow` | Shadow | black 12% | black 40% | The one sheet shadow |
+| `scrim` | Scrim | black 6% | black 30% | The dimmed window behind the ⌘K jump palette |
 
 `Theme.Colors.windowBackground` is the `NSColor` of Ground for AppKit.
 `Theme.Colors.onSelectionSecondary` is the hierarchical `.secondary` style, for secondary text in
@@ -136,15 +137,17 @@ keep their own case rules.
 
 - **Spacing** (`Theme.Spacing`): 2, 4, 6 `smallMinus`, 8, 10 `mediumMinus`, 12, 16, 20
   `largePlus`, 24, 28 `xLargePlus`, 32, 36 `xxLargePlus`, 48, 56 `huge`, 64 `xHuge`.
-- **Radius** (`Theme.Radius`): `card` / `sheet` 24, `container` 16 (tables, grouped lists),
-  `control` 12 (inputs, banners, checkbox rows), `row` 10 (scopes), `compactRow` 8 (sidebar).
+- **Radius** (`Theme.Radius`): `card` / `sheet` 24, `container` 16 (tables, grouped lists, the
+  ⌘K palette), `control` 12 (inputs, banners, checkbox rows), `row` 10 (scopes), `compactRow` 8
+  (sidebar).
   Pills (buttons, chips, segmented control, pill inputs, badges) use the `.pill` shape
   (`Capsule(style: .circular)`, Radius.swift). The macOS 27 SDK's `Capsule()` defaults to
   `.continuous` corners, whose flatter ends read as short straight edges at pill sizes;
   `scripts/lint.sh` rejects `Capsule()`.
 - **Lines** (`Theme.Stroke.hairline` = 1 pt): `hairline` by default, `hairlineStrong` for
   controls. Dashed rows ("Add Destination") use `Theme.Stroke.dashPattern` (4 / 4). Focus rings are 2 pt `brand`, 2 pt outside the shape (`Theme.Layout.focusRing*`).
-- **Shadow** (`Theme.Shadow`): only `Card(.sheet)`: `shadow` color, radius 32, y 24.
+- **Shadow** (`Theme.Shadow`): only `Card(.sheet)` and the ⌘K palette (`.popover`): `shadow`
+  color, radius 32, y 24.
 - **Motion** (`Theme.Durations`): `interaction` 0.14 s / `interactionAnimation` (ease-out) for
   hover, press, focus, selection, chips; `spring` (0.28 s, no bounce) for the selected segment,
   expanding rows and banners sliding in. Legacy `standardAnimation` = `interactionAnimation`.
@@ -260,7 +263,7 @@ pointer cursor, 40% when disabled).
 ### `BrandMark`, `DotGridBackground`, `StepCounter`
 
 ```swift
-BrandMark()                                                       // 18 pt ink, toolbar/sidebar
+BrandMark()                                                       // 18 pt ink
 BrandMark(size: Theme.Layout.brandMarkLarge, center: .outlined)   // 44 pt, brand outlined center
 LockContent().background(DotGridBackground())
 StepCounter(current: 2, total: 5)                                 // "02 / 05"
@@ -290,6 +293,7 @@ Table(rows, selection: $selection) {
 ScopeRow(scope).fxRowBackground(isSelected: isSelected, style: .scope)    // 36 pt, card + hairline
 SidebarTreeRow(level: 1, systemImage: Theme.Symbols.repository, title: repo.name, isSelected: isSelected) { select() }
                                                    // 28 pt, surface2 when selected (.fxRowBackground(style: .sidebar))
+JumpPlaceRow(…).fxRowBackground(isSelected: isSelected, style: .palette)  // 34 pt, surface2 (⌘K palette)
 ```
 
 `.fxTableCell()` gives 34 pt rows (boards Main2, Org-Visibility; cell content 26 + the inset table's padding; measured on a real
@@ -329,15 +333,20 @@ foreground color, so `.primary` text still turns white on selected rows.
 
 ### Main window (boards Main2-Home, Main2-Repository; two columns since 1.0, B11b)
 
-- Toolbar: `BrandMark()` + the selected place's path (`MainViewModel.breadcrumb`, `.monoMeta`,
-  `subtleText`, `GitHub › owner › repo › environment`, `Azure Key Vault › name` or `Folders ›
-  name`), or the window title
-  (`.headline`) with nothing selected, in a fixed `Theme.Layout.toolbarTitleWidth` item at the
+- Toolbar (1.0 D6c2; boards Main2-Home, Main2-Repository, Main2-Search): the system's glass
+  toolbar (`MainToolbar.swift`). The title item, shared glass hidden, is the selected place's
+  path (`MainViewModel.breadcrumb`) in sans `.callout`: the steps `mutedText`, the separators
+  `faintText`, the last step `.calloutEmphasized` ink (`GitHub › owner › repo › environment`,
+  `Azure › vault` or `Folders › name`), or "FX Vault" in `mutedText` with nothing selected, then
+  the DEV chip in Debug builds. It is a fixed `Theme.Layout.toolbarTitleWidth` item at the
   detail column's leading edge; a long path drops its first steps down to the last one, then
-  shows only the mark. Icon
-  actions as `.fxIconButtonStyle()`; `SyncToolbarButton` last.
+  shows the app name. Then the search button (`magnifyingglass` + `KeyHint("⌘K")`) on its own
+  glass, a fixed `ToolbarSpacer`, and `SyncToolbarButton` with its shared glass hidden. New
+  Repository, Import .env and Share are menu commands only (⌘N, also on an owner's menu; ⇧⌘I;
+  ⌥⌘S).
 - Sidebar (1.0, D6c1; boards Main2-Home, Main2-Expanded, Main2-Repository, Main2-Dark): the
-  window's floating glass sidebar (macOS 26), no fill of its own. On top the search field
+  system's split-view sidebar with its own Liquid Glass and no fill of ours (the boards draw it
+  floating; whether it floats is the system's call, and macOS 27 draws it full height). On top the search field
   (`surface2`, `compactRow` radius, `sidebarControlHeight`, a `KeyHint("⌘F")`; Edit › Find
   focuses it and brings a hidden sidebar back). Then sections with a `SidebarSectionHeader` (11 pt medium, sentence case,
   `subtleText`): GitHub, Azure, Folders (a quiet `plus` for New Folder…). Every node is a
@@ -352,8 +361,9 @@ foreground color, so `.primary` text still turns white on selected rows.
   and the selected one, the rest behind "Show N more" (`.label` subtle). A `SidebarSubline`
   (`.label` subtle, its action in `.labelEmphasized` ink) says what an owner needs: "Needs
   admin:org · Approve", "Authorize SSO · Open", "Not logged in · Settings". Owners start
-  collapsed; a selection opens its owner and a search opens all. Add Repository by Name… is on
-  the owner's context menu, New Environment… on the repository's.
+  collapsed; a selection opens its owner and a search opens all. New Repository… (the owner
+  preselected) and Add Repository by Name… are on the owner's context menu, New Environment… on
+  the repository's.
 - The selected imported repository's row stands for its repository scope; its environments
   (`ScopeListView`, `smallcircle.filled.circle`, level 2) nest under it with the secrets without
   a value and the pending dot, then the runtime destinations. Clicking the repository row again
@@ -362,7 +372,25 @@ foreground color, so `.primary` text still turns white on selected rows.
 - Azure lists the Key Vaults of their own flat (`key`, level 0; context menu and the detail's
   Actions: Remove from FX Vault…) until the subscriptions of 1g. The bottom of the sidebar holds
   the listing state or the last notice in `.label`, then Lock and Settings as quiet icons.
-- Detail (`ground`, insets 28 top / 36 sides, 20 between blocks): `Banner`s first; then
+- Home (nothing selected; board Main2-Home): `EmptyStateView` with `square.3.layers.3d`, "Choose
+  a place", the pending changes ("4 pending changes", or "No pending changes") and
+  `KeyHint("⌘K")` + "to jump anywhere".
+- Recovery key (never confirmed as saved; board Main2-Home): a `.warning` `Banner` with `key` at
+  the top of the detail column, over every place: "Your recovery key wasn't saved" · Create New
+  Key… (Settings › Security on the new-key sheet). The key shown at onboarding cannot be shown
+  again, so the board's "Show Key" is not offered.
+- Jump palette (⌘K, Edit › Jump Anywhere or the toolbar's search button; board Main2-Search):
+  over the window on `scrim` (a click outside closes it), `jumpPaletteWidth` wide under the
+  toolbar, `.fxCardBackground(.popover)`. The field (`.headline`, `jumpPaletteFieldHeight`), a
+  divider, "Places" (`SidebarSectionHeader`) with rows up to `jumpPaletteListMaxHeight`, then it
+  scrolls: `.fxRowBackground(style: .palette)` (34 pt), the place's symbol, its name in its
+  sidebar style with the first typed word in the emphasized weight, the detail ("Folder",
+  "owner › repository") in `.caption` subtle, `KeyHint("↩")` on the selected row. A divider and
+  the footer keys: ↑ ↓ to move, ↩ to open, esc to close. Every typed word must be in the name or
+  the owner and repository; names that start with a word come first, then names that contain
+  one, then path matches. Secrets by name join in 1f.
+- Detail (no background of its own: the window's `ground` shows; insets 28 top / 36 sides, 20
+  between blocks): `Banner`s first; then
   `SectionLabel("Environment")` + `.largeTitle` name + `StatusChip.tag`s + branch patterns in
   `.monoMeta`, with outline/secondary actions on the right (Clone, Refresh, and since v0.4.0
   the scope's actions menu as an outline `ellipsis` circle); the `SegmentedPill`
@@ -702,7 +730,10 @@ and `-only-testing:AppTests/HeldShareSnapshotTests`): `project-share-contents`,
 `project-share-send-to-passphrase`, `project-share-passphrase`, `project-share-open`,
 `project-share-expired` and `settings-sharing`; `sync-held-one`, `sync-held-two`,
 `sync-held-only` and `main-held`. 1.0 removed the presence, teammates, pairing, shared-space
-and Nearby Chat renders with those screens.
+and Nearby Chat renders with those screens; D6c2 adds `main-home` (nothing selected, with the
+recovery-key banner) and `main-jump` (the ⌘K palette). The toolbar's glass items and the
+sidebar draw blank in these captures: `JumpPaletteUITests` (light) and `MainTreeUITests` (dark)
+attach screenshots of the running window instead.
 The offscreen window capture leaves the repository sidebar blank or black in some captures; the
 running app draws it normally. SwiftUI `ImageRenderer` is not used: it
 cannot draw AppKit-backed views (`ScrollView`, `List`, `Table`, text fields, toggles, the split

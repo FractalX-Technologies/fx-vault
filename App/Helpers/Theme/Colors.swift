@@ -61,6 +61,8 @@ extension Theme {
         static let dotGrid = Color(.dotGrid)
         /// The one soft shadow, under sheets drawn in the window (``Card`` with `.sheet`).
         static let shadow = Color(.shadow)
+        /// The dimmed window behind the ⌘K jump palette (board Main2-Search).
+        static let scrim = Color(.scrim)
         /// The notch island (``NotchIslandView``): black, white and dimmed white in both
         /// appearances, so it reads as part of the hardware notch.
         static let island = Color(.island)

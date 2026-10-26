@@ -6,7 +6,8 @@ enum SidebarCopy {
     static let searchPrompt = String(localized: "main.sidebar.search.prompt", defaultValue: "Search")
     static let searchLabel = String(localized: "main.sidebar.search.label", defaultValue: "Search the sidebar")
     static let searchShortcut = String(localized: "main.sidebar.search.shortcut", defaultValue: "Search the sidebar (⌘F)")
-    /// The section of the Key Vaults; the toolbar path and Connect still say "Azure Key Vault".
+    /// The section of the Key Vaults, and the first step of their toolbar path; Sync and
+    /// Connect say "Azure Key Vault".
     static let azureSection = String(localized: "main.sidebar.azure", defaultValue: "Azure")
     static let expanded = String(localized: "main.sidebar.owner.expanded", defaultValue: "Expanded")
     static let collapsed = String(localized: "main.sidebar.owner.collapsed", defaultValue: "Collapsed")

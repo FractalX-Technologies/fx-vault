@@ -458,12 +458,12 @@ nonisolated enum SyncCopy {
     /// The summary footer: "9 changes in 3 places · 1 deletion · 1 blocked".
     static func summaryCounts(changes: Int, places: Int, deletions: Int, blocked: Int) -> String {
         // Automatic grammar agreement: "1 change in 1 place", "9 changes in 3 places".
-        var parts = [inflected(AttributedString(
+        var parts = [String(inflected: AttributedString(
             localized: "sync.footer.changes",
             defaultValue: "^[\(changes) change](inflect: true) in ^[\(places) place](inflect: true)"
         ))]
         if deletions > 0 {
-            parts.append(inflected(AttributedString(
+            parts.append(String(inflected: AttributedString(
                 localized: "sync.footer.deletions",
                 defaultValue: "^[\(deletions) deletion](inflect: true)"
             )))
@@ -477,14 +477,10 @@ nonisolated enum SyncCopy {
     /// "Sync 1 Change", "Sync 8 Changes": what will run.
     static func syncButtonTitle(changes: Int) -> String {
         guard changes > 0 else { return String(localized: "sync.button.sync", defaultValue: "Sync") }
-        return inflected(AttributedString(
+        return String(inflected: AttributedString(
             localized: "sync.button.syncChanges",
             defaultValue: "Sync ^[\(changes) Change](inflect: true)"
         ))
-    }
-
-    private static func inflected(_ text: AttributedString) -> String {
-        String(text.characters)
     }
 
     // MARK: - Fix actions

@@ -22,8 +22,8 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Connect Azure.** After GitHub, the first launch lists your Azure subscriptions and their Key
   Vaults through `az`, every vault checked; Continue imports each vault with its secret values
   as a Key Vault of its own (no repository), and the summary counts them. Without `az`, Run
-  installs it with Homebrew; `az login` stays Copy. The vaults are listed under **Azure Key
-  Vault** in the sidebar, after GitHub, and open with their secrets; their edits count on the
+  installs it with Homebrew; `az login` stays Copy. The vaults are listed under **Azure** in the
+  sidebar, after GitHub, and open with their secrets; their edits count on the
   Sync button and Sync sends them, shown as an "Azure Key Vault" group after the repositories.
   **Remove from FX Vault…** (the vault's context menu or Actions) drops one locally; nothing
   changes in Azure.
@@ -59,6 +59,16 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   organization you imported or selected. Lock and Settings sit at the bottom
   of the sidebar; Add Repository by Name… is on an owner's menu and New Environment… on a
   repository's.
+- **Jump anywhere (⌘K).** The toolbar's search button, Edit › Jump Anywhere or ⌘K opens a
+  palette of every place in the sidebar (organizations, repositories, environments, Key Vaults,
+  folders): type part of a name or of its owner and repository, ↑↓ to move, ↩ to open, esc to
+  close.
+- **A quieter toolbar.** The toolbar shows the path of the selected place (`GitHub › owner ›
+  repository › environment`, `Azure › vault`, `Folders › name`), the ⌘K search button and Sync.
+  New Repository (⌘N, and now on an owner's menu with the owner preselected), Import .env
+  (⇧⌘I) and Share Project (⌥⌘S) stay in the File menu. With nothing selected, the window says
+  "Choose a place" with the pending changes and the ⌘K hint. "Your recovery key wasn't saved"
+  moved from the sidebar to a banner over the selected place, with Create New Key….
 - **Sharing production.** Share Project lists production stages unchecked; checking one asks
   for Touch ID (or, without Touch ID, your master password at Create), and the send step names
   the production places. The file is refused unless that confirmation was given.

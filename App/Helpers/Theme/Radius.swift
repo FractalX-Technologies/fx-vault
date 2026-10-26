@@ -8,7 +8,7 @@ extension Theme {
         static let card: CGFloat = 24
         /// Sheets drawn in the window (the system sheet keeps its own corners).
         static let sheet: CGFloat = 24
-        /// Tables and grouped lists inside a card or on the ground.
+        /// Tables and grouped lists inside a card or on the ground; the ⌘K jump palette.
         static let container: CGFloat = 16
         /// Rounded inputs, banners, checkbox rows.
         static let control: CGFloat = 12
