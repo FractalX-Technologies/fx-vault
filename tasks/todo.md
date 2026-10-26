@@ -2354,6 +2354,14 @@ Review D6d-2 and D6d-4 fixes (2026-10-26, automatic):
 - Docs: DESIGN (dialog tag, linked chip, delete list and notes, export offer, footnotes, linked update list), CHANGELOG, STRUCTURE (Place/, DialogChrome), RELEASING (steps 58, 59).
 - Gates: build-for-testing OK, lint OK, strings ×2 (second run up to date), check-secrets OK in the worktree.
 
+Review D6c5 — ⌘K "Secrets by name" (2026-10-26, automatic):
+- VaultStore: `ItemNameStore.fetchMatches(containing:limit:)`: one `UNION ALL` over `config_items` (outside deleted environments), `folder_items`, `destination_items` and `org_items`, live rows, names and ids only; every word with `instr` on the stored upper-case name; a name that starts with a word first, then by name, secrets first, holder.
+- VaultCore: `ItemHolderModel` (was Copy All's `CopyAllPlaceModel`), `ItemNameMatchModel`, `Limits.maxItemNameMatches` (50). VaultData: `ConfigRepository.itemNames(matching:limit:)` (the B10 quick vault can reuse it).
+- App: the palette asks for names on each query (`JumpPaletteViewModel.items`); `JumpPlaces.items(_:in:)` labels them from the sidebar data ("owner › repo › env", "owner › repo", "Folder · name", "Azure Key Vault · vault", "login · Organization"); `JumpResultID` for ↑↓ across both sections; `JumpRow` draws places and names; "Names only" in the footer; `JumpPlaceTarget.repositoryScope`. ↩ on a name: `MainViewModel.jump(to: JumpItemModel)` opens the place and keeps `pendingRow` until the detail shows that scope (repositories select their scope later), then sets its kind and selection. `ConfigKind.symbolName`.
+- Departures: variables are listed too (the board shows only secrets; a variable is as findable); no "· 3 repos" after an organization; a repository's own destinations (not Key Vaults of their own) are left out (the sidebar doesn't list them).
+- Tests written, not run yet: package `ItemNameQueryTests.everyHolderAnswersEveryWordInAnyCase` (VaultDataTests); `JumpPaletteTests.namesFollowThePlacesAndOpenTheirRow` (and `selectedID` is a `JumpResultID`); UI `JumpPaletteUITests` types "mode" and opens staging.
+- Docs: README, CHANGELOG, DESIGN, ARCHITECTURE, STRUCTURE, RELEASING step 19.
+
 Review B6b3b — organizations in Sync (2026-10-25, automatic):
 - Badge: `AppViewModel.organizationPendingCounts` (observed from `OrganizationItemRepository`) joins the Sync count and the Dock badge.
 - Sync sheet: the toolbar Sync reviews each organization with pending changes (`OrganizationSyncRepository.review`), one summary group per organization (`OrgSyncPresentation`, "+ / ↑ / −" lines, blocked rows with Edit… for a missing value or empty list), its deletions in the deletion review, and runs them after GitHub and destinations; result rows per change. A repository's own Sync leaves organizations out.

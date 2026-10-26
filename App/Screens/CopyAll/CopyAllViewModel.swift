@@ -15,7 +15,7 @@ enum CopyAllStep: Equatable {
 /// logged.
 @Observable
 final class CopyAllViewModel: LockObserving {
-    let place: CopyAllPlaceModel
+    let place: ItemHolderModel
     let reauth: ReauthModel<EnvExportAuthorizationModel>
     private(set) var step: CopyAllStep = .authenticate
     var alert: ErrorPresentationModel?

@@ -27,3 +27,26 @@ public enum ItemPlaceModel: Sendable, Hashable {
         return nil
     }
 }
+
+/// Anything that holds secrets and variables: a place, or an organization (1.0). Copy All reads
+/// one (D6c4); a name found by ⌘K says where it is (D6c5).
+public enum ItemHolderModel: Sendable, Hashable {
+    case place(ItemPlaceModel)
+    case organization(OrganizationID)
+}
+
+/// A secret or variable found by its name (1.0 D6c5, ⌘K "Secrets by name"): its row, kind and
+/// holder, never its value.
+public struct ItemNameMatchModel: Sendable, Hashable, Identifiable {
+    public let id: ConfigItemID
+    public let kind: ConfigKind
+    public let name: String
+    public let holder: ItemHolderModel
+
+    public init(id: ConfigItemID, kind: ConfigKind, name: String, holder: ItemHolderModel) {
+        self.id = id
+        self.kind = kind
+        self.name = name
+        self.holder = holder
+    }
+}

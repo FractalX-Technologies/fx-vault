@@ -23,7 +23,7 @@ struct CopyAllTextTests {
 
     static func text(
         _ files: EnvFileRepository,
-        _ place: CopyAllPlaceModel,
+        _ place: ItemHolderModel,
         _ authorization: EnvExportAuthorizationModel
     ) throws -> String? {
         let text = try files.copyAllText(of: place, authorization: authorization, sectionTitle: title)
@@ -115,7 +115,7 @@ struct CopyAllTextTests {
         let fixture = try await EnvFileTests.Fixture.make()
         defer { fixture.directory.remove() }
         try fixture.harness.add(fixture.repo, "TOKEN", value: ConfigFixture.valueB)
-        let place = CopyAllPlaceModel.place(.scope(repositoryID: fixture.repo.id, scope: .repository))
+        let place = ItemHolderModel.place(.scope(repositoryID: fixture.repo.id, scope: .repository))
 
         let fileAuthorization = try await fixture.authorize()
         #expect(fileAuthorization.purpose == .file)

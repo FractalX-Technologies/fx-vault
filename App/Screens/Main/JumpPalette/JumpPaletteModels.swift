@@ -6,6 +6,8 @@ enum JumpPlaceTarget: Hashable {
     case organization(SidebarOwnerModel.ID)
     case repository(SidebarRepoModel.ID)
     case environment(RepoID, EnvironmentID)
+    /// A repository's own secrets and variables (a name found at the repository level).
+    case repositoryScope(RepoID)
     case keyVault(DestinationID)
     case folder(FolderID)
 }
@@ -25,6 +27,30 @@ struct JumpPlaceModel: Identifiable, Hashable {
     var id: JumpPlaceTarget {
         target
     }
+}
+
+/// One name under "Secrets by name" (1.0 D6c5; board Main2-Search): the kind's symbol, the mono
+/// name and where it is ("example-org › api-service › production", "Folder · Stripe test").
+/// Never a value.
+struct JumpItemModel: Identifiable, Hashable {
+    let match: ItemNameMatchModel
+    let detail: String
+    /// The place ↩ opens; its detail then selects the row.
+    let target: JumpPlaceTarget
+
+    var id: ConfigItemID {
+        match.id
+    }
+
+    var name: String {
+        match.name
+    }
+}
+
+/// A row of either section, for ↑↓ across both.
+enum JumpResultID: Hashable {
+    case place(JumpPlaceTarget)
+    case item(ConfigItemID)
 }
 
 /// What the palette lists: the sidebar's data when it opens.
@@ -61,6 +87,38 @@ enum JumpPlaces {
         places += input.keyVaults.map { place(.keyVault($0.id), $0.title, $0.provider.title, $0.provider.symbolName) }
         places += input.folders.map { place(.folder($0.id), $0.name, PlaceCopy.folder, Theme.Symbols.folder, style: .sans) }
         return places
+    }
+
+    /// The names the vault found, each with where it is from the sidebar's data; a name whose
+    /// place the sidebar doesn't list (a destination of a repository) is left out.
+    static func items(_ matches: [ItemNameMatchModel], in input: JumpPlaceInputModel) -> [JumpItemModel] {
+        let repositories = Dictionary(
+            input.owners.flatMap(\.repos).compactMap { repo in repo.importedRepoID.map { ($0, repo) } },
+            uniquingKeysWith: { first, _ in first }
+        )
+        return matches.compactMap { match in
+            switch match.holder {
+            case .place(.scope(let repositoryID, let scope)):
+                guard let repo = repositories[repositoryID] else { return nil }
+                guard case .environment(let environmentID) = scope else {
+                    let detail = JumpPaletteCopy.path([repo.ownerLogin, repo.name])
+                    return JumpItemModel(match: match, detail: detail, target: .repositoryScope(repositoryID))
+                }
+                guard let environment = input.environments[repositoryID]?.first(where: { $0.id == environmentID }) else { return nil }
+                let detail = JumpPaletteCopy.path([repo.ownerLogin, repo.name, environment.name])
+                return JumpItemModel(match: match, detail: detail, target: .environment(repositoryID, environmentID))
+            case .place(.folder(let id)):
+                guard let folder = input.folders.first(where: { $0.id == id }) else { return nil }
+                return JumpItemModel(match: match, detail: PlaceCopy.subline([PlaceCopy.folder, folder.name]), target: .folder(id))
+            case .place(.destination(let id)):
+                guard let vault = input.keyVaults.first(where: { $0.id == id }) else { return nil }
+                return JumpItemModel(match: match, detail: PlaceCopy.subline([vault.provider.title, vault.title]), target: .keyVault(id))
+            case .organization(let id):
+                guard let owner = input.owners.first(where: { $0.organization?.id == id }) else { return nil }
+                let detail = PlaceCopy.subline([owner.login, PlaceCopy.organization])
+                return JumpItemModel(match: match, detail: detail, target: .organization(owner.id))
+            }
+        }
     }
 
     private static func place(

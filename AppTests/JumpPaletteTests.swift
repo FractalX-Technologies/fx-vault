@@ -39,7 +39,7 @@ struct JumpPaletteTests {
             "\(TestFixtures.owner) › repository",
             "\(TestFixtures.owner) › stripe-webhooks › environment",
         ])
-        #expect(palette.selectedID == palette.results.first?.id)
+        #expect(palette.selectedID == palette.results.first.map { .place($0.id) })
         palette.open()
         #expect(main.jumpPalette == nil)
         #expect(main.sidebar.selectedFolderID == folderID)
@@ -50,7 +50,7 @@ struct JumpPaletteTests {
         #expect(byVault.results.map(\.name) == ["production", "kv-example-prod"])
         byVault.moveSelection(.down)
         byVault.moveSelection(.down)
-        #expect(byVault.selectedID == byVault.results.last?.id, "the selection stops at the last place")
+        #expect(byVault.selectedID == byVault.results.last.map { .place($0.id) }, "the selection stops at the last place")
         byVault.open()
         #expect(main.sidebar.selectedKeyVaultID == vaultID)
 
@@ -71,6 +71,55 @@ struct JumpPaletteTests {
         #expect(main.jumpPalette != nil, "↩ with nothing to open keeps the palette")
         main.closeJumpPalette()
         #expect(main.jumpPalette == nil)
+    }
+
+    /// "Secrets by name" (1.0 D6c5): once something is typed, the names after the places, with
+    /// where they are; ↓ crosses into them and ↩ opens the place with the row selected.
+    @Test func namesFollowThePlacesAndOpenTheirRow() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: MainViewModelTests.ready)
+        let main = harness.app.makeMainViewModel()
+        let repoID = try await harness.stageRepository(name: "stripe-webhooks")
+        try harness.data.config.createEnvironment(in: repoID, name: "production")
+        let production = try EditorFixtures.environment(harness, repoID, named: "production")
+        let key = try harness.data.config.addItem(
+            repositoryID: repoID,
+            scope: .environment(production.id),
+            kind: .secret,
+            name: "STRIPE_KEY",
+            value: SecretBytes(utf8: EditorFixtures.secretValue)
+        ).itemID
+        let folderID = try harness.data.folders.createFolder(named: "Stripe test")
+        try harness.data.folders.addItem(folderID: folderID, kind: .variable, name: "STRIPE_MODE", value: SecretBytes(utf8: "test"))
+        #expect(await TestFixtures.eventually { !main.sidebar.owners.isEmpty && !main.sidebar.folders.isEmpty })
+
+        main.showJumpPalette()
+        let palette = try #require(main.jumpPalette)
+        #expect(palette.items.isEmpty, "names wait for the typing")
+        palette.query = "stripe"
+        #expect(palette.results.map(\.name) == ["Stripe test", "stripe-webhooks", "production"])
+        #expect(palette.items.map(\.name) == ["STRIPE_KEY", "STRIPE_MODE"])
+        #expect(palette.items.map(\.detail) == ["\(TestFixtures.owner) › stripe-webhooks › production", "Folder · Stripe test"])
+        for _ in palette.results {
+            palette.moveSelection(.down)
+        }
+        #expect(palette.selectedID == .item(key))
+        palette.open()
+        #expect(main.jumpPalette == nil)
+        #expect(await TestFixtures.eventually { main.detail?.scope == .environment(production.id) })
+        #expect(main.detail?.kind == .secret)
+        #expect(main.detail?.selection == [key])
+
+        // Nothing but a name matches: it is selected first; a variable opens on Variables.
+        main.showJumpPalette()
+        let byFolder = try #require(main.jumpPalette)
+        byFolder.query = "mode"
+        #expect(byFolder.results.isEmpty)
+        let mode = try #require(byFolder.items.first)
+        #expect(byFolder.selectedID == .item(mode.id))
+        byFolder.open()
+        #expect(main.sidebar.selectedFolderID == folderID)
+        #expect(main.folderDetail?.kind == .variable)
+        #expect(main.folderDetail?.selection == [mode.id])
     }
 
     @Test func anOrganizationAndARepositoryOpenTheirSidebarPlaces() async throws {

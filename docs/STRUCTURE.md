@@ -47,8 +47,9 @@ FXVault/
 │   │   ├── Main/                    # MainScreen/ViewModel (glass panels, router),
 │   │   │                            # MainToolbar (the toolbar panel), MainWindowChrome (the
 │   │   │                            # hidden title bar and its empty toolbar, D6c2b)
-│   │   │   ├── JumpPalette/         # the ⌘K palette (D6c2): JumpPaletteModels (JumpPlaces,
-│   │   │   │                        # pure), JumpPaletteViewModel, JumpPaletteView, JumpPaletteCopy
+│   │   │   ├── JumpPalette/         # the ⌘K palette (D6c2, D6c5): JumpPaletteModels (JumpPlaces,
+│   │   │   │                        # pure; places and names), JumpPaletteViewModel, JumpPaletteView,
+│   │   │   │                        # JumpPaletteCopy
 │   │   │   ├── Place/               # every place's header (D6c3): PlaceHeader (name, subline,
 │   │   │   │                        # status line, ⋯ More), PlaceCopy,
 │   │   │   │                        # PlaceItemMoreItems (⋯ item actions), PlaceRefreshingLine,
@@ -252,7 +253,7 @@ FXVault/
 │   │   │   ├── Stores/              # VaultRecord, Account, Repo, Config, SyncJournal, SharePackage,
 │   │   │   │                        # Folder (+LinkCountQuery, v0.7.0),
 │   │   │   │                        # Destination (v0.8.0), SentShare, ShareHold (held rows of both
-│   │   │   │                        # item tables; v0.9.0)
+│   │   │   │                        # item tables; v0.9.0), ItemName (⌘K names, 1.0)
 │   │   │   └── Errors/              # StoreError
 │   │   ├── GitHubKit/
 │   │   │   ├── Process/             # CommandRunning, CommandSpec, StdinPayload, ProcessRunner,

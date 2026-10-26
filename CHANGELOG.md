@@ -103,7 +103,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Jump anywhere (⌘K).** The toolbar's search button, Edit › Jump Anywhere or ⌘K opens a
   palette of every place in the sidebar (organizations, repositories, environments, Key Vaults,
   folders): type part of a name or of its owner and repository, ↑↓ to move, ↩ to open, esc to
-  close.
+  close. Under **Secrets by name** it also lists up to 50 secrets and variables whose name holds
+  what you typed, with where each one is; ↩ opens that place with the row selected. Values are
+  never searched.
 - **A quieter toolbar.** The toolbar shows the path of the selected place (`GitHub › owner ›
   repository › environment`, `Azure › vault`, `Folders › name`), the ⌘K search button and Sync.
   New Repository (⌘N, and now on an owner's menu with the owner preselected), Import .env
