@@ -191,6 +191,11 @@ public final class VaultManager: Sendable {
         return biometricStore.makeSession(prompt: prompt)
     }
 
+    /// False once a lock (a sleep or screen lock while already locked, too) invalidated it.
+    public func isCurrent(_ session: BiometricSession) -> Bool {
+        biometricStore.isCurrent(session)
+    }
+
     /// Unlocks with the island's check: the same rules as ``unlockWithBiometrics(prompt:)`` first,
     /// then `session` is evaluated (one touch, in its view) and its context reads the DEK. A
     /// failed or cancelled check reads nothing; a lock meanwhile throws `.cancelled` or `.locked`.

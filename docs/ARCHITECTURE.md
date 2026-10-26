@@ -1142,7 +1142,8 @@ AppTests).
   takes a `BiometricSession` from `VaultManager.biometricSession(prompt:)` (nil unless Touch ID
   can unlock now) and `TouchIDSensorView` puts its `LAAuthenticationView` in the row;
   `unlockWithTouchID()` then calls `unlockWithBiometrics(session:)` (evaluate, then the keychain
-  read through that context). A failed check gets a fresh session; the island going away or the
+  read through that context). A failed check gets a fresh session, and so does one a sleep or
+  screen lock invalidated (`vaultDidLockAgain()`, or `isCurrent` when the island shows); the island going away or the
   unlock drops it, and the window's lock screen uses the prompt path.
 - Quick vault (1.0 Q1, `App/Screens/QuickVault/`): `QuickVaultHotKeyRegistering` registers the
   Settings shortcut with Carbon's `RegisterEventHotKey` (no Accessibility or Input Monitoring

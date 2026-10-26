@@ -178,8 +178,10 @@ final class LockViewModel: LockObserving {
     /// The island is on screen: pairs a fresh check with its view, before any evaluation starts
     /// (the view only takes over the UI of a context it was made with). Nil when Touch ID can't
     /// unlock now, so the island and its button stay as before.
+    /// A check still current is kept, so the view on screen stays paired with it.
     func prepareIslandTouchID() {
         guard !isUnlocking else { return }
+        if let islandTouchID, app.container.vaultManager.isCurrent(islandTouchID) { return }
         islandTouchID = app.container.vaultManager.biometricSession(prompt: Self.unlockPrompt)
     }
 
@@ -192,6 +194,14 @@ final class LockViewModel: LockObserving {
     private func renewIslandTouchID() {
         guard islandTouchID != nil else { return }
         islandTouchID = app.container.vaultManager.biometricSession(prompt: Self.unlockPrompt)
+    }
+
+    /// A sleep or screen lock while already locked (Phase A only, no ``vaultDidLock()``): it
+    /// invalidated the island's check, so a held one is replaced, and the next activation may
+    /// prompt again.
+    func vaultDidLockAgain() {
+        hasAutoPrompted = false
+        renewIslandTouchID()
     }
 
     // MARK: - Recovery

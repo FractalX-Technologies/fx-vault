@@ -169,6 +169,10 @@ public final class FakeBiometricKeyStore: BiometricKeyStoring {
         return session
     }
 
+    public func isCurrent(_ session: BiometricSession) -> Bool {
+        state.withLock { $0.currentSession == ObjectIdentifier(session) }
+    }
+
     public func evaluate(_ session: BiometricSession) async throws(VaultError) {
         let action = state.withLock { state in
             let action = state.nextEvaluationAction
