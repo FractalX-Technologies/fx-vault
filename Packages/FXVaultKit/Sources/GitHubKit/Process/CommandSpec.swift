@@ -19,6 +19,10 @@ public struct CommandSpec: Sendable {
     public var timeout: Duration
     public var maxStdoutBytes: Int
     public var maxStderrBytes: Int
+    /// Sees stderr as it arrives (lossy UTF-8 chunks, unredacted), for a command that prints
+    /// what the user needs before it exits (`gh auth refresh`'s device code, 1.0 B4b). Stdout,
+    /// which may hold values, is never observed.
+    public var stderrObserver: (@Sendable (String) -> Void)?
 
     public init(
         executableURL: URL,
@@ -28,7 +32,8 @@ public struct CommandSpec: Sendable {
         stdin: StdinPayload = .empty,
         timeout: Duration,
         maxStdoutBytes: Int = Limits.maxStdoutBytes,
-        maxStderrBytes: Int = Limits.maxStderrBytes
+        maxStderrBytes: Int = Limits.maxStderrBytes,
+        stderrObserver: (@Sendable (String) -> Void)? = nil
     ) {
         self.executableURL = executableURL
         self.arguments = arguments
@@ -38,6 +43,7 @@ public struct CommandSpec: Sendable {
         self.timeout = timeout
         self.maxStdoutBytes = maxStdoutBytes
         self.maxStderrBytes = maxStderrBytes
+        self.stderrObserver = stderrObserver
     }
 }
 

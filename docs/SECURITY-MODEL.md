@@ -349,6 +349,15 @@ trusted for that path (below). Details: [API.md](API.md).
   values, which never reach stdout, an argv, a log or a file; the parser keeps only names. FX Vault
   still never passes `GH_TOKEN` or `GITHUB_TOKEN` to gh (its own `GH_TOKEN` is the account token
   it fetched, for write commands only).
+- **In-app Approve (A7, 1.0 B4b).** `gh auth refresh -h github.com -s <scopes>` is the only gh
+  command FX Vault runs that changes the user's gh login, and only from Approve on a sidebar line.
+  The scopes come from a fixed list (`GHApprovalScope`: `repo`, `read:org`, `admin:org`), never
+  from typed text or gh's output; it runs only for gh's active account (FX Vault never runs `gh
+  auth switch`), without `GH_TOKEN`, with stdin closed. While it runs, stderr is read only for
+  the one-time device code (`GHDeviceCodeParser`), which is shown and never logged; stdout is
+  never observed and nothing gh prints is kept or shown. The log names the scope count only. No
+  code within 20 s, a non-zero exit, Cancel, a lock and the 15-minute expiry stop gh; the cached
+  token of that account is dropped after a success.
 - **Which gh.** The gh the shell finds comes first, then fixed folders; the first gh that exists
   decides, and FX Vault never runs another one when that one is rejected, so it cannot silently
   run a different (older or planted) gh than Terminal. A rejected gh is never executed, not even

@@ -61,6 +61,7 @@ struct CommandBuilderTests {
             try GHEnvironmentsAPI.addBranchPolicy(repo: repo, environment: "production", pattern: "release/*", type: .branch),
             try GHEnvironmentsAPI.deleteBranchPolicy(repo: repo, environment: "production", policyID: 42),
             try GHEnvironmentsAPI.delete(repo: repo, environment: "production"),
+            try GHAuthService.refreshCommand(scopes: GHApprovalScope.allCases),
         ]
     }
 

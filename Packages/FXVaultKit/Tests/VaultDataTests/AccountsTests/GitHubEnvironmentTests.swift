@@ -1,6 +1,7 @@
 import Darwin
 import Foundation
 import GitHubKit
+import os
 import Testing
 import VaultCore
 @testable import VaultData
@@ -368,6 +369,50 @@ struct GitHubEnvironmentTests {
 
         try await fixture.repository.mapSSHAlias(nil, to: "user-a")
         #expect(try AccountStore(database: fixture.database).fetch(login: "user-a")?.sshHostAlias == nil)
+    }
+
+    // MARK: - In-app Approve (1.0 B4b)
+
+    @Test func approveRefreshesTheActiveAccountAndDropsItsToken() async throws {
+        let fixture = try Fixture()
+        defer { fixture.directory.remove() }
+        try await fixture.repository.detectGH(overridePath: fixture.ghPath)
+        fixture.runner.enqueue(.success(Self.authStatus), matching: { $0.starts(with: ["auth", "status"]) })
+        _ = try await fixture.repository.accounts()
+        let cache = fixture.repository.tokenCache
+        #expect(cache.store(SecretBytes(utf8: "stale"), for: "user-a", ifGeneration: cache.generation))
+        fixture.runner.enqueue(
+            FakeCommandRunner.Response(streamedStderr: "! First copy your one-time code: 4F2C-91AB\n"),
+            matching: { $0.starts(with: ["auth", "refresh"]) }
+        )
+
+        let seen = OSAllocatedUnfairLock(initialState: [String]())
+        try await fixture.repository.approveScopes([.adminOrg], login: "USER-A") { code in
+            seen.withLock { $0.append(code.code) }
+        }
+        #expect(seen.withLock { $0 } == ["4F2C-91AB"])
+        #expect(fixture.runner.invocations.last?.arguments == ["auth", "refresh", "-h", "github.com", "-s", "admin:org"])
+        #expect(cache.token(for: "user-a") == nil, "the next call reads the refreshed token")
+        #expect(await fixture.repository.isActiveAccount("user-a"))
+    }
+
+    @Test func approveNeverRefreshesAnotherAccount() async throws {
+        let fixture = try Fixture()
+        defer { fixture.directory.remove() }
+        try await fixture.repository.detectGH(overridePath: fixture.ghPath)
+        fixture.runner.enqueue(.success(Self.authStatus), matching: { $0.starts(with: ["auth", "status"]) })
+        _ = try await fixture.repository.accounts()
+        #expect(await !fixture.repository.isActiveAccount("user-b"))
+
+        var thrown: GHApprovalError?
+        do throws(GHApprovalError) {
+            try await fixture.repository.approveScopes([.repo, .readOrg], login: "user-b") { _ in }
+        } catch {
+            thrown = error
+        }
+        #expect(thrown == .notActiveAccount)
+        #expect(!fixture.runner.invocations.contains { $0.arguments.starts(with: ["auth", "refresh"]) })
+        #expect(!fixture.runner.invocations.contains { $0.arguments.starts(with: ["auth", "switch"]) })
     }
 
     // MARK: - Helpers

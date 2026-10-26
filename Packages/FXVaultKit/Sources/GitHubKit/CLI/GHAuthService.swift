@@ -35,7 +35,74 @@ public struct GHAuthService: Sendable {
         )
     }
 
+    /// A7 (1.0 B4b): `gh auth refresh -h github.com -s <scopes>`, for gh's active account. The
+    /// scopes come from ``GHApprovalScope`` only.
+    public static func refreshCommand(scopes: [GHApprovalScope]) throws(GHError) -> GHCommand {
+        guard !scopes.isEmpty else { throw .invalidInput(.emptyValue) }
+        return try GHCommand(
+            operation: .authRefresh,
+            arguments: ["auth", "refresh", "-h", GHConstants.host, "-s", scopeList(scopes)],
+            logTemplate: "auth refresh -h github.com -s {scopes}"
+        )
+    }
+
+    /// What the user can run in Terminal instead (shown with Copy when the in-app run fails).
+    public static func refreshCommandText(scopes: [GHApprovalScope]) -> String {
+        "gh auth refresh -h \(GHConstants.host) -s \(scopeList(scopes))"
+    }
+
+    /// In the fixed list's order, each once.
+    private static func scopeList(_ scopes: [GHApprovalScope]) -> String {
+        GHApprovalScope.allCases.filter(scopes.contains).map(\.rawValue).joined(separator: ",")
+    }
+
     // MARK: - Operations
+
+    /// Runs A7: `onDeviceCode` gets gh's code once it prints it, then gh waits for the approval
+    /// in the browser and exits. Without a code within `codeWait`, gh is stopped
+    /// (`.unrecognizedOutput`). Cancelling the task ends gh. Nothing of gh's output is kept.
+    public func approve(
+        scopes: [GHApprovalScope],
+        codeWait: Duration = Timeouts.ghDeviceCodeWait,
+        onDeviceCode: @escaping @Sendable (GHDeviceCodeModel) -> Void
+    ) async throws(GHApprovalError) {
+        let command: GHCommand
+        do {
+            command = try Self.refreshCommand(scopes: scopes)
+        } catch {
+            throw .failed
+        }
+        let watcher = GHDeviceCodeWatcher(onCode: onDeviceCode)
+        let service = self.service
+        let outcome: Result<Void, GHApprovalError> = await withTaskGroup(of: Result<Void, GHApprovalError>?.self) { group in
+            group.addTask {
+                do throws(GHError) {
+                    let output = try await service.execute(command, token: nil, stderrObserver: watcher.receive)
+                    output.wipe()
+                    return .success(())
+                } catch {
+                    switch error {
+                    case .cancelled: return .failure(.cancelled)
+                    case .timeout: return .failure(.timedOut)
+                    default: return .failure(watcher.hasCode ? .failed : .unrecognizedOutput)
+                    }
+                }
+            }
+            group.addTask {
+                do { try await Task.sleep(for: codeWait) } catch { return nil }
+                return watcher.hasCode ? nil : .failure(.unrecognizedOutput)
+            }
+            var result: Result<Void, GHApprovalError> = .failure(.cancelled)
+            for await next in group {
+                guard let next else { continue }
+                result = next
+                group.cancelAll()
+                break
+            }
+            return result
+        }
+        try outcome.get()
+    }
 
     /// The usable github.com accounts with their login state and scope status (A3).
     public func accounts() async throws(GHError) -> [GHAccountStatusModel] {

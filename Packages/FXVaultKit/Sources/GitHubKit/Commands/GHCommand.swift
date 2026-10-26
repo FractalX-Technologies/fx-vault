@@ -6,6 +6,7 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
     case version = "A1"
     case authStatus = "A3"
     case authToken = "A4"
+    case authRefresh = "A7"
     case orgList = "A5"
     case orgMembership = "A6"
     case repoList = "B1"
@@ -54,10 +55,10 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
         self != .repoCreate
     }
 
-    /// True when the call runs with the account's `GH_TOKEN` (everything but A1, A3, A4).
+    /// True when the call runs with the account's `GH_TOKEN` (everything but A1, A3, A4, A7).
     public var requiresToken: Bool {
         switch self {
-        case .version, .authStatus, .authToken: false
+        case .version, .authStatus, .authToken, .authRefresh: false
         default: true
         }
     }
@@ -97,6 +98,7 @@ public enum GHOperation: String, Sendable, Hashable, CaseIterable {
     public var timeout: Duration {
         switch self {
         case .authToken: Timeouts.ghAuthToken
+        case .authRefresh: Timeouts.ghAuthRefresh
         case .repoList: Timeouts.ghRepoList
         default: Timeouts.ghDefault
         }

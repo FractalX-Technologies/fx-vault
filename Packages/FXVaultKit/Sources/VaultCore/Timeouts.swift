@@ -16,6 +16,11 @@ public enum Timeouts {
 
     /// `gh auth token`.
     public static let ghAuthToken: Duration = .seconds(60)
+    /// `gh auth refresh` (1.0 B4b): GitHub's device code expires after 15 minutes.
+    public static let ghAuthRefresh: Duration = .seconds(900)
+    /// How long `gh auth refresh` may run without printing its device code before FX Vault
+    /// stops it and offers the command instead (output it doesn't recognize).
+    public static let ghDeviceCodeWait: Duration = .seconds(20)
     /// Every other gh command.
     public static let ghDefault: Duration = .seconds(30)
     /// `gh repo list`.

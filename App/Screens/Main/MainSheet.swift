@@ -1,4 +1,5 @@
 import Foundation
+import GitHubKit
 import VaultCore
 import VaultData
 
@@ -69,6 +70,8 @@ enum MainSheet: Hashable, Identifiable {
     // Main/ (owned by the main window)
     /// "Add repository by name…" for one account (§10 Column 1).
     case addRepositoryByName(AddRepositoryContext)
+    /// A sidebar subline's Approve (1.0 B4b): gh's device code for the missing scopes.
+    case ghApproval(GHApprovalContext)
 
     var id: Self {
         self
@@ -78,7 +81,7 @@ enum MainSheet: Hashable, Identifiable {
     /// (v0.2.0).
     var needsInternet: Bool {
         switch self {
-        case .sync, .createRepository, .addRepositoryByName, .addDestination, .destinationDrift, .orgDrift:
+        case .sync, .createRepository, .addRepositoryByName, .addDestination, .destinationDrift, .orgDrift, .ghApproval:
             true
         default:
             false
@@ -353,6 +356,14 @@ struct ShareImportContext: Hashable {
 /// "Add repository by name…" for one account.
 struct AddRepositoryContext: Hashable {
     let accountLogin: String
+}
+
+/// What ``GHApprovalSheet`` asks gh for (1.0 B4b): scopes of the fixed list, for gh's active
+/// account. `ownerLogin` names the organization the subline was on, for the title only.
+struct GHApprovalContext: Hashable {
+    let login: String
+    let ownerLogin: String
+    let scopes: [GHApprovalScope]
 }
 
 /// What a feature asks the main window to reload after it changed something the database

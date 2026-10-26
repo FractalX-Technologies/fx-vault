@@ -230,6 +230,8 @@ private struct MainSheetContent: View {
             DestinationDriftScreen(context: context, dependencies: dependencies) { [weak main] in
                 main?.destinationDetail?.clearRefresh()
             }
+        case .ghApproval(let context):
+            GHApprovalSheet(context: context, dependencies: dependencies)
         case .addRepositoryByName(let context):
             AddRepositorySheet(viewModel: AddRepositoryViewModel(
                 context: context,

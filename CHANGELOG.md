@@ -10,6 +10,10 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Touch ID in the island.** On a signed build with a sensor, the island shows the system's
   Touch ID glyph and one touch unlocks there, with no Touch ID dialog over it. The password,
   the restart and 14-day rules and the window's lock screen are unchanged.
+- **Approve in the app.** Approve on a sidebar line (Needs repo… or Needs admin:org) runs
+  `gh auth refresh` for that scope and shows GitHub's one-time code with Copy and Open
+  github.com/login/device; it closes once the browser approval is done, or with Check Again.
+  Another account than gh's active one still opens Settings › Accounts with its commands.
 - **Quick vault shortcut.** Settings › General records the global shortcut for the quick vault:
   ⌃⌥V by default, any key with two modifiers, one of them Control, Option or Command. Settings
   says so when another app holds the shortcut.

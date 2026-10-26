@@ -1019,8 +1019,8 @@ D1–D5). This slice removed every peer-to-peer feature:
 - Slice B4 checks organization access: `GitHubEnvironmentRepository.organizationAccess(accountLogin:)`
   (A5, then A6 per organization, with the scopes of the last `accounts()`) and
   `adminOrgFixCommands(for:)` (switch, `gh auth refresh -s admin:org`, switch back). Preferences
-  › Accounts shows them; FX Vault never runs `gh auth refresh` itself (it needs a browser and the
-  active account, §2). `GHError.stopsAccountReads` is the one rule for errors that end an
+  › Accounts shows them. Since 1.0 B4b the sidebar's Approve runs `gh auth refresh` itself for
+  gh's active account (below); another account keeps these commands. `GHError.stopsAccountReads` is the one rule for errors that end an
   account's reads (the catalog uses it too).
 - Slice B11b makes the main window two columns. `ScopeListView` is the selected repository's
   branch of the sidebar tree (environments, New Environment, destinations); the repository row
@@ -1218,8 +1218,14 @@ AppTests).
     (`expandedOwnerIDs`; a selection opens its owner, a search opens all) and list the vault's
     repositories, the rest behind "Show N more" (`SidebarGrouping.repoList`). Import, Clone,
     Share…, Remove from vault (confirmed); Add repository by name on the owner's menu
-    (`Main/AddRepository`); "Approve" asks `AppViewModel.requestedSettingsTab` for Settings ›
-    Accounts. 1.0: vault organizations
+    (`Main/AddRepository`); "Approve" opens the `GHApproval` sheet (1.0 B4b) when
+    `SidebarOwnerProblem.approvalScopes` maps the problem to the fixed scopes and the owner's
+    account is gh's active one, else asks `AppViewModel.requestedSettingsTab` for Settings ›
+    Accounts. The sheet's `GHApprovalViewModel` runs
+    `GitHubEnvironmentRepository.approveScopes` (A7 through `GHAuthService.approve`, whose
+    `CommandSpec.stderrObserver` feeds `GHDeviceCodeWatcher`), shows the code, ends on gh's exit,
+    Check Again (`gh auth status` lists the scopes), Cancel or a lock, then reloads the sidebar.
+    1.0: vault organizations
     are observed too (`SidebarInputModel.vaultOrganizations`); an organization group carries its
     `OrganizationModel` and is its own place (`selectedOrganizationOwnerID`; a repository, a folder
     and an organization are selected one at a time), with Import and Remove from Vault;

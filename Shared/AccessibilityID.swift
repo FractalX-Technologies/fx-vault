@@ -48,6 +48,18 @@ enum AccessibilityID {
         static let unlocked = "island.unlocked"
     }
 
+    /// In-app Approve through `gh auth refresh` (1.0 B4b).
+    enum GHApproval {
+        static let sheet = "ghApproval"
+        static let code = "ghApproval.code"
+        static let copyCode = "ghApproval.copyCode"
+        static let openDevicePage = "ghApproval.openDevicePage"
+        static let checkAgain = "ghApproval.checkAgain"
+        static let cancel = "ghApproval.cancel"
+        static let tryAgain = "ghApproval.tryAgain"
+        static let status = "ghApproval.status"
+    }
+
     /// The Connect phase after onboarding (1.0).
     enum Connect {
         static let importSelected = "connect.continue"

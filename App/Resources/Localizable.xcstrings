@@ -8647,6 +8647,149 @@
         }
       }
     },
+    "ghApproval.approved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Approved · checked again"
+          }
+        }
+      }
+    },
+    "ghApproval.checkAgain" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check Again"
+          }
+        }
+      }
+    },
+    "ghApproval.enterCode" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter this code on GitHub"
+          }
+        }
+      }
+    },
+    "ghApproval.error" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Run this in Terminal, approve in the browser, then Check Again:"
+          }
+        }
+      }
+    },
+    "ghApproval.error.expired" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub's code is valid for 15 minutes. Try Again for a new one, or run this in Terminal:"
+          }
+        }
+      }
+    },
+    "ghApproval.error.expired.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The code expired"
+          }
+        }
+      }
+    },
+    "ghApproval.error.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub CLI didn't finish the approval"
+          }
+        }
+      }
+    },
+    "ghApproval.openDevicePage" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open %@"
+          }
+        }
+      }
+    },
+    "ghApproval.starting" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Asking GitHub CLI for a code…"
+          }
+        }
+      }
+    },
+    "ghApproval.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub CLI asks GitHub for it on %@. Enter the code on GitHub and approve; FX Vault never sees your token."
+          }
+        }
+      }
+    },
+    "ghApproval.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Approve %@ on GitHub"
+          }
+        }
+      }
+    },
+    "ghApproval.tryAgain" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Try Again"
+          }
+        }
+      }
+    },
+    "ghApproval.waiting" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Waiting for approval…"
+          }
+        }
+      }
+    },
     "ghSetup.checkAgain" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
