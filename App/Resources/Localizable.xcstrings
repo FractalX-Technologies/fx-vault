@@ -12145,17 +12145,6 @@
         }
       }
     },
-    "projectShare.adjust" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Adjust what's included"
-          }
-        }
-      }
-    },
     "projectShare.airDrop" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12178,24 +12167,46 @@
         }
       }
     },
-    "projectShare.continue" : {
+    "projectShare.counts.secrets" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Continue"
+            "value" : "^[%lld secret](inflect: true)"
           }
         }
       }
     },
-    "projectShare.create" : {
+    "projectShare.counts.variables" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Create Share File"
+            "value" : "^[%lld variable](inflect: true)"
+          }
+        }
+      }
+    },
+    "projectShare.createFile" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create File"
+          }
+        }
+      }
+    },
+    "projectShare.createFile.touchID" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Create File with Touch ID"
           }
         }
       }
@@ -12207,6 +12218,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Encrypting the share…"
+          }
+        }
+      }
+    },
+    "projectShare.done.clipboardClears" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The clipboard clears in %lld s."
+          }
+        }
+      }
+    },
+    "projectShare.done.copied" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied. The clipboard clears in %lld s."
           }
         }
       }
@@ -12332,13 +12365,13 @@
         }
       }
     },
-    "projectShare.done.passphraseHint" : {
+    "projectShare.done.refusedAfter" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Send these words another way (a call or another app), not with the file."
+            "value" : "FX Vault refuses it after %@. Rotate anything in it if it leaks."
           }
         }
       }
@@ -12361,6 +12394,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "1 repository updated"
+          }
+        }
+      }
+    },
+    "projectShare.done.sendApart" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send the file by chat or AirDrop, and the words by call or another app."
+          }
+        }
+      }
+    },
+    "projectShare.done.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Send the passphrase another way"
           }
         }
       }
@@ -12409,17 +12464,6 @@
         }
       }
     },
-    "projectShare.expiry.passphrase" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "FX Vault refuses to open it after this date. Anyone with the passphrase could still read it with other software."
-          }
-        }
-      }
-    },
     "projectShare.noRepositories" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12442,35 +12486,13 @@
         }
       }
     },
-    "projectShare.open.change.one" : {
+    "projectShare.open.alreadyInVault" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "1 change"
-          }
-        }
-      }
-    },
-    "projectShare.open.changes" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld changes"
-          }
-        }
-      }
-    },
-    "projectShare.open.dates" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Created %1$@ · Expires %2$@"
+            "value" : "Already in your vault"
           }
         }
       }
@@ -12596,6 +12618,17 @@
         }
       }
     },
+    "projectShare.open.importAsHeld" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import as Held"
+          }
+        }
+      }
+    },
     "projectShare.open.importFailed" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12618,46 +12651,57 @@
         }
       }
     },
-    "projectShare.open.inVault" : {
+    "projectShare.open.newRepository" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "In your vault"
+            "value" : "New repository · import from GitHub"
           }
         }
       }
     },
-    "projectShare.open.nothingSyncs" : {
+    "projectShare.open.newRepositoryWith" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Nothing reaches GitHub or a provider until you include it in Sync."
+            "value" : "New repository · import from GitHub with %@"
           }
         }
       }
     },
-    "projectShare.open.repositories" : {
+    "projectShare.open.nothingSyncs.azure" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%lld repositories"
+            "value" : "Nothing reaches GitHub or Azure until you include it in Sync."
           }
         }
       }
     },
-    "projectShare.open.repository.one" : {
+    "projectShare.open.passphraseLabel" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "1 repository"
+            "value" : "%lld-word passphrase"
+          }
+        }
+      }
+    },
+    "projectShare.open.passphrasePrompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "six words separated by spaces"
           }
         }
       }
@@ -12673,35 +12717,57 @@
         }
       }
     },
-    "projectShare.open.skipped.notChecked" : {
+    "projectShare.open.skipped.noAccess" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Skipped: access couldn't be checked"
+            "value" : "Skipped · no access"
           }
         }
       }
     },
-    "projectShare.open.skipped.notVisible" : {
+    "projectShare.open.skipped.offline" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Skipped: none of your GitHub accounts can see it"
+            "value" : "Skipped · GitHub unreachable"
           }
         }
       }
     },
-    "projectShare.open.skipped.unreachable" : {
+    "projectShare.open.skipped.unchecked" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Skipped: GitHub couldn't be reached to check access"
+            "value" : "Skipped · access not checked"
+          }
+        }
+      }
+    },
+    "projectShare.open.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open %@"
+          }
+        }
+      }
+    },
+    "projectShare.open.unlocked" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlocked · created %1$@ · expires %2$@"
           }
         }
       }
@@ -12728,35 +12794,13 @@
         }
       }
     },
-    "projectShare.open.willImport" : {
+    "projectShare.open.whatItAdds" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Will be imported from GitHub"
-          }
-        }
-      }
-    },
-    "projectShare.open.willImportWith" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Will be imported from GitHub with %@"
-          }
-        }
-      }
-    },
-    "projectShare.production" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Production"
+            "value" : "What it adds · nothing is deleted"
           }
         }
       }
@@ -12772,35 +12816,35 @@
         }
       }
     },
-    "projectShare.production.included" : {
+    "projectShare.production.leaves" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Includes production (%@). Whoever has the file and the words gets these values."
+            "value" : "Production values leave this Mac in a file (%@). Rotate them if it leaks."
           }
         }
       }
     },
-    "projectShare.protection.passphrase" : {
+    "projectShare.production.treeHelp" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Anyone, with a passphrase"
+            "value" : "Creating a file with production asks for Touch ID or your master password."
           }
         }
       }
     },
-    "projectShare.protection.passphrase.help" : {
+    "projectShare.productionTag" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Six words that you send another way. Whoever has the file and the words can open it."
+            "value" : "production"
           }
         }
       }
@@ -12849,24 +12893,13 @@
         }
       }
     },
-    "projectShare.repositoryLevel" : {
+    "projectShare.saveFile" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Repository-level secrets and variables"
-          }
-        }
-      }
-    },
-    "projectShare.save" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Save…"
+            "value" : "Save File…"
           }
         }
       }
@@ -12904,28 +12937,6 @@
         }
       }
     },
-    "projectShare.shareStage" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Share Stage…"
-          }
-        }
-      }
-    },
-    "projectShare.shareStage.help" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Share this stage's GitHub environment and destinations in an encrypted file."
-          }
-        }
-      }
-    },
     "projectShare.stages" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12948,145 +12959,35 @@
         }
       }
     },
-    "projectShare.step.contents" : {
+    "projectShare.subtitle.passphrase" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "What to share"
+            "value" : "An encrypted file, opened with a passphrase you send another way."
           }
         }
       }
     },
-    "projectShare.step.sendTo" : {
+    "projectShare.title.named" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Send to"
+            "value" : "Share %@ securely"
           }
         }
       }
     },
-    "projectShare.subtitle" : {
+    "projectShare.title.securely" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "One encrypted .fxvault file with the repositories, stages and destinations you choose."
-          }
-        }
-      }
-    },
-    "projectShare.summary.folder.one" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1 folder"
-          }
-        }
-      }
-    },
-    "projectShare.summary.folders" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld folders"
-          }
-        }
-      }
-    },
-    "projectShare.summary.item.one" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1 secret or variable"
-          }
-        }
-      }
-    },
-    "projectShare.summary.items" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld secrets and variables"
-          }
-        }
-      }
-    },
-    "projectShare.summary.line" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ in %2$@"
-          }
-        }
-      }
-    },
-    "projectShare.summary.lineBoth" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ in %2$@ and %3$@"
-          }
-        }
-      }
-    },
-    "projectShare.summary.lineFolders" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ in %2$@"
-          }
-        }
-      }
-    },
-    "projectShare.summary.repositories" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld repositories"
-          }
-        }
-      }
-    },
-    "projectShare.summary.repository.one" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1 repository"
-          }
-        }
-      }
-    },
-    "projectShare.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Share Project"
+            "value" : "Share Securely"
           }
         }
       }
@@ -14752,24 +14653,24 @@
         }
       }
     },
-    "share.error.expired.message" : {
+    "share.error.expired.file" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Ask the sender for a new one."
+            "value" : "This file expired"
           }
         }
       }
     },
-    "share.error.expired.title" : {
+    "share.error.expired.import" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This share file has expired"
+            "value" : "FX Vault won’t import it. Ask the sender for a new file."
           }
         }
       }
@@ -15023,17 +14924,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Couldn't save the file"
-          }
-        }
-      }
-    },
-    "share.export.copied" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Passphrase copied. The clipboard clears in %lld seconds."
           }
         }
       }
@@ -15555,17 +15445,6 @@
         }
       }
     },
-    "share.sheet.label" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Share"
-          }
-        }
-      }
-    },
     "share.summary.counts" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -15665,6 +15544,28 @@
         }
       }
     },
+    "share.tree.collapsed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Collapsed"
+          }
+        }
+      }
+    },
+    "share.tree.expanded" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Expanded"
+          }
+        }
+      }
+    },
     "share.tree.itemsOnly" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -15727,28 +15628,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Not shared"
-          }
-        }
-      }
-    },
-    "share.tree.withPolicy" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "With branch policy"
-          }
-        }
-      }
-    },
-    "share.tree.withPolicy.help" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "The whole environment is checked, so its deployment branch policy is shared too."
           }
         }
       }
@@ -16006,28 +15885,6 @@
         }
       }
     },
-    "shareImport.passphrase.placeholder" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "word-word-word-word-word-word"
-          }
-        }
-      }
-    },
-    "shareImport.passphrase.prompt" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Enter the six-word passphrase the sender gave you."
-          }
-        }
-      }
-    },
     "shareImport.reading" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -16035,17 +15892,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Reading the file…"
-          }
-        }
-      }
-    },
-    "shareImport.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Import Share"
           }
         }
       }

@@ -3,12 +3,10 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// Share Project (v0.9.0): what to share → send to → Touch ID or password → share or save. See
-/// ``ProjectShareViewModel`` for the rules.
-///
-/// UI feature contract entry view (ARCHITECTURE.md): presented by `MainScreen` for
-/// `MainSheet.shareExport`, from Share › File…, the File menu's Share Project…, a place's or a
-/// row menu's Share Securely….
+/// Share Securely (boards Share-Pick, Share-Passphrase): what to share, Touch ID or the password,
+/// then the passphrase and the file (``ProjectShareViewModel``). UI feature contract entry view
+/// (ARCHITECTURE.md): `MainScreen` presents it for `MainSheet.shareExport` (Share › File…, the File
+/// menu's Share Project…, a place's or a row menu's Share Securely…).
 struct ProjectShareScreen: View {
     @State private var viewModel: ProjectShareViewModel
     @Environment(\.dismiss) private var dismiss
@@ -24,22 +22,34 @@ struct ProjectShareScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
-            SheetHeader(
-                label: ShareSheetLabel.share,
-                title: ProjectShareCopy.title,
-                subtitle: ProjectShareCopy.subtitle
-            )
+        DialogSheet(
+            title: isDone ? ProjectShareCopy.doneTitle : ProjectShareCopy.title(viewModel.subjectName),
+            subtitle: isDone ? nil : ProjectShareCopy.subtitle,
+            footerNote: footerNote,
+            isWorking: viewModel.isDelivering
+        ) {
             content
-            Spacer(minLength: 0)
-            footer
+        } actions: {
+            actions
         }
-        .fxSheetContent()
-        .frame(width: Theme.Layout.shareSheetWidth)
-        .frame(minHeight: Theme.Layout.shareSheetMinHeight)
+        .frame(width: isDone ? Theme.Layout.sharePassphraseWidth : Theme.Layout.sharePickWidth)
+        .frame(maxHeight: Theme.Layout.shareSheetMaxHeight)
         .task { await viewModel.start() }
         .onDisappear { viewModel.close() }
         .errorAlert($viewModel.alert)
+    }
+
+    private var isDone: Bool {
+        viewModel.step == .done
+    }
+
+    /// The file's counts while choosing (board Share-Pick); when FX Vault refuses the file once
+    /// it is made (board Share-Passphrase).
+    private var footerNote: String? {
+        if isDone {
+            return viewModel.expiresAt.map(ProjectShareCopy.refusedAfter)
+        }
+        return viewModel.counts.map(ProjectShareCopy.counts).flatMap { $0.isEmpty ? nil : $0 }
     }
 
     @ViewBuilder
@@ -47,8 +57,6 @@ struct ProjectShareScreen: View {
         switch viewModel.step {
         case .contents:
             ProjectShareContentsStep(viewModel: viewModel)
-        case .sendTo:
-            ProjectShareSendToStep(viewModel: viewModel)
         case .authenticate:
             ShareReauthView(
                 model: viewModel.activeReauth,
@@ -63,329 +71,294 @@ struct ProjectShareScreen: View {
         }
     }
 
-    private var footer: some View {
-        HStack(spacing: Theme.Spacing.mediumMinus) {
-            if viewModel.step == .sendTo || viewModel.step == .authenticate {
-                Button(ProjectShareCopy.back) {
-                    viewModel.back()
-                }
-                .fxButtonStyle(.secondary, size: .large)
-            }
-            Spacer()
-            if viewModel.step == .done {
-                Button(String(localized: "common.done", defaultValue: "Done")) {
-                    dismiss()
-                }
-                .fxButtonStyle(.secondary, size: .large)
-                .keyboardShortcut(.cancelAction)
-            } else {
-                Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
-                    dismiss()
-                }
-                .fxButtonStyle(.secondary, size: .large)
-                .keyboardShortcut(.cancelAction)
-                switch viewModel.step {
-                case .contents:
-                    Button(ProjectShareCopy.continueTitle) {
-                        viewModel.continueToSendTo()
-                    }
-                    .fxButtonStyle(.primary, size: .large)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!viewModel.canContinue)
-                    .accessibilityIdentifier(AccessibilityID.Share.continueToSendTo)
-                case .sendTo, .creating:
-                    Button(ProjectShareCopy.create) {
-                        Task { await viewModel.requestCreate() }
-                    }
-                    .fxButtonStyle(.primary, size: .large)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!viewModel.canCreate)
-                    .accessibilityIdentifier(AccessibilityID.Share.create)
-                case .authenticate, .done:
-                    EmptyView()
+    @ViewBuilder
+    private var actions: some View {
+        switch viewModel.step {
+        case .contents, .creating:
+            cancelButton
+            Button {
+                Task { await viewModel.requestCreate() }
+            } label: {
+                if viewModel.activeReauth.canUseTouchID {
+                    Label(ProjectShareCopy.createFileWithTouchID, systemImage: "touchid")
+                } else {
+                    Text(ProjectShareCopy.createFile)
                 }
             }
+            .fxButtonStyle(.primary, size: .dialog)
+            .keyboardShortcut(.defaultAction)
+            .disabled(!viewModel.canCreate)
+            .accessibilityIdentifier(AccessibilityID.Share.create)
+        case .authenticate:
+            Button(ProjectShareCopy.back) {
+                viewModel.back()
+            }
+            .fxButtonStyle(.outline, size: .dialog)
+            cancelButton
+        case .done:
+            ProjectShareDeliveryButtons(viewModel: viewModel)
+            Button(String(localized: "common.done", defaultValue: "Done")) {
+                dismiss()
+            }
+            .fxButtonStyle(.primary, size: .dialog)
+            .keyboardShortcut(.cancelAction)
         }
+    }
+
+    private var cancelButton: some View {
+        Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
+            dismiss()
+        }
+        .fxButtonStyle(.outline, size: .dialog)
+        .keyboardShortcut(.cancelAction)
     }
 }
 
-// MARK: - Step 1: what to share
+// MARK: - What to share (board Share-Pick)
 
+/// The repositories, the repository level and stages across them, the tree, the notes and the
+/// expiry.
 private struct ProjectShareContentsStep: View {
     let viewModel: ProjectShareViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            repositories
-            stages
-            if let tree = viewModel.tree, !tree.roots.isEmpty {
-                VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                    HStack {
-                        SectionLabel(ProjectShareCopy.adjust)
-                        Spacer()
-                        if !viewModel.chosenRepositoryIDs.isEmpty {
-                            Toggle(
-                                ProjectShareCopy.repositoryLevel,
-                                isOn: Binding(
-                                    get: { viewModel.includesRepositoryLevel },
-                                    set: { viewModel.setIncludesRepositoryLevel($0) }
-                                )
-                            )
-                            .toggleStyle(.checkbox)
-                            .fxTextStyle(.caption)
-                            .foregroundStyle(Theme.Colors.mutedText)
-                        }
-                    }
-                    ShareScopeTreeView(tree: tree, expandsRoots: viewModel.chosenRepositoryIDs.count == 1) { checked, node in
-                        viewModel.setChecked(checked, for: node)
-                    }
-                    .id(viewModel.chosenRepositoryIDs)
-                }
-            } else if viewModel.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, minHeight: Theme.Layout.shareListMinHeight)
-            }
-            if let preview = viewModel.preview {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-                    Text(ProjectShareCopy.summary(preview))
-                        .fxTextStyle(.statusLine)
-                        .foregroundStyle(Theme.Colors.subtleText)
-                    if !preview.valueMissingNames.isEmpty {
-                        ShareNoteView(
-                            systemImage: "key.slash",
-                            text: ProjectShareCopy.valueMissing(preview.valueMissingNames.count),
-                            tint: Theme.Colors.warning
-                        )
-                        .help(preview.valueMissingNames.joined(separator: "\n"))
-                    }
-                }
-            }
-        }
-    }
-
-    private var repositories: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            SectionLabel(ProjectShareCopy.repositories)
-            FlowLayout(spacing: Theme.Spacing.small) {
+        @Bindable var viewModel = viewModel
+        DialogFormRow(ProjectShareCopy.repositories) {
+            FlowLayout(spacing: Theme.Spacing.smallMinus) {
                 ForEach(viewModel.chosenRepositories) { repository in
-                    ProjectShareRepositoryChip(title: repository.fullName) {
+                    DialogTokenChip(title: repository.fullName, removeLabel: ProjectShareCopy.removeRepository) {
                         Task { await viewModel.removeRepository(repository.id) }
                     }
                 }
                 if !viewModel.addableRepositories.isEmpty {
-                    Menu {
-                        ForEach(viewModel.addableRepositories) { repository in
-                            Button(repository.fullName) {
-                                Task { await viewModel.addRepository(repository.id) }
-                            }
-                        }
-                    } label: {
-                        Label(ProjectShareCopy.addRepository, systemImage: "plus")
-                    }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize()
-                    .fxTextStyle(.callout)
+                    addRepositoryMenu
                 }
             }
             if viewModel.chosenRepositoryIDs.isEmpty, !viewModel.isLoading {
-                Text(ProjectShareCopy.noRepositories)
-                    .fxTextStyle(.caption)
-                    .foregroundStyle(Theme.Colors.subtleText)
+                ConfigEditorNoteView(note: .info(ProjectShareCopy.noRepositories), style: .dialog)
             }
+        }
+        if !viewModel.chosenRepositoryIDs.isEmpty {
+            DialogFormRow(ProjectShareCopy.stages) {
+                stages
+            }
+        }
+        if let tree = viewModel.tree, !tree.roots.isEmpty {
+            ShareScopeTreeView(tree: tree, expandsRoots: viewModel.chosenRepositoryIDs.count == 1) { checked, node in
+                viewModel.setChecked(checked, for: node)
+            }
+            .id(viewModel.chosenRepositoryIDs)
+        } else if viewModel.isLoading {
+            ProgressView()
+                .controlSize(.small)
+                .frame(maxWidth: .infinity)
+        }
+        notes
+        HStack(spacing: Theme.Spacing.medium) {
+            Text(ProjectShareCopy.expiry)
+                .fxTextStyle(.formLabel)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .accessibilityHidden(true)
+            Spacer(minLength: 0)
+            SegmentedPill(
+                selection: $viewModel.expiry,
+                segments: ShareExpiryChoice.allCases.map {
+                    SegmentedPill.Segment(value: $0, title: ProjectShareCopy.expiryChoice($0))
+                },
+                accessibilityLabel: ProjectShareCopy.expiry,
+                size: .small
+            )
+            .fixedSize()
         }
     }
 
+    /// The repositories that can still be added, as the dashed add chip of a dialog form.
+    private var addRepositoryMenu: some View {
+        Menu {
+            ForEach(viewModel.addableRepositories) { repository in
+                Button(repository.fullName) {
+                    Task { await viewModel.addRepository(repository.id) }
+                }
+            }
+        } label: {
+            DialogAddChipLabel(title: ProjectShareCopy.addRepository)
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .fixedSize()
+    }
+
+    /// The repository level and each stage, for every chosen repository; production carries its
+    /// tag and asks for Touch ID when ticked.
     @ViewBuilder
     private var stages: some View {
-        if !viewModel.chosenRepositoryIDs.isEmpty {
-            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                SectionLabel(ProjectShareCopy.stages)
-                if viewModel.stageOptions.isEmpty {
-                    Text(ProjectShareCopy.noStages)
-                        .fxTextStyle(.caption)
-                        .foregroundStyle(Theme.Colors.subtleText)
-                } else {
-                    FlowLayout(spacing: Theme.Spacing.medium) {
-                        ForEach(viewModel.stageOptions) { option in
-                            HStack(spacing: Theme.Spacing.xSmall) {
-                                Toggle(
-                                    option.name,
-                                    isOn: Binding(
-                                        get: { viewModel.isStageChosen(option) },
-                                        set: { viewModel.setStage(option, chosen: $0) }
-                                    )
-                                )
-                                .toggleStyle(.checkbox)
-                                .fxTextStyle(.monoName)
-                                .foregroundStyle(Theme.Colors.ink)
-                                .accessibilityIdentifier(AccessibilityID.Share.stage(option.name))
-                                if option.isProduction {
-                                    StatusChip(title: ProjectShareCopy.productionChip, tone: .warning)
-                                        .help(ProjectShareCopy.productionHelp)
-                                }
-                            }
-                            .frame(minHeight: Theme.Layout.scopeRowHeight)
-                        }
-                    }
-                    Text(ProjectShareCopy.stagesHelp)
-                        .fxTextStyle(.caption)
-                        .foregroundStyle(Theme.Colors.subtleText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-    }
-}
-
-/// A chosen repository with its remove button.
-private struct ProjectShareRepositoryChip: View {
-    let title: String
-    let onRemove: () -> Void
-
-    var body: some View {
-        HStack(spacing: Theme.Spacing.xSmall) {
-            Image(systemName: Theme.Symbols.repository)
-                .foregroundStyle(Theme.Colors.subtleText)
-                .accessibilityHidden(true)
-            Text(verbatim: title)
-                .fxTextStyle(.monoName)
-                .foregroundStyle(Theme.Colors.ink)
-                .lineLimit(1)
-                .truncationMode(.middle)
-            Button(action: onRemove) {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(Theme.Colors.subtleText)
-            }
-            .buttonStyle(.plain)
-            .help(ProjectShareCopy.removeRepository)
-            .accessibilityLabel(ProjectShareCopy.removeRepository)
-        }
-        .padding(.vertical, Theme.Spacing.xSmall)
-        .padding(.horizontal, Theme.Spacing.small)
-        .fxCardBackground(.container)
-    }
-}
-
-// MARK: - Step 2: send to
-
-private struct ProjectShareSendToStep: View {
-    let viewModel: ProjectShareViewModel
-
-    var body: some View {
-        @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            if let preview = viewModel.preview {
-                Text(ProjectShareCopy.summary(preview))
-                    .fxTextStyle(.statusLine)
-                    .foregroundStyle(Theme.Colors.subtleText)
-            }
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                Text(ProjectShareCopy.passphraseOption)
-                    .fxTextStyle(.bodyEmphasized)
+        FlowLayout(spacing: Theme.Spacing.medium) {
+            Toggle(
+                ProjectShareCopy.repositoryLevelPlace,
+                isOn: Binding(
+                    get: { viewModel.includesRepositoryLevel },
+                    set: { viewModel.setIncludesRepositoryLevel($0) }
+                )
+            )
+            .toggleStyle(.checkbox)
+            .fxTextStyle(.caption)
+            .foregroundStyle(Theme.Colors.ink)
+            .frame(minHeight: Theme.Layout.dialogFieldHeight)
+            ForEach(viewModel.stageOptions) { option in
+                HStack(spacing: Theme.Spacing.smallMinus) {
+                    Toggle(
+                        option.name,
+                        isOn: Binding(
+                            get: { viewModel.isStageChosen(option) },
+                            set: { viewModel.setStage(option, chosen: $0) }
+                        )
+                    )
+                    .toggleStyle(.checkbox)
+                    .fxTextStyle(.monoMeta)
                     .foregroundStyle(Theme.Colors.ink)
-                Text(ProjectShareCopy.passphraseHelp)
-                    .fxTextStyle(.caption)
-                    .foregroundStyle(Theme.Colors.mutedText)
-                    .fixedSize(horizontal: false, vertical: true)
-                if viewModel.includesProduction {
-                    ShareNoteView(
-                        systemImage: "exclamationmark.triangle",
-                        text: ProjectShareCopy.productionIncluded(viewModel.productionPlaces),
-                        tint: Theme.Colors.warning
-                    )
-                    .accessibilityIdentifier(AccessibilityID.Share.productionNote)
+                    .accessibilityIdentifier(AccessibilityID.Share.stage(option.name))
+                    if option.isProduction {
+                        DialogTag(title: ProjectShareCopy.productionTag)
+                            .accessibilityHidden(true)
+                        Image(systemName: "lock")
+                            .font(Theme.Typography.label)
+                            .foregroundStyle(Theme.Colors.mutedText)
+                            .help(ProjectShareCopy.productionHelp)
+                            .accessibilityLabel(Text(ProjectShareCopy.productionHelp))
+                    }
                 }
+                .frame(minHeight: Theme.Layout.dialogFieldHeight)
             }
-            .padding(Theme.Spacing.medium)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .fxCardBackground(.container)
-            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                HStack(spacing: Theme.Spacing.medium) {
-                    SectionLabel(ProjectShareCopy.expiry)
-                    SegmentedPill(
-                        selection: $viewModel.expiry,
-                        segments: ShareExpiryChoice.allCases.map {
-                            SegmentedPill.Segment(value: $0, title: ProjectShareCopy.expiryChoice($0))
-                        },
-                        accessibilityLabel: ProjectShareCopy.expiry
-                    )
-                    .fixedSize()
-                }
-                Text(ProjectShareCopy.expiryPassphraseNote)
-                    .fxTextStyle(.caption)
-                    .foregroundStyle(Theme.Colors.subtleText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        }
+        ConfigEditorNoteView(
+            note: .info(viewModel.stageOptions.isEmpty ? ProjectShareCopy.noStages : ProjectShareCopy.stagesHelp),
+            style: .dialog
+        )
+    }
+
+    /// Production leaving the Mac and secrets that travel by name only.
+    @ViewBuilder
+    private var notes: some View {
+        if viewModel.includesProduction {
+            ConfigEditorNoteView(note: .info(ProjectShareCopy.productionIncluded(viewModel.productionPlaces)), style: .dialog)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier(AccessibilityID.Share.productionNote)
+        }
+        if let missing = viewModel.preview?.valueMissingNames, !missing.isEmpty {
+            ConfigEditorNoteView(note: .warning(ProjectShareCopy.valueMissing(missing.count)), style: .dialog)
+                .help(missing.joined(separator: "\n"))
         }
     }
 }
 
-// MARK: - Step 4: deliver
+// MARK: - The passphrase (board Share-Passphrase)
 
+/// The file, the passphrase shown once with Copy, the clipboard line, how to send both, and
+/// "I've saved it", which unlocks the delivery buttons.
 private struct ProjectShareDoneStep: View {
     let viewModel: ProjectShareViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-            if let passphrase = viewModel.passphrase {
-                PassphraseView(passphrase: passphrase) {
-                    viewModel.copyPassphrase()
-                }
-                .accessibilityIdentifier(AccessibilityID.Share.passphrase)
-                SheetCallout(
-                    systemImage: "exclamationmark.bubble",
-                    tint: Theme.Colors.warning,
-                    text: ProjectShareCopy.passphraseHint
-                )
-                FXCheckboxRow(
-                    title: String(localized: "shareExport.passphrase.saved", defaultValue: "I've saved it"),
-                    isOn: Binding(
-                        get: { viewModel.hasSavedPassphrase },
-                        set: { viewModel.hasSavedPassphrase = $0 }
-                    )
-                )
-                .accessibilityIdentifier(AccessibilityID.Share.passphraseSaved)
-            }
-            if let expiresAt = viewModel.expiresAt {
-                Text(ProjectShareCopy.expires(expiresAt))
-                    .fxTextStyle(.monoMeta)
-                    .foregroundStyle(Theme.Colors.subtleText)
-            }
-            HStack(spacing: Theme.Spacing.small) {
-                if viewModel.canSendWithAirDrop {
-                    Button {
-                        viewModel.sendWithAirDrop()
-                    } label: {
-                        Label(ProjectShareCopy.airDrop, systemImage: "dot.radiowaves.up.forward")
-                    }
-                    .fxButtonStyle(.primary)
-                    .accessibilityIdentifier(AccessibilityID.Share.airDrop)
-                }
-                Button {
-                    viewModel.shareFile()
-                } label: {
-                    Label(ProjectShareCopy.share, systemImage: "square.and.arrow.up")
-                }
-                .fxButtonStyle(viewModel.canSendWithAirDrop ? .secondary : .primary)
-                .background(ShareDeliveryAnchor(delivery: viewModel.delivery))
-                Button {
-                    Task { await viewModel.saveToFile() }
-                } label: {
-                    Label(ProjectShareCopy.save, systemImage: "square.and.arrow.down")
-                }
-                .fxButtonStyle(.secondary)
-                if viewModel.isDelivering {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-            }
-            .disabled(!viewModel.canDeliver)
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
+            Image(systemName: "doc")
+                .font(Theme.Typography.callout)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .accessibilityHidden(true)
             Text(verbatim: viewModel.fileName)
                 .fxTextStyle(.monoMeta)
-                .foregroundStyle(Theme.Colors.subtleText)
-            if let notice = viewModel.notice {
-                ShareNoteView(systemImage: "checkmark.circle", text: notice, tint: Theme.Colors.success)
+                .foregroundStyle(Theme.Colors.ink)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            if let counts = viewModel.counts.map(ProjectShareCopy.counts), !counts.isEmpty {
+                Text(verbatim: "· \(counts)")
+                    .font(Theme.Typography.monoLabel)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .lineLimit(1)
             }
         }
+        .accessibilityElement(children: .combine)
+        if let passphrase = viewModel.passphrase {
+            ProjectSharePassphraseBox(passphrase: passphrase) {
+                viewModel.copyPassphrase()
+            }
+            Text(verbatim: viewModel.passphraseNote)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(ProjectShareCopy.sendApart)
+                .fxTextStyle(.callout)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+            FXCheckboxRow(
+                title: String(localized: "shareExport.passphrase.saved", defaultValue: "I've saved it"),
+                isOn: Binding(
+                    get: { viewModel.hasSavedPassphrase },
+                    set: { viewModel.hasSavedPassphrase = $0 }
+                ),
+                isBoxed: false
+            )
+            .accessibilityIdentifier(AccessibilityID.Share.passphraseSaved)
+        }
+    }
+}
+
+/// The six words on one line in the grey box, 17 pt mono, with Copy. Hidden from screen
+/// capture.
+private struct ProjectSharePassphraseBox: View {
+    let passphrase: String
+    let onCopy: () -> Void
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.mediumMinus) {
+            Text(verbatim: passphrase.components(separatedBy: PassphraseGenerator.separator).joined(separator: " "))
+                .fxTextStyle(.passphraseWord)
+                .foregroundStyle(Theme.Colors.ink)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button(action: onCopy) {
+                Label(String(localized: "passphrase.copy", defaultValue: "Copy"), systemImage: "doc.on.doc")
+            }
+            .fxButtonStyle(.outline, size: .compact)
+        }
+        .padding(.vertical, Theme.Spacing.mediumPlus)
+        .padding(.leading, Theme.Spacing.large)
+        .padding(.trailing, Theme.Spacing.mediumPlus)
+        .background(Theme.Colors.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(AccessibilityID.Share.passphrase)
+        .screenCaptureProtected()
+    }
+}
+
+/// Save File…, Send with AirDrop where this Mac offers it, and Share…: enabled once the
+/// passphrase is saved.
+private struct ProjectShareDeliveryButtons: View {
+    let viewModel: ProjectShareViewModel
+
+    var body: some View {
+        Group {
+            Button(ProjectShareCopy.saveFile) {
+                Task { await viewModel.saveToFile() }
+            }
+            .fxButtonStyle(.outline, size: .dialog)
+            if viewModel.canSendWithAirDrop {
+                Button {
+                    viewModel.sendWithAirDrop()
+                } label: {
+                    Label(ProjectShareCopy.airDrop, systemImage: "dot.radiowaves.up.forward")
+                }
+                .fxButtonStyle(.outline, size: .dialog)
+                .accessibilityIdentifier(AccessibilityID.Share.airDrop)
+            }
+            Button {
+                viewModel.shareFile()
+            } label: {
+                Label(ProjectShareCopy.share, systemImage: "square.and.arrow.up")
+            }
+            .fxButtonStyle(.outline, size: .dialog)
+            .background(ShareDeliveryAnchor(delivery: viewModel.delivery))
+        }
+        .disabled(!viewModel.canDeliver)
     }
 }

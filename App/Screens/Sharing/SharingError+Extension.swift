@@ -172,10 +172,10 @@ nonisolated extension SharingError: PresentableError {
             )
         case .expired:
             ErrorPresentationModel(
-                title: String(localized: "share.error.expired.title", defaultValue: "This share file has expired"),
+                title: String(localized: "share.error.expired.file", defaultValue: "This file expired"),
                 message: String(
-                    localized: "share.error.expired.message",
-                    defaultValue: "Ask the sender for a new one."
+                    localized: "share.error.expired.import",
+                    defaultValue: "FX Vault won’t import it. Ask the sender for a new file."
                 )
             )
         }

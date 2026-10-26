@@ -3,11 +3,10 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// Import a `.fxvault` share (§10 `ShareImportScreen`): passphrase → preview and merge choices →
-/// apply. See ``ShareImportViewModel`` for the rules.
-///
-/// UI feature contract entry view (ARCHITECTURE.md): presented by `MainScreen` for
-/// `MainSheet.shareImport` (from the Share menu or a `.fxvault` file opened in Finder/AirDrop).
+/// Open a `.fxvault` file (§10 `ShareImportScreen`; boards Share-Open, Share-OpenPreview,
+/// Share-Expired): passphrase → preview and merge choices → apply (``ShareImportViewModel``).
+/// UI feature contract entry view (ARCHITECTURE.md): `MainScreen` presents it for
+/// `MainSheet.shareImport` (the Share menu, or a `.fxvault` file opened in Finder or AirDrop).
 struct ShareImportScreen: View {
     @State private var viewModel: ShareImportViewModel
     @Environment(\.dismiss) private var dismiss
@@ -24,22 +23,59 @@ struct ShareImportScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
-            SheetHeader(
-                label: ShareSheetLabel.share,
-                title: String(localized: "shareImport.title", defaultValue: "Import Share"),
-                subtitle: viewModel.fileName
-            )
-            content
-            Spacer(minLength: 0)
-            footer
+        Group {
+            if viewModel.step == .failed, let failure = viewModel.failure {
+                ShareRefusedView(failure: failure, hasExpired: viewModel.hasExpired, fileName: viewModel.fileName) {
+                    dismiss()
+                }
+            } else {
+                DialogSheet(
+                    title: ProjectShareCopy.openTitle(viewModel.fileName),
+                    subtitle: subtitle,
+                    footerNote: footerNote,
+                    isWorking: viewModel.step == .bundleApplying || viewModel.step == .applying
+                ) {
+                    content
+                } actions: {
+                    actions
+                }
+            }
         }
-        .fxSheetContent()
-        .frame(width: Theme.Layout.shareSheetWidth)
-        .frame(minHeight: Theme.Layout.shareSheetMinHeight)
+        .frame(width: width)
+        .frame(maxHeight: Theme.Layout.shareSheetMaxHeight)
         .task { await viewModel.start() }
         .onDisappear { viewModel.close() }
         .errorAlert($viewModel.alert)
+    }
+
+    private var width: CGFloat {
+        switch viewModel.step {
+        case .reading, .passphrase, .opening: Theme.Layout.shareOpenWidth
+        case .bundlePreview, .bundleApplying: Theme.Layout.shareOpenPreviewWidth
+        case .failed: Theme.Layout.shareExpiredWidth
+        case .preview, .applying, .done, .folderDestination, .folderSaved, .bundleDone: Theme.Layout.shareSheetWidth
+        }
+    }
+
+    /// When the file was made and when FX Vault stops opening it (board Share-OpenPreview).
+    private var subtitle: String? {
+        guard let editor = viewModel.bundleEditor, viewModel.step == .bundlePreview || viewModel.step == .bundleApplying else {
+            return nil
+        }
+        return ProjectShareCopy.unlocked(created: editor.createdAt, expires: editor.expiresAt)
+    }
+
+    private var footerNote: String? {
+        switch viewModel.step {
+        case .bundlePreview:
+            ProjectShareCopy.nothingSyncs
+        case .bundleApplying:
+            viewModel.bundleEditor?.needsRepositoryImport == true && viewModel.isOnline
+                ? ProjectShareCopy.importing
+                : String(localized: "shareImport.applying", defaultValue: "Importing…")
+        default:
+            nil
+        }
     }
 
     @ViewBuilder
@@ -57,12 +93,10 @@ struct ShareImportScreen: View {
             }
         case .folderDestination:
             if let destination = viewModel.destination {
-                VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-                    if viewModel.wasFolderImported {
-                        Banner(.warning, message: FolderShareCopy.alreadyImported)
-                    }
-                    FolderDestinationView(model: destination)
+                if viewModel.wasFolderImported {
+                    Banner(.warning, message: FolderShareCopy.alreadyImported)
                 }
+                FolderDestinationView(model: destination)
             }
         case .folderSaved:
             if let notice = viewModel.folderNotice {
@@ -70,44 +104,32 @@ struct ShareImportScreen: View {
             }
         case .bundlePreview, .bundleApplying:
             if let editor = viewModel.bundleEditor {
-                ScrollView {
-                    ProjectShareImportView(editor: editor, isOnline: viewModel.isOnline)
-                }
-                .frame(maxHeight: Theme.Layout.projectShareContentMaxHeight)
-                .disabled(viewModel.step == .bundleApplying)
-                if viewModel.step == .bundleApplying {
-                    SheetProgressRow(text: editor.needsRepositoryImport && viewModel.isOnline
-                        ? ProjectShareCopy.importing
-                        : String(localized: "shareImport.applying", defaultValue: "Importing…"))
-                }
+                ProjectShareImportView(editor: editor, isOnline: viewModel.isOnline)
+                    .disabled(viewModel.step == .bundleApplying)
             }
         case .bundleDone:
             if let result = viewModel.bundleResult {
                 ProjectShareImportResultView(result: result, failedRepositories: viewModel.failedRepositories)
             }
         case .failed:
-            if let failure = viewModel.failure {
-                InlineErrorView(error: failure)
-            }
+            EmptyView()
         }
     }
 
+    /// The six words in one mono field (board Share-Open), with the count and the error as notes.
     private var passphraseStep: some View {
         @Bindable var viewModel = viewModel
-        return VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            Text(String(
-                localized: "shareImport.passphrase.prompt",
-                defaultValue: "Enter the six-word passphrase the sender gave you."
-            ))
-            .fxTextStyle(.body)
-            .foregroundStyle(Theme.Colors.mutedText)
-            SecureField(
-                String(localized: "shareImport.passphrase.placeholder", defaultValue: "word-word-word-word-word-word"),
-                text: $viewModel.passphrase
-            )
+        return VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
+            Text(ProjectShareCopy.passphraseLabel)
+                .fxTextStyle(.formLabel)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .accessibilityHidden(true)
+            SecureField(text: $viewModel.passphrase, prompt: Text(ProjectShareCopy.passphrasePrompt)) {
+                Text(ProjectShareCopy.passphraseLabel)
+            }
             .focused($isPassphraseFocused)
             .fxInputField(
-                .rounded,
+                .dialog,
                 isFocused: isPassphraseFocused,
                 isInvalid: viewModel.passphraseError != nil,
                 isMonospaced: true
@@ -116,22 +138,25 @@ struct ShareImportScreen: View {
             .onSubmit(open)
             .onAppear { isPassphraseFocused = true }
             HStack(spacing: Theme.Spacing.small) {
-                Text(String(
-                    localized: "shareImport.passphrase.count",
-                    defaultValue: "\(viewModel.typedWordCount) of \(Limits.passphraseWordCount) words"
-                ))
-                .fxTextStyle(.monoMeta)
-                .foregroundStyle(Theme.Colors.subtleText)
+                ConfigEditorNoteView(
+                    note: .info(String(
+                        localized: "shareImport.passphrase.count",
+                        defaultValue: "\(viewModel.typedWordCount) of \(Limits.passphraseWordCount) words"
+                    )),
+                    style: .dialog
+                )
                 if viewModel.step == .opening {
                     ProgressView()
-                        .controlSize(.small)
-                    Text(String(localized: "shareImport.opening", defaultValue: "Decrypting…"))
-                        .fxTextStyle(.caption)
-                        .foregroundStyle(Theme.Colors.mutedText)
+                        .controlSize(.mini)
+                    ConfigEditorNoteView(
+                        note: .info(String(localized: "shareImport.opening", defaultValue: "Decrypting…")),
+                        style: .dialog
+                    )
                 }
             }
             if let error = viewModel.passphraseError {
-                InlineErrorView(error: error)
+                ConfigEditorNoteView(note: .error(error.title), style: .dialog)
+                ConfigEditorNoteView(note: .info(error.message), style: .dialog)
             }
         }
     }
@@ -139,12 +164,10 @@ struct ShareImportScreen: View {
     @ViewBuilder
     private var previewStep: some View {
         if let editor = viewModel.editor {
-            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-                if let reason = editor.blockReason {
-                    blockedBanner(reason)
-                }
-                ShareImportPreviewView(editor: editor)
+            if let reason = editor.blockReason {
+                blockedBanner(reason)
             }
+            ShareImportPreviewView(editor: editor)
         }
     }
 
@@ -166,46 +189,44 @@ struct ShareImportScreen: View {
         }
     }
 
-    private var footer: some View {
-        HStack(spacing: Theme.Spacing.mediumMinus) {
-            Spacer()
-            switch viewModel.step {
-            case .done, .failed, .folderSaved, .bundleDone:
-                Button(String(localized: "common.done", defaultValue: "Done")) {
-                    dismiss()
-                }
-                .fxButtonStyle(.primary, size: .large)
-                .keyboardShortcut(.defaultAction)
-            case .reading, .passphrase, .opening:
-                cancelButton
-                Button(String(localized: "shareImport.open", defaultValue: "Open"), action: open)
-                    .fxButtonStyle(.primary, size: .large)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!viewModel.canOpen)
-            case .preview, .applying:
-                cancelButton
-                Button(String(localized: "shareImport.apply", defaultValue: "Import")) {
-                    Task { await viewModel.apply() }
-                }
-                .fxButtonStyle(.primary, size: .large)
-                .disabled(!viewModel.canApply)
-            case .bundlePreview, .bundleApplying:
-                cancelButton
-                Button(String(localized: "shareImport.apply", defaultValue: "Import")) {
-                    Task { await viewModel.applyBundle() }
-                }
-                .fxButtonStyle(.primary, size: .large)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!viewModel.canApplyBundle)
-            case .folderDestination:
-                cancelButton
-                Button(viewModel.destination?.choice == .repository ? FolderDestinationCopy.continueTitle : FolderDestinationCopy.saveTitle) {
-                    Task { await viewModel.continueFolder() }
-                }
-                .fxButtonStyle(.primary, size: .large)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!viewModel.canContinueFolder)
+    @ViewBuilder
+    private var actions: some View {
+        switch viewModel.step {
+        case .done, .failed, .folderSaved, .bundleDone:
+            Button(String(localized: "common.done", defaultValue: "Done")) {
+                dismiss()
             }
+            .fxButtonStyle(.primary, size: .dialog)
+            .keyboardShortcut(.defaultAction)
+        case .reading, .passphrase, .opening:
+            cancelButton
+            Button(String(localized: "shareImport.open", defaultValue: "Open"), action: open)
+                .fxButtonStyle(.primary, size: .dialog)
+                .keyboardShortcut(.defaultAction)
+                .disabled(!viewModel.canOpen)
+        case .preview, .applying:
+            cancelButton
+            Button(String(localized: "shareImport.apply", defaultValue: "Import")) {
+                Task { await viewModel.apply() }
+            }
+            .fxButtonStyle(.primary, size: .dialog)
+            .disabled(!viewModel.canApply)
+        case .bundlePreview, .bundleApplying:
+            cancelButton
+            Button(ProjectShareCopy.importAsHeld) {
+                Task { await viewModel.applyBundle() }
+            }
+            .fxButtonStyle(.primary, size: .dialog)
+            .keyboardShortcut(.defaultAction)
+            .disabled(!viewModel.canApplyBundle)
+        case .folderDestination:
+            cancelButton
+            Button(viewModel.destination?.choice == .repository ? FolderDestinationCopy.continueTitle : FolderDestinationCopy.saveTitle) {
+                Task { await viewModel.continueFolder() }
+            }
+            .fxButtonStyle(.primary, size: .dialog)
+            .keyboardShortcut(.defaultAction)
+            .disabled(!viewModel.canContinueFolder)
         }
     }
 
@@ -213,12 +234,44 @@ struct ShareImportScreen: View {
         Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
             dismiss()
         }
-        .fxButtonStyle(.secondary, size: .large)
+        .fxButtonStyle(.outline, size: .dialog)
         .keyboardShortcut(.cancelAction)
     }
 
     private func open() {
         Task { await viewModel.open() }
+    }
+}
+
+/// A file that cannot be opened here (board Share-Expired): the symbol, why, the file's name and
+/// OK, centred.
+private struct ShareRefusedView: View {
+    let failure: ErrorPresentationModel
+    let hasExpired: Bool
+    let fileName: String
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
+                Image(systemName: hasExpired ? "clock.badge.xmark" : "exclamationmark.triangle")
+                    .font(Theme.Typography.dialogSymbol)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .accessibilityHidden(true)
+                SheetHeader.dialog(failure.title, subtitle: failure.message)
+                Text(verbatim: fileName)
+                    .fxTextStyle(.monoMeta)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Button(String(localized: "common.ok", defaultValue: "OK"), action: onDismiss)
+                .fxButtonStyle(.primary, size: .dialog)
+                .keyboardShortcut(.defaultAction)
+                .frame(maxWidth: .infinity)
+        }
+        .padding(Theme.Layout.dialogInset)
+        .fxSheetBackground()
     }
 }
 

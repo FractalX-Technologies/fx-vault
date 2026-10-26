@@ -71,6 +71,8 @@ final class ShareImportViewModel: LockObserving {
     private(set) var wasFolderImported = false
     /// Why the file cannot be opened (``Step/failed``).
     private(set) var failure: ErrorPresentationModel?
+    /// The failure is the file's expiry (board Share-Expired's clock).
+    private(set) var hasExpired = false
     private(set) var isImportingRepository = false
     var alert: ErrorPresentationModel?
     let fileName: String
@@ -155,6 +157,7 @@ final class ShareImportViewModel: LockObserving {
             } else {
                 self.passphrase = ""
                 failure = Self.presentation(of: error)
+                hasExpired = error == .share(.expired)
                 step = .failed
             }
         }

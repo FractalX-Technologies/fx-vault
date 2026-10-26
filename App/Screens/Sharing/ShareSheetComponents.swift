@@ -3,14 +3,10 @@ import SwiftUI
 // Small pieces shared by the sharing and `.env` sheets. The header, callout,
 // checkbox row and sheet chrome are design components (App/Components/Design/SheetChrome.swift).
 
-/// The ``SheetHeader`` labels of the sharing and `.env` sheets, one per feature.
+/// The ``SheetHeader`` label of the `.env` sheets (the 1.0 share dialogs have no eyebrow).
 enum ShareSheetLabel {
     static var environmentFile: String {
         String(localized: "envFile.sheet.label", defaultValue: "Environment file")
-    }
-
-    static var share: String {
-        String(localized: "share.sheet.label", defaultValue: "Share")
     }
 }
 

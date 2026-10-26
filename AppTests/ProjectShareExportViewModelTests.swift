@@ -52,7 +52,6 @@ struct ProjectShareExportViewModelTests {
         #expect(world.sender.biometrics.lastPrompt == FeatureDependencies.reauthPrompt(for: .share))
 
         // Create reuses the confirmation from the tick: no second prompt.
-        model.continueToSendTo()
         #expect(model.canCreate)
         await model.requestCreate()
         #expect(model.step == .done, "\(String(describing: model.alert))")
@@ -85,10 +84,14 @@ struct ProjectShareExportViewModelTests {
         model.setStage(production, chosen: true)
         await model.settle()
         #expect(model.isStageChosen(production))
-        model.continueToSendTo()
         await model.requestCreate()
         #expect(model.step == .authenticate)
         #expect(model.activeReauth === model.productionReauth)
+        // Back returns to the one choosing step, and Create asks again.
+        model.back()
+        #expect(model.step == .contents)
+        await model.requestCreate()
+        #expect(model.step == .authenticate)
 
         model.activeReauth.password = testPassword
         await model.authenticateWithPassword()
@@ -108,13 +111,31 @@ struct ProjectShareExportViewModelTests {
         #expect(model.includesProduction)
         #expect(!model.productionPlaces.isEmpty)
 
-        model.continueToSendTo()
         #expect(model.canCreate)
         await model.requestCreate()
         #expect(model.activeReauth === model.productionReauth)
         model.activeReauth.password = testPassword
         await model.authenticateWithPassword()
         #expect(model.step == .done, "\(String(describing: model.alert))")
+    }
+
+    /// The title names the one repository; the footer and each tree row count what they hold
+    /// (board Share-Pick).
+    @Test func theSheetNamesItsRepositoryAndCountsTheFile() async throws {
+        let world = try await ProjectShareWorld()
+        let model = await model(world)
+        #expect(model.subjectName == TestFixtures.repoName)
+        #expect(ProjectShareCopy.title(model.subjectName) == "Share \(TestFixtures.repoName) securely")
+        #expect(ProjectShareCopy.title(nil) == "Share Securely")
+        // Production is left out: the repository level, staging and its destination.
+        #expect(model.counts == ShareItemCountModel(secrets: 3, variables: 1))
+        let root = try #require(model.tree?.roots.first)
+        #expect(root.itemCounts == ShareItemCountModel(secrets: 4, variables: 1))
+        let environments = (root.children ?? []).filter { $0.kind == .environment }
+        #expect(environments.filter(\.isProduction).map(\.title) == ["production"])
+        #expect(ProjectShareCopy.counts(ShareItemCountModel(secrets: 3, variables: 0)) == "3 secrets")
+        #expect(ProjectShareCopy.counts(ShareItemCountModel(secrets: 1, variables: 1)) == "1 secret · 1 variable")
+        #expect(ProjectShareCopy.counts(ShareItemCountModel(secrets: 0, variables: 0)).isEmpty)
     }
 
     @Test func theExpiryMovesThePreviewDate() async throws {
@@ -149,7 +170,6 @@ struct ProjectShareExportViewModelTests {
         let world = try await ProjectShareWorld()
         let delivery = FakeShareFileDelivery()
         let model = await model(world, delivery: delivery)
-        model.continueToSendTo()
         #expect(model.canCreate)
         await authenticateAndCreate(model)
 
@@ -191,7 +211,9 @@ struct ProjectShareExportViewModelTests {
         #expect(model.chosenRepositoryIDs.isEmpty)
         #expect(model.selection?.folderIDs == [folderID])
         #expect(model.preview?.summary.folders.count == 1)
-        #expect(model.canContinue)
+        #expect(model.canCreate)
+        #expect(model.subjectName == "Mobile App")
+        #expect(model.counts == ShareItemCountModel(secrets: 1, variables: 0))
     }
 
     @Test func addingAndRemovingRepositories() async throws {
@@ -219,7 +241,6 @@ struct ProjectShareExportViewModelTests {
         let world = try await ProjectShareWorld()
         try await world.sender.enableTouchID()
         let model = await model(world)
-        model.continueToSendTo()
         let loadsBefore = world.sender.biometrics.loadCount
 
         await model.requestCreate()
@@ -235,7 +256,6 @@ struct ProjectShareExportViewModelTests {
     @Test func withoutTouchIDThePasswordIsRequiredAndAWrongOneIsRejected() async throws {
         let world = try await ProjectShareWorld()
         let model = await model(world)
-        model.continueToSendTo()
         await model.requestCreate()
         // The automatic Touch ID attempt fails quietly: no error, the password field remains.
         #expect(model.step == .authenticate)
@@ -258,13 +278,14 @@ struct ProjectShareExportViewModelTests {
     @Test func copyingThePassphraseIsConcealedAndClearedAfter30Seconds() async throws {
         let world = try await ProjectShareWorld()
         let model = await model(world)
-        model.continueToSendTo()
         await authenticateAndCreate(model)
         let passphrase = try #require(model.passphrase)
         let harness = world.sender
         let sleepersBefore = harness.clock.sleeperCount
+        #expect(model.passphraseNote == "The clipboard clears in 30 s.")
 
         model.copyPassphrase()
+        #expect(model.passphraseNote == "Copied. The clipboard clears in 30 s.")
         #expect(harness.pasteboardString == passphrase)
         let types = harness.pasteboard.types ?? []
         #expect(types.contains(ClipboardManager.Marker.concealed))
@@ -281,7 +302,6 @@ struct ProjectShareExportViewModelTests {
         let world = try await ProjectShareWorld()
         let delivery = FakeShareFileDelivery()
         let model = await model(world, delivery: delivery)
-        model.continueToSendTo()
         await authenticateAndCreate(model)
         let staged = try #require(model.stagedFileURL)
         let destination = world.sender.sandbox.appendingPathComponent("Saved.fxvault")
@@ -317,7 +337,6 @@ struct ProjectShareExportViewModelTests {
         let world = try await ProjectShareWorld()
         let delivery = FakeShareFileDelivery()
         let model = await model(world, delivery: delivery)
-        model.continueToSendTo()
         await authenticateAndCreate(model)
         let staged = try #require(model.stagedFileURL)
         #expect(model.canSendWithAirDrop)
@@ -341,7 +360,6 @@ struct ProjectShareExportViewModelTests {
         let world = try await ProjectShareWorld()
         let delivery = FakeShareFileDelivery()
         let model = await model(world, delivery: delivery)
-        model.continueToSendTo()
         await authenticateAndCreate(model)
         model.hasSavedPassphrase = true
         delivery.saveDestination = nil
@@ -356,13 +374,12 @@ struct ProjectShareExportViewModelTests {
     @Test func aLockDropsTheTypedPasswordAndTheAuthorization() async throws {
         let world = try await ProjectShareWorld()
         let model = await model(world)
-        model.continueToSendTo()
         await model.requestCreate()
         model.reauth.password = "typed"
 
         world.sender.app.lock(trigger: .manual)
 
-        #expect(model.step == .sendTo)
+        #expect(model.step == .contents)
         #expect(model.reauth.password.isEmpty)
         #expect(!model.reauth.isAuthorized)
     }
@@ -371,7 +388,6 @@ struct ProjectShareExportViewModelTests {
     @Test func aLockAfterCreatingDropsThePassphrase() async throws {
         let world = try await ProjectShareWorld()
         let created = await model(world)
-        created.continueToSendTo()
         await authenticateAndCreate(created)
         #expect(created.passphrase != nil)
         world.sender.app.lock(trigger: .manual)

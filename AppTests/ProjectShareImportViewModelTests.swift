@@ -77,6 +77,7 @@ struct ProjectShareImportViewModelTests {
         await model.open()
         #expect(model.step == .failed)
         #expect(model.failure == SharingError.share(.expired).presentation)
+        #expect(model.hasExpired)
         #expect(model.passphrase.isEmpty)
     }
 

@@ -3,29 +3,32 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// A project share's preview in Import Share (v0.9.0, P7): the sender (unverified), the dates, the replay warning, the repository list (✓ ⇣ ✕) and, for the selected
-/// repository, today's preview of its GitHub scopes plus its destinations; then the folders.
+/// A project share's preview (v0.9.0, P7; board Share-OpenPreview): the sender (unverified), the
+/// replay warning, what the file adds per repository and, for the selected repository, today's
+/// preview of its GitHub scopes plus its destinations; then the folders.
 struct ProjectShareImportView: View {
     let editor: ProjectShareImportEditor
     let isOnline: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            ProjectShareSenderView(sender: editor.sender, createdAt: editor.createdAt, expiresAt: editor.expiresAt)
-            if editor.plan.requiresReplayConfirmation {
-                replayWarning
-            }
+        ProjectShareSenderView(sender: editor.sender)
+        if editor.plan.requiresReplayConfirmation {
+            replayWarning
+        }
+        VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
+            Text(ProjectShareCopy.whatItAdds)
+                .fxTextStyle(.formLabel)
+                .foregroundStyle(Theme.Colors.mutedText)
             repositoryList
-            if let repository = editor.selectedRepository {
-                ProjectShareRepositoryPreview(editor: editor, repository: repository)
-            }
-            if !editor.plan.folders.isEmpty {
-                folders
-            }
-            ShareNoteView(systemImage: "tray.and.arrow.down", text: ProjectShareCopy.nothingSyncs)
-            if editor.needsRepositoryImport, !isOnline {
-                ShareNoteView(systemImage: "wifi.slash", text: ConnectivityCopy.offlineHelp, tint: Theme.Colors.warning)
-            }
+        }
+        if let repository = editor.selectedRepository {
+            ProjectShareRepositoryPreview(editor: editor, repository: repository)
+        }
+        if !editor.plan.folders.isEmpty {
+            folders
+        }
+        if editor.needsRepositoryImport, !isOnline {
+            ShareNoteView(systemImage: "wifi.slash", text: ConnectivityCopy.offlineHelp, tint: Theme.Colors.warning)
         }
     }
 
@@ -54,7 +57,7 @@ struct ProjectShareImportView: View {
     }
 
     private var repositoryList: some View {
-        Card(.container, spacing: 0) {
+        VStack(spacing: 0) {
             ForEach(Array(editor.repositoryRows.enumerated()), id: \.element.id) { index, row in
                 if index > 0 {
                     HairlineDivider()
@@ -64,76 +67,80 @@ struct ProjectShareImportView: View {
                 }
             }
         }
+        .clipShape(.rect(cornerRadius: CardStyle.dialog.radius))
+        .fxCardBackground(.dialog)
     }
 
+    /// The folders in the file, each with what happens to it.
     private var folders: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            SectionLabel(ProjectShareCopy.folders)
-            Card(.container, spacing: 0) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
+            Text(ProjectShareCopy.folders)
+                .fxTextStyle(.formLabel)
+                .foregroundStyle(Theme.Colors.mutedText)
+            VStack(spacing: 0) {
                 ForEach(Array(editor.plan.folders.enumerated()), id: \.element.id) { index, folder in
                     if index > 0 {
                         HairlineDivider()
                     }
                     HStack(spacing: Theme.Spacing.small) {
-                        Image(systemName: "folder.fill")
-                            .foregroundStyle(Theme.Colors.subtleText)
+                        Image(systemName: "folder")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.Colors.mutedText)
                             .accessibilityHidden(true)
                         Text(verbatim: folder.name)
-                            .fxTextStyle(.calloutEmphasized)
+                            .fxTextStyle(.caption)
                             .foregroundStyle(Theme.Colors.ink)
-                        Text(ShareSummaryLineModel.counts(folder.counts))
-                            .fxTextStyle(.monoMeta)
-                            .foregroundStyle(Theme.Colors.subtleText)
+                            .lineLimit(1)
+                        Text(verbatim: ProjectShareCopy.counts(folder.counts))
+                            .font(Theme.Typography.monoLabel)
+                            .foregroundStyle(Theme.Colors.mutedText)
+                            .lineLimit(1)
                         Spacer(minLength: Theme.Spacing.small)
-                        Picker(
-                            ProjectShareCopy.folders,
+                        DialogPopUp(
+                            title: ProjectShareCopy.folders,
                             selection: Binding(
                                 get: { folder.action },
                                 set: { editor.setFolderAction($0, for: folder) }
-                            )
-                        ) {
-                            ForEach(editor.folderActions(for: folder), id: \.self) { action in
-                                Text(ProjectShareImportEditor.title(of: action)).tag(action)
+                            ),
+                            options: editor.folderActions(for: folder).map {
+                                .init(value: $0, title: ProjectShareImportEditor.title(of: $0))
                             }
-                        }
-                        .labelsHidden()
-                        .fixedSize()
+                        )
+                        .frame(width: Theme.Layout.shareActionPickerWidth)
                     }
-                    .padding(.vertical, Theme.Spacing.small)
-                    .padding(.horizontal, Theme.Spacing.large)
+                    .padding(.horizontal, Theme.Spacing.medium)
+                    .frame(minHeight: Theme.Layout.shareOpenRowHeight)
+                    .padding(.vertical, Theme.Spacing.xSmall)
                 }
             }
+            .fxCardBackground(.dialog)
         }
     }
 }
 
-/// Who sent the file and when it expires.
-struct ProjectShareSenderView: View {
+/// Who the file says sent it, marked not verified.
+private struct ProjectShareSenderView: View {
     let sender: ShareFileSenderModel
-    let createdAt: Date
-    let expiresAt: Date
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-            HStack(spacing: Theme.Spacing.small) {
-                Image(systemName: "person.crop.circle.badge.questionmark")
-                    .foregroundStyle(Theme.Colors.subtleText)
-                    .accessibilityHidden(true)
-                Text(ProjectShareCopy.from(sender.displayName))
-                    .fxTextStyle(.bodyEmphasized)
-                    .foregroundStyle(Theme.Colors.ink)
-                StatusChip(title: ProjectShareCopy.unverified, tone: .warning)
-                    .help(ProjectShareCopy.unverifiedHelp)
-            }
-            Text(ProjectShareCopy.dates(created: createdAt, expires: expiresAt))
-                .fxTextStyle(.monoMeta)
-                .foregroundStyle(Theme.Colors.subtleText)
+        HStack(spacing: Theme.Spacing.small) {
+            Image(systemName: "person.crop.circle.badge.questionmark")
+                .font(Theme.Typography.callout)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .accessibilityHidden(true)
+            Text(ProjectShareCopy.from(sender.displayName))
+                .fxTextStyle(.callout)
+                .foregroundStyle(Theme.Colors.ink)
+            DialogTag(title: ProjectShareCopy.unverified)
+                .help(ProjectShareCopy.unverifiedHelp)
         }
         .accessibilityElement(children: .combine)
     }
 }
 
-/// One repository line: ✓ ⇣ ✕, the name, the counts and what happens to it.
+/// One repository the file adds to (board Share-OpenPreview): the symbol, the mono name and its
+/// owner, then a dot and what happens (✓ in the vault with the counts, ⇣ imported from GitHub
+/// first, ✕ skipped). Selecting it shows its preview below.
 private struct ProjectShareRepositoryRow: View {
     let row: ProjectShareImportEditor.RepositoryRowModel
     let isSelected: Bool
@@ -141,33 +148,34 @@ private struct ProjectShareRepositoryRow: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.small) {
-                Image(systemName: symbol)
-                    .foregroundStyle(tint)
+            HStack(spacing: Theme.Spacing.small) {
+                Image(systemName: Theme.Symbols.repository)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                    Text(verbatim: row.fullName)
-                        .fxTextStyle(.monoName)
-                        .foregroundStyle(row.mark == .skipped ? Theme.Colors.mutedText : Theme.Colors.ink)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Text(row.detail)
+                Text(verbatim: nameParts.name)
+                    .fxTextStyle(.monoMeta)
+                    .foregroundStyle(row.mark == .skipped ? Theme.Colors.mutedText : Theme.Colors.ink)
+                    .lineLimit(1)
+                if let owner = nameParts.owner {
+                    Text(verbatim: owner)
                         .fxTextStyle(.caption)
-                        .foregroundStyle(row.mark == .skipped ? Theme.Colors.warning : Theme.Colors.mutedText)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(Theme.Colors.mutedText)
+                        .lineLimit(1)
                 }
                 Spacer(minLength: Theme.Spacing.small)
-                Text(ShareSummaryLineModel.counts(row.counts))
-                    .fxTextStyle(.monoMeta)
-                    .foregroundStyle(Theme.Colors.subtleText)
-                Image(systemName: "chevron.right")
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(isSelected ? Theme.Colors.brand : Theme.Colors.subtleText)
-                    .accessibilityHidden(true)
+                HStack(spacing: Theme.Spacing.smallMinus) {
+                    mark
+                    Text(verbatim: status)
+                        .fxTextStyle(.caption)
+                        .foregroundStyle(statusColor)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
-            .padding(.vertical, Theme.Spacing.small)
-            .padding(.horizontal, Theme.Spacing.large)
-            .background(isSelected ? Theme.Colors.surface2 : Color.clear)
+            .padding(.horizontal, Theme.Spacing.medium)
+            .frame(height: Theme.Layout.shareOpenRowHeight)
+            .background(isSelected ? Theme.Colors.surface : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -175,19 +183,40 @@ private struct ProjectShareRepositoryRow: View {
         .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : [.isButton])
     }
 
-    private var symbol: String {
+    /// `owner/name` read as the name, then its owner.
+    private var nameParts: (owner: String?, name: String) {
+        let parts = row.fullName.split(separator: "/", maxSplits: 1).map(String.init)
+        return parts.count == 2 ? (parts[0], parts[1]) : (nil, row.fullName)
+    }
+
+    /// "Already in your vault · 3 secrets · 1 variable"; a skipped repository says why only.
+    private var status: String {
+        let counts = row.mark == .skipped ? "" : ProjectShareCopy.counts(row.counts)
+        return [row.detail, counts].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private var mark: some View {
         switch row.mark {
-        case .inVault: "checkmark.circle.fill"
-        case .willImport: "arrow.down.circle"
-        case .skipped: "xmark.circle"
+        case .inVault:
+            Circle()
+                .fill(Theme.Colors.success)
+                .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
+                .accessibilityHidden(true)
+        case .willImport:
+            RingDot()
+        case .skipped:
+            Circle()
+                .fill(Theme.Colors.hairlineStrong)
+                .frame(width: Theme.Layout.statusDotSize, height: Theme.Layout.statusDotSize)
+                .accessibilityHidden(true)
         }
     }
 
-    private var tint: Color {
+    private var statusColor: Color {
         switch row.mark {
-        case .inVault: Theme.Colors.success
-        case .willImport: Theme.Colors.brand
-        case .skipped: Theme.Colors.warning
+        case .inVault, .skipped: Theme.Colors.mutedText
+        case .willImport: Theme.Colors.ink
         }
     }
 }

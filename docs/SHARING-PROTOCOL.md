@@ -176,7 +176,7 @@ the planner):
 | Condition | Result |
 |---|---|
 | `createdAt > now + 10 min` | `invalidPackage(createdInFuture)` |
-| `now > expiresAt + 10 min` | `ShareError.expired` ("This share file has expired") |
+| `now > expiresAt + 10 min` | `ShareError.expired` ("This file expired") |
 
 FX Vault enforces the expiry; the cryptography does not (SECURITY-MODEL.md §10.5).
 

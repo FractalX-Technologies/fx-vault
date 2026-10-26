@@ -141,7 +141,6 @@ enum AccessibilityID {
 
     /// Share Project and its "Confirm it's you" step.
     enum Share {
-        static let continueToSendTo = "share.continue"
         static let create = "share.create"
         static let productionNote = "share.productionNote"
         static let password = "share.reauth.password"
