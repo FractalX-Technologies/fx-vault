@@ -293,9 +293,13 @@ check, copies at once. The value goes through `ClipboardManager` only (§7).
   only (no keystroke monitoring); Settings unregisters it while its recorder listens. The panel
   is excluded from screen capture. While locked it shows nothing of the vault: the island asks
   for the unlock first, with no name, value or count. It closes when FX Vault resigns active or
-  the panel loses the key (not during the Touch ID or password check), and on lock, dropping
-  the places it read, the open place's lines and revealed values; recent places are ids in
-  memory only, never written. Revealed values follow N1's rules (not selectable, re-masked).
+  the panel loses the key, and on lock, dropping the places it read, the open place's lines and
+  revealed values; a focus loss during the Touch ID or password check closes it when the check
+  ends without the focus back, so it never comes back with the place open. Esc and the shortcut
+  hand the keys to the app it opened over, never to FX Vault's main window (on a shared screen
+  that window would show the vault). Each open draws a new panel, so no earlier value flashes.
+  Recent places are ids in memory only, never written. Revealed values follow N1's rules (not
+  selectable, re-masked), and a Copy after the value masked again asks again.
 - **File secrets (1.0):** Choose… or a drop on a place reads one regular file (at most twice the
   48,000-byte limit) with `SecretFileReader` (VaultCore, also the `.env` import's reader): the
   path is `stat`ed before it is opened, so a folder, a pipe or a device is never opened, then

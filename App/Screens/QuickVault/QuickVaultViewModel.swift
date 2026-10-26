@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import SwiftUI
@@ -29,8 +30,13 @@ final class QuickVaultViewModel: LockObserving {
     /// The screen's notch height; 0 floats the panel under the menu bar.
     var notchHeight: CGFloat = 0
 
-    /// The panel shows or hides; `returnsFocus` gives the focus back to the app it opened over.
-    @ObservationIgnored var onOpenChange: ((_ isOpen: Bool, _ returnsFocus: Bool) -> Void)?
+    @ObservationIgnored var onShow: (() -> Void)?
+    /// The panel hides; `returnFocusTo` is the app to give the keys back to (``QuickVaultFocusReturn``).
+    @ObservationIgnored var onHide: ((_ returnFocusTo: pid_t?) -> Void)?
+    /// FX Vault is active and the panel, or no other window, has the keys (the controller says).
+    @ObservationIgnored var hasFocus: () -> Bool = { true }
+    /// The app in front, read when the quick vault is asked for.
+    @ObservationIgnored var frontmostApp: () -> pid_t? = { NSWorkspace.shared.frontmostApplication?.processIdentifier }
     /// The panel's size changed; it keeps its top edge where it is.
     @ObservationIgnored var onSizeChange: ((CGSize) -> Void)?
     /// Most recent first, in memory only: ids, never a name.
@@ -39,6 +45,9 @@ final class QuickVaultViewModel: LockObserving {
     @ObservationIgnored private(set) var loadTask: Task<Void, Never>?
     /// Bumped by each open: a read that ends after a close or a newer open is dropped.
     @ObservationIgnored private var openCount = 0
+    @ObservationIgnored private var focusReturn = QuickVaultFocusReturn()
+    /// Waits for the end of a check a focus loss came during (internal so tests can await it).
+    @ObservationIgnored private(set) var checkWatch: Task<Void, Never>?
     @ObservationIgnored private var input = QuickVaultInputModel()
     @ObservationIgnored private var places: [QuickVaultPlaceModel] = []
     @ObservationIgnored private let app: AppViewModel
@@ -52,13 +61,23 @@ final class QuickVaultViewModel: LockObserving {
 
     // MARK: - Open and close
 
+    /// The shortcut or the menu asked for it: remember the app in front before FX Vault comes forward.
+    func noteRequest() {
+        focusReturn.remember(frontmost: frontmostApp(), own: ProcessInfo.processInfo.processIdentifier)
+    }
+
+    /// A request made while locked ended without the quick vault (another app, Open FX Vault).
+    func forgetRequest() {
+        focusReturn.forget()
+    }
+
     /// Shows the search, then reads the vault's places into it; only while unlocked.
     func open() {
         guard app.phase == .unlocked, !isOpen else { return }
         isOpen = true
         openCount += 1
         focusRequest += 1
-        onOpenChange?(true, false)
+        onShow?()
         let count = openCount
         loadTask = Task { [weak self] in
             guard let input = await self?.readInput(), let self, isOpen, openCount == count else { return }
@@ -73,6 +92,8 @@ final class QuickVaultViewModel: LockObserving {
         guard isOpen else { return }
         loadTask?.cancel()
         loadTask = nil
+        checkWatch?.cancel()
+        checkWatch = nil
         place?.close()
         place = nil
         isOpen = false
@@ -82,7 +103,7 @@ final class QuickVaultViewModel: LockObserving {
         results = []
         items = []
         selectedID = nil
-        onOpenChange?(false, returnsFocus)
+        onHide?(focusReturn.take(returnsFocus: returnsFocus))
     }
 
     /// Esc: from a place back to the search, from the search away.
@@ -100,10 +121,34 @@ final class QuickVaultViewModel: LockObserving {
         focusRequest += 1
     }
 
-    /// Losing the focus closes it, but not while Touch ID or the password check runs.
+    /// Losing the focus closes it. Not while Touch ID or the password check runs (its prompt may
+    /// take the focus); then the check's end decides.
     func didLoseFocus() {
-        guard isOpen, place?.isAuthorizing != true else { return }
-        close()
+        guard isOpen else { return }
+        guard place?.isAuthorizing == true else {
+            close()
+            return
+        }
+        closeAfterTheCheckWithoutFocus()
+    }
+
+    /// Without this, `hidesOnDeactivate` would bring the panel back at the next activation, the
+    /// place still open, after a check the user walked away from.
+    private func closeAfterTheCheckWithoutFocus() {
+        guard checkWatch == nil else { return }
+        checkWatch = Task { [weak self] in
+            let checks = Observations { @MainActor [weak self] in
+                self?.place?.isAuthorizing == true
+            }
+            for await isAuthorizing in checks where !isAuthorizing {
+                break
+            }
+            guard let self, !Task.isCancelled else { return }
+            checkWatch = nil
+            if isOpen, !hasFocus() {
+                close()
+            }
+        }
     }
 
     func vaultDidLock() {

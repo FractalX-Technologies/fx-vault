@@ -91,6 +91,10 @@ final class PreferencesViewModel: LockObserving {
         }
     }
 
+    var isQuickVaultShortcutRefused: Bool {
+        app.isQuickVaultShortcutRefused
+    }
+
     /// The shortcut box listens: the shortcut is off meanwhile, so pressing it records it
     /// instead of opening the quick vault; the end registers the new one (1.0 Q1).
     var isRecordingShortcut = false {

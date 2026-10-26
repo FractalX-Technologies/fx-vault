@@ -119,3 +119,27 @@ enum QuickVaultPlaces {
         }
     }
 }
+
+/// The app that gets the keys back when esc or the shortcut closes the quick vault: the one in
+/// front when it was asked for, never FX Vault itself (its main window may be open behind).
+struct QuickVaultFocusReturn: Equatable {
+    private(set) var processID: pid_t?
+
+    /// A request, before FX Vault comes forward. From FX Vault itself (the island waiting for the
+    /// unlock, say) it keeps the app of the request still pending.
+    mutating func remember(frontmost: pid_t?, own: pid_t) {
+        guard let frontmost, frontmost != own else { return }
+        processID = frontmost
+    }
+
+    /// The request ended without opening the quick vault.
+    mutating func forget() {
+        processID = nil
+    }
+
+    /// On close: the app to activate when the close gives the keys back. Taken once.
+    mutating func take(returnsFocus: Bool) -> pid_t? {
+        defer { processID = nil }
+        return returnsFocus ? processID : nil
+    }
+}

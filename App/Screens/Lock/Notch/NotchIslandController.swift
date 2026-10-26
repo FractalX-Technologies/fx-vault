@@ -8,7 +8,7 @@ final class NotchIslandController {
     let model: NotchIslandModel
     /// The vault is locked and the island is the unlock UI; it appears whenever FX Vault is active.
     private(set) var isPresented = false
-    private var panel: NotchIslandPanel?
+    private let presenter: NotchPanelPresenter
     private var hideTask: Task<Void, Never>?
     private var activationObserver: NSObjectProtocol?
     private var resignObserver: NSObjectProtocol?
@@ -16,9 +16,13 @@ final class NotchIslandController {
     var onQuickVaultRequestEnded: (() -> Void)?
 
     init(lock: LockViewModel) {
-        model = NotchIslandModel(lock: lock)
+        let model = NotchIslandModel(lock: lock)
+        self.model = model
+        presenter = NotchPanelPresenter(notchHeight: { model.notchHeight }) {
+            NotchIslandView(model: model)
+        }
         model.onSizeChange = { [weak self] size in
-            self?.place(size: size)
+            self?.presenter.place(size: size)
         }
         activationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification,
@@ -62,12 +66,12 @@ final class NotchIslandController {
     /// Shows "Unlocked" for a moment, then goes away.
     func dismissUnlocked() {
         isPresented = false
-        guard let panel, panel.isVisible else { return }
+        guard presenter.isVisible else { return }
         model.isUnlocked = true
         hideTask = Task { [weak self] in
             try? await Task.sleep(for: Theme.Durations.islandUnlocked)
             guard !Task.isCancelled else { return }
-            self?.panel?.orderOut(nil)
+            self?.presenter.hide()
         }
     }
 
@@ -75,39 +79,16 @@ final class NotchIslandController {
     func dismiss() {
         hideTask?.cancel()
         isPresented = false
-        panel?.orderOut(nil)
+        presenter.hide()
     }
 
     private func showIfPresented() {
         guard isPresented, NSApp.isActive else { return }
-        let screen = NSScreen.main ?? NSScreen.screens.first
-        model.notchHeight = screen?.safeAreaInsets.top ?? 0
-        let panel = panel ?? makePanel()
-        place(size: panel.contentView?.fittingSize ?? .zero)
-        panel.makeKeyAndOrderFront(nil)
+        model.notchHeight = NotchPanelPresenter.screenNotchHeight
+        presenter.show()
         Task {
             await model.lock.autoPromptIfAllowed(isAppActive: NSApp.isActive, isSceneActive: true)
         }
-    }
-
-    private func makePanel() -> NotchIslandPanel {
-        let panel = NotchIslandPanel()
-        let hosting = NSHostingView(rootView: NotchIslandView(model: model))
-        hosting.sizingOptions = [.intrinsicContentSize]
-        panel.contentView = hosting
-        self.panel = panel
-        return panel
-    }
-
-    private func place(size: CGSize) {
-        guard let panel, size.width > 0, size.height > 0, let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens.first else { return }
-        let frame = NotchGeometry.islandFrame(
-            size: size,
-            screenFrame: screen.frame,
-            visibleFrame: screen.visibleFrame,
-            notchHeight: model.notchHeight
-        )
-        panel.setFrame(frame, display: true)
     }
 }
 

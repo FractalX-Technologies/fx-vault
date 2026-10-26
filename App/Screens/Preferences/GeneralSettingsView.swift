@@ -15,10 +15,7 @@ struct GeneralSettingsView: View {
         )
         PreferencesPage {
             PreferencesSection(nil) {
-                PreferencesRow(
-                    shortcutLabel,
-                    detail: String(localized: "settings.general.quickVault.detail", defaultValue: "Opens the quick vault from the notch")
-                ) {
+                PreferencesRow(shortcutLabel, detail: shortcutDetail) {
                     QuickVaultShortcutRecorder(title: shortcutLabel, shortcut: $viewModel.quickVaultShortcut) { isRecording in
                         viewModel.isRecordingShortcut = isRecording
                     }
@@ -105,6 +102,13 @@ struct GeneralSettingsView: View {
         .onAppear {
             viewModel.refreshLoginItem()
         }
+    }
+
+    /// macOS refused the shortcut (another app holds it): the row says so until one registers.
+    private var shortcutDetail: String {
+        viewModel.isQuickVaultShortcutRefused
+            ? String(localized: "settings.general.quickVault.refused", defaultValue: "This shortcut is in use. Choose another.")
+            : String(localized: "settings.general.quickVault.detail", defaultValue: "Opens the quick vault from the notch")
     }
 
     private var shortcutLabel: String {

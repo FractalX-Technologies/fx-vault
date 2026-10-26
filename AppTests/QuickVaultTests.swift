@@ -283,6 +283,183 @@ struct QuickVaultTests {
         #expect(!harness.app.isQuickVaultRequested)
     }
 
+    // MARK: - Focus
+
+    @Test func theKeysGoBackToTheAppItOpenedOver() {
+        var focus = QuickVaultFocusReturn()
+        focus.remember(frontmost: 4242, own: 7)
+        focus.remember(frontmost: 7, own: 7)
+        #expect(focus.take(returnsFocus: true) == 4242, "FX Vault in front later keeps the request's app")
+        #expect(focus.take(returnsFocus: true) == nil, "taken once")
+
+        focus.remember(frontmost: 7, own: 7)
+        #expect(focus.take(returnsFocus: true) == nil, "opened from FX Vault, it stays there")
+        focus.remember(frontmost: 4242, own: 7)
+        #expect(focus.take(returnsFocus: false) == nil, "a focus loss went elsewhere already")
+        focus.remember(frontmost: 4242, own: 7)
+        focus.forget()
+        #expect(focus.take(returnsFocus: true) == nil)
+    }
+
+    /// Esc and the shortcut hand the keys back even with the main window open behind; a focus
+    /// loss and a quick vault opened from FX Vault don't.
+    @Test func escAndTheShortcutActivateTheAppItOpenedOver() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let quickVault = harness.app.quickVault
+        let own = ProcessInfo.processInfo.processIdentifier
+        var frontmost: pid_t? = 4242
+        quickVault.frontmostApp = { frontmost }
+        var returned: [pid_t?] = []
+        quickVault.onHide = { returned.append($0) }
+
+        harness.app.openQuickVault()
+        quickVault.escape()
+        harness.hotKey.press()
+        harness.hotKey.press()
+        harness.app.openQuickVault()
+        quickVault.didLoseFocus()
+        frontmost = own
+        harness.app.openQuickVault()
+        quickVault.escape()
+        #expect(returned == [4242, 4242, nil, nil])
+    }
+
+    /// Locked, the request's app gets the keys after the unlock; a request that ended leaves none.
+    @Test func whileLockedTheKeysGoBackToTheRequestsApp() async throws {
+        let harness = try await TestHarness(vault: .locked)
+        harness.preferences.hasAnsweredTouchIDOffer = true
+        let quickVault = harness.app.quickVault
+        let own = ProcessInfo.processInfo.processIdentifier
+        var frontmost: pid_t? = 4242
+        quickVault.frontmostApp = { frontmost }
+        var returned: [pid_t?] = []
+        quickVault.onHide = { returned.append($0) }
+
+        harness.hotKey.press()
+        frontmost = own
+        harness.hotKey.press()
+        harness.app.lockScreen.password = testPassword
+        await harness.app.lockScreen.unlockWithPassword()
+        #expect(quickVault.isOpen)
+        quickVault.escape()
+
+        harness.app.lock(trigger: .manual)
+        frontmost = 4242
+        harness.hotKey.press()
+        harness.app.endQuickVaultRequest()
+        frontmost = own
+        harness.app.lockScreen.password = testPassword
+        await harness.app.lockScreen.unlockWithPassword()
+        harness.app.openQuickVault()
+        quickVault.escape()
+        #expect(returned == [4242, nil])
+    }
+
+    /// Touch ID's prompt may take the focus, so a focus loss waits for the check; at its end, the
+    /// quick vault closes if the user went elsewhere meanwhile, and stays if they came back.
+    @Test func aFocusLossDuringTheCheckClosesItOnceTheCheckEnds() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        try await harness.enableTouchID()
+        let folderID = try Self.folder(harness)
+        let quickVault = harness.app.quickVault
+        var hasFocus = true
+        quickVault.hasFocus = { hasFocus }
+
+        for comesBack in [false, true] {
+            await Self.open(harness)
+            quickVault.show(.place(.folder(folderID)))
+            let key = try Self.line("STRIPE_KEY", in: try await Self.lines(quickVault, count: 2))
+            let place = try #require(quickVault.place)
+            let prompt = CallGate()
+            harness.biometrics.onNextLoad { prompt.wait() }
+            place.copy(key)
+            let check = Task { await place.start() }
+            #expect(await TestFixtures.eventually { place.isAuthorizing })
+
+            hasFocus = false
+            quickVault.didLoseFocus()
+            #expect(quickVault.isOpen, "the check keeps it open")
+            hasFocus = comesBack
+            let watch = try #require(quickVault.checkWatch)
+            prompt.open()
+            await check.value
+            await watch.value
+            #expect(place.copiedID == key.id)
+            #expect(quickVault.isOpen == comesBack)
+            quickVault.close()
+            hasFocus = true
+        }
+    }
+
+    /// A revealed secret masks again when its place goes: esc (back to the search), the shortcut
+    /// (away) and a focus loss.
+    @Test func aRevealedSecretMasksAgainWhenThePlaceGoes() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        try await harness.enableTouchID()
+        let folderID = try Self.folder(harness)
+        let quickVault = harness.app.quickVault
+
+        let closes: [(String, () -> Void)] = [
+            ("esc", { quickVault.escape() }),
+            ("the shortcut", { harness.hotKey.press() }),
+            ("a focus loss", { quickVault.didLoseFocus() }),
+        ]
+        for (name, close) in closes {
+            if !quickVault.isOpen {
+                await Self.open(harness)
+            }
+            quickVault.show(.place(.folder(folderID)))
+            let key = try Self.line("STRIPE_KEY", in: try await Self.lines(quickVault, count: 2))
+            let place = try #require(quickVault.place)
+            place.reveal.ask(key)
+            await place.reveal.start()
+            #expect(try Self.line("STRIPE_KEY", in: place.lines).value == .revealed(Self.secretValue))
+            close()
+            #expect(quickVault.place == nil)
+            #expect(try Self.line("STRIPE_KEY", in: place.lines).value == .masked, "after \(name)")
+        }
+    }
+
+    /// Once a revealed secret masks again (after `Timeouts.revealRemask`), its Copy asks again.
+    @Test func aCopyAfterTheValueMaskedAgainAsksAgain() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        try await harness.enableTouchID()
+        let folderID = try Self.folder(harness)
+        let quickVault = harness.app.quickVault
+        await Self.open(harness)
+        quickVault.show(.place(.folder(folderID)))
+        let key = try Self.line("STRIPE_KEY", in: try await Self.lines(quickVault, count: 2))
+        let place = try #require(quickVault.place)
+
+        let sleepersBefore = harness.clock.sleeperCount
+        place.reveal.ask(key)
+        await place.reveal.start()
+        let revealed = try Self.line("STRIPE_KEY", in: place.lines)
+        #expect(revealed.value == .revealed(Self.secretValue))
+        await harness.clock.waitForSleepers(count: sleepersBefore + 1)
+        harness.clock.advance(by: Timeouts.revealRemask)
+        #expect(await TestFixtures.eventually { (try? Self.line("STRIPE_KEY", in: place.lines).value) == .masked })
+
+        place.copy(revealed)
+        #expect(place.copyRequest == NotesRevealRequestModel(id: key.id, name: "STRIPE_KEY"))
+        #expect(harness.pasteboardString == nil)
+    }
+
+    @Test func aRefusedShortcutIsSaidInSettings() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let preferences = harness.app.makePreferencesViewModel()
+        let taken = try #require(QuickVaultShortcutModel(keyCode: 9, modifierFlags: [.control, .shift], characters: "v"))
+        harness.hotKey.takenShortcuts = [taken]
+        #expect(!preferences.isQuickVaultShortcutRefused)
+
+        preferences.quickVaultShortcut = taken
+        #expect(harness.hotKey.registered == nil)
+        #expect(preferences.isQuickVaultShortcutRefused)
+        preferences.quickVaultShortcut = .standard
+        #expect(harness.hotKey.registered == .standard)
+        #expect(!preferences.isQuickVaultShortcutRefused)
+    }
+
     // MARK: - Menu
 
     @Test func theMenuShowsTheShortcut() {

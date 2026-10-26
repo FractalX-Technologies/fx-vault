@@ -39,7 +39,7 @@ FXVault/
 │   │   │                            # list, shared with Choose Vaults…), ConnectCopy
 │   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel,
 │   │   │                            # Notch/ (NotchIslandController + panel, NotchIslandView
-│   │   │                            # + model, NotchGeometry),
+│   │   │                            # + model, NotchGeometry, NotchPanelPresenter),
 │   │   │                            # TouchIDOfferScreen/ViewModel (one-time offer after a
 │   │   │                            # password unlock), PasswordRequiredReason+Extension
 │   │   ├── MenuBar/                 # MenuBarContent, MenuBarCopy (the menu bar item, 1.0 M1;
@@ -57,7 +57,7 @@ FXVault/
 │   │   │                            # PlaceSelectionModel (what Keep Editing goes back to, N2)
 │   │   │   ├── JumpPalette/         # the ⌘K palette (D6c2, D6c5): JumpPaletteModels (JumpPlaces,
 │   │   │   │                        # pure; places and names), JumpPaletteViewModel, JumpPaletteView,
-│   │   │   │                        # JumpPaletteCopy
+│   │   │   │                        # JumpResultsList (shared with the quick vault), JumpPaletteCopy
 │   │   │   ├── Place/               # every place's header (D6c3): PlaceHeader (name, subline,
 │   │   │   │                        # status line, ⋯ More), PlaceCopy,
 │   │   │   │                        # PlaceItemMoreItems (⋯ item actions), PlaceRefreshingLine,
@@ -175,7 +175,7 @@ FXVault/
 │   │                                # WindowBackground, SheetChrome (SheetHeader,
 │   │                                # SheetCallout, FXCheckboxRow, InlineErrorView,
 │   │                                # FXLinkButtonStyle, fxSheetContent), FlowLayout (v0.6.0),
-│   │                                # KeyHint (1.0), RingDot, DialogChrome (DialogSheet,
+│   │                                # KeyHint (+ KeyHintLabel; 1.0), RingDot, DialogChrome (DialogSheet,
 │   │                                # dialog list box, DialogNoteBox, DialogNote,
 │   │                                # DialogSentence), DialogForm (rows, the field box,
 │   │                                # pop-ups, chips, tags; 1.0 D6d), GlassPanel

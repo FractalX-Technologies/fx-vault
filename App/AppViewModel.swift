@@ -98,6 +98,8 @@ final class AppViewModel {
     private(set) var isSyncReviewRequested = false
     /// The quick vault's shortcut came while locked: the quick vault opens after the unlock (1.0 Q1).
     private(set) var isQuickVaultRequested = false
+    /// macOS refused the quick vault's shortcut (another app holds it): Settings says so.
+    private(set) var isQuickVaultShortcutRefused = false
     /// The place the quick vault's Expand asked the main window for (``takePlaceRequest()``).
     private(set) var requestedPlace: JumpPlaceTarget?
 
@@ -204,8 +206,14 @@ final class AppViewModel {
 
     /// Registers the shortcut of Settings › General with macOS; again after it changes.
     func registerQuickVaultHotKey() {
-        container.quickVaultHotKey.register(container.preferences.quickVaultShortcut) { [weak self] in
+        let shortcut = container.preferences.quickVaultShortcut
+        let isRegistered = container.quickVaultHotKey.register(shortcut) { [weak self] in
             self?.toggleQuickVault()
+        }
+        isQuickVaultShortcutRefused = !isRegistered
+        if !isRegistered {
+            // The keys are a setting, not a secret.
+            AppLog.ui.error("Quick vault shortcut \(shortcut.displayText, privacy: .public) was refused")
         }
     }
 
@@ -235,8 +243,10 @@ final class AppViewModel {
             requestMainWindow()
         case .unlocked:
             guard !quickVault.isOpen else { return }
+            quickVault.noteRequest()
             quickVault.open()
         case .locked:
+            quickVault.noteRequest()
             isQuickVaultRequested = true
             // Recovery and the Touch ID offer are in the window; the quick vault follows them.
             guard unlocksInIsland, let island else {
@@ -252,6 +262,7 @@ final class AppViewModel {
     /// The island went away (FX Vault resigned active): a later unlock opens the window again.
     func endQuickVaultRequest() {
         isQuickVaultRequested = false
+        quickVault.forgetRequest()
     }
 
     /// Expand in the quick vault: the main window comes forward on `target`.
@@ -620,7 +631,7 @@ final class AppViewModel {
     /// **Open FX Vault** (the menu bar item): the main window, or the island while locked (the
     /// window would only close again).
     func openFXVault() {
-        isQuickVaultRequested = false
+        endQuickVaultRequest()
         guard unlocksInIsland, island != nil else {
             requestMainWindow()
             return

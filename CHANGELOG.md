@@ -8,13 +8,14 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 ### Added
 
 - **Quick vault shortcut.** Settings › General records the global shortcut for the quick vault:
-  ⌃⌥V by default, any key with two modifiers, one of them Control, Option or Command.
+  ⌃⌥V by default, any key with two modifiers, one of them Control, Option or Command. Settings
+  says so when another app holds the shortcut.
 - **Quick vault.** The shortcut, from any app, or Quick Vault at the top of the menu bar menu,
   opens a search under the notch: the vault's places, recent ones first, and names. ↩ shows a
   place's lines; Copy puts a variable on the clipboard at once and a secret after Touch ID or the
   master password (cleared after 30 s); ⌘↩ opens the place in the main window. It is hidden from
-  screen capture and closes when FX Vault loses the focus or locks; while locked, the island asks
-  for the unlock first.
+  screen capture and closes when FX Vault loses the focus or locks; esc gives the keys back to
+  the app it opened over. While locked, the island asks for the unlock first.
 - **Open at login.** Settings › General adds FX Vault to the Login Items, and says when System
   Settings has to allow it first.
 - **Copy Diagnostics in Settings.** Settings › Advanced copies the gh report (versions, paths
