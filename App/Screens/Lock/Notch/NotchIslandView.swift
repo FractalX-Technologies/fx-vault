@@ -95,17 +95,35 @@ struct NotchIslandView: View {
             } label: {
                 HStack(spacing: Theme.Spacing.medium) {
                     // The brand's dot grid for the quick vault, the fingerprint beside its caption.
-                    Image(systemName: model.opensQuickVault ? Theme.Symbols.menuBar : "touchid")
-                        .font(Theme.Typography.title)
-                        .foregroundStyle(Theme.Colors.islandInk)
+                    Group {
+                        if model.opensQuickVault {
+                            Image(systemName: Theme.Symbols.menuBar)
+                                .font(Theme.Typography.title)
+                        } else {
+                            TouchIDSensorView(
+                                session: model.lock.islandTouchID,
+                                controlSize: .large,
+                                font: Theme.Typography.title
+                            )
+                        }
+                    }
+                    .foregroundStyle(Theme.Colors.islandInk)
                     VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
                         Text(String(localized: "island.locked", defaultValue: "FX Vault is locked"))
                             .fxTextStyle(.headline)
                             .foregroundStyle(Theme.Colors.islandInk)
                         if model.opensQuickVault {
-                            Label(QuickVaultCopy.touchIDToOpen, systemImage: "touchid")
-                                .fxTextStyle(.caption)
-                                .foregroundStyle(Theme.Colors.islandMuted)
+                            Label {
+                                Text(QuickVaultCopy.touchIDToOpen)
+                            } icon: {
+                                TouchIDSensorView(
+                                    session: model.lock.islandTouchID,
+                                    controlSize: .small,
+                                    font: Theme.Typography.caption
+                                )
+                            }
+                            .fxTextStyle(.caption)
+                            .foregroundStyle(Theme.Colors.islandMuted)
                         } else {
                             Text(String(localized: "island.touchID", defaultValue: "Touch ID to unlock"))
                                 .fxTextStyle(.caption)

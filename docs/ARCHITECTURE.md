@@ -1138,6 +1138,12 @@ AppTests).
   main window; it appears whenever FX Vault is active; `didUnlock()` shows "Unlocked" and opens
   the window. Recovery and the Touch ID offer call `showLockWindow()`; cancelling recovery
   presents the island again. Without side effects (tests, previews) there is no island.
+- Touch ID in the island (1.0 B11e2): when the island shows, `LockViewModel.prepareIslandTouchID()`
+  takes a `BiometricSession` from `VaultManager.biometricSession(prompt:)` (nil unless Touch ID
+  can unlock now) and `TouchIDSensorView` puts its `LAAuthenticationView` in the row;
+  `unlockWithTouchID()` then calls `unlockWithBiometrics(session:)` (evaluate, then the keychain
+  read through that context). A failed check gets a fresh session; the island going away or the
+  unlock drops it, and the window's lock screen uses the prompt path.
 - Quick vault (1.0 Q1, `App/Screens/QuickVault/`): `QuickVaultHotKeyRegistering` registers the
   Settings shortcut with Carbon's `RegisterEventHotKey` (no Accessibility or Input Monitoring
   permission; macOS delivers that one combination only). `QuickVaultViewModel` (a lock observer)

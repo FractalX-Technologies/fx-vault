@@ -66,6 +66,7 @@ final class NotchIslandController {
     /// Shows "Unlocked" for a moment, then goes away.
     func dismissUnlocked() {
         isPresented = false
+        model.lock.dropIslandTouchID()
         guard presenter.isVisible else { return }
         model.isUnlocked = true
         hideTask = Task { [weak self] in
@@ -79,12 +80,15 @@ final class NotchIslandController {
     func dismiss() {
         hideTask?.cancel()
         isPresented = false
+        model.lock.dropIslandTouchID()
         presenter.hide()
     }
 
     private func showIfPresented() {
         guard isPresented, NSApp.isActive else { return }
         model.notchHeight = NotchPanelPresenter.screenNotchHeight
+        // Before the view shows and before the auto-prompt evaluates it.
+        if model.lock.islandTouchID == nil { model.lock.prepareIslandTouchID() }
         presenter.show()
         Task {
             await model.lock.autoPromptIfAllowed(isAppActive: NSApp.isActive, isSceneActive: true)

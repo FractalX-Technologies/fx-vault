@@ -39,7 +39,8 @@ FXVault/
 │   │   │                            # list, shared with Choose Vaults…), ConnectCopy
 │   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel,
 │   │   │                            # Notch/ (NotchIslandController + panel, NotchIslandView
-│   │   │                            # + model, NotchGeometry, NotchPanelPresenter),
+│   │   │                            # + model, NotchGeometry, NotchPanelPresenter,
+│   │   │                            # TouchIDSensorView: LAAuthenticationView),
 │   │   │                            # TouchIDOfferScreen/ViewModel (one-time offer after a
 │   │   │                            # password unlock), PasswordRequiredReason+Extension
 │   │   ├── MenuBar/                 # MenuBarContent, MenuBarCopy (the menu bar item, 1.0 M1;
@@ -359,7 +360,8 @@ FXVault/
 │   │       ├── Vault/               # VaultManager, VaultState, PasswordRules, ReauthGate,
 │   │       │   │                    # ReauthTicket, Argon2idSharingDeriver, VaultManagerConstants
 │   │       │   ├── Biometrics/      # BiometricPrompt, BiometricKeyStoring, KeychainManager,
-│   │       │   │                    # BiometricAuthManager, BuildCapabilities, KeychainProbe
+│   │       │   │                    # BiometricAuthManager, BiometricSession (the island's
+│   │       │   │                    # check), BuildCapabilities, KeychainProbe
 │   │       │   │                    # (--diagnose add + delete, KeychainItemCalling seam)
 │   │       │   ├── Records/         # VaultRecord / KeyWrapRecord extensions
 │   │       │   ├── Support/         # DEKRotator, VaultOperationGate

@@ -1,4 +1,5 @@
 import Foundation
+import LocalAuthentication
 import Testing
 import VaultCore
 import VaultCrypto
@@ -118,6 +119,83 @@ struct VaultBiometricsTests {
         #expect(harness.manager.state == .locked)
         #expect(harness.session.isLocked)
         #expect(try harness.manager.isBiometricsEnabled())
+    }
+
+    // MARK: - Island session (1.0 B11e2)
+
+    @Test func islandSessionContextReachesTheKeychainRead() async throws {
+        let (harness, recoveryKey) = try await Self.enabledAndLocked()
+        defer { recoveryKey.wipe() }
+        let session = try #require(harness.manager.biometricSession(prompt: VaultFixture.prompt))
+        try await harness.manager.unlockWithBiometrics(session: session)
+        #expect(harness.manager.state == .unlocked)
+        #expect(harness.biometrics.evaluationCount == 1)
+        #expect(harness.biometrics.loadCount == 1)
+        #expect(harness.biometrics.lastLoadContext == ObjectIdentifier(session.context))
+    }
+
+    @Test(arguments: [VaultError.cancelled, .passwordFallbackRequested, .biometryUnavailable(.lockout)])
+    func failedIslandCheckReadsNothing(error: VaultError) async throws {
+        let (harness, recoveryKey) = try await Self.enabledAndLocked()
+        defer { recoveryKey.wipe() }
+        let session = try #require(harness.manager.biometricSession(prompt: VaultFixture.prompt))
+        harness.biometrics.failNextEvaluation(with: error)
+        let thrown = await vaultError { try await harness.manager.unlockWithBiometrics(session: session) }
+        #expect(thrown == error)
+        #expect(harness.biometrics.loadCount == 0)
+        #expect(harness.manager.state == .locked)
+        #expect(try harness.manager.isBiometricsEnabled())
+    }
+
+    @Test func lockDuringTheIslandCheckDropsIt() async throws {
+        let (harness, recoveryKey) = try await Self.enabledAndLocked()
+        defer { recoveryKey.wipe() }
+        let manager = harness.manager
+        let session = try #require(manager.biometricSession(prompt: VaultFixture.prompt))
+        harness.biometrics.onNextEvaluation { manager.lock() }
+        let thrown = await vaultError { try await manager.unlockWithBiometrics(session: session) }
+        #expect(thrown == .cancelled)
+        #expect(harness.biometrics.loadCount == 0)
+        #expect(manager.state == .locked)
+    }
+
+    @Test func sessionFromBeforeALockCannotUnlock() async throws {
+        let (harness, recoveryKey) = try await Self.enabledAndLocked()
+        defer { recoveryKey.wipe() }
+        let session = try #require(harness.manager.biometricSession(prompt: VaultFixture.prompt))
+        harness.manager.lock()
+        let thrown = await vaultError { try await harness.manager.unlockWithBiometrics(session: session) }
+        #expect(thrown == .cancelled)
+        #expect(harness.biometrics.loadCount == 0)
+        #expect(harness.manager.state == .locked)
+    }
+
+    @Test func islandSessionFollowsTheTouchIDRules() async throws {
+        let (harness, recoveryKey) = try await VaultHarness.created()
+        defer { recoveryKey.wipe() }
+        harness.manager.lock()
+        // Not enabled: no session, so the island keeps the password row only.
+        #expect(harness.manager.biometricSession(prompt: VaultFixture.prompt) == nil)
+
+        let (enabled, enabledRecovery) = try await Self.enabledAndLocked()
+        defer { enabledRecovery.wipe() }
+        enabled.capabilities.accessGroup = nil
+        #expect(enabled.manager.biometricSession(prompt: VaultFixture.prompt) == nil)
+    }
+
+    @Test func evaluationErrorsMapLikeTheKeychainRead() {
+        typealias Auth = BiometricAuthManager
+        let failed = LAError.Code.authenticationFailed.rawValue
+        #expect(Auth.evaluationError(forLAErrorCode: failed, isLockedOut: false) == .passwordFallbackRequested)
+        #expect(Auth.evaluationError(forLAErrorCode: failed, isLockedOut: true) == .biometryUnavailable(.lockout))
+        #expect(Auth.evaluationError(forLAErrorCode: LAError.Code.userFallback.rawValue, isLockedOut: false)
+            == .passwordFallbackRequested)
+        for code in [LAError.Code.userCancel, .systemCancel, .appCancel, .invalidContext] {
+            #expect(Auth.evaluationError(forLAErrorCode: code.rawValue, isLockedOut: false) == .cancelled)
+        }
+        #expect(Auth.evaluationError(forLAErrorCode: LAError.Code.biometryLockout.rawValue, isLockedOut: true)
+            == .biometryUnavailable(.lockout))
+        #expect(Auth.evaluationError(forLAErrorCode: -9999, isLockedOut: false) == .biometryUnavailable(.notAvailable))
     }
 
     // MARK: - Invalidation and errors

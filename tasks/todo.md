@@ -1944,7 +1944,7 @@ Build (maykel, mark, yati, anton; split further once each design is approved):
 - [x] B8 Azure discovery (`az account list`, `az keyvault list`) and Key Vault as a source. Split: B8a discovery, package layer [x]; B8b1 Key Vaults of their own in the store (`v18`) [x]; B8b2 Connect Azure (requirements, subscriptions and vaults, import), the vaults in the first-import summary [x]; B8b3 the sidebar Azure node opening the vault (and Show in Sidebar for a linked copy there) [x]; B8c1 Sync of the vaults of their own (review, run, badge) [x]; B8c2a Remove from FX Vault for a vault of its own [x]; B8c2b dropped (2026-10-25, Bryan: 0.9's repository Key Vaults stay under their repositories; no migration).
 - [ ] B9 Notes view read-only, then editable with the change review: slices N1, N2 below.
 - [x] B10 File secrets: picker and drop, base64 option, limits (GitHub 48 KiB, Key Vault 25 KiB), trailing-newline notice: slice F1 below.
-- [x] B11 (B11a–e; B11e2 is a waiver until a signed build) New start, onboarding, notch unlock island (`LAAuthenticationView`), allowlisted setup-command runner and main window from D1–D2; macOS 26 deployment target.
+- [x] B11 (B11a–e2; B11e2's in-place Touch ID is checked by hand on a signed build, RELEASING #73) New start, onboarding, notch unlock island (`LAAuthenticationView`), allowlisted setup-command runner and main window from D1–D2; macOS 26 deployment target.
 
 Review D1 — start and onboarding (2026-10-25):
 - Boards: 16 in `docs/design/mockup/v1/` (Welcome light/dark, recovery reset, password, recovery key, confirm, Touch ID, GitHub setup, connect GitHub, connect Azure, first import, fill values, 4 notch states).
@@ -2634,7 +2634,7 @@ Orchestrator:
 - [x] O1 Follow-up of the B7a review: read each `selected` organization item's repositories (B14/B15) at import and Refresh.
 - [ ] Not doable here:
   - B4b (`gh auth refresh` changes Bryan's real gh token);
-  - B11e2 Touch ID inside the island (signed build and sensor);
+  - B11e2's manual check on a signed build with a sensor (RELEASING #73; built and tested through fakes);
   - the RELEASING manual rows;
   - tag and release.
 
@@ -2741,3 +2741,12 @@ Review Q1 — Quick vault from the notch (2026-10-26, automatic):
   - `QuickVaultFocusReturn` keeps the app (`QuickVaultReturnApp`, `NSRunningApplication` live) and skips it once `isTerminated`; with no app to go back to and no FX Vault window, the close hides FX Vault as before.
   - Tests: `anAppThatQuitGetsNoKeys` (seen failing without the `isTerminated` check); the focus tests now use fake apps and check that only esc and the shortcut return the keys. The become-key path and the hide fallback are AppKit-only: RELEASING #71.
   - Gates: app tests 114 in 11 suites green (as in round one; `QuickVaultTests` 19); UI `QuickVaultUITests` (2) green, run alone; lint OK; check-secrets OK; strings ×2 (up to date).
+
+Review B11e2 — Touch ID inside the island (2026-10-26, automatic):
+- VaultData: `BiometricSession` (the island's `LAContext`); `BiometricKeyStoring` gains `makeSession`, `evaluate` and `load(account:session:)`; `KeychainManager` evaluates `.deviceOwnerAuthenticationWithBiometrics` on the current context only and reads with that same context; `BiometricAuthManager.evaluationError` maps `LAError` as the read's status (a failed match → password field or lockout, never a delete).
+- `VaultManager.biometricSession(prompt:)` (nil unless Touch ID can unlock now) and `unlockWithBiometrics(session:)`: the same rules and key check as the prompt path (`readBiometricKeys` now takes the read), evaluate, then the read.
+- App: the island prepares a session before it shows and before the auto-prompt; `TouchIDSensorView` hosts `LAAuthenticationView` in the Touch ID row (large) and the quick vault's caption (small). A failed check gets a fresh session; unlock, `dismiss()` and `vaultDidLock` drop it; the window's lock screen keeps the system prompt.
+- Assumption: a lock while already locked (sleep, screen lock) runs Phase A only, so the island's spent check is replaced by a fresh one rather than dropped; the old context can never read.
+- Tests: package `VaultBiometricsTests` (context reaches the read, failed or cancelled check reads nothing, a lock during or before the check, the rules, the `LAError` mapping); app `NotchIslandTests` (one touch through its own context, a cancel then a fresh check, a lock during the touch, the window path, no Touch ID). Seen failing under 7 mutations.
+- Waiver: tasks/waivers.md B11e2; manual check RELEASING #73.
+- Docs: CHANGELOG, README, ARCHITECTURE, SECURITY-MODEL §5, DESIGN, STRUCTURE.

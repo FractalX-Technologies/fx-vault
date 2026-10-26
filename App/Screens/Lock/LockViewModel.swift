@@ -23,6 +23,9 @@ final class LockViewModel: LockObserving {
     /// Incremented when the user picks the Touch ID prompt's password fallback; the screen
     /// focuses the password field on every change (§5.5).
     private(set) var passwordFocusRequest = 0
+    /// The island's Touch ID check, shown in its `LAAuthenticationView`: one touch evaluates it
+    /// and its context reads the key, so no system prompt follows (1.0 B11e2). Nil elsewhere.
+    private(set) var islandTouchID: BiometricSession?
     var isShowingRecoveryReset = false
 
     @ObservationIgnored private let app: AppViewModel
@@ -134,11 +137,17 @@ final class LockViewModel: LockObserving {
         error = nil
         defer { isUnlocking = false }
         do {
-            try await app.container.vaultManager.unlockWithBiometrics(prompt: Self.unlockPrompt)
+            if let islandTouchID {
+                try await app.container.vaultManager.unlockWithBiometrics(session: islandTouchID)
+            } else {
+                try await app.container.vaultManager.unlockWithBiometrics(prompt: Self.unlockPrompt)
+            }
             password = ""
+            islandTouchID = nil
             app.didUnlock()
         } catch {
             refreshBiometricStatus()
+            renewIslandTouchID()
             switch error {
             case VaultError.passwordFallbackRequested:
                 passwordFocusRequest += 1
@@ -166,6 +175,25 @@ final class LockViewModel: LockObserving {
         await unlockWithTouchID()
     }
 
+    /// The island is on screen: pairs a fresh check with its view, before any evaluation starts
+    /// (the view only takes over the UI of a context it was made with). Nil when Touch ID can't
+    /// unlock now, so the island and its button stay as before.
+    func prepareIslandTouchID() {
+        guard !isUnlocking else { return }
+        islandTouchID = app.container.vaultManager.biometricSession(prompt: Self.unlockPrompt)
+    }
+
+    /// The island went away: later attempts (the window's lock screen) use the system prompt.
+    func dropIslandTouchID() {
+        islandTouchID = nil
+    }
+
+    /// A failed or cancelled check is spent; the island gets a new one while it is still up.
+    private func renewIslandTouchID() {
+        guard islandTouchID != nil else { return }
+        islandTouchID = app.container.vaultManager.biometricSession(prompt: Self.unlockPrompt)
+    }
+
     // MARK: - Recovery
 
     func showRecoveryReset() {
@@ -189,6 +217,8 @@ final class LockViewModel: LockObserving {
         touchIDOffer = nil
         hasAutoPrompted = false
         isShowingRecoveryReset = false
+        // The lock invalidated its context; the island prepares a new one when it shows.
+        islandTouchID = nil
         refreshBiometricStatus()
     }
 

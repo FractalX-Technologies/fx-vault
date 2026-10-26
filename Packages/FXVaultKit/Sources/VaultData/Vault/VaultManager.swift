@@ -175,10 +175,37 @@ public final class VaultManager: Sendable {
         try await gate.run {
             try requireVault()
             let epoch = lockEpoch
-            let keys = try await readBiometricKeys(prompt: prompt)
+            let keys = try await readBiometricKeys { store, account throws(VaultError) in
+                try await Self.loadDEK(from: store, account: account, prompt: prompt)
+            }
             guard session.isLocked else { return }
             try install(keys, ifEpoch: epoch)
             VaultManagerConstants.log.info("Vault unlocked with Touch ID")
+        }
+    }
+
+    /// A Touch ID check for the island's `LAAuthenticationView` (1.0 B11e2), or nil when Touch ID
+    /// can't unlock now (not enabled, unsigned build, no sensor, password required).
+    public func biometricSession(prompt: BiometricPrompt) -> BiometricSession? {
+        guard (try? biometricUnlockStatus()) == .available else { return nil }
+        return biometricStore.makeSession(prompt: prompt)
+    }
+
+    /// Unlocks with the island's check: the same rules as ``unlockWithBiometrics(prompt:)`` first,
+    /// then `session` is evaluated (one touch, in its view) and its context reads the DEK. A
+    /// failed or cancelled check reads nothing; a lock meanwhile throws `.cancelled` or `.locked`.
+    @concurrent
+    public func unlockWithBiometrics(session biometricSession: BiometricSession) async throws {
+        try await gate.run {
+            try requireVault()
+            let epoch = lockEpoch
+            let keys = try await readBiometricKeys { store, account throws(VaultError) in
+                try await store.evaluate(biometricSession)
+                return try await Self.loadDEK(from: store, account: account, session: biometricSession)
+            }
+            guard session.isLocked else { return }
+            try install(keys, ifEpoch: epoch)
+            VaultManagerConstants.log.info("Vault unlocked with Touch ID in the island")
         }
     }
 
@@ -449,7 +476,9 @@ public final class VaultManager: Sendable {
     func reauthenticate(prompt: BiometricPrompt) async throws {
         try await gate.run {
             try requireUnlocked()
-            let keys = try await readBiometricKeys(prompt: prompt)
+            let keys = try await readBiometricKeys { store, account throws(VaultError) in
+                try await Self.loadDEK(from: store, account: account, prompt: prompt)
+            }
             try ensureInstalledKeysMatch(keys)
         }
     }
@@ -628,7 +657,9 @@ public final class VaultManager: Sendable {
 
     /// Applies every Touch ID rule, reads the item (one prompt) and verifies it against the
     /// vault's key-check value. Invalid items are deleted and the enablement cleared.
-    private func readBiometricKeys(prompt: BiometricPrompt) async throws -> UnlockedKeys {
+    private func readBiometricKeys(
+        _ read: (any BiometricKeyStoring, String) async throws(VaultError) -> SecretBytes
+    ) async throws -> UnlockedKeys {
         let vault = try loadVault()
         let context = try vault.keyContext()
         let account = BiometricKeyAccount.name(vaultID: vault.vaultID)
@@ -650,7 +681,7 @@ public final class VaultManager: Sendable {
 
         let dek: SecretBytes
         do {
-            dek = try await Self.loadDEK(from: biometricStore, account: account, prompt: prompt)
+            dek = try await read(biometricStore, account)
         } catch .biometryInvalidated {
             try forgetBiometrics(account: account)
             throw VaultError.biometryInvalidated
@@ -676,6 +707,23 @@ public final class VaultManager: Sendable {
             keychainQueue.async {
                 continuation.resume(returning: Result { () throws(VaultError) in
                     try store.load(account: account, prompt: prompt)
+                })
+            }
+        }
+        return try result.get()
+    }
+
+    /// The island's read, on ``keychainQueue`` too: with an evaluated context it never prompts,
+    /// but `SecItemCopyMatching` still blocks.
+    private static func loadDEK(
+        from store: any BiometricKeyStoring,
+        account: String,
+        session: BiometricSession
+    ) async throws(VaultError) -> SecretBytes {
+        let result: Result<SecretBytes, VaultError> = await withCheckedContinuation { continuation in
+            keychainQueue.async {
+                continuation.resume(returning: Result { () throws(VaultError) in
+                    try store.load(account: account, session: session)
                 })
             }
         }

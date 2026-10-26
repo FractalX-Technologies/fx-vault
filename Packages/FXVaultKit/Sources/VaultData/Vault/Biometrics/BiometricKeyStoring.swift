@@ -24,6 +24,18 @@ public protocol BiometricKeyStoring: Sendable {
     /// Reads the item for `account`, showing the Touch ID prompt. The caller wipes the result.
     func load(account: String, prompt: BiometricPrompt) throws(VaultError) -> SecretBytes
 
+    /// A fresh check for an in-app Touch ID view (1.0 B11e2), the current context from now on (a
+    /// lock invalidates it). Never prompts.
+    func makeSession(prompt: BiometricPrompt) -> BiometricSession
+
+    /// Runs the session's check: inside the `LAAuthenticationView` showing its context, else as
+    /// the system prompt. Throws as ``load(account:prompt:)`` does (cancel, fallback, lockout).
+    func evaluate(_ session: BiometricSession) async throws(VaultError)
+
+    /// Reads the item for `account` with the evaluated session's context, without a second
+    /// prompt; `.cancelled` once a lock invalidated it. The caller wipes the result.
+    func load(account: String, session: BiometricSession) throws(VaultError) -> SecretBytes
+
     /// True when an item exists for `account`, checked without any UI (§5.5 presence check).
     func contains(account: String) throws(VaultError) -> Bool
 

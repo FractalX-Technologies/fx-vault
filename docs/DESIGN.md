@@ -924,7 +924,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   while locked, a borderless panel above the menu bar (`NotchIslandPanel`), 340 pt wide,
   `island` black with `islandInk` / `islandMuted` text in both appearances, no shadow, lower
   corners 20 pt (all four without a notch, 6 pt under the menu bar). Touch ID row (symbol 24 pt,
-  `.headline` "FX Vault is locked", `.caption` "Touch ID to unlock", "Use Password"), password
+  or with Touch ID ready the system's `LAAuthenticationView` glyph, large, and small in the quick
+  vault's caption; `.headline` "FX Vault is locked", `.caption` "Touch ID to unlock", "Use Password"), password
   pill with the reason or error line and "Recovery Key…", or "Unlocked" for 0.9 s.
 - Setup commands (board GitHubSetup): a `CommandRow` for an allowlisted brew command adds an
   `.outline` Run before Copy; under the rows, `CommandOutputView` (`.monoMeta` `mutedText` lines on
