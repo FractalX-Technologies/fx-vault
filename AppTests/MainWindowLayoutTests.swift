@@ -60,6 +60,65 @@ struct MainWindowLayoutTests {
         #expect(window.titleVisibility == .visible)
     }
 
+    /// SwiftUI can show the next main screen before the last one disappears: the first one out
+    /// keeps the title bar for the second, and the last one out restores the window's own.
+    @Test func overlappingMainScreensKeepTheTitleBarUntilTheLastLeaves() {
+        let window = Self.window(showing: Text(verbatim: "Locked"), contentSize: Self.defaultSize)
+        defer { window.close() }
+        let first = MainWindowTitleBar()
+        let second = MainWindowTitleBar()
+        first.install(in: window)
+        second.install(in: window)
+
+        first.remove()
+        #expect(window.toolbar?.identifier == MainWindowTitleBar.toolbarIdentifier)
+        #expect(window.titleVisibility == .hidden)
+        #expect(window.titlebarAppearsTransparent)
+
+        second.remove()
+        #expect(window.toolbar == nil)
+        #expect(window.titleVisibility == .visible)
+        #expect(!window.titlebarAppearsTransparent)
+    }
+
+    /// An update that clears the window's toolbar gets the empty one back at once, or the traffic
+    /// lights would drop to the title bar's corner, over the sidebar panel's edge.
+    @Test func theToolbarComesBackWhenSomethingClearsIt() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let main = harness.app.makeMainViewModel()
+        let window = Self.window(showing: MainScreen(viewModel: main), contentSize: Self.defaultSize)
+        defer { window.close() }
+        #expect(await TestFixtures.eventually { window.toolbar?.identifier == MainWindowTitleBar.toolbarIdentifier })
+
+        window.toolbar = nil
+        #expect(window.toolbar?.identifier == MainWindowTitleBar.toolbarIdentifier)
+    }
+
+    /// The main screen's minimum is the same with the sidebar hidden: a window narrowed then would
+    /// push the detail past its edge when ⌃⌘S shows the sidebar again (it measured 436 pt).
+    @Test func hidingTheSidebarKeepsTheMinimumWidth() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let main = harness.app.makeMainViewModel()
+        let shown = NSHostingController(rootView: MainScreen(viewModel: main)).sizeThatFits(in: .zero).width
+        main.toggleSidebar()
+        #expect(main.isSidebarHidden)
+        let hidden = NSHostingController(rootView: MainScreen(viewModel: main)).sizeThatFits(in: .zero).width
+        #expect(hidden == shown)
+        #expect(hidden >= 3 * Theme.Layout.mainPanelInset + Theme.Layout.sidebarMaxWidth + Theme.Layout.detailMinWidth)
+        withExtendedLifetime(harness) {}
+    }
+
+    /// A double-click on the window's chrome does what System Settings › Desktop & Dock says.
+    @Test func aDoubleClickOnTheChromeFollowsSystemSettings() {
+        typealias Action = TitleBarDoubleClickAction
+        #expect(Action.resolve(actionOnDoubleClick: nil, minimizesOnDoubleClick: false) == .zoom)
+        #expect(Action.resolve(actionOnDoubleClick: "Fill", minimizesOnDoubleClick: false) == .zoom)
+        #expect(Action.resolve(actionOnDoubleClick: "Maximize", minimizesOnDoubleClick: true) == .zoom)
+        #expect(Action.resolve(actionOnDoubleClick: "Minimize", minimizesOnDoubleClick: false) == .minimize)
+        #expect(Action.resolve(actionOnDoubleClick: "None", minimizesOnDoubleClick: false) == .none)
+        #expect(Action.resolve(actionOnDoubleClick: nil, minimizesOnDoubleClick: true) == .minimize)
+    }
+
     /// The detail (header, Secrets | Variables pill and add actions, table) fits the narrowest
     /// detail column: rows that do not fit wrap below, and the table scrolls, instead of spilling
     /// under the scope column and past the window edge.

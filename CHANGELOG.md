@@ -97,8 +97,10 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Floating panels.** The main window has no title bar of its own: the sidebar and the toolbar
   float as rounded glass panels on a soft ground, with the window's close, minimize and zoom
   buttons inside the sidebar's top corner. View › Hide Sidebar (⌃⌘S) slides the sidebar out and
-  the toolbar starts after the window buttons; Edit › Find brings it back. The Sync button is a
-  smaller pill with the sync symbol and the pending count.
+  the toolbar starts after the window buttons; Edit › Find brings it back. Drag the gap after
+  the sidebar to resize it (240 to 400 pt; FX Vault remembers it); drag the toolbar's empty
+  part, the gaps or the band above the sidebar's search to move the window, and double-click
+  them to zoom. The Sync button is a smaller pill with the sync symbol and the pending count.
 - **A place's header and its ⋯ menu.** Every place opens with its name and one line saying what
   it is, where and how many (`Environment · api-service · 6 secrets · 2 variables · 1 without
   value`), then "N changed on GitHub · Review" when GitHub changed something. Its ⋯ menu holds

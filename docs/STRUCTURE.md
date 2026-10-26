@@ -131,7 +131,7 @@ FXVault/
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell, RecoveryKeyGridView,
 │   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,
 │   │   │                            # PasswordStrengthMeter, NewPasswordFields,
-│   │   │                            # WindowAccessor, EscapeKeyMonitor (onEscapeKey),
+│   │   │                            # WindowAccessor, WindowDragArea, EscapeKeyMonitor (onEscapeKey),
 │   │   │                            # CommandRow (+ Run), CommandOutputView,
 │   │   │                            # SetupCommandList (+ SetupCommandRunState),
 │   │   │                            # ErrorAlert, ConfigEditorSheet

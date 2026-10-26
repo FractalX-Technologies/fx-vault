@@ -16,9 +16,10 @@ import VaultData
 ///
 /// Every screen is drawn at 2x as `<name>-<appearance>.window.png`: the view in an offscreen
 /// `NSWindow` (`cacheDisplay`), which includes the AppKit-backed controls (text fields,
-/// checkboxes, pickers, `Table`, `List`, `ScrollView`, `NavigationSplitView`) and, for the main
-/// window, the toolbar. SwiftUI `ImageRenderer` is not used: it draws those controls as
-/// placeholders or blank, which gives a reviewer nothing to check.
+/// checkboxes, pickers, `Table`, `List`, `ScrollView`) and the main window's glass panels. The
+/// traffic lights are not drawn (the hidden title bar is outside the content view). SwiftUI
+/// `ImageRenderer` is not used: it draws those controls as placeholders or blank, which gives a
+/// reviewer nothing to check.
 ///
 /// Data comes from the test harness (in-memory vault, scripted gh, fake transports); nothing
 /// touches the real vault, the keychain or `~/Library`. Nothing is asserted about pixels.

@@ -17,10 +17,8 @@ struct MainToolbarPanel: View {
         .padding(.trailing, Theme.Spacing.small)
         .frame(maxWidth: .infinity)
         .frame(height: Theme.Layout.toolbarPanelHeight)
-        .contentShape(Rectangle())
-        // The panel is the window's title bar: dragging its empty part moves the window.
-        .gesture(WindowDragGesture())
-        .allowsWindowActivationEvents(true)
+        // The panel is the window's title bar: its empty part moves and zooms the window.
+        .background(WindowDragArea())
         .fxGlassPanel()
     }
 }

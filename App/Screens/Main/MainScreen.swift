@@ -8,6 +8,7 @@ import VaultCore
 /// and the sheet router of the UI feature contract.
 struct MainScreen: View {
     @State private var viewModel: MainViewModel
+    @State private var isFullScreen = false
 
     init(app: AppViewModel) {
         _viewModel = State(initialValue: app.makeMainViewModel())
@@ -26,7 +27,7 @@ struct MainScreen: View {
                 JumpPaletteOverlay(main: viewModel)
             }
             .animation(Theme.Durations.interactionAnimation, value: viewModel.jumpPalette == nil)
-            .mainWindowChrome()
+            .mainWindowChrome(isFullScreen: $isFullScreen)
             .sheet(item: $viewModel.activeSheet) { sheet in
                 MainSheetContent(sheet: sheet, main: viewModel)
             }
@@ -68,20 +69,29 @@ struct MainScreen: View {
 
     /// The panels, `mainPanelInset` from the window's edges and from each other, from the very
     /// top of the window: the traffic lights sit in the sidebar panel's top inset, or before the
-    /// toolbar panel while the sidebar is hidden (View › Hide Sidebar slides it out).
+    /// toolbar panel while the sidebar is hidden (View › Hide Sidebar slides it out). The gutters
+    /// and the sidebar's top band move the window; the gutter after the sidebar resizes it.
     private var panels: some View {
-        HStack(spacing: Theme.Layout.mainPanelInset) {
+        HStack(spacing: 0) {
             if !viewModel.isSidebarHidden {
-                SidebarView(main: viewModel)
-                    .padding(.top, Theme.Layout.sidebarPanelTopInset)
-                    .frame(width: Theme.Layout.sidebarWidth)
-                    .mainColumnHeight()
-                    .fxGlassPanel()
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+                HStack(spacing: 0) {
+                    SidebarView(main: viewModel)
+                        .padding(.top, Theme.Layout.sidebarPanelTopInset)
+                        .frame(width: viewModel.sidebarWidth)
+                        .mainColumnHeight()
+                        .fxGlassPanel()
+                        .overlay(alignment: .top) {
+                            WindowDragArea()
+                                .frame(height: Theme.Layout.sidebarPanelTopInset)
+                        }
+                    SidebarResizeHandle(main: viewModel)
+                }
+                .transition(.move(edge: .leading).combined(with: .opacity))
             }
             VStack(spacing: Theme.Layout.mainPanelInset) {
                 MainToolbarPanel(viewModel: viewModel)
-                    .padding(.leading, viewModel.isSidebarHidden ? Theme.Layout.trafficLightsWidth : 0)
+                    // Full screen hides the traffic lights.
+                    .padding(.leading, viewModel.isSidebarHidden && !isFullScreen ? Theme.Layout.trafficLightsWidth : 0)
                 if viewModel.showsRecoveryKeyReminder {
                     RecoveryKeyStrip(main: viewModel)
                 }
@@ -91,9 +101,47 @@ struct MainScreen: View {
             }
         }
         .padding(Theme.Layout.mainPanelInset)
+        // The same minimum with the sidebar hidden: showing it again never overflows the window.
+        .frame(minWidth: Theme.Layout.mainScreenMinWidth)
         .ignoresSafeArea()
-        .background(MainWindowGround())
+        .background {
+            MainWindowGround()
+                .overlay {
+                    WindowDragArea()
+                        .ignoresSafeArea()
+                }
+        }
         .animation(Theme.Durations.spring, value: viewModel.isSidebarHidden)
+    }
+}
+
+/// The gutter between the sidebar panel and the detail: dragging it resizes the sidebar between
+/// `sidebarMinWidth` and `sidebarMaxWidth` (``MainViewModel/sidebarWidth``, kept per Mac user).
+private struct SidebarResizeHandle: View {
+    let main: MainViewModel
+    @State private var startWidth: CGFloat?
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    var body: some View {
+        Color.clear
+            .frame(width: Theme.Layout.mainPanelInset)
+            .mainColumnHeight()
+            .contentShape(Rectangle())
+            .pointerStyle(.columnResize)
+            .gesture(
+                DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                    .onChanged { drag in
+                        let start = startWidth ?? main.sidebarWidth
+                        startWidth = start
+                        // Global coordinates don't flip: right to left, the sidebar is on the right.
+                        let delta = layoutDirection == .rightToLeft ? -drag.translation.width : drag.translation.width
+                        main.sidebarWidth = start + delta
+                    }
+                    .onEnded { _ in
+                        startWidth = nil
+                    }
+            )
+            .accessibilityHidden(true)
     }
 }
 

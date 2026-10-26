@@ -111,6 +111,7 @@ final class PreferencesManager {
         static let trustedGHOwnerUID = "preferences.trustedGHOwnerUID"
         static let recoveryKeyConfirmationPending = "preferences.recoveryKeyConfirmationPending"
         static let touchIDOfferAnswered = "preferences.touchIDOfferAnswered"
+        static let sidebarWidth = "preferences.sidebarWidth"
         /// Settings of the nearby, teammate and shared-space features 1.0 removed.
         static let removed = [
             "preferences.nearbyDisplayName", "preferences.nearbyVisibility",
@@ -134,10 +135,29 @@ final class PreferencesManager {
         )
         isRecoveryKeyConfirmationPending = store.bool(forKey: Key.recoveryKeyConfirmationPending)
         hasAnsweredTouchIDOffer = store.bool(forKey: Key.touchIDOfferAnswered)
+        sidebarWidth = Self.validatedSidebarWidth(store.integer(forKey: Key.sidebarWidth))
         // The display name shown to nearby Macs is personal data: don't leave it on disk.
         for key in Key.removed {
             store.removeValue(forKey: key)
         }
+    }
+
+    /// The main window's sidebar panel width in points, dragged on its trailing gutter. Always
+    /// between `Theme.Layout.sidebarMinWidth` and `sidebarMaxWidth`.
+    var sidebarWidth: Int {
+        didSet {
+            let valid = Self.validatedSidebarWidth(sidebarWidth)
+            if valid != sidebarWidth {
+                sidebarWidth = valid
+                return
+            }
+            store.set(sidebarWidth, forKey: Key.sidebarWidth)
+        }
+    }
+
+    static func validatedSidebarWidth(_ width: Int?) -> Int {
+        guard let width else { return Int(Theme.Layout.sidebarWidth) }
+        return min(max(width, Int(Theme.Layout.sidebarMinWidth)), Int(Theme.Layout.sidebarMaxWidth))
     }
 
     /// Inactivity auto-lock, in minutes. Always one of ``autoLockOptions``.
