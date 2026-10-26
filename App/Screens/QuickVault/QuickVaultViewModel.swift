@@ -31,12 +31,13 @@ final class QuickVaultViewModel: LockObserving {
     var notchHeight: CGFloat = 0
 
     @ObservationIgnored var onShow: (() -> Void)?
-    /// The panel hides; `returnFocusTo` is the app to give the keys back to (``QuickVaultFocusReturn``).
-    @ObservationIgnored var onHide: ((_ returnFocusTo: pid_t?) -> Void)?
+    /// The panel hides; on esc or the shortcut (`returnsFocus`) the keys go to `app`, the one it
+    /// opened over (``QuickVaultFocusReturn``), when there is one.
+    @ObservationIgnored var onHide: ((_ returnsFocus: Bool, _ app: (any QuickVaultReturnApp)?) -> Void)?
     /// FX Vault is active and the panel, or no other window, has the keys (the controller says).
     @ObservationIgnored var hasFocus: () -> Bool = { true }
     /// The app in front, read when the quick vault is asked for.
-    @ObservationIgnored var frontmostApp: () -> pid_t? = { NSWorkspace.shared.frontmostApplication?.processIdentifier }
+    @ObservationIgnored var frontmostApp: () -> (any QuickVaultReturnApp)? = { NSWorkspace.shared.frontmostApplication }
     /// The panel's size changed; it keeps its top edge where it is.
     @ObservationIgnored var onSizeChange: ((CGSize) -> Void)?
     /// Most recent first, in memory only: ids, never a name.
@@ -103,7 +104,7 @@ final class QuickVaultViewModel: LockObserving {
         results = []
         items = []
         selectedID = nil
-        onHide?(focusReturn.take(returnsFocus: returnsFocus))
+        onHide?(returnsFocus, focusReturn.take(returnsFocus: returnsFocus))
     }
 
     /// Esc: from a place back to the search, from the search away.

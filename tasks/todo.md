@@ -2606,6 +2606,7 @@ Lane A (one builder):
 - [x] N2 Notes editing. `NSTextView` (TextKit 2) where each value is one whole token, Set value…, pasting `KEY=value` lines, inline errors and Key Vault name rules, then Review ⌘S → pending changes.
   - Boards: Place-Edit, Place-SecretValue, Place-Paste, Place-Errors, KV-NameRules, Place-Review.
 - [x] Q1 Quick vault from the notch (⌃⌥V, a registered hot key): search, recent places, a place's lines with Copy, Reveal with Touch ID, Expand ⌘↩, closes on focus loss, hidden from capture. Built in lane B (Review Q1).
+  - [ ] Follow-up: a non-activating panel (`.nonactivatingPanel`) for the quick vault, so an open main window stays behind the other app while it is open; focus loss would be read from the panel's key state, and the Touch ID and password paths rechecked (Review Q1, round 2).
   - Boards: QuickVault-Search, -Place, -Locked, -Expanding.
 
 Lane B (one builder):
@@ -2734,3 +2735,9 @@ Review Q1 — Quick vault from the notch (2026-10-26, automatic):
   - Hot key: the callback reads `EventHotKeyID` and acts on "FXVQ" only; `InstallEventHandler`'s status is checked; a refused shortcut is logged with its keys and Settings › General says "This shortcut is in use. Choose another." (`isQuickVaultShortcutRefused`).
   - Tests (7 new in `QuickVaultTests`, 18 in all): the focus model; esc and the shortcut returning to the app (focus loss and FX Vault itself not); the locked path's app; a focus loss during a held Touch ID check (closes, or stays when the focus came back); a revealed secret masked again after esc, the shortcut and a focus loss; a Copy after the re-mask asks again; the refused shortcut in Settings. Seen failing in one round with each fix removed (10 issues in 7 tests).
   - Gates: app tests 113 in 11 suites green (`QuickVaultTests`, `AppViewModelTests`, `JumpPaletteTests`, `LockViewModelTests`, `MainWindowLayoutTests`, `MenuBarTests`, `NotchIslandTests`, `NotesRevealTests`, `PreferencesViewModelTests`, `QuickVaultShortcutTests`, `OrganizationEditingTests`); UI `QuickVaultUITests` (2), `NotchIslandUITests`, `MenuBarUITests` and `SettingsUITests.testTheQuickVaultShortcutRecordsANewKey` green, one run at a time; lint OK; check-secrets OK; strings ×2 (second run up to date).
+- Fixes after review, round 2 (2026-10-26):
+  - The main window during the session is documented, not redesigned: opening activates FX Vault, so an open main window sits in front of the other app until the quick vault closes (SECURITY-MODEL §7, RELEASING #71, the controller's comment); a non-activating panel is a follow-up (above).
+  - Another FX Vault window becoming key (`NSWindow.didBecomeKeyNotification`, not the panel, while it shows) is a focus loss, so a click on the main window after a check with no key window closes it.
+  - `QuickVaultFocusReturn` keeps the app (`QuickVaultReturnApp`, `NSRunningApplication` live) and skips it once `isTerminated`; with no app to go back to and no FX Vault window, the close hides FX Vault as before.
+  - Tests: `anAppThatQuitGetsNoKeys` (seen failing without the `isTerminated` check); the focus tests now use fake apps and check that only esc and the shortcut return the keys. The become-key path and the hide fallback are AppKit-only: RELEASING #71.
+  - Gates: app tests 114 in 11 suites green (as in round one; `QuickVaultTests` 19); UI `QuickVaultUITests` (2) green, run alone; lint OK; check-secrets OK; strings ×2 (up to date).

@@ -286,18 +286,30 @@ struct QuickVaultTests {
     // MARK: - Focus
 
     @Test func theKeysGoBackToTheAppItOpenedOver() {
+        let safari = FakeReturnApp(4242)
+        let fxVault = FakeReturnApp(7)
         var focus = QuickVaultFocusReturn()
-        focus.remember(frontmost: 4242, own: 7)
-        focus.remember(frontmost: 7, own: 7)
-        #expect(focus.take(returnsFocus: true) == 4242, "FX Vault in front later keeps the request's app")
+        focus.remember(frontmost: safari, own: 7)
+        focus.remember(frontmost: fxVault, own: 7)
+        #expect(focus.take(returnsFocus: true) === safari, "FX Vault in front later keeps the request's app")
         #expect(focus.take(returnsFocus: true) == nil, "taken once")
 
-        focus.remember(frontmost: 7, own: 7)
+        focus.remember(frontmost: fxVault, own: 7)
         #expect(focus.take(returnsFocus: true) == nil, "opened from FX Vault, it stays there")
-        focus.remember(frontmost: 4242, own: 7)
+        focus.remember(frontmost: safari, own: 7)
         #expect(focus.take(returnsFocus: false) == nil, "a focus loss went elsewhere already")
-        focus.remember(frontmost: 4242, own: 7)
+        focus.remember(frontmost: safari, own: 7)
         focus.forget()
+        #expect(focus.take(returnsFocus: true) == nil)
+    }
+
+    /// An app that quit while the quick vault was open gets nothing; the panel falls back to
+    /// hiding FX Vault when no window of it shows.
+    @Test func anAppThatQuitGetsNoKeys() {
+        let safari = FakeReturnApp(4242)
+        var focus = QuickVaultFocusReturn()
+        focus.remember(frontmost: safari, own: 7)
+        safari.isTerminated = true
         #expect(focus.take(returnsFocus: true) == nil)
     }
 
@@ -306,11 +318,13 @@ struct QuickVaultTests {
     @Test func escAndTheShortcutActivateTheAppItOpenedOver() async throws {
         let harness = try await TestHarness(vault: .unlocked)
         let quickVault = harness.app.quickVault
-        let own = ProcessInfo.processInfo.processIdentifier
-        var frontmost: pid_t? = 4242
+        let safari = FakeReturnApp(4242)
+        var frontmost = safari
         quickVault.frontmostApp = { frontmost }
-        var returned: [pid_t?] = []
-        quickVault.onHide = { returned.append($0) }
+        var returned: [String] = []
+        quickVault.onHide = { returnsFocus, app in
+            returned.append("\(returnsFocus) \(app?.processIdentifier ?? 0)")
+        }
 
         harness.app.openQuickVault()
         quickVault.escape()
@@ -318,10 +332,10 @@ struct QuickVaultTests {
         harness.hotKey.press()
         harness.app.openQuickVault()
         quickVault.didLoseFocus()
-        frontmost = own
+        frontmost = FakeReturnApp(ProcessInfo.processInfo.processIdentifier)
         harness.app.openQuickVault()
         quickVault.escape()
-        #expect(returned == [4242, 4242, nil, nil])
+        #expect(returned == ["true 4242", "true 4242", "false 0", "true 0"])
     }
 
     /// Locked, the request's app gets the keys after the unlock; a request that ended leaves none.
@@ -329,14 +343,15 @@ struct QuickVaultTests {
         let harness = try await TestHarness(vault: .locked)
         harness.preferences.hasAnsweredTouchIDOffer = true
         let quickVault = harness.app.quickVault
-        let own = ProcessInfo.processInfo.processIdentifier
-        var frontmost: pid_t? = 4242
+        let safari = FakeReturnApp(4242)
+        let fxVault = FakeReturnApp(ProcessInfo.processInfo.processIdentifier)
+        var frontmost = safari
         quickVault.frontmostApp = { frontmost }
         var returned: [pid_t?] = []
-        quickVault.onHide = { returned.append($0) }
+        quickVault.onHide = { _, app in returned.append(app?.processIdentifier) }
 
         harness.hotKey.press()
-        frontmost = own
+        frontmost = fxVault
         harness.hotKey.press()
         harness.app.lockScreen.password = testPassword
         await harness.app.lockScreen.unlockWithPassword()
@@ -344,10 +359,10 @@ struct QuickVaultTests {
         quickVault.escape()
 
         harness.app.lock(trigger: .manual)
-        frontmost = 4242
+        frontmost = safari
         harness.hotKey.press()
         harness.app.endQuickVaultRequest()
-        frontmost = own
+        frontmost = fxVault
         harness.app.lockScreen.password = testPassword
         await harness.app.lockScreen.unlockWithPassword()
         harness.app.openQuickVault()
@@ -468,5 +483,19 @@ struct QuickVaultTests {
         #expect(f5.keyboardShortcut?.key.character.unicodeScalars.first?.value == UInt32(NSF5FunctionKey))
         let space = QuickVaultShortcutModel(keyCode: 0x31, modifiers: [.option, .shift], key: "Space")
         #expect(space.keyboardShortcut == .init(.space, modifiers: [.option, .shift]))
+    }
+}
+
+/// An app in front of FX Vault when the quick vault was asked for.
+private final class FakeReturnApp: QuickVaultReturnApp {
+    let processIdentifier: pid_t
+    var isTerminated = false
+
+    init(_ processIdentifier: pid_t) {
+        self.processIdentifier = processIdentifier
+    }
+
+    func takeKeysFromFXVault() -> Bool {
+        true
     }
 }

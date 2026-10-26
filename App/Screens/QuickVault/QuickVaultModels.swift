@@ -120,26 +120,36 @@ enum QuickVaultPlaces {
     }
 }
 
+/// An app the quick vault can give the keys back to: `NSRunningApplication`, a fake in tests.
+protocol QuickVaultReturnApp: AnyObject {
+    var processIdentifier: pid_t { get }
+    /// Quit since it was in front: nothing to give the keys to.
+    var isTerminated: Bool { get }
+    /// Asks macOS to bring it forward from FX Vault; false when refused.
+    func takeKeysFromFXVault() -> Bool
+}
+
 /// The app that gets the keys back when esc or the shortcut closes the quick vault: the one in
 /// front when it was asked for, never FX Vault itself (its main window may be open behind).
-struct QuickVaultFocusReturn: Equatable {
-    private(set) var processID: pid_t?
+struct QuickVaultFocusReturn {
+    private(set) var app: (any QuickVaultReturnApp)?
 
     /// A request, before FX Vault comes forward. From FX Vault itself (the island waiting for the
     /// unlock, say) it keeps the app of the request still pending.
-    mutating func remember(frontmost: pid_t?, own: pid_t) {
-        guard let frontmost, frontmost != own else { return }
-        processID = frontmost
+    mutating func remember(frontmost: (any QuickVaultReturnApp)?, own: pid_t) {
+        guard let frontmost, frontmost.processIdentifier != own else { return }
+        app = frontmost
     }
 
     /// The request ended without opening the quick vault.
     mutating func forget() {
-        processID = nil
+        app = nil
     }
 
-    /// On close: the app to activate when the close gives the keys back. Taken once.
-    mutating func take(returnsFocus: Bool) -> pid_t? {
-        defer { processID = nil }
-        return returnsFocus ? processID : nil
+    /// On close: the app to activate when the close gives the keys back, if it still runs. Taken once.
+    mutating func take(returnsFocus: Bool) -> (any QuickVaultReturnApp)? {
+        defer { app = nil }
+        guard returnsFocus, let app, !app.isTerminated else { return nil }
+        return app
     }
 }
