@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The header of every place (1.0 D6c3; boards Main2-Repository, Place-Table, KV-Place,
 /// Folder-View, Org-Visibility): the name, "kind · parent · counts", an optional status line,
-/// then the place's own buttons and ⋯ More on the right, or under the name in a narrow column.
+/// then the place's own buttons and ⋯ More on the right, or under the name in a narrow column,
+/// wrapping onto more lines when they don't fit there either.
 struct PlaceHeader<Status: View, Accessories: View, MoreItems: View>: View {
     let title: String
     var titleStyle: SidebarTitleStyle = .mono
@@ -21,7 +22,11 @@ struct PlaceHeader<Status: View, Accessories: View, MoreItems: View>: View {
             }
             VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
                 details
-                actions
+                // At `detailMinWidth` a folder's Copy To, Share Securely…, Notes | Table and ⋯
+                // are wider than the column: they wrap instead of widening it.
+                FlowLayout(spacing: Theme.Spacing.small) {
+                    actionItems
+                }
             }
         }
     }
@@ -49,19 +54,24 @@ struct PlaceHeader<Status: View, Accessories: View, MoreItems: View>: View {
 
     private var actions: some View {
         HStack(spacing: Theme.Spacing.small) {
-            accessories()
-            Menu {
-                moreItems()
-            } label: {
-                Label(PlaceCopy.more, systemImage: "ellipsis")
-            }
-            .menuStyle(.button)
-            .menuIndicator(.hidden)
-            .fxIconButtonStyle(size: .compact)
-            .help(PlaceCopy.more)
-            .accessibilityIdentifier(AccessibilityID.Place.more)
+            actionItems
         }
         .fixedSize()
+    }
+
+    @ViewBuilder
+    private var actionItems: some View {
+        accessories()
+        Menu {
+            moreItems()
+        } label: {
+            Label(PlaceCopy.more, systemImage: "ellipsis")
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .fxIconButtonStyle(size: .compact)
+        .help(PlaceCopy.more)
+        .accessibilityIdentifier(AccessibilityID.Place.more)
     }
 }
 
