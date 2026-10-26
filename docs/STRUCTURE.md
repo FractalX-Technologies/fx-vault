@@ -114,9 +114,10 @@ FXVault/
 │   │   │                            # ShareFileDelivery (share picker, AirDrop included),
 │   │   │                            # ShareStagingFolder, ShareLocalIdentityModel, ShareSheetComponents,
 │   │   │                            # SharingError and SharingKit-type +Extension files; v0.9.0
-│   │   │                            # project shares: ProjectShareScreen/ViewModel (Share Project),
+│   │   │                            # project shares: ProjectShareScreen/ViewModel (Share
+│   │   │                            # Securely, boards Share-Pick and Share-Passphrase),
 │   │   │                            # ProjectShareTreeModel, ProjectShareImportView/Editor (a
-│   │   │                            # bundle in Import Share), ProjectShareCopy
+│   │   │                            # bundle opened, board Share-OpenPreview), ProjectShareCopy
 │   │   └── Preferences/             # PreferencesScreen/ViewModel, General, Security(+ViewModel),
 │   │                                # Accounts(+ViewModel), Advanced,
 │   │                                # SharingSettingsScreen/ViewModel (the sent log; v0.9.0)
@@ -139,7 +140,7 @@ FXVault/
 │   │                                # FXLinkButtonStyle, fxSheetContent), FlowLayout (v0.6.0),
 │   │                                # KeyHint (1.0), RingDot, DialogChrome (DialogSheet,
 │   │                                # dialog list box), DialogForm (rows, the field box,
-│   │                                # pop-ups, chips; 1.0 D6d)
+│   │                                # pop-ups, chips, tags; 1.0 D6d)
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
 │   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe,
 │   │                                # ConnectivityMonitor (NWPathMonitor, path sources),

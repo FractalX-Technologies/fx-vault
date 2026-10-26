@@ -82,9 +82,9 @@ the secrets your code reads at runtime in Azure Key Vault.
   sessions never travel: the receiver uses their own `az login`.
 - **Open a project file.** Double-click it: FX Vault lists each repository as already in your
   vault, to import from GitHub with your account, or skipped (no access), previews the merge
-  (nothing of yours is deleted) and then opens the first repository at the environment of the
-  file's first stage. Nothing from the file reaches
-  GitHub or a provider until you include it in Sync's **From Files** review; until then its rows
+  (nothing of yours is deleted), and **Import as Held** opens the first repository at the
+  environment of the file's first stage. Nothing from the file reaches
+  GitHub or Azure until you include it in Sync's **From Files** review; until then its rows
   show **Held**.
 - **Works offline.** A banner says when the Mac has no internet connection or GitHub isn't
   responding (with Retry). Your edits stay in the vault; Sync, Import, New Repository, Refresh

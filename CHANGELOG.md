@@ -22,6 +22,13 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   the clone folder, and the button says Stage Repository; New Environment is titled with its
   repository, says when a name is free ("Not used in api-service yet"), shows branch rules as
   chips, and the button says Stage Environment. Both end on "Created on GitHub at the next Sync."
+- **Share Securely as the boards.** Choosing what to share is one dialog: the repositories,
+  the repository level and stages, the tree with each row's counts, the production note and
+  Expires after, with Create File (with Touch ID where it can) in the footer; the Send to step
+  is gone. The passphrase is shown on one line with Copy, the time the clipboard clears, and
+  when FX Vault stops opening the file. Opening a file asks the six words in one field, lists
+  what it adds with a dot per repository, and imports as held ("Import as Held"); an expired
+  file says "This file expired" in a small dialog of its own.
 - **Edit organization secrets and variables.** The organization view gains Add Secret, Add
   Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
   with the organization's repositories). A Selected item keeps GitHub's repository list until

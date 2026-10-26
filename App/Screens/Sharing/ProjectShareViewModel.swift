@@ -5,16 +5,16 @@ import SharingKit
 import VaultCore
 import VaultData
 
-/// Share Project (v0.9.0, tasks/todo.md P1–P6): one `.fxvault` format 2 file with several
-/// repositories, their GitHub scopes and runtime destinations, and optional folders.
+/// Share Securely (v0.9.0, tasks/todo.md P1–P6; board Share-Pick since 1.0): one `.fxvault`
+/// format 2 file with several repositories, their GitHub scopes and runtime destinations, and
+/// optional folders, opened with a fresh passphrase.
 ///
-/// 1. **What to share**: the repositories (the current one preselected), the stages across them
-///    (production unchecked; ticking it asks for Touch ID, 1.0 B3b), the repository-level toggle
-///    and a tree per repository to adjust; a live summary (``SharingRepository/previewBundle(_:)``).
-/// 2. **Send to**: anyone with a fresh passphrase, and the expiry.
-/// 3. **Authenticate** with Touch ID or the master password (`.fileExport`, single use; with
+/// 1. **What to share**: the repositories (the current one preselected), the repository level
+///    and the stages across them (production unchecked; ticking it asks for Touch ID, 1.0 B3b),
+///    a tree per repository to adjust, the expiry; live counts (``SharingRepository/previewBundle(_:)``).
+/// 2. **Authenticate** with Touch ID or the master password (`.fileExport`, single use; with
 ///    production, `.productionFileExport`, which the production tick may already hold).
-/// 4. **Deliver**: the sealed file sits 0600 in a private staging folder named
+/// 3. **Deliver** (board Share-Passphrase): the sealed file sits 0600 in a private staging folder named
 ///    ``SharingRepository/defaultFileName(timeZone:)``; Send with AirDrop, Share… (Mail,
 ///    Messages, any app that takes files) or Save…. A passphrase is shown once. The staged file
 ///    is removed when the sheet closes.
@@ -24,7 +24,6 @@ import VaultData
 final class ProjectShareViewModel: LockObserving {
     enum Step: Equatable {
         case contents
-        case sendTo
         case authenticate
         case creating
         case done
@@ -48,9 +47,8 @@ final class ProjectShareViewModel: LockObserving {
     private(set) var tree: ProjectShareTreeModel?
     private(set) var preview: ShareBundleExportPreviewModel?
     private(set) var isLoading = false
-
-    // MARK: Send to
-
+    /// The folder the sheet opened for, named by the title while no repository is chosen.
+    private(set) var openedFolderName: String?
     var expiry: ShareExpiryChoice = .default {
         didSet { schedulePreview() }
     }
@@ -131,6 +129,10 @@ final class ProjectShareViewModel: LockObserving {
         hasStarted = true
         isLoading = true
         defer { isLoading = false }
+        if case .folder(let id) = context.selection {
+            let name = dependencies.folders.folderName(id)
+            openedFolderName = name.isEmpty ? nil : name
+        }
         do {
             allRepositories = try await loader.repositories()
             let initial = try await initialSelection()
@@ -306,6 +308,19 @@ final class ProjectShareViewModel: LockObserving {
 
     // MARK: - Step 1: summary
 
+    /// What the title names: the one repository chosen, else the folder the sheet opened for;
+    /// nil for several.
+    var subjectName: String? {
+        let repositories = chosenRepositories
+        if repositories.count == 1 { return repositories.first?.name }
+        return repositories.isEmpty ? openedFolderName : nil
+    }
+
+    /// Secrets and variables in the file (the footer); nil until the counts are known.
+    var counts: ShareItemCountModel? {
+        preview?.summary.counts
+    }
+
     /// What the checked rows share.
     var selection: ShareBundleSelectionModel? {
         guard let tree else { return nil }
@@ -317,7 +332,7 @@ final class ProjectShareViewModel: LockObserving {
         previewTask = Task { [weak self] in await self?.refreshPreview() }
     }
 
-    /// Recomputes the summary; Continue waits for it, so it always describes the checks.
+    /// Recomputes the summary; Create waits for it, so it always describes the checks.
     private func refreshPreview() async {
         previewGeneration += 1
         let generation = previewGeneration
@@ -336,27 +351,12 @@ final class ProjectShareViewModel: LockObserving {
         }
     }
 
-    var canContinue: Bool {
-        step == .contents && preview.map { $0.itemCount > 0 || !$0.summary.folders.isEmpty } == true
-    }
-
-    func continueToSendTo() {
-        guard canContinue else { return }
-        step = .sendTo
-    }
-
     func back() {
-        switch step {
-        case .sendTo: step = .contents
-        case .authenticate:
-            // Only the step's own model: a production confirmation from the tick stays.
-            activeReauth.reset()
-            step = .sendTo
-        case .contents, .creating, .done: break
-        }
+        guard step == .authenticate else { return }
+        // Only the step's own model: a production confirmation from the tick stays.
+        activeReauth.reset()
+        step = .contents
     }
-
-    // MARK: - Step 2: send to
 
     /// The file includes production (a stage or an environment picked in the tree).
     var includesProduction: Bool {
@@ -373,9 +373,11 @@ final class ProjectShareViewModel: LockObserving {
         includesProduction ? productionReauth : reauth
     }
 
-    // The preview says whether production is in, which picks the confirmation Create asks for.
+    // The preview says whether production is in, which picks the confirmation Create asks for;
+    // the file needs an item or a folder.
     var canCreate: Bool {
-        step == .sendTo && selection != nil && preview != nil
+        step == .contents && selection != nil
+            && preview.map { $0.itemCount > 0 || !$0.summary.folders.isEmpty } == true
     }
 
     /// Moves to the authentication step and tries Touch ID once (no error when it is off). A
@@ -390,7 +392,7 @@ final class ProjectShareViewModel: LockObserving {
         }
     }
 
-    // MARK: - Step 3: authenticate
+    // MARK: - Step 2: authenticate
 
     func authenticateWithTouchID(automatic: Bool = false) async {
         guard step == .authenticate else { return }
@@ -410,7 +412,7 @@ final class ProjectShareViewModel: LockObserving {
     /// that needs a new authentication.
     private func create() async {
         guard let selection, let authorization = activeReauth.takeAuthorization() else {
-            step = .sendTo
+            step = .contents
             return
         }
         step = .creating
@@ -437,11 +439,11 @@ final class ProjectShareViewModel: LockObserving {
             alert = error.presentation
             reauth.reset()
             productionReauth.reset()
-            step = .sendTo
+            step = .contents
         }
     }
 
-    // MARK: - Step 4: deliver
+    // MARK: - Step 3: deliver
 
     var canDeliver: Bool {
         step == .done && !isDelivering && stagedFileURL != nil && hasSavedPassphrase
@@ -451,10 +453,17 @@ final class ProjectShareViewModel: LockObserving {
     func copyPassphrase() {
         guard let passphrase else { return }
         dependencies.clipboard.copy(passphrase)
-        notice = String(
-            localized: "share.export.copied",
-            defaultValue: "Passphrase copied. The clipboard clears in \(dependencies.clipboard.clearDelay.wholeSeconds) seconds."
-        )
+        notice = ProjectShareCopy.copied(clipboardClearSeconds)
+    }
+
+    /// The line under the passphrase: the last notice (copied, saved, sent), else when a copy
+    /// clears (board Share-Passphrase).
+    var passphraseNote: String {
+        notice ?? ProjectShareCopy.clipboardClears(clipboardClearSeconds)
+    }
+
+    private var clipboardClearSeconds: Int {
+        dependencies.clipboard.clearDelay.wholeSeconds
     }
 
     /// Save…: asks where, then writes the encrypted file there (0600).
@@ -539,7 +548,7 @@ final class ProjectShareViewModel: LockObserving {
     func vaultDidLock() {
         wipe()
         if step == .authenticate || step == .creating {
-            step = .sendTo
+            step = .contents
         }
     }
 

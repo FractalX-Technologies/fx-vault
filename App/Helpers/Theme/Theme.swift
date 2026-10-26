@@ -99,6 +99,8 @@ enum Theme {
         static let dialogNoteSpacing: CGFloat = 5
         /// The name chips of a dialog form ("production ×") and their remove cross.
         static let dialogChipHeight: CGFloat = 22
+        /// A tag beside a name in a dialog list ("production", board Share-Pick).
+        static let dialogTagHeight: CGFloat = 18
 
         // MARK: Onboarding, lock and recovery
 
@@ -221,18 +223,32 @@ enum Theme {
 
         // MARK: Sharing sheets
 
-        /// Width of every sharing sheet (export, import).
+        /// Width of the sharing steps without a board (a one-repository import, a folder copy,
+        /// what an import changed).
         static let shareSheetWidth: CGFloat = 560
-        static let shareSheetMinHeight: CGFloat = 420
-        /// Height of the scope tree and the import preview.
+        /// The share dialogs (boards Share-Pick, Share-Passphrase, Share-Open, Share-OpenPreview,
+        /// Share-Expired).
+        static let sharePickWidth: CGFloat = 600
+        static let sharePassphraseWidth: CGFloat = 680
+        static let shareOpenWidth: CGFloat = 440
+        static let shareOpenPreviewWidth: CGFloat = 620
+        static let shareExpiredWidth: CGFloat = 360
+        /// The tallest a share dialog grows before its content scrolls.
+        static let shareSheetMaxHeight: CGFloat = 640
+        /// Height of the share tree and of the one-repository import preview.
         static let shareListHeight: CGFloat = 260
-        /// The scope tree gives way down to this height when the sheet is short.
+        /// The import preview inside a project share's preview.
         static let shareListMinHeight: CGFloat = 140
+        /// The share tree (board Share-Pick): 28 pt rows, 18 pt a level, a 10 pt chevron column.
+        static let shareTreeRowHeight: CGFloat = 28
+        static let shareTreeIndent: CGFloat = 18
+        static let shareTreeChevronWidth: CGFloat = 10
+        /// A row of what a file adds (board Share-OpenPreview).
+        static let shareOpenRowHeight: CGFloat = 32
+        /// The symbol over a file that cannot be opened (board Share-Expired).
+        static let shareRefusedSymbolSize: CGFloat = 26
         /// Width of the per-item action picker in the import preview.
         static let shareActionPickerWidth: CGFloat = 150
-        /// Tallest scrolling content of a project share sheet (v0.9.0): the tree, stages and
-        /// summary of Share Project, the repositories and previews of Import Share.
-        static let projectShareContentMaxHeight: CGFloat = 520
 
         // MARK: Linked copies (v0.4.1)
 

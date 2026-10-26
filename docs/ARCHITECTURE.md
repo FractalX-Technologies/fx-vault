@@ -1316,13 +1316,14 @@ AppTests).
     plaintext, skipped and unverified-share warnings → save panel → iCloud confirmation before
     any write → 0600 write → git tracked / not ignored / ignored / unknown, with the `.gitignore`
     offer). One authorization per write; a failed write uses it up.
-  - `Sharing` (§9, M6): file export (v0.9.0: `ProjectShareScreen`: stages and the tri-state
-    `ShareScopeTreeModel`, production unchecked by default and confirmed with its own
+  - `Sharing` (§9, M6): file export (v0.9.0: `ProjectShareScreen`, one choosing step since D6d
+    (repositories, stages, the tri-state `ShareScopeTreeModel` and the expiry; no Send to step):
+    production unchecked by default and confirmed with its own
     `.productionFileExport` authorization (`productionReauth`), else `ReauthGate.authorizeShare(.fileExport)`
     → `exportBundle` into `$TMPDIR/io.fractalx.fxvault.shares/<uuid>/` (0700 / 0600) → passphrase
     shown once → Send with AirDrop, the system share picker or Save… (0600); the staged file is
     removed when the sheet closes), and import (header before passphrase; one message for wrong
-    passphrase / damaged file; chips, Keep mine default, widening-policy and replay confirmations;
+    passphrase / damaged file; an expired file has its own small dialog (`hasExpired`); chips, Keep mine default, widening-policy and replay confirmations;
     one-click import of a missing repository through `ShareRepositoryImporter`).
     Re-authentication sheets use `ShareReauthModel` / `ShareReauthView`.
 

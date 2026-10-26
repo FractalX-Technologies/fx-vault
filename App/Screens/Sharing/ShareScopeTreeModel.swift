@@ -1,4 +1,5 @@
 import Foundation
+import SharingKit
 import VaultCore
 import VaultData
 
@@ -39,6 +40,20 @@ struct ShareScopeNodeModel: Identifiable, Hashable {
     /// nil for leaves (items, and environments without items), so the tree shows no
     /// disclosure triangle.
     let children: [ShareScopeNodeModel]?
+
+    /// Secrets and variables under the row (the tree's counts column, board Share-Pick).
+    var itemCounts: ShareItemCountModel {
+        switch kind {
+        case .secret: ShareItemCountModel(secrets: 1, variables: 0)
+        case .variable: ShareItemCountModel(secrets: 0, variables: 1)
+        default: .sum((children ?? []).map(\.itemCounts))
+        }
+    }
+
+    /// A production environment: tagged, and confirmed when the file is created.
+    var isProduction: Bool {
+        kind == .environment && StageRisk.isProduction(title)
+    }
 }
 
 /// A tree of checkable rows, as ``ShareScopeTreeView`` shows it: one or more roots and the

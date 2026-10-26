@@ -6,20 +6,20 @@ import VaultData
 /// Text of the project share sheets (v0.9.0): Share Project, the bundle preview of Import Share
 /// and Settings › Sharing. Every count has a singular variant (lessons, 2026-10-16).
 enum ProjectShareCopy {
-    // MARK: - Share sheet
+    // MARK: - Share sheet (board Share-Pick)
 
-    static let title = String(localized: "projectShare.title", defaultValue: "Share Project")
+    /// "Share api-service securely" for one repository or folder; "Share Securely" otherwise.
+    static func title(_ name: String?) -> String {
+        guard let name else {
+            return String(localized: "projectShare.title.securely", defaultValue: "Share Securely")
+        }
+        return String(localized: "projectShare.title.named", defaultValue: "Share \(name) securely")
+    }
+
     static let subtitle = String(
-        localized: "projectShare.subtitle",
-        defaultValue: "One encrypted .fxvault file with the repositories, stages and destinations you choose."
+        localized: "projectShare.subtitle.passphrase",
+        defaultValue: "An encrypted file, opened with a passphrase you send another way."
     )
-    static let shareStage = String(localized: "projectShare.shareStage", defaultValue: "Share Stage…")
-    static let shareStageHelp = String(
-        localized: "projectShare.shareStage.help",
-        defaultValue: "Share this stage's GitHub environment and destinations in an encrypted file."
-    )
-    static let contentsStep = String(localized: "projectShare.step.contents", defaultValue: "What to share")
-    static let sendToStep = String(localized: "projectShare.step.sendTo", defaultValue: "Send to")
     static let repositories = String(localized: "projectShare.repositories", defaultValue: "Repositories")
     static let addRepository = String(localized: "projectShare.addRepository", defaultValue: "Add Repository")
     static let removeRepository = String(localized: "projectShare.removeRepository", defaultValue: "Remove from the file")
@@ -36,43 +36,18 @@ enum ProjectShareCopy {
         localized: "projectShare.noStages",
         defaultValue: "These repositories have no environments or destinations with a stage."
     )
-    static let productionChip = String(localized: "projectShare.production", defaultValue: "Production")
+    /// The tag beside a production stage or environment.
+    static let productionTag = String(localized: "projectShare.productionTag", defaultValue: "production")
     static let productionHelp = String(
         localized: "projectShare.production.help",
         defaultValue: "Unchecked by default. Checking it asks for Touch ID."
     )
-    static let repositoryLevel = String(
-        localized: "projectShare.repositoryLevel",
-        defaultValue: "Repository-level secrets and variables"
+    /// A production environment ticked in the tree is confirmed when the file is created.
+    static let productionTreeHelp = String(
+        localized: "projectShare.production.treeHelp",
+        defaultValue: "Creating a file with production asks for Touch ID or your master password."
     )
-    static let adjust = String(localized: "projectShare.adjust", defaultValue: "Adjust what's included")
-    static let continueTitle = String(localized: "projectShare.continue", defaultValue: "Continue")
     static let back = String(localized: "projectShare.back", defaultValue: "Back")
-
-    static func summary(_ preview: ShareBundleExportPreviewModel) -> String {
-        let repositories = preview.summary.repositories.count
-        let folders = preview.summary.folders.count
-        let items = preview.itemCount
-        let itemText = items == 1
-            ? String(localized: "projectShare.summary.item.one", defaultValue: "1 secret or variable")
-            : String(localized: "projectShare.summary.items", defaultValue: "\(items) secrets and variables")
-        let repositoryText = repositories == 1
-            ? String(localized: "projectShare.summary.repository.one", defaultValue: "1 repository")
-            : String(localized: "projectShare.summary.repositories", defaultValue: "\(repositories) repositories")
-        guard folders > 0 else {
-            return String(localized: "projectShare.summary.line", defaultValue: "\(itemText) in \(repositoryText)")
-        }
-        let folderText = folders == 1
-            ? String(localized: "projectShare.summary.folder.one", defaultValue: "1 folder")
-            : String(localized: "projectShare.summary.folders", defaultValue: "\(folders) folders")
-        guard repositories > 0 else {
-            return String(localized: "projectShare.summary.lineFolders", defaultValue: "\(itemText) in \(folderText)")
-        }
-        return String(
-            localized: "projectShare.summary.lineBoth",
-            defaultValue: "\(itemText) in \(repositoryText) and \(folderText)"
-        )
-    }
 
     static func valueMissing(_ count: Int) -> String {
         count == 1
@@ -80,19 +55,11 @@ enum ProjectShareCopy {
             : String(localized: "projectShare.valueMissing", defaultValue: "\(count) secrets have no value here and travel by name only")
     }
 
-    // MARK: - Send to
-
-    static let passphraseOption = String(localized: "projectShare.protection.passphrase", defaultValue: "Anyone, with a passphrase")
-    static let passphraseHelp = String(
-        localized: "projectShare.protection.passphrase.help",
-        defaultValue: "Six words that you send another way. Whoever has the file and the words can open it."
-    )
-
-    /// The send-to card when the file carries production values.
+    /// The note under the tree when the file carries production values.
     static func productionIncluded(_ places: [String]) -> String {
         String(
-            localized: "projectShare.production.included",
-            defaultValue: "Includes production (\(places.joined(separator: ", "))). Whoever has the file and the words gets these values."
+            localized: "projectShare.production.leaves",
+            defaultValue: "Production values leave this Mac in a file (\(places.joined(separator: ", "))). Rotate them if it leaks."
         )
     }
 
@@ -104,11 +71,25 @@ enum ProjectShareCopy {
             : String(localized: "projectShare.expiry.days", defaultValue: "\(choice.days) days")
     }
 
-    static let expiryPassphraseNote = String(
-        localized: "projectShare.expiry.passphrase",
-        defaultValue: "FX Vault refuses to open it after this date. Anyone with the passphrase could still read it with other software."
-    )
-    static let create = String(localized: "projectShare.create", defaultValue: "Create Share File")
+    /// "13 secrets · 6 variables"; a kind with none is left out, and nothing is "".
+    static func counts(_ counts: ShareItemCountModel) -> String {
+        let secrets = counts.secrets > 0
+            ? String(inflected: AttributedString(
+                localized: "projectShare.counts.secrets",
+                defaultValue: "^[\(counts.secrets) secret](inflect: true)"
+            ))
+            : nil
+        let variables = counts.variables > 0
+            ? String(inflected: AttributedString(
+                localized: "projectShare.counts.variables",
+                defaultValue: "^[\(counts.variables) variable](inflect: true)"
+            ))
+            : nil
+        return [secrets, variables].compactMap(\.self).joined(separator: " · ")
+    }
+
+    static let createFile = String(localized: "projectShare.createFile", defaultValue: "Create File")
+    static let createFileWithTouchID = String(localized: "projectShare.createFile.touchID", defaultValue: "Create File with Touch ID")
     static let reauthMessage = String(
         localized: "projectShare.reauth.message",
         defaultValue: "Sharing exports values. Use Touch ID or your master password to continue."
@@ -119,12 +100,29 @@ enum ProjectShareCopy {
     )
     static let creating = String(localized: "projectShare.creating", defaultValue: "Encrypting the share…")
 
-    // MARK: - Done
+    // MARK: - Done (board Share-Passphrase)
 
-    static let passphraseHint = String(
-        localized: "projectShare.done.passphraseHint",
-        defaultValue: "Send these words another way (a call or another app), not with the file."
+    static let doneTitle = String(localized: "projectShare.done.title", defaultValue: "Send the passphrase another way")
+    static let sendApart = String(
+        localized: "projectShare.done.sendApart",
+        defaultValue: "Send the file by chat or AirDrop, and the words by call or another app."
     )
+
+    static func clipboardClears(_ seconds: Int) -> String {
+        String(localized: "projectShare.done.clipboardClears", defaultValue: "The clipboard clears in \(seconds) s.")
+    }
+
+    static func copied(_ seconds: Int) -> String {
+        String(localized: "projectShare.done.copied", defaultValue: "Copied. The clipboard clears in \(seconds) s.")
+    }
+
+    /// The finished file's footer: "FX Vault refuses it after 1 Nov. Rotate anything in it if it leaks."
+    static func refusedAfter(_ date: Date) -> String {
+        String(
+            localized: "projectShare.done.refusedAfter",
+            defaultValue: "FX Vault refuses it after \(date.formatted(.dateTime.day().month(.abbreviated))). Rotate anything in it if it leaks."
+        )
+    }
 
     static func expires(_ date: Date) -> String {
         String(localized: "projectShare.expires", defaultValue: "Expires \(date.formatted(date: .abbreviated, time: .shortened))")
@@ -132,7 +130,7 @@ enum ProjectShareCopy {
 
     static let share = String(localized: "projectShare.share", defaultValue: "Share…")
     static let airDrop = String(localized: "projectShare.airDrop", defaultValue: "Send with AirDrop")
-    static let save = String(localized: "projectShare.save", defaultValue: "Save…")
+    static let saveFile = String(localized: "projectShare.saveFile", defaultValue: "Save File…")
 
     static func saved(_ name: String) -> String {
         String(localized: "projectShare.saved.passphrase", defaultValue: "Saved “\(name)”. Send the passphrase separately.")
@@ -140,7 +138,21 @@ enum ProjectShareCopy {
 
     static let sent = String(localized: "projectShare.sent.passphrase", defaultValue: "File sent. Send the passphrase through a different app.")
 
-    // MARK: - Opening a bundle
+    // MARK: - Opening a file (boards Share-Open, Share-OpenPreview, Share-Expired)
+
+    /// "Open FX Vault share 25 Oct.fxvault".
+    static func openTitle(_ fileName: String) -> String {
+        String(localized: "projectShare.open.title", defaultValue: "Open \(fileName)")
+    }
+
+    static let passphraseLabel = String(
+        localized: "projectShare.open.passphraseLabel",
+        defaultValue: "\(Limits.passphraseWordCount)-word passphrase"
+    )
+    static let passphrasePrompt = String(
+        localized: "projectShare.open.passphrasePrompt",
+        defaultValue: "six words separated by spaces"
+    )
 
     static func from(_ sender: String) -> String {
         sender.isEmpty
@@ -154,34 +166,41 @@ enum ProjectShareCopy {
         defaultValue: "A share file says who sent it but can't prove it."
     )
 
-    static func dates(created: Date, expires: Date) -> String {
-        String(
-            localized: "projectShare.open.dates",
-            defaultValue: "Created \(created.formatted(date: .abbreviated, time: .shortened)) · Expires \(expires.formatted(date: .abbreviated, time: .shortened))"
+    /// "Unlocked · created 25 Oct · expires 1 Nov".
+    static func unlocked(created: Date, expires: Date) -> String {
+        let day = Date.FormatStyle.dateTime.day().month(.abbreviated)
+        return String(
+            localized: "projectShare.open.unlocked",
+            defaultValue: "Unlocked · created \(created.formatted(day)) · expires \(expires.formatted(day))"
         )
     }
 
+    static let whatItAdds = String(localized: "projectShare.open.whatItAdds", defaultValue: "What it adds · nothing is deleted")
     static let nothingSyncs = String(
-        localized: "projectShare.open.nothingSyncs",
-        defaultValue: "Nothing reaches GitHub or a provider until you include it in Sync."
+        localized: "projectShare.open.nothingSyncs.azure",
+        defaultValue: "Nothing reaches GitHub or Azure until you include it in Sync."
     )
-    static let inVault = String(localized: "projectShare.open.inVault", defaultValue: "In your vault")
+    static let importAsHeld = String(localized: "projectShare.open.importAsHeld", defaultValue: "Import as Held")
+    static let inVault = String(localized: "projectShare.open.alreadyInVault", defaultValue: "Already in your vault")
 
     static func willImport(_ account: String?) -> String {
         guard let account, !account.isEmpty else {
-            return String(localized: "projectShare.open.willImport", defaultValue: "Will be imported from GitHub")
+            return String(localized: "projectShare.open.newRepository", defaultValue: "New repository · import from GitHub")
         }
-        return String(localized: "projectShare.open.willImportWith", defaultValue: "Will be imported from GitHub with \(account)")
+        return String(
+            localized: "projectShare.open.newRepositoryWith",
+            defaultValue: "New repository · import from GitHub with \(account)"
+        )
     }
 
     static func skipped(_ reason: ShareRepositoryNoAccessReason) -> String {
         switch reason {
         case .notVisible:
-            String(localized: "projectShare.open.skipped.notVisible", defaultValue: "Skipped: none of your GitHub accounts can see it")
+            String(localized: "projectShare.open.skipped.noAccess", defaultValue: "Skipped · no access")
         case .unreachable:
-            String(localized: "projectShare.open.skipped.unreachable", defaultValue: "Skipped: GitHub couldn't be reached to check access")
+            String(localized: "projectShare.open.skipped.offline", defaultValue: "Skipped · GitHub unreachable")
         case .notChecked:
-            String(localized: "projectShare.open.skipped.notChecked", defaultValue: "Skipped: access couldn't be checked")
+            String(localized: "projectShare.open.skipped.unchecked", defaultValue: "Skipped · access not checked")
         }
     }
 
@@ -219,18 +238,6 @@ enum ProjectShareCopy {
             localized: "projectShare.open.importFailed",
             defaultValue: "Couldn't import \(names.joined(separator: ", ")) from GitHub. It was skipped."
         )
-    }
-
-    static func changes(_ count: Int) -> String {
-        count == 1
-            ? String(localized: "projectShare.open.change.one", defaultValue: "1 change")
-            : String(localized: "projectShare.open.changes", defaultValue: "\(count) changes")
-    }
-
-    static func repositoryCount(_ count: Int) -> String {
-        count == 1
-            ? String(localized: "projectShare.open.repository.one", defaultValue: "1 repository")
-            : String(localized: "projectShare.open.repositories", defaultValue: "\(count) repositories")
     }
 
     // MARK: - Result

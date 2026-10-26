@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// The scope tree with tri-state checkboxes (`ProjectShareScreen`, v0.2.0): repository,
-/// repository level, environments, items. See ``ShareScopeTreeModel`` for the rules.
+/// The share tree (board Share-Pick): a card of 28 pt rows with tri-state checkboxes, the
+/// repository, its repository level, environments and destinations, their items, then folders;
+/// each row with its counts. See ``ShareScopeTreeModel`` for the rules.
 ///
-/// The repository row starts expanded, so its scopes fill the box; the box grows up to
-/// `shareListHeight` and gives way down to `shareListMinHeight` when the sheet is short.
+/// The box grows with its rows up to `shareListHeight`, then scrolls.
 struct ShareScopeTreeView<Tree: ShareCheckTree>: View {
     let tree: Tree
     /// `true` checks everything under the row, `false` unchecks it.
@@ -20,54 +20,45 @@ struct ShareScopeTreeView<Tree: ShareCheckTree>: View {
     }
 
     var body: some View {
-        List {
-            ForEach(tree.roots) { root in
-                ShareScopeTreeNode(node: root, tree: tree, expanded: $expanded, onCheck: onCheck)
-            }
-        }
-        .shareListContainer()
-        .frame(minHeight: Theme.Layout.shareListMinHeight, maxHeight: Theme.Layout.shareListHeight)
-    }
-}
-
-/// One node and, when expanded, its children (a disclosure group per node with children).
-private struct ShareScopeTreeNode<Tree: ShareCheckTree>: View {
-    let node: ShareScopeNodeModel
-    let tree: Tree
-    @Binding var expanded: Set<ShareScopeNodeID>
-    let onCheck: (Bool, ShareScopeNodeModel) -> Void
-
-    var body: some View {
-        if let children = node.children {
-            DisclosureGroup(isExpanded: isExpanded) {
-                ForEach(children) { child in
-                    ShareScopeTreeNode(node: child, tree: tree, expanded: $expanded, onCheck: onCheck)
+        ScrollView {
+            VStack(spacing: 0) {
+                ForEach(Array(visibleRows.enumerated()), id: \.element.node.id) { index, row in
+                    if index > 0 {
+                        HairlineDivider()
+                    }
+                    ShareScopeTreeRow(
+                        node: row.node,
+                        depth: row.depth,
+                        state: tree.state(of: row.node),
+                        isExpanded: row.node.children == nil ? nil : expanded.contains(row.node.id),
+                        onExpand: { toggleExpanded(row.node.id) },
+                        onToggle: { onCheck(tree.state(of: row.node) != .checked, row.node) }
+                    )
                 }
-            } label: {
-                row
             }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .frame(maxHeight: Theme.Layout.shareListHeight)
+        .fxCardBackground(.dialog)
+    }
+
+    /// The rows in tree order, each open row followed by its children.
+    private var visibleRows: [(node: ShareScopeNodeModel, depth: Int)] {
+        var rows: [(node: ShareScopeNodeModel, depth: Int)] = []
+        func add(_ node: ShareScopeNodeModel, depth: Int) {
+            rows.append((node, depth))
+            guard expanded.contains(node.id) else { return }
+            node.children?.forEach { add($0, depth: depth + 1) }
+        }
+        tree.roots.forEach { add($0, depth: 0) }
+        return rows
+    }
+
+    private func toggleExpanded(_ id: ShareScopeNodeID) {
+        if expanded.contains(id) {
+            expanded.remove(id)
         } else {
-            row
-        }
-    }
-
-    private var row: some View {
-        ShareScopeTreeRow(node: node, state: tree.state(of: node)) {
-            onCheck(tree.state(of: node) != .checked, node)
-        }
-        .listRowSeparator(.visible)
-        .listRowSeparatorTint(Theme.Colors.hairline)
-    }
-
-    private var isExpanded: Binding<Bool> {
-        Binding {
-            expanded.contains(node.id)
-        } set: { isExpanded in
-            if isExpanded {
-                expanded.insert(node.id)
-            } else {
-                expanded.remove(node.id)
-            }
+            expanded.insert(id)
         }
     }
 }
@@ -82,80 +73,117 @@ extension View {
     }
 }
 
-/// One row: a tri-state checkbox, the icon, the name and its notes.
+/// One row: the disclosure chevron, a tri-state checkbox, the symbol, the name (mono for names
+/// from GitHub and Azure), a production environment's tag and lock, then the counts.
 private struct ShareScopeTreeRow: View {
     let node: ShareScopeNodeModel
+    let depth: Int
     let state: ShareCheckState
+    /// nil for a row without children.
+    let isExpanded: Bool?
+    let onExpand: () -> Void
     let onToggle: () -> Void
 
     var body: some View {
-        Button(action: onToggle) {
-            HStack(spacing: Theme.Spacing.small) {
-                Image(systemName: checkboxSymbol)
-                    .font(Theme.Typography.body)
-                    .foregroundStyle(state == .unchecked ? Theme.Colors.subtleText : Theme.Colors.ink)
-                    .accessibilityHidden(true)
-                Image(systemName: icon)
-                    .font(Theme.Typography.callout)
-                    .foregroundStyle(Theme.Colors.subtleText)
-                    .accessibilityHidden(true)
-                Text(verbatim: node.title)
-                    .fxTextStyle(isGroup ? .calloutEmphasized : .monoName)
-                    .foregroundStyle(Theme.Colors.ink)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Spacer(minLength: Theme.Spacing.small)
-                notes
+        HStack(spacing: Theme.Spacing.smallMinus) {
+            chevron
+            Button(action: onToggle) {
+                HStack(spacing: Theme.Spacing.smallMinus) {
+                    Image(systemName: checkboxSymbol)
+                        .font(Theme.Typography.callout)
+                        .foregroundStyle(state == .unchecked ? Theme.Colors.subtleText : Theme.Colors.ink)
+                    Image(systemName: icon)
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Colors.mutedText)
+                    Text(verbatim: node.title)
+                        .fxTextStyle(isPlainTitle ? .caption : .monoMeta)
+                        .foregroundStyle(Theme.Colors.ink)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    if node.isProduction {
+                        DialogTag(title: ProjectShareCopy.productionTag)
+                        Image(systemName: "lock")
+                            .font(Theme.Typography.label)
+                            .foregroundStyle(Theme.Colors.mutedText)
+                            .help(ProjectShareCopy.productionTreeHelp)
+                    }
+                    notes
+                }
+                .contentShape(Rectangle())
             }
-            .frame(minHeight: Theme.Layout.scopeRowHeight)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isToggle)
+            .accessibilityValue(accessibilityState)
+            Spacer(minLength: Theme.Spacing.small)
+            Text(verbatim: ProjectShareCopy.counts(node.itemCounts))
+                .font(Theme.Typography.monoLabel)
+                .foregroundStyle(Theme.Colors.mutedText)
+                .lineLimit(1)
+                .fixedSize()
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isToggle)
-        .accessibilityValue(accessibilityState)
+        .padding(.leading, Theme.Spacing.mediumMinus + CGFloat(depth) * Theme.Layout.shareTreeIndent)
+        .padding(.trailing, Theme.Spacing.mediumMinus)
+        .frame(height: Theme.Layout.shareTreeRowHeight)
     }
 
+    @ViewBuilder
+    private var chevron: some View {
+        if let isExpanded {
+            Button(action: onExpand) {
+                Image(systemName: "chevron.right")
+                    .font(Theme.Typography.label)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .rotationEffect(isExpanded ? .degrees(90) : .zero)
+                    .frame(width: Theme.Layout.shareTreeChevronWidth, height: Theme.Layout.shareTreeRowHeight)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: node.title))
+            .accessibilityValue(isExpanded ? Self.expandedTitle : Self.collapsedTitle)
+        } else {
+            Color.clear
+                .frame(width: Theme.Layout.shareTreeChevronWidth)
+        }
+    }
+
+    /// A secret without a value here travels by name only; an environment checked in part
+    /// leaves its branch policy behind.
     @ViewBuilder
     private var notes: some View {
         switch node.kind {
         case .secret(hasValue: false):
-            StatusChip(
-                title: String(localized: "share.tree.byNameOnly", defaultValue: "Name only"),
-                tone: .warning
+            note(
+                String(localized: "share.tree.byNameOnly", defaultValue: "Name only"),
+                help: String(
+                    localized: "share.tree.byNameOnly.help",
+                    defaultValue: "The value is missing in your vault, so only the name is shared."
+                )
             )
-            .help(String(
-                localized: "share.tree.byNameOnly.help",
-                defaultValue: "The value is missing in your vault, so only the name is shared."
-            ))
         case .environment where state == .mixed:
-            StatusChip(
-                title: String(localized: "share.tree.itemsOnly", defaultValue: "Selected items only"),
-                tone: .neutral
+            note(
+                String(localized: "share.tree.itemsOnly", defaultValue: "Selected items only"),
+                help: String(
+                    localized: "share.tree.itemsOnly.help",
+                    defaultValue: "Only the checked items are shared. The deployment branch policy is shared only when the whole environment is checked."
+                )
             )
-            .help(String(
-                localized: "share.tree.itemsOnly.help",
-                defaultValue: "Only the checked items are shared. The deployment branch policy is shared only when the whole environment is checked."
-            ))
-        case .environment where state == .checked:
-            StatusChip(
-                title: String(localized: "share.tree.withPolicy", defaultValue: "With branch policy"),
-                tone: .brand
-            )
-            .help(String(
-                localized: "share.tree.withPolicy.help",
-                defaultValue: "The whole environment is checked, so its deployment branch policy is shared too."
-            ))
         default:
             EmptyView()
         }
     }
 
-    private var isGroup: Bool {
-        switch node.kind {
-        case .repository, .repositoryLevel, .environment, .destination, .folder: true
-        case .secret, .variable: false
-        }
+    private func note(_ text: String, help: String) -> some View {
+        Text(verbatim: text)
+            .fxTextStyle(.formNote)
+            .foregroundStyle(Theme.Colors.mutedText)
+            .lineLimit(1)
+            .help(help)
+    }
+
+    /// The repository level reads as a place ("Repository"); names come from GitHub and Azure.
+    private var isPlainTitle: Bool {
+        node.kind == .repositoryLevel
     }
 
     private var checkboxSymbol: String {
@@ -174,13 +202,15 @@ private struct ShareScopeTreeRow: View {
         }
     }
 
+    private static let expandedTitle = String(localized: "share.tree.expanded", defaultValue: "Expanded")
+    private static let collapsedTitle = String(localized: "share.tree.collapsed", defaultValue: "Collapsed")
+
     private var icon: String {
         switch node.kind {
-        case .repository: Theme.Symbols.repository
-        case .repositoryLevel: "folder"
-        case .environment: "square.stack.3d.up"
+        case .repository, .repositoryLevel: Theme.Symbols.repository
+        case .environment: Theme.Symbols.environment
         case .destination(let symbolName): symbolName
-        case .folder: "folder.fill"
+        case .folder: "folder"
         case .secret: "key"
         case .variable: "textformat"
         }

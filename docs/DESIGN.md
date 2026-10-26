@@ -349,11 +349,12 @@ when disabled): `.fxInputField(.dialog)`, `DialogPopUp` (a menu with a check bes
 option, drawn by `DialogFieldButtonStyle` with chevrons; `display` can differ from the option
 title, ".gitignore: None"), `.dialogFieldChrome()` alone for a value without a menu (the SSH
 alias); `DialogSwitch` (a mini switch before its title; the title toggles it unless disabled),
-`DialogTokenChip` (`production ×`, 22 pt, 6 pt corners, mono) and the dashed `DialogAddChip`,
-laid out in a `FlowLayout`. Small actions in a row are `.compact` buttons (Add Rule, Try Again).
+`DialogTokenChip` (`production ×`, 22 pt, 6 pt corners, mono) and the dashed `DialogAddChip`
+(its face, `DialogAddChipLabel`, also labels an add menu), laid out in a `FlowLayout`;
+`DialogTag` (`production`, 18 pt, 6 pt corners, an ink hairline, 11 pt medium) beside a name in
+a dialog list. Small actions in a row are `.compact` buttons (Add Rule, Try Again).
 
-`PassphraseView` (App/Components) is the generated passphrase card shared by onboarding and
-Share as File; `EmptyStateView` uses the light symbol, a `.headline` ink title and a `mutedText`
+`PassphraseView` (App/Components) is the generated passphrase card of onboarding; `EmptyStateView` uses the light symbol, a `.headline` ink title and a `mutedText`
 `.callout` message.
 
 ### `.fxWindowBackground()`
@@ -613,36 +614,52 @@ foreground color, so `.primary` text still turns white on selected rows.
   (Show Destination).
   Destination deletions join the deletion review; the result shows "Confirmed in the
   destination", "Sent, but the destination did not list it yet…" or "Not sent" per item.
-- Share Project (v0.9.0, `ProjectShareScreen`, `shareSheetWidth`, eyebrow SHARE) replaces the
-  Share as File sheet for every entry point: File › Share Project… (⌥⌘S; ⇧⌘S is Sync), Share ›
+- Share Securely (v0.9.0; D6d, boards Share-Pick and Share-Passphrase, `ProjectShareScreen`) is
+  one `DialogSheet` for every entry point: File › Share Project… (⌥⌘S; ⇧⌘S is Sync), Share ›
   File… (Vault menu), and Share Securely… on a repository, an environment or a folder.
-  Step 1, what to share: REPOSITORIES as removable chips in a
-  `FlowLayout` (`Theme.Symbols.repository`, `.monoName`, an `xmark.circle.fill`) with an Add Repository
-  borderless menu; STAGES as checkboxes across those repositories, a production stage with a
-  `.warning` "Production" chip and its checkbox unchecked (help: "Unchecked by default. Checking it asks for Touch ID."); "Repository-level secrets and variables" as a
-  checkbox beside ADJUST WHAT'S INCLUDED; then the scope tree with one root per repository (and
-  folders), destinations as nodes with their provider symbol; the summary ("7 secrets and
-  variables in 3 repositories") in `.statusLine` `subtleText` and the value-missing names as a
-  warning note. Step 2, SEND TO: one `fxCardBackground(.container)` card, "Anyone, with a passphrase" in
-  `.bodyEmphasized` with its explanation in `.caption` and a `warning` note naming the production
-  places when the file includes production; EXPIRES AFTER as a `SegmentedPill` (1 day / 7 days / 30 days)
-  with the honest note in `.caption` `subtleText`. Then Touch ID or the password (`ShareReauthView`) and
-  the result: the six words (`PassphraseView`, a `warning` `SheetCallout` "Send these words
-  another way…", "I've saved it") with the expiry; Send with AirDrop (primary, `dot.radiowaves.up.forward`, only where this Mac offers AirDrop), Share… (the system picker; primary without AirDrop) and Save… (secondary), the file name in
-  `.monoMeta`. The footer: Back (secondary), Cancel, Continue / Create Share File (primary).
-- Import Share for a project file (v0.9.0, `ProjectShareImportView`): a passphrase field; "This share file has
-  expired" is a failure with its own title. The sender row: a person symbol, "From Ana" in
-  `.bodyEmphasized`, `StatusChip` "Not verified" (`.warning`) with its explanation as help, then created and
-  expiry dates in `.monoMeta`. One `Card(.container)` lists the repositories: `checkmark.circle.fill`
-  `success` "In your vault", `arrow.down.circle` `brand` "Will be imported from GitHub with
-  user-a", `xmark.circle` `warning` "Skipped: none of your GitHub accounts can see it" (the name
-  muted), counts in `.monoMeta` and a chevron (`brand` when chosen). The chosen repository shows
-  today's merge preview, then DESTINATIONS (provider symbol, "Azure Key Vault · kv-example-staging",
-  the stage as a chip, `.warning` for production, and "New. FX Vault reaches it with your az
-  login." or "Merges into your destination…" as a caption; a 0.9 file's Supabase and Vercel
-  destinations as one "Left out: …" note) and FOLDERS (a picker: New folder, Merge keep mine /
-  replace mine, Don't import). A note closes it: "Nothing reaches GitHub or a provider until you
-  include it in Sync." The content scrolls past `projectShareContentMaxHeight`. After Import,
+  Share-Pick (600 pt): "Share api-service securely" ("Share Securely" for several places), "An
+  encrypted file, opened with a passphrase you send another way."; Repositories as
+  `DialogTokenChip`s with an Add Repository menu on the dashed chip; Stages as checkboxes across
+  those repositories (Repository level first; a production stage unchecked with its `DialogTag`
+  and a lock whose help says ticking asks for Touch ID) over the stages note; then the tree: a
+  `.dialog` card of 28 pt rows with hairlines between them, 18 pt a level, a 10 pt chevron
+  column, a tri-state checkbox, the symbol, the name in `.monoMeta` ("Repository" in `.caption`),
+  a production environment's tag and lock, "Name only" or "Selected items only" as a note, and
+  the counts in 11 pt mono ("2 secrets · 1 variable"; a kind with none is left out); up to
+  `shareListHeight`, then it scrolls. Under it, dialog notes: "Production values leave this Mac
+  in a file (api-service · production). Rotate them if it leaks." and the value-missing names;
+  "Expires after" as a `.formLabel` with the `.small` `SegmentedPill` at the trailing edge. The
+  footer: the file's counts, Cancel (outline) and "Create File with Touch ID" (primary, `touchid`;
+  "Create File" without Touch ID). Touch ID or the password (`ShareReauthView`: "Confirm it's
+  you" in `.headline`, the password as a dialog form row with Continue, Use Touch ID outline)
+  keeps the title; its footer is Back and Cancel. Share-Passphrase (680 pt): "Send the
+  passphrase another way"; the file (`doc`, the name in `.monoMeta`, "· 18 secrets · 7
+  variables"); the six words on one line in 17 pt mono in a `surface` box with 10 pt corners and
+  a `.compact` Copy (hidden from screen capture); "The clipboard clears in 30 s." (or the last
+  notice: copied, saved, sent); "Send the file by chat or AirDrop, and the words by call or
+  another app."; "I've saved it". The footer: "FX Vault refuses it after 1 Nov. Rotate anything
+  in it if it leaks.", Save File…, Send with AirDrop (only where this Mac offers it), Share…
+  (outline, enabled once saved) and Done (primary).
+- Opening a file (D6d, boards Share-Open, Share-OpenPreview, Share-Expired, `ShareImportScreen`)
+  is a `DialogSheet` titled "Open FX Vault share 25 Oct.fxvault". Share-Open (440 pt): "6-word
+  passphrase" as a `.formLabel` over one `.dialog` mono secure field ("six words separated by
+  spaces"), the word count and a wrong passphrase as dialog notes; Cancel and Open. A file that
+  cannot be opened (Share-Expired, 360 pt) is its own small dialog: a 26 pt symbol (a clock when
+  it expired), "This file expired", "FX Vault won't import it. Ask the sender for a new file.",
+  the file name in `.monoMeta`, a centred OK. Share-OpenPreview (620 pt, `ProjectShareImportView`):
+  "Unlocked · created 25 Oct · expires 1 Nov" under the title; "From Ana" with a "Not verified"
+  `DialogTag` (its explanation as help); "What it adds · nothing is deleted" over a `.dialog` card
+  of 32 pt rows: the repository symbol, the name in `.monoMeta` and its owner muted, then a
+  `success` dot "Already in your vault · 3 secrets", an ink `RingDot` "New repository · import
+  from GitHub with user-a" or a `hairlineStrong` dot "Skipped · no access" (muted); a row is
+  selected (`surface`) to show today's merge preview of that repository, then DESTINATIONS
+  (provider symbol, "Azure Key Vault · kv-example-staging", the stage as a chip, `.warning` for
+  production, and "New. FX Vault reaches it with your az login." or "Merges into your
+  destination…" as a caption; a 0.9 file's Supabase and Vercel destinations as one "Left out: …"
+  note) and Folders (a `.dialog` card of rows with a `DialogPopUp`: New folder, Merge keep mine /
+  replace mine, Don't import). The footer: "Nothing reaches GitHub or Azure until you include it
+  in Sync.", Cancel and Import as Held. The dialogs grow with their content up to
+  `shareSheetMaxHeight`, then scroll. After Import,
   `SheetCallout`s list what changed ("1 change waits for you in Sync › From Files" in `brand`),
   and the main window has already moved to the first repository, at the environment of the
   first stage.
@@ -824,9 +841,10 @@ window captures (9 screens × 2 appearances = 18 files; v0.7.0 adds `main-folder
 `MainSnapshotFixture.destinations` (`kv-example-prod` and `kv-example-web`).
 v0.9.0 adds two suites gated the same way (pass `-only-testing:AppTests/ProjectShareSnapshotTests`
 and `-only-testing:AppTests/HeldShareSnapshotTests`): `project-share-contents`,
-`project-share-contents-three`, `project-share-production-blocked`,
-`project-share-send-to-passphrase`, `project-share-passphrase`, `project-share-open`,
-`project-share-expired` and `settings-sharing`; `sync-held-one`, `sync-held-two`,
+`project-share-contents-three`, `project-share-passphrase`, `project-share-open`, `project-share-expired` and
+`settings-sharing` (D6d: `project-share-send-to-passphrase` is gone with its step;
+`project-share-contents-production`, `project-share-authenticate` and
+`project-share-open-passphrase` are added); `sync-held-one`, `sync-held-two`,
 `sync-held-only` and `main-held`. 1.0 removed the presence, teammates, pairing, shared-space
 and Nearby Chat renders with those screens; D6c2 adds `main-home` (nothing selected, with the
 recovery-key banner) and `main-jump` (the ⌘K palette). The toolbar's glass items and the

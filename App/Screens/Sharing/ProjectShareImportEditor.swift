@@ -90,19 +90,10 @@ final class ProjectShareImportEditor {
                 fullName: repository.fullName,
                 mark: Self.mark(of: repository.status),
                 detail: Self.detail(of: repository.status),
-                counts: Self.counts(of: summary),
+                counts: summary.counts,
                 destinationCount: summary.destinations.count
             )
         }
-    }
-
-    /// Secrets and variables of a repository's GitHub scopes and destinations.
-    static func counts(of summary: ShareBundleRepositorySummaryModel) -> ShareItemCountModel {
-        let scopes = [summary.content.repositoryLevel] + summary.content.environments.map(\.counts) + summary.destinations.map(\.counts)
-        return ShareItemCountModel(
-            secrets: scopes.map(\.secrets).reduce(0, +),
-            variables: scopes.map(\.variables).reduce(0, +)
-        )
     }
 
     static func mark(of status: ShareBundleRepositoryStatus) -> RepositoryRowModel.Mark {
@@ -217,5 +208,25 @@ final class ProjectShareImportEditor {
 
     var changedCount: Int {
         plan.changedItemCount
+    }
+}
+
+extension ShareBundleRepositorySummaryModel {
+    /// Secrets and variables of the repository's GitHub scopes and destinations.
+    var counts: ShareItemCountModel {
+        .sum([content.repositoryLevel] + content.environments.map(\.counts) + destinations.map(\.counts))
+    }
+}
+
+extension ShareBundleSummaryModel {
+    /// Secrets and variables of every repository and folder in the file.
+    var counts: ShareItemCountModel {
+        .sum(repositories.map(\.counts) + folders.map(\.counts))
+    }
+}
+
+extension ShareItemCountModel {
+    static func sum(_ parts: [ShareItemCountModel]) -> ShareItemCountModel {
+        ShareItemCountModel(secrets: parts.map(\.secrets).reduce(0, +), variables: parts.map(\.variables).reduce(0, +))
     }
 }

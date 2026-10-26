@@ -28,7 +28,7 @@ final class ShareProjectUITests: VaultUITestCase {
         let checked = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == 1"), object: production)
         XCTAssertEqual(XCTWaiter().wait(for: [checked], timeout: timeout), .completed)
 
-        click(app.buttons[AccessibilityID.Share.continueToSendTo])
+        // The note under the tree names the production places as soon as production is in.
         let note = app.descendants(matching: .any)[AccessibilityID.Share.productionNote]
         XCTAssertTrue(note.waitForExistence(timeout: timeout))
         // The note combines into one static text, whose words are its value on macOS.

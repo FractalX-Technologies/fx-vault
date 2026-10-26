@@ -77,6 +77,8 @@ extension Theme {
 
         /// The symbol above an empty state.
         static let emptyStateIcon = Font.system(size: Theme.Layout.emptyStateIconSize, weight: .light)
+        /// The symbol over a dialog's message (board Share-Expired).
+        static let dialogSymbol = Font.system(size: Theme.Layout.shareRefusedSymbolSize)
 
         /// Point sizes of the scale.
         enum Size {
