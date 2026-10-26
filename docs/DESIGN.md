@@ -605,7 +605,8 @@ foreground color, so `.primary` text still turns white on selected rows.
   Differs `.brand`, Value missing `.warning`, Not compared `.neutral`, and a chevron), a
   hairline, a caption and an outline Unlink.
 - The detail fits its narrowest column (`Theme.Layout.detailMinWidth`): the header's buttons and
-  ⋯ move under the name, and the selection's actions under the Secrets / Variables pill when a
+  ⋯ move under the name, wrapping onto a second line when they still don't fit (`FlowLayout`: a
+  folder's Copy To, Share Securely…, Notes | Table and ⋯), and the selection's actions under the Secrets / Variables pill when a
   row does not fit (`ViewThatFits`); the table scrolls sideways inside its card. Nothing
   spills under the sidebar or past the window edge. `MainWindowLayoutTests` checks both.
 - On macOS 26+ the sidebar's rows scroll under the traffic lights and the sidebar button with the
