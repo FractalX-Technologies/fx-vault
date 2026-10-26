@@ -1193,7 +1193,8 @@ AppTests).
     same (`ConfigSelectionMenu`); ⌫ is `deleteSelection()`. `ConfigSelectionActionsModel` keeps
     the rows each action applies to; `ConfigDeletionModel` holds one or several rows for one
     confirmation (synced rows are deleted on GitHub by the next Sync after its review, rows never
-    synced are removed at once). Each action is one transaction:
+    synced are removed at once); 1.0 (D6d-2) shows it as `DeleteItemsSheet`, built by each
+    detail view model's `deletionSheet`. Each action is one transaction:
     `ConfigRepository.deleteItems(_:repositoryID:)`, `revertItems(_:repositoryID:)`,
     `requestPush(_:repositoryID:)`, all or nothing.
     v0.4.0 copy and paste between scopes of the repository: ⌘C (`onCommand(copy:)` on the table,

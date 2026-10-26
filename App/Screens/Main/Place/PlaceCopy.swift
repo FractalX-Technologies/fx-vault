@@ -56,6 +56,11 @@ nonisolated enum PlaceCopy {
         return subline([secretsText, variablesText, withoutValueText])
     }
 
+    /// "api-service › production" (the Sync review, the "Delete?" and Export .env titles).
+    static func environmentPlace(repository: String, environment: String) -> String {
+        String(localized: "sync.place.environmentName", defaultValue: "\(repository) › \(environment)")
+    }
+
     /// "2 changed on GitHub" (board Main2-Repository).
     static func changedOnGitHub(_ count: Int) -> String {
         String(localized: "place.drift.changed", defaultValue: "\(count) changed on GitHub")

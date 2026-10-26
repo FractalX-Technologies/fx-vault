@@ -15,6 +15,55 @@ extension View {
     }
 }
 
+/// The bordered box of a dialog's warnings (board Main2-Export): a hairline with 10 pt corners
+/// and no fill, its ``DialogNote`` rows 8 pt apart.
+struct DialogNoteBox<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            content()
+        }
+        .padding(.vertical, Theme.Spacing.mediumMinus)
+        .padding(.horizontal, Theme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                .strokeBorder(Theme.Colors.hairline, lineWidth: Theme.Stroke.hairline)
+        )
+    }
+}
+
+/// One warning of a ``DialogNoteBox``: a 13 pt symbol (ink unless `tint` says otherwise), the
+/// 12 pt sentence, and an optional action at its end ("Add to .gitignore").
+struct DialogNote<Accessory: View>: View {
+    let systemImage: String
+    let text: String
+    var tint: Color = Theme.Colors.ink
+    @ViewBuilder let accessory: () -> Accessory
+
+    var body: some View {
+        HStack(alignment: .center, spacing: Theme.Spacing.small) {
+            Image(systemName: systemImage)
+                .font(Theme.Typography.body)
+                .foregroundStyle(tint)
+                .accessibilityHidden(true)
+            Text(verbatim: text)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.ink)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            accessory()
+        }
+    }
+}
+
+extension DialogNote where Accessory == EmptyView {
+    init(systemImage: String, text: String, tint: Color = Theme.Colors.ink) {
+        self.init(systemImage: systemImage, text: text, tint: tint) { EmptyView() }
+    }
+}
+
 extension SheetHeader {
     /// The title of a 1.0 dialog: no eyebrow, 15 pt semibold, the muted subtitle 4 pt below.
     static func dialog(_ title: String, subtitle: String? = nil, @ViewBuilder accessory: @escaping () -> Accessory) -> Self {

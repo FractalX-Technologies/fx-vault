@@ -98,6 +98,7 @@ struct FolderViewModelTests {
 
         model.deleteSelection()
         #expect(model.pendingDeletion?.map(\.name) == ["FIREBASE_API_KEY"])
+        #expect(model.deletionSheet?.title == "Delete 1 secret from Mobile App?")
         model.confirmDeletion()
         #expect(await fixture.waitForFolderRows([]))
         #expect(model.selection.isEmpty)
@@ -281,6 +282,7 @@ struct FolderViewModelTests {
         )
         #expect(await TestFixtures.eventually { model.preview?.exportedNames == ["API_URL", "FIREBASE_API_KEY"] })
         #expect(model.repositoryName == "Mobile App")
+        #expect(model.placeTitle == "Mobile App")
         #expect(model.unverifiedShareNames.isEmpty)
     }
 

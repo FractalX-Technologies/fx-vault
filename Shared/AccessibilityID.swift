@@ -115,6 +115,8 @@ enum AccessibilityID {
 
     /// A place's header (1.0 D6c3): its "kind · parent · counts" line and ⋯ More.
     enum Place {
+        /// The red Delete of the "Delete?" sheet (boards Main2-Delete, Main2-DeleteKeyVault).
+        static let deleteConfirm = "place.deleteConfirm"
         static let subline = "place.subline"
         static let more = "place.more"
         static let copyAll = "place.copyAll"

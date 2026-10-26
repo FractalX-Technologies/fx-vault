@@ -214,6 +214,13 @@ final class DestinationDetailViewModel: LockObserving {
         requestDeletion(of: selectedRows)
     }
 
+    /// The "Delete?" sheet of ``pendingDeletion`` (board Main2-DeleteKeyVault).
+    var deletionSheet: DeleteItemsSheetModel? {
+        pendingDeletion.map {
+            DeleteItemsSheetModel(entries: $0.map(DeleteItemsSheetModel.Entry.init), place: destination?.title ?? "", target: .keyVault)
+        }
+    }
+
     /// Pushed items become pending deletions for the next Sync; the others go at once.
     func confirmDeletion() {
         guard let rows = pendingDeletion else { return }

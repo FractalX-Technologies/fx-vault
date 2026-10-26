@@ -106,6 +106,53 @@ extension VisualSnapshotTests {
         }
     }
 
+    // MARK: - Delete and Export .env (boards Main2-Delete, Main2-DeleteKeyVault, Main2-Export)
+
+    /// The "Delete?" sheet of a GitHub environment and of a Key Vault, as their boards.
+    @Test func deleteSheets() async throws {
+        let gitHub = DeleteItemsSheetModel(
+            entries: [
+                DeleteItemsSheetModel.Entry(name: "JWT_SECRET", kind: .secret, isOnRemote: true, hasValue: false),
+                DeleteItemsSheetModel.Entry(name: "REDIS_URL", kind: .secret, isOnRemote: true, hasValue: true),
+            ],
+            place: "api-service › production",
+            target: .gitHub
+        )
+        try await SnapshotOutput.write("delete-github", size: CGSize(width: Theme.Layout.sheetWidth, height: Self.deleteHeight)) {
+            DeleteItemsSheet(model: gitHub, cancel: {}, confirm: {})
+        }
+        let keyVault = DeleteItemsSheetModel(
+            entries: [
+                DeleteItemsSheetModel.Entry(name: "api-jwt-secret", kind: .secret, isOnRemote: true, hasValue: true),
+                DeleteItemsSheetModel.Entry(name: "redis-connection", kind: .secret, isOnRemote: true, hasValue: true),
+            ],
+            place: "kv-example-prod",
+            target: .keyVault
+        )
+        try await SnapshotOutput.write("delete-keyvault", size: CGSize(width: Theme.Layout.sheetWidth, height: Self.deleteHeight)) {
+            DeleteItemsSheet(model: keyVault, cancel: {}, confirm: {})
+        }
+    }
+
+    /// Export .env: the first step (Touch ID or the master password), then the end with the
+    /// `.gitignore` offer beside its note.
+    @Test func exportEnvSteps() async throws {
+        let fixture = try await EnvFileExportViewModelTests.Fixture()
+        let start = await fixture.viewModel()
+        try await SnapshotOutput.write("export-authenticate", size: CGSize(width: Theme.Layout.envExportSheetWidth, height: Self.exportHeight)) {
+            EnvExportDialog(viewModel: start, dismiss: {})
+        }
+
+        let root = try EnvFileFixtures.makeDirectory(fixture.harness.sandbox.appending(path: "api-service", directoryHint: .isDirectory))
+        let done = await fixture.authenticated(git: .repository(root: root, isTracked: false, isIgnored: false))
+        await done.chooseDestination(root.appending(path: ".env"))
+        try await SnapshotOutput.write("export-done", size: CGSize(width: Theme.Layout.envExportSheetWidth, height: Self.exportHeight)) {
+            EnvExportDialog(viewModel: done, dismiss: {})
+        }
+    }
+
+    private static let deleteHeight: CGFloat = 250
+    private static let exportHeight: CGFloat = 330
     private static let newEnvironmentHeight: CGFloat = 440
     private static let syncDeletionsHeight: CGFloat = 320
     private static let syncProgressHeight: CGFloat = 520

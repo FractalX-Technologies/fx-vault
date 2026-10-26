@@ -144,6 +144,8 @@ struct OrganizationEditingTests {
         let npm = try #require(detail.rows.first { $0.name == "NPM_TOKEN" })
         detail.requestDeletion(of: [npm])
         #expect(detail.pendingDeletion == [npm])
+        #expect(detail.deletionSheet?.title == "Delete 1 secret from \(organization.login)?")
+        #expect(detail.deletionSheet?.notes.last == "GitHub can’t undo this, and FX Vault has no copy of secrets without a value.")
         detail.confirmDeletion()
         #expect(await TestFixtures.eventually { detail.rows.first { $0.name == "NPM_TOKEN" }?.syncStatus == .deleted })
         // As a repository's header: the pending deletion is not counted, "without value" is

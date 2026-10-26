@@ -37,26 +37,12 @@ struct RepoDetailScreen: View {
             Task { await viewModel.handlePaste(providers) }
         }
         .errorAlert($viewModel.alert)
-        .confirmationDialog(
-            viewModel.pendingDeletion?.title ?? "",
-            isPresented: deletionBinding,
-            titleVisibility: .visible,
-            presenting: viewModel.pendingDeletion
-        ) { deletion in
-            Button(deletion.confirmTitle, role: .destructive) {
-                viewModel.confirmDeletion()
-            }
-        } message: { deletion in
-            Text(deletion.message)
+        .deleteItemsSheet(viewModel.deletionSheet) {
+            viewModel.pendingDeletion = nil
+        } confirm: {
+            viewModel.confirmDeletion()
         }
         .modifier(ItemCopyConflictDialog(viewModel: viewModel))
-    }
-
-    private var deletionBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.pendingDeletion != nil },
-            set: { if !$0 { viewModel.pendingDeletion = nil } }
-        )
     }
 }
 
@@ -310,59 +296,6 @@ struct ConfigSelectionActionsModel {
 }
 
 extension ConfigDeletionModel {
-    var title: String {
-        Self.title(count: rows.count)
-    }
-
-    var confirmTitle: String {
-        Self.confirmTitle(count: rows.count)
-    }
-
-    var message: String {
-        Self.message(syncedNames: syncedRows.map(\.name), unsyncedCount: unsyncedCount)
-    }
-
-    // The texts by count and name, shared with the organization detail (1.0).
-
-    static func title(count: Int) -> String {
-        count == 1
-            ? String(localized: "main.detail.delete.title", defaultValue: "Delete this item?")
-            : String(localized: "main.detail.delete.several.title", defaultValue: "Delete \(count) items?")
-    }
-
-    static func confirmTitle(count: Int) -> String {
-        count == 1
-            ? String(localized: "main.detail.delete.confirm", defaultValue: "Delete")
-            : String(localized: "main.detail.delete.several.confirm", defaultValue: "Delete \(count) Items")
-    }
-
-    static func message(syncedNames synced: [String], unsyncedCount: Int) -> String {
-        let onGitHub = if synced.count == 1, let name = synced.first {
-            String(
-                localized: "main.detail.delete.message",
-                defaultValue: "\(name) is deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
-            )
-        } else {
-            String(
-                localized: "main.detail.delete.several.message",
-                defaultValue: "\(names(synced)) are deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
-            )
-        }
-        switch unsyncedCount {
-        case 0:
-            return onGitHub
-        case 1:
-            let local = String(localized: "main.detail.delete.unsynced.one", defaultValue: "The one never synced is removed now.")
-            return "\(onGitHub) \(local)"
-        default:
-            let local = String(
-                localized: "main.detail.delete.unsynced.several",
-                defaultValue: "The \(unsyncedCount) never synced are removed now."
-            )
-            return "\(onGitHub) \(local)"
-        }
-    }
-
     /// The first three names, then "and N more".
     static func names(_ names: [String]) -> String {
         let shown = Array(names.prefix(3)).formatted(.list(type: .and))

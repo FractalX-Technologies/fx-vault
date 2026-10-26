@@ -37,6 +37,12 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   SSH alias, token, scopes and organizations as dotted lines, and the accounts FX Vault can't
   use in the same card; the gh path and version moved to Advanced. Sharing lists "Files you
   shared" as Active or Expired with their counts and expiry time, and Show names.
+- **Delete and Export .env as the boards.** Deleting secrets or variables opens a small
+  dialog titled with the count and the place ("Delete 2 secrets from api-service ›
+  production?"), lists the names, says the next Sync deletes them on GitHub or in Key Vault and
+  asks again, and has a red Delete; Return no longer deletes. Export .env is titled with its
+  place, keeps its steps, shows the warnings in one box with Add to .gitignore beside its note,
+  and ends each step on "Saved readable only by you."
 - **Edit organization secrets and variables.** The organization view gains Add Secret, Add
   Variable and a Status column; its editor sets the value and Access (All, Private, or Selected
   with the organization's repositories). A Selected item keeps GitHub's repository list until

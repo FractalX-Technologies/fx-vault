@@ -32,6 +32,28 @@ struct DialogFormRow<Content: View>: View {
     }
 }
 
+/// An 11 pt label over its control (boards Reset-Confirm, Main2-Export "Save to"): the control
+/// carries the label for VoiceOver, so the label is hidden from it.
+struct DialogStackedField<Content: View>: View {
+    let label: String
+    @ViewBuilder let content: () -> Content
+
+    init(_ label: String, @ViewBuilder content: @escaping () -> Content) {
+        self.label = label
+        self.content = content
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Layout.dialogNoteSpacing) {
+            Text(label)
+                .fxTextStyle(.formLabel)
+                .foregroundStyle(Theme.Colors.subtleText)
+                .accessibilityHidden(true)
+            content()
+        }
+    }
+}
+
 /// A switch with its title after it ("Add README", "Clone to my Mac"); the title toggles it too,
 /// unless the row is disabled.
 struct DialogSwitch: View {

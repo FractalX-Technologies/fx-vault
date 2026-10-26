@@ -210,6 +210,18 @@ final class EnvExportViewModel: LockObserving {
         EnvFilePanels.defaultExportFileName
     }
 
+    /// The title's place (board Main2-Export): "owner/repo › production", the repository alone
+    /// for its own scope, a folder's name; "" until the header loads.
+    var placeTitle: String {
+        if case .scope(_, let scope) = place, scope == .repository {
+            return repositoryName
+        }
+        if repositoryName.isEmpty || scopeTitle.isEmpty {
+            return repositoryName.isEmpty ? scopeTitle : repositoryName
+        }
+        return PlaceCopy.environmentPlace(repository: repositoryName, environment: scopeTitle)
+    }
+
     /// The save panel returned `url`: checks iCloud and git, then writes, or asks first when the
     /// folder syncs to iCloud.
     func chooseDestination(_ url: URL) async {

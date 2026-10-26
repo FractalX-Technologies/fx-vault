@@ -3,11 +3,10 @@ import EnvTools
 import SwiftUI
 import VaultData
 
-/// EnvExportScreen: ReauthGate → warnings (plaintext, iCloud, tracked file) → save panel → gitignore offer.
-///
-/// UI feature contract entry view (ARCHITECTURE.md): presented by `MainScreen` for
-/// `MainSheet`. The init signature is fixed; the feature owns everything else in this folder.
-/// Dismiss with `@Environment(\.dismiss)`.
+/// EnvExportScreen (board Main2-Export): ReauthGate → warnings → save panel → gitignore offer,
+/// each step in the 1.0 dialog. UI feature contract entry view (ARCHITECTURE.md): presented by
+/// `MainScreen` for `MainSheet`. The init signature is fixed; the feature owns everything else
+/// in this folder. Dismiss with `@Environment(\.dismiss)`.
 struct EnvExportScreen: View {
     @State private var viewModel: EnvExportViewModel
     @Environment(\.dismiss) private var dismiss
@@ -18,29 +17,38 @@ struct EnvExportScreen: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: Theme.Spacing.xLarge) {
-            SheetHeader(
-                label: ShareSheetLabel.environmentFile,
-                title: String(localized: "envExport.title", defaultValue: "Export .env"),
-                subtitle: subtitle
-            )
+        EnvExportDialog(viewModel: viewModel, dismiss: { dismiss() })
+            .errorAlert($viewModel.alert)
+            .onDisappear { viewModel.discard() }
+    }
+}
+
+/// The dialog itself, apart from the entry view's state so the snapshot renders a view model in
+/// any step.
+struct EnvExportDialog: View {
+    let viewModel: EnvExportViewModel
+    let dismiss: () -> Void
+
+    var body: some View {
+        DialogSheet(
+            title: title,
+            footerNote: String(localized: "envExport.footer", defaultValue: "Saved readable only by you. Delete it when you’re done."),
+            isWorking: viewModel.isWorking
+        ) {
             content
-            footer
+        } actions: {
+            actions
         }
-        .fxSheetContent()
         .frame(width: Theme.Layout.envExportSheetWidth)
-        .errorAlert($viewModel.alert)
-        .onDisappear { viewModel.discard() }
     }
 
-    private var subtitle: String {
-        if viewModel.scopeTitle.isEmpty {
-            return String(localized: "envExport.subtitle.unknown", defaultValue: "Write this scope's values to a .env file.")
+    /// "Export api-service › production as .env".
+    private var title: String {
+        let place = viewModel.placeTitle
+        if place.isEmpty {
+            return String(localized: "envExport.title", defaultValue: "Export .env")
         }
-        return String(
-            localized: "envExport.subtitle",
-            defaultValue: "\(viewModel.repositoryName) · \(viewModel.scopeTitle)"
-        )
+        return String(localized: "envExport.title.place", defaultValue: "Export \(place) as .env")
     }
 
     @ViewBuilder
@@ -57,78 +65,60 @@ struct EnvExportScreen: View {
         }
     }
 
-    private var footer: some View {
-        HStack(spacing: Theme.Spacing.mediumMinus) {
-            switch viewModel.step {
-            case .authenticate:
-                cancelButton
-                Spacer()
-                progress
-                if viewModel.showsTouchIDButton {
-                    Button {
-                        Task { await viewModel.authenticateWithTouchID() }
-                    } label: {
-                        Label(String(localized: "envExport.auth.touchID", defaultValue: "Use Touch ID"), systemImage: "touchid")
-                    }
-                    .disabled(!viewModel.canAuthenticateWithTouchID)
-                    .modifier(DefaultActionModifier(isDefault: viewModel.defaultAction == .touchID))
+    @ViewBuilder
+    private var actions: some View {
+        switch viewModel.step {
+        case .authenticate:
+            cancelButton
+            Button(String(localized: "envExport.auth.continue", defaultValue: "Continue")) {
+                Task { await viewModel.authenticateWithPassword() }
+            }
+            .disabled(!viewModel.canAuthenticateWithPassword)
+            .modifier(DefaultActionModifier(isDefault: viewModel.defaultAction == .password))
+            if viewModel.showsTouchIDButton {
+                Button {
+                    Task { await viewModel.authenticateWithTouchID() }
+                } label: {
+                    Label(String(localized: "envExport.auth.touchID", defaultValue: "Use Touch ID"), systemImage: "touchid")
                 }
-                Button(String(localized: "envExport.auth.continue", defaultValue: "Continue")) {
-                    Task { await viewModel.authenticateWithPassword() }
-                }
-                .disabled(!viewModel.canAuthenticateWithPassword)
-                .modifier(DefaultActionModifier(isDefault: viewModel.defaultAction == .password))
-            case .review:
-                cancelButton
-                Spacer()
-                progress
-                Button(String(localized: "envExport.chooseLocation", defaultValue: "Choose Location…"), action: chooseLocation)
-                    .disabled(viewModel.isWorking)
-                    .modifier(DefaultActionModifier(isDefault: true))
-            case .confirmCloudSync:
-                cancelButton
-                Spacer()
-                progress
-                Button(String(localized: "envExport.cloud.exportAnyway", defaultValue: "Export Anyway")) {
-                    Task { await viewModel.confirmCloudSyncExport() }
-                }
-                .disabled(viewModel.isWorking)
-                Button(String(localized: "envExport.cloud.chooseAnother", defaultValue: "Choose Another Location")) {
-                    viewModel.chooseAnotherLocation()
-                    chooseLocation()
-                }
+                .disabled(!viewModel.canAuthenticateWithTouchID)
+                .modifier(DefaultActionModifier(isDefault: viewModel.defaultAction == .touchID))
+            }
+        case .review:
+            cancelButton
+            Button(String(localized: "envExport.chooseLocation", defaultValue: "Choose Location…"), action: chooseLocation)
                 .disabled(viewModel.isWorking)
                 .modifier(DefaultActionModifier(isDefault: true))
-            case .done:
-                Spacer()
-                if viewModel.defaultAction == .addToGitignore {
-                    Button(String(localized: "envExport.gitignore.notNow", defaultValue: "Not Now")) { dismiss() }
-                        .fxButtonStyle(.secondary, size: .large)
-                        .keyboardShortcut(.cancelAction)
-                    Button(String(localized: "envExport.gitignore.add", defaultValue: "Add to .gitignore")) {
-                        viewModel.addGitignoreEntry()
-                    }
+        case .confirmCloudSync:
+            cancelButton
+            Button(String(localized: "envExport.cloud.exportAnyway", defaultValue: "Export Anyway")) {
+                Task { await viewModel.confirmCloudSyncExport() }
+            }
+            .disabled(viewModel.isWorking)
+            .modifier(DefaultActionModifier(isDefault: false))
+            Button(String(localized: "envExport.cloud.chooseAnother", defaultValue: "Choose Another Location")) {
+                viewModel.chooseAnotherLocation()
+                chooseLocation()
+            }
+            .disabled(viewModel.isWorking)
+            .modifier(DefaultActionModifier(isDefault: true))
+        case .done:
+            // With the `.gitignore` offer, Return adds the line (the button beside its note).
+            if viewModel.defaultAction == .addToGitignore {
+                Button(String(localized: "envExport.gitignore.notNow", defaultValue: "Not Now"), action: dismiss)
+                    .fxButtonStyle(.outline, size: .dialog)
+                    .keyboardShortcut(.cancelAction)
+            } else {
+                Button(String(localized: "common.done", defaultValue: "Done"), action: dismiss)
                     .modifier(DefaultActionModifier(isDefault: true))
-                } else {
-                    Button(String(localized: "common.done", defaultValue: "Done")) { dismiss() }
-                        .modifier(DefaultActionModifier(isDefault: true))
-                }
             }
         }
     }
 
     private var cancelButton: some View {
-        Button(String(localized: "common.cancel", defaultValue: "Cancel")) { dismiss() }
-            .fxButtonStyle(.secondary, size: .large)
+        Button(String(localized: "common.cancel", defaultValue: "Cancel"), action: dismiss)
+            .fxButtonStyle(.outline, size: .dialog)
             .keyboardShortcut(.cancelAction)
-    }
-
-    @ViewBuilder
-    private var progress: some View {
-        if viewModel.isWorking {
-            ProgressView()
-                .controlSize(.small)
-        }
     }
 
     private func chooseLocation() {
@@ -140,18 +130,19 @@ struct EnvExportScreen: View {
     }
 }
 
-/// Makes a button the primary Return pill when `isDefault`; otherwise a secondary pill.
+/// Makes a button the black Return pill when `isDefault`; otherwise the outline (board
+/// Main2-Export).
 private struct DefaultActionModifier: ViewModifier {
     let isDefault: Bool
 
     func body(content: Content) -> some View {
         if isDefault {
             content
-                .fxButtonStyle(.primary, size: .large)
+                .fxButtonStyle(.primary, size: .dialog)
                 .keyboardShortcut(.defaultAction)
         } else {
             content
-                .fxButtonStyle(.secondary, size: .large)
+                .fxButtonStyle(.outline, size: .dialog)
         }
     }
 }
@@ -166,33 +157,24 @@ private struct EnvExportAuthenticateView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
             if viewModel.preview == nil {
                 ProgressView()
                     .controlSize(.small)
             } else if !viewModel.hasSomethingToExport {
-                SheetCallout(
-                    systemImage: "tray",
-                    tint: Theme.Colors.subtleText,
-                    text: String(
-                        localized: "envExport.nothing",
-                        defaultValue: "This scope has no values to export. Secrets without a value in FX Vault are never exported."
-                    )
-                )
+                EnvExportSentence(text: String(
+                    localized: "envExport.nothing",
+                    defaultValue: "This scope has no values to export. Secrets without a value in FX Vault are never exported."
+                ))
             } else {
-                Text(String(
+                EnvExportSentence(text: String(
                     localized: "envExport.auth.message",
                     defaultValue: "Exporting writes \(viewModel.exportedCount) values to a file in plaintext. Confirm it's you with Touch ID or your master password."
                 ))
-                .fxTextStyle(.body)
-                .foregroundStyle(Theme.Colors.ink)
-                .fixedSize(horizontal: false, vertical: true)
-                VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
-                    SectionLabel(passwordLabel)
-                        .accessibilityHidden(true)
+                DialogStackedField(passwordLabel) {
                     SecureField(passwordLabel, text: $viewModel.password)
                         .focused($isPasswordFocused)
-                        .fxInputField(.rounded, isFocused: isPasswordFocused, isInvalid: viewModel.authError != nil)
+                        .fxInputField(.dialog, isFocused: isPasswordFocused, isInvalid: viewModel.authError != nil, isMonospaced: true)
                         .onSubmit { Task { await viewModel.authenticateWithPassword() } }
                 }
                 if let notice = viewModel.touchIDNotice {
@@ -211,15 +193,14 @@ private struct EnvExportAuthenticateView: View {
     }
 }
 
-/// Step 2: the plaintext warning and what is left out.
+/// Step 2: the plaintext warning and what is left out, in the bordered note box.
 private struct EnvExportReviewView: View {
     let viewModel: EnvExportViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            SheetCallout(
-                systemImage: "exclamationmark.triangle.fill",
-                tint: Theme.Colors.danger,
+        DialogNoteBox {
+            DialogNote(
+                systemImage: "exclamationmark.triangle",
                 text: String(
                     localized: "envExport.warning.plaintext",
                     defaultValue: "The file will contain \(viewModel.exportedCount) values in plaintext. Anyone who can read the file can read them. Keep it out of git, synced folders and chats, and delete it when you are done."
@@ -231,8 +212,7 @@ private struct EnvExportReviewView: View {
                         localized: "envExport.skipped.valueMissing",
                         defaultValue: "Skipped: \(viewModel.valueMissingNames.count) secrets have no value in FX Vault"
                     ),
-                    names: viewModel.valueMissingNames,
-                    tint: Theme.Colors.warning
+                    names: viewModel.valueMissingNames
                 )
             }
             if !viewModel.nameCollisions.isEmpty {
@@ -241,8 +221,7 @@ private struct EnvExportReviewView: View {
                         localized: "envExport.skipped.collisions",
                         defaultValue: "Skipped: \(viewModel.nameCollisions.count) variables share a name with an exported secret"
                     ),
-                    names: viewModel.nameCollisions,
-                    tint: Theme.Colors.warning
+                    names: viewModel.nameCollisions
                 )
             }
             if !viewModel.unverifiedShareNames.isEmpty {
@@ -251,71 +230,61 @@ private struct EnvExportReviewView: View {
                         localized: "envExport.unverifiedShare",
                         defaultValue: "\(viewModel.unverifiedShareNames.count) values came from a share and are not verified on GitHub yet"
                     ),
-                    names: viewModel.unverifiedShareNames,
-                    tint: Theme.Colors.warning
+                    names: viewModel.unverifiedShareNames
                 )
             }
         }
     }
 }
 
-/// Step 3 (only for synced folders): the iCloud and Spotlight warning.
+/// Step 3 (only for synced folders): where the file would go, and that it leaves this Mac.
 private struct EnvExportCloudWarningView: View {
     let choice: EnvExportDestinationChoiceModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            SheetCallout(
-                systemImage: "icloud.fill",
-                tint: Theme.Colors.danger,
-                text: choice.destination.cloudSyncStatus == .iCloudDesktopAndDocuments
-                    ? String(
-                        localized: "envExport.cloud.desktopAndDocuments",
-                        defaultValue: "This folder syncs to iCloud (Desktop & Documents). The plaintext file would be uploaded to iCloud and indexed by Spotlight."
-                    )
-                    : String(
-                        localized: "envExport.cloud.drive",
-                        defaultValue: "This folder syncs to iCloud Drive. The plaintext file would be uploaded to iCloud and indexed by Spotlight."
-                    )
-            )
-            Text(verbatim: choice.fileURL.path(percentEncoded: false))
-                .fxTextStyle(.monoMeta)
-                .foregroundStyle(Theme.Colors.subtleText)
-                .textSelection(.enabled)
-                .lineLimit(2)
-                .truncationMode(.middle)
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
+            EnvExportPath(label: String(localized: "envExport.saveTo", defaultValue: "Save to"), url: choice.fileURL)
+            DialogNoteBox {
+                DialogNote(
+                    systemImage: "icloud",
+                    text: choice.destination.cloudSyncStatus == .iCloudDesktopAndDocuments
+                        ? String(
+                            localized: "envExport.cloud.desktopAndDocuments.note",
+                            defaultValue: "This folder syncs to iCloud (Desktop & Documents), so the file leaves this Mac and Spotlight indexes it."
+                        )
+                        : String(
+                            localized: "envExport.cloud.drive.note",
+                            defaultValue: "This folder syncs to iCloud Drive, so the file leaves this Mac and Spotlight indexes it."
+                        )
+                )
+            }
         }
     }
 }
 
-/// Step 4: written; git checks and the `.gitignore` offer.
+/// Step 4: written; git checks and the `.gitignore` offer beside its note.
 private struct EnvExportDoneView: View {
     let viewModel: EnvExportViewModel
     let outcome: EnvExportOutcomeModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-            SheetCallout(
-                systemImage: "checkmark.circle.fill",
-                tint: Theme.Colors.success,
-                text: String(
-                    localized: "envExport.done.written",
-                    defaultValue: "Wrote \(outcome.result.preview.exportedNames.count) values to \(outcome.result.fileURL.lastPathComponent). Only your user account can read it."
-                )
-            )
-            HStack {
-                Text(verbatim: outcome.result.fileURL.path(percentEncoded: false))
-                    .fxTextStyle(.monoMeta)
-                    .foregroundStyle(Theme.Colors.subtleText)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Spacer()
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
+            EnvExportPath(label: String(localized: "envExport.savedTo", defaultValue: "Saved to"), url: outcome.result.fileURL) {
                 Button(String(localized: "envExport.done.reveal", defaultValue: "Show in Finder")) {
                     NSWorkspace.shared.activateFileViewerSelecting([outcome.result.fileURL])
                 }
-                .fxLinkButtonStyle(isEmphasized: true)
+                .fxButtonStyle(.outline, size: .compact)
             }
-            gitStatus
+            DialogNoteBox {
+                DialogNote(
+                    systemImage: "checkmark.circle",
+                    text: String(
+                        localized: "envExport.done.written",
+                        defaultValue: "Wrote \(outcome.result.preview.exportedNames.count) values to \(outcome.result.fileURL.lastPathComponent). Only your user account can read it."
+                    )
+                )
+                gitStatus
+            }
         }
     }
 
@@ -323,28 +292,23 @@ private struct EnvExportDoneView: View {
     private var gitStatus: some View {
         switch outcome.destination.gitExposure {
         case .tracked(_, let relativePath):
-            SheetCallout(
-                systemImage: "exclamationmark.octagon.fill",
-                tint: Theme.Colors.danger,
+            DialogNote(
+                systemImage: "exclamationmark.octagon",
                 text: String(
                     localized: "envExport.git.tracked",
                     defaultValue: "\(relativePath) is already committed to git. Removing it from the next commit does not remove it from history: remove it from the repository's history and rotate these values."
-                )
+                ),
+                tint: Theme.Colors.danger
             )
         case .notIgnored(_, let relativePath, _):
             gitignoreOffer(relativePath: relativePath)
         case .ignored:
-            SheetCallout(
-                systemImage: "checkmark.shield",
-                tint: Theme.Colors.success,
-                text: String(localized: "envExport.git.ignored", defaultValue: "git ignores this file.")
-            )
+            DialogNote(systemImage: "checkmark.shield", text: String(localized: "envExport.git.ignored", defaultValue: "git ignores this file."))
         case .outsideRepository:
             EmptyView()
         case nil:
-            SheetCallout(
+            DialogNote(
                 systemImage: "questionmark.circle",
-                tint: Theme.Colors.warning,
                 text: String(
                     localized: "envExport.git.failed",
                     defaultValue: "FX Vault could not check whether git ignores this file. Check it before your next commit."
@@ -356,31 +320,30 @@ private struct EnvExportDoneView: View {
     @ViewBuilder
     private func gitignoreOffer(relativePath: String) -> some View {
         switch viewModel.gitignoreState {
-        case .offered(let line):
-            SheetCallout(
-                systemImage: "exclamationmark.triangle.fill",
-                tint: Theme.Colors.warning,
+        case .offered:
+            DialogNote(
+                systemImage: "exclamationmark.triangle",
                 text: String(
-                    localized: "envExport.git.notIgnored",
-                    defaultValue: "git does not ignore \(relativePath). Add \(line) to the repository's .gitignore so it is never committed?"
+                    localized: "envExport.git.notIgnored.note",
+                    defaultValue: "This folder is a git working tree and \(relativePath) isn’t ignored."
                 )
-            )
+            ) {
+                Button(String(localized: "envExport.gitignore.add", defaultValue: "Add to .gitignore")) {
+                    viewModel.addGitignoreEntry()
+                }
+                .fxButtonStyle(.outline, size: .compact)
+                .keyboardShortcut(.defaultAction)
+            }
         case .added(let line):
-            SheetCallout(
-                systemImage: "checkmark.shield",
-                tint: Theme.Colors.success,
-                text: String(localized: "envExport.git.added", defaultValue: "Added \(line) to .gitignore.")
-            )
+            DialogNote(systemImage: "checkmark.shield", text: String(localized: "envExport.git.added", defaultValue: "Added \(line) to .gitignore."))
         case .alreadyPresent:
-            SheetCallout(
+            DialogNote(
                 systemImage: "checkmark.shield",
-                tint: Theme.Colors.success,
                 text: String(localized: "envExport.git.alreadyPresent", defaultValue: ".gitignore already lists this file.")
             )
         case .manual:
-            SheetCallout(
-                systemImage: "exclamationmark.triangle.fill",
-                tint: Theme.Colors.warning,
+            DialogNote(
+                systemImage: "exclamationmark.triangle",
                 text: String(
                     localized: "envExport.git.manual",
                     defaultValue: "git does not ignore this file, and its name cannot be added automatically. Add it to .gitignore yourself."
@@ -392,23 +355,56 @@ private struct EnvExportDoneView: View {
     }
 }
 
-/// A titled, scrollable list of names (never values).
+/// A body sentence of the dialog: 13 pt, muted, wrapped.
+private struct EnvExportSentence: View {
+    let text: String
+
+    var body: some View {
+        Text(verbatim: text)
+            .fxTextStyle(.callout)
+            .foregroundStyle(Theme.Colors.mutedText)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// "Save to" over the file's path in a field-like box (mono, middle-truncated), with an
+/// optional action beside it.
+private struct EnvExportPath<Accessory: View>: View {
+    let label: String
+    let url: URL
+    @ViewBuilder let accessory: () -> Accessory
+
+    var body: some View {
+        DialogStackedField(label) {
+            HStack(spacing: Theme.Spacing.smallMinus) {
+                Text(verbatim: url.path(percentEncoded: false))
+                    .fxTextStyle(.monoMeta)
+                    .foregroundStyle(Theme.Colors.ink)
+                    .textSelection(.enabled)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .dialogFieldChrome()
+                    .accessibilityLabel(Text(verbatim: "\(label) \(url.path(percentEncoded: false))"))
+                accessory()
+            }
+        }
+    }
+}
+
+extension EnvExportPath where Accessory == EmptyView {
+    init(label: String, url: URL) {
+        self.init(label: label, url: url) { EmptyView() }
+    }
+}
+
+/// A skipped or unverified group: its note, then the names (never values), scrollable.
 private struct EnvExportNameList: View {
     let title: String
     let names: [String]
-    let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            Label {
-                Text(verbatim: title)
-                    .fxTextStyle(.calloutEmphasized)
-                    .foregroundStyle(Theme.Colors.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-            } icon: {
-                Image(systemName: "exclamationmark.circle")
-                    .foregroundStyle(tint)
-            }
+        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+            DialogNote(systemImage: "exclamationmark.circle", text: title)
             ScrollView {
                 Text(verbatim: names.joined(separator: ", "))
                     .fxTextStyle(.monoMeta)
@@ -417,6 +413,7 @@ private struct EnvExportNameList: View {
                     .textSelection(.enabled)
             }
             .frame(maxHeight: Theme.Layout.envNameListMaxHeight)
+            .padding(.leading, Theme.Layout.dialogNoteIndent)
         }
     }
 }

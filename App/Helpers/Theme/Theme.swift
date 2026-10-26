@@ -238,7 +238,8 @@ enum Theme {
         /// The import sheet holds a five-column table.
         static let envImportSheetWidth: CGFloat = 760
         static let envImportSheetHeight: CGFloat = 560
-        static let envExportSheetWidth: CGFloat = 520
+        /// The export dialog (board Main2-Export).
+        static let envExportSheetWidth: CGFloat = 580
         /// Height of the paste editor above the live preview.
         static let envPasteEditorHeight: CGFloat = 150
         /// The paste mode shows the editor above the live preview, so the sheet is taller.
@@ -247,6 +248,8 @@ enum Theme {
         static let envIssueListMaxHeight: CGFloat = 96
         /// Height of a name list in the export warnings ("Skipped: …").
         static let envNameListMaxHeight: CGFloat = 88
+        /// The names under a dialog note line up with its sentence, past the 13 pt symbol.
+        static let dialogNoteIndent: CGFloat = 21
         static let envImportIncludeColumnWidth: CGFloat = 28
         static let envImportLineColumnWidth: CGFloat = 40
         static let envImportKeyColumnMinWidth: CGFloat = 220

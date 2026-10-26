@@ -31,7 +31,7 @@ final class OrganizationUITests: VaultUITestCase {
 
         table.staticTexts["NPM_TOKEN"].rightClick()
         click(app.menuItems["Delete…"])
-        click(dialogButton("Delete", in: app))
+        click(app.buttons[AccessibilityID.Place.deleteConfirm])
         XCTAssertTrue(table.staticTexts["Deleted"].waitForExistence(timeout: timeout), "NPM_TOKEN is not pending deletion")
     }
 

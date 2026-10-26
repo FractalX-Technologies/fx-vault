@@ -22,25 +22,10 @@ struct OrganizationDetailScreen: View {
         }
         .fxPlaceColumn()
         .errorAlert($viewModel.alert)
-        .confirmationDialog(
-            ConfigDeletionModel.title(count: viewModel.pendingDeletion?.count ?? 0),
-            isPresented: Binding(
-                get: { viewModel.pendingDeletion != nil },
-                set: { if !$0 { viewModel.pendingDeletion = nil } }
-            ),
-            titleVisibility: .visible,
-            presenting: viewModel.pendingDeletion
-        ) { rows in
-            Button(ConfigDeletionModel.confirmTitle(count: rows.count), role: .destructive) {
-                viewModel.confirmDeletion()
-            }
-            Button(String(localized: "common.cancel", defaultValue: "Cancel"), role: .cancel) {}
-                .keyboardShortcut(.defaultAction)
-        } message: { rows in
-            Text(ConfigDeletionModel.message(
-                syncedNames: rows.filter(\.isOnGitHub).map(\.name),
-                unsyncedCount: rows.filter { !$0.isOnGitHub }.count
-            ))
+        .deleteItemsSheet(viewModel.deletionSheet) {
+            viewModel.pendingDeletion = nil
+        } confirm: {
+            viewModel.confirmDeletion()
         }
     }
 

@@ -63,13 +63,14 @@ struct RepoDetailSelectionTests {
         #expect(model.selectedRows.map(\.name) == ["API_TOKEN", "NEW_A", "NEW_B"])
 
         model.requestDeletion(of: model.selectedRows)
-        let deletion = try #require(model.pendingDeletion)
-        #expect(deletion.syncedRows.map(\.name) == ["API_TOKEN"])
-        #expect(deletion.unsyncedCount == 2)
-        #expect(deletion.title == "Delete 3 items?")
-        #expect(deletion.confirmTitle == "Delete 3 Items")
-        #expect(deletion.message.hasPrefix("API_TOKEN is deleted on GitHub by the next Sync"))
-        #expect(deletion.message.hasSuffix("The 2 never synced are removed now."))
+        let deletion = try #require(model.deletionSheet)
+        #expect(deletion.title == "Delete 3 secrets from \(TestFixtures.repoName)?")
+        #expect(deletion.names == ["API_TOKEN", "NEW_A", "NEW_B"])
+        #expect(deletion.notes == [
+            "One of them is removed from GitHub at the next Sync, which asks again.",
+            "The 2 never synced are removed now.",
+            "GitHub can’t undo this.",
+        ])
         #expect(fixture.status("API_TOKEN") == .synced, "nothing changes before the confirmation")
 
         model.confirmDeletion()
