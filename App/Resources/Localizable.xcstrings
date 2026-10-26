@@ -15005,6 +15005,182 @@
         }
       }
     },
+    "quickVault.closesOnLock" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "closes when %@ locks"
+          }
+        }
+      }
+    },
+    "quickVault.copied" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied %@"
+          }
+        }
+      }
+    },
+    "quickVault.copy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy %@"
+          }
+        }
+      }
+    },
+    "quickVault.copy.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy the value"
+          }
+        }
+      }
+    },
+    "quickVault.copy.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The value goes to the clipboard, which clears in %lld seconds."
+          }
+        }
+      }
+    },
+    "quickVault.copy.secretHelp" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy the value. Asks for Touch ID or your master password."
+          }
+        }
+      }
+    },
+    "quickVault.expand" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Expand"
+          }
+        }
+      }
+    },
+    "quickVault.expand.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open this place in the main window (⌘↩)"
+          }
+        }
+      }
+    },
+    "quickVault.footer.close" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "close"
+          }
+        }
+      }
+    },
+    "quickVault.footer.expand" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "expand"
+          }
+        }
+      }
+    },
+    "quickVault.footer.open" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "open"
+          }
+        }
+      }
+    },
+    "quickVault.locked.touchID" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Touch ID to open Quick Vault"
+          }
+        }
+      }
+    },
+    "quickVault.noLines" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nothing here yet"
+          }
+        }
+      }
+    },
+    "quickVault.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search places and names"
+          }
+        }
+      }
+    },
+    "quickVault.recent" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Recent"
+          }
+        }
+      }
+    },
+    "quickVault.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Quick Vault"
+          }
+        }
+      }
+    },
     "recoveryKey.group.accessibility" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -20886,6 +21062,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "copy every value to the clipboard"
+          }
+        }
+      }
+    },
+    "touchID.prompt.copyValue" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "copy a secret to the clipboard"
           }
         }
       }

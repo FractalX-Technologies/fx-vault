@@ -171,8 +171,9 @@ struct NotesGutter: View {
 }
 
 /// A value: the masked token (a button that asks to reveal it), the revealed value in an ink
-/// outline, a variable in plaintext, or nothing for a secret without a value.
-private struct NotesValueView: View {
+/// outline, a variable in plaintext, or nothing for a secret without a value. The quick vault's
+/// lines show it too (1.0 Q1).
+struct NotesValueView: View {
     let item: NotesItemLineModel
     let reveal: NotesRevealModel
 

@@ -17,6 +17,9 @@ final class NotchIslandModel {
     var isUnlocked = false
     /// **Use Password**, or the Touch ID prompt's own password fallback.
     var prefersPassword = false
+    /// The quick vault's shortcut asked while locked: the island says so and is the quick
+    /// vault's width (board QuickVault-Locked).
+    var opensQuickVault = false
     /// The island's size changed; the panel keeps its top edge where it is.
     @ObservationIgnored var onSizeChange: ((CGSize) -> Void)?
 
@@ -33,6 +36,11 @@ final class NotchIslandModel {
     func reset() {
         isUnlocked = false
         prefersPassword = false
+        opensQuickVault = false
+    }
+
+    var width: CGFloat {
+        opensQuickVault ? Theme.Layout.quickVaultWidth : Theme.Layout.islandWidth
     }
 }
 
@@ -42,17 +50,17 @@ struct NotchIslandView: View {
     @FocusState private var isPasswordFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            // The hardware notch covers this band; the island's content starts under it.
-            Color.clear.frame(height: model.notchHeight)
+        VStack(spacing: Theme.Spacing.medium) {
             content
-                .padding(.horizontal, Theme.Spacing.large)
-                .padding(.top, model.notchHeight > 0 ? Theme.Spacing.small : Theme.Spacing.medium)
-                .padding(.bottom, Theme.Spacing.medium)
+            if model.opensQuickVault, model.state != .unlocked {
+                // Dimmed until the unlock: no place, name or count shows while locked.
+                QuickVaultSearchField.locked
+            }
         }
-        .frame(width: Theme.Layout.islandWidth)
-        .background(Theme.Colors.island, in: shape)
-        .environment(\.colorScheme, .dark)
+        .padding(.horizontal, Theme.Spacing.large)
+        .padding(.top, model.notchHeight > 0 ? Theme.Spacing.small : Theme.Spacing.medium)
+        .padding(.bottom, Theme.Spacing.medium)
+        .notchIsland(notchHeight: model.notchHeight, width: model.width)
         .animation(Theme.Durations.spring, value: model.state)
         .onGeometryChange(for: CGSize.self, of: \.size) { size in
             model.onSizeChange?(size)
@@ -62,13 +70,6 @@ struct NotchIslandView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(AccessibilityID.Island.panel)
-    }
-
-    /// Flush with the screen's top edge under a notch: only the lower corners are round.
-    private var shape: UnevenRoundedRectangle {
-        let radius = Theme.Layout.islandCornerRadius
-        let top = model.notchHeight > 0 ? 0 : radius
-        return UnevenRoundedRectangle(topLeadingRadius: top, bottomLeadingRadius: radius, bottomTrailingRadius: radius, topTrailingRadius: top)
     }
 
     @ViewBuilder
@@ -93,16 +94,23 @@ struct NotchIslandView: View {
                 Task { await model.lock.unlockWithTouchID() }
             } label: {
                 HStack(spacing: Theme.Spacing.medium) {
-                    Image(systemName: "touchid")
+                    // The brand's dot grid for the quick vault, the fingerprint beside its caption.
+                    Image(systemName: model.opensQuickVault ? Theme.Symbols.menuBar : "touchid")
                         .font(Theme.Typography.title)
                         .foregroundStyle(Theme.Colors.islandInk)
                     VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
                         Text(String(localized: "island.locked", defaultValue: "FX Vault is locked"))
                             .fxTextStyle(.headline)
                             .foregroundStyle(Theme.Colors.islandInk)
-                        Text(String(localized: "island.touchID", defaultValue: "Touch ID to unlock"))
-                            .fxTextStyle(.caption)
-                            .foregroundStyle(Theme.Colors.islandMuted)
+                        if model.opensQuickVault {
+                            Label(QuickVaultCopy.touchIDToOpen, systemImage: "touchid")
+                                .fxTextStyle(.caption)
+                                .foregroundStyle(Theme.Colors.islandMuted)
+                        } else {
+                            Text(String(localized: "island.touchID", defaultValue: "Touch ID to unlock"))
+                                .fxTextStyle(.caption)
+                                .foregroundStyle(Theme.Colors.islandMuted)
+                        }
                     }
                 }
                 .contentShape(Rectangle())
@@ -164,5 +172,28 @@ struct NotchIslandView: View {
     private var status: String? {
         if let error = model.lock.error { return error.title }
         return model.lock.biometricNotice?.title ?? model.lock.biometricNotice?.detail
+    }
+}
+
+extension View {
+    /// The black island grown out of the notch (the lock island, the quick vault): a band the
+    /// hardware notch covers, then the content, `width` wide. Under a notch it is flush with the
+    /// screen's top edge, so only its lower corners are round.
+    func notchIsland(notchHeight: CGFloat, width: CGFloat) -> some View {
+        let radius = Theme.Layout.islandCornerRadius
+        let top = notchHeight > 0 ? 0 : radius
+        let shape = UnevenRoundedRectangle(
+            topLeadingRadius: top,
+            bottomLeadingRadius: radius,
+            bottomTrailingRadius: radius,
+            topTrailingRadius: top
+        )
+        return VStack(spacing: 0) {
+            Color.clear.frame(height: notchHeight)
+            self
+        }
+        .frame(width: width)
+        .background(Theme.Colors.island, in: shape)
+        .environment(\.colorScheme, .dark)
     }
 }

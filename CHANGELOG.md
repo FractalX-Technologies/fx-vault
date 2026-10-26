@@ -9,6 +9,12 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 - **Quick vault shortcut.** Settings › General records the global shortcut for the quick vault:
   ⌃⌥V by default, any key with two modifiers, one of them Control, Option or Command.
+- **Quick vault.** The shortcut, from any app, or Quick Vault at the top of the menu bar menu,
+  opens a search under the notch: the vault's places, recent ones first, and names. ↩ shows a
+  place's lines; Copy puts a variable on the clipboard at once and a secret after Touch ID or the
+  master password (cleared after 30 s); ⌘↩ opens the place in the main window. It is hidden from
+  screen capture and closes when FX Vault loses the focus or locks; while locked, the island asks
+  for the unlock first.
 - **Open at login.** Settings › General adds FX Vault to the Login Items, and says when System
   Settings has to allow it first.
 - **Copy Diagnostics in Settings.** Settings › Advanced copies the gh report (versions, paths
@@ -19,7 +25,7 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **Azure in Settings.** Settings › Accounts has an Azure group: each tenant with its vaults
   in FX Vault, Signed in or the `az login --tenant` command to copy, Choose Vaults… to add more
   of a tenant's vaults after onboarding, and `az logout` to copy.
-- **Menu bar item.** FX Vault's dot grid in the menu bar: Open FX Vault (the island while
+- **Menu bar item.** FX Vault's dot grid in the menu bar: Quick Vault, Open FX Vault (the island while
   locked), Review Sync · N pending… (opens the Sync review, after the unlock when locked), Lock
   Now, Settings… and Quit. It shows counts only, never names or values.
 - **File secrets.** Add a key file as a secret from ⋯ More › Add File Secret… or by dropping a

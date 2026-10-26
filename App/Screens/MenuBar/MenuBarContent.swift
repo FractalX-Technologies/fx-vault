@@ -1,13 +1,20 @@
 import AppKit
 import SwiftUI
 
-/// The menu bar item's menu (board MenuBar): Open FX Vault, Review Sync · N pending… (only with
-/// something pending), Lock Now, Settings… and Quit. The quick vault adds its own item (Q1).
+/// The menu bar item's menu (board MenuBar): Quick Vault with its shortcut, Open FX Vault,
+/// Review Sync · N pending… (only with something pending), Lock Now, Settings… and Quit.
 struct MenuBarContent: View {
     let app: AppViewModel
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
+        // The shortcut shows beside it; the menu answers it only while open (the hot key works
+        // everywhere else).
+        Button(QuickVaultCopy.title) {
+            app.openQuickVault()
+        }
+        .keyboardShortcut(app.container.preferences.quickVaultShortcut.keyboardShortcut)
+        .accessibilityIdentifier(AccessibilityID.MenuBar.quickVault)
         Button(MenuBarCopy.openApp) {
             app.openFXVault()
         }

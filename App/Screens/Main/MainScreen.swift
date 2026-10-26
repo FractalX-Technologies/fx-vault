@@ -45,6 +45,7 @@ struct MainScreen: View {
                 }
                 viewModel.presentNextPendingImport()
                 viewModel.presentRequestedSyncReview()
+                viewModel.openRequestedPlace()
             }
             .alert(
                 DestinationCopy.retiredTitle,
@@ -65,6 +66,9 @@ struct MainScreen: View {
             }
             .onChange(of: viewModel.app.isSyncReviewRequested) {
                 viewModel.presentRequestedSyncReview()
+            }
+            .onChange(of: viewModel.app.requestedPlace) {
+                viewModel.openRequestedPlace()
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
                 viewModel.remaskRevealedValues()

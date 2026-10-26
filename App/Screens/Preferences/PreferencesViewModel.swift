@@ -83,7 +83,21 @@ final class PreferencesViewModel: LockObserving {
 
     var quickVaultShortcut: QuickVaultShortcutModel {
         get { app.container.preferences.quickVaultShortcut }
-        set { app.container.preferences.quickVaultShortcut = newValue }
+        set {
+            app.container.preferences.quickVaultShortcut = newValue
+            if !isRecordingShortcut {
+                app.registerQuickVaultHotKey()
+            }
+        }
+    }
+
+    /// The shortcut box listens: the shortcut is off meanwhile, so pressing it records it
+    /// instead of opening the quick vault; the end registers the new one (1.0 Q1).
+    var isRecordingShortcut = false {
+        didSet {
+            guard isRecordingShortcut != oldValue else { return }
+            app.setQuickVaultHotKeySuspended(isRecordingShortcut)
+        }
     }
 
     /// On while registered, also while System Settings still has to allow it.

@@ -97,6 +97,8 @@ extension Theme {
         static let emptyStateIcon = Font.system(size: Theme.Layout.emptyStateIconSize, weight: .light)
         /// The symbol over a dialog's message (board Share-Expired).
         static let dialogSymbol = Font.system(size: Theme.Layout.shareRefusedSymbolSize)
+        /// The lock on a Copy that asks for Touch ID first (board QuickVault-Place).
+        static let lockBadge = Font.system(size: 7, weight: .bold)
 
         /// Point sizes of the scale.
         enum Size {

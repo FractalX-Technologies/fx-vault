@@ -176,14 +176,16 @@ struct JumpPaletteView: View {
 
 /// One row, a place or a name: its symbol, the name with the typed text in bold (mono for names
 /// from GitHub and Azure and for secrets, sans for folders), what and where it is, and ↩ on the
-/// selected row.
-private struct JumpRow: View {
+/// selected row. The quick vault's rows trade the ↩ for the pending dot (board QuickVault-Search).
+struct JumpRow: View {
     let systemImage: String
     let name: String
     let titleStyle: SidebarTitleStyle
     let detail: String
     let highlight: Range<String.Index>?
     let isSelected: Bool
+    var showsReturnKey = true
+    var hasPendingChanges = false
     let open: () -> Void
 
     var body: some View {
@@ -204,7 +206,13 @@ private struct JumpRow: View {
                     .lineLimit(1)
                     .truncationMode(.head)
                 Spacer(minLength: 0)
-                if isSelected {
+                if hasPendingChanges {
+                    Circle()
+                        .fill(Theme.Colors.ink)
+                        .frame(width: Theme.Layout.changedDotSize, height: Theme.Layout.changedDotSize)
+                        .help(NotesCopy.pendingMark)
+                }
+                if isSelected, showsReturnKey {
                     KeyHint("↩")
                 }
             }

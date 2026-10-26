@@ -661,6 +661,12 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         jumpPalette = nil
     }
 
+    /// The place the quick vault's Expand asked for (1.0 Q1), once the window shows.
+    func openRequestedPlace() {
+        guard let target = app.takePlaceRequest() else { return }
+        jump(to: target)
+    }
+
     /// Selects the place in the sidebar (clearing its search so the row shows) and closes the
     /// palette.
     func jump(to target: JumpPlaceTarget) {

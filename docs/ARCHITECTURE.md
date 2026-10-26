@@ -1039,7 +1039,9 @@ AppTests).
   test host never touches `~/Library`, the keychain or gh). Properties: `vaultManager`, `data:
   VaultDataComponents`, `reauth: ReauthGate`, `preferences`, `clipboard`, `autoLock`,
   `ghStatusProbe`, `dockBadge`, `passphraseGenerator`, `vaultDirectory`, `clock`,
-  `connectivity`, `gitHubReachability`, `hasSideEffects`. `live()` uses
+  `connectivity`, `gitHubReachability`, `hasSideEffects`, `quickVaultHotKey` (1.0 Q1:
+  `CarbonQuickVaultHotKey` live, `RecordedQuickVaultHotKey` in previews, tests and UI tests, so no
+  test takes ⌃⌥V from the developer). `live()` uses
   `GitHubEnvironmentStatusProbe` and `NWPathMonitorSource`; `preview()` a `FixedGHStatusProbe`
   and a `FixedNetworkPathSource` (always online; tests pass their own monitor).
 - `AppBootstrap` (`.ready(AppViewModel)` / `.failed(ErrorPresentationModel)`), owned by
@@ -1053,7 +1055,11 @@ AppTests).
   GitHub plus destination changes), `isSyncing` /
   `beginSyncActivity() -> SyncActivity`, `pendingImports` / `openShareFiles(_:)` /
   `takeNextPendingImport()`, `setMainWindowOpener(_:)` / `requestMainWindow()`, the menu bar's
-  `openFXVault()` (the island while `unlocksInIsland`, the rule `attachMainWindow` shares) and
+  `openFXVault()` (the island while `unlocksInIsland`, the rule `attachMainWindow` shares), the
+  quick vault's `quickVault`, `openQuickVault()` / `toggleQuickVault()` (the hot key),
+  `isQuickVaultRequested` (locked: the island unlocks, then `didUnlock()` opens the quick vault in
+  place of the window), `registerQuickVaultHotKey()` / `setQuickVaultHotKeySuspended(_:)` (the
+  Settings recorder) and `requestPlace(_:)` / `takePlaceRequest()` (Expand; a lock clears it) and
   `offersSyncReview` / `requestSyncReview()` / `takeSyncReviewRequest()` (a flag the main window
   consumes after the unlock; a lock clears it, and so does the Sync sheet it was chosen over),
   `canLock` (⌃⌘L and Lock Now), `hasChangesToSync` (shared by Sync and Review Sync),
@@ -1132,6 +1138,19 @@ AppTests).
   main window; it appears whenever FX Vault is active; `didUnlock()` shows "Unlocked" and opens
   the window. Recovery and the Touch ID offer call `showLockWindow()`; cancelling recovery
   presents the island again. Without side effects (tests, previews) there is no island.
+- Quick vault (1.0 Q1, `App/Screens/QuickVault/`): `QuickVaultHotKeyRegistering` registers the
+  Settings shortcut with Carbon's `RegisterEventHotKey` (no Accessibility or Input Monitoring
+  permission; macOS delivers that one combination only). `QuickVaultViewModel` (a lock observer)
+  reads the places once per open, off the main actor where the repository is an actor:
+  `ConfigRepository.repositories()`, organizations, environments, Key Vaults and folders through
+  `SidebarGrouping` and `JumpPlaces`; recent places are ids in memory (5). A place's lines come
+  from the main window's detail view model for it (`NotesPlaceModel`: Repo, Folder, Destination,
+  Organization), so Reveal is N1's `NotesRevealModel`; `QuickVaultPlaceViewModel` adds Copy (a
+  secret not revealed asks `ReauthPurpose.copyValue`, then `copyValue(of:)` /
+  `copyOrganizationValue(of:)` through `ClipboardManager`). `QuickVaultController` shows it in
+  a `NotchIslandPanel` and closes it on resign-active or the panel's resign-key, except while a
+  check runs; esc or the shortcut gives the focus back to the app it opened over.
+  `RepoPendingCountModel.pendingScopes` marks a scope waiting for Sync.
 - `Onboarding`, then `Connect` (`AppViewModel.isFirstConnectPending`, in memory only: a lock
   or relaunch goes to the main window; steps GitHub then Azure, `ConnectAzureModel` lists
   through `AzureDiscoveryRepository` and imports each checked vault as a Key Vault of its own

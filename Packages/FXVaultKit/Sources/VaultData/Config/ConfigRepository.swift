@@ -487,6 +487,12 @@ public struct ConfigRepository: Sendable {
 
     // MARK: - Observation
 
+    /// Every repository in the vault, once (1.0 Q1: the quick vault reads its places when it
+    /// opens; the sidebar observes them instead).
+    public func repositories() throws(ConfigRepositoryError) -> [RepoModel] {
+        try performConfig { try RepoStore(database: session.database).fetchAll() }
+    }
+
     /// Every repository (sidebar), now and after each change.
     public func observeRepositories() -> AsyncThrowingStream<[RepoModel], any Error> {
         RepoStore(database: session.database).observeAll()
@@ -534,7 +540,8 @@ public struct ConfigRepository: Sendable {
             counts[inputs.repository.id] = RepoPendingCountModel(
                 pending: changeSet.pendingCount,
                 blocked: changeSet.blocked.count,
-                valueMissing: liveScopes.reduce(0) { $0 + $1.valueMissingCount }
+                valueMissing: liveScopes.reduce(0) { $0 + $1.valueMissingCount },
+                pendingScopes: Set(liveScopes.filter(\.hasPendingChanges).map(\.scope))
             )
         }
         return PendingCountsModel(repositories: counts)

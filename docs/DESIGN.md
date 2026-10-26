@@ -960,12 +960,37 @@ foreground color, so `.primary` text still turns white on selected rows.
 - A `MenuBarExtra` (menu style) with `Theme.Symbols.menuBar` (`circle.grid.3x3.fill`, the brand
   mark's dot grid), named after the app; left out in unit tests and previews
   (`AppContainer.hasSideEffects`).
-- `MenuBarContent`: Open FX Vault (the main window; while locked, the island instead, so no window
+- `MenuBarContent`: Quick Vault (1.0 Q1) with the Settings shortcut as its key equivalent
+  (`QuickVaultShortcutModel.keyboardShortcut`), Open FX Vault (the main window; while locked, the island instead, so no window
   opens only to close), Review Sync · N pending… (only with changes pending, no Sync running and
   onboarding done; the Sync review, after the unlock when locked; without gh or the internet
   only the window; chosen over the Sync sheet it does nothing), a
   divider, Lock Now (disabled unless unlocked), Settings… ⌘,, a divider, Quit FX Vault ⌘Q.
-- Counts only: the menu never shows a name or a value. "Quick Vault ⌃⌥V" at the top comes with Q1.
+- Counts only: the menu never shows a name or a value.
+
+### Quick vault (boards QuickVault-Search, -Place, -Locked, -Expanding)
+
+- `QuickVaultView` in its own `NotchIslandPanel` (`QuickVaultController`), placed by
+  `NotchGeometry` like the island (top centre under the menu bar without a notch), with a shadow
+  over other apps' windows; the island's chrome is shared (`.notchIsland(notchHeight:width:)`:
+  the notch band, `island` black, lower corners 20 pt, dark scheme). 600 pt wide
+  (`quickVaultWidth`), a list of a fixed 300 pt (`quickVaultListHeight`) so search and place keep
+  one size.
+- Search: a 36 pt field (`quickVaultFieldHeight`, "Search places and names"), then "Recent" (the
+  empty query, once a place was opened) or "Places", and "Secrets by name" while typing; rows are
+  ⌘K's `JumpRow` without the return key, with an ink dot (`NotesCopy.pendingMark`) on a place
+  waiting for Sync. ↑↓ move across both sections, ↩ opens, ⌘↩ expands. Footer: `KeyHint`s "↩
+  open · ⌘↩ expand · esc close".
+- Place: the path (`.caption`, `mutedText`) over the bold name, an outline Expand (⌘↩); the
+  place's own lines (`quickVaultLineHeight` 27 pt, mono names, N1's `NotesValueView`: masked
+  token, `no value`, file label), each with Copy, a lock badge (`Typography.lockBadge`, 7 pt bold)
+  on a secret's; "Copied NAME" after. A secret's Copy or Reveal shows `ReauthView` with Cancel in
+  place of the lines. Footer: eye.slash "Hidden from screen capture · closes when FX Vault locks".
+- Locked: the island with the dot grid, "Touch ID to open Quick Vault" and the field drawn
+  disabled, no name, value or count; after the unlock the island gives way to the quick vault
+  without "Unlocked".
+- Expanding: no morph; the panel closes and the main window opens on the place (deviation from
+  the board's animation).
 
 ### Settings
 

@@ -168,6 +168,17 @@ enum AccessibilityID {
         static let field = "jump.field"
     }
 
+    /// The quick vault from the notch (1.0 Q1; boards QuickVault-*). Each line's Copy shares
+    /// ``copy``; its label names the line.
+    enum QuickVault {
+        static let panel = "quickVault"
+        static let field = "quickVault.field"
+        static let expand = "quickVault.expand"
+        static let lines = "quickVault.lines"
+        static let copy = "quickVault.copy"
+        static let confirm = "quickVault.confirm"
+    }
+
     /// The item editor sheets (repository, folder, destination and organization items).
     enum ItemEditor {
         static let name = "itemEditor.name"
@@ -211,6 +222,7 @@ enum AccessibilityID {
 
     /// The menu bar item's menu (1.0 M1).
     enum MenuBar {
+        static let quickVault = "menuBar.quickVault"
         static let open = "menuBar.open"
         static let reviewSync = "menuBar.reviewSync"
         static let lockNow = "menuBar.lockNow"
