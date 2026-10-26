@@ -244,6 +244,38 @@ struct ConfigEnvironmentTests {
         let synced = try #require(try await scopes.next())
         #expect(synced.allSatisfy { !$0.hasPendingChanges })
     }
+
+    /// The sidebar's count after a repository (1.0 D6d, board Main2-Repository): live secrets
+    /// without a value at the repository level and in its live environments.
+    @Test func aRepositoryCountsItsSecretsWithoutAValue() async throws {
+        let harness = try await ConfigHarness.make()
+        let repo = try harness.seedRepository()
+        let staging = try harness.config.createEnvironment(in: repo.id, name: "staging")
+        let preview = try harness.config.createEnvironment(in: repo.id, name: "preview")
+        let old = try harness.add(repo, "OLD_KEY", value: ConfigFixture.valueA)
+        let imported = [
+            try harness.add(repo, "API_KEY", value: ConfigFixture.valueA),
+            try harness.add(repo, "STAGING_KEY", value: ConfigFixture.valueB, scope: .environment(staging)),
+            try harness.add(repo, "PREVIEW_KEY", value: ConfigFixture.valueC, scope: .environment(preview)),
+            old,
+        ]
+        try harness.add(repo, "MODE", kind: .variable, value: "test")
+        try harness.add(repo, "FILLED", value: ConfigFixture.valueB)
+        try harness.markSynced(repo)
+        // Imported from GitHub: names only.
+        for var row in try harness.store.fetchItemRecords(repositoryID: repo.id) where imported.contains(row.id) {
+            row.valueCiphertext = nil
+            row.valueFingerprint = nil
+            try harness.store.updateItem(row)
+        }
+        #expect(try harness.config.pendingCounts().counts(for: repo.id).valueMissing == 4)
+
+        // A tombstone and a deleted environment's secrets wait for Sync; they are not missing.
+        try harness.config.deleteItems([old], repositoryID: repo.id)
+        try harness.config.deleteEnvironment(preview)
+        #expect(try harness.config.pendingCounts().counts(for: repo.id).valueMissing == 2)
+        #expect(try harness.config.pendingCounts().counts(for: RepoID()).valueMissing == 0)
+    }
 }
 
 private extension PendingCountsModel {

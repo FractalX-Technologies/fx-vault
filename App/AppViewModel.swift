@@ -368,6 +368,11 @@ final class AppViewModel {
         pendingCounts.counts(for: repositoryID).pending + (destinationPendingCounts[repositoryID] ?? 0)
     }
 
+    /// A repository's secrets without a value in FX Vault (the sidebar's count, 1.0 D6d).
+    func valueMissingCount(of repositoryID: RepoID) -> Int {
+        pendingCounts.counts(for: repositoryID).valueMissing
+    }
+
     /// Starts a sync activity (the sync sheet holds it for the whole run).
     func beginSyncActivity() -> SyncActivity {
         let activity = SyncActivity(assertion: container.autoLock.beginSyncActivity()) { [weak self] ended in

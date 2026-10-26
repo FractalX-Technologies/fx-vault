@@ -233,6 +233,18 @@ struct SidebarCount: View {
     }
 }
 
+/// How many secrets of a repository, scope or Key Vault have no value in FX Vault (board
+/// Main2-Repository: "api-service 3"); nothing at zero.
+struct SidebarValueMissingCount: View {
+    let count: Int
+
+    var body: some View {
+        if count > 0 {
+            SidebarCount(value: count, help: SidebarCopy.valueMissingHelp(count))
+        }
+    }
+}
+
 /// The ink dot of a node with changes waiting for the next Sync.
 struct SidebarPendingDot: View {
     var body: some View {

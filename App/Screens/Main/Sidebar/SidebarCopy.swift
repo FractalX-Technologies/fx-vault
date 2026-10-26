@@ -17,6 +17,11 @@ enum SidebarCopy {
     static let addByName = String(localized: "main.sidebar.addByName.menu", defaultValue: "Add Repository by Name…")
     static let newEnvironment = String(localized: "main.scopes.newEnvironment.menu", defaultValue: "New Environment…")
 
+    /// The help of a count of secrets without a value (a repository, a scope, a Key Vault).
+    static func valueMissingHelp(_ count: Int) -> String {
+        String(localized: "main.scopes.valueMissing.help", defaultValue: "\(count) secrets have no value in FX Vault")
+    }
+
     static func expand(_ name: String) -> String {
         String(localized: "main.sidebar.expand", defaultValue: "Show what is in \(name)")
     }

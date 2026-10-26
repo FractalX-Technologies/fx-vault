@@ -3103,17 +3103,6 @@
         }
       }
     },
-    "destination.valueMissing.help" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld secrets have no value in FX Vault"
-          }
-        }
-      }
-    },
     "destinationDrift.added" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

@@ -58,9 +58,7 @@ private struct KeyVaultRow: View {
         ) {
             sidebar.selectedKeyVaultID = vault.id
         } trailing: {
-            if vault.valueMissingCount > 0 {
-                SidebarCount(value: vault.valueMissingCount, help: DestinationCopy.valueMissingHelp(vault.valueMissingCount))
-            }
+            SidebarValueMissingCount(count: vault.valueMissingCount)
             if vault.pendingCount > 0 {
                 SidebarPendingDot()
             }
