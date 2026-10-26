@@ -29,7 +29,10 @@ final class AccountsUITests: VaultUITestCase {
         XCTAssertTrue(tenant.waitForExistence(timeout: timeout), "the signed-in tenant is not listed")
         XCTAssertTrue(tenant.staticTexts["Example"].exists)
         XCTAssertTrue(tenant.staticTexts["No vaults in FX Vault"].exists)
-        XCTAssertTrue(app.staticTexts[AccessibilityID.Setup.command("az logout")].exists, "Sign out of Azure gives az logout")
+        XCTAssertTrue(
+            app.staticTexts[AccessibilityID.Setup.command("az logout")].waitForExistence(timeout: timeout),
+            "Sign out of Azure gives az logout"
+        )
 
         click(app.buttons[AccessibilityID.Accounts.azureChooseVaults(tenantID)])
         let vault = app.checkBoxes[AccessibilityID.Connect.vault("kv-example-prod")]

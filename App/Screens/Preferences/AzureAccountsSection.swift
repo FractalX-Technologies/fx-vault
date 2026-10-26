@@ -26,22 +26,24 @@ struct AzureAccountsSection: View {
                 if viewModel.showsSignOut {
                     HairlineDivider()
                     PreferencesRow(AzureAccountsCopy.signOut) {
-                        AzureCommandControl(command: AzureAccountsCopy.logoutCommand, viewModel: viewModel)
+                        AzureCommand(command: AzureAccountsCopy.logoutCommand, viewModel: viewModel)
                     }
+                    // A container first: an id on the row alone would replace its children's ids.
+                    .accessibilityElement(children: .contain)
                     .accessibilityIdentifier(AccessibilityID.Accounts.azureSignOut)
                 }
             }
             if let copied = viewModel.copiedCommand {
-                HStack(spacing: Theme.Spacing.small) {
-                    PreferencesFootnote(AzureAccountsCopy.copied(copied))
-                    Spacer(minLength: 0)
-                    Button(AzureAccountsCopy.checkAgain) {
-                        Task { await viewModel.checkAgain() }
+                VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                    CommandCheckSteps(
+                        message: AzureAccountsCopy.copied(copied),
+                        checkAgainID: AccessibilityID.Accounts.azureCheckAgain,
+                        isChecking: viewModel.isLoading
+                    ) {
+                        await viewModel.checkAgain()
                     }
-                    .fxButtonStyle(.outline, size: .compact)
-                    .disabled(viewModel.isLoading)
-                    .accessibilityIdentifier(AccessibilityID.Accounts.azureCheckAgain)
                 }
+                .padding(.horizontal, Theme.Spacing.xSmall)
             }
             if let result = viewModel.importResult {
                 PreferencesFootnote(Self.resultText(result))
@@ -129,7 +131,7 @@ private struct AzureTenantRow: View {
                 .disabled(viewModel.isImporting)
                 .accessibilityIdentifier(AccessibilityID.Accounts.azureChooseVaults(tenant.id))
             case .notSignedIn:
-                AzureCommandControl(command: tenant.loginCommand, viewModel: viewModel)
+                AzureCommand(command: tenant.loginCommand, viewModel: viewModel)
             case .unknown:
                 EmptyView()
             }
@@ -139,34 +141,14 @@ private struct AzureTenantRow: View {
     }
 }
 
-/// A command to run in Terminal, in mono, and Copy (Copied once it is on the clipboard). The
-/// command can be long (a tenant id): it truncates in the middle and its help shows it whole.
-private struct AzureCommandControl: View {
+/// An `az` command to run in Terminal, inline at a row's trailing edge, Copied once copied.
+private struct AzureCommand: View {
     let command: String
     let viewModel: AzureAccountsViewModel
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.smallMinus) {
-            Text(verbatim: command)
-                .fxTextStyle(.monoLabel)
-                .foregroundStyle(Theme.Colors.mutedText)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .textSelection(.enabled)
-                .help(command)
-                .accessibilityIdentifier(AccessibilityID.Setup.command(command))
-            Button {
-                viewModel.copy(command)
-            } label: {
-                if viewModel.copiedCommand == command {
-                    Label(String(localized: "settings.advanced.diagnostics.copied", defaultValue: "Copied"), systemImage: "checkmark")
-                } else {
-                    Label(String(localized: "command.copy", defaultValue: "Copy"), systemImage: "doc.on.doc")
-                }
-            }
-            .fxButtonStyle(.outline, size: .compact)
-            .fixedSize()
-            .help(String(localized: "command.copy.help", defaultValue: "Copy the command"))
+        CommandRow(command: command, style: .inline, isCopied: viewModel.copiedCommand == command) {
+            viewModel.copy($0)
         }
     }
 }

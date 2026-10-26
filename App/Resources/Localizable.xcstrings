@@ -793,6 +793,17 @@
         }
       }
     },
+    "command.copied" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied"
+          }
+        }
+      }
+    },
     "command.copy" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -1020,6 +1031,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "FX Vault does not run %@: another user can change it. Reinstall the Azure CLI."
+          }
+        }
+      }
+    },
+    "connect.azure.vault.saved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ · In FX Vault"
           }
         }
       }
@@ -14356,17 +14378,6 @@
         }
       }
     },
-    "settings.accounts.azure.checkAgain" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Check Again"
-          }
-        }
-      }
-    },
     "settings.accounts.azure.choose.add" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -14374,17 +14385,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Add Vaults"
-          }
-        }
-      }
-    },
-    "settings.accounts.azure.choose.saved" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ · In FX Vault"
           }
         }
       }
@@ -14539,6 +14539,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "^[%lld vault](inflect: true)"
+          }
+        }
+      }
+    },
+    "settings.accounts.checkAgain" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check Again"
           }
         }
       }
@@ -14704,17 +14715,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Your shell sets %@. gh in Terminal uses that token instead of the accounts listed here; FX Vault ignores it and uses only the accounts gh stores. To store one, run:"
-          }
-        }
-      }
-    },
-    "settings.accounts.unmapped.checkAgain" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Check Again"
           }
         }
       }

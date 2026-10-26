@@ -137,20 +137,16 @@ private struct GHLoginSteps: View {
     var afterCheck: () -> Void = {}
 
     var body: some View {
-        Text(message)
-            .fxTextStyle(.formNote)
-            .foregroundStyle(Theme.Colors.subtleText)
-            .fixedSize(horizontal: false, vertical: true)
-        CommandRow(command: GHSetupViewModel.loginCommand) { viewModel.copy($0) }
-        Button(String(localized: "settings.accounts.unmapped.checkAgain", defaultValue: "Check Again")) {
-            Task {
-                await viewModel.checkAgain()
-                afterCheck()
-            }
+        CommandCheckSteps(
+            message: message,
+            command: GHSetupViewModel.loginCommand,
+            checkAgainID: checkAgainID,
+            isChecking: viewModel.isLoading,
+            onCopy: { viewModel.copy($0) }
+        ) {
+            await viewModel.checkAgain()
+            afterCheck()
         }
-        .fxButtonStyle(.outline, size: .compact)
-        .disabled(viewModel.isLoading)
-        .accessibilityIdentifier(checkAgainID)
     }
 }
 

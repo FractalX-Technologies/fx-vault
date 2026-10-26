@@ -136,6 +136,11 @@ struct DestinationRepositoryTests {
         #expect(try fixture.destinations.destination(older)?.subscription == production)
         try fixture.destinations.setSubscription(KeyVaultSubscriptionModel(id: UUID(), name: " "), of: older)
         #expect(try fixture.destinations.destination(older)?.subscription == production)
+        // Bidi controls and invisible characters never reach the sidebar.
+        try fixture.destinations.setSubscription(KeyVaultSubscriptionModel(id: production.id, name: "Example\u{202E} Production\u{200B}"), of: older)
+        #expect(try fixture.destinations.destination(older)?.subscription == production)
+        try fixture.destinations.setSubscription(KeyVaultSubscriptionModel(id: UUID(), name: "\u{200B}\u{202E}"), of: older)
+        #expect(try fixture.destinations.destination(older)?.subscription == production)
         #expect(configError {
             try fixture.destinations.setSubscription(production, of: DestinationID())
         } == .destinationNotFound)

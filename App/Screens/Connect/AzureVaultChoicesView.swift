@@ -95,7 +95,7 @@ private struct ConnectVaultRow: View {
                 Text(verbatim: vault.name)
                     .fxTextStyle(.bodyEmphasized)
                     .foregroundStyle(Theme.Colors.ink)
-                Text(verbatim: isSaved ? AzureAccountsCopy.vaultSaved(location: vault.location) : vault.location)
+                Text(verbatim: isSaved ? ConnectCopy.vaultSaved(location: vault.location) : vault.location)
                     .fxTextStyle(.caption)
                     .foregroundStyle(Theme.Colors.subtleText)
             }

@@ -313,6 +313,11 @@ trusted for that path (below). Details: [API.md](API.md).
   classified only after JWTs and GitHub token patterns are redacted, and never logged.
   Settings › Accounts › Azure (1.0 S1b) runs `az account list` only and keeps each tenant's id
   and `tenantDisplayName`; the listing's `user` (the signed-in account's email) is never read.
+  Subscription and tenant names are cleaned of bidi controls and invisible characters
+  (`DisplayNameSanitizer`) when `az` lists them and again when a subscription is saved, and a
+  tenant goes into `az login --tenant` only when it is an id or a domain
+  (`DestinationRules.isValidTenantID`). A lock ends Add Vaults: the import task is cancelled
+  and nothing after the lock is imported, even after a quick unlock (`lockCount`).
   `az login --tenant <id>` and `az logout` are interactive, so Settings gives them to copy and
   never runs them.
 

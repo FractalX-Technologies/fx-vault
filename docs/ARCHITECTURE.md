@@ -1165,8 +1165,10 @@ AppTests).
   for gh: `AzureTenantRowModel.rows` builds one row per tenant from the Key Vaults of their own
   and `AzureDiscoveryRepository.subscriptions()` (`az account list`, the only `az` it runs;
   `tenantDisplayName`, never the user); Choose Vaults… is a `ConnectAzureModel` with
-  `.tenant(id)` scope in a sheet, which leaves the vaults already in FX Vault out; the logins
-  are Copy-only),
+  `.tenant(id)` scope in a sheet, which leaves the vaults already in FX Vault out; Add Vaults
+  runs in a task the lock cancels, and the import and the listing compare `lockCount`, so a
+  lock and a quick unlock end them and they never touch a sheet opened later; the logins are
+  Copy-only, inline `CommandRow`s, with `CommandCheckSteps` for Check Again),
   Advanced (v0.3.1: the trusted gh with its owner and **Revoke**).
 - `Main` (§10.4), `MainViewModel` owns:
   - `SidebarViewModel` (`Main/Sidebar`): vault repositories observed (work without gh), gh
