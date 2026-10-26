@@ -655,7 +655,8 @@ read; a `selected` item reaches only through the `org_item_repositories` list FX
 already made, records only `last_refreshed_at` and returns `OrgRefreshModel` (not stored: the
 view keeps it). A name this Mac's Sync deleted within `Timeouts.recentDeletionSuppression` is not
 reported as added (D28): organization Sync keeps no journal, so `OrgDeletionLog` (in memory,
-one instance shared by both actors in `VaultDataComponents`) holds those deletions. An `OrgDriftModel` reuses SyncEngine's `DriftKind` (`.secretModified` /
+one instance shared by both actors in `VaultDataComponents`, a required init argument of each so
+no construction drops it) holds those deletions. An `OrgDriftModel` reuses SyncEngine's `DriftKind` (`.secretModified` /
 `.variableModified` when `updatedAt` or the visibility differs, or the count of a `selected` item
 whose list FX Vault doesn't hold; `.remoteAdded`; `.remoteDeleted`) and is keyed by
 `OrgItemKey` (kind and folded name). `resolve(_:option:organizationID:)` takes a

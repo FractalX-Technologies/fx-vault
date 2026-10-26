@@ -133,6 +133,28 @@ struct OrganizationDriftTests {
         }
     }
 
+    /// GitHub changed the item again between Refresh and the choice: the reviewed finding is
+    /// stale and nothing is written.
+    @Test func aFindingWhoseGitHubDateMovedAgainIsStale() async throws {
+        let fixture = try await Self.fixture()
+        let organizations = fixture.base.organizations
+        let id = fixture.organization.id
+        Self.scriptChanged(fixture)
+        let refreshed = try await organizations.refresh(organizationID: id).findings
+        let npm = try #require(refreshed.first { $0.name == "NPM_TOKEN" })
+        let before = try await fixture.item("NPM_TOKEN")
+
+        let movedAgain = Self.changedSecrets.replacingOccurrences(of: "2026-10-20T10:00:00Z", with: "2026-10-22T10:00:00Z")
+        fixture.base.scriptLists(secrets: movedAgain, variables: Self.changedVariables)
+        await #expect(throws: DriftRepositoryError.stale) {
+            try await organizations.resolve([npm], option: .acceptGitHub, organizationID: id)
+        }
+
+        let after = try await fixture.item("NPM_TOKEN")
+        #expect(after.remoteUpdatedAt == before.remoteUpdatedAt)
+        #expect(after.syncStatus == before.syncStatus)
+    }
+
     /// Only a moved date or visibility, or the count of a list FX Vault doesn't hold, is a
     /// change; a pending deletion GitHub still lists stays pending.
     @Test func aChangeIsADateVisibilityOrGitHubsCountAndAPendingDeletionStays() async throws {

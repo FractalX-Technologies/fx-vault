@@ -153,7 +153,8 @@ FXVault/
 │   │                                # SheetCallout, FXCheckboxRow, InlineErrorView,
 │   │                                # FXLinkButtonStyle, fxSheetContent), FlowLayout (v0.6.0),
 │   │                                # KeyHint (1.0), RingDot, DialogChrome (DialogSheet,
-│   │                                # dialog list box, DialogNote, DialogSentence), DialogForm (rows, the field box,
+│   │                                # dialog list box, DialogNoteBox, DialogNote,
+│   │                                # DialogSentence), DialogForm (rows, the field box,
 │   │                                # pop-ups, chips, tags; 1.0 D6d), GlassPanel
 │   │                                # (fxGlassPanel, MainWindowGround; D6c2b)
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,

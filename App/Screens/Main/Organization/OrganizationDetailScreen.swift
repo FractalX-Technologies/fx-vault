@@ -40,6 +40,11 @@ struct OrganizationDetailScreen: View {
                     Text(DriftCopy.nothingChanged)
                         .fxTextStyle(.caption)
                         .foregroundStyle(Theme.Colors.mutedText)
+                    if let note = viewModel.skippedNote {
+                        Text(note)
+                            .fxTextStyle(.caption)
+                            .foregroundStyle(Theme.Colors.mutedText)
+                    }
                 } else {
                     DriftBannerView(count: refresh.findings.count, conflictCount: refresh.findings.filter(\.isConflict).count) {
                         viewModel.reviewChanges()

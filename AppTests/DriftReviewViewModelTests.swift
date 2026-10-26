@@ -69,6 +69,25 @@ struct DriftReviewViewModelTests {
         #expect(model.rows.allSatisfy { !$0.keepLocal.needsConfirmation })
     }
 
+    /// A name added on GitHub and in the vault: Keep Local sends the vault's item (it is not
+    /// deleted on GitHub) and Accept GitHub replaces it, as an organization's review says.
+    @Test func aNameAddedOnBothSidesSaysWhatEachChoiceDoes() async throws {
+        let fixture = try await Fixture(cached: DriftFixtures.report([
+            DriftFixtures.item(.remoteAdded, .secret, "API_TOKEN", isConflict: true),
+            DriftFixtures.item(.remoteAdded, .variable, "BASE_URL", isConflict: true),
+            DriftFixtures.item(.remoteAdded, .secret, "NEW_KEY", itemID: nil),
+        ]))
+        let model = fixture.viewModel
+        await model.load()
+
+        #expect(model.rows[0].keepLocal.explanation == "Yours is sent on the next Sync, replacing GitHub's.")
+        #expect(model.rows[0].acceptGitHub.explanation == DriftCopy.bothAddedAcceptGitHub(.secret, fillsValue: true))
+        #expect(model.rows[1].keepLocal.explanation == DriftCopy.bothAddedKeepLocal)
+        #expect(model.rows[1].acceptGitHub.explanation == DriftCopy.bothAddedAcceptGitHub(.variable, fillsValue: true))
+        #expect(model.rows[2].keepLocal.explanation == "It is deleted on GitHub on the next Sync.")
+        #expect(model.rows[2].acceptGitHub.explanation == DriftCopy.acceptGitHubExplanation(.remoteAdded))
+    }
+
     @Test func otherYearsShowTheYear() async throws {
         let date = try #require(DriftFixtures.october12(year: 2024))
         let now = try #require(DriftFixtures.october12(year: 2026))

@@ -162,13 +162,22 @@ final class DriftReviewViewModel {
         return DriftChoiceModel(
             option: option,
             title: option == .keepLocal ? DriftCopy.keepLocalTitle : DriftCopy.acceptGitHubTitle,
-            explanation: option == .keepLocal
-                ? DriftCopy.keepLocalExplanation(drift.kind)
-                : DriftCopy.acceptGitHubExplanation(drift.kind),
+            explanation: Self.explanation(drift, option),
             unavailableReason: resolution.unavailableReason.map(DriftCopy.unavailable)
                 ?? (isOnline ? nil : ConnectivityCopy.offlineHelp),
             needsConfirmation: Self.needsConfirmation(drift, option)
         )
+    }
+
+    /// What each choice does; a name added on both sides (a conflicting add) keeps or replaces
+    /// the vault's item, so it has its own texts.
+    static func explanation(_ drift: DriftModel, _ option: DriftResolutionOption) -> String {
+        if drift.kind == .remoteAdded, drift.isConflict, case .item(let item) = drift.subject {
+            return option == .keepLocal
+                ? DriftCopy.bothAddedKeepLocal
+                : DriftCopy.bothAddedAcceptGitHub(item.kind, fillsValue: true)
+        }
+        return option == .keepLocal ? DriftCopy.keepLocalExplanation(drift.kind) : DriftCopy.acceptGitHubExplanation(drift.kind)
     }
 
     /// "Accept GitHub" of a remote deletion removes the local row and its value.

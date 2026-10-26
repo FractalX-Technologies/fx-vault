@@ -131,6 +131,32 @@ nonisolated enum DriftCopy {
         }
     }
 
+    /// "Keep Local" of a name added on GitHub and in the vault (a repository's or an
+    /// organization's, 1.0 B7b): the vault's item is sent, it is not deleted on GitHub.
+    static let bothAddedKeepLocal = String(
+        localized: "drift.keepLocal.bothAdded",
+        defaultValue: "Yours is sent on the next Sync, replacing GitHub's."
+    )
+
+    /// "Accept GitHub" of a name added on both sides: GitHub's item replaces the vault's. A
+    /// repository's secret continues in the fill step (`fillsValue`); an organization's has none.
+    static func bothAddedAcceptGitHub(_ itemKind: ConfigKind, fillsValue: Bool) -> String {
+        switch (itemKind, fillsValue) {
+        case (.variable, _):
+            String(localized: "drift.accept.bothAdded.variable", defaultValue: "GitHub's replaces yours in your vault, with its value.")
+        case (.secret, true):
+            String(
+                localized: "drift.accept.bothAdded.secretFill",
+                defaultValue: "GitHub's replaces yours in your vault. GitHub never returns secret values: enter its value next."
+            )
+        case (.secret, false):
+            String(
+                localized: "drift.accept.bothAdded.secret",
+                defaultValue: "GitHub's replaces yours in your vault, without a value: GitHub never returns one."
+            )
+        }
+    }
+
     /// What "Accept GitHub" does for this kind of finding.
     static func acceptGitHubExplanation(_ kind: DriftKind) -> String {
         switch kind {

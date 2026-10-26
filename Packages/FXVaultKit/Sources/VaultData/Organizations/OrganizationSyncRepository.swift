@@ -29,7 +29,7 @@ public actor OrganizationSyncRepository {
         session: VaultSession,
         schedulers: any GHSchedulerProviding,
         clock: any VaultClock = SystemClock(),
-        deletions: OrgDeletionLog = OrgDeletionLog()
+        deletions: OrgDeletionLog
     ) {
         self.session = session
         self.schedulers = schedulers

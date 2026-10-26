@@ -78,6 +78,17 @@ extension ConfigTableModel {
         add()
     }
 
+    /// The selected rows of the visible kind, in table order.
+    var selectedRows: [ConfigRowModel] {
+        rows(for: selection)
+    }
+
+    /// The selection bar needs two of the place's own rows: selected inherited rows (B7a) have
+    /// nothing to count, copy or delete, and a selected row that is gone counts for nothing.
+    var showsSelectionActions: Bool {
+        selectedRows.count > 1
+    }
+
     /// ⌘C needs a selected row of the place's own: an inherited one (B7a) is not copied.
     var canCopySelection: Bool {
         !rows(for: selection).isEmpty

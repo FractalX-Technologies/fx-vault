@@ -47,6 +47,7 @@ struct OrganizationDriftReviewTests {
 
         #expect(await TestFixtures.eventually { detail.refresh != nil && !detail.isRefreshing })
         #expect(detail.findings.map(\.name) == ["API_TOKEN", "DEPLOY_KEY", "NPM_TOKEN", "REGION", "STRIPE_KEY"])
+        #expect(detail.skippedNote == nil, "the review lists the skipped names")
         let npm = try #require(detail.rows.first { $0.name == "NPM_TOKEN" })
         #expect(detail.isChangedOnGitHub(npm))
 
@@ -80,8 +81,8 @@ struct OrganizationDriftReviewTests {
         #expect(deploy.keepLocal.explanation == DriftCopy.keepLocalExplanation(.remoteAdded))
         // Added on both sides: Keep Local sends the vault's; Accept replaces it and asks first.
         #expect(both.isConflict)
-        #expect(both.keepLocal.explanation == OrganizationCopy.conflictKeepLocal)
-        #expect(both.acceptGitHub.explanation == OrganizationCopy.conflictAccept)
+        #expect(both.keepLocal.explanation == DriftCopy.bothAddedKeepLocal)
+        #expect(both.acceptGitHub.explanation == DriftCopy.bothAddedAcceptGitHub(.secret, fillsValue: false))
         #expect(both.acceptGitHub.needsConfirmation)
         #expect(region.acceptGitHub.needsConfirmation)
         #expect(!deploy.acceptGitHub.needsConfirmation)
@@ -111,5 +112,33 @@ struct OrganizationDriftReviewTests {
         #expect(review.findings.map(\.name) == ["API_TOKEN", "STRIPE_KEY"])
         #expect(detail.findings.map(\.name) == ["API_TOKEN", "STRIPE_KEY"])
         #expect(resolved.count == 3)
+    }
+
+    // gitleaks:allow (secret names only, no values)
+    /// The imported listing again, plus one name FX Vault can't hold.
+    static let unchangedSecrets = """
+    [{"name":"STRIPE_KEY","numSelectedRepos":3,"updatedAt":"2026-10-12T10:00:00Z","visibility":"selected"},
+     {"name":"NPM_TOKEN","numSelectedRepos":0,"updatedAt":"2026-08-02T10:00:00Z","visibility":"all"},
+     {"name":"1FXV_FIXTURE_BAD","numSelectedRepos":0,"updatedAt":"2026-10-25T10:00:00Z","visibility":"all"}]
+    """
+
+    /// Nothing to review: the status line says which names were not compared.
+    @Test func aRefreshWithNothingChangedNamesWhatItCouldNotCompare() async throws {
+        let (harness, organization) = try await OrganizationEditingTests().imported()
+        let detail = OrganizationDetailViewModel(
+            organizationID: organization.id,
+            dependencies: harness.dependencies(recorder: ActionRecorder()),
+            organization: { organization },
+            repositoryNames: { [] }
+        )
+        #expect(await TestFixtures.eventually { detail.items.count == 3 })
+        harness.runner.replaceStub(argumentsPrefix: ["secret", "list", "--org=Example-Org"], with: .success(Self.unchangedSecrets))
+        harness.runner.replaceStub(argumentsPrefix: ["variable", "list", "--org=Example-Org"], with: .success(OrganizationViewModelTests.variables))
+
+        detail.refreshNow()
+
+        #expect(await TestFixtures.eventually { detail.refresh != nil && !detail.isRefreshing })
+        #expect(detail.findings.isEmpty)
+        #expect(detail.skippedNote == DriftCopy.skipped(["1FXV_FIXTURE_BAD"]))
     }
 }

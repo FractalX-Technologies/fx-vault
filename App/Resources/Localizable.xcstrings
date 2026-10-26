@@ -3224,6 +3224,39 @@
         }
       }
     },
+    "drift.accept.bothAdded.secret" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub's replaces yours in your vault, without a value: GitHub never returns one."
+          }
+        }
+      }
+    },
+    "drift.accept.bothAdded.secretFill" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub's replaces yours in your vault. GitHub never returns secret values: enter its value next."
+          }
+        }
+      }
+    },
+    "drift.accept.bothAdded.variable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub's replaces yours in your vault, with its value."
+          }
+        }
+      }
+    },
     "drift.accept.deleted" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -3550,6 +3583,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "It is deleted on GitHub on the next Sync."
+          }
+        }
+      }
+    },
+    "drift.keepLocal.bothAdded" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Yours is sent on the next Sync, replacing GitHub's."
           }
         }
       }
@@ -11767,28 +11811,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Your vault takes GitHub's access. GitHub never returns secret values, so its value is missing until you enter it."
-          }
-        }
-      }
-    },
-    "organization.drift.conflict.accept" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "GitHub's replaces yours here; a secret arrives without its value."
-          }
-        }
-      }
-    },
-    "organization.drift.conflict.keepLocal" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Yours is sent on the next Sync, replacing GitHub's."
           }
         }
       }

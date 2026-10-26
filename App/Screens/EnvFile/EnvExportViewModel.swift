@@ -82,7 +82,10 @@ final class EnvExportViewModel: LockObserving {
     private(set) var preview: EnvExportPreviewModel?
     /// Exported items that came from a share and are not verified on GitHub yet (§9.5).
     private(set) var unverifiedShareNames: [String] = []
+    /// "owner/repo" (the file's header), or a folder's name.
     private(set) var repositoryName = ""
+    /// The repository's own name, as the boards title a place ("api-service"); a folder's name.
+    private(set) var placeName = ""
     private(set) var scopeTitle = ""
     /// The repository's clone folder, the save panel's starting folder.
     private(set) var suggestedDirectory: URL?
@@ -210,16 +213,16 @@ final class EnvExportViewModel: LockObserving {
         EnvFilePanels.defaultExportFileName
     }
 
-    /// The title's place (board Main2-Export): "owner/repo › production", the repository alone
+    /// The title's place (board Main2-Export): "api-service › production", the repository alone
     /// for its own scope, a folder's name; "" until the header loads.
     var placeTitle: String {
         if case .scope(_, let scope) = place, scope == .repository {
-            return repositoryName
+            return placeName
         }
-        if repositoryName.isEmpty || scopeTitle.isEmpty {
-            return repositoryName.isEmpty ? scopeTitle : repositoryName
+        if placeName.isEmpty || scopeTitle.isEmpty {
+            return placeName.isEmpty ? scopeTitle : placeName
         }
-        return PlaceCopy.environmentPlace(repository: repositoryName, environment: scopeTitle)
+        return PlaceCopy.environmentPlace(repository: placeName, environment: scopeTitle)
     }
 
     /// The save panel returned `url`: checks iCloud and git, then writes, or asks first when the
@@ -390,16 +393,19 @@ final class EnvExportViewModel: LockObserving {
             case .scope(let repositoryID, let scope):
                 let repository = try config.changeSet(repositoryID: repositoryID)?.repository
                 repositoryName = repository?.fullName ?? ""
+                placeName = repository?.name ?? ""
                 suggestedDirectory = repository?.clonePath.map { URL(filePath: $0, directoryHint: .isDirectory) }
                 scopeTitle = try config.scopes(repositoryID: repositoryID).first { $0.scope == scope }?.title ?? ""
             case .folder(let folderID):
                 // The folder's name in the title; no clone folder to start the save panel in.
                 repositoryName = try folders.folders().first { $0.id == folderID }?.name ?? ""
+                placeName = repositoryName
                 scopeTitle = ""
             case .destination(let destinationID):
                 let destination = try destinations.destination(destinationID)
                 let repository = try destination?.repositoryID.flatMap { try config.changeSet(repositoryID: $0)?.repository }
                 repositoryName = repository?.fullName ?? ""
+                placeName = repository?.name ?? ""
                 suggestedDirectory = repository?.clonePath.map { URL(filePath: $0, directoryHint: .isDirectory) }
                 scopeTitle = destination?.copyTargetTitle ?? ""
             }

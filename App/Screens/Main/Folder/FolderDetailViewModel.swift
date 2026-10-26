@@ -103,10 +103,6 @@ final class FolderDetailViewModel: LockObserving {
         rows.filter { ids.contains($0.id) }
     }
 
-    var selectedRows: [ConfigRowModel] {
-        rows(for: selection)
-    }
-
     func clearSelection() {
         selection.removeAll()
     }
