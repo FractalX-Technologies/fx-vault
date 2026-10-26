@@ -502,6 +502,14 @@ foreground color, so `.primary` text still turns white on selected rows.
   text is the board's notes: `# Secrets · N`, `KEY=value` lines by name, a blank line,
   `# Variables · N`; a secret without a value is `KEY=`, a pending deletion is left out, an empty
   kind has no section.
+- Delete… and Delete Selected… (boards Main2-Delete, Main2-DeleteKeyVault): `DeleteItemsSheet`,
+  a 440 pt `DialogSheet` titled "Delete 2 secrets from api-service › production?" (secrets,
+  variables or items; the place as the toolbar names it), the names in `.fxDialogListBox()`
+  (`.monoMeta`), then muted `.callout` notes: what the next Sync does on GitHub or in Key Vault
+  ("which asks again"), the ones never synced removed now, and "GitHub can’t undo this" (with
+  "FX Vault has no copy of secrets without a value" when such a secret is listed) or "Key Vault
+  keeps deleted secrets recoverable for up to 90 days"; a folder says its items go now. Cancel
+  outlined (Esc) and the red `.destructive` Delete; Return does nothing.
 - An environment row's context menu (board Main2-Actions): Rename…, Duplicate Environment…,
   Share Securely…, Refresh, Revert Changes (only when there is a change to undo; not on the
   board), | Delete Environment….
@@ -825,6 +833,15 @@ These sheets use the sheet chrome components (`SheetHeader`, `.fxSheetContent()`
 `SheetProgressRow`; `.shareListContainer()` draws a native `List` as a hairline `card` container.
 Failures use `Banner(.danger)`.
 
+- `.env` export (board Main2-Export): `EnvExportDialog`, a 580 pt `DialogSheet` titled "Export
+  api-service › production as .env", "Saved readable only by you. Delete it when you’re done."
+  as every step's footer note, Cancel outlined and the step's default an ink pill. Warnings sit
+  in a `DialogNoteBox` (hairline, 10 pt corners, no fill) of `DialogNote` rows (a 13 pt ink
+  symbol, the 12 pt ink sentence; a committed file's octagon in `danger`); "Save to" and
+  "Saved to" are a `DialogStackedField` over the mono path in `dialogFieldChrome`; Add to
+  .gitignore is a `.compact` outline beside its note. Not built: the Include secrets / Include
+  variables checkboxes and the one-step flow (path, warnings, Export with Touch ID): the steps
+  stay ReauthGate, warnings, save panel, iCloud check, written.
 - `.env` import: File / Paste as a `SegmentedPill`; the preview `Table` uses `.fxTable()` and
   `.fxTableCell()`, mono names (`.monoName`), the line number as `TableMetaText`, the kind as a
   neutral chip that toggles Secret / Variable (filled = secret, outlined = variable), "Make
@@ -873,6 +890,7 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 | Sync-Review | `.fxSheetBackground`, `SyncSummaryCardView` (`.fxCardBackground(.container)`), `.leadEmphasized`, `.placeName`, `.monoMeta`, `FXLinkButtonStyle`, `FXButtonStyle(.large)` |
 | Sync-Delete, Sync-Progress, Sync-Done | `SyncDeletionsView` (`.fxDialogListBox`), `SyncRunView` (`SyncProgressPresentation`), `SyncDoneView`, `FXButtonStyle(.dialog)` |
 | NewRepo, NewEnvironment | `CreateRepoFormView`, `NewEnvironmentScreen`, `BranchPolicyEditorView`, `DialogForm.swift` |
+| Main2-Delete, Main2-DeleteKeyVault, Main2-Export | `DeleteItemsSheet`, `EnvExportDialog`, `DialogNoteBox`, `DialogStackedField` |
 | FX Vault Destinations 3: Key Vault destination | `DestinationDetailScreen`, the RUNTIME rows of `ScopeListView` |
 | FX Vault Destinations 4: multi-provider Sync review | `DestinationSyncPresentation` sections in the Sync sheet |
 

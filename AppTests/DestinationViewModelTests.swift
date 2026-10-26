@@ -109,6 +109,7 @@ struct DestinationViewModelTests {
 
         // A pending add is removed at once and can be reverted only before.
         model.requestDeletion(of: [row])
+        #expect(model.deletionSheet?.notes == ["It was never synced, so it’s removed now."])
         model.confirmDeletion()
         #expect(await TestFixtures.eventually { model.rows.isEmpty })
 

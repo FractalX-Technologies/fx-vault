@@ -88,6 +88,7 @@ struct EnvFileExportViewModelTests {
         #expect(model.exportedCount == 2)
         #expect(model.repositoryName == "\(TestFixtures.owner)/\(TestFixtures.repoName)")
         #expect(model.scopeTitle == "Repository")
+        #expect(model.placeTitle == "\(TestFixtures.owner)/\(TestFixtures.repoName)")
         #expect(model.showsTouchIDButton)
         #expect(model.defaultAction == .touchID)
         model.password = "typed"

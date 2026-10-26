@@ -193,6 +193,13 @@ final class FolderDetailViewModel: LockObserving {
         requestDeletion(of: selectedRows)
     }
 
+    /// The "Delete?" sheet of ``pendingDeletion``.
+    var deletionSheet: DeleteItemsSheetModel? {
+        pendingDeletion.map {
+            DeleteItemsSheetModel(entries: $0.map(DeleteItemsSheetModel.Entry.init), place: folder?.name ?? "", target: .folder)
+        }
+    }
+
     /// Deletes at once (a folder has no GitHub side); linked copies elsewhere stay.
     func confirmDeletion() {
         guard let rows = pendingDeletion else { return }

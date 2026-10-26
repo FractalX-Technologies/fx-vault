@@ -418,7 +418,7 @@ enum SyncPresentationBuilder {
         return SyncPlaceModel(
             id: scope.journalKey,
             systemImage: Theme.Symbols.environment,
-            name: SyncCopy.environmentPlace(repository: repository, environment: environmentName),
+            name: PlaceCopy.environmentPlace(repository: repository, environment: environmentName),
             kind: SyncCopy.environmentKind
         )
     }

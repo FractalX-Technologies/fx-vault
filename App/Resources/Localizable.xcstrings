@@ -2454,6 +2454,193 @@
         }
       }
     },
+    "delete.sheet.gitHub.all" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "They’re removed from GitHub at the next Sync, which asks again."
+          }
+        }
+      }
+    },
+    "delete.sheet.gitHub.irreversible" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub can’t undo this."
+          }
+        }
+      }
+    },
+    "delete.sheet.gitHub.irreversible.valueMissing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "GitHub can’t undo this, and FX Vault has no copy of secrets without a value."
+          }
+        }
+      }
+    },
+    "delete.sheet.gitHub.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It’s removed from GitHub at the next Sync, which asks again."
+          }
+        }
+      }
+    },
+    "delete.sheet.gitHub.some" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld of them are removed from GitHub at the next Sync, which asks again."
+          }
+        }
+      }
+    },
+    "delete.sheet.gitHub.someOne" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "One of them is removed from GitHub at the next Sync, which asks again."
+          }
+        }
+      }
+    },
+    "delete.sheet.items" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld item](inflect: true)"
+          }
+        }
+      }
+    },
+    "delete.sheet.keyVault.all" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "They’re deleted in Key Vault at the next Sync, which asks again."
+          }
+        }
+      }
+    },
+    "delete.sheet.keyVault.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It’s deleted in Key Vault at the next Sync, which asks again."
+          }
+        }
+      }
+    },
+    "delete.sheet.keyVault.recoverable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Key Vault keeps deleted secrets recoverable for up to 90 days."
+          }
+        }
+      }
+    },
+    "delete.sheet.keyVault.some" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld of them are deleted in Key Vault at the next Sync, which asks again."
+          }
+        }
+      }
+    },
+    "delete.sheet.keyVault.someOne" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "One of them is deleted in Key Vault at the next Sync, which asks again."
+          }
+        }
+      }
+    },
+    "delete.sheet.local.all" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "None of them was synced yet, so they’re removed now."
+          }
+        }
+      }
+    },
+    "delete.sheet.local.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It was never synced, so it’s removed now."
+          }
+        }
+      }
+    },
+    "delete.sheet.secrets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld secret](inflect: true)"
+          }
+        }
+      }
+    },
+    "delete.sheet.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete %1$@ from %2$@?"
+          }
+        }
+      }
+    },
+    "delete.sheet.variables" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld variable](inflect: true)"
+          }
+        }
+      }
+    },
     "destination.add" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2494,17 +2681,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Copied %lld items. Open a scope, folder or destination and paste them with ⌘V: the copies stay linked to these items."
-          }
-        }
-      }
-    },
-    "destination.delete.message" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Items already in the destination are deleted there by the next Sync, after you confirm. Their linked copies elsewhere stay."
           }
         }
       }
@@ -3675,24 +3851,24 @@
         }
       }
     },
-    "envExport.cloud.desktopAndDocuments" : {
+    "envExport.cloud.desktopAndDocuments.note" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This folder syncs to iCloud (Desktop & Documents). The plaintext file would be uploaded to iCloud and indexed by Spotlight."
+            "value" : "This folder syncs to iCloud (Desktop & Documents), so the file leaves this Mac and Spotlight indexes it."
           }
         }
       }
     },
-    "envExport.cloud.drive" : {
+    "envExport.cloud.drive.note" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This folder syncs to iCloud Drive. The plaintext file would be uploaded to iCloud and indexed by Spotlight."
+            "value" : "This folder syncs to iCloud Drive, so the file leaves this Mac and Spotlight indexes it."
           }
         }
       }
@@ -3763,6 +3939,17 @@
         }
       }
     },
+    "envExport.footer" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved readable only by you. Delete it when you’re done."
+          }
+        }
+      }
+    },
     "envExport.git.added" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -3818,13 +4005,13 @@
         }
       }
     },
-    "envExport.git.notIgnored" : {
+    "envExport.git.notIgnored.note" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "git does not ignore %1$@. Add %2$@ to the repository's .gitignore so it is never committed?"
+            "value" : "This folder is a git working tree and %@ isn’t ignored."
           }
         }
       }
@@ -3906,6 +4093,28 @@
         }
       }
     },
+    "envExport.saveTo" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save to"
+          }
+        }
+      }
+    },
+    "envExport.savedTo" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved to"
+          }
+        }
+      }
+    },
     "envExport.skipped.collisions" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -3928,28 +4137,6 @@
         }
       }
     },
-    "envExport.subtitle" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$@"
-          }
-        }
-      }
-    },
-    "envExport.subtitle.unknown" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Write this scope's values to a .env file."
-          }
-        }
-      }
-    },
     "envExport.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -3957,6 +4144,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Export .env"
+          }
+        }
+      }
+    },
+    "envExport.title.place" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Export %@ as .env"
           }
         }
       }
@@ -7382,28 +7580,6 @@
         }
       }
     },
-    "folder.deleteItems.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete %lld items?"
-          }
-        }
-      }
-    },
-    "folder.deleteItems.title.one" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete this item?"
-          }
-        }
-      }
-    },
     "folder.destination" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9626,17 +9802,6 @@
         }
       }
     },
-    "main.detail.delete.message" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ is deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
-          }
-        }
-      }
-    },
     "main.detail.delete.names.more" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9644,50 +9809,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ and %2$lld more"
-          }
-        }
-      }
-    },
-    "main.detail.delete.several.confirm" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete %lld Items"
-          }
-        }
-      }
-    },
-    "main.detail.delete.several.message" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ are deleted on GitHub by the next Sync, after you confirm the deletion there. Revert undoes it until then."
-          }
-        }
-      }
-    },
-    "main.detail.delete.several.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete %lld items?"
-          }
-        }
-      }
-    },
-    "main.detail.delete.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete this item?"
           }
         }
       }

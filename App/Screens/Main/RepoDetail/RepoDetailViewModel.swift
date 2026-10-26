@@ -71,18 +71,9 @@ struct ConfigRowModel: Identifiable, Hashable {
 }
 
 /// The rows waiting for the "Delete?" confirmation: one row, or a multi-selection (v0.4.0).
+/// Rows on GitHub wait for the next Sync's deletion review; rows never synced go at once.
 struct ConfigDeletionModel: Hashable {
     let rows: [ConfigRowModel]
-
-    /// The rows on GitHub: the next Sync deletes them there after its deletion review.
-    var syncedRows: [ConfigRowModel] {
-        rows.filter(\.isSynced)
-    }
-
-    /// The rows never synced: they are removed from the vault at once.
-    var unsyncedCount: Int {
-        rows.count - syncedRows.count
-    }
 }
 
 /// A copy into another scope waiting for "Replace or keep?": the target already has `conflicts`.
@@ -238,6 +229,13 @@ final class RepoDetailViewModel: LockObserving {
             return summary.title
         }
         return repository?.name ?? ""
+    }
+
+    /// "api-service › production" for an environment, the repository's name for its own scope
+    /// (the "Delete?" sheet's title, board Main2-Delete).
+    var placeName: String {
+        guard scope.level == .environment, let repository else { return headerTitle }
+        return PlaceCopy.environmentPlace(repository: repository.name, environment: headerTitle)
     }
 
     /// "Environment · api-service · 6 secrets · 2 variables · 1 without value", or "Repository ·
@@ -711,6 +709,11 @@ final class RepoDetailViewModel: LockObserving {
     /// ⌫ on the table: Delete… for the selected rows.
     func deleteSelection() {
         requestDeletion(of: selectedRows)
+    }
+
+    /// The "Delete?" sheet of ``pendingDeletion``.
+    var deletionSheet: DeleteItemsSheetModel? {
+        pendingDeletion.map { DeleteItemsSheetModel(entries: $0.rows.map(DeleteItemsSheetModel.Entry.init), place: placeName, target: .gitHub) }
     }
 
     func confirmDeletion() {

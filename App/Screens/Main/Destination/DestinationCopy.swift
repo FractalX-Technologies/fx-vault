@@ -148,13 +148,6 @@ nonisolated enum DestinationCopy {
         String(localized: "destination.table.fill", defaultValue: "Fill Value…")
     }
 
-    static var deleteItemsMessage: String {
-        String(
-            localized: "destination.delete.message",
-            defaultValue: "Items already in the destination are deleted there by the next Sync, after you confirm. Their linked copies elsewhere stay."
-        )
-    }
-
     // MARK: Errors
 
     static var syncErrorTitle: String {

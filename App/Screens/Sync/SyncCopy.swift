@@ -454,11 +454,6 @@ nonisolated enum SyncCopy {
         String(localized: "sync.place.organization", defaultValue: "organization")
     }
 
-    /// "api-service › production".
-    static func environmentPlace(repository: String, environment: String) -> String {
-        String(localized: "sync.place.environmentName", defaultValue: "\(repository) › \(environment)")
-    }
-
     /// The summary footer: "9 changes in 3 places · 1 deletion · 1 blocked".
     static func summaryCounts(changes: Int, places: Int, deletions: Int, blocked: Int) -> String {
         // Automatic grammar agreement: "1 change in 1 place", "9 changes in 3 places".

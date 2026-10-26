@@ -174,7 +174,7 @@ struct ResetVaultSheet: View {
             ),
             isWorking: viewModel.isResetting
         ) {
-            field(String(localized: "settings.reset.password", defaultValue: "Master password")) {
+            DialogStackedField(String(localized: "settings.reset.password", defaultValue: "Master password")) {
                 SecureField(text: $viewModel.resetPassword) {
                     Text(String(localized: "settings.reset.password", defaultValue: "Master password"))
                 }
@@ -182,7 +182,7 @@ struct ResetVaultSheet: View {
                 .focused($focusedField, equals: .password)
                 .fxInputField(.dialog, isFocused: focusedField == .password, isMonospaced: true)
             }
-            field(confirmLabel) {
+            DialogStackedField(confirmLabel) {
                 TextField(text: $viewModel.resetConfirmationText, prompt: Text(verbatim: PreferencesViewModel.resetConfirmationWord)) {
                     Text(confirmLabel)
                 }
@@ -214,16 +214,5 @@ struct ResetVaultSheet: View {
             localized: "settings.reset.confirm",
             defaultValue: "Type \(PreferencesViewModel.resetConfirmationWord) to confirm"
         )
-    }
-
-    /// An 11 pt label over its 28 pt field; the field carries the label for VoiceOver.
-    private func field(_ label: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Layout.dialogNoteSpacing) {
-            Text(label)
-                .fxTextStyle(.formLabel)
-                .foregroundStyle(Theme.Colors.subtleText)
-                .accessibilityHidden(true)
-            content()
-        }
     }
 }

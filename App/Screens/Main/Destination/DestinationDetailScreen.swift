@@ -37,26 +37,12 @@ struct DestinationDetailScreen: View {
             Task { await viewModel.handlePaste(providers) }
         }
         .errorAlert($viewModel.alert)
-        .confirmationDialog(
-            FolderCopy.deleteItemsTitle(count: viewModel.pendingDeletion?.count ?? 0),
-            isPresented: deletionBinding,
-            titleVisibility: .visible,
-            presenting: viewModel.pendingDeletion
-        ) { rows in
-            Button(FolderCopy.deleteItemsConfirm(count: rows.count), role: .destructive) {
-                viewModel.confirmDeletion()
-            }
-        } message: { _ in
-            Text(DestinationCopy.deleteItemsMessage)
+        .deleteItemsSheet(viewModel.deletionSheet) {
+            viewModel.pendingDeletion = nil
+        } confirm: {
+            viewModel.confirmDeletion()
         }
         .modifier(ItemCopyConflictDialog(viewModel: viewModel))
-    }
-
-    private var deletionBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.pendingDeletion != nil },
-            set: { if !$0 { viewModel.pendingDeletion = nil } }
-        )
     }
 }
 

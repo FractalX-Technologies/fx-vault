@@ -51,7 +51,8 @@ FXVault/
 │   │   │   │                        # pure), JumpPaletteViewModel, JumpPaletteView, JumpPaletteCopy
 │   │   │   ├── Place/               # every place's header (D6c3): PlaceHeader (name, subline,
 │   │   │   │                        # status line, ⋯ More), PlaceCopy,
-│   │   │   │                        # PlaceItemMoreItems (⋯ item actions), PlaceRefreshingLine
+│   │   │   │                        # PlaceItemMoreItems (⋯ item actions), PlaceRefreshingLine,
+│   │   │   │                        # DeleteItemsSheet (the "Delete?" dialog of every place)
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
 │   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel

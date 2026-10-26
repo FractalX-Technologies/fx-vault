@@ -94,6 +94,13 @@ final class OrganizationDetailViewModel {
         }
     }
 
+    /// The "Delete?" sheet of ``pendingDeletion``.
+    var deletionSheet: DeleteItemsSheetModel? {
+        pendingDeletion.map {
+            DeleteItemsSheetModel(entries: $0.map(DeleteItemsSheetModel.Entry.init), place: organization?.login ?? "", target: .gitHub)
+        }
+    }
+
     func confirmDeletion() {
         guard let rows = pendingDeletion else { return }
         pendingDeletion = nil
