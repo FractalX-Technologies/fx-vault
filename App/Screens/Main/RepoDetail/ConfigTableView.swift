@@ -47,11 +47,8 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
                                 Text(PlaceCopy.inherited)
                                     .fxTextStyle(.caption)
                                     .foregroundStyle(Theme.Colors.mutedText)
-                            } else if row.isHeld {
-                                StatusChip(title: HeldShareCopy.chip, tone: .warning)
-                                    .help(viewModel.heldHelp(for: row))
                             } else {
-                                ConfigStatusLabel(row: row)
+                                ConfigStatusLabel(row: row, heldHelp: viewModel.heldHelp(for: row))
                             }
                         }
                         .fxTableCell()
@@ -82,8 +79,8 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
             viewModel.deleteSelection()
         }
         // ⌘C copies the selected items (v0.4.0): ⌘V in another scope, repository or folder pastes
-        // them as linked copies (v0.4.1, v0.7.0). Disabled with nothing selected.
-        .onCommand(#selector(NSText.copy(_:)), perform: viewModel.selection.isEmpty ? nil : { viewModel.copySelection() })
+        // them as linked copies (v0.4.1, v0.7.0). Disabled with nothing of the place's own selected.
+        .onCommand(#selector(NSText.copy(_:)), perform: viewModel.canCopySelection ? { viewModel.copySelection() } : nil)
         .overlay {
             if rows.isEmpty {
                 EmptyStateView(
@@ -167,22 +164,31 @@ extension ConfigTableView where Model == RepoDetailViewModel, RowMenu == ConfigR
     }
 }
 
-/// A row's sync status, then "· Overrides example-org" when an organization item of the same
-/// name reaches the repository and this one wins (B7a; board Place-Table).
+/// A row's sync status (or the Held chip, v0.9.0), then "· Overrides example-org" when an
+/// organization item of the same name reaches the repository and this one wins (B7a; board
+/// Place-Table).
 private struct ConfigStatusLabel: View {
     let row: ConfigRowModel
+    let heldHelp: String
 
     var body: some View {
+        let overridesHelp = row.overrides.map(PlaceCopy.overridesHelp) ?? ""
         HStack(spacing: Theme.Spacing.smallMinus) {
-            StatusDotLabel(status: row.status)
+            if row.isHeld {
+                StatusChip(title: HeldShareCopy.chip, tone: .warning)
+                    .help(heldHelp)
+            } else {
+                StatusDotLabel(status: row.status)
+                    .help(overridesHelp)
+            }
             if let organization = row.overrides {
                 Text(PlaceCopy.overrides(organization))
                     .fxTextStyle(.caption)
                     .foregroundStyle(Theme.Colors.mutedText)
                     .lineLimit(1)
+                    .help(overridesHelp)
             }
         }
-        .help(row.overrides.map(PlaceCopy.overridesHelp) ?? "")
     }
 }
 

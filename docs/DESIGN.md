@@ -508,8 +508,10 @@ foreground color, so `.primary` text still turns white on selected rows.
   "example-org · all repos" (`OrgVisibility.reachTitle`) in `.caption`, the value masked (a
   variable's in plaintext), Updated from GitHub, and Status "Inherited" in `mutedText`. They
   have no menu, no edit and no actions. The repository's (or the environment's) own item of the
-  same name shows "· Overrides example-org" in `mutedText` after its status; in an environment
-  the repository level's names also keep the organization's out.
+  same name shows "· Overrides example-org" in `mutedText` after its status (after the Held chip
+  too); in an environment the repository level's names also keep the organization's out.
+  FX Vault doesn't know the organization's plan: on GitHub Free private repositories can't use
+  organization items, yet their all and private rows still say Inherited.
 - ⋯ More (board Main2-Actions), what each place offers, disabled when the account may not:
   New Secret, New Variable | Paste Multiple…, Import .env…, Export .env…, Copy All | Copy To
   (the selection, or the open tab when nothing is selected), Share Securely… | Deployment

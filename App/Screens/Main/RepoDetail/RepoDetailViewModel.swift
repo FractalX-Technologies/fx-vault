@@ -386,7 +386,12 @@ final class RepoDetailViewModel: LockObserving {
         rows(for: selection)
     }
 
-    /// The rows of `ids` in table order (a context menu's rows can differ from the selection).
+    /// The selection bar needs two of the scope's own rows: selected inherited rows (B7a) have
+    /// nothing to count, copy or delete.
+    var showsSelectionActions: Bool {
+        selectedRows.count > 1
+    }
+
     /// The table: the scope's own rows (one that overrides an organization item says so), then
     /// the organization's items this repository gets and nothing here overrides, read only
     /// (board Place-Table). Actions only ever see ``rows``.
@@ -408,6 +413,7 @@ final class RepoDetailViewModel: LockObserving {
             .map { ConfigRowModel(inherited: $0, organization: inherited.organizationLogin) }
     }
 
+    /// The rows of `ids` in table order (a context menu's rows can differ from the selection).
     func rows(for ids: Set<ConfigItemID>) -> [ConfigRowModel] {
         rows.filter { ids.contains($0.id) }
     }
