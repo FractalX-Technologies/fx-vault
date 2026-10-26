@@ -664,16 +664,17 @@ one instance shared by both actors in `VaultDataComponents`, a required init arg
 no construction drops it) holds those deletions. An `OrgDriftModel` reuses SyncEngine's `DriftKind` (`.secretModified` /
 `.variableModified` when `updatedAt` or the visibility differs, or which repositories a `selected`
 item FX Vault doesn't edit reaches: the folded names when both lists are known, else the count;
-`.remoteAdded`; `.remoteDeleted`). Refresh reads B14/B15 for each `selected` item and stores
-GitHub's list where the vault's is unknown and nothing else changed and is keyed by
-`OrgItemKey` (kind and folded name). `resolve(_:option:organizationID:)` takes a
-`DriftResolutionOption`, lists again, and throws `DriftRepositoryError` (`.stale` when a finding
+`.remoteAdded`; `.remoteDeleted`) and is keyed by `OrgItemKey` (kind and folded name). Refresh
+reads B14/B15 for each `selected` item and stores GitHub's list where the vault's is unknown and
+nothing else changed. `resolve(_:option:organizationID:)` takes a `DriftResolutionOption`, lists
+again (B14/B15 only for the findings it resolves), and throws `DriftRepositoryError` (`.stale` when a finding
 moved: another row, or another GitHub date than the one reviewed; `.resolutionUnavailable(.valueMissing)`
 for Keep Local without the vault's value).
 Accept GitHub writes GitHub's visibility, count, list, date and a variable's value as synced (a
 secret whose date moved loses its value; under the same date it keeps it); Keep Local records GitHub's state as synced so the vault's item is
 pending over it (a remote add becomes a pending deletion, a remote deletion an add; a list GitHub
-changed becomes an edited list, so Sync sends the vault's back). `DEKRotator` re-seals organization
+changed, or a `selected` item GitHub moved to another visibility, keeps the vault's list as an
+edited one, so Sync sends it back). `DEKRotator` re-seals organization
 values with the same `synced_fp` rule as destinations.
 
 **.env files** (`EnvFiles/`). `struct EnvFileRepository(session:gitignoreChecker:

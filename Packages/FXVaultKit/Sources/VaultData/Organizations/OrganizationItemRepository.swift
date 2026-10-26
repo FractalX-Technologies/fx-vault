@@ -128,12 +128,13 @@ public struct OrganizationItemRepository: Sendable {
                 }
                 if item.repositoriesEdited || item.visibility != synced {
                     // GitHub's count and list are unknown once the access was edited; Refresh reads them.
+                    // Otherwise the stored list is GitHub's and stays.
                     item.selectedCount = nil
+                    try store.replaceRepositories(itemID: id, names: [], in: tx)
                 }
                 item.isDeleted = false
                 item.visibility = synced
                 item.repositoriesEdited = false
-                try store.replaceRepositories(itemID: id, names: [], in: tx)
                 item.updatedAt = now
                 try store.updateItem(item, in: tx)
             }

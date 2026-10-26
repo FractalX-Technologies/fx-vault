@@ -198,7 +198,8 @@ extension OrganizationRepository {
             }) else {
                 throw .organizationNotFound
             }
-            listing = try await list(organization)
+            // Only the resolved findings' lists: the other rows fall back to the count.
+            listing = try await list(organization, readingListsOf: Set(findings.map { OrgItemKey.make($0.itemKind, $0.name) }))
         } catch {
             throw Self.driftError(error)
         }
@@ -324,19 +325,21 @@ extension OrganizationRepository {
         row.remoteUpdatedAt = listed.updatedAt
         // A secret's value on GitHub is unknown, so the vault's is sent.
         row.syncedFingerprint = listed.value.map { keys.fingerprint($0, rowID: row.id) }
-        guard row.visibility == .selected, listed.visibility == .selected, !row.repositoriesEdited else { return }
-        if !stored.isEmpty, let names = listed.repositories, !sameRepositories(stored, names) {
-            // The list the vault read is kept: Sync sends it back.
+        guard row.visibility == .selected, !row.repositoriesEdited else { return }
+        let githubChangedList = listed.visibility != .selected || listed.repositories.map { !sameRepositories(stored, $0) } == true
+        if !stored.isEmpty, githubChangedList {
+            // The list the vault read is kept: Sync sends it back, whatever GitHub has now.
             row.repositoriesEdited = true
             row.selectedCount = stored.count
-        } else {
+        } else if listed.visibility == .selected {
             row.selectedCount = listed.selectedCount
         }
     }
 
     // MARK: - Listing
 
-    func list(_ organization: OrganizationRecord) async throws(RepoCatalogError) -> Listing {
+    /// B12/B13, then B14/B15 for each `selected` item, or only those in `keys` when given.
+    func list(_ organization: OrganizationRecord, readingListsOf keys: Set<String>? = nil) async throws(RepoCatalogError) -> Listing {
         let secrets: [GHSecretDTO]
         let variables: [GHVariableListingModel]
         do throws(GHError) {
@@ -376,7 +379,7 @@ extension OrganizationRepository {
             throw error
         }
         let lists = await Self.selectedRepositories(
-            of: items.values.map { ($0.kind, $0.name, $0.visibility) },
+            of: items.filter { keys?.contains($0.key) ?? true }.values.map { ($0.kind, $0.name, $0.visibility) },
             organization: organization.login,
             accountLogin: organization.accountLogin,
             schedulers: schedulers
