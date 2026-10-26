@@ -46,7 +46,7 @@ struct NewEnvironmentScreen: View {
                     )
                     .disabled(!viewModel.canEdit)
                     if let note = viewModel.nameNote {
-                        DialogFormNote(note.message, tone: note.dialogTone)
+                        ConfigEditorNoteView(note: note, style: .dialog)
                     }
                 }
                 DialogFormRow(BranchPolicyEditorView.formLabel) {

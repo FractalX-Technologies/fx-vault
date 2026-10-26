@@ -87,28 +87,32 @@ nonisolated enum SyncCopy {
                 symbol: .added,
                 name: item.name,
                 detail: kind,
-                text: String(localized: "sync.summary.item.added", defaultValue: "+ \(item.name) (\(kind))")
+                text: String(localized: "sync.summary.item.added", defaultValue: "+ \(item.name) (\(kind))"),
+                kind: item.kind
             )
         case .modified:
             return SyncChangeLineModel(
                 symbol: .modified,
                 name: item.name,
                 detail: kind,
-                text: String(localized: "sync.summary.item.modified", defaultValue: "~ \(item.name) (\(kind))")
+                text: String(localized: "sync.summary.item.modified", defaultValue: "~ \(item.name) (\(kind))"),
+                kind: item.kind
             )
         case .deleted:
             return SyncChangeLineModel(
                 symbol: .deleted,
                 name: item.name,
                 detail: lineDetail(kind, deletedOnGitHub),
-                text: String(localized: "sync.summary.item.deleted", defaultValue: "− \(item.name) (\(kind))")
+                text: String(localized: "sync.summary.item.deleted", defaultValue: "− \(item.name) (\(kind))"),
+                kind: item.kind
             )
         case .renamed(let from):
             return SyncChangeLineModel(
                 symbol: .modified,
                 name: item.name,
                 detail: lineDetail(kind, String(localized: "sync.summary.item.renamedFrom", defaultValue: "renamed from \(from)")),
-                text: String(localized: "sync.summary.item.renamed", defaultValue: "\(from) → \(item.name) (\(kind))")
+                text: String(localized: "sync.summary.item.renamed", defaultValue: "\(from) → \(item.name) (\(kind))"),
+                kind: item.kind
             )
         }
     }

@@ -49,7 +49,7 @@ extension SyncCopy {
     }
 
     static var deletionsCardKind: String {
-        String(localized: "sync.progress.deletions.kind", defaultValue: "after the other writes")
+        String(localized: "sync.progress.deletions.afterEveryWrite", defaultValue: "after every write")
     }
 
     /// "blocked · Value missing locally": a change of the run that will not be written.
@@ -76,8 +76,8 @@ extension SyncCopy {
 
     static var deletionSubtitle: String {
         String(
-            localized: "sync.deletions.subtitle",
-            defaultValue: "Confirm before Sync starts. Deletions run after the other writes."
+            localized: "sync.deletions.subtitleBoard",
+            defaultValue: "Confirm before Sync starts. Deletions run after every write."
         )
     }
 
@@ -104,11 +104,11 @@ extension SyncCopy {
 
     /// One change that stays pending: "Add secret DOCKER_PASSWORD in production · Value missing locally."
     static func donePending(_ issue: SyncIssueModel) -> String {
-        "\(issue.title) · \(issue.reason)"
+        lineDetail(issue.title, issue.reason)
     }
 
-    /// "and 3 more stay pending".
+    /// "and 3 more pending".
     static func donePendingMore(_ count: Int) -> String {
-        String(localized: "sync.done.pendingMore", defaultValue: "and \(count) more stay pending")
+        String(localized: "sync.done.pendingMore.short", defaultValue: "and \(count) more pending")
     }
 }

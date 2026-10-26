@@ -38,7 +38,7 @@ struct SyncResultView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Layout.compactSheetInset)
+            .padding(.horizontal, Theme.Layout.dialogInset)
         }
     }
 
@@ -107,7 +107,7 @@ struct SyncDoneView: View {
                     .font(Theme.Typography.title2)
                     .foregroundStyle(Theme.Colors.success)
                     .frame(width: Theme.Layout.syncDoneMarkSize, height: Theme.Layout.syncDoneMarkSize)
-                    .overlay(Circle().strokeBorder(Theme.Colors.success, lineWidth: Theme.Layout.syncWaitingDotStroke))
+                    .overlay(RingDot(color: Theme.Colors.success, size: Theme.Layout.syncDoneMarkSize))
                     .accessibilityHidden(true)
                 Text(verbatim: SyncCopy.doneTitle(count: done.syncedCount))
                     .fxTextStyle(.leadEmphasized)
@@ -118,10 +118,7 @@ struct SyncDoneView: View {
                 }
                 ForEach(done.pending.prefix(Self.pendingLimit)) { issue in
                     HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.smallMinus) {
-                        Circle()
-                            .strokeBorder(Theme.Colors.ink, lineWidth: Theme.Layout.syncWaitingDotStroke)
-                            .frame(width: Theme.Layout.syncWaitingDotSize, height: Theme.Layout.syncWaitingDotSize)
-                            .accessibilityHidden(true)
+                        RingDot()
                         Text(verbatim: SyncCopy.donePending(issue))
                             .fxTextStyle(.caption)
                             .foregroundStyle(Theme.Colors.ink)
@@ -141,7 +138,7 @@ struct SyncDoneView: View {
                 .fxButtonStyle(.primary, size: .dialog)
                 .keyboardShortcut(.defaultAction)
         }
-        .padding(Theme.Layout.compactSheetInset)
+        .padding(Theme.Layout.dialogInset)
         .frame(width: Theme.Layout.syncDoneWidth)
     }
 

@@ -1,8 +1,8 @@
 import SwiftUI
 
 // The form of a 1.0 dialog (boards NewRepo, NewEnvironment): a 150 pt column of 11 pt labels,
-// 28 pt fields (`.fxInputField(.dialog)`) and pop-up buttons, 11 pt notes under them, and name
-// chips. Sheets put the rows 14 pt apart between a `.leadEmphasized` title and the footer.
+// 28 pt fields and pop-up buttons in one box (``DialogFieldChrome``), 11 pt notes under them
+// (`ConfigEditorNoteView(style: .dialog)`), and name chips. Rows sit 14 pt apart.
 
 /// One row: the label, 14 pt from its controls and notes. The controls carry their own
 /// accessibility labels, so the column label is hidden from VoiceOver.
@@ -31,53 +31,12 @@ struct DialogFormRow<Content: View>: View {
     }
 }
 
-/// An 11 pt note under a control: muted, or red when it blocks the primary action.
-struct DialogFormNote: View {
-    enum Tone: Sendable {
-        case muted
-        case warning
-        case danger
-    }
-
-    let text: String
-    var tone: Tone = .muted
-
-    init(_ text: String, tone: Tone = .muted) {
-        self.text = text
-        self.tone = tone
-    }
-
-    var body: some View {
-        Text(verbatim: text)
-            .fxTextStyle(.formNote)
-            .foregroundStyle(color)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private var color: Color {
-        switch tone {
-        case .muted: Theme.Colors.mutedText
-        case .warning: Theme.Colors.warning
-        case .danger: Theme.Colors.danger
-        }
-    }
-}
-
-extension ConfigEditorNoteModel {
-    /// The tone of the same note under a dialog form's control.
-    var dialogTone: DialogFormNote.Tone {
-        switch tone {
-        case .error: .danger
-        case .warning: .warning
-        case .info, .success: .muted
-        }
-    }
-}
-
-/// A switch with its title after it ("Add README", "Clone to my Mac"); the title toggles it too.
+/// A switch with its title after it ("Add README", "Clone to my Mac"); the title toggles it too,
+/// unless the row is disabled.
 struct DialogSwitch: View {
     let title: String
     @Binding var isOn: Bool
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         HStack(spacing: Theme.Spacing.small) {
@@ -87,25 +46,42 @@ struct DialogSwitch: View {
                 .labelsHidden()
             Text(title)
                 .fxTextStyle(.callout)
-                .foregroundStyle(Theme.Colors.ink)
-                .onTapGesture { isOn.toggle() }
+                .foregroundStyle(isEnabled ? Theme.Colors.ink : Theme.Colors.mutedText)
+                .onTapGesture {
+                    if isEnabled { isOn.toggle() }
+                }
                 .accessibilityHidden(true)
         }
     }
 }
 
-extension View {
-    /// The box of a dialog form's field-like control: 28 pt, 7 pt corners, `card` with a strong
-    /// hairline (``DialogFieldButtonStyle``, a value shown without a menu).
-    func dialogFieldChrome() -> some View {
+/// The one box of a dialog form's fields, pop-ups and shown values: 28 pt, 7 pt corners, `card`
+/// with a hairline in `border` (strong at rest; ink focused, danger invalid for a text field).
+/// It fades once when disabled, so a control inside must not fade again.
+struct DialogFieldChrome: ViewModifier {
+    var border: Color = Theme.Colors.hairlineStrong
+    /// A pop-up's chevrons sit closer to the edge than a text field's last character.
+    var trailingInset: CGFloat = Theme.Spacing.small
+    @Environment(\.isEnabled) private var isEnabled
+
+    func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.field, style: .continuous)
-        return padding(.leading, Theme.Spacing.mediumMinus)
-            .padding(.trailing, Theme.Spacing.small)
-            .frame(height: Theme.Layout.dialogFieldHeight)
-            .frame(maxWidth: .infinity)
+        content
+            .padding(.leading, Theme.Spacing.mediumMinus)
+            .padding(.trailing, trailingInset)
+            .frame(maxWidth: .infinity, minHeight: Theme.Layout.dialogFieldHeight)
             .background(Theme.Colors.card, in: shape)
-            .overlay(shape.stroke(Theme.Colors.hairlineStrong, lineWidth: Theme.Stroke.hairline).padding(Theme.Stroke.hairline / 2))
+            .overlay(shape.strokeBorder(border, lineWidth: Theme.Stroke.hairline))
             .contentShape(shape)
+            .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
+    }
+}
+
+extension View {
+    /// ``DialogFieldChrome``: a value shown without a menu, or the body of
+    /// ``DialogFieldButtonStyle`` and `.fxInputField(.dialog)`.
+    func dialogFieldChrome(border: Color = Theme.Colors.hairlineStrong, trailingInset: CGFloat = Theme.Spacing.small) -> some View {
+        modifier(DialogFieldChrome(border: border, trailingInset: trailingInset))
     }
 }
 
@@ -124,7 +100,6 @@ struct DialogFieldButtonStyle: ButtonStyle {
 private struct DialogFieldButtonBody: View {
     let style: DialogFieldButtonStyle
     let configuration: ButtonStyleConfiguration
-    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         HStack(spacing: Theme.Spacing.small) {
@@ -143,7 +118,6 @@ private struct DialogFieldButtonBody: View {
         }
         .dialogFieldChrome()
         .opacity(configuration.isPressed ? Theme.Opacity.pressed : 1)
-        .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
     }
 }
 
@@ -275,9 +249,11 @@ private struct DialogAddChipLabelStyle: LabelStyle {
             )
         }
         DialogFormRow("Name") {
-            TextField("Name", text: .constant("billing-service"))
-                .fxInputField(.dialog, isMonospaced: true)
-            DialogFormNote("Probably available · GitHub confirms it at Sync")
+            TextField(text: .constant("billing-service")) {
+                Text(verbatim: "Name")
+            }
+            .fxInputField(.dialog, isMonospaced: true)
+            ConfigEditorNoteView(note: .info("Probably available · GitHub confirms it at Sync"), style: .dialog)
         }
         DialogFormRow("Environments to create") {
             FlowLayout(spacing: Theme.Spacing.smallMinus) {
@@ -287,7 +263,7 @@ private struct DialogAddChipLabelStyle: LabelStyle {
             }
         }
     }
-    .padding(Theme.Layout.compactSheetInset)
+    .padding(Theme.Layout.dialogInset)
     .frame(width: Theme.Layout.createRepoSheetWidth)
     .background(Theme.Colors.card)
 }

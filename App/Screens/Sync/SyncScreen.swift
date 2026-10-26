@@ -48,8 +48,8 @@ struct SyncScreen: View {
     private var steps: some View {
         VStack(spacing: 0) {
             header
-                .padding(.horizontal, Theme.Layout.compactSheetInset)
-                .padding(.top, Theme.Layout.compactSheetInset)
+                .padding(.horizontal, Theme.Layout.dialogInset)
+                .padding(.top, Theme.Layout.dialogInset)
                 .padding(.bottom, Theme.Spacing.mediumMinus)
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

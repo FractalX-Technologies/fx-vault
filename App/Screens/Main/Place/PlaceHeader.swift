@@ -106,16 +106,6 @@ extension PlaceHeader where Status == EmptyView, Accessories == EmptyView {
     }
 }
 
-/// The ring of a place changed on GitHub (board Main2-Repository; the sidebar's mark in B7).
-struct ChangedOnGitHubDot: View {
-    var body: some View {
-        Circle()
-            .strokeBorder(Theme.Colors.ink, lineWidth: Theme.Stroke.changedDot)
-            .frame(width: Theme.Layout.changedDotSize, height: Theme.Layout.changedDotSize)
-            .accessibilityHidden(true)
-    }
-}
-
 extension View {
     /// A place's column (boards Main2): 28 pt sides, 20 pt top and bottom, the content at the
     /// top leading corner.

@@ -151,9 +151,9 @@ enum SheetFooterInset {
     /// below, 12 pt above (the content ends just before it).
     static let dialog = EdgeInsets(
         top: Theme.Spacing.medium,
-        leading: Theme.Layout.compactSheetInset,
-        bottom: Theme.Layout.compactSheetInset,
-        trailing: Theme.Layout.compactSheetInset
+        leading: Theme.Layout.dialogInset,
+        bottom: Theme.Layout.dialogInset,
+        trailing: Theme.Layout.dialogInset
     )
 }
 
@@ -316,20 +316,43 @@ struct ConfigEditorNoteModel: Hashable {
     }
 }
 
-/// Renders a ``ConfigEditorNoteModel`` with its icon and semantic color.
+/// Renders a ``ConfigEditorNoteModel`` with its icon and semantic color. The `.dialog` style
+/// is the 11 pt note of a 1.0 dialog form (boards NewRepo, NewEnvironment): muted, or in the
+/// tone's color for a warning or an error; only an error keeps its icon, so it does not rely
+/// on color alone.
 struct ConfigEditorNoteView: View {
+    enum Style: Hashable {
+        case standard
+        case dialog
+    }
+
     let note: ConfigEditorNoteModel
+    var style: Style = .standard
 
     var body: some View {
-        Label {
-            Text(note.message)
-                .fixedSize(horizontal: false, vertical: true)
-        } icon: {
-            Image(systemName: Self.systemImage(for: note.tone))
-                .foregroundStyle(Self.tint(for: note.tone))
+        switch style {
+        case .standard:
+            Label {
+                Text(note.message)
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: Self.systemImage(for: note.tone))
+                    .foregroundStyle(Self.tint(for: note.tone))
+            }
+            .fxTextStyle(.caption)
+            .foregroundStyle(Self.textColor(for: note.tone))
+        case .dialog:
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.xSmall) {
+                if note.isError {
+                    Image(systemName: Self.systemImage(for: note.tone))
+                        .accessibilityHidden(true)
+                }
+                Text(verbatim: note.message)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .fxTextStyle(.formNote)
+            .foregroundStyle(Self.dialogTextColor(for: note.tone))
         }
-        .fxTextStyle(.caption)
-        .foregroundStyle(Self.textColor(for: note.tone))
     }
 
     // MARK: Resolution (pure)
@@ -355,6 +378,15 @@ struct ConfigEditorNoteView: View {
     /// Feedback reads in ink; explanations in muted text.
     static func textColor(for tone: ConfigEditorNoteModel.Tone) -> Color {
         tone == .info ? Theme.Colors.mutedText : Theme.Colors.ink
+    }
+
+    /// A dialog note has no tinted icon, so its text takes the tone's color; an explanation or
+    /// a confirmation ("Not used in api-service yet") stays muted, as on the boards.
+    static func dialogTextColor(for tone: ConfigEditorNoteModel.Tone) -> Color {
+        switch tone {
+        case .error, .warning: tint(for: tone)
+        case .info, .success: Theme.Colors.mutedText
+        }
     }
 }
 

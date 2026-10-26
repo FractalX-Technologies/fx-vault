@@ -19,7 +19,7 @@ struct DriftBannerView: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.smallMinus) {
-            ChangedOnGitHubDot()
+            RingDot()
             Text(Self.message(count: report.count, conflictCount: report.conflicts.count))
                 .fxTextStyle(.caption)
                 .foregroundStyle(Theme.Colors.mutedText)

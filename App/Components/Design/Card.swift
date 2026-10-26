@@ -11,6 +11,8 @@ import SwiftUI
 /// - `.popover`: 16 pt corners, no padding, hairline-strong border, the soft shadow and a blur
 ///   behind the fill, so the text under it does not show through. The ⌘K jump palette over the
 ///   window (board Main2-Search).
+/// - `.dialog`: 10 pt corners, 12 pt padding. A card inside a 1.0 dialog (boards Sync-Review,
+///   Sync-Progress).
 ///
 /// ```swift
 /// Card {
@@ -51,6 +53,7 @@ struct Card<Content: View>: View {
         switch style {
         case .card, .sheet: Theme.Spacing.xxLarge
         case .container, .popover: 0
+        case .dialog: Theme.Spacing.medium
         }
     }
 }
@@ -61,11 +64,13 @@ enum CardStyle: Sendable {
     case container
     case sheet
     case popover
+    case dialog
 
     var radius: CGFloat {
         switch self {
         case .card, .sheet: Theme.Radius.card
         case .container, .popover: Theme.Radius.container
+        case .dialog: Theme.Radius.row
         }
     }
 

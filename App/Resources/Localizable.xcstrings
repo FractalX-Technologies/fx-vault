@@ -1,9 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Name" : {
-
-    },
     "accounts.org.needsAdminOrg" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -16768,13 +16765,13 @@
         }
       }
     },
-    "sync.deletions.subtitle" : {
+    "sync.deletions.subtitleBoard" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Confirm before Sync starts. Deletions run after the other writes."
+            "value" : "Confirm before Sync starts. Deletions run after every write."
           }
         }
       }
@@ -16999,13 +16996,13 @@
         }
       }
     },
-    "sync.done.pendingMore" : {
+    "sync.done.pendingMore.short" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "and %lld more stay pending"
+            "value" : "and %lld more pending"
           }
         }
       }
@@ -17703,13 +17700,13 @@
         }
       }
     },
-    "sync.progress.deletions.kind" : {
+    "sync.progress.deletions.afterEveryWrite" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "after the other writes"
+            "value" : "after every write"
           }
         }
       }

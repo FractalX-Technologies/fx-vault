@@ -48,7 +48,7 @@ FXVault/
 │   │   │   ├── JumpPalette/         # the ⌘K palette (D6c2): JumpPaletteModels (JumpPlaces,
 │   │   │   │                        # pure), JumpPaletteViewModel, JumpPaletteView, JumpPaletteCopy
 │   │   │   ├── Place/               # every place's header (D6c3): PlaceHeader (name, subline,
-│   │   │   │                        # status line, ⋯ More), ChangedOnGitHubDot, PlaceCopy,
+│   │   │   │                        # status line, ⋯ More), PlaceCopy,
 │   │   │   │                        # PlaceItemMoreItems (⋯ item actions), PlaceRefreshingLine
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
@@ -137,8 +137,9 @@ FXVault/
 │   │                                # WindowBackground, SheetChrome (SheetHeader,
 │   │                                # SheetCallout, FXCheckboxRow, InlineErrorView,
 │   │                                # FXLinkButtonStyle, fxSheetContent), FlowLayout (v0.6.0),
-│   │                                # KeyHint (1.0), DialogChrome (DialogSheet, dialog cards),
-│   │                                # DialogForm (rows, notes, pop-ups, chips; 1.0 D6d)
+│   │                                # KeyHint (1.0), RingDot, DialogChrome (DialogSheet,
+│   │                                # dialog list box), DialogForm (rows, the field box,
+│   │                                # pop-ups, chips; 1.0 D6d)
 │   ├── Managers/                    # AutoLockManager, LockSignalSources, ClipboardManager,
 │   │                                # PreferencesManager, DockBadgeManager, GHStatusProbe,
 │   │                                # ConnectivityMonitor (NWPathMonitor, path sources),

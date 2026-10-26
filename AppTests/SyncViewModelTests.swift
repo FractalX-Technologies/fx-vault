@@ -1,5 +1,7 @@
+import DestinationKit
 import Foundation
 import GitHubKit
+import os
 import SyncEngine
 import Testing
 import VaultCore
@@ -426,6 +428,9 @@ struct SyncViewModelTests {
         #expect(foreignRules == ["wait timer"])
         #expect(environment.lostCount == 1)
         #expect(model.deletionRows.first?.items.map(\.title) == ["Delete secret OLD_TOKEN in Repository"])
+        // Board Sync-Delete: an item and an environment both read their repository as the place.
+        #expect(model.deletionRows.first?.items.map(\.place?.name) == [TestFixtures.repoName])
+        #expect(environment.place == TestFixtures.repoName)
 
         // Neither button is the default (Return does nothing); deleting needs the checkbox.
         #expect(model.buttons.allSatisfy { !$0.isDefault })
@@ -600,9 +605,239 @@ struct SyncViewModelTests {
         #expect(!autoLock.isSyncActive)
         #expect(model.resultSections.map(\.kind) == [.skipped, .succeeded])
         #expect(model.stopReason?.reason == SyncCopy.stopReason(.cancelled))
+        // A stopped run keeps the full result, not the short finish.
+        #expect(model.done == nil)
         #expect(model.buttons.map(\.action) == [.done])
         #expect(model.buttons.first?.isDefault == true)
         #expect(fixture.recorder.refreshes == [.drift(SyncFixtures.repository.id)])
+    }
+
+    /// A secret turned into a variable is − secret and + variable of one name in one scope.
+    /// Sync Without Deleting leaves the deletion out, and the variable's line still ends done.
+    @Test func aConvertedItemsLineEndsDoneWithoutItsDeletion() async throws {
+        let variable = SyncFixtures.set(.variable, "API_KEY")
+        let secret = SyncFixtures.deleteItem(.secret, "API_KEY")
+        let review = SyncFixtures.review([SyncFixtures.preflight(executable: [variable, secret])])
+        let fixture = try await Fixture(review: .success(review))
+        let model = fixture.viewModel
+        await model.load()
+        await model.reviewDeletions()
+
+        let run = await fixture.startRun(includeDeletions: false)
+        let lines = model.progressCards.flatMap(\.lines)
+        #expect(lines.map(\.name) == ["API_KEY"])
+        let line = try #require(lines.first)
+        fixture.service.run.send(.changeStarted(changeID: variable.id))
+        fixture.service.run.send(.changeFinished(SyncChangeResultModel(change: variable, outcome: .succeeded(.verified)), completed: 1, total: 1))
+        #expect(await TestFixtures.eventually { model.lineState(line) == .done })
+        fixture.service.run.finish(SyncFixtures.outcome([SyncChangeResultModel(change: variable, outcome: .succeeded(.verified))]))
+        await run.value
+    }
+
+    /// Board Sync-Progress: an environment's item and its deployment branches line (no name)
+    /// follow their own changes; a blocked change reads "blocked · reason" and never runs.
+    @Test func environmentAndPolicyLinesFollowTheirChanges() async throws {
+        let policy = ConfigChangeModel(repositoryID: SyncFixtures.repository.id, operation: .upsertEnvironment(EnvironmentUpsertChangeModel(
+            environmentID: SyncFixtures.environmentID, name: "production", policy: .protectedBranches, syncedPolicy: .all, isNew: false
+        )))
+        let database = SyncFixtures.set(.secret, "DB_URL", environment: "production")
+        let review = SyncFixtures.review([SyncFixtures.preflight(
+            executable: [policy, database],
+            blocked: [SyncBlockedChangeModel(
+                change: SyncFixtures.set(.secret, "DOCKER_PASSWORD", environment: "production"),
+                reason: .change(.valueMissing)
+            )]
+        )])
+        let fixture = try await Fixture(review: .success(review))
+        let model = fixture.viewModel
+        await model.load()
+        let run = await fixture.startRun()
+
+        let lines = model.progressCards.flatMap(\.lines)
+        let policyLine = try #require(lines.first { $0.name == nil })
+        let databaseLine = try #require(lines.first { $0.name == "DB_URL" })
+        let blockedLine = try #require(lines.first { $0.isBlocked })
+        #expect(blockedLine.name == "DOCKER_PASSWORD")
+        #expect(blockedLine.detail == "blocked · Value missing locally")
+        #expect(model.lineState(blockedLine) == .skipped)
+
+        let fake = fixture.service.run
+        fake.send(.started(total: 2))
+        fake.send(.changeStarted(changeID: policy.id))
+        #expect(await TestFixtures.eventually { model.lineState(policyLine) == .writing })
+        #expect(model.lineState(databaseLine) == .waiting)
+        fake.send(.changeFinished(SyncChangeResultModel(change: policy, outcome: .succeeded(.verified)), completed: 1, total: 2))
+        fake.send(.changeStarted(changeID: database.id))
+        #expect(await TestFixtures.eventually { model.lineState(databaseLine) == .writing })
+        #expect(model.lineState(policyLine) == .done)
+        fake.send(.changeFinished(SyncChangeResultModel(change: database, outcome: .failed(.valueMissing)), completed: 2, total: 2))
+        #expect(await TestFixtures.eventually { model.lineState(databaseLine) == .failed })
+        #expect(model.lineState(blockedLine) == .skipped)
+
+        fake.finish(SyncFixtures.outcome([
+            SyncChangeResultModel(change: policy, outcome: .succeeded(.verified)),
+            SyncChangeResultModel(change: database, outcome: .failed(.valueMissing)),
+        ]))
+        await run.value
+    }
+
+    /// One line can stand for several changes (an environment's policy and its patterns).
+    @Test func aLineOfSeveralChangesCombinesTheirStates() {
+        #expect(SyncLineState.combined([.done, .failed]) == .failed)
+        #expect(SyncLineState.combined([.writing, .failed]) == .failed)
+        #expect(SyncLineState.combined([.done, .writing]) == .writing)
+        // Part done, part not started: still being written.
+        #expect(SyncLineState.combined([.done, nil]) == .writing)
+        #expect(SyncLineState.combined([nil, nil]) == .waiting)
+        #expect(SyncLineState.combined([.skipped, .skipped]) == .skipped)
+        #expect(SyncLineState.combined([.done, .skipped]) == .done)
+    }
+
+    /// The run's cards: the deletions gather in a last card of their own, and only when they
+    /// run.
+    @Test func deletionsRunInTheLastCardOnlyWhenIncluded() throws {
+        let repository = SyncPresentationBuilder.repository(SyncFixtures.preflight(executable: [
+            SyncFixtures.deleteItem(.secret, "OLD_TOKEN"),
+            SyncFixtures.set(.variable, "BASE_URL"),
+            SyncFixtures.set(.secret, "DB_URL", environment: "production"),
+        ]))
+        let production = "\(TestFixtures.repoName) › production"
+
+        let cards = SyncProgressPresentation.cards([repository], includesDeletions: true)
+        #expect(cards.map(\.name) == [TestFixtures.repoName, production, "Deletions"])
+        let deletions = try #require(cards.last)
+        #expect(deletions.id == SyncProgressPresentation.deletionsID)
+        #expect(deletions.kind == "after every write")
+        #expect(deletions.lines.map(\.name) == ["OLD_TOKEN"])
+        #expect(deletions.lines.map(\.detail) == [TestFixtures.repoName])
+        #expect(cards.first?.lines.map(\.name) == ["BASE_URL"])
+
+        let withoutDeletions = SyncProgressPresentation.cards([repository], includesDeletions: false)
+        #expect(withoutDeletions.map(\.name) == [TestFixtures.repoName, production])
+        #expect(!withoutDeletions.flatMap(\.lines).contains { $0.name == "OLD_TOKEN" })
+    }
+
+    /// Board Sync-Delete: the title names the kind every deletion shares; secrets with
+    /// variables, or an environment, make them items.
+    @Test func theDeletionTitleNamesTheirOneKind() async throws {
+        func title(_ changes: [ConfigChangeModel]) async throws -> String {
+            let fixture = try await Fixture(review: .success(SyncFixtures.review([SyncFixtures.preflight(executable: changes)])))
+            await fixture.viewModel.load()
+            return fixture.viewModel.deletionTitle
+        }
+        #expect(try await title([SyncFixtures.deleteItem(.secret, "OLD_TOKEN")]) == "Delete 1 secret?")
+        #expect(try await title([SyncFixtures.deleteItem(.variable, "OLD_URL"), SyncFixtures.deleteItem(.variable, "OLD_LEVEL")]) == "Delete 2 variables?")
+        #expect(try await title([SyncFixtures.deleteItem(.secret, "OLD_TOKEN"), SyncFixtures.deleteItem(.variable, "OLD_URL")]) == "Delete 2 items?")
+        #expect(try await title([SyncFixtures.deleteEnvironment("qa")]) == "Delete 1 item?")
+    }
+
+    /// An organization's deletion names its kind (1.0), alone or with a repository's.
+    @Test func organizationDeletionsNameTheirKind() async throws {
+        let (harness, organization) = try await OrganizationEditingTests().imported()
+        let token = try await OrganizationEditingTests().item("NPM_TOKEN", in: harness, organization)
+        try harness.data.organizationItems.deleteItems([token.id])
+
+        func title(_ changes: [ConfigChangeModel]) async -> String {
+            let model = SyncViewModel(
+                context: SyncContext(repositoryIDs: nil),
+                dependencies: harness.dependencies(recorder: ActionRecorder(), isGitHubReady: true),
+                service: FakeSyncService(review: .success(SyncFixtures.review(changes.isEmpty ? [] : [SyncFixtures.preflight(executable: changes)])))
+            )
+            await model.load()
+            return model.deletionTitle
+        }
+        #expect(await title([]) == "Delete 1 secret?")
+        #expect(await title([SyncFixtures.deleteItem(.variable, "OLD_URL")]) == "Delete 2 items?")
+    }
+
+    /// The Key Vaults' lines turn from a ring to a spinner to a check as the vault answers,
+    /// after GitHub's; a Key Vault's deletion is a secret's.
+    @Test func keyVaultLinesFollowTheirWritesAndDeletionsAreSecrets() async throws {
+        let fixture = try await Fixture(review: .success(SyncFixtures.review([])))
+        let harness = fixture.harness
+        try harness.installFakeGH()
+        try harness.installFakeAZ()
+        let vaultName = "kv-example-shared"
+        let gate = CallGate()
+        Self.stubWritableKeyVault(harness.transport, vaultName: vaultName, gate: gate)
+        let vault = try harness.data.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: vaultName, tenantID: nil),
+            stage: nil
+        )
+        let item = try harness.data.destinations.addItem(destinationID: vault, kind: .secret, name: "DATABASE_URL", value: SecretBytes(utf8: "FXV_FIXTURE_SECRET")).itemID
+
+        let model = fixture.viewModel
+        await model.load()
+        let line = try #require(model.progressCards.flatMap(\.lines).first { $0.name == "DATABASE_URL" })
+        let run = Task { await model.startSync(includeDeletions: false) }
+        #expect(await TestFixtures.eventually { model.lineState(line) == .writing })
+        gate.open()
+        await run.value
+        #expect(await TestFixtures.eventually { model.lineState(line) == .done })
+        #expect(model.step == .result)
+
+        try harness.data.destinations.deleteItems([item])
+        let next = SyncViewModel(
+            context: SyncContext(repositoryIDs: nil),
+            dependencies: harness.dependencies(recorder: ActionRecorder(), isGitHubReady: true),
+            service: FakeSyncService(review: .success(SyncFixtures.review([])))
+        )
+        await next.load()
+        #expect(next.deletionCount == 1)
+        #expect(next.deletionTitle == "Delete 1 secret?")
+    }
+
+    /// An organization runs as one call: its lines spin together, then each takes its outcome.
+    @Test func organizationLinesSpinTogetherThenTakeTheirOutcome() async throws {
+        let (harness, organization) = try await OrganizationEditingTests().imported()
+        let gate = CallGate()
+        harness.runner.respond(argumentsPrefix: ["variable", "set"]) { invocation in
+            gate.wait()
+            return invocation.arguments.contains("AREA")
+                ? .failure(stderr: "HTTP 422: Validation Failed (https://api.github.com/orgs/Example-Org/actions/variables)")
+                : .success("")
+        }
+        let items = harness.data.organizationItems
+        try items.addItem(organizationID: organization.id, kind: .variable, name: "AREA", value: SecretBytes(utf8: "north"), access: .all)
+        try items.addItem(organizationID: organization.id, kind: .variable, name: "ZONE", value: SecretBytes(utf8: "eu-west-1"), access: .all)
+
+        let model = SyncViewModel(
+            context: SyncContext(repositoryIDs: nil),
+            dependencies: harness.dependencies(recorder: ActionRecorder(), isGitHubReady: true),
+            service: FakeSyncService(review: .success(SyncFixtures.review([])))
+        )
+        await model.load()
+        let lines = model.progressCards.flatMap(\.lines)
+        let area = try #require(lines.first { $0.name == "AREA" })
+        let zone = try #require(lines.first { $0.name == "ZONE" })
+        let run = Task { await model.startSync(includeDeletions: false) }
+        #expect(await TestFixtures.eventually { model.lineState(area) == .writing })
+        #expect(model.lineState(zone) == .writing)
+        gate.open()
+        await run.value
+        #expect(model.lineState(area) == .failed)
+        #expect(model.lineState(zone) == .done)
+    }
+
+    /// A Key Vault that keeps what the run writes (`PUT /secrets/<name>`, held by `gate`), so
+    /// the run's confirming listing and the next review see it.
+    private static func stubWritableKeyVault(_ transport: FakeHTTPTransport, vaultName: String, gate: CallGate) {
+        let stored = OSAllocatedUnfairLock<[String]>(initialState: [])
+        let listPath = "/secrets"
+        transport.respond(pathPrefix: listPath) { request in
+            let name = String(request.path.dropFirst(listPath.count + 1))
+            switch request.method {
+            case .put:
+                gate.wait()
+                stored.withLock { $0.append(name) }
+                return .json(FakeAzureOutput.secret(vaultName: vaultName, name: name, value: "FXV_FIXTURE_SECRET"))
+            case .get where name.isEmpty:
+                return .json(FakeAzureOutput.secretList(vaultName: vaultName, names: stored.withLock { $0 }))
+            default:
+                return .json(FakeAzureOutput.secret(vaultName: vaultName, name: name, value: "FXV_FIXTURE_SECRET"))
+            }
+        }
     }
 
     @Test func resultSectionsCarryLocalizedReasonsAndFixes() async throws {
@@ -701,6 +936,8 @@ struct SyncViewModelTests {
         await run.value
 
         #expect(fixture.recorder.refreshes == [.catalog, .drift(SyncFixtures.repository.id)])
+        // A clone still to make keeps the full result, with its Clone button.
+        #expect(model.done == nil)
         let row = try #require(model.clones.first)
         #expect(row.state == .notAttempted)
         #expect(row.fullName == SyncFixtures.fullName)

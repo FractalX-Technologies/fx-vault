@@ -1,13 +1,15 @@
 import Foundation
 import SyncEngine
+import VaultCore
 import VaultData
 
-/// A line of the run's cards (board Sync-Progress): its group, its card's place and the changed
-/// name (nil for the line about the place itself, its deployment branches).
+/// A line of the run's cards (board Sync-Progress): its group, its card's place, the changed
+/// name and its kind (both nil for the line about the place itself, its deployment branches).
 struct SyncLineKey: Hashable {
     let group: SyncGroupID
     let place: String
     let name: String?
+    let kind: ConfigKind?
 }
 
 /// Where a change, and so its line, is in the run (board Sync-Progress: a check, a spinner, a
@@ -91,7 +93,7 @@ enum SyncProgressPresentation {
             for card in group.cards {
                 var lines: [SyncProgressLineModel] = []
                 for line in card.lines {
-                    let key = SyncLineKey(group: group.id, place: card.place.id, name: line.name)
+                    let key = SyncLineKey(group: group.id, place: card.place.id, name: line.name, kind: line.kind)
                     if line.symbol == .deleted {
                         deletions.append(SyncProgressLineModel(key: key, name: line.name, detail: card.place.name))
                     } else {
@@ -100,7 +102,7 @@ enum SyncProgressPresentation {
                 }
                 for issue in card.blocked + card.remoteChanged {
                     lines.append(SyncProgressLineModel(
-                        key: SyncLineKey(group: group.id, place: card.place.id, name: issue.name ?? issue.title),
+                        key: SyncLineKey(group: group.id, place: card.place.id, name: issue.name ?? issue.title, kind: nil),
                         name: issue.name ?? issue.title,
                         detail: SyncCopy.blockedDetail(issue.reason),
                         isBlocked: true
@@ -132,14 +134,16 @@ enum SyncProgressPresentation {
     /// line about the environment itself. Repository creation and environment deletion have
     /// none (the card's sentence says them).
     static func key(_ change: ConfigChangeModel, group: SyncGroupID) -> SyncLineKey? {
-        let name: String?
         switch change.operation {
-        case .setItem(let set): name = set.name
-        case .deleteItem(let delete): name = delete.name
-        case .upsertEnvironment, .reconcileBranchPatterns, .renameEnvironment: name = nil
-        case .createRepository, .deleteEnvironment: return nil
+        case .setItem(let set):
+            return SyncLineKey(group: group, place: change.scope.journalKey, name: set.name, kind: set.kind)
+        case .deleteItem(let delete):
+            return SyncLineKey(group: group, place: change.scope.journalKey, name: delete.name, kind: delete.kind)
+        case .upsertEnvironment, .reconcileBranchPatterns, .renameEnvironment:
+            return SyncLineKey(group: group, place: change.scope.journalKey, name: nil, kind: nil)
+        case .createRepository, .deleteEnvironment:
+            return nil
         }
-        return SyncLineKey(group: group, place: change.scope.journalKey, name: name)
     }
 }
 
