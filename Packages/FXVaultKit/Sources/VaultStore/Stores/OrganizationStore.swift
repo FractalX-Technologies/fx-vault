@@ -132,8 +132,8 @@ public struct OrganizationStore: Sendable {
         }
     }
 
-    /// A `selected` item reaches the repository only through the list stored for it: GitHub's
-    /// own list is not read at import, so an unknown list reaches nothing.
+    /// A `selected` item reaches the repository only through the list stored for it (the edited
+    /// one, or GitHub's as last read); an unknown list, one GitHub didn't return, reaches nothing.
     static func inheritedItems(ownerLogin: String, repositoryName: String, isPrivate: Bool, db: Database) throws -> InheritedOrgItemsModel? {
         guard let organization = try OrganizationRecord
             .filter(OrganizationRecord.CodingKeys.loginKey == OwnerLoginValidator.foldKey(ownerLogin))
@@ -149,7 +149,8 @@ public struct OrganizationStore: Sendable {
         return InheritedOrgItemsModel(organizationID: organization.id, organizationLogin: organization.login, items: items)
     }
 
-    /// The repository list stored for an item (`repositories_edited`), by name.
+    /// The repository list stored for an item, by name: the edited one (`repositories_edited`)
+    /// or GitHub's as last read.
     public func fetchRepositories(itemID: ConfigItemID, in tx: StoreTransaction) throws -> [String] {
         try Self.repositories(itemID: itemID, db: tx.db)
     }

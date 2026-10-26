@@ -63,6 +63,12 @@ public actor OrganizationRepository {
         var skipped: [SkippedRemoteNameModel] = []
         let secrets = try Self.storable(listedSecrets, kind: .secret, name: \.name, visibility: \.visibility, skipped: &skipped)
         let variables = try Self.storable(listedVariables, kind: .variable, name: \.name, visibility: \.visibility, skipped: &skipped)
+        let lists = await Self.selectedRepositories(
+            of: secrets.map { (.secret, $0.name, $0.visibility) } + variables.map { (.variable, $0.name, $0.visibility) },
+            organization: login,
+            accountLogin: accountLogin,
+            schedulers: schedulers
+        )
 
         let now = clock.now
         let organization = OrganizationRecord(login: login, accountLogin: accountLogin, lastRefreshedAt: now, createdAt: now, updatedAt: now)
@@ -70,7 +76,7 @@ public actor OrganizationRepository {
             try session.write { keys, tx in
                 try store.insertOrganization(organization, in: tx)
                 for (name, visibility, secret) in secrets {
-                    try store.insertItem(Self.item(
+                    let item = Self.item(
                         organizationID: organization.id,
                         kind: .secret,
                         name: name,
@@ -78,7 +84,9 @@ public actor OrganizationRepository {
                         selectedCount: secret.numSelectedRepos,
                         remoteUpdatedAt: secret.updatedAt,
                         now: now
-                    ), in: tx)
+                    )
+                    try store.insertItem(item, in: tx)
+                    try store.replaceRepositories(itemID: item.id, names: lists[OrgItemKey.make(.secret, name)] ?? [], in: tx)
                 }
                 for (name, visibility, variable) in variables {
                     var item = Self.item(
@@ -93,6 +101,7 @@ public actor OrganizationRepository {
                     try OrgFieldCipher.setValue(variable.value, on: &item, keys: keys)
                     item.syncedFingerprint = item.valueFingerprint
                     try store.insertItem(item, in: tx)
+                    try store.replaceRepositories(itemID: item.id, names: lists[OrgItemKey.make(.variable, name)] ?? [], in: tx)
                 }
             }
         }
@@ -166,6 +175,31 @@ public actor OrganizationRepository {
         let secrets = try await scheduler.listOrganizationSecrets(login)
         let variables = try await scheduler.listOrganizationVariables(login)
         return (secrets, variables)
+    }
+
+    /// B14/B15 for each `selected` item (O1): GitHub's own repository list, by ``OrgItemKey``.
+    /// A list that can't be read stays unknown, which the count still covers, so it never fails
+    /// an import or a Refresh.
+    static func selectedRepositories(
+        of items: [(kind: ConfigKind, name: String, visibility: OrgVisibility)],
+        organization login: String,
+        accountLogin: String,
+        schedulers: any GHSchedulerProviding
+    ) async -> [String: [String]] {
+        let selected = items.filter { $0.visibility == .selected }
+        guard !selected.isEmpty, let scheduler = try? await schedulers.scheduler(for: accountLogin) else { return [:] }
+        var lists: [String: [String]] = [:]
+        for item in selected {
+            do throws(GHError) {
+                lists[OrgItemKey.make(item.kind, item.name)] = switch item.kind {
+                case .secret: try await scheduler.organizationSecretRepositories(item.name, organization: login)
+                case .variable: try await scheduler.organizationVariableRepositories(item.name, organization: login)
+                }
+            } catch {
+                log.error("An organization item's repository list was not read: \(error.logCode, privacy: .public)")
+            }
+        }
+        return lists
     }
 
     /// The listed rows the vault can hold, by validated name; the first of a repeated name wins.

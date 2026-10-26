@@ -13,7 +13,8 @@ import VaultStore
 /// - **Run** sends each write with its complete access: the edited list, or for an unchanged
 ///   `selected` item GitHub's own list read right before the write (B14/B15), so a write never
 ///   narrows who can use the item. Deletions run only when asked.
-/// - **Confirm** re-lists once; a listed write becomes synced with GitHub's `updatedAt`.
+/// - **Confirm** re-lists once; a listed write becomes synced with GitHub's `updatedAt`, and
+///   keeps the list it sent as GitHub's (O1).
 /// - No journal: an interrupted run leaves the item pending, and the next review blocks it as
 ///   changed on GitHub until it is refreshed.
 public actor OrganizationSyncRepository {
@@ -111,16 +112,20 @@ public actor OrganizationSyncRepository {
             for change in review.changes { result.outcomes[change.itemID] = .failed(error) }
             return result
         }
-        var sent: [ConfigItemID] = []
+        var sent: [ConfigItemID: [String]] = [:]
         for change in review.changes {
             guard includeDeletions || change.operation != .delete, !Task.isCancelled else {
                 result.outcomes[change.itemID] = .skipped
                 continue
             }
-            let outcome = await execute(change, organization: organization, scheduler: scheduler)
+            let (outcome, access) = await execute(change, organization: organization, scheduler: scheduler)
             result.outcomes[change.itemID] = outcome
             if outcome == .done, change.operation != .delete {
-                sent.append(change.itemID)
+                if case .selected(let repositories)? = access {
+                    sent[change.itemID] = repositories.names
+                } else {
+                    sent[change.itemID] = []
+                }
             }
         }
         if !sent.isEmpty {
@@ -132,8 +137,13 @@ public actor OrganizationSyncRepository {
         return result
     }
 
-    private func execute(_ change: OrgChangeModel, organization: OrganizationRecord, scheduler: GHCommandScheduler) async -> OrgChangeOutcome {
-        guard let item = try? loadItem(change.itemID), Self.change(for: item) == change else { return .skipped }
+    /// The outcome, and for a write the access it sent.
+    private func execute(
+        _ change: OrgChangeModel,
+        organization: OrganizationRecord,
+        scheduler: GHCommandScheduler
+    ) async -> (OrgChangeOutcome, GHOrgRepositoryAccess?) {
+        guard let item = try? loadItem(change.itemID), Self.change(for: item) == change else { return (.skipped, nil) }
         if change.operation == .delete {
             do throws(GHError) {
                 switch item.kind {
@@ -143,22 +153,22 @@ public actor OrganizationSyncRepository {
             } catch .notFound {
                 // Already gone on GitHub.
             } catch {
-                return .failed(error)
+                return (.failed(error), nil)
             }
             try? write { tx in try store.deleteItem(id: item.id, in: tx) }
             deletions.record(OrgItemKey.make(item.kind, item.name), organizationID: item.organizationID, at: clock.now)
-            return .done
+            return (.done, nil)
         }
         let access: GHOrgRepositoryAccess
         do throws(GHError) {
             guard let resolved = try await self.access(for: item, organization: organization, scheduler: scheduler) else {
-                return .blocked(.noRepositories)
+                return (.blocked(.noRepositories), nil)
             }
             access = resolved
         } catch {
-            return .failed(error)
+            return (.failed(error), nil)
         }
-        guard let value = try? openValue(item) else { return .blocked(.valueMissing) }
+        guard let value = try? openValue(item) else { return (.blocked(.valueMissing), nil) }
         defer { value.wipe() }
         do throws(GHError) {
             switch item.kind {
@@ -174,9 +184,9 @@ public actor OrganizationSyncRepository {
                 )
             }
         } catch {
-            return .failed(error)
+            return (.failed(error), nil)
         }
-        return .done
+        return (.done, access)
     }
 
     /// The complete access a write sends; nil for a `selected` item that reaches no repository.
@@ -199,16 +209,17 @@ public actor OrganizationSyncRepository {
         }
     }
 
-    /// Re-lists once: a listed write is synced with GitHub's `updatedAt` and repository count.
-    private func confirm(_ ids: [ConfigItemID], organization: OrganizationRecord) async -> [ConfigItemID: OrgChangeOutcome] {
+    /// Re-lists once: a listed write is synced with GitHub's `updatedAt` and repository count, and
+    /// the names it sent (`sent`, empty unless `selected`) become GitHub's stored list.
+    private func confirm(_ sent: [ConfigItemID: [String]], organization: OrganizationRecord) async -> [ConfigItemID: OrgChangeOutcome] {
         let listed: [String: Listed]
         do throws(GHError) {
             listed = try await listing(organization)
         } catch {
-            return Dictionary(uniqueKeysWithValues: ids.map { ($0, OrgChangeOutcome.unconfirmed) })
+            return sent.mapValues { _ in OrgChangeOutcome.unconfirmed }
         }
         var outcomes: [ConfigItemID: OrgChangeOutcome] = [:]
-        for id in ids {
+        for (id, names) in sent {
             guard var item = try? loadItem(id), let entry = listed[OrgItemKey.make(item.kind, item.name)] else {
                 outcomes[id] = .unconfirmed
                 continue
@@ -222,7 +233,7 @@ public actor OrganizationSyncRepository {
             let recorded = item
             do {
                 try write { tx in
-                    try store.replaceRepositories(itemID: id, names: [], in: tx)
+                    try store.replaceRepositories(itemID: id, names: recorded.visibility == .selected ? names : [], in: tx)
                     try store.updateItem(recorded, in: tx)
                 }
                 outcomes[id] = .done
