@@ -1,4 +1,5 @@
 import Foundation
+import SharingKit
 import VaultCore
 import VaultData
 
@@ -36,7 +37,13 @@ struct ProjectShareTreeModel: Equatable, ShareCheckTree {
         parts = repositories.map(\.part)
         folderIDs = folders.map(\.id)
         let folderNodes = folders.map { folder in
-            ShareScopeNodeModel(id: .folder(folder.id), title: folder.name, kind: .folder, children: nil)
+            ShareScopeNodeModel(
+                id: .folder(folder.id),
+                title: folder.name,
+                kind: .folder,
+                children: nil,
+                ownCounts: ShareItemCountModel(secrets: folder.secretCount, variables: folder.variableCount)
+            )
         }
         roots = repositories.map(\.node) + folderNodes
         var leaves: [ShareScopeNodeID: Set<ShareScopeNodeID>] = [:]

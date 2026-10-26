@@ -73,19 +73,7 @@ enum ProjectShareCopy {
 
     /// "13 secrets · 6 variables"; a kind with none is left out, and nothing is "".
     static func counts(_ counts: ShareItemCountModel) -> String {
-        let secrets = counts.secrets > 0
-            ? String(inflected: AttributedString(
-                localized: "projectShare.counts.secrets",
-                defaultValue: "^[\(counts.secrets) secret](inflect: true)"
-            ))
-            : nil
-        let variables = counts.variables > 0
-            ? String(inflected: AttributedString(
-                localized: "projectShare.counts.variables",
-                defaultValue: "^[\(counts.variables) variable](inflect: true)"
-            ))
-            : nil
-        return [secrets, variables].compactMap(\.self).joined(separator: " · ")
+        PlaceCopy.counts(secrets: counts.secrets, variables: counts.variables, omitsZeroKinds: true)
     }
 
     static let createFile = String(localized: "projectShare.createFile", defaultValue: "Create File")
@@ -116,11 +104,11 @@ enum ProjectShareCopy {
         String(localized: "projectShare.done.copied", defaultValue: "Copied. The clipboard clears in \(seconds) s.")
     }
 
-    /// The finished file's footer: "FX Vault refuses it after 1 Nov. Rotate anything in it if it leaks."
+    /// The finished file's footer: "FX Vault refuses it after 1 Nov, 14:02. Rotate anything in it if it leaks."
     static func refusedAfter(_ date: Date) -> String {
         String(
-            localized: "projectShare.done.refusedAfter",
-            defaultValue: "FX Vault refuses it after \(date.formatted(.dateTime.day().month(.abbreviated))). Rotate anything in it if it leaks."
+            localized: "projectShare.done.refusedAfter.time",
+            defaultValue: "FX Vault refuses it after \(moment(date)). Rotate anything in it if it leaks."
         )
     }
 
@@ -168,12 +156,11 @@ enum ProjectShareCopy {
         defaultValue: "A share file says who sent it but can't prove it."
     )
 
-    /// "Unlocked · created 25 Oct · expires 1 Nov".
+    /// "Unlocked · created 25 Oct, 14:02 · expires 1 Nov, 14:02".
     static func unlocked(created: Date, expires: Date) -> String {
-        let day = Date.FormatStyle.dateTime.day().month(.abbreviated)
-        return String(
-            localized: "projectShare.open.unlocked",
-            defaultValue: "Unlocked · created \(created.formatted(day)) · expires \(expires.formatted(day))"
+        String(
+            localized: "projectShare.open.unlocked.time",
+            defaultValue: "Unlocked · created \(moment(created)) · expires \(moment(expires))"
         )
     }
 

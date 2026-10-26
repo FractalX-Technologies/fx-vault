@@ -40,19 +40,22 @@ struct ShareScopeNodeModel: Identifiable, Hashable {
     /// nil for leaves (items, and environments without items), so the tree shows no
     /// disclosure triangle.
     let children: [ShareScopeNodeModel]?
+    /// A production environment, or a destination at a production stage (both are production
+    /// places in the file's note): tagged, with a lock.
+    var isProduction = false
+    /// The counts of a row shared whole without children (a folder); nil sums its children.
+    var ownCounts: ShareItemCountModel?
 
     /// Secrets and variables under the row (the tree's counts column, board Share-Pick).
     var itemCounts: ShareItemCountModel {
-        switch kind {
+        if let ownCounts {
+            return ownCounts
+        }
+        return switch kind {
         case .secret: ShareItemCountModel(secrets: 1, variables: 0)
         case .variable: ShareItemCountModel(secrets: 0, variables: 1)
         default: .sum((children ?? []).map(\.itemCounts))
         }
-    }
-
-    /// A production environment: tagged, and confirmed when the file is created.
-    var isProduction: Bool {
-        kind == .environment && StageRisk.isProduction(title)
     }
 }
 
@@ -255,7 +258,8 @@ struct ShareScopeTreeModel: Equatable, ShareCheckTree {
                 id: .environment(environment.id),
                 title: environment.name,
                 kind: .environment,
-                children: children.isEmpty ? nil : children
+                children: children.isEmpty ? nil : children,
+                isProduction: StageRisk.isProduction(environment.name)
             )
         }
         let runtime = destinations.map { entry -> ShareScopeNodeModel in
@@ -266,7 +270,8 @@ struct ShareScopeTreeModel: Equatable, ShareCheckTree {
                 id: .destination(entry.destination.id),
                 title: "\(entry.destination.provider.shortTitle) · \(entry.destination.title)",
                 kind: .destination(symbolName: entry.destination.provider.symbolName),
-                children: children.isEmpty ? nil : children
+                children: children.isEmpty ? nil : children,
+                isProduction: entry.destination.stage.map(StageRisk.isProduction) ?? false
             )
         }
         let repositoryItems = leaves(.repository)

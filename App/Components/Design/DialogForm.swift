@@ -2,7 +2,8 @@ import SwiftUI
 
 // The form of a 1.0 dialog (boards NewRepo, NewEnvironment, Share-Pick): a 150 pt column of
 // 11 pt labels, 28 pt fields and pop-up buttons in one box (``DialogFieldChrome``), 11 pt notes
-// under them (`ConfigEditorNoteView(style: .dialog)`), name chips and tags. Rows sit 14 pt apart.
+// under them (`ConfigEditorNoteView(style: .dialog)`), name chips (tags: `StatusChip.dialogTag`).
+// Rows sit 14 pt apart.
 
 /// One row: the label, 14 pt from its controls and notes. The controls carry their own
 /// accessibility labels, so the column label is hidden from VoiceOver.
@@ -204,24 +205,6 @@ struct DialogTokenChip: View {
     }
 }
 
-/// A tag beside a name in a dialog list (`production`, board Share-Pick): 18 pt, 6 pt corners,
-/// an ink hairline, 11 pt medium.
-struct DialogTag: View {
-    let title: String
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.token, style: .continuous)
-        Text(verbatim: title)
-            .fxTextStyle(.formLabel)
-            .foregroundStyle(Theme.Colors.ink)
-            .lineLimit(1)
-            .padding(.horizontal, Theme.Spacing.smallMinus)
-            .frame(height: Theme.Layout.dialogTagHeight)
-            .overlay(shape.strokeBorder(Theme.Colors.ink, lineWidth: Theme.Stroke.hairline))
-            .fixedSize()
-    }
-}
-
 /// The dashed "+ Add" chip after a dialog form's names.
 struct DialogAddChip: View {
     let title: String
@@ -291,7 +274,7 @@ private struct DialogAddChipLabelStyle: LabelStyle {
             }
         }
         DialogFormRow("Stages") {
-            DialogTag(title: "production")
+            StatusChip.dialogTag("production")
         }
     }
     .padding(Theme.Layout.dialogInset)

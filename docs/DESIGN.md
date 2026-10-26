@@ -351,8 +351,8 @@ title, ".gitignore: None"), `.dialogFieldChrome()` alone for a value without a m
 alias); `DialogSwitch` (a mini switch before its title; the title toggles it unless disabled),
 `DialogTokenChip` (`production ×`, 22 pt, 6 pt corners, mono) and the dashed `DialogAddChip`
 (its face, `DialogAddChipLabel`, also labels an add menu), laid out in a `FlowLayout`;
-`DialogTag` (`production`, 18 pt, 6 pt corners, an ink hairline, 11 pt medium) beside a name in
-a dialog list. Small actions in a row are `.compact` buttons (Add Rule, Try Again).
+`StatusChip.dialogTag` (`production`, 18 pt, 6 pt corners, an ink hairline, 11 pt medium) beside
+a name in a dialog list. Small actions in a row are `.compact` buttons (Add Rule, Try Again).
 
 `PassphraseView` (App/Components) is the generated passphrase card of onboarding; `EmptyStateView` uses the light symbol, a `.headline` ink title and a `mutedText`
 `.callout` message.
@@ -620,13 +620,15 @@ foreground color, so `.primary` text still turns white on selected rows.
   Share-Pick (600 pt): "Share api-service securely" ("Share Securely" for several places), "An
   encrypted file, opened with a passphrase you send another way."; Repositories as
   `DialogTokenChip`s with an Add Repository menu on the dashed chip; Stages as checkboxes across
-  those repositories (Repository level first; a production stage unchecked with its `DialogTag`
-  and a lock whose help says ticking asks for Touch ID) over the stages note; then the tree: a
-  `.dialog` card of 28 pt rows with hairlines between them, 18 pt a level, a 10 pt chevron
-  column, a tri-state checkbox, the symbol, the name in `.monoMeta` ("Repository" in `.caption`),
-  a production environment's tag and lock, "Name only" or "Selected items only" as a note, and
-  the counts in 11 pt mono ("2 secrets · 1 variable"; a kind with none is left out); up to
-  `shareListHeight`, then it scrolls. Under it, dialog notes: "Production values leave this Mac
+  those repositories (Repository level first; a production stage unchecked with its
+  `StatusChip.dialogTag` and a lock whose help says ticking asks for Touch ID) over the stages
+  note; then the tree: a `.dialog` card of 28 pt rows with hairlines between them, 18 pt a
+  level, a 10 pt chevron column, a tri-state checkbox, the symbol, the name in `.monoMeta`
+  ("Repository" in `.caption`), the tag and lock of a production environment or of a
+  destination at a production stage (the lock reads its help to VoiceOver), "Name only" or
+  "Selected items only" as a note, and the counts in 11 pt mono ("2 secrets · 1 variable"; a
+  kind with none is left out; a folder row counts the folder); up to `shareListHeight`, then it
+  scrolls. Under it, dialog notes: "Production values leave this Mac
   in a file (api-service · production). Rotate them if it leaks." and the value-missing names;
   "Expires after" as a `.formLabel` with the `.small` `SegmentedPill` at the trailing edge. The
   footer: the file's counts, Cancel (outline) and "Create File with Touch ID" (primary, `touchid`;
@@ -637,7 +639,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   variables"); the six words on one line in 17 pt mono in a `surface` box with 10 pt corners and
   a `.compact` Copy (hidden from screen capture); "The clipboard clears in 30 s." (or the last
   notice: copied, saved, sent); "Send the file by chat or AirDrop, and the words by call or
-  another app."; "I've saved it". The footer: "FX Vault refuses it after 1 Nov. Rotate anything
+  another app."; "I've saved it". The footer: "FX Vault refuses it after 1 Nov, 14:02. Rotate anything
   in it if it leaks.", Save File…, Send with AirDrop (only where this Mac offers it), Share…
   (outline, enabled once saved) and Done (primary).
 - Opening a file (D6d, boards Share-Open, Share-OpenPreview, Share-Expired, `ShareImportScreen`)
@@ -647,14 +649,14 @@ foreground color, so `.primary` text still turns white on selected rows.
   cannot be opened (Share-Expired, 360 pt) is its own small dialog: a 26 pt symbol (a clock when
   it expired), "This file expired", "FX Vault won't import it. Ask the sender for a new file.",
   the file name in `.monoMeta`, a centred OK. Share-OpenPreview (620 pt, `ProjectShareImportView`):
-  "Unlocked · created 25 Oct · expires 1 Nov" under the title; "From Ana" with a "Not verified"
-  `DialogTag` (its explanation as help); "What it adds · nothing is deleted" over a `.dialog` card
+  "Unlocked · created 25 Oct, 14:02 · expires 1 Nov, 14:02" under the title; "From Ana" with a
+  "Not verified" `StatusChip.dialogTag` (its explanation as help); "What it adds · nothing is deleted" over a `.dialog` card
   of 32 pt rows: the repository symbol, the name in `.monoMeta` and its owner muted, then a
   `success` dot "Already in your vault · 3 secrets", an ink `RingDot` "New repository · import
   from GitHub with user-a" or a `hairlineStrong` dot "Skipped · no access" (muted); a row is
   selected (`surface`) to show today's merge preview of that repository, then DESTINATIONS
-  (provider symbol, "Azure Key Vault · kv-example-staging", the stage as a chip, `.warning` for
-  production, and "New. FX Vault reaches it with your az login." or "Merges into your
+  (provider symbol, "Azure Key Vault · kv-example-staging", the stage in `.monoMeta` with the
+  production tag when it is one, and "New. FX Vault reaches it with your az login." or "Merges into your
   destination…" as a caption; a 0.9 file's Supabase and Vercel destinations as one "Left out: …"
   note) and Folders (a `.dialog` card of rows with a `DialogPopUp`: New folder, Merge keep mine /
   replace mine, Don't import). The footer: "Nothing reaches GitHub or Azure until you include it
@@ -739,11 +741,11 @@ the window gets `.fxWindowBackground()`. `PreferencesLayout.swift` draws the tab
   `hairlineStrong` dot otherwise (Expired, Org secrets need an org admin).
 
 General: Lock (Lock after inactivity, with the footnote that FX Vault always locks on sleep,
-screen lock and window close), then Clipboard clears after (the fixed 30 s) and Clone folder
+screen lock and window close), then Clipboard clears after (the fixed 30 s; also on lock) and Clone folder
 (`~/…` with Choose…). Security: Unlock with Touch ID with its footnote, then Master password and
 Recovery key; its password sheets keep the older sheet chrome. Advanced: GitHub CLI (the gh path
 override field with Choose…, In use with the gh version and path and Check Again, any other gh
-state as a `GHStatusRow` under it, a trusted gh with Revoke, the telemetry footnote), then Vault
+state but checking and unknown as a `GHStatusRow` under it, a trusted gh with Revoke, the telemetry footnote), then Vault
 (Vault folder, Reset vault). Reset vault stays in Advanced, unlike the board, because it works
 while the vault is locked; its dialog (board Reset-Confirm) is a 380 pt `DialogSheet` with two
 11 pt labels over 28 pt mono fields and a danger-filled Erase Vault.
@@ -761,7 +763,7 @@ no copy of the file. If one leaks, rotate what's in it.": one row per export, ne
 `doc` symbol, the date and time in 12 pt medium, Active or Expired, a ••• menu with Remove from
 List (a confirmation that the sent file is not affected); under it, the repositories, stages,
 counts and "expires 1 Nov, 14:02" (a 0.9 row adds "Teammates: …"), and Show names, which lists
-the names per place in two mono columns.
+the names per place in two mono columns, secrets in ink (the ones to rotate), variables muted.
 
 ### `.env` and sharing (sheet pattern)
 

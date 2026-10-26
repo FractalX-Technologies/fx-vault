@@ -219,7 +219,7 @@ private struct ProjectShareContentsStep: View {
                     .foregroundStyle(Theme.Colors.ink)
                     .accessibilityIdentifier(AccessibilityID.Share.stage(option.name))
                     if option.isProduction {
-                        DialogTag(title: ProjectShareCopy.productionTag)
+                        StatusChip.dialogTag(ProjectShareCopy.productionTag)
                             .accessibilityHidden(true)
                         Image(systemName: "lock")
                             .font(Theme.Typography.label)

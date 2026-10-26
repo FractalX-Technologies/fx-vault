@@ -258,4 +258,20 @@ struct PreferencesViewModelTests {
         #expect(viewModel.resetPassword.isEmpty)
         #expect(!viewModel.isVaultSettingsAvailable)
     }
+
+    /// Settings › Advanced, In use: a ready gh shows its version and path; checking and unknown
+    /// add nothing; every other state adds the status sentence under the row.
+    @Test func theInUseRowFollowsTheGHStatus() {
+        let ready = GHStatusModel.ready(version: "2.102.0", path: "/opt/homebrew/bin/gh")
+        #expect(ready.inUse?.version == "2.102.0")
+        #expect(ready.inUse?.path == "/opt/homebrew/bin/gh")
+        #expect(!ready.needsInUseSentence)
+        #expect(GHStatusModel.checking.inUse == nil)
+        #expect(!GHStatusModel.checking.needsInUseSentence)
+        #expect(!GHStatusModel.unknown.needsInUseSentence)
+        #expect(GHStatusModel.notInstalled.needsInUseSentence)
+        #expect(GHStatusModel.outdated(found: "2.40.0", required: "2.97.0", path: nil).needsInUseSentence)
+        #expect(GHStatusModel.noAccounts(version: "2.102.0", path: "/opt/homebrew/bin/gh").needsInUseSentence)
+        #expect(GHStatusModel.failed.needsInUseSentence)
+    }
 }

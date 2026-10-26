@@ -48,7 +48,7 @@ struct AdvancedSettingsView: View {
                     }
                     .fxButtonStyle(.outline, size: .compact)
                 }
-                if GHInUseValue.needsSentence(viewModel.ghStatus) {
+                if viewModel.ghStatus.needsInUseSentence {
                     PreferencesBlock {
                         GHStatusRow(status: viewModel.ghStatus)
                     }
@@ -122,24 +122,31 @@ private struct GHInUseValue: View {
     let status: GHStatusModel
 
     var body: some View {
-        switch status {
-        case .ready(let version, let path):
+        if let inUse = status.inUse {
             HStack(spacing: Theme.Spacing.xSmall) {
-                PreferencesValue(text: String(localized: "settings.advanced.gh.inUse.version", defaultValue: "gh \(version) ·"))
+                PreferencesValue(text: String(localized: "settings.advanced.gh.inUse.version", defaultValue: "gh \(inUse.version) ·"))
                     .fixedSize()
-                PreferencesValue(text: path, isMonospaced: true)
+                PreferencesValue(text: inUse.path, isMonospaced: true)
             }
             .accessibilityElement(children: .combine)
-        case .checking:
+        } else if status == .checking {
             ProgressView()
                 .controlSize(.small)
-        default:
-            EmptyView()
         }
     }
+}
 
-    static func needsSentence(_ status: GHStatusModel) -> Bool {
-        switch status {
+extension GHStatusModel {
+    /// The version and path of a ready gh (Settings › Advanced, In use).
+    var inUse: (version: String, path: String)? {
+        if case .ready(let version, let path) = self { (version, path) } else { nil }
+    }
+
+    /// True when the In use row needs ``GHStatusRow``'s sentence under it: every state but ready,
+    /// checking and unknown. Unknown means detection has not run (previews, tests): the row then
+    /// shows the requirement and Check Again only, as ``GHStatusRow`` shows nothing for it.
+    var needsInUseSentence: Bool {
+        switch self {
         case .ready, .checking, .unknown: false
         default: true
         }
@@ -147,7 +154,8 @@ private struct GHInUseValue: View {
 }
 
 /// Reset vault (board Reset-Confirm): master password plus typing "reset" (D30). The final
-/// confirm is the one danger-filled button.
+/// confirm is the one danger-filled button. Internal, not private, so the visual snapshot
+/// can render it.
 struct ResetVaultSheet: View {
     @Bindable var viewModel: PreferencesViewModel
     @FocusState private var focusedField: Field?

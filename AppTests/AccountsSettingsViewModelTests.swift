@@ -259,4 +259,22 @@ struct AccountsSettingsViewModelTests {
         #expect(harness.app.accountsRevision == revision + 1)
         #expect(await TestFixtures.eventually { main.sidebar.owners.map(\.login) == ["user-a", "user-b"] })
     }
+
+    /// Board Settings-Accounts: a valid token is a green dot, offline grey (nothing to fix here),
+    /// and a rejected token, another error or no login a ring.
+    @Test func tokenMarksFollowTheState() {
+        func summary(_ state: GHAccountState?) -> GHAccountSummaryModel {
+            GHAccountSummaryModel(
+                account: AccountModel(login: "user-a", lastSeenAt: ManualClock.defaultStart),
+                status: state.map {
+                    GHAccountStatusModel(login: "user-a", isActive: true, state: $0, scopes: .ok, scopeList: nil, gitProtocol: "ssh")
+                }
+            )
+        }
+        #expect(summary(.ok).tokenStateMark == .fine)
+        #expect(summary(.offline).tokenStateMark == .idle)
+        #expect(summary(.reloginRequired).tokenStateMark == .needsYou)
+        #expect(summary(.unexpected("boom")).tokenStateMark == .needsYou)
+        #expect(summary(nil).tokenStateMark == .needsYou)
+    }
 }

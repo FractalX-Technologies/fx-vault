@@ -214,6 +214,35 @@ struct ProjectShareExportViewModelTests {
         #expect(model.canCreate)
         #expect(model.subjectName == "Mobile App")
         #expect(model.counts == ShareItemCountModel(secrets: 1, variables: 0))
+        let folderRow = try #require(model.tree?.roots.first { $0.id == .folder(folderID) })
+        #expect(folderRow.itemCounts == ShareItemCountModel(secrets: 1, variables: 0))
+    }
+
+    /// Continue is gone: an empty selection is the only gate before Touch ID.
+    @Test func nothingCheckedCannotCreate() async throws {
+        let world = try await ProjectShareWorld()
+        let model = await model(world)
+        for root in model.tree?.roots ?? [] {
+            model.setChecked(false, for: root)
+        }
+        await model.settle()
+        #expect(!model.canCreate)
+        await model.requestCreate()
+        #expect(model.step == .contents)
+    }
+
+    /// A destination at a production stage is a production place, as the file's note counts it.
+    @Test func aDestinationAtAProductionStageIsTagged() async throws {
+        let world = try await ProjectShareWorld()
+        let production = try world.sender.data.destinations.createDestination(
+            repositoryID: world.senderRepositoryID,
+            target: .azureKeyVault(vaultName: "kv-example-prod", tenantID: nil),
+            stage: "production"
+        )
+        let model = await model(world)
+        let rows = try #require(model.tree?.roots.first?.children)
+        #expect(rows.first { $0.id == .destination(production) }?.isProduction == true)
+        #expect(rows.first { $0.id == .destination(world.destinationID) }?.isProduction == false)
     }
 
     @Test func addingAndRemovingRepositories() async throws {
@@ -228,6 +257,7 @@ struct ProjectShareExportViewModelTests {
         await model.addRepository(second)
         await model.settle()
         #expect(model.chosenRepositoryIDs == [world.senderRepositoryID, second])
+        #expect(model.subjectName == nil)
         #expect(model.stageOptions.first { $0.name == "staging" }?.repositoryIDs.count == 2)
         #expect(model.preview?.summary.repositories.count == 2)
         await model.removeRepository(world.senderRepositoryID)

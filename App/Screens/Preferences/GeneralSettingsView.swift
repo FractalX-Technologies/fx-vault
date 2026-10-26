@@ -34,8 +34,8 @@ struct GeneralSettingsView: View {
                 PreferencesRow(
                     String(localized: "settings.general.clipboard", defaultValue: "Clipboard clears after"),
                     detail: String(
-                        localized: "settings.general.clipboard.detail",
-                        defaultValue: "Copied values stay on this Mac and are marked concealed; most clipboard managers skip them"
+                        localized: "settings.general.clipboard.detail.lock",
+                        defaultValue: "Also clears when FX Vault locks. Copied values stay on this Mac and are marked concealed; most clipboard managers skip them"
                     )
                 ) {
                     PreferencesValue(text: String(

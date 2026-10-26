@@ -31,6 +31,22 @@ final class SharingSettingsViewModel: LockObserving {
         let title: String
         let secretNames: [String]
         let variableNames: [String]
+
+        /// "Show names": the secrets first (the ones to rotate), then the variables. A converted
+        /// item can carry one name as both, so a name is keyed by its kind too.
+        var names: [NameModel] {
+            secretNames.map { NameModel(kind: .secret, name: $0) }
+                + variableNames.map { NameModel(kind: .variable, name: $0) }
+        }
+    }
+
+    struct NameModel: Identifiable, Hashable {
+        let kind: ConfigKind
+        let name: String
+
+        var id: Self {
+            self
+        }
     }
 
     private(set) var entries: [EntryModel] = []
@@ -112,10 +128,7 @@ final class SharingSettingsViewModel: LockObserving {
             recipients: recipients,
             repositories: repositories,
             stages: share.summary.stages,
-            counts: ShareItemCountModel(
-                secrets: share.summary.secretCount,
-                variables: share.summary.places.reduce(0) { $0 + $1.variableNames.count }
-            ),
+            counts: ShareItemCountModel(secrets: share.summary.secretCount, variables: share.summary.variableCount),
             places: places
         )
     }
