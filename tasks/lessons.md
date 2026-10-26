@@ -98,3 +98,4 @@ Patterns and rules learned from corrections during this project. Read at the sta
 - A commit message that names a package-manager install (for example the Homebrew install of gh) trips the dangerous-commands hook → pass the message with `git commit -F <file>`.
 - A `.*` in a shell command (for example inside an `rg` pattern) trips the protect-secrets hook as a glob that could read `.env` → write patterns without `.*` (`[0-9.]+`, a narrower class) or put the script in a file.
 - A confirmation dialog's button exists in XCUITest but never becomes enabled → the Touch Bar repeats it, disabled, under the same title and `app.buttons[title]` finds that copy first; use `VaultUITestCase.dialogButton(_:in:)` (identifier `action-button-N`).
+- Deleting a fixture listed in `.gitleaks.toml` → keep its allowlist path: the CI job scans history (`gitleaks git`), where the file still is; run `gitleaks git --config .gitleaks.toml .` before pushing a change to that file.
