@@ -11023,6 +11023,28 @@
         }
       }
     },
+    "menu.view.hideSidebar" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Sidebar"
+          }
+        }
+      }
+    },
+    "menu.view.showSidebar" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show Sidebar"
+          }
+        }
+      }
+    },
     "onboarding.back" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

@@ -1,16 +1,13 @@
 import SwiftUI
 
-/// The toolbar Sync button (§10 Toolbar; mockup Main): an ink pill reading "Sync" with the
-/// pending count in an SF Mono badge. Disabled at 0, while locked, offline (40%) and while a
-/// sync runs (then it shows progress). The menu command uses ``title(count:)`` ("Sync 5").
+/// The toolbar panel's Sync button (§10 Toolbar; board Main2-Home): a 28 pt ink pill with the sync
+/// symbol, "Sync" and the pending count in an SF Mono badge. Disabled at 0, while locked, offline
+/// (40%) and while a sync runs (then it shows progress). The menu uses ``title(count:)``.
 ///
 /// ```swift
 /// SyncToolbarButton(count: viewModel.pendingChangeCount, isSyncing: viewModel.isSyncing,
 ///                   isEnabled: viewModel.canSync, unavailableReason: offlineHelp) { viewModel.sync() }
 /// ```
-///
-/// On macOS 26 and later, hide the toolbar's shared glass behind it
-/// (`ToolbarItem { … }.sharedBackgroundVisibility(.hidden)`) so the pill keeps its ink fill.
 struct SyncToolbarButton: View {
     let count: Int
     let isSyncing: Bool
@@ -21,14 +18,16 @@ struct SyncToolbarButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Theme.Spacing.mediumMinus) {
+            HStack(spacing: Theme.Spacing.smallMinus) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .accessibilityHidden(true)
                 Text(String(localized: "toolbar.sync.title", defaultValue: "Sync"))
                 badge
             }
         }
         .buttonStyle(FXButtonStyle(
             .primary,
-            size: .regular,
+            size: .toolbar,
             horizontalPadding: (Theme.Layout.syncButtonLeadingPadding, Self.trailingPadding(showsBadge: showsBadge))
         ))
         .focusEffectDisabled()
@@ -45,14 +44,14 @@ struct SyncToolbarButton: View {
     private var badge: some View {
         if isSyncing {
             ProgressView()
-                .controlSize(.small)
+                .controlSize(.mini)
                 .tint(Theme.Colors.onInk)
                 .frame(minWidth: Theme.Layout.badgeHeight, minHeight: Theme.Layout.badgeHeight)
         } else if count > 0 {
             Text(count, format: .number)
-                .font(Theme.Typography.monoMeta)
+                .font(Theme.Typography.monoLabel)
                 .monospacedDigit()
-                .padding(.horizontal, Theme.Spacing.small)
+                .padding(.horizontal, Theme.Spacing.xSmall)
                 .frame(minWidth: Theme.Layout.badgeHeight, minHeight: Theme.Layout.badgeHeight)
                 .background(Theme.Colors.inkBadge, in: .pill)
         }

@@ -24,7 +24,14 @@ enum MainCopy {
         ))
     }
 
-    /// The banner while the recovery key was never confirmed as saved (board Main2-Home).
+    /// View › Hide Sidebar / Show Sidebar (⌃⌘S), the main window's own command since D6c2b.
+    static func sidebarCommand(isSidebarHidden: Bool) -> String {
+        isSidebarHidden
+            ? String(localized: "menu.view.showSidebar", defaultValue: "Show Sidebar")
+            : String(localized: "menu.view.hideSidebar", defaultValue: "Hide Sidebar")
+    }
+
+    /// The strip while the recovery key was never confirmed as saved (board Main2-Home).
     static let recoveryKeyNotSaved = String(localized: "main.recoveryBanner", defaultValue: "Your recovery key wasn't saved")
     static let createNewRecoveryKey = String(localized: "main.recoveryBanner.createKey", defaultValue: "Create New Key…")
 }

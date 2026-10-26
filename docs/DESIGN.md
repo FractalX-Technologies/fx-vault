@@ -35,8 +35,9 @@ fonts are SF Pro and SF Mono, and there is no brand blue.
   (`Color(red:…)`, `NSColor(srgbRed:…)`, hex helpers, `#colorLiteral`, `.red`, `Color.blue`, …)
   and literal fonts (`.system(size:)`, `Font.custom`, `NSFont(name:)`, …) anywhere in `App/`
   outside those two folders.
-- Keep it native macOS: `NavigationSplitView`, `Table`, the `Settings` scene and system sheets
-  stay; this language restyles them, it does not rebuild their behavior.
+- Keep it native macOS: `Table`, the `Settings` scene, system sheets and the window's own
+  traffic lights stay; this language restyles them, it does not rebuild their behavior. The main
+  window lays out its own glass panels instead of `NavigationSplitView` (D6c2b, "Main window").
 
 ## Principles
 
@@ -79,6 +80,12 @@ value below and fails if a color set has no dark variant or no test.
 | `dotGrid` | DotGrid | black 12% | white 10% | Dots of `DotGridBackground` |
 | `shadow` | Shadow | black 12% | black 40% | The one sheet shadow |
 | `scrim` | Scrim | black 6% | black 30% | The dimmed window behind the ⌘K jump palette |
+| `panelShadow` | PanelShadow | black 8% | black 40% | Under the main window's glass panels |
+| `mainGround` | MainGround | `#F8F7F6` | `#121214` | The main window's soft ground (`MainWindowGround`) |
+| `mainGlowTopLeading` | MainGlowTopLeading | `#FFFFFF` | `#212124` | The ground's glow from the top leading corner |
+| `mainGlowTopTrailing` | MainGlowTopTrailing | `#EBE9E6` | `#1B1B1F` | … from the top trailing corner |
+| `mainGlowBottomTrailing` | MainGlowBottomTrailing | `#E6E5E3` | `#1B1A1A` | … from the bottom trailing corner |
+| `mainGlowBottomLeading` | MainGlowBottomLeading | `#F3EFEB` | `#1B1A1A` | … from the bottom leading corner |
 
 `Theme.Colors.windowBackground` is the `NSColor` of Ground for AppKit.
 `Theme.Colors.onSelectionSecondary` is the hierarchical `.secondary` style, for secondary text in
@@ -139,16 +146,17 @@ keep their own case rules.
 - **Spacing** (`Theme.Spacing`): 2, 4, 6 `smallMinus`, 8, 10 `mediumMinus`, 12, 16, 20
   `largePlus`, 24, 28 `xLargePlus`, 32, 36 `xxLargePlus`, 48, 56 `huge`, 64 `xHuge`.
 - **Radius** (`Theme.Radius`): `card` / `sheet` 24, `container` 16 (tables, grouped lists, the
-  ⌘K palette), `control` 12 (inputs, banners, checkbox rows), `row` 10 (scopes), `compactRow` 8
-  (sidebar).
+  ⌘K palette), `panel` 14 (the main window's sidebar and toolbar panels), `control` 12 (inputs,
+  banners, checkbox rows), `row` 10 (scopes, the recovery-key strip), `compactRow` 8 (sidebar).
   Pills (buttons, chips, segmented control, pill inputs, badges) use the `.pill` shape
   (`Capsule(style: .circular)`, Radius.swift). The macOS 27 SDK's `Capsule()` defaults to
   `.continuous` corners, whose flatter ends read as short straight edges at pill sizes;
   `scripts/lint.sh` rejects `Capsule()`.
 - **Lines** (`Theme.Stroke.hairline` = 1 pt): `hairline` by default, `hairlineStrong` for
   controls. Dashed rows ("Add Destination") use `Theme.Stroke.dashPattern` (4 / 4). Focus rings are 2 pt `brand`, 2 pt outside the shape (`Theme.Layout.focusRing*`).
-- **Shadow** (`Theme.Shadow`): only `Card(.sheet)` and the ⌘K palette (`.popover`): `shadow`
-  color, radius 32, y 24.
+- **Shadow** (`Theme.Shadow`): `Card(.sheet)` and the ⌘K palette (`.popover`): `shadow` color,
+  radius 32, y 24; the main window's glass panels (`.fxGlassPanel()`): `panelShadow`, radius 12
+  (the board's CSS blur 24), y 8.
 - **Motion** (`Theme.Durations`): `interaction` 0.14 s / `interactionAnimation` (ease-out) for
   hover, press, focus, selection, chips; `spring` (0.28 s, no bounce) for the selected segment,
   expanding rows and banners sliding in. Legacy `standardAnimation` = `interactionAnimation`.
@@ -288,10 +296,22 @@ SyncToolbarButton(count: viewModel.pendingChangeCount, isSyncing: viewModel.isSy
                   isEnabled: viewModel.canSync, unavailableReason: offlineHelp) { viewModel.sync() }
 ```
 
-Ink pill "Sync" with the count in a mono `inkBadge` capsule; a spinner while syncing; 40% when
-disabled. `SyncToolbarButton.title(count:)` ("Sync 5") stays the menu title. On macOS 26+, hide the
-toolbar's shared glass behind it: `ToolbarItem { … }.sharedBackgroundVisibility(.hidden)` inside
-`if #available(macOS 26, *)`.
+A `.toolbar` ink pill (28 pt, 12 pt medium; board Main2-Home): the sync symbol, "Sync" and the
+count in a 16 pt mono `inkBadge` capsule (`monoLabel`), 12 pt before and 6 pt after it; a spinner
+while syncing; 40% when disabled. `SyncToolbarButton.title(count:)` ("Sync 5") stays the menu
+title. It sits in the toolbar panel, not in a system toolbar.
+
+### `.fxGlassPanel()`, `MainWindowGround`
+
+```swift
+SidebarView(main: main).fxGlassPanel()                 // 14 pt corners
+RecoveryKeyStrip(main: main).fxGlassPanel(radius: Theme.Radius.row)
+panels.background(MainWindowGround())
+```
+
+The main window's floating panels: `glassEffect(.regular)` in a continuous rounded rectangle, a
+`hairline` border and the `panelShadow`. `MainWindowGround` is `mainGround` with a radial glow from
+each corner (`mainGlow*`, `groundGlowRadius`); only the main window uses it.
 
 ### Tables and rows: `.fxTable`, `.fxTableCell`, `TableNameText`, `TableMetaText`, `FXTableHeaderRow`, `.fxRowBackground`
 
@@ -367,20 +387,36 @@ foreground color, so `.primary` text still turns white on selected rows.
 
 ### Main window (boards Main2-Home, Main2-Repository; two columns since 1.0, B11b)
 
-- Toolbar (1.0 D6c2; boards Main2-Home, Main2-Repository, Main2-Search): the system's glass
-  toolbar (`MainToolbar.swift`). The title item, shared glass hidden, is the selected place's
-  path (`MainViewModel.breadcrumb`) in sans `.callout`: the steps `mutedText`, the separators
+- Chrome (1.0 D6c2b; boards Main2-Home, Main2-Dark): no title bar of its own. The scene is
+  `.windowStyle(.hiddenTitleBar)`; `MainScreen` lays out `.fxGlassPanel()`s on
+  `MainWindowGround`, `mainPanelInset` (8) from the window's edges and from each other, from the
+  window's very top: the sidebar panel (`sidebarWidth` 264, its content `sidebarPanelTopInset`
+  44 down), and beside it the toolbar panel (`toolbarPanelHeight` 44), the recovery-key strip
+  and the detail. While it shows, `MainWindowTitleBar` hides the title, makes the title bar
+  transparent and gives the window an empty unified toolbar, so AppKit itself puts the traffic
+  lights 19 pt in, inside the sidebar panel, and keeps them there on resize, in full screen and
+  on hover; leaving the main screen (the lock) restores the title bar. View › Hide Sidebar
+  (⌃⌘S) is our own command (`MainViewModel.toggleSidebar()`): the sidebar panel slides out and
+  the toolbar panel starts `trafficLightsWidth` (80) in, after the lights; Edit › Find brings
+  it back.
+  Why (decision, 2026-10-26): on macOS 27 (26A428) `NavigationSplitView`, and an AppKit sidebar
+  split item alike, draw the sidebar's glass full height with square corners, so the boards'
+  floating sidebar cannot be had from the split view. Moving the traffic-light buttons by hand
+  (the Electron way) lasts only until AppKit's next title-bar layout (every resize) and leaves
+  their hover area behind; the empty toolbar gets the boards' place (19 vs 20 pt) natively.
+- Toolbar panel (1.0 D6c2, D6c2b; boards Main2-Home, Main2-Repository, Main2-Search):
+  `MainToolbarPanel` (`MainToolbar.swift`), no native toolbar items. The selected place's path
+  (`MainViewModel.breadcrumb`) in sans `.callout`: the steps `mutedText`, the separators
   `faintText`, the last step `.calloutEmphasized` ink (`GitHub › owner › repo › environment`,
   `Azure › vault` or `Folders › name`), or "FX Vault" in `mutedText` with nothing selected, then
-  the DEV chip in Debug builds. It is a fixed `Theme.Layout.toolbarTitleWidth` item at the
-  detail column's leading edge; a long path drops its first steps down to the last one, then
-  shows the app name. Then the search button (`magnifyingglass` + `KeyHint("⌘K")`) on its own
-  glass, a fixed `ToolbarSpacer`, and `SyncToolbarButton` with its shared glass hidden. New
+  the DEV chip in Debug builds. It takes the panel's free width; a long path drops its first
+  steps down to the last one, then shows the app name. Then the search button (`magnifyingglass`
+  + `KeyHint("⌘K")`, `.ghost` `.compact`) and `SyncToolbarButton`. 16 pt before the path, 8 pt
+  after Sync. Dragging the panel's empty part moves the window (`WindowDragGesture`). New
   Repository, Import .env and Share are menu commands only (⌘N, also on an owner's menu; ⇧⌘I;
   ⌥⌘S).
 - Sidebar (1.0, D6c1; boards Main2-Home, Main2-Expanded, Main2-Repository, Main2-Dark): the
-  system's split-view sidebar with its own Liquid Glass and no fill of ours (the boards draw it
-  floating; whether it floats is the system's call, and macOS 27 draws it full height). On top the search field
+  sidebar panel (above). On top the search field
   (`surface2`, `compactRow` radius, `sidebarControlHeight`, a `KeyHint("⌘F")`; Edit › Find
   focuses it and brings a hidden sidebar back). Then sections with a `SidebarSectionHeader` (11 pt medium, sentence case,
   `subtleText`): GitHub, Azure, Folders (a quiet `plus` for New Folder…). Every node is a
@@ -409,10 +445,11 @@ foreground color, so `.primary` text still turns white on selected rows.
 - Home (nothing selected; board Main2-Home): `EmptyStateView` with `square.3.layers.3d`, "Choose
   a place", the pending changes ("4 pending changes", or "No pending changes") and
   `KeyHint("⌘K")` + "to jump anywhere".
-- Recovery key (never confirmed as saved; board Main2-Home): a `.warning` `Banner` with `key` at
-  the top of the detail column, over every place: "Your recovery key wasn't saved" · Create New
-  Key… (Settings › Security on the new-key sheet). The key shown at onboarding cannot be shown
-  again, so the board's "Show Key" is not offered.
+- Recovery key (never confirmed as saved; board Main2-Home): a glass strip under the toolbar
+  panel, over every place (`bannerStripHeight` 36, `row` corners, 14 / 6 pt sides): `key`, "Your
+  recovery key wasn't saved" in `.calloutEmphasized` ink, then Create New Key… (`.secondary`
+  `.compact`; Settings › Security on the new-key sheet). The key shown at onboarding cannot be
+  shown again, so the board's "Show Key" is not offered.
 - Jump palette (⌘K, Edit › Jump Anywhere or the toolbar's search button; board Main2-Search):
   over the window on `scrim` (a click outside closes it), `jumpPaletteWidth` wide under the
   toolbar, `.fxCardBackground(.popover)` (the `card` fill over `.regularMaterial`, so the text
@@ -455,12 +492,12 @@ foreground color, so `.primary` text still turns white on selected rows.
   board), | Delete Environment….
 - Dark appearance and offline are the same layout (MainDark): only tokens change; offline adds
   `Banner(.offline)` and disables the Sync pill.
-- Columns take the window's height: each column of the split view has
+- Columns take the window's height: the sidebar panel and the detail have
   `.frame(minHeight: 0, maxHeight: .infinity)` (`mainColumnHeight()` in MainScreen.swift).
-  AppKit sizes the split view from each column's minimum height, which SwiftUI measures at zero
-  width, where a wrapped empty-state message is about 1,000 pt tall; the split view then
-  outgrew the window and was centered in it, so the sidebar's first rows sat under the traffic
-  lights and its footer fell below the window. A column scrolls or centers its own content.
+  SwiftUI measures a column's minimum height at zero width, where a wrapped empty-state message
+  is about 1,000 pt tall; as a minimum it grew the window (the split view before D6c2b outgrew
+  it and was centered, the sidebar's first rows under the traffic lights). A column scrolls or
+  centers its own content.
 - With two or more rows selected (v0.4.0), the selection's actions sit right of the pill:
   "N selected" in `.monoMeta` `mutedText`, Copy To (an outline pill menu with a chevron), Push on
   Next Sync and Revert as outline pills when some rows allow them, Delete… as an outline pill
@@ -792,12 +829,12 @@ Failures use `Banner(.danger)`.
 |---|---|
 | `Theme.Colors.*`, `.fxTextStyle`, `Theme.Spacing/Radius/Layout` | Literal colors, `.system(size:)`, numbers in screens |
 | Mono for names, values, counts, dates, paths | Mono for sentences |
-| Hairline borders | Shadows (except `Card(.sheet)`), gradients |
+| Hairline borders | Shadows (except `Card(.sheet)`, the palette and the main window's panels), gradients (except `MainWindowGround`) |
 | Brand for pending, links, focus | Brand fills, brand body text |
 | One primary pill per view | `.borderedProminent`, two primaries |
 | Sentence-case strings, uppercase via `.sectionLabel` | Uppercase literals in String Catalogs |
 | Pill buttons and menu items in Title Case (macOS HIG: "Add Secret", "Paste Multiple…"); text links ("Use recovery key", "Learn more"), headings, body and labels in sentence case | Sentence-case buttons copied from the web boards ("Add secret") |
-| Native split view, table, settings, sheets | Custom window chrome or fake traffic lights |
+| Native table, settings, sheets; the window's own traffic lights | Fake or hand-moved traffic lights, native toolbar items in the main window |
 | 140 ms ease-out, spring without bounce | Long or bouncy animations, emoji |
 
 ## App icon (board Brand)
@@ -837,10 +874,8 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
 - The drift line (a banner before 1.0) is `mutedText`, `warning` when a change on GitHub also
   changed in the vault (a decision is needed; nothing failed). `DriftBannerView` is the only
   implementation.
-- On macOS 26+ the toolbar draws shared glass behind items unless hidden per item.
-- The toolbar proposes no width to its items, so the title is a fixed-width item
-  (`toolbarTitleWidth`) and picks the longest path that fits it; a path longer than that keeps its
-  last two steps.
+- The traffic lights sit 19 pt in, the boards' 20: the place AppKit gives them under an empty
+  unified toolbar (`MainWindowTitleBar`).
 - Tracking is not part of `Font`; text styled with a bare `Theme.Typography` font has no tracking.
 - Import Share for a project file (v0.9.0) previews one repository at a time: the list chooses
   which; the others are not expanded together.

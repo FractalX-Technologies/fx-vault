@@ -3,7 +3,8 @@ import VaultCore
 
 /// The sidebar (§10; boards Main2-Home, Main2-Expanded, Main2-Repository): search (⌘F), GitHub
 /// owners › repositories › environments, Azure, Folders, then Lock and Settings. It sits in the
-/// window's floating glass sidebar; ``MainColumnSelection`` keeps Up and Down on custom rows.
+/// main window's glass sidebar panel (``MainScreen``); ``MainColumnSelection`` keeps Up and Down
+/// on custom rows.
 struct SidebarView: View {
     let main: MainViewModel
     @FocusState private var isListFocused: Bool

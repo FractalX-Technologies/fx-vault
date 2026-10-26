@@ -30,10 +30,11 @@ struct FXVaultApp: App {
             }
             .fxWindowBackground()
         }
+        // Only the traffic lights over the content (boards Main2, Lock, Onboarding); the main
+        // screen adds its empty toolbar for their place (``MainWindowTitleBar``).
+        .windowStyle(.hiddenTitleBar)
         .defaultSize(width: Theme.Layout.windowDefaultWidth, height: Theme.Layout.windowDefaultHeight)
         .commands {
-            // View › Show/Hide Sidebar (⌃⌘S); Edit › Find brings a hidden sidebar back.
-            SidebarCommands()
             if let viewModel = appDelegate.bootstrap.viewModel {
                 VaultCommands(viewModel: viewModel)
             }
@@ -54,9 +55,9 @@ struct FXVaultApp: App {
 }
 
 /// The menu commands (§10 Toolbar): File › New Repository (⌘N), Import .env (⇧⌘I) and Share
-/// Project… (⌥⌘S), Edit › Find (⌘F) and Jump Anywhere (⌘K), and the Vault menu with Lock (⌃⌘L) and Sync (⇧⌘S). Commands
-/// that act on the main window reach it through the focused scene value
-/// (``FocusedValues/mainViewModel``).
+/// Project… (⌥⌘S), Edit › Find (⌘F) and Jump Anywhere (⌘K), View › Hide Sidebar (⌃⌘S), and Vault ›
+/// Lock (⌃⌘L) and Sync (⇧⌘S). Commands that act on the main window reach it through the focused
+/// scene value (``FocusedValues/mainViewModel``).
 struct VaultCommands: Commands {
     let viewModel: AppViewModel
     @FocusedValue(\.mainViewModel) private var main
@@ -104,6 +105,16 @@ struct VaultCommands: Commands {
             }
             .keyboardShortcut("k", modifiers: .command)
             .disabled(main?.canJump != true)
+        }
+
+        // Before Enter Full Screen, which shares the placement. Edit › Find brings a hidden
+        // sidebar back too.
+        CommandGroup(before: .sidebar) {
+            Button(MainCopy.sidebarCommand(isSidebarHidden: main?.isSidebarHidden == true)) {
+                main?.toggleSidebar()
+            }
+            .keyboardShortcut("s", modifiers: [.control, .command])
+            .disabled(main == nil)
         }
 
         CommandMenu(String(localized: "menu.vault", defaultValue: "Vault")) {
