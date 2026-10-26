@@ -413,8 +413,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// The sidebar column is hidden (View › Hide Sidebar, ⌃⌘S); Edit › Find brings it back.
     var isSidebarHidden = false
 
-    /// Edit › Find (⌘F): shows the sidebar if it was hidden, then focuses its search field.
-    /// Edit › Find (⌘F): also closes the ⌘K palette, which would keep the focus from the search.
+    /// Edit › Find (⌘F): closes the ⌘K palette (it would keep the focus), shows the sidebar if
+    /// it was hidden, then focuses its search field.
     func findInSidebar() {
         jumpPalette = nil
         isSidebarHidden = false

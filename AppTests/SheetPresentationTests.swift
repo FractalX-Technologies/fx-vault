@@ -38,9 +38,8 @@ struct SheetPresentationTests {
 
     // MARK: - Drift line
 
-    @Test func driftLineSaysWhatChangedAndWarnsOnConflicts() {
-        #expect(DriftBannerView.tone(conflictCount: 0) == .info)
-        #expect(DriftBannerView.tone(conflictCount: 1) == .warning)
+    /// Muted text in both cases (board Main2-Repository); a conflict is named, not colored.
+    @Test func driftLineSaysWhatChangedAndNamesConflicts() {
         #expect(DriftBannerView.message(count: 3, conflictCount: 0) == "3 changed on GitHub")
         let withConflicts = DriftBannerView.message(count: 3, conflictCount: 1)
         #expect(withConflicts.hasPrefix("3 changed on GitHub"))

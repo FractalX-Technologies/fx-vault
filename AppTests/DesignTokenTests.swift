@@ -137,8 +137,8 @@ struct DesignTokenTests {
         #expect(Theme.Layout.tableRowHeight == 34)
         let spacing = [
             Theme.Spacing.xxSmall, Theme.Spacing.xSmall, Theme.Spacing.smallMinus, Theme.Spacing.small,
-            Theme.Spacing.mediumMinus, Theme.Spacing.medium, Theme.Spacing.large, Theme.Spacing.largePlus,
-            Theme.Spacing.xLarge, Theme.Spacing.xLargePlus, Theme.Spacing.xxLarge, Theme.Spacing.xxLargePlus,
+            Theme.Spacing.mediumMinus, Theme.Spacing.medium, Theme.Spacing.mediumPlus, Theme.Spacing.large,
+            Theme.Spacing.largePlus, Theme.Spacing.xLarge, Theme.Spacing.xLargePlus, Theme.Spacing.xxLarge,
             Theme.Spacing.xxxLarge, Theme.Spacing.huge, Theme.Spacing.xHuge,
         ]
         #expect(spacing == spacing.sorted(), "the spacing scale is ascending")

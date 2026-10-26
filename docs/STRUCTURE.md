@@ -48,7 +48,8 @@ FXVault/
 │   │   │   ├── JumpPalette/         # the ⌘K palette (D6c2): JumpPaletteModels (JumpPlaces,
 │   │   │   │                        # pure), JumpPaletteViewModel, JumpPaletteView, JumpPaletteCopy
 │   │   │   ├── Place/               # every place's header (D6c3): PlaceHeader (name, subline,
-│   │   │   │                        # status line, ⋯ More), ChangedOnGitHubDot, PlaceCopy
+│   │   │   │                        # status line, ⋯ More), ChangedOnGitHubDot, PlaceCopy,
+│   │   │   │                        # PlaceItemMoreItems (⋯ item actions), PlaceRefreshingLine
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
 │   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel

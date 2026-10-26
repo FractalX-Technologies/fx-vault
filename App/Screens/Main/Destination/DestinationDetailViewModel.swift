@@ -71,10 +71,10 @@ final class DestinationDetailViewModel: LockObserving {
         guard let destination else { return "" }
         let counts = PlaceCopy.counts(secrets: count(of: .secret), variables: nil)
         guard destination.repositoryID != nil else {
-            return PlaceCopy.subline([destination.provider.title, counts])
+            return PlaceCopy.subline([destination.provider.shortTitle, counts])
         }
         return PlaceCopy.subline([
-            destination.provider.title,
+            destination.provider.shortTitle,
             DestinationCopy.runtimeSection,
             destination.stage ?? DestinationCopy.noStage,
             counts,

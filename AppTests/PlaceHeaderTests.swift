@@ -1,3 +1,4 @@
+import DestinationKit
 import Foundation
 import Testing
 import VaultCore
@@ -65,5 +66,81 @@ struct PlaceHeaderTests {
         let first = try #require(rows.first)
         repository.selection = [first.id]
         #expect(repository.placeCopyRows.map(\.id) == [first.id], "a selection: only it")
+    }
+
+    /// A pending deletion is neither copied by Copy To nor deleted again by Delete Selected….
+    @Test func aPendingDeletionIsLeftOutOfCopyToAndDeleteSelected() async throws {
+        let fixture = try await RepoDetailSelectionTests.Fixture()
+        let model = fixture.viewModel
+        _ = try await fixture.rows(count: 3)
+        #expect(!model.canDeleteSelection, "nothing selected")
+        fixture.select(["API_TOKEN"])
+        #expect(model.canDeleteSelection)
+        model.deleteSelection()
+        model.confirmDeletion()
+        #expect(await TestFixtures.eventually { fixture.status("API_TOKEN") == .deleted })
+
+        #expect(model.placeCopyRows.map(\.name) == ["NEW_A", "NEW_B"], "the tab without its pending deletion")
+        fixture.select(["API_TOKEN"])
+        #expect(model.placeCopyRows.isEmpty)
+        #expect(!model.canDeleteSelection, "only a pending deletion is selected")
+    }
+
+    /// Board KV-Place: "Key Vault · counts" (the subscription arrives with 1g); a runtime
+    /// destination adds Runtime and its stage, or "No stage".
+    @Test func aKeyVaultSaysWhatItIsAndARuntimeOneItsStage() async throws {
+        let fixture = try await DestinationViewModelTests.Fixture()
+        let staged = try fixture.detail(try fixture.addVault(stage: "production"))
+        #expect(staged.subline == "Key Vault · Runtime · production · 0 secrets")
+        let unstagedID = try fixture.destinations.createDestination(
+            repositoryID: fixture.repositoryID,
+            target: .azureKeyVault(vaultName: "kv-sample-dev", tenantID: nil),
+            stage: nil
+        )
+        #expect(try fixture.detail(unstagedID).subline == "Key Vault · Runtime · No stage · 0 secrets")
+
+        let ownID = try fixture.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-example-shared", tenantID: nil),
+            stage: nil
+        )
+        let own = try fixture.detail(ownID)
+        try fixture.destinations.addItem(destinationID: ownID, kind: .secret, name: "DATABASE_URL", value: SecretBytes(utf8: "FXV_FIXTURE_SECRET"))
+        #expect(await TestFixtures.eventually { own.subline == "Key Vault · 1 secret" })
+    }
+
+    /// A Key Vault read from Azure: Refresh says "Refreshing…" until `az` answers, and Delete
+    /// Selected… needs a selected secret that is not already a pending deletion.
+    @Test func aKeyVaultShowsItsRefreshAndKeepsDeleteForLiveSecrets() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: MainViewModelTests.ready)
+        try harness.installFakeAZ()
+        harness.transport.stubKeyVault("kv-example-prod", secrets: ["DATABASE-URL": "postgres://example"])
+        let destinations = harness.data.destinations
+        let id = try destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-example-prod", tenantID: nil),
+            stage: nil
+        )
+        _ = try await harness.data.destinationSync.importRemote(destinationID: id)
+        let model = DestinationDetailViewModel(
+            destination: try #require(try destinations.destination(id)),
+            dependencies: harness.dependencies(recorder: ActionRecorder())
+        ) {
+            try? destinations.destination(id)
+        }
+        #expect(await TestFixtures.eventually { model.rows.count == 1 })
+        let row = try #require(model.rows.first)
+
+        model.refreshNow()
+        #expect(model.isRefreshing, "the header shows Refreshing… at once")
+        #expect(PlaceCopy.refreshing == "Refreshing…")
+        #expect(await TestFixtures.eventually { !model.isRefreshing })
+
+        #expect(!model.canDeleteSelection, "nothing selected")
+        model.selection = [row.id]
+        #expect(model.canDeleteSelection)
+        try destinations.deleteItems([row.id])
+        #expect(await TestFixtures.eventually { model.rows.first?.isDeleted == true }, "an imported secret waits for Sync")
+        #expect(!model.canDeleteSelection, "only a pending deletion is selected")
     }
 }

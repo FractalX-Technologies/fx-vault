@@ -4,14 +4,14 @@ import SwiftUI
 /// MainDark): 12 pt corners, hairline border, one line of text, an optional mono label and an
 /// optional link-style action.
 ///
-/// - `.info`: `card` fill with a brand dot ("2 changes on GitHub since your last sync · Review").
-/// - `.warning`: `card` fill, hairline-strong border, warning symbol (the drift banner with
-///   conflicts; brand links stay above AA on `card`).
+/// - `.info`: `card` fill with a brand dot (a Key Vault's Refresh result · Review).
+/// - `.warning`: `card` fill, hairline-strong border, warning symbol (a read-only scope, the
+///   recovery-key notice; brand links stay above AA on `card`).
 /// - `.offline`: `surface2` fill, hairline-strong border, `wifi.slash` and the `OFFLINE` label.
 /// - `.danger`: `card` fill, danger symbol, for failures that need an action.
 ///
 /// ```swift
-/// Banner(.info, message: driftText, action: .init(title: reviewTitle) { viewModel.reviewDrift() })
+/// Banner(.info, message: driftText, action: .init(title: reviewTitle) { viewModel.reviewDifferences() })
 /// Banner(.offline, message: ConnectivityBannerModel.offline.message)
 /// ```
 struct Banner: View {

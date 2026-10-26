@@ -1,9 +1,9 @@
 import SwiftUI
 import VaultData
 
-/// The drift line under a repository's header (§10 Column 3; board Main2-Repository): the ring,
-/// "2 changed on GitHub", "· 1 also changed in your vault" in the warning color when a change on
-/// GitHub also changed in the vault (a decision is needed; nothing failed), then Review.
+/// The drift line under a repository's header (§10 Column 3; board Main2-Repository): the ink
+/// ring, "2 changed on GitHub" in muted text, "· 1 also changed in your vault" when a change on
+/// GitHub also changed in the vault (a decision is needed; nothing failed), then Review in ink.
 ///
 /// UI feature contract entry view (ARCHITECTURE.md): `RepoDetailScreen` shows it when the last
 /// drift check of the open repository found something (`report.count > 0`) and calls
@@ -18,20 +18,26 @@ struct DriftBannerView: View {
     }
 
     var body: some View {
-        let conflictCount = report.conflicts.count
         HStack(spacing: Theme.Spacing.smallMinus) {
             ChangedOnGitHubDot()
-            Text(Self.message(count: report.count, conflictCount: conflictCount))
+            Text(Self.message(count: report.count, conflictCount: report.conflicts.count))
                 .fxTextStyle(.caption)
-                .foregroundStyle(Self.tone(conflictCount: conflictCount) == .warning ? Theme.Colors.warning : Theme.Colors.mutedText)
+                .foregroundStyle(Theme.Colors.mutedText)
                 .lineLimit(1)
             Text(verbatim: "·")
                 .fxTextStyle(.caption)
                 .foregroundStyle(Theme.Colors.mutedText)
                 .accessibilityHidden(true)
-            Button(PlaceCopy.review, action: onReview)
-                .fxLinkButtonStyle(isEmphasized: true)
-                .help(String(
+            // Ink with a faint underline as the board, not the brand link of sheets.
+            Button(action: onReview) {
+                Text(PlaceCopy.review)
+                    .font(Theme.Typography.captionEmphasized)
+                    .foregroundStyle(Theme.Colors.ink)
+                    .underline(color: Theme.Colors.hairlineStrong)
+            }
+            .buttonStyle(.plain)
+            .pointerStyle(.link)
+            .help(String(
                     localized: "drift.banner.review.help",
                     defaultValue: "Keep your version or take GitHub's for each change"
                 ))
@@ -40,10 +46,6 @@ struct DriftBannerView: View {
     }
 
     // MARK: Resolution (pure)
-
-    static func tone(conflictCount: Int) -> Banner.Tone {
-        conflictCount > 0 ? .warning : .info
-    }
 
     /// "3 changed on GitHub", plus "· 1 also changed in your vault" when there are conflicts.
     static func message(count: Int, conflictCount: Int) -> String {

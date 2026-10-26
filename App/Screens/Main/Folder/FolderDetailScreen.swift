@@ -77,23 +77,7 @@ private struct FolderDetailHeader: View {
             .fxButtonStyle(.outline, size: .compact)
             .disabled(viewModel.items.isEmpty)
         } moreItems: {
-            ForEach(ConfigKind.allCases, id: \.self) { kind in
-                Button(PlaceCopy.newItem(kind)) {
-                    viewModel.add(kind)
-                }
-            }
-            Divider()
-            Button(PlaceCopy.pasteMultiple) {
-                viewModel.pasteMultiple()
-            }
-            Button(PlaceCopy.importEnv) {
-                viewModel.importEnvFile()
-            }
-            Divider()
-            Button(PlaceCopy.deleteSelected, role: .destructive) {
-                viewModel.deleteSelection()
-            }
-            .disabled(viewModel.selection.isEmpty)
+            PlaceItemMoreItems(viewModel: viewModel)
             Divider()
             FolderContextMenu(folderID: viewModel.folderID, main: main)
         }
@@ -127,7 +111,7 @@ private struct FolderDetailControls: View {
                     .fxTextStyle(.monoMeta)
                     .foregroundStyle(Theme.Colors.mutedText)
                 CopyToMenu(
-                    title: String(localized: "main.detail.selection.copyTo", defaultValue: "Copy To"),
+                    title: PlaceCopy.copyTo,
                     rows: rows,
                     viewModel: viewModel,
                     showsChevron: true
@@ -170,7 +154,7 @@ private struct FolderRowActions: View {
         Button(String(localized: "main.table.edit", defaultValue: "Edit…")) {
             viewModel.edit(row)
         }
-        CopyToMenu(title: String(localized: "main.table.copyTo", defaultValue: "Copy To"), rows: [row], viewModel: viewModel)
+        CopyToMenu(title: PlaceCopy.copyTo, rows: [row], viewModel: viewModel)
         if row.isLinked {
             Button(String(localized: "main.table.linked.show", defaultValue: "Show Linked Copies")) {
                 viewModel.showLinkedCopies(of: row)

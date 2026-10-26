@@ -52,7 +52,6 @@ struct OrganizationDetailScreen: View {
                 Button(PlaceCopy.newItem(kind)) {
                     viewModel.add(kind)
                 }
-                .accessibilityIdentifier(AccessibilityID.Main.organizationAdd(kind.rawValue))
             }
             if let organization = viewModel.organization {
                 Divider()

@@ -1343,17 +1343,6 @@
         }
       }
     },
-    "copyTo.eyebrow" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy To"
-          }
-        }
-      }
-    },
     "copyTo.noScope" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -2494,17 +2483,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "No stage"
-          }
-        }
-      }
-    },
-    "destination.detail.refresh" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Refresh"
           }
         }
       }
@@ -7536,28 +7514,6 @@
         }
       }
     },
-    "folder.exportEnv" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Export .env…"
-          }
-        }
-      }
-    },
-    "folder.eyebrow" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Folder"
-          }
-        }
-      }
-    },
     "folder.name.create" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8999,17 +8955,6 @@
         }
       }
     },
-    "jump.place.folder" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Folder"
-          }
-        }
-      }
-    },
     "jump.place.organization" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9747,17 +9692,6 @@
         }
       }
     },
-    "main.detail.pasteMultiple" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Paste Multiple…"
-          }
-        }
-      }
-    },
     "main.detail.planNote" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -9864,17 +9798,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Deselect"
-          }
-        }
-      }
-    },
-    "main.detail.selection.copyTo" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy To"
           }
         }
       }
@@ -10154,17 +10077,6 @@
         }
       }
     },
-    "main.scopes.exportEnv" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Export .env…"
-          }
-        }
-      }
-    },
     "main.scopes.itemCount" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -10326,17 +10238,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Azure"
-          }
-        }
-      }
-    },
-    "main.sidebar.clone" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Clone…"
           }
         }
       }
@@ -10715,17 +10616,6 @@
         }
       }
     },
-    "main.table.copyTo" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy To"
-          }
-        }
-      }
-    },
     "main.table.copyTo.destinations" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11096,17 +10986,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Find"
-          }
-        }
-      }
-    },
-    "menu.file.importEnv" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Import .env…"
           }
         }
       }
@@ -11624,17 +11503,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "In the organization %@"
-          }
-        }
-      }
-    },
-    "organization.eyebrow" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Organization"
           }
         }
       }
@@ -12262,6 +12130,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Share Securely…"
+          }
+        }
+      }
+    },
+    "place.refreshing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Refreshing…"
           }
         }
       }

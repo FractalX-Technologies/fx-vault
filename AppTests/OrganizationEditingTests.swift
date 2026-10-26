@@ -146,6 +146,9 @@ struct OrganizationEditingTests {
         #expect(detail.pendingDeletion == [npm])
         detail.confirmDeletion()
         #expect(await TestFixtures.eventually { detail.rows.first { $0.name == "NPM_TOKEN" }?.syncStatus == .deleted })
+        // As a repository's header: the pending deletion is not counted, "without value" is
+        // secrets only.
+        #expect(detail.subline == "Organization · 1 secret · 1 variable · 1 without value")
         let deleted = try #require(detail.rows.first { $0.name == "NPM_TOKEN" })
         detail.edit(deleted)
         #expect(recorder.presented.count == 1)

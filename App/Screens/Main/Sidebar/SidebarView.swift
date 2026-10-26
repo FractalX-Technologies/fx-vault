@@ -440,7 +440,7 @@ private struct RepoContextMenu: View {
                     defaultValue: "Environments need admin rights on the repository"
                 ))
             Divider()
-            Button(String(localized: "main.sidebar.clone", defaultValue: "Clone…")) {
+            Button(PlaceCopy.clone) {
                 guard let folder = ClonePanel.folder(for: main) else { return }
                 Task { await sidebar.clone(repo, into: folder) }
             }

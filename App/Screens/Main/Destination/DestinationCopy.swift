@@ -68,10 +68,6 @@ nonisolated enum DestinationCopy {
         String(localized: "destination.detail.eyebrow", defaultValue: "Destination · Runtime")
     }
 
-    static var refresh: String {
-        String(localized: "destination.detail.refresh", defaultValue: "Refresh")
-    }
-
     static var refreshHelp: String {
         String(
             localized: "destination.detail.refresh.help",

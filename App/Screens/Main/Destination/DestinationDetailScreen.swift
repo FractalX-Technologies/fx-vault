@@ -60,9 +60,9 @@ struct DestinationDetailScreen: View {
     }
 }
 
-/// The vault's name, its subline, the Experimental tag of a runtime destination, and ⋯ More: New
-/// Secret (a Key Vault holds secrets only), Paste Multiple…, Import .env…, Copy To, Refresh, Delete
-/// Selected…, then the vault's own menu.
+/// The vault's name, its subline, Refreshing… while `az` reads it, the Experimental tag of a
+/// runtime destination, and ⋯ More: New Secret (a Key Vault holds secrets only), Paste
+/// Multiple…, Import .env…, Copy To, Refresh, Delete Selected…, then the vault's own menu.
 private struct DestinationDetailHeader: View {
     let viewModel: DestinationDetailViewModel
     let main: MainViewModel
@@ -70,33 +70,24 @@ private struct DestinationDetailHeader: View {
     var body: some View {
         let destination = viewModel.destination
         PlaceHeader(title: destination?.title ?? "", subline: viewModel.subline) {
+            if viewModel.isRefreshing {
+                PlaceRefreshingLine()
+            }
+        } accessories: {
             if destination?.repositoryID != nil {
                 StatusChip.tag(DestinationCopy.experimentalTag)
                     .help(DestinationCopy.experimentalHelp)
             }
         } moreItems: {
-            Button(PlaceCopy.newItem(.secret)) {
-                viewModel.add(.secret)
+            PlaceItemMoreItems(viewModel: viewModel, kinds: [.secret]) {
+                Divider()
+                CopyToMenu(title: PlaceCopy.copyTo, rows: viewModel.placeCopyRows, viewModel: viewModel)
+                Button(PlaceCopy.refresh) {
+                    viewModel.refreshNow()
+                }
+                .disabled(viewModel.isRefreshing || !main.isOnline)
+                .help(main.networkHelp(DestinationCopy.refreshHelp))
             }
-            Divider()
-            Button(PlaceCopy.pasteMultiple) {
-                viewModel.pasteMultiple()
-            }
-            Button(PlaceCopy.importEnv) {
-                viewModel.importEnvFile()
-            }
-            Divider()
-            CopyToMenu(title: PlaceCopy.copyTo, rows: viewModel.placeCopyRows, viewModel: viewModel)
-            Button(PlaceCopy.refresh) {
-                viewModel.refreshNow()
-            }
-            .disabled(viewModel.isRefreshing || !main.isOnline)
-            .help(main.networkHelp(DestinationCopy.refreshHelp))
-            Divider()
-            Button(PlaceCopy.deleteSelected, role: .destructive) {
-                viewModel.deleteSelection()
-            }
-            .disabled(viewModel.selection.isEmpty)
             if let destination {
                 Divider()
                 if destination.repositoryID == nil {
@@ -212,7 +203,7 @@ private struct DestinationDetailControls: View {
                     .fxTextStyle(.monoMeta)
                     .foregroundStyle(Theme.Colors.mutedText)
                 CopyToMenu(
-                    title: String(localized: "main.detail.selection.copyTo", defaultValue: "Copy To"),
+                    title: PlaceCopy.copyTo,
                     rows: rows,
                     viewModel: viewModel,
                     showsChevron: true
@@ -265,7 +256,7 @@ private struct DestinationRowActions: View {
                     viewModel.fill(row)
                 }
             }
-            CopyToMenu(title: String(localized: "main.table.copyTo", defaultValue: "Copy To"), rows: [row], viewModel: viewModel)
+            CopyToMenu(title: PlaceCopy.copyTo, rows: [row], viewModel: viewModel)
         }
         if row.isLinked {
             Button(String(localized: "main.table.linked.show", defaultValue: "Show Linked Copies")) {

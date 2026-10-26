@@ -77,10 +77,6 @@ enum AccessibilityID {
         static let importRepository = "main.import"
         static let importOrganization = "main.importOrganization"
         static let organizationTable = "main.organizationTable"
-        /// Add Secret / Add Variable on an organization (`secret`, `variable`).
-        static func organizationAdd(_ kind: String) -> String {
-            "main.organizationAdd.\(kind)"
-        }
         /// The toolbar's path of the selected place (1.0).
         static let breadcrumb = "main.breadcrumb"
 

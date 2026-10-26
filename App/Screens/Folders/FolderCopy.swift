@@ -3,11 +3,12 @@ import Foundation
 /// The texts of folders (v0.7.0), in one place for the sidebar, the folder columns and sheets.
 enum FolderCopy {
     static let sectionTitle = String(localized: "folder.section", defaultValue: "Folders")
-    static let eyebrow = String(localized: "folder.eyebrow", defaultValue: "Folder")
+    /// One key with the place header's kind.
+    static let eyebrow = PlaceCopy.folder
     static let newFolder = String(localized: "folder.new", defaultValue: "New Folder…")
     static let rename = String(localized: "folder.rename", defaultValue: "Rename…")
     static let delete = String(localized: "folder.delete", defaultValue: "Delete Folder…")
-    static let exportEnv = String(localized: "folder.exportEnv", defaultValue: "Export .env…")
+    static let exportEnv = PlaceCopy.exportEnv
     static let emptyHint = String(
         localized: "folder.emptyHint",
         defaultValue: "Keep secrets and variables you use in several repositories here, for example the keys of a mobile app."

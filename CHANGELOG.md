@@ -76,8 +76,10 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   Securely…, Deployment Branches…, Clone…, Refresh and Delete Selected… (what the place offers);
   Copy To takes the selected rows, or the open tab when none is selected. An environment's menu
   in the sidebar has Rename…, Duplicate Environment…, Share Securely…, Refresh and Delete
-  Environment…. A folder keeps Copy To and Share Securely… beside its ⋯. The Add buttons, the
-  tags under the title and the drift banner are gone.
+  Environment…. A folder keeps Copy To and Share Securely… beside its ⋯. Refresh shows
+  "Refreshing…" under the title until GitHub or Azure answers, and Delete Selected… waits for a
+  selected row that is not already deleted. The Add buttons, the tags under the title and the
+  drift banner are gone.
 - **Sharing production.** Share Project lists production stages unchecked; checking one asks
   for Touch ID (or, without Touch ID, your master password at Create), and the send step names
   the production places. The file is refused unless that confirmation was given.

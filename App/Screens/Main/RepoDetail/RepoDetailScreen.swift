@@ -102,7 +102,7 @@ private struct RepoDetailSelectionActions: View {
                 .fxTextStyle(.monoMeta)
                 .foregroundStyle(Theme.Colors.mutedText)
             CopyToMenu(
-                title: String(localized: "main.detail.selection.copyTo", defaultValue: "Copy To"),
+                title: PlaceCopy.copyTo,
                 rows: actions.deletable,
                 viewModel: viewModel,
                 showsChevron: true
@@ -141,8 +141,8 @@ private struct RepoDetailSelectionActions: View {
     }
 }
 
-/// The header (boards Main2-Repository, Main2-Actions): the scope's name, its subline, the drift
-/// line ("2 changed on GitHub · Review", or why the check failed) and ⋯ More.
+/// The header (boards Main2-Repository, Main2-Actions): the scope's name, its subline, the status
+/// line (Refreshing…, "2 changed on GitHub · Review", or why the check failed) and ⋯ More.
 private struct RepoDetailHeader: View {
     let viewModel: RepoDetailViewModel
     let main: MainViewModel
@@ -153,7 +153,9 @@ private struct RepoDetailHeader: View {
             subline: viewModel.headerSubline,
             titleHelp: viewModel.repository?.fullName
         ) {
-            if let report = viewModel.driftReport, report.count > 0 {
+            if viewModel.isRefreshing {
+                PlaceRefreshingLine()
+            } else if let report = viewModel.driftReport, report.count > 0 {
                 DriftBannerView(report: report) {
                     viewModel.reviewDrift()
                 }
@@ -181,23 +183,15 @@ private struct RepoDetailMoreItems: View {
     let main: MainViewModel
 
     var body: some View {
+        PlaceItemMoreItems(viewModel: viewModel) {
+            placeItems
+        }
+    }
+
+    @ViewBuilder
+    private var placeItems: some View {
         let scopeList = main.scopeList
         let scope = scopeList?.selectedScope
-        ForEach(ConfigKind.allCases, id: \.self) { kind in
-            Button(PlaceCopy.newItem(kind)) {
-                viewModel.add(kind)
-            }
-            .disabled(!viewModel.canEdit)
-        }
-        Divider()
-        Button(PlaceCopy.pasteMultiple) {
-            viewModel.pasteMultiple()
-        }
-        .disabled(!viewModel.canEdit)
-        Button(PlaceCopy.importEnv) {
-            viewModel.importEnvFile()
-        }
-        .disabled(!viewModel.canEdit)
         Button(PlaceCopy.exportEnv) {
             if let scopeList, let scope {
                 scopeList.exportEnv(scope)
@@ -234,11 +228,6 @@ private struct RepoDetailMoreItems: View {
             localized: "main.detail.refresh.help",
             defaultValue: "Read permissions and check GitHub for changes"
         )))
-        Divider()
-        Button(PlaceCopy.deleteSelected, role: .destructive) {
-            viewModel.deleteSelection()
-        }
-        .disabled(!viewModel.canEdit || viewModel.selectedRows.allSatisfy(\.isDeleted))
     }
 
     private func canExport(_ scopeList: ScopeListViewModel?, _ scope: ConfigScopeSummaryModel?) -> Bool {

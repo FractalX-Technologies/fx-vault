@@ -74,4 +74,10 @@ extension ConfigTableModel {
         let selected = rows(for: selection)
         return (selected.isEmpty ? rows : selected).filter { !$0.isDeleted }
     }
+
+    /// Delete Selected… in ⋯ More: a selected row that is not already a pending deletion, in a
+    /// place whose items can change. A selection of tombstones alone has nothing to delete.
+    var canDeleteSelection: Bool {
+        canEdit && rows(for: selection).contains { !$0.isDeleted }
+    }
 }
