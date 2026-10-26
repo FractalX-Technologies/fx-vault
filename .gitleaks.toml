@@ -14,4 +14,16 @@ paths = [
   '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/file_v1_kat\.json$''',
   '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/file_v2_kat\.json$''',
   '''^Packages/FXVaultKit/Tests/EnvToolsTests/Fixtures/sample\.env$''',
+  # Removed in 1.0 but still in history, which the CI job scans: dropping them fails every scan.
+  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/nearby_kat\.json$''',
+  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/chat_kat\.json$''',
+  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/team_kat\.json$''',
+  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/space_kat\.json$''',
+  '''^Packages/FXVaultKit/Tests/SharingKitTests/Fixtures/pairing_kat\.json$''',
+]
+# Migration identifiers (`v18_standalone_key_vaults`) read as a generic API key next to a
+# `KeyVaults` case name. Snake case after a version prefix is never a credential.
+regexTarget = "secret"
+regexes = [
+  '''^v[0-9]+_[a-z0-9_]+$''',
 ]
