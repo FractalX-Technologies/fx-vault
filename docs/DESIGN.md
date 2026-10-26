@@ -474,19 +474,27 @@ foreground color, so `.primary` text still turns white on selected rows.
   drift line (`DriftBannerView`: a 7 pt ink ring, "2 changed on GitHub" in `mutedText` (with
   "· 1 also changed in your vault" on a conflict, still muted), "·", Review in `ink`
   `captionEmphasized` with a `hairlineStrong` underline) or why the check failed. On the right, bottom-aligned: the place's own
-  `.compact` outline buttons (a folder's Copy To and Share Securely…) and ⋯ More. The
+  `.compact` outline buttons (a folder's Copy To and Share Securely…; Copy All with the `touchid`
+  glyph on a repository scope, a Key Vault and an organization, `CopyAllButton`) and ⋯ More. The
   `SegmentedPill` (Secrets / Variables) with the selection's actions; the table with
   `.fxTable()`.
 - ⋯ More (board Main2-Actions), what each place offers, disabled when the account may not:
-  New Secret, New Variable | Paste Multiple…, Import .env…, Export .env… | Copy To (the
-  selection, or the open tab when nothing is selected), Share Securely… | Deployment Branches…
-  (an environment; its help says the policy and the plan note), Clone…, Refresh | Delete
-  Selected…. An organization: New Secret, New Variable | Remove from Vault…. A Key Vault: New
-  Secret | Paste Multiple…, Import .env… | Copy To, Refresh | Delete Selected… | its own menu. A
-  folder: the item actions, then its own menu (Rename…, Share Securely…, Export .env…, Delete
-  Folder…). The item actions are one section (`PlaceItemMoreItems`); Delete Selected… needs a
-  selected row that is not already a pending deletion (`canDeleteSelection`). Copy All joins in
-  1e; the lock beside Touch ID items and Notes | Table wait for 1e and B9.
+  New Secret, New Variable | Paste Multiple…, Import .env…, Export .env…, Copy All | Copy To
+  (the selection, or the open tab when nothing is selected), Share Securely… | Deployment
+  Branches… (an environment; its help says the policy and the plan note), Clone…, Refresh |
+  Delete Selected…. An organization: New Secret, New Variable | Copy All | Remove from Vault….
+  A Key Vault: New Secret | Paste Multiple…, Import .env…, Copy All | Copy To, Refresh | Delete
+  Selected… | its own menu. A folder: the item actions with Copy All, then its own menu
+  (Rename…, Share Securely…, Export .env…, Delete Folder…). The item actions are one section
+  (`PlaceItemMoreItems`); Delete Selected… needs a selected row that is not already a pending
+  deletion (`canDeleteSelection`); Copy All needs a live item (`canCopyAll`). A SwiftUI menu
+  item has no trailing lock glyph, so Copy All's help says it asks for Touch ID; Notes | Table
+  waits for B9.
+- Copy All (1.0 D6c4, `CopyAllScreen`): "Confirm it's you" (`ReauthView`, Touch ID tried at once,
+  then the master password), then "Copied" with the count and the clipboard's clear delay. The
+  text is the board's notes: `# Secrets · N`, `KEY=value` lines by name, a blank line,
+  `# Variables · N`; a secret without a value is `KEY=`, a pending deletion is left out, an empty
+  kind has no section.
 - An environment row's context menu (board Main2-Actions): Rename…, Duplicate Environment…,
   Share Securely…, Refresh, Revert Changes (only when there is a change to undo; not on the
   board), | Delete Environment….
@@ -669,7 +677,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   in a file (api-service · production). Rotate them if it leaks." and the value-missing names;
   "Expires after" as a `.formLabel` with the `.small` `SegmentedPill` at the trailing edge. The
   footer: the file's counts, Cancel (outline) and "Create File with Touch ID" (primary, `touchid`;
-  "Create File" without Touch ID). Touch ID or the password (`ShareReauthView`: "Confirm it's
+  "Create File" without Touch ID). Touch ID or the password (`ReauthView`: "Confirm it's
   you" in `.headline`, the password as a dialog form row with Continue, Use Touch ID outline)
   keeps the title; its footer is Back and Cancel. Share-Passphrase (680 pt): "Send the
   passphrase another way"; the file (`doc`, the name in `.monoMeta`, "· 18 secrets · 7

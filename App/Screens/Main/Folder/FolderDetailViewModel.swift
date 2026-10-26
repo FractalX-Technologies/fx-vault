@@ -167,6 +167,10 @@ final class FolderDetailViewModel: LockObserving {
         }
     }
 
+    func copyAll() {
+        dependencies.actions.present(.copyAll(CopyAllContext(place: .place(place))))
+    }
+
     // MARK: - Add, edit and delete
 
     func add() {

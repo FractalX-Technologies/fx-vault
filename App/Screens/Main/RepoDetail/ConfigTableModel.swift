@@ -40,6 +40,9 @@ protocol ConfigTableModel: AnyObject, Observable {
     func edit(_ row: ConfigRowModel)
     func deleteSelection()
     func copySelection()
+    /// Copy All (1.0 D6c4): the sheet that asks for Touch ID or the master password, then copies
+    /// every live value of the place.
+    func copyAll()
     func pasteMultiple()
     func copy(_ rows: [ConfigRowModel], to target: ItemCopyTargetModel)
     func copyToOtherRepository(_ rows: [ConfigRowModel])
@@ -79,5 +82,10 @@ extension ConfigTableModel {
     /// place whose items can change. A selection of tombstones alone has nothing to delete.
     var canDeleteSelection: Bool {
         canEdit && rows(for: selection).contains { !$0.isDeleted }
+    }
+
+    /// Copy All needs a live item of either kind (both tabs, whatever is selected).
+    var canCopyAll: Bool {
+        ConfigKind.allCases.contains { count(of: $0) > 0 }
     }
 }

@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// "Confirm it's you" before a share (D30): Touch ID, or the master password, in the dialog
-/// form of the share sheet (board Share-Pick's language).
-struct ShareReauthView: View {
-    let model: ShareReauthModel
+/// "Confirm it's you" before a share or Copy All (D30): Touch ID, or the master password, in the
+/// dialog form of the 1.0 sheets (board Share-Pick's language).
+struct ReauthView<Authorization: ReauthAuthorization>: View {
+    let model: ReauthModel<Authorization>
     let message: String
     let onTouchID: () async -> Void
     let onPassword: () async -> Void

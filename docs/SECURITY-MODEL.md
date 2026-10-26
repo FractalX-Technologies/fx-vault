@@ -191,7 +191,8 @@ the official signed release.") and every keychain call refuses with `.unsignedBu
 
 ## 6. Re-authentication (D30)
 
-`.env` export (also of a folder, v0.7.0, or a destination, v0.8.0) and `.fxvault` export
+`.env` export (also of a folder, v0.7.0, or a destination, v0.8.0), Copy All (1.0: a place's
+values as `.env` text on the clipboard, concealed and cleared after 30 s) and `.fxvault` export
 (`.fileExport`; since v0.9.0 a project bundle, with a passphrase) require a fresh Touch ID or
 master-password check through `ReauthGate` (never `.deviceOwnerAuthentication`, which would accept the macOS
 login password). The result is a single-use authorization (`EnvExportAuthorizationModel`,

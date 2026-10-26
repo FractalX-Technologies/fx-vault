@@ -117,6 +117,7 @@ enum AccessibilityID {
     enum Place {
         static let subline = "place.subline"
         static let more = "place.more"
+        static let copyAll = "place.copyAll"
     }
 
     /// The ⌘K jump palette (1.0).

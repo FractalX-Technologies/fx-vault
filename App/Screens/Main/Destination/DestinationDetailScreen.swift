@@ -61,8 +61,8 @@ struct DestinationDetailScreen: View {
 }
 
 /// The vault's name, its subline, Refreshing… while `az` reads it, the Experimental tag of a
-/// runtime destination, and ⋯ More: New Secret (a Key Vault holds secrets only), Paste
-/// Multiple…, Import .env…, Copy To, Refresh, Delete Selected…, then the vault's own menu.
+/// runtime destination, Copy All, and ⋯ More: New Secret (a Key Vault holds secrets only), Paste
+/// Multiple…, Import .env…, Copy All, Copy To, Refresh, Delete Selected…, then the vault's own menu.
 private struct DestinationDetailHeader: View {
     let viewModel: DestinationDetailViewModel
     let main: MainViewModel
@@ -78,8 +78,14 @@ private struct DestinationDetailHeader: View {
                 StatusChip.tag(DestinationCopy.experimentalTag)
                     .help(DestinationCopy.experimentalHelp)
             }
+            CopyAllButton(isEnabled: viewModel.canCopyAll) {
+                viewModel.copyAll()
+            }
         } moreItems: {
             PlaceItemMoreItems(viewModel: viewModel, kinds: [.secret]) {
+                CopyAllMenuItem(isEnabled: viewModel.canCopyAll) {
+                    viewModel.copyAll()
+                }
                 Divider()
                 CopyToMenu(title: PlaceCopy.copyTo, rows: viewModel.placeCopyRows, viewModel: viewModel)
                 Button(PlaceCopy.refresh) {

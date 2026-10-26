@@ -305,7 +305,7 @@ public struct EnvFileRepository: Sendable {
         existingFile: SecureFileWriter.ExistingFilePolicy = .fail,
         headerComments: [String] = []
     ) throws(EnvFileError) -> EnvExportResultModel {
-        try authorization.consume(for: session)
+        try authorization.consume(.file, for: session)
         let preview = try exportPreview(place: place)
         let contents = try serialize(place: place, names: Set(preview.exportedNames), headerComments: headerComments)
         defer { contents.wipe() }
@@ -533,18 +533,7 @@ public struct EnvFileRepository: Sendable {
         let entries: [DotEnvEntryModel]
         do {
             entries = try session.read { keys, tx in
-                let sources: [ItemCopySource] = switch place {
-                case .scope(let repositoryID, let scope):
-                    try ConfigStore(database: session.database)
-                        .fetchItemRecords(repositoryID: repositoryID, scope: scope, in: tx)
-                        .map(ItemCopySource.init)
-                case .folder(let folderID):
-                    try FolderStore(database: session.database).fetchItemRecords(folderID: folderID, in: tx).map(ItemCopySource.init)
-                case .destination(let destinationID):
-                    try DestinationStore(database: session.database)
-                        .fetchItemRecords(destinationID: destinationID, in: tx)
-                        .map(ItemCopySource.init)
-                }
+                let sources = try itemSources(of: place, in: tx)
                 var byName: [String: DotEnvEntryModel] = [:]
                 let ordered = sources.filter { !$0.isDeleted && names.contains($0.name) }
                     .sorted { ($0.kind == .secret ? 0 : 1) < ($1.kind == .secret ? 0 : 1) }
@@ -564,4 +553,74 @@ public struct EnvFileRepository: Sendable {
             throw .serialize(error)
         }
     }
+
+    /// The rows of a scope, folder or destination, tombstones included.
+    private func itemSources(of place: ItemPlaceModel, in tx: StoreTransaction) throws -> [ItemCopySource] {
+        switch place {
+        case .scope(let repositoryID, let scope):
+            try ConfigStore(database: session.database)
+                .fetchItemRecords(repositoryID: repositoryID, scope: scope, in: tx)
+                .map(ItemCopySource.init)
+        case .folder(let folderID):
+            try FolderStore(database: session.database).fetchItemRecords(folderID: folderID, in: tx).map(ItemCopySource.init)
+        case .destination(let destinationID):
+            try DestinationStore(database: session.database)
+                .fetchItemRecords(destinationID: destinationID, in: tx)
+                .map(ItemCopySource.init)
+        }
+    }
+
+    // MARK: - Copy All
+
+    /// Copy All's text (board Main2-Repository): a `# <sectionTitle>` section per kind, secrets
+    /// first, names in order, every live item; a value the vault lacks is `KEY=`. Consumes a
+    /// ``EnvExportPurpose/clipboard`` authorization and logs nothing; the caller wipes the text.
+    /// Throws `.authorizationInvalid`, `.config` or `.serialize`.
+    public func copyAllText(
+        of place: CopyAllPlaceModel,
+        authorization: EnvExportAuthorizationModel,
+        sectionTitle: (ConfigKind, Int) -> String
+    ) throws(EnvFileError) -> SecretBytes {
+        try authorization.consume(.clipboard, for: session)
+        let byKind: [ConfigKind: [DotEnvEntryModel]]
+        do {
+            byKind = try session.read { keys, tx in
+                var byKind: [ConfigKind: [DotEnvEntryModel]] = [:]
+                switch place {
+                case .place(let place):
+                    for source in try itemSources(of: place, in: tx) where !source.isDeleted {
+                        let value = try source.openValue(keys: keys) ?? SecretBytes(count: 0)
+                        byKind[source.kind, default: []].append(DotEnvEntryModel(key: source.name, value: value))
+                    }
+                case .organization(let organizationID):
+                    let records = try OrganizationStore(database: session.database)
+                        .fetchItemRecords(organizationID: organizationID, in: tx)
+                    for record in records where !record.isDeleted {
+                        let value = try OrgFieldCipher.openValue(of: record, keys: keys) ?? SecretBytes(count: 0)
+                        byKind[record.kind, default: []].append(DotEnvEntryModel(key: record.name, value: value))
+                    }
+                }
+                return byKind
+            }
+        } catch {
+            throw .config(.wrap(error))
+        }
+        defer { byKind.values.joined().forEach { $0.value.wipe() } }
+        let sections = ConfigKind.allCases.compactMap { kind -> DotEnvSectionModel? in
+            guard let entries = byKind[kind], !entries.isEmpty else { return nil }
+            return DotEnvSectionModel(comments: [sectionTitle(kind, entries.count)], entries: entries.sorted { $0.key < $1.key })
+        }
+        do {
+            return try DotEnvSerializer.serialize(sections: sections)
+        } catch {
+            throw .serialize(error)
+        }
+    }
+}
+
+/// What Copy All reads (1.0 D6c4): a repository scope, a folder or a destination, or an
+/// organization.
+public enum CopyAllPlaceModel: Sendable, Hashable {
+    case place(ItemPlaceModel)
+    case organization(OrganizationID)
 }

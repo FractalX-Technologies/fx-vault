@@ -501,12 +501,12 @@ them with `await`). Packages ship no user-facing text: the app maps every error.
   failed replacement; set wherever that is detected, including ReauthGate checks while unlocked;
   cleared by enable, disable, reset and an answered offer). Argon2id work is `@concurrent`. A weak
   new password throws `PasswordPolicyError.tooWeak`.
-- `ReauthGate` (D30): `authorize(.export | .share, with: .biometrics(prompt) |
+- `ReauthGate` (D30): `authorize(.export | .share | .copyAll, with: .biometrics(prompt) |
   .password(String))`, `authorizeWithPassword(.newRecoveryKey | .changePassword |
-  .disableTouchID | .rotateKey | .resetVault, password:)`; plus `authorizeEnvExport(with:
-  session:) -> EnvExportAuthorizationModel` and `authorizeShare(_:with:session:) ->
-  ShareAuthorizationModel`. Both authorizations are single-use and bound to the session and
-  its key generation (shared core `ReauthTicket`).
+  .disableTouchID | .rotateKey | .resetVault, password:)`; plus `authorizeEnvExport(.file |
+  .clipboard, with:session:) -> EnvExportAuthorizationModel` and `authorizeShare(_:with:session:)
+  -> ShareAuthorizationModel`. Both authorizations are single-use, valid for their purpose only
+  and bound to the session and its key generation (shared core `ReauthTicket`).
 - Touch ID: `BiometricPrompt(reason:fallbackTitle:)` (built by the app with `String(localized:)`),
   `protocol BiometricKeyStoring`, `KeychainManager(accessGroup:authManager:)`,
   `BiometricAuthManager`, `protocol BuildCapabilitiesProviding` / `BuildCapabilities`,
@@ -647,7 +647,10 @@ cloudSyncDetector:fileWriter:clock:writePolicy:)`: `readFile(at:)`, `parse(_:)`,
 `conflicts(for:in:repositoryID:scope:)`, `applyImport(_:selections:repositoryID:scope:)`,
 `exportPreview(repositoryID:scope:)`, `inspectDestination(_:)`, `export(repositoryID:scope:to:
 authorization:existingFile:headerComments:)` (0600, needs an `EnvExportAuthorizationModel`),
-`addGitignoreEntry(relativePath:repositoryRoot:)`. `GitServiceGitignoreChecker(git:)`.
+`addGitignoreEntry(relativePath:repositoryRoot:)`, and Copy All's
+`copyAllText(of: CopyAllPlaceModel, authorization:sectionTitle:) -> SecretBytes` (1.0 D6c4: a
+scope, folder, destination or organization; a `.clipboard` authorization; `DotEnvSerializer`'s
+sections). `GitServiceGitignoreChecker(git:)`.
 
 **Sync** (`Sync/`). `actor SyncRepository(session:schedulers:cloner:clock:writePolicy:)`:
 `pendingSummary()` / `observePendingSummary()` (feeds "Sync N"), `prepareAfterUnlock()`
@@ -750,8 +753,8 @@ let reauth = ReauthGate(manager: vault)
 - The sync view model holds a `SyncActivityAssertion` for the whole run (it suspends only the
   inactivity rule).
 - Sheets that show values conform to `LockObserving` or live under a phase-switched screen.
-- `.env` export needs `ReauthGate.authorizeEnvExport`; `.fxvault` export needs
-  `ReauthGate.authorizeShare`.
+- `.env` export and Copy All need `ReauthGate.authorizeEnvExport` (`.file`, `.clipboard`);
+  `.fxvault` export needs `ReauthGate.authorizeShare`.
 - Destination items are written only through `DestinationRepository` (its internal
   `DestinationItemWriter`) and destination remotes are reached only through
   `DestinationSyncRepository`, over the one
@@ -1172,7 +1175,8 @@ AppTests).
     drift line, and ⋯ More, whose item actions are `PlaceItemMoreItems` (shared with Key Vaults
     and folders; Delete Selected… follows `ConfigTableModel.canDeleteSelection`): New Secret /
     New Variable (`ConfigTableModel.add(_:)` opens that kind's tab first),
-    Paste Multiple…, Import .env…, Export .env…, Copy To (`placeCopyRows`: the selection, or the
+    Paste Multiple…, Import .env…, Export .env…, Copy All (`copyAll()` presents `CopyAllScreen`
+    when `canCopyAll`; also the header button), Copy To (`placeCopyRows`: the selection, or the
     open tab), Share Securely…, Deployment Branches… (`editBranchPolicy()`; its help carries the
     policy and the plan note), Clone…, Refresh, Delete Selected…), the read-only explanation, and
     `ConfigTableView` (Secrets | Variables over one
@@ -1331,7 +1335,8 @@ AppTests).
     removed when the sheet closes), and import (header before passphrase; one message for wrong
     passphrase / damaged file; an expired file has its own small dialog (`hasExpired`); chips, Keep mine default, widening-policy and replay confirmations;
     one-click import of a missing repository through `ShareRepositoryImporter`).
-    Re-authentication sheets use `ShareReauthModel` / `ShareReauthView`.
+    Re-authentication steps use `ReauthModel` / `ReauthView` (`App/Screens/Reauth/`), shared with
+    Copy All.
 
 **Components** (`App/Components`): `SecretValueEditor`, `MaskedValueCell` (display-only: masked /
 revealed / plain / missing, the view model owns reveal state), `CommandRow`,

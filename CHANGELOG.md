@@ -110,6 +110,12 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   "Refreshing…" under the title until GitHub or Azure answers, and Delete Selected… waits for a
   selected row that is not already deleted. The Add buttons, the tags under the title and the
   drift banner are gone.
+- **Copy All.** A repository's scopes, Key Vaults and organizations have a Copy All button in
+  their header, and every place has Copy All in its ⋯ menu. It asks for Touch ID (or your master
+  password), then copies every value of the place as `.env` text: `# Secrets · N`, the secrets,
+  a blank line, `# Variables · N`, the variables, a secret without a value as `KEY=`. The
+  clipboard is marked concealed and clears after 30 seconds, when FX Vault locks and when it
+  quits.
 - **Sharing production.** Share Project lists production stages unchecked; checking one asks
   for Touch ID (or, without Touch ID, your master password at Create), and the send step names
   the production places. The file is refused unless that confirmation was given.

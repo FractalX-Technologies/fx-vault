@@ -1354,6 +1354,94 @@
         }
       }
     },
+    "copyAll.accessibility" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy All, asks for Touch ID"
+          }
+        }
+      }
+    },
+    "copyAll.done.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%1$lld value](inflect: true) copied as .env text. The clipboard clears in %2$lld seconds."
+          }
+        }
+      }
+    },
+    "copyAll.done.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copied"
+          }
+        }
+      }
+    },
+    "copyAll.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy every value of this place as .env text. Asks for Touch ID or your master password."
+          }
+        }
+      }
+    },
+    "copyAll.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Every value of this place goes to the clipboard as .env text, in plain text, until the clipboard clears."
+          }
+        }
+      }
+    },
+    "copyAll.section.secrets" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Secrets · %lld"
+          }
+        }
+      }
+    },
+    "copyAll.section.variables" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Variables · %lld"
+          }
+        }
+      }
+    },
+    "copyAll.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy All"
+          }
+        }
+      }
+    },
     "copyTo.copy" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -18455,6 +18543,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Sync %lld"
+          }
+        }
+      }
+    },
+    "touchID.prompt.copyAll" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "copy every value to the clipboard"
           }
         }
       }

@@ -259,6 +259,8 @@ enum Theme {
         static let shareOpenWidth: CGFloat = 440
         static let shareOpenPreviewWidth: CGFloat = 620
         static let shareExpiredWidth: CGFloat = 360
+        /// Copy All's dialog (1.0 D6c4, no board): Share-Pick's password row beside its label.
+        static let copyAllSheetWidth: CGFloat = 520
         /// The tallest a share dialog grows before its content scrolls.
         static let shareSheetMaxHeight: CGFloat = 640
         /// Height of the share tree and of the one-repository import preview.

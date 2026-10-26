@@ -167,7 +167,9 @@ private struct RepoDetailHeader: View {
                     .help(error.message)
             }
         } accessories: {
-            EmptyView()
+            CopyAllButton(isEnabled: viewModel.canCopyAll) {
+                viewModel.copyAll()
+            }
         } moreItems: {
             RepoDetailMoreItems(viewModel: viewModel, main: main)
         }
@@ -175,7 +177,7 @@ private struct RepoDetailHeader: View {
 }
 
 /// ⋯ More of a repository scope (board Main2-Actions): New Secret and New Variable; Paste
-/// Multiple…, Import .env… and Export .env…; Copy To and Share Securely…; Deployment Branches…
+/// Multiple…, Import .env…, Export .env… and Copy All; Copy To and Share Securely…; Deployment Branches…
 /// (an environment), Clone… and Refresh; Delete Selected…. Actions the account may not take are
 /// listed disabled.
 private struct RepoDetailMoreItems: View {
@@ -198,6 +200,9 @@ private struct RepoDetailMoreItems: View {
             }
         }
         .disabled(!canExport(scopeList, scope))
+        CopyAllMenuItem(isEnabled: viewModel.canCopyAll) {
+            viewModel.copyAll()
+        }
         Divider()
         CopyToMenu(title: PlaceCopy.copyTo, rows: viewModel.placeCopyRows, viewModel: viewModel)
         Button(PlaceCopy.shareSecurely) {
