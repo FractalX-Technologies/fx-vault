@@ -2406,6 +2406,11 @@ Review D6c6 — Azure › subscription › vault (2026-10-26, automatic):
   - Connect: a reused vault whose subscription can't be saved is still imported (logged without names).
   - `SidebarAzureModel` / `SidebarSubscriptionModel` moved to `SidebarModels.swift`.
   - Tests written, not run yet: `SidebarViewModelTests.keyVaultsGroupUnderTheirSubscription` (a selection opens it), `ConnectAzureTests.aFailedOrMissedLookupLeavesTheRefreshAlone`, `MainViewModelTests.aKeyVaultOfItsOwnOpensFromTheSidebar` (the path).
+- Re-review (1g lookup, 2026-10-26):
+  - `AzureDiscoveryRepository.subscription(ofVaultNamed:tenantID:)` returns `KeyVaultSubscriptionMatchModel` (`.found`, `.notListed`, `.incomplete`); only `.notListed` (every list answered) is remembered.
+  - A lock cancels the Refresh and its lookup (`vaultDidLock`); a cancelled Refresh shows no result and no error.
+  - Subscription test ids use the subscription's UUID; `isSelectionPending` has its own doc comment.
+  - Tests written, not run yet: `AzureDiscoveryRepositoryTests.aVaultIsFoundInTheSubscriptionThatListsIt` (incomplete), `ConnectAzureTests.aFailedOrMissedLookupLeavesTheRefreshAlone` (a failed list is retried) and `lockingDuringARefreshDropsItAndItsLookup`, `JumpPaletteTests.anotherScopeOfItsRepositoryLeavesTheNameBehind`.
 
 Review D6d-0 — the sidebar's "N without value" (2026-10-26, automatic):
 - VaultData: `RepoPendingCountModel.valueMissing`: live secrets without a value at the repository level and in live environments, summed from `scopeSummaries` inside `pendingCounts(_:)` (the existing all-repositories observation; no new query).

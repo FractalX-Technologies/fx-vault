@@ -25,8 +25,8 @@ struct SidebarKeyVaultsSection: View {
                         title: group.subscription.name,
                         titleStyle: .sans,
                         isSelected: false,
-                        accessibilityID: AccessibilityID.Main.subscription(group.subscription.name),
-                        toggleAccessibilityID: AccessibilityID.Main.subscriptionToggle(group.subscription.name),
+                        accessibilityID: AccessibilityID.Main.subscription(group.id),
+                        toggleAccessibilityID: AccessibilityID.Main.subscriptionToggle(group.id),
                         onToggle: { sidebar.toggle(subscription: group.id) }
                     ) {
                         sidebar.toggle(subscription: group.id)

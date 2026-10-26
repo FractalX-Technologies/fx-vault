@@ -632,7 +632,8 @@ destination item never reaches GitHub except as a copy in a repository scope.
 - `AzureDiscoveryRepository` (1.0, B8): `subscriptions()`, `keyVaults(subscriptionID:)` and
   `discover()` over `AzureCLIDiscovery`, read-only and without storage;
   `subscription(ofVaultNamed:tenantID:)` (D6c6) finds the subscription that lists a vault (name
-  and tenant case-insensitive). It and the token
+  and tenant case-insensitive): `.found`, `.notListed`, or `.incomplete` when a subscription's
+  vault list failed. It and the token
   provider get their `AzureCLIRunner` from `ShellResolvingAzureCLI` (same shell probe).
 - Across places: `ItemCopySource` reads a row of any of the three tables and one `link_id` group
   spans them; `LinkedCopyPlaceModel.destination(…)`; `ConfigRepository+Links`,
@@ -1199,8 +1200,9 @@ AppTests).
     scopes, the folders and the other destinations; ⌘C / ⌘V and `.env` import work as for scopes.
     Refresh is disabled offline. After a Refresh's spinner, in a task of its own, a Key Vault of
     its own without a subscription gets it through `KeyVaultSubscriptionLookup`
-    (`AppContainer.keyVaultSubscriptions`, D6c6; no `az` call at launch; a vault no subscription
-    lists is not looked up again that session, a failed `az` is), so the sidebar's
+    (`AppContainer.keyVaultSubscriptions`, D6c6; no `az` call at launch;
+    `KeyVaultSubscriptionMatchModel`: a vault every subscription's list leaves out is not looked
+    up again that session, while a failed `az` or a list that failed is), so the sidebar's
     `SidebarAzureModel` groups it.
   - `RepoDetailViewModel` (`Main/RepoDetail`): the place header (1.0 D6c3, `Main/Place`:
     `PlaceHeader` with `headerTitle`, `headerSubline` built by `PlaceCopy`, Refreshing… or the

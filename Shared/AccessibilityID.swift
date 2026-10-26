@@ -1,3 +1,5 @@
+import Foundation
+
 /// Accessibility identifiers the XCUITest suite drives. Compiled into the app and into
 /// FXVaultUITests, so renaming one breaks the build instead of a UI test at run time.
 enum AccessibilityID {
@@ -109,14 +111,15 @@ enum AccessibilityID {
             "main.ownerToggle.\(login)"
         }
 
-        /// An Azure subscription's row under Azure in the sidebar (1.0 D6c6).
-        static func subscription(_ name: String) -> String {
-            "main.subscription.\(name)"
+        /// An Azure subscription's row under Azure in the sidebar (1.0 D6c6), by id: two
+        /// subscriptions may share a name.
+        static func subscription(_ id: UUID) -> String {
+            "main.subscription.\(id.uuidString.lowercased())"
         }
 
         /// The chevron that opens or closes a subscription (1.0 D6c6).
-        static func subscriptionToggle(_ name: String) -> String {
-            "main.subscriptionToggle.\(name)"
+        static func subscriptionToggle(_ id: UUID) -> String {
+            "main.subscriptionToggle.\(id.uuidString.lowercased())"
         }
 
         /// The toolbar's search button that opens the ⌘K jump palette (1.0).
