@@ -32,6 +32,10 @@ struct ConfigRowModel: Identifiable, Hashable {
     let linkCount: Int
     /// The share file whose import holds this row out of Sync (v0.9.0, P8); nil when not held.
     var heldBy: SharePackageID?
+    /// The organization whose item of the same name this one overrides (1.0, B7a).
+    var overrides: String?
+    /// An organization item the repository inherits (1.0, B7a): read only, never in ``rows``.
+    var inherited: InheritedRowModel?
 
     init(_ item: ConfigItemModel) {
         id = item.id
@@ -45,6 +49,24 @@ struct ConfigRowModel: Identifiable, Hashable {
         syncedName = item.syncedName == item.name ? nil : item.syncedName
         linkCount = item.isLinked ? item.linkCount : 0
         heldBy = item.heldBy
+    }
+
+    /// An inherited row: GitHub gives the organization's item to this repository.
+    init(inherited item: OrgItemModel, organization: String) {
+        id = item.id
+        name = item.name
+        kind = item.kind
+        hasValue = item.hasValue
+        isDeleted = false
+        isSynced = true
+        updatedAt = item.remoteUpdatedAt ?? .distantPast
+        status = .synced
+        syncedName = nil
+        linkCount = 0
+        inherited = InheritedRowModel(
+            scope: PlaceCopy.subline([organization, item.visibility.reachTitle(selectedCount: item.selectedRepositoryCount)]),
+            updatedAt: item.remoteUpdatedAt
+        )
     }
 
     /// True when a share file holds this row (the Held chip, v0.9.0).
@@ -68,6 +90,14 @@ struct ConfigRowModel: Identifiable, Hashable {
     var canPushOnNextSync: Bool {
         isHeld || (kind == .secret && hasValue && isSynced && !isDeleted && (status == .synced || status == .unverifiedShare))
     }
+}
+
+/// What an inherited row says beyond its name (1.0, B7a; board Place-Table).
+struct InheritedRowModel: Hashable {
+    /// "example-org · all repos", "example-org · private and internal".
+    let scope: String
+    /// GitHub's last change; nil for an organization item not synced yet.
+    let updatedAt: Date?
 }
 
 /// The rows waiting for the "Delete?" confirmation: one row, or a multi-selection (v0.4.0).
@@ -167,6 +197,13 @@ final class RepoDetailViewModel: LockObserving {
     }
     /// The other places of ``linkedPopoverRowID``, loaded when the popover opens.
     private(set) var linkedCopies: [LinkedCopyModel] = []
+    /// What the repository gets from its organization (1.0, B7a); nil for a person's repository
+    /// or an organization not in the vault.
+    private(set) var inherited: InheritedOrgItemsModel?
+    /// Inherited variables in plaintext, as the scope's own (dropped on lock).
+    private var inheritedValues: [ConfigItemID: String] = [:]
+    /// In an environment, the repository level's names: they win over the organization's there.
+    private var repositoryLevelNames: Set<ItemNameModel> = []
 
     @ObservationIgnored private(set) var driftTask: Task<Void, Never>?
     /// A drift check was asked for while offline and skipped: the reconnect check re-lists.
@@ -196,6 +233,7 @@ final class RepoDetailViewModel: LockObserving {
         scopeProvider = scopeSummary
         dependencies.actions.addLockObserver(self)
         observeItems()
+        observeInherited()
     }
 
     // MARK: - Header
@@ -312,7 +350,9 @@ final class RepoDetailViewModel: LockObserving {
     }
 
     func display(for row: ConfigRowModel) -> ConfigValueDisplayModel {
-        values.display(for: row)
+        guard row.inherited != nil else { return values.display(for: row) }
+        // An organization secret is on GitHub even when the vault has no value for it.
+        return row.kind == .variable ? inheritedValues[row.id].map(ConfigValueDisplayModel.plain) ?? .masked : .masked
     }
 
     /// A repository scope shows each row's sync status.
@@ -347,6 +387,27 @@ final class RepoDetailViewModel: LockObserving {
     }
 
     /// The rows of `ids` in table order (a context menu's rows can differ from the selection).
+    /// The table: the scope's own rows (one that overrides an organization item says so), then
+    /// the organization's items this repository gets and nothing here overrides, read only
+    /// (board Place-Table). Actions only ever see ``rows``.
+    var tableRows: [ConfigRowModel] {
+        guard let inherited else { return rows }
+        let reached = inherited.items.filter { $0.kind == kind }
+        let reachedNames = Set(reached.map(\.name))
+        let ownNames = Set(items.filter { $0.kind == kind && !$0.isDeleted }.map(\.name))
+        let own = rows.map { row in
+            var row = row
+            if !row.isDeleted, reachedNames.contains(row.name) {
+                row.overrides = inherited.organizationLogin
+            }
+            return row
+        }
+        let overridden = ownNames.union(repositoryLevelNames.filter { $0.kind == kind }.map(\.name))
+        return own + reached
+            .filter { !overridden.contains($0.name) }
+            .map { ConfigRowModel(inherited: $0, organization: inherited.organizationLogin) }
+    }
+
     func rows(for ids: Set<ConfigItemID>) -> [ConfigRowModel] {
         rows.filter { ids.contains($0.id) }
     }
@@ -514,7 +575,57 @@ final class RepoDetailViewModel: LockObserving {
         observeItems()
     }
 
+    /// The organization's items that reach this repository, now and after each change.
+    private func observeInherited() {
+        guard let repository else { return }
+        let stream = dependencies.organizations.observeInheritedItems(
+            ownerLogin: repository.ownerLogin,
+            repositoryName: repository.name,
+            isPrivate: repository.visibility.isPrivate
+        )
+        tasks.set("inherited", Task { [weak self] in
+            do {
+                for try await inherited in stream {
+                    self?.applyInherited(inherited)
+                }
+            } catch {
+                AppLog.ui.error("Inherited item observation ended")
+            }
+        })
+    }
+
+    private func applyInherited(_ inherited: InheritedOrgItemsModel?) {
+        self.inherited = inherited
+        var values: [ConfigItemID: String] = [:]
+        for item in inherited?.items ?? [] where item.kind == .variable && item.hasValue {
+            guard let bytes = try? dependencies.organizationItems.reveal(item.id) else { continue }
+            values[item.id] = bytes.utf8String()
+            bytes.wipe()
+        }
+        inheritedValues = values
+    }
+
+    /// An environment's inherited rows leave out what the repository level overrides.
+    private func observeRepositoryLevelNames() {
+        guard scope.level == .environment else {
+            tasks.cancel("repositoryLevel")
+            repositoryLevelNames = []
+            return
+        }
+        let stream = dependencies.config.observeItems(repositoryID: repositoryID, scope: .repository)
+        tasks.set("repositoryLevel", Task { [weak self] in
+            do {
+                for try await items in stream {
+                    self?.repositoryLevelNames = Set(items.filter { !$0.isDeleted }.map { ItemNameModel(kind: $0.kind, name: $0.name) })
+                }
+            } catch {
+                AppLog.ui.error("Repository-level item observation ended")
+            }
+        })
+    }
+
     private func observeItems() {
+        observeRepositoryLevelNames()
         let stream = dependencies.config.observeItems(repositoryID: repositoryID, scope: scope)
         tasks.set("items", Task { [weak self] in
             do {
@@ -657,7 +768,7 @@ final class RepoDetailViewModel: LockObserving {
 
     /// Edit, or Fill Value for a value-missing secret (§7.8).
     func edit(_ row: ConfigRowModel) {
-        guard canEdit, !row.isDeleted else { return }
+        guard canEdit, !row.isDeleted, row.inherited == nil else { return }
         present(row.hasValue ? .edit(row.id) : .fill(row.id))
     }
 
@@ -897,6 +1008,7 @@ final class RepoDetailViewModel: LockObserving {
     func vaultDidLock() {
         remaskAll()
         values.clearVariables()
+        inheritedValues = [:]
         driftTask?.cancel()
         driftReport = nil
         pendingDeletion = nil

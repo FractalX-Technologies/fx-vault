@@ -76,6 +76,18 @@ nonisolated enum PlaceCopy {
         return String(localized: "main.detail.delete.names.more", defaultValue: "\(names.prefix(3).joined(separator: ", ")) and \(names.count - 3) more")
     }
 
+    /// An inherited organization item's status (B7a; board Place-Table).
+    static let inherited = String(localized: "place.inherited", defaultValue: "Inherited")
+
+    /// "· Overrides example-org" beside a row's status.
+    static func overrides(_ organization: String) -> String {
+        String(localized: "place.overrides", defaultValue: "· Overrides \(organization)")
+    }
+
+    static func overridesHelp(_ organization: String) -> String {
+        String(localized: "place.overrides.help", defaultValue: "\(organization) has an item of the same name; this one wins here")
+    }
+
     /// "2 changed on GitHub" (board Main2-Repository).
     static func changedOnGitHub(_ count: Int) -> String {
         String(localized: "place.drift.changed", defaultValue: "\(count) changed on GitHub")

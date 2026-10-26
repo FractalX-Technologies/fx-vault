@@ -12343,6 +12343,17 @@
         }
       }
     },
+    "place.inherited" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Inherited"
+          }
+        }
+      }
+    },
     "place.kind.environment" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -12515,6 +12526,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Share Securely…"
+          }
+        }
+      }
+    },
+    "place.overrides" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "· Overrides %@"
+          }
+        }
+      }
+    },
+    "place.overrides.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ has an item of the same name; this one wins here"
           }
         }
       }

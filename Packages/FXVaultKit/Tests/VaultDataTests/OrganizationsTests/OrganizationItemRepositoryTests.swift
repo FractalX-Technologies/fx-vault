@@ -72,6 +72,31 @@ struct OrganizationItemRepositoryTests {
         #expect(try await fixture.item("STRIPE_KEY").syncStatus == .modified)
     }
 
+    /// B7a: a repository inherits the live items whose visibility reaches it. The fixture's
+    /// NPM_TOKEN reaches all, FXV_FIXTURE_URL private repositories; STRIPE_KEY and REGION are
+    /// `selected` with lists FX Vault never read, so they reach nothing.
+    @Test func aRepositoryInheritsWhatItsOrganizationGivesIt() async throws {
+        let fixture = try await Fixture.make()
+        let organizations = fixture.base.organizations
+        let login = OrganizationRepositoryTests.organization
+        let web = try #require(try await organizations.inheritedItems(ownerLogin: login, repositoryName: "web", isPrivate: false))
+        #expect(web.organizationLogin == login)
+        #expect(web.organizationID == fixture.organization.id)
+        #expect(web.items.map(\.name) == ["NPM_TOKEN"])
+        let api = try await organizations.inheritedItems(ownerLogin: login.uppercased(), repositoryName: "api", isPrivate: true)
+        #expect(api?.items.map(\.name) == ["FXV_FIXTURE_URL", "NPM_TOKEN"], "the owner's login matches without case")
+
+        // A stored list names the repository (in any case); a pending deletion gives nothing.
+        let stripe = try await fixture.item("STRIPE_KEY")
+        try fixture.items.setAccess(stripe.id, .selected(["API"]))
+        let npm = try await fixture.item("NPM_TOKEN")
+        try fixture.items.deleteItems([npm.id])
+        #expect(try await organizations.inheritedItems(ownerLogin: login, repositoryName: "api", isPrivate: true)?.items.map(\.name) == ["FXV_FIXTURE_URL", "STRIPE_KEY"])
+        #expect(try await organizations.inheritedItems(ownerLogin: login, repositoryName: "web", isPrivate: false)?.items.isEmpty == true)
+
+        #expect(try await organizations.inheritedItems(ownerLogin: "other-org", repositoryName: "api", isPrivate: true) == nil)
+    }
+
     @Test func addsDeletionsAndRevivals() async throws {
         let fixture = try await Fixture.make()
         let items = fixture.items

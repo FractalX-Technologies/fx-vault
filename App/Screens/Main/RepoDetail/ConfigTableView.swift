@@ -36,18 +36,22 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
     }
 
     var body: some View {
-        let rows = viewModel.rows
+        let rows = viewModel.tableRows
         Group {
             if viewModel.showsSyncStatus {
                 Table(rows, selection: $viewModel.selection) {
                     commonColumns
                     TableColumn(Self.header(String(localized: "main.table.status", defaultValue: "Status"))) { row in
                         Group {
-                            if row.isHeld {
+                            if row.inherited != nil {
+                                Text(PlaceCopy.inherited)
+                                    .fxTextStyle(.caption)
+                                    .foregroundStyle(Theme.Colors.mutedText)
+                            } else if row.isHeld {
                                 StatusChip(title: HeldShareCopy.chip, tone: .warning)
                                     .help(viewModel.heldHelp(for: row))
                             } else {
-                                StatusDotLabel(status: row.status)
+                                ConfigStatusLabel(row: row)
                             }
                         }
                         .fxTableCell()
@@ -61,14 +65,15 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
             }
         }
         .fxTable()
+        // An inherited row is read only: no menu, no edit (B7a).
         .contextMenu(forSelectionType: ConfigItemID.self) { ids in
-            if let id = ids.first, ids.count == 1, let row = rows.first(where: { $0.id == id }) {
+            if let id = ids.first, ids.count == 1, let row = rows.first(where: { $0.id == id }), row.inherited == nil {
                 rowMenu(row)
-            } else if ids.count > 1 {
+            } else if ids.count > 1, !viewModel.rows(for: ids).isEmpty {
                 selectionMenu(viewModel.rows(for: ids))
             }
         } primaryAction: { ids in
-            if let id = ids.first, let row = rows.first(where: { $0.id == id }) {
+            if let id = ids.first, let row = rows.first(where: { $0.id == id }), row.inherited == nil {
                 viewModel.edit(row)
             }
         }
@@ -107,12 +112,15 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
         TableColumn(Self.header(String(localized: "main.table.name", defaultValue: "Name"))) { row in
             VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
                 HStack(spacing: Theme.Spacing.smallMinus) {
-                    TableNameText(name: row.name, isDeleted: row.isDeleted)
+                    TableNameText(name: row.name, isDeleted: row.isDeleted, isMuted: row.inherited != nil)
                     if row.isLinked {
                         LinkedChip(row: row, viewModel: viewModel)
                     }
                 }
-                if let syncedName = row.syncedName {
+                if let inherited = row.inherited {
+                    TableMetaText(inherited.scope)
+                        .lineLimit(1)
+                } else if let syncedName = row.syncedName {
                     Text(String(localized: "main.table.renamedFrom", defaultValue: "Renamed from \(syncedName)"))
                         .font(Theme.Typography.caption)
                         .foregroundStyle(Theme.Colors.mutedText)
@@ -125,7 +133,7 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
         TableColumn(Self.header(String(localized: "main.table.value", defaultValue: "Value"))) { row in
             MaskedValueCell(
                 display: viewModel.display(for: row),
-                onToggle: row.kind == .secret && row.hasValue && !row.isDeleted
+                onToggle: row.kind == .secret && row.hasValue && !row.isDeleted && row.inherited == nil
                     ? { viewModel.toggleReveal(row.id) }
                     : nil
             )
@@ -133,8 +141,10 @@ struct ConfigTableView<Model: ConfigTableModel, RowMenu: View, SelectionMenu: Vi
         }
         .width(min: Theme.Layout.tableValueMinWidth)
         TableColumn(Self.header(String(localized: "main.table.updated", defaultValue: "Updated"))) { row in
-            TableMetaText(ConfigTableFormat.updatedText(row.updatedAt))
-                .help(row.updatedAt.formatted(date: .complete, time: .shortened))
+            // An organization item added in FX Vault has no GitHub date yet.
+            let updatedAt = row.inherited.map(\.updatedAt) ?? row.updatedAt
+            TableMetaText(updatedAt.map { ConfigTableFormat.updatedText($0) } ?? "—")
+                .help(updatedAt?.formatted(date: .complete, time: .shortened) ?? "")
                 .fxTableCell()
         }
         .width(Theme.Layout.tableDateMinWidth)
@@ -154,6 +164,25 @@ extension ConfigTableView where Model == RepoDetailViewModel, RowMenu == ConfigR
         } selectionMenu: { rows in
             ConfigSelectionMenu(rows: rows, viewModel: viewModel)
         }
+    }
+}
+
+/// A row's sync status, then "· Overrides example-org" when an organization item of the same
+/// name reaches the repository and this one wins (B7a; board Place-Table).
+private struct ConfigStatusLabel: View {
+    let row: ConfigRowModel
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.smallMinus) {
+            StatusDotLabel(status: row.status)
+            if let organization = row.overrides {
+                Text(PlaceCopy.overrides(organization))
+                    .fxTextStyle(.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .lineLimit(1)
+            }
+        }
+        .help(row.overrides.map(PlaceCopy.overridesHelp) ?? "")
     }
 }
 
