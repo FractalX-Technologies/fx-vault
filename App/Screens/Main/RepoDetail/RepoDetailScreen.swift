@@ -2,27 +2,19 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// Column 3 (§10; mockup Main): the connectivity banner, the header (scope label, name, chips,
-/// branch rules, Clone and Refresh), the drift banner, the plan note, the read-only explanation,
-/// the Secrets | Variables pill with Paste multiple and Add, and the table.
+/// Column 3 (§10; boards Main2-Repository, Place-Table): the connectivity banner, the header
+/// (name, "Environment · api-service · counts", the drift line, ⋯ More), the read-only
+/// explanation, the Secrets | Variables pill with the selection's actions, and the table.
 struct RepoDetailScreen: View {
     @Bindable var viewModel: RepoDetailViewModel
     let main: MainViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.largePlus) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
             if let banner = main.connectivityBanner {
                 MainConnectivityBanner(banner: banner, main: main)
             }
             RepoDetailHeader(viewModel: viewModel, main: main)
-            if let report = viewModel.driftReport, report.count > 0 {
-                DriftBannerView(report: report) {
-                    viewModel.reviewDrift()
-                }
-            }
-            if viewModel.showsPlanNote {
-                PlanNoteView()
-            }
             if let reason = viewModel.readOnlyReason {
                 Label(reason.localizedExplanation, systemImage: "lock")
                     .font(Theme.Typography.callout)
@@ -37,9 +29,7 @@ struct RepoDetailScreen: View {
                     .foregroundStyle(Theme.Colors.mutedText)
             }
         }
-        .padding(.horizontal, Theme.Spacing.xxLargePlus)
-        .padding(.vertical, Theme.Spacing.xLargePlus)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .fxPlaceColumn()
         // ⌘V anywhere in the detail column (the table, the Kind pill, the empty state): a
         // user-initiated paste opens the import preview prefilled (never a background read).
         // Paste is disabled in read-only scopes.
@@ -70,37 +60,31 @@ struct RepoDetailScreen: View {
     }
 }
 
-/// The Secrets | Variables pill with the add actions on its right, or under it when the column is
-/// too narrow for one row, so the actions never spill under the sidebar. While several rows
-/// are selected, the selection's actions take the add actions' place (v0.4.0).
+/// The Secrets | Variables pill, with the selection's actions on its right (or under it when the
+/// column is too narrow) while several rows are selected (v0.4.0). Adding, pasting and importing
+/// are in ⋯ More since 1.0.
 private struct RepoDetailControls: View {
     @Bindable var viewModel: RepoDetailViewModel
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: Theme.Spacing.medium) {
-                kindPill
+                ConfigKindPill(viewModel: viewModel)
                 Spacer(minLength: 0)
-                actions
+                selectionActions
             }
             VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-                kindPill
-                actions
+                ConfigKindPill(viewModel: viewModel)
+                selectionActions
             }
         }
     }
 
     @ViewBuilder
-    private var actions: some View {
+    private var selectionActions: some View {
         if viewModel.selection.count > 1 {
             RepoDetailSelectionActions(viewModel: viewModel)
-        } else {
-            ConfigAddActions(viewModel: viewModel)
         }
-    }
-
-    private var kindPill: some View {
-        ConfigKindPill(viewModel: viewModel)
     }
 }
 
@@ -157,199 +141,125 @@ private struct RepoDetailSelectionActions: View {
     }
 }
 
-/// The header (mockup Main): ENVIRONMENT or REPOSITORY, the scope's name in the large title,
-/// visibility and capability tags, the branch rules in mono, then Clone and Refresh on the right,
-/// or under the title when the column is too narrow for both.
+/// The header (boards Main2-Repository, Main2-Actions): the scope's name, its subline, the drift
+/// line ("2 changed on GitHub · Review", or why the check failed) and ⋯ More.
 private struct RepoDetailHeader: View {
     let viewModel: RepoDetailViewModel
     let main: MainViewModel
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .bottom, spacing: Theme.Spacing.large) {
-                details
-                Spacer(minLength: 0)
-                actions
-            }
-            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-                details
-                actions
-            }
-        }
-    }
-
-    private var details: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
-            SectionLabel(isEnvironment
-                ? String(localized: "main.detail.environment", defaultValue: "Environment")
-                : String(localized: "main.detail.repository", defaultValue: "Repository"))
-            Text(verbatim: title)
-                .fxTextStyle(.largeTitle)
-                .foregroundStyle(Theme.Colors.ink)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .textSelection(.enabled)
-                .help(viewModel.repository?.fullName ?? "")
-            RepoDetailChips(viewModel: viewModel)
-                .padding(.top, Theme.Spacing.xSmall)
-        }
-    }
-
-    private var actions: some View {
-        HStack(spacing: Theme.Spacing.large) {
-            Button(String(localized: "main.detail.clone", defaultValue: "Clone")) {
-                guard let folder = ClonePanel.folder(for: main), let repo = main.selectedRepo else { return }
-                Task { await main.sidebar.clone(repo, into: folder) }
-            }
-            .fxButtonStyle(.outline)
-            .disabled(!viewModel.canClone)
-            .help(main.networkHelp(String(localized: "main.detail.clone.help", defaultValue: "Clone through the account's SSH alias")))
-            Button {
-                Task { await viewModel.refresh() }
-            } label: {
-                if viewModel.isRefreshing {
-                    ProgressView()
-                        .controlSize(.small)
-                        .accessibilityLabel(String(localized: "main.detail.refresh", defaultValue: "Refresh"))
-                } else {
-                    Text(String(localized: "main.detail.refresh", defaultValue: "Refresh"))
+        PlaceHeader(
+            title: viewModel.headerTitle,
+            subline: viewModel.headerSubline,
+            titleHelp: viewModel.repository?.fullName
+        ) {
+            if let report = viewModel.driftReport, report.count > 0 {
+                DriftBannerView(report: report) {
+                    viewModel.reviewDrift()
                 }
+            } else if let error = viewModel.driftError {
+                Label(error.title, systemImage: "exclamationmark.triangle")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .lineLimit(1)
+                    .help(error.message)
             }
-            .fxButtonStyle(.secondary)
-            .disabled(!viewModel.canRefresh)
-            .help(main.networkHelp(String(
-                localized: "main.detail.refresh.help",
-                defaultValue: "Read permissions and check GitHub for changes"
-            )))
-            if let scopeList = main.scopeList, let scope = scopeList.selectedScope {
-                ScopeActionsMenu(scope: scope, scopeList: scopeList)
-            }
+        } accessories: {
+            EmptyView()
+        } moreItems: {
+            RepoDetailMoreItems(viewModel: viewModel, main: main)
         }
-    }
-
-    private var isEnvironment: Bool {
-        viewModel.scope.level == .environment
-    }
-
-    /// The environment's name, or the repository's name for the repository scope.
-    private var title: String {
-        if isEnvironment, let summary = viewModel.scopeSummary {
-            return summary.title
-        }
-        return viewModel.repository?.name ?? ""
     }
 }
 
-/// The selected scope's actions as an outline circle in the header (v0.4.0): the scope row's
-/// context menu (Settings, Rename, Duplicate, Export .env, Share, Revert, Delete for an
-/// environment; Export .env and Share for the repository level), so they are not only a
-/// right-click away. Actions the account may not take are listed disabled.
-private struct ScopeActionsMenu: View {
-    let scope: ConfigScopeSummaryModel
-    let scopeList: ScopeListViewModel
-
-    var body: some View {
-        let label = scope.environment == nil
-            ? String(localized: "main.detail.scopeActions.repository", defaultValue: "Repository Actions")
-            : String(localized: "main.detail.scopeActions.environment", defaultValue: "Environment Actions")
-        Menu {
-            ScopeContextMenu(scope: scope, viewModel: scopeList)
-        } label: {
-            Label(label, systemImage: "ellipsis")
-        }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
-        .fxIconButtonStyle()
-        .help(label)
-    }
-}
-
-/// The tags under the title ("Private", "Admin"), "Created by the next Sync" and the drift-check
-/// error, in one row or stacked when the column is too narrow; for an environment, "Deployment
-/// branches: …" in mono with Edit on its own row below, so the policy gets the full column width.
-private struct RepoDetailChips: View {
+/// ⋯ More of a repository scope (board Main2-Actions): New Secret and New Variable; Paste
+/// Multiple…, Import .env… and Export .env…; Copy To and Share Securely…; Deployment Branches…
+/// (an environment), Clone… and Refresh; Delete Selected…. Actions the account may not take are
+/// listed disabled.
+private struct RepoDetailMoreItems: View {
     let viewModel: RepoDetailViewModel
+    let main: MainViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: Theme.Spacing.small) {
-                    chips
-                }
-                VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
-                    chips
-                }
+        let scopeList = main.scopeList
+        let scope = scopeList?.selectedScope
+        ForEach(ConfigKind.allCases, id: \.self) { kind in
+            Button(PlaceCopy.newItem(kind)) {
+                viewModel.add(kind)
             }
-            if viewModel.scope.level == .environment, let policy = viewModel.branchPolicy {
-                branchPolicyRow(policy)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var chips: some View {
-        if let repository = viewModel.repository {
-            StatusChip.tag(repository.visibility.localizedTitle)
-            if !repository.existsOnGitHub {
-                StatusChip(
-                    title: String(localized: "main.detail.notOnGitHub", defaultValue: "Created by the next Sync"),
-                    tone: .brand
-                )
-            }
-        }
-        if let capability = viewModel.capability {
-            if case .full = capability {
-                StatusChip.tag(capability.chipTitle)
-            } else {
-                StatusChip(title: capability.chipTitle, tint: capability.chipTint)
-            }
-        }
-        if let error = viewModel.driftError {
-            Label(error.title, systemImage: "exclamationmark.triangle")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.mutedText)
-                .lineLimit(1)
-                .fixedSize()
-                .help(error.message)
-        }
-    }
-
-    private func branchPolicyRow(_ policy: DeploymentBranchPolicyModel) -> some View {
-        let text = String(
-            localized: "main.detail.branches",
-            defaultValue: "Deployment branches: \(policy.localizedSummary)"
-        )
-        return HStack(spacing: Theme.Spacing.small) {
-            Text(text)
-                .fxTextStyle(.monoMeta)
-                .foregroundStyle(Theme.Colors.subtleText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .help(text)
-            Button(String(localized: "main.detail.branches.edit", defaultValue: "Edit")) {
-                viewModel.editBranchPolicy()
-            }
-            .fxLinkButtonStyle(isEmphasized: true)
             .disabled(!viewModel.canEdit)
         }
+        Divider()
+        Button(PlaceCopy.pasteMultiple) {
+            viewModel.pasteMultiple()
+        }
+        .disabled(!viewModel.canEdit)
+        Button(PlaceCopy.importEnv) {
+            viewModel.importEnvFile()
+        }
+        .disabled(!viewModel.canEdit)
+        Button(PlaceCopy.exportEnv) {
+            if let scopeList, let scope {
+                scopeList.exportEnv(scope)
+            }
+        }
+        .disabled(!canExport(scopeList, scope))
+        Divider()
+        CopyToMenu(title: PlaceCopy.copyTo, rows: viewModel.placeCopyRows, viewModel: viewModel)
+        Button(PlaceCopy.shareSecurely) {
+            if let scopeList, let scope {
+                scopeList.share(scope)
+            }
+        }
+        .disabled(!canExport(scopeList, scope))
+        Divider()
+        if viewModel.scope.level == .environment {
+            Button(PlaceCopy.deploymentBranches) {
+                viewModel.editBranchPolicy()
+            }
+            .disabled(!viewModel.canEdit)
+            .help(branchesHelp)
+        }
+        Button(PlaceCopy.clone) {
+            guard let folder = ClonePanel.folder(for: main), let repo = main.selectedRepo else { return }
+            Task { await main.sidebar.clone(repo, into: folder) }
+        }
+        .disabled(!viewModel.canClone)
+        .help(main.networkHelp(String(localized: "main.detail.clone.help", defaultValue: "Clone through the account's SSH alias")))
+        Button(PlaceCopy.refresh) {
+            Task { await viewModel.refresh() }
+        }
+        .disabled(!viewModel.canRefresh)
+        .help(main.networkHelp(String(
+            localized: "main.detail.refresh.help",
+            defaultValue: "Read permissions and check GitHub for changes"
+        )))
+        Divider()
+        Button(PlaceCopy.deleteSelected, role: .destructive) {
+            viewModel.deleteSelection()
+        }
+        .disabled(!viewModel.canEdit || viewModel.selectedRows.allSatisfy(\.isDeleted))
     }
-}
 
-/// The plan note (§10): environment features on private repositories depend on the plan.
-private struct PlanNoteView: View {
-    var body: some View {
-        HStack(spacing: Theme.Spacing.xSmall) {
-            Text(String(
+    private func canExport(_ scopeList: ScopeListViewModel?, _ scope: ConfigScopeSummaryModel?) -> Bool {
+        guard let scopeList, let scope else { return false }
+        return scopeList.canExport(scope)
+    }
+
+    /// The policy in mono no longer sits under the title (1.0): its summary and the plan note
+    /// (§10) are this item's help.
+    private var branchesHelp: String {
+        var parts: [String] = []
+        if let policy = viewModel.branchPolicy {
+            parts.append(String(localized: "main.detail.branches", defaultValue: "Deployment branches: \(policy.localizedSummary)"))
+        }
+        if viewModel.showsPlanNote {
+            parts.append(String(
                 localized: "main.detail.planNote",
                 defaultValue: "Some environment features on private repositories depend on your GitHub plan."
             ))
-            .foregroundStyle(Theme.Colors.mutedText)
-            if let url = ExternalLinks.environmentPlans {
-                Link(String(localized: "main.detail.planNote.learnMore", defaultValue: "Learn more"), destination: url)
-                    .foregroundStyle(Theme.Colors.brand)
-            }
         }
-        .font(Theme.Typography.caption)
+        return parts.joined(separator: " ")
     }
 }
 

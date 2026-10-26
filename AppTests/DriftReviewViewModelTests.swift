@@ -221,9 +221,9 @@ struct DriftReviewViewModelTests {
         ])
     }
 
-    @Test func bannerCopy() {
-        #expect(DriftCopy.bannerTitle(count: 1) == "1 change on GitHub")
-        #expect(DriftCopy.bannerTitle(count: 3) == "3 changes on GitHub")
+    @Test func driftLineCopy() {
+        #expect(PlaceCopy.changedOnGitHub(1) == "1 changed on GitHub")
+        #expect(PlaceCopy.changedOnGitHub(3) == "3 changed on GitHub")
         #expect(DriftCopy.bannerConflicts(2) == "2 also changed in your vault")
     }
 }

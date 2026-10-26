@@ -1,29 +1,5 @@
-import SwiftUI
+import Foundation
 import VaultCore
-
-extension RepoCapabilityModel {
-    /// The capability chip in the repository header (§10 Column 3).
-    var chipTitle: String {
-        switch self {
-        case .full:
-            String(localized: "capability.admin", defaultValue: "Admin")
-        case .repoLevelOnly:
-            String(localized: "capability.repoLevelOnly", defaultValue: "Write: repo-level only")
-        case .readOnly(.adminRequired), .readOnly(.unavailable):
-            String(localized: "capability.readOnly.adminRequired", defaultValue: "Read-only: admin required")
-        case .readOnly(.archived):
-            String(localized: "capability.readOnly.archived", defaultValue: "Read-only: archived")
-        }
-    }
-
-    var chipTint: Color {
-        switch self {
-        case .full: Theme.Colors.success
-        case .repoLevelOnly: Theme.Colors.brand
-        case .readOnly: Theme.Colors.warning
-        }
-    }
-}
 
 nonisolated extension RepoCapabilityModel.ReadOnlyReason {
     /// Why a scope is read-only (§10 "read-only scopes explain why").

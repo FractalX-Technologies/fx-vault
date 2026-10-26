@@ -1159,23 +1159,25 @@ AppTests).
     `DestinationContextMenu` (Settings…, Export .env…, Remove from FX Vault…, confirmed) and
     "+ Add Destination" (`.addDestination`). A selection is a scope or a destination
     (`selectedDestination`); Up and Down walk both (`rowIDs`). `MainViewModel.followScopeSelection` puts the matching view model in the detail column:
-  - `DestinationDetailViewModel` (`Main/Destination`, v0.8.0): the header (DESTINATION · RUNTIME,
-    title, provider / stage / Experimental tags, how it is reached, Refresh, the actions menu),
+  - `DestinationDetailViewModel` (`Main/Destination`, v0.8.0): the place header (`subline`:
+    "Key Vault · counts", a runtime destination's stage and Experimental tag; ⋯ More with New
+    Secret, Paste Multiple…, Import .env…, Copy To, Refresh, Delete Selected… and the vault's menu),
     the STAGE / TARGET / NAMES AND VALUES card, the Refresh banner (changes → `.destinationDrift`,
     items FX Vault cannot use), and the same `ConfigTableView` through `ConfigTableModel` with
     the Status column under SECRETS · n (Key Vault holds secrets only). Copy To lists the repository's
     scopes, the folders and the other destinations; ⌘C / ⌘V and `.env` import work as for scopes.
     Refresh is disabled offline.
-  - `RepoDetailViewModel` (`Main/RepoDetail`): header (owner/name, visibility, capability chip,
-    Clone, Refresh, drift banner, deployment branches with Edit, plan note on private
-    repositories, read-only explanation) and `ConfigTableView` (Secrets | Variables over one
+  - `RepoDetailViewModel` (`Main/RepoDetail`): the place header (1.0 D6c3, `Main/Place`:
+    `PlaceHeader` with `headerTitle`, `headerSubline` built by `PlaceCopy`, the drift line, and
+    ⋯ More: New Secret / New Variable (`ConfigTableModel.add(_:)` opens that kind's tab first),
+    Paste Multiple…, Import .env…, Export .env…, Copy To (`placeCopyRows`: the selection, or the
+    open tab), Share Securely…, Deployment Branches… (`editBranchPolicy()`; its help carries the
+    policy and the plan note), Clone…, Refresh, Delete Selected…), the read-only explanation, and
+    `ConfigTableView` (Secrets | Variables over one
     `Table`; masked secrets with the eye toggle, "Value missing", plaintext variables; Reveal,
-    Copy, Edit / Fill Value, Convert or Move, Push on Next Sync (secrets), Revert, Delete). Next
-    to the Secrets | Variables `SegmentedPill`, Add Secret / Add Variable (primary pill) adds one
-    item of the tab's kind, with Paste Multiple… (outline pill) and Import .env File… (outline
-    circle) beside it; ⌘V in the detail
+    Copy, Edit / Fill Value, Convert or Move, Push on Next Sync (secrets), Revert, Delete). ⌘V in the detail
     column (`onPasteCommand(of: [.plainText], validator: validatePaste)`, `handlePaste(_:)`
-    reads the providers) opens the import preview prefilled. All three pass the tab's kind as `defaultKind` and the open scope as the
+    reads the providers) opens the import preview prefilled. Paste, import and ⌘V pass the tab's kind as `defaultKind` and the open scope as the
     target. Revealed values re-mask after
     `Timeouts.revealRemask` (injected clock), on resign active, on scope change and on lock.
     The drift check runs when a repository opens (`DriftRepository.detectOnOpen`).
@@ -1210,11 +1212,9 @@ AppTests).
     (`RepoDetailViewModel.linkedPopoverRowID` / `linkedCopies`): each place with its comparison,
     a click opens it (`MainActions.open(_:_:)` selects the repository, then the scope through
     `ScopeListViewModel.select(scope:)`), and Unlink.
-    v0.4.0 header actions menu: an `ellipsis` outline circle after Clone and Refresh
-    (`ScopeActionsMenu`) shows the scope list's `ScopeContextMenu` for the selected scope
-    (Settings, Rename, Duplicate, Export .env, Share, Revert Changes, Delete… for an environment;
-    Export .env and Share for the repository level), so creating and deleting environments is
-    not only a right-click away; the delete confirmation stays on the scope list.
+    An environment row's `ScopeContextMenu` (board Main2-Actions): Rename…, Duplicate
+    Environment…, Share Securely…, Refresh (the open `RepoDetailViewModel`), Revert Changes when
+    there is one, Delete Environment…; the delete confirmation stays on the scope list.
   - Connectivity (v0.2.0): `ConnectivityBannerView` (a `Banner`, at the top of the detail
     column since v0.3.0) shows
     `MainViewModel.connectivityBanner` ("No internet connection. Your changes stay in the vault;
@@ -1290,7 +1290,8 @@ AppTests).
   - `Drift` (§7.7): `DriftReviewViewModel` over `DriftServicing` (`LiveDriftService`): findings
     in the plan's wording, Keep Local / Accept GitHub (no default), confirmation before removing
     local data, a secret's Accept GitHub chains to the item editor in fill mode, stale findings
-    re-check. `DriftBannerView` ("N changes on GitHub") in the detail column.
+    re-check. `DriftBannerView` (the drift line "N changed on GitHub · Review") under the place
+    header.
   - `CreateRepo` (M4): `CreateRepoViewModel` (`LockObserving`) stages through
     `RepoCreationRepository.stage` (one transaction; nothing reaches GitHub before Sync). Owner
     picker from `creation.owners`, `RepoNameValidator` plus a 500 ms debounced availability

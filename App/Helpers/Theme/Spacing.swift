@@ -12,14 +12,16 @@ extension Theme {
         /// 10: icon to text in rows and buttons, gaps between pills.
         static let mediumMinus: CGFloat = 10
         static let medium: CGFloat = 12
+        /// 14: between a place's header and the blocks under it (boards Main2).
+        static let mediumPlus: CGFloat = 14
         static let large: CGFloat = 16
-        /// 20: table cell insets, gaps between stacked blocks in the detail column.
+        /// 20: table cell insets, the detail column's top and bottom inset.
         static let largePlus: CGFloat = 20
         static let xLarge: CGFloat = 24
-        /// 28: the detail column's top inset, hero gaps on lock and onboarding.
+        /// 28: the detail column's side inset, hero gaps on lock and onboarding.
         static let xLargePlus: CGFloat = 28
         static let xxLarge: CGFloat = 32
-        /// 36: the detail column's side inset.
+        /// 36: wide page insets.
         static let xxLargePlus: CGFloat = 36
         static let xxxLarge: CGFloat = 48
         /// 56 and 64: onboarding and lock page insets.

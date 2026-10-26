@@ -2,15 +2,15 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// Column 3 for a folder (v0.7.0): FOLDER and the folder's name, the "Never on GitHub" tag, the
-/// folder's actions, the Secrets | Variables pill with the add actions (or the selection's
-/// actions), and the table without the Status column.
+/// Column 3 for a folder (v0.7.0; board Folder-View): the header (the name, "Folder · never sent
+/// anywhere by itself · counts", Copy To, Share Securely…, ⋯ More), the Secrets | Variables pill
+/// with the selection's actions, and the table without the Status column.
 struct FolderDetailScreen: View {
     @Bindable var viewModel: FolderDetailViewModel
     let main: MainViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.largePlus) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
             FolderDetailHeader(viewModel: viewModel, main: main)
             FolderDetailControls(viewModel: viewModel)
             ConfigTableView(
@@ -30,9 +30,7 @@ struct FolderDetailScreen: View {
                     .foregroundStyle(Theme.Colors.mutedText)
             }
         }
-        .padding(.horizontal, Theme.Spacing.xxLargePlus)
-        .padding(.vertical, Theme.Spacing.xLargePlus)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .fxPlaceColumn()
         .onPasteCommand(of: [.plainText], validator: viewModel.validatePaste) { providers in
             Task { await viewModel.handlePaste(providers) }
         }
@@ -60,71 +58,49 @@ struct FolderDetailScreen: View {
     }
 }
 
-/// FOLDER, the name in the large title and the tag, then the folder's actions on the right (or
-/// below when the column is narrow).
+/// The folder's name in sans (the user named it), its subline, Copy To and Share Securely… as on
+/// board Folder-View, and ⋯ More: New Secret, New Variable, Paste Multiple…, Import .env…, Delete
+/// Selected…, then the folder's own menu (Rename…, Share Securely…, Export .env…, Delete Folder…).
 private struct FolderDetailHeader: View {
     let viewModel: FolderDetailViewModel
     let main: MainViewModel
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .bottom, spacing: Theme.Spacing.large) {
-                details
-                Spacer(minLength: 0)
-                actions
-            }
-            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-                details
-                actions
-            }
-        }
-    }
-
-    private var details: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
-            SectionLabel(FolderCopy.eyebrow)
-            Text(verbatim: viewModel.folder?.name ?? "")
-                .fxTextStyle(.largeTitle)
-                .foregroundStyle(Theme.Colors.ink)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .textSelection(.enabled)
-            StatusChip.tag(FolderCopy.localTag)
-                .help(FolderCopy.localHelp)
-                .padding(.top, Theme.Spacing.xSmall)
-            // Moved here from the folder column 1.0 removed: how a folder's items reach repositories.
-            if !viewModel.items.isEmpty {
-                Text(FolderCopy.overviewHint)
-                    .fxTextStyle(.caption)
-                    .foregroundStyle(Theme.Colors.mutedText)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, Theme.Spacing.xSmall)
-            }
-        }
-    }
-
-    private var actions: some View {
-        HStack(spacing: Theme.Spacing.large) {
-            Button(FolderCopy.shareAsFile) {
+        PlaceHeader(title: viewModel.folder?.name ?? "", titleStyle: .sans, subline: viewModel.subline) {
+            CopyToMenu(title: PlaceCopy.copyTo, rows: viewModel.placeCopyRows, viewModel: viewModel, showsChevron: true)
+                .menuStyle(.button)
+                .menuIndicator(.hidden)
+                .fxButtonStyle(.outline, size: .compact)
+            Button(PlaceCopy.shareSecurely) {
                 viewModel.shareAsFile()
             }
-            .fxButtonStyle(.outline)
+            .fxButtonStyle(.outline, size: .compact)
             .disabled(viewModel.items.isEmpty)
-            Menu {
-                FolderContextMenu(folderID: viewModel.folderID, main: main)
-            } label: {
-                Label(FolderCopy.actions, systemImage: "ellipsis")
+        } moreItems: {
+            ForEach(ConfigKind.allCases, id: \.self) { kind in
+                Button(PlaceCopy.newItem(kind)) {
+                    viewModel.add(kind)
+                }
             }
-            .menuStyle(.button)
-            .menuIndicator(.hidden)
-            .fxIconButtonStyle()
-            .help(FolderCopy.actions)
+            Divider()
+            Button(PlaceCopy.pasteMultiple) {
+                viewModel.pasteMultiple()
+            }
+            Button(PlaceCopy.importEnv) {
+                viewModel.importEnvFile()
+            }
+            Divider()
+            Button(PlaceCopy.deleteSelected, role: .destructive) {
+                viewModel.deleteSelection()
+            }
+            .disabled(viewModel.selection.isEmpty)
+            Divider()
+            FolderContextMenu(folderID: viewModel.folderID, main: main)
         }
     }
 }
 
-/// The pill with the add actions on its right, or the selection's actions while several rows are
-/// selected.
+/// The pill, with the selection's actions on its right while several rows are selected.
 private struct FolderDetailControls: View {
     @Bindable var viewModel: FolderDetailViewModel
 
@@ -172,8 +148,6 @@ private struct FolderDetailControls: View {
                 .help(String(localized: "main.detail.selection.clear", defaultValue: "Deselect"))
             }
             .fixedSize()
-        } else {
-            ConfigAddActions(viewModel: viewModel)
         }
     }
 }

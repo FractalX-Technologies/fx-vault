@@ -366,7 +366,7 @@ private struct RepoNodeView: View {
             RepoContextMenu(repo: repo, main: main)
         }
         if isOpen, let scopeList = main.scopeList {
-            ScopeListView(viewModel: scopeList)
+            ScopeListView(viewModel: scopeList, detail: main.detail)
         }
     }
 
@@ -411,7 +411,7 @@ private struct OwnerContextMenu: View {
     }
 }
 
-/// Import, or New Environment… / Clone… / Share… / Remove from Vault….
+/// Import, or New Environment… / Clone… / Share Securely… / Remove from Vault….
 private struct RepoContextMenu: View {
     let repo: SidebarRepoModel
     let main: MainViewModel
@@ -449,7 +449,7 @@ private struct RepoContextMenu: View {
                 localized: "main.detail.clone.help",
                 defaultValue: "Clone through the account's SSH alias"
             )))
-            Button(String(localized: "main.sidebar.share", defaultValue: "Share…")) {
+            Button(PlaceCopy.shareSecurely) {
                 if let id = repo.importedRepoID {
                     main.present(.shareExport(ShareExportContext(selection: .repository(id))))
                 }

@@ -8,20 +8,9 @@ enum FolderCopy {
     static let rename = String(localized: "folder.rename", defaultValue: "Rename…")
     static let delete = String(localized: "folder.delete", defaultValue: "Delete Folder…")
     static let exportEnv = String(localized: "folder.exportEnv", defaultValue: "Export .env…")
-    static let shareAsFile = String(localized: "folder.shareAsFile", defaultValue: "Share as File…")
-    static let actions = String(localized: "folder.actions", defaultValue: "Folder Actions")
-    static let localTag = String(localized: "folder.localTag", defaultValue: "Never on GitHub")
-    static let localHelp = String(
-        localized: "folder.localHelp",
-        defaultValue: "A folder stays in this vault. Copy its items into a repository to put them on GitHub with the next Sync."
-    )
     static let emptyHint = String(
         localized: "folder.emptyHint",
         defaultValue: "Keep secrets and variables you use in several repositories here, for example the keys of a mobile app."
-    )
-    static let overviewHint = String(
-        localized: "folder.overviewHint",
-        defaultValue: "Copy items into any repository with ⌘C and ⌘V or Copy To. Copies stay linked: change a value here and FX Vault offers to update them."
     )
     static let nameField = String(localized: "folder.name.field", defaultValue: "Name")
     static let namePrompt = String(localized: "folder.name.prompt", defaultValue: "Mobile App")

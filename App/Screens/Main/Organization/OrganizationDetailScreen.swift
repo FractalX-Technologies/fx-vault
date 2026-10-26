@@ -2,15 +2,15 @@ import SwiftUI
 import VaultCore
 import VaultData
 
-/// Column 3 for an imported organization (1.0; mockup Org-Visibility): ORGANIZATION, the login
-/// in the large title with the counts, Add Secret, Add Variable and Remove from Vault, and the
-/// table Name | Kind | Value | Visibility | Status | Updated.
+/// Column 3 for an imported organization (1.0; board Org-Visibility): the header (the login,
+/// "Organization · counts", ⋯ More) and the table Name | Kind | Value | Visibility | Status |
+/// Updated.
 struct OrganizationDetailScreen: View {
     @Bindable var viewModel: OrganizationDetailViewModel
     let main: MainViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.largePlus) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumPlus) {
             header
             if viewModel.rows.isEmpty {
                 Text(OrganizationCopy.empty)
@@ -20,9 +20,7 @@ struct OrganizationDetailScreen: View {
                 OrganizationItemsTable(viewModel: viewModel)
             }
         }
-        .padding(.horizontal, Theme.Spacing.xxLargePlus)
-        .padding(.vertical, Theme.Spacing.xLargePlus)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .fxPlaceColumn()
         .errorAlert($viewModel.alert)
         .confirmationDialog(
             ConfigDeletionModel.title(count: viewModel.pendingDeletion?.count ?? 0),
@@ -46,36 +44,21 @@ struct OrganizationDetailScreen: View {
         }
     }
 
+    /// The login, "Organization · counts" and ⋯ More: New Secret, New Variable, Remove from
+    /// Vault… (board Org-Visibility; Refresh arrives with B7).
     private var header: some View {
-        HStack(alignment: .bottom, spacing: Theme.Spacing.large) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.smallMinus) {
-                SectionLabel(OrganizationCopy.eyebrow)
-                Text(verbatim: viewModel.organization?.login ?? "")
-                    .fxTextStyle(.largeTitle)
-                    .foregroundStyle(Theme.Colors.ink)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
-                Text(viewModel.counts)
-                    .fxTextStyle(.monoMeta)
-                    .foregroundStyle(Theme.Colors.mutedText)
-                    .padding(.top, Theme.Spacing.xSmall)
-            }
-            Spacer(minLength: 0)
+        PlaceHeader(title: viewModel.organization?.login ?? "", subline: viewModel.subline) {
             ForEach(ConfigKind.allCases, id: \.self) { kind in
-                Button {
+                Button(PlaceCopy.newItem(kind)) {
                     viewModel.add(kind)
-                } label: {
-                    Label(kind.addTitle, systemImage: "plus")
                 }
-                .fxButtonStyle(kind == .secret ? .primary : .secondary)
                 .accessibilityIdentifier(AccessibilityID.Main.organizationAdd(kind.rawValue))
             }
             if let organization = viewModel.organization {
+                Divider()
                 Button(OrganizationCopy.remove, role: .destructive) {
                     main.sidebar.requestRemoval(organization)
                 }
-                .fxButtonStyle(.outline)
             }
         }
     }

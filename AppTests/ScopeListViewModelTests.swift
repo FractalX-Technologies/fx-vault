@@ -62,13 +62,11 @@ struct ScopeListViewModelTests {
 
         model.rename(staging)
         model.duplicate(staging)
-        model.openSettings(staging)
         model.exportEnv(staging)
         model.share(staging)
         #expect(fixture.recorder.presented == [
             .renameEnvironment(context),
             .duplicateEnvironment(context),
-            .environmentSettings(context),
             .envExport(EnvExportContext(repositoryID: fixture.repositoryID, scope: .environment(environmentID))),
             .shareExport(ShareExportContext(selection: .environment(environmentID))),
         ])

@@ -17,6 +17,8 @@ extension Theme {
         static let largeTitle = Font.system(size: Size.largeTitle, weight: .semibold)
         /// 22 pt, semibold. Sheet titles.
         static let title = Font.system(size: Size.title, weight: .semibold)
+        /// 20 pt, semibold. A folder's name heading its place (board Folder-View).
+        static let placeTitle = Font.system(size: Size.placeTitle, weight: .semibold)
         /// 17 pt, semibold. Card and settings section titles.
         static let title2 = Font.system(size: Size.title2, weight: .semibold)
         /// 13 pt, semibold. Emphasized row titles.
@@ -56,6 +58,8 @@ extension Theme {
         static let monoMetaEmphasized = Font.system(size: Size.caption, weight: .medium, design: .monospaced)
         /// 11 pt mono. Uppercase section labels (with tracking: ``Theme/TextStyle/sectionLabel``).
         static let monoLabel = Font.system(size: Size.label, design: .monospaced)
+        /// 20 pt mono, semibold. A name from GitHub or Azure heading its place (board Main2-Repository).
+        static let monoPlaceTitle = Font.system(size: Size.placeTitle, weight: .semibold, design: .monospaced)
         /// 17 pt mono, medium. Passphrase words (``Theme/TextStyle/passphraseWord``).
         static let passphraseWord = Font.system(size: Size.title2, weight: .medium, design: .monospaced)
 
@@ -77,6 +81,7 @@ extension Theme {
             static let display: CGFloat = 32
             static let largeTitle: CGFloat = 24
             static let title: CGFloat = 22
+            static let placeTitle: CGFloat = 20
             static let title2: CGFloat = 17
             static let lead: CGFloat = 15
             static let headline: CGFloat = 13
@@ -140,6 +145,8 @@ extension Theme.TextStyle {
     static let largeTitle = Self(font: Typography.largeTitle, size: Typography.Size.largeTitle)
     /// 22 pt, semibold. Sheet titles.
     static let title = Self(font: Typography.title, size: Typography.Size.title)
+    /// 20 pt, semibold. A folder's name heading its place.
+    static let placeTitle = Self(font: Typography.placeTitle, size: Typography.Size.placeTitle)
     /// 17 pt, semibold. Card and settings section titles.
     static let title2 = Self(font: Typography.title2, size: Typography.Size.title2)
     /// 13 pt, semibold. Emphasized row titles.
@@ -177,6 +184,8 @@ extension Theme.TextStyle {
     static let sectionLabel = Self(font: Typography.monoLabel, size: Typography.Size.label, trackingEm: Typography.Tracking.label, isUppercase: true)
     /// 11 pt mono, uppercase, +0.06em. Status lines (`PASSWORD REQUIRED AFTER RESTART`).
     static let statusLine = Self(font: Typography.monoLabel, size: Typography.Size.label, trackingEm: Typography.Tracking.counter, isUppercase: true)
+    /// 20 pt mono, semibold. A name from GitHub or Azure heading its place (`production`).
+    static let monoPlaceTitle = Self(font: Typography.monoPlaceTitle, size: Typography.Size.placeTitle)
     /// 17 pt mono, medium. A word of a generated passphrase (share export, onboarding).
     static let passphraseWord = Self(font: Typography.passphraseWord, size: Typography.Size.title2)
 }

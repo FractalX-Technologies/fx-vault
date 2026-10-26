@@ -231,6 +231,35 @@ final class RepoDetailViewModel: LockObserving {
         capability?.readOnlyReason(for: scope.level)
     }
 
+    /// The header's name: the environment's, or the repository's for the repository scope.
+    var headerTitle: String {
+        if scope.level == .environment, let summary = scopeSummary {
+            return summary.title
+        }
+        return repository?.name ?? ""
+    }
+
+    /// "Environment · api-service · 6 secrets · 2 variables · 1 without value", or "Repository ·
+    /// example-org · Private · …" for the repository scope (1.0 D6c3; board Main2-Repository).
+    var headerSubline: String {
+        let counts = PlaceCopy.counts(
+            secrets: count(of: .secret),
+            variables: count(of: .variable),
+            withoutValue: items.lazy.filter { $0.kind == .secret && !$0.isDeleted && !$0.hasValue }.count
+        )
+        guard let repository else { return counts }
+        if scope.level == .environment {
+            return PlaceCopy.subline([PlaceCopy.environment, repository.name, counts])
+        }
+        return PlaceCopy.subline([
+            PlaceCopy.repository,
+            repository.ownerLogin,
+            repository.visibility.localizedTitle,
+            repository.existsOnGitHub ? nil : PlaceCopy.createdByNextSync,
+            counts,
+        ])
+    }
+
     /// The environment's deployment branch policy; nil for the repository scope.
     var branchPolicy: DeploymentBranchPolicyModel? {
         scopeSummary?.environment?.branchPolicy

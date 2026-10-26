@@ -7,6 +7,8 @@ import VaultData
 /// repository's context menu; the repository scope is the repository's own row.
 struct ScopeListView: View {
     @Bindable var viewModel: ScopeListViewModel
+    /// The open repository's detail, for Refresh on a row's menu.
+    let detail: RepoDetailViewModel?
     @FocusState private var isListFocused: Bool
 
     var body: some View {
@@ -18,7 +20,7 @@ struct ScopeListView: View {
                 }
                 .id(scope.id)
                 .contextMenu {
-                    ScopeContextMenu(scope: scope, viewModel: viewModel)
+                    ScopeContextMenu(scope: scope, viewModel: viewModel, detail: detail)
                 }
             }
             DestinationsSection(viewModel: viewModel, isListFocused: $isListFocused)
@@ -248,47 +250,40 @@ private struct ScopeRow: View {
     }
 }
 
-/// Settings… / Rename / Duplicate… / Export .env… / Share… / Delete (or Restore): the row's
-/// context menu, and since v0.4.0 the detail header's actions menu for the selected scope.
+/// An environment row's context menu (board Main2-Actions): Rename…, Duplicate Environment…,
+/// Share Securely…, Refresh, Revert Changes when there is a change to undo, then Delete
+/// Environment…. Export .env… and Deployment Branches… are in the detail's ⋯ More (1.0).
 struct ScopeContextMenu: View {
     let scope: ConfigScopeSummaryModel
     let viewModel: ScopeListViewModel
+    let detail: RepoDetailViewModel?
 
     var body: some View {
-        if scope.environment != nil {
-            Button(String(localized: "main.scopes.settings", defaultValue: "Settings…")) {
-                viewModel.openSettings(scope)
-            }
-            .disabled(!viewModel.canEdit(scope))
-            Button(String(localized: "main.scopes.rename", defaultValue: "Rename…")) {
-                viewModel.rename(scope)
-            }
-            .disabled(!viewModel.canEdit(scope))
-            Button(String(localized: "main.scopes.duplicate", defaultValue: "Duplicate…")) {
-                viewModel.duplicate(scope)
-            }
-            .disabled(!viewModel.canEdit(scope))
-            Divider()
+        Button(String(localized: "main.scopes.rename", defaultValue: "Rename…")) {
+            viewModel.rename(scope)
         }
-        Button(String(localized: "main.scopes.exportEnv", defaultValue: "Export .env…")) {
-            viewModel.exportEnv(scope)
+        .disabled(!viewModel.canEdit(scope))
+        Button(String(localized: "main.scopes.duplicateEnvironment", defaultValue: "Duplicate Environment…")) {
+            viewModel.duplicate(scope)
         }
-        .disabled(!viewModel.canExport(scope))
-        Button(String(localized: "main.scopes.share", defaultValue: "Share…")) {
+        .disabled(!viewModel.canEdit(scope))
+        Button(PlaceCopy.shareSecurely) {
             viewModel.share(scope)
         }
         .disabled(!viewModel.canExport(scope))
-        if scope.environment != nil {
-            Divider()
-            if viewModel.canRevert(scope) {
-                Button(String(localized: "main.scopes.revert", defaultValue: "Revert Changes")) {
-                    viewModel.revert(scope)
-                }
-            }
-            Button(String(localized: "main.scopes.delete", defaultValue: "Delete…"), role: .destructive) {
-                viewModel.requestDeletion(scope)
-            }
-            .disabled(!viewModel.canEdit(scope))
+        Button(PlaceCopy.refresh) {
+            Task { await detail?.refresh() }
         }
+        .disabled(detail?.canRefresh != true)
+        if viewModel.canRevert(scope) {
+            Button(String(localized: "main.scopes.revert", defaultValue: "Revert Changes")) {
+                viewModel.revert(scope)
+            }
+        }
+        Divider()
+        Button(String(localized: "main.scopes.deleteEnvironment", defaultValue: "Delete Environment…"), role: .destructive) {
+            viewModel.requestDeletion(scope)
+        }
+        .disabled(!viewModel.canEdit(scope))
     }
 }

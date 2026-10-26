@@ -77,6 +77,15 @@ final class FolderDetailViewModel: LockObserving {
         items.lazy.filter { $0.kind == kind }.count
     }
 
+    /// "Folder · never sent anywhere by itself · 4 secrets · 1 variable" (board Folder-View).
+    var subline: String {
+        PlaceCopy.subline([
+            PlaceCopy.folder,
+            PlaceCopy.folderNote,
+            PlaceCopy.counts(secrets: count(of: .secret), variables: count(of: .variable)),
+        ])
+    }
+
     /// A folder's items can always change while the vault is unlocked.
     var canEdit: Bool {
         folder != nil

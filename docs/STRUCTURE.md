@@ -47,6 +47,8 @@ FXVault/
 │   │   ├── Main/                    # MainScreen/ViewModel (two columns, router), MainToolbar
 │   │   │   ├── JumpPalette/         # the ⌘K palette (D6c2): JumpPaletteModels (JumpPlaces,
 │   │   │   │                        # pure), JumpPaletteViewModel, JumpPaletteView, JumpPaletteCopy
+│   │   │   ├── Place/               # every place's header (D6c3): PlaceHeader (name, subline,
+│   │   │   │                        # status line, ⋯ More), ChangedOnGitHubDot, PlaceCopy
 │   │   │   ├── MainSheet.swift      # MainSheet router + every feature context struct
 │   │   │   ├── FeatureDependencies.swift  # FeatureDependencies + MainActions (feature contract)
 │   │   │   ├── ClonePanel.swift     # clone folder from Preferences or an open panel
@@ -180,8 +182,10 @@ FXVault/
 │   │                                # type scale, no bundled fonts, AppIcon set
 │   ├── DesignComponentTests.swift   # v0.3.0: component resolution rules, light/dark render
 │   │                                # smoke tests, the 52 pt table row on a real NSTableView
-│   ├── SheetPresentationTests.swift # v0.3.0: Sync footer pills and shortcuts, drift banner
+│   ├── SheetPresentationTests.swift # v0.3.0: Sync footer pills and shortcuts, drift line
 │   │                                # tone, value editor frame, editor sheet sizing
+│   ├── PlaceHeaderTests.swift       # D6c3: place sublines and counts, New Secret / New
+│   │                                # Variable, Copy To's rows
 │   ├── MainScreenPresentationTests.swift # v0.3.0: column keyboard selection, initials, dates
 │   ├── VisualSnapshotTests.swift    # v0.3.0, opt-in (FXV_SNAPSHOTS_DIR): light/dark PNGs of the
 │   │                                # main screens for visual review (docs/DESIGN.md)

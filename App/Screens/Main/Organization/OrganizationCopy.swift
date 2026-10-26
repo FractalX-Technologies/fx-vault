@@ -27,11 +27,4 @@ enum OrganizationCopy {
             defaultValue: "\(login)'s secrets and variables are deleted from this Mac. Nothing changes on GitHub."
         )
     }
-
-    /// "14 secrets · 6 variables · 3 without value".
-    static func counts(secrets: Int, variables: Int, withoutValue: Int) -> String {
-        let counts = String(localized: "organization.counts", defaultValue: "\(secrets) secrets · \(variables) variables")
-        guard withoutValue > 0 else { return counts }
-        return String(localized: "organization.counts.withoutValue", defaultValue: "\(counts) · \(withoutValue) without value")
-    }
 }

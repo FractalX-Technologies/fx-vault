@@ -69,6 +69,15 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   (⇧⌘I) and Share Project (⌥⌘S) stay in the File menu. With nothing selected, the window says
   "Choose a place" with the pending changes and the ⌘K hint. "Your recovery key wasn't saved"
   moved from the sidebar to a banner over the selected place, with Create New Key….
+- **A place's header and its ⋯ menu.** Every place opens with its name and one line saying what
+  it is, where and how many (`Environment · api-service · 6 secrets · 2 variables · 1 without
+  value`), then "N changed on GitHub · Review" when GitHub changed something. Its ⋯ menu holds
+  New Secret, New Variable, Paste Multiple…, Import .env…, Export .env…, Copy To, Share
+  Securely…, Deployment Branches…, Clone…, Refresh and Delete Selected… (what the place offers);
+  Copy To takes the selected rows, or the open tab when none is selected. An environment's menu
+  in the sidebar has Rename…, Duplicate Environment…, Share Securely…, Refresh and Delete
+  Environment…. A folder keeps Copy To and Share Securely… beside its ⋯. The Add buttons, the
+  tags under the title and the drift banner are gone.
 - **Sharing production.** Share Project lists production stages unchecked; checking one asks
   for Touch ID (or, without Touch ID, your master password at Create), and the send step names
   the production places. The file is refused unless that confirmation was given.

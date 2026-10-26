@@ -107,8 +107,9 @@ is required.
 | `TextStyle` / `Typography` | Face | Size | Tracking | Use (mockup) |
 |---|---|---|---|---|
 | `.display` | SF Pro semibold | 32 | 0 | Lock headline |
-| `.largeTitle` | SF Pro semibold | 24 | 0 | Environment heading, onboarding step title |
+| `.largeTitle` | SF Pro semibold | 24 | 0 | Onboarding step title |
 | `.title` | SF Pro semibold | 22 | 0 | Sheet title |
+| `.placeTitle` / `.monoPlaceTitle` | SF Pro / SF Mono semibold | 20 | 0 | A place's name heading its detail: mono for names from GitHub and Azure, sans for a folder (boards Main2-Repository, Folder-View) |
 | `.title2` | SF Pro semibold | 17 | 0 | Card and settings section titles |
 | `.headline` | SF Pro semibold | 13 | 0 | The app name with nothing selected, emphasized rows |
 | `.lead` | SF Pro | 15 (22 lines) | 0 | Paragraph under a display or large title |
@@ -170,14 +171,16 @@ Button { … } label: { Label(lockTitle, systemImage: "lock") }
 
 | Variant | Look | Use |
 |---|---|---|
-| `.primary` | ink fill, ground text, 500 | The one action the view exists for (Sync, Unlock, Continue, Add secret) |
-| `.secondary` | `surface2` fill, `hairline` border (keeps the pill's edge on a dark `card`) | Cancel, Refresh, Touch ID |
-| `.outline` | `hairlineStrong` border | Clone, Paste multiple, Back |
+| `.primary` | ink fill, ground text, 500 | The one action the view exists for (Sync, Unlock, Continue, Import) |
+| `.secondary` | `surface2` fill, `hairline` border (keeps the pill's edge on a dark `card`) | Cancel, Touch ID |
+| `.outline` | `hairlineStrong` border | Back, a folder's Copy To and Share Securely… |
 | `.ghost` | no chrome until hover | Inline and low-priority actions |
 | `.destructive` | `danger` fill, ground text | Only the final confirm of a destructive action |
 
-Sizes: `.regular` 34 pt / 13 pt text (toolbar, inline, headers), `.large` 42 pt / 14 pt (sheet
-footers, onboarding, lock). A pill keeps its title's width (never truncates next to flexible
+Sizes: `.regular` 34 pt / 13 pt text (inline, sheets), `.large` 42 pt / 14 pt (sheet
+footers, onboarding, lock), `.compact` 26 pt / 12 pt with 8 pt corners instead of the capsule (a
+place header's buttons). `.fxIconButtonStyle(size: .compact)` is the matching 26 pt square, the
+header's ⋯ More. A pill keeps its title's width (never truncates next to flexible
 text). `isFullWidth: true` stretches the pill (lock Touch ID). Disabled pills
 fade to 40%. Always apply with `.fxButtonStyle` / `.fxIconButtonStyle` (they replace the system
 focus ring with the brand ring). Icon-only buttons need an accessibility label.
@@ -389,12 +392,31 @@ foreground color, so `.primary` text still turns white on selected rows.
   the footer keys: ↑ ↓ to move, ↩ to open, esc to close. Every typed word must be in the name or
   the owner and repository; names that start with a word come first, then names that contain
   one, then path matches. Secrets by name join in 1f.
-- Detail (no background of its own: the window's `ground` shows; insets 28 top / 36 sides, 20
-  between blocks): `Banner`s first; then
-  `SectionLabel("Environment")` + `.largeTitle` name + `StatusChip.tag`s + branch patterns in
-  `.monoMeta`, with outline/secondary actions on the right (Clone, Refresh, and since v0.4.0
-  the scope's actions menu as an outline `ellipsis` circle); the `SegmentedPill`
-  (Secrets / Variables) with outline + primary actions; the table with `.fxTable()`.
+- Detail (no background of its own: the window's `ground` shows; `.fxPlaceColumn()`: insets
+  28 sides / 20 top and bottom, 14 between blocks, `Spacing.mediumPlus`): `Banner`s first; then
+  the place header (1.0 D6c3, `PlaceHeader`; boards Main2-Repository, Place-Table): the name in
+  `.monoPlaceTitle` (`.placeTitle` for a folder), "kind · parent · counts" in `.caption`
+  `subtleText` (`PlaceCopy.subline`: `Environment · api-service · 6 secrets · 2 variables · 1
+  without value`; the repository scope adds its visibility and "created by the next Sync"; a Key
+  Vault "Key Vault · 32 secrets"; a folder "Folder · never sent anywhere by itself · …"), then a
+  status line: the drift line (`DriftBannerView`: a 7 pt ink ring, "2 changed on GitHub" in
+  `mutedText` (`warning` when a change also changed in the vault), "·", Review as an
+  emphasized link) or why the check failed. On the right, bottom-aligned: the place's own
+  `.compact` outline buttons (a folder's Copy To and Share Securely…) and ⋯ More. The
+  `SegmentedPill` (Secrets / Variables) with the selection's actions; the table with
+  `.fxTable()`.
+- ⋯ More (board Main2-Actions), what each place offers, disabled when the account may not:
+  New Secret, New Variable | Paste Multiple…, Import .env…, Export .env… | Copy To (the
+  selection, or the open tab when nothing is selected), Share Securely… | Deployment Branches…
+  (an environment; its help says the policy and the plan note), Clone…, Refresh | Delete
+  Selected…. An organization: New Secret, New Variable | Remove from Vault…. A Key Vault: New
+  Secret | Paste Multiple…, Import .env… | Copy To, Refresh | Delete Selected… | its own menu. A
+  folder: the item actions, then its own menu (Rename…, Share Securely…, Export .env…, Delete
+  Folder…). Copy All joins in 1e; the lock beside Touch ID items and Notes | Table wait for 1e
+  and B9.
+- An environment row's context menu (board Main2-Actions): Rename…, Duplicate Environment…,
+  Share Securely…, Refresh, Revert Changes (only when there is a change to undo; not on the
+  board), | Delete Environment….
 - Dark appearance and offline are the same layout (MainDark): only tokens change; offline adds
   `Banner(.offline)` and disables the Sync pill.
 - Columns take the window's height: each column of the split view has
@@ -403,7 +425,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   width, where a wrapped empty-state message is about 1,000 pt tall; the split view then
   outgrew the window and was centered in it, so the sidebar's first rows sat under the traffic
   lights and its footer fell below the window. A column scrolls or centers its own content.
-- With two or more rows selected (v0.4.0), the add actions give their place to the selection's:
+- With two or more rows selected (v0.4.0), the selection's actions sit right of the pill:
   "N selected" in `.monoMeta` `mutedText`, Copy To (an outline pill menu with a chevron), Push on
   Next Sync and Revert as outline pills when some rows allow them, Delete… as an outline pill
   (the destructive style stays for the dialog's final confirm), and Deselect as an outline
@@ -415,24 +437,23 @@ foreground color, so `.primary` text still turns white on selected rows.
   `.monoMeta`, the copy's own name only when it differs, a `StatusChip`: Same value `.success`,
   Differs `.brand`, Value missing `.warning`, Not compared `.neutral`, and a chevron), a
   hairline, a caption and an outline Unlink.
-- The detail fits its narrowest column (`Theme.Layout.detailMinWidth`): Clone and Refresh move
-  under the title, the tags stack, and the add actions move under the Secrets / Variables pill
-  when a row does not fit (`ViewThatFits`); the table scrolls sideways inside its card. Nothing
+- The detail fits its narrowest column (`Theme.Layout.detailMinWidth`): the header's buttons and
+  ⋯ move under the name, and the selection's actions under the Secrets / Variables pill when a
+  row does not fit (`ViewThatFits`); the table scrolls sideways inside its card. Nothing
   spills under the sidebar or past the window edge. `MainWindowLayoutTests` checks both.
 - On macOS 26+ the sidebar's rows scroll under the traffic lights and the sidebar button with the
   system's soft scroll-edge effect, as in Finder; at rest they start below the title bar.
 
 - Folders (v0.7.0): one sidebar row per folder (`folder` / `folder.fill` when selected, the
   name in `.caption`, the item count in `monoLabel` subtle), or a quiet "New Folder…" row when
-  there is none. A selected folder fills the detail with the folder
-  header (FOLDER, the name in `.largeTitle`, a "Never on GitHub" tag, how its items reach
-  repositories as a caption once it has some, Share as File… outline and a ••• menu) above the same Secrets / Variables pill, add actions and table as a repository, without
-  the Status column.
+  there is none. A selected folder fills the detail with the place header (the name in
+  `.placeTitle`, "Folder · never sent anywhere by itself · counts", Copy To and Share Securely…
+  as `.compact` outline buttons, ⋯ More) above the same Secrets / Variables pill and table as a
+  repository, without the Status column.
 - Organizations (1.0, B5c; mockup Org-Visibility): the organization's own sidebar node.
   Selected, the detail shows the Import prompt (`EmptyStateView`, primary Import) or
-  the organization header (ORGANIZATION, the login in `.largeTitle`, counts in `.monoMeta` with
-  "· N without value"; `.primary` Add Secret, `.secondary` Add Variable, Remove from Vault…
-  outline) above a `.fxTable()`: Name (struck through when deleted), Kind, Value
+  the place header (the login, "Organization · 14 secrets · 6 variables · 3 without value", ⋯
+  More with New Secret, New Variable and Remove from Vault…) above a `.fxTable()`: Name (struck through when deleted), Kind, Value
   (`MaskedValueCell`, no eye), Visibility, Status (`StatusDotLabel`), Updated; the row menu
   Copy Value, Edit…, Revert / Revert Access, Delete… (B6b3a). The item editor is a
   `ConfigEditorSheet` (ORGANIZATION, the name or New Secret/Variable): Kind `SegmentedPill` on
@@ -448,11 +469,9 @@ foreground color, so `.primary` text still turns white on selected rows.
   count in `monoLabel` subtle, on `.fxRowBackground(style: .sidebar)`. "Add Destination" is a dashed
   `hairlineStrong` row. A destination's context menu (and the detail's
   ••• menu): Settings…, Export .env…, Remove from FX Vault… (destructive confirmation).
-- Destination detail (v0.8.0, canvas board 3): `SectionLabel` DESTINATION · RUNTIME, the name in
-  `.largeTitle` (middle-truncated), `StatusChip.tag`s for the provider, the stage (or "No stage")
-  and Experimental, then how it is reached ("via Azure CLI sign-in") in
-  `.monoMeta` `subtleText`; Refresh (secondary, a small `ProgressView` while listing, disabled
-  offline) and the ••• outline circle, beside the title or under it (`ViewThatFits`). A
+- Destination detail (v0.8.0; board KV-Place): the place header (the name, "Key Vault · 32
+  secrets", a runtime destination "Key Vault · Runtime · stage · …" with its Experimental tag;
+  Refresh in ⋯ More, disabled offline). A
   `container` card holds STAGE (`.callout`), TARGET (`.monoMeta`) and NAMES AND VALUES (the
   provider's rules in `.caption` `mutedText`), side by side or stacked. The Refresh banner is
   `.info` with Review ("2 changes in Key Vault since your last sync"), `.info` with a checkmark
@@ -520,7 +539,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   destination", "Sent, but the destination did not list it yet…" or "Not sent" per item.
 - Share Project (v0.9.0, `ProjectShareScreen`, `shareSheetWidth`, eyebrow SHARE) replaces the
   Share as File sheet for every entry point: File › Share Project… (⌥⌘S; ⇧⌘S is Sync), Share ›
-  File… (toolbar and Vault menu), a repository's or scope's Share…, and a folder's Share as File….
+  File… (Vault menu), and Share Securely… on a repository, an environment or a folder.
   Step 1, what to share: REPOSITORIES as removable chips in a
   `FlowLayout` (`Theme.Symbols.repository`, `.monoName`, an `xmark.circle.fill`) with an Add Repository
   borderless menu; STAGES as checkboxes across those repositories, a production stage with a
@@ -695,8 +714,9 @@ App/Resources/Assets.xcassets/AppIcon.appiconset` renders every size from the ve
   the native header for an `FXTableHeaderRow` would need fixed column widths (SwiftUI does not
   expose the live, user-resizable widths), which would leave the table short of the column on
   wide windows, so the native header stays.
-- The drift banner is `.info`, or `.warning` when a change on GitHub also changed in the vault
-  (a decision is needed; nothing failed). `DriftBannerView` is the only implementation.
+- The drift line (a banner before 1.0) is `mutedText`, `warning` when a change on GitHub also
+  changed in the vault (a decision is needed; nothing failed). `DriftBannerView` is the only
+  implementation.
 - On macOS 26+ the toolbar draws shared glass behind items unless hidden per item.
 - The toolbar proposes no width to its items, so the title is a fixed-width item
   (`toolbarTitleWidth`) and picks the longest path that fits it; a path longer than that keeps its

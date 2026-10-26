@@ -20,8 +20,8 @@ the secrets your code reads at runtime in Azure Key Vault.
   secrets need an org admin**, or **Needs SSO authorization** (with GitHub's SSO page).
 - **Organization secrets and variables.** Selecting an organization in the sidebar imports
   its own secrets (names only: GitHub never returns values) and variables with their visibility:
-  all repositories, private and internal, or the selected ones. **Add Secret** and **Add
-  Variable** open an editor with the value and Access (All, Private, or Selected with the
+  all repositories, private and internal, or the selected ones. **New Secret** and **New
+  Variable** (in the ⋯ menu) open an editor with the value and Access (All, Private, or Selected with the
   organization's repositories); the row menu edits, deletes, reverts and copies a value. Changes
   wait in the vault with their status and count on the Sync button; the toolbar Sync sends them
   after the repositories (deletions only after the deletion review). A repository's own Sync
@@ -64,7 +64,7 @@ the secrets your code reads at runtime in Azure Key Vault.
   change a linked item's value, the editor offers to update the copies too, so a rotation is one
   edit and one Sync.
 - **Paste many at once.** Copy a whole `.env` and press ⌘V on the secrets or variables table
-  (or choose **Paste Multiple…** in the Add menu): a live preview lists every `KEY=value` as
+  (or choose **Paste Multiple…** in the place's ⋯ menu): a live preview lists every `KEY=value` as
   you edit, with line numbers for problem lines. Rows start as the tab's kind (Variables or
   Secrets), credential-looking variables get a "Make Secret" badge, and Mark All and Overwrite
   All handle the rest. The target is the repository or environment you have open. FX Vault

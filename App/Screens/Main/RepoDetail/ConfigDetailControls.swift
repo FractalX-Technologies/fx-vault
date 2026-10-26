@@ -26,41 +26,6 @@ struct ConfigKindPill<Model: ConfigTableModel>: View {
     }
 }
 
-/// Import .env file (outline circle), Paste multiple (outline pill) and Add secret / Add
-/// variable (the tab's kind, primary pill). Paste and import default every row to the tab's
-/// kind.
-struct ConfigAddActions<Model: ConfigTableModel>: View {
-    let viewModel: Model
-
-    var body: some View {
-        HStack(spacing: Theme.Spacing.mediumMinus) {
-            Button {
-                viewModel.importEnvFile()
-            } label: {
-                Label(String(localized: "main.detail.importEnvFile", defaultValue: "Import .env File…"), systemImage: "square.and.arrow.down")
-            }
-            .fxIconButtonStyle()
-            .help(String(localized: "main.detail.importEnvFile", defaultValue: "Import .env File…"))
-            Button(String(localized: "main.detail.pasteMultiple", defaultValue: "Paste Multiple…")) {
-                viewModel.pasteMultiple()
-            }
-            .fxButtonStyle(.outline)
-            Button {
-                viewModel.add()
-            } label: {
-                Label(viewModel.kind.addTitle, systemImage: "plus")
-            }
-            .fxButtonStyle(.primary)
-            .help(String(
-                localized: "main.detail.add.help",
-                defaultValue: "Add one item, or paste many KEY=value lines at once (⌘V on the table)"
-            ))
-        }
-        .fixedSize()
-        .disabled(!viewModel.canEdit)
-    }
-}
-
 /// "Replace or keep?" for a copy into a place that already has some of the names.
 struct ItemCopyConflictDialog<Model: ConfigTableModel>: ViewModifier {
     @Bindable var viewModel: Model
