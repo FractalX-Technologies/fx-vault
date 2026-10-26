@@ -2579,7 +2579,7 @@ Lane A (one builder):
 Lane B (one builder):
 - [x] S1 Settings as the boards: General (quick vault shortcut, open at login, lock when the screen locks, sound effects), Security, Accounts, Advanced. The Accounts board's Azure group waits for its own slice (Review S1).
   - Boards: Settings-*.
-- [ ] M1 Menu bar item: Quick Vault, Open FX Vault, Review Sync · N pending…, Lock Now, Settings…, Quit.
+- [x] M1 Menu bar item: Quick Vault, Open FX Vault, Review Sync · N pending…, Lock Now, Settings…, Quit. Quick Vault is Q1's item (Review M1).
   - Board: MenuBar.
 - [ ] F1 File secrets: picker and drop, exact text or Base64, per-source limits, the trailing-newline notice, and the Notes file line `APNS_KEY = file AuthKey.p8 · 6 lines`.
   - Boards: Place-FileDrop, Place-FileSheet.
@@ -2625,3 +2625,14 @@ Review S1 — Settings as the boards (2026-10-26, automatic):
 - Docs: DESIGN (Settings), CHANGELOG, README, ARCHITECTURE, STRUCTURE, RELEASING #65.
 - Gates: XcodeGen 2.45.4; app tests 58 in 4 suites green (`QuickVaultShortcutTests`, `PreferencesViewModelTests`, `DiagnosticReportTests`, `GHStatusProbeTests`); snapshots `preferences-*` rendered and checked against the boards; lint OK; check-secrets OK; strings ×2 (second run up to date). No package change.
 - Fixes after review (2026-10-26): `GHLoginSteps` is the one message, `gh auth login` row and Check Again of Add Account… and the SSH aliases without an account; `SettingsUITests` finds the command, Reset Vault… and Reveal in Finder by `AccessibilityID` (`Setup.command(_:)` on every `CommandRow`'s text, `Settings.resetVault`, `Settings.revealVaultFolder`); the diagnose command is a `CommandRow` with Copy (`PreferencesViewModel.copyCommand(_:)`), single-quoted with `'` as `'\''` (`DiagnosticReportTests.theTerminalCommandRunsTheExecutableItself`: a path with `$`, a backtick and `'`), and the attributed footnote is gone; the recorder uses `.fxTextStyle` and reads the event inside `MainActor.assumeIsolated`.
+
+Review M1 — Menu bar item (2026-10-26, automatic):
+- A `MenuBarExtra` (`Theme.Symbols.menuBar`, the dot grid) with `MenuBarContent`: Open FX Vault, Review Sync · N pending… (only with changes pending after onboarding), Lock Now (disabled unless unlocked), Settings… ⌘,, Quit FX Vault ⌘Q. Words in `MenuBarCopy`; ids in `AccessibilityID.MenuBar`. Counts only, never a name or a value.
+- Open FX Vault (`AppViewModel.openFXVault()`): the main window; while locked, activate and present the island, so no window opens only to close (recovery and the Touch ID offer keep the window).
+- Review Sync (`requestSyncReview()`): sets `isSyncReviewRequested` and opens FX Vault; `MainViewModel.presentRequestedSyncReview()` takes it once unlocked (on appear, on change, when a sheet closes) and opens the Sync review. A lock clears it, like a relaunch.
+- The scene is inserted only when `AppContainer.hasSideEffects` (the app and UI tests), not while it hosts unit tests or previews.
+- Not built: "Quick Vault ⌃⌥V" at the top of the menu (lane A, Q1).
+- Assumptions: the items name the build ("Open FX Vault Dev" in Debug), like the app menu; without gh or the internet Review Sync opens the window only (the toolbar's Sync stays disabled and says why); Settings… activates FX Vault first (a menu bar item doesn't).
+- Tests: `MenuBarTests` (8: hidden with nothing pending and during onboarding, the title, opens the review, waits for the sheet on screen, after the unlock when locked, a lock drops a waiting request, Open FX Vault brings the window, the words); seen failing with the lock's clear removed (2 issues). UI `MenuBarUITests` (Lock Now shows the island; Open FX Vault while locked keeps the island and no window) written for the batch run. RELEASING #66 for the menu bar itself.
+- Docs: DESIGN (Menu bar, board map), CHANGELOG, README, ARCHITECTURE, STRUCTURE, RELEASING #66.
+- Gates: XcodeGen 2.45.4; app tests 49 in 7 suites green (`MenuBarTests`, `MainViewModelTests`, `PendingImportsTests`, `AppViewModelTests`, `NotchIslandTests`, `SheetPresentationTests`, `AppSmokeTests`); the UI target builds for testing (not run); lint OK; check-secrets OK; strings ×2 (second run up to date). No package change.

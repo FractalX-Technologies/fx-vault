@@ -367,5 +367,7 @@ enum Theme {
         /// The item kinds (`ConfigKind.symbolName`): tables, the share trees, ⌘K's names.
         static let secret = "key"
         static let variable = "textformat"
+        /// The menu bar item (board MenuBar): a 3×3 dot grid, like the brand mark.
+        static let menuBar = "circle.grid.3x3.fill"
     }
 }

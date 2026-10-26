@@ -41,6 +41,8 @@ FXVault/
 │   │   │                            # + model, NotchGeometry),
 │   │   │                            # TouchIDOfferScreen/ViewModel (one-time offer after a
 │   │   │                            # password unlock), PasswordRequiredReason+Extension
+│   │   ├── MenuBar/                 # MenuBarContent, MenuBarCopy (the menu bar item, 1.0 M1;
+│   │   │                            # board MenuBar)
 │   │   ├── GHSetup/                 # GHSetupScreen/ViewModel (install, upgrade, untrusted, Trust
 │   │   │                            # This gh, login, GH_TOKEN, unusable accounts, Copy
 │   │   │                            # Diagnostics, Check Again, Not Now)

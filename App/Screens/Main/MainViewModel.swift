@@ -29,6 +29,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         didSet {
             if activeSheet == nil {
                 presentNextPendingImport()
+                presentRequestedSyncReview()
             } else {
                 // A menu command or an opened .fxvault file can bring a sheet over the palette; it
                 // would come back stale when the sheet goes.
@@ -300,6 +301,13 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     func presentNextPendingImport() {
         guard activeSheet == nil, let url = app.takeNextPendingImport() else { return }
         activeSheet = .shareImport(ShareImportContext(fileURL: url))
+    }
+
+    /// Opens the Sync review the menu bar asked for (``AppViewModel/requestSyncReview()``),
+    /// unless another sheet is on screen (it follows when that one closes).
+    func presentRequestedSyncReview() {
+        guard activeSheet == nil, app.takeSyncReviewRequest() else { return }
+        sync()
     }
 
     /// The share selection for the current column selection: the environment, the repository,

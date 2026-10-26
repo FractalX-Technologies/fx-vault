@@ -93,6 +93,9 @@ final class AppViewModel {
     private(set) var isGHSetupDeferred = false
     /// The result of the launch reconciliation after the last unlock (§7.3), nil until it ran.
     private(set) var lastReconciliation: SyncReconciliationModel?
+    /// Review Sync… in the menu bar asked for the Sync review; the main window opens it once the
+    /// vault is unlocked (``takeSyncReviewRequest()``).
+    private(set) var isSyncReviewRequested = false
 
     @ObservationIgnored let container: AppContainer
     @ObservationIgnored private var lockObservers: [WeakLockObserver] = []
@@ -181,6 +184,7 @@ final class AppViewModel {
     private func runLockPhaseB() {
         // In memory only: after a lock the main window follows the unlock, like a relaunch.
         isFirstConnectPending = false
+        isSyncReviewRequested = false
         lockObservers.removeAll { $0.observer == nil }
         for entry in lockObservers {
             entry.observer?.vaultDidLock()
@@ -499,6 +503,37 @@ final class AppViewModel {
     /// Called by the main window's root view with its `openWindow` action.
     func setMainWindowOpener(_ opener: @escaping () -> Void) {
         mainWindowOpener = opener
+    }
+
+    /// **Open FX Vault** (the menu bar item): the main window, or the island while locked (the
+    /// window would only close again). Recovery and the Touch ID offer keep the window.
+    func openFXVault() {
+        guard phase == .locked, island != nil, !lockScreen.isShowingRecoveryReset, lockScreen.touchIDOffer == nil else {
+            requestMainWindow()
+            return
+        }
+        NSApp.activate()
+        presentIsland()
+    }
+
+    /// The menu bar item lists Review Sync only with something pending in a vault that exists.
+    var offersSyncReview: Bool {
+        pendingChangeCount > 0 && phase != .onboarding
+    }
+
+    /// **Review Sync · N pending…** (the menu bar item): FX Vault on the Sync review, after the
+    /// unlock when locked.
+    func requestSyncReview() {
+        guard offersSyncReview else { return }
+        isSyncReviewRequested = true
+        openFXVault()
+    }
+
+    /// Clears and returns the menu bar's Sync review request, once the vault is unlocked.
+    func takeSyncReviewRequest() -> Bool {
+        guard phase == .unlocked, isSyncReviewRequested else { return false }
+        isSyncReviewRequested = false
+        return true
     }
 
     /// Activates FX Vault and opens the main window if it was closed.
