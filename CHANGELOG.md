@@ -106,6 +106,10 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   organization you imported or selected. Lock and Settings sit at the bottom
   of the sidebar; Add Repository by Name… is on an owner's menu and New Environment… on a
   repository's.
+- **Azure by subscription.** The sidebar lists Azure › subscription › vault; each subscription
+  opens and closes, and searching a subscription's name finds its vaults. Connect Azure keeps
+  each vault's subscription; a vault connected before shows directly under Azure until its first
+  Refresh.
 - **Jump anywhere (⌘K).** The toolbar's search button, Edit › Jump Anywhere or ⌘K opens a
   palette of every place in the sidebar (organizations, repositories, environments, Key Vaults,
   folders): type part of a name or of its owner and repository, ↑↓ to move, ↩ to open, esc to

@@ -28,9 +28,9 @@ struct MigrationTests {
             "v7_journal_fingerprints", "v8_force_push_requested_at", "v9_item_links", "v10_teammates",
             "v11_spaces", "v12_folders", "v13_destinations", "v14_project_shares",
             "v15_drop_teammates", "v16_drop_runtime_providers", "v17_organizations", "v18_standalone_key_vaults",
-            "v19_org_item_changes",
+            "v19_org_item_changes", "v20_key_vault_subscriptions",
         ])
-        #expect(Migration.latest == .v19OrgItemChanges)
+        #expect(Migration.latest == .v20KeyVaultSubscriptions)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -147,6 +147,34 @@ struct MigrationTests {
         }
         #expect(row[0] as String? == "selected")
         #expect(row[1] as Int == 0 && row[2] as Int == 0)
+    }
+
+    /// v20: a Key Vault imported before it keeps no subscription (it shows directly under Azure)
+    /// until one is saved; the columns take only a UUID and a 1–255 character name.
+    @Test func keyVaultsGainAnEmptySubscription() throws {
+        let database = try DatabaseFactory.unmigratedInMemory()
+        try VaultMigrator.migrate(database, upTo: .v19OrgItemChanges)
+        let id = UUID().uuidString.lowercased()
+        try database.write { tx in
+            try tx.db.execute(sql: """
+                INSERT INTO destinations (id, repository_id, provider, target_key, settings_json, sort_order, created_at, updated_at)
+                VALUES (?, NULL, 'azure_keyvault', 'kv|kv-example-prod', '{"vaultName":"kv-example-prod","version":1}', 0, ?, ?)
+                """, arguments: [id, Self.seedTime, Self.seedTime])
+        }
+        try VaultMigrator.migrate(database)
+        let store = DestinationStore(database: database)
+        var record = try database.read { tx in try #require(try store.fetchDestinationRecords(repositoryID: nil, in: tx).first) }
+        #expect(record.subscription == nil)
+
+        let production = KeyVaultSubscriptionModel(id: UUID(), name: "Example Production")
+        record.setSubscription(production)
+        try database.write { tx in try store.updateDestination(record, in: tx) }
+        #expect(try database.read { tx in try store.fetchDestinationRecords(repositoryID: nil, in: tx).first?.subscription } == production)
+        #expect(throws: (any Error).self) {
+            try database.write { tx in
+                try tx.db.execute(sql: "UPDATE destinations SET subscription_name = '' WHERE id = ?", arguments: [id])
+            }
+        }
     }
 
     @Test func migratingTwiceIsANoOp() throws {

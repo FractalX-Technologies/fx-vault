@@ -82,6 +82,10 @@ public enum Limits {
 
     // MARK: - Destinations (v0.8.0)
 
+    /// Longest Azure subscription name saved with a Key Vault, in Unicode scalars (database CHECK,
+    /// v20). Local choice: Azure's own limit is smaller.
+    public static let maxSubscriptionNameLength = 255
+
     /// Largest Key Vault secret value, in bytes (Azure: 25 KiB).
     public static let maxKeyVaultValueBytes = 25 * bytesPerKiB
     /// Most secrets and variables one destination holds. Local choice, as for folders.

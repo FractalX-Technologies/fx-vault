@@ -501,4 +501,16 @@ enum MigrationSQL {
         CREATE UNIQUE INDEX destinations_repo_target ON destinations(repository_id, target_key);
         CREATE UNIQUE INDEX destinations_standalone_target ON destinations(target_key) WHERE repository_id IS NULL;
         """
+
+    // MARK: v20_key_vault_subscriptions (1.0, tasks/todo.md D6c6). Additive.
+
+    /// The Azure subscription of a Key Vault of its own, saved when Connect Azure imports it or
+    /// a Refresh finds it, so the sidebar groups Azure › subscription › vault without an `az`
+    /// call at launch. NULL until then: the vault shows directly under Azure.
+    static let v20KeyVaultSubscriptions = """
+        ALTER TABLE destinations ADD COLUMN subscription_id TEXT
+          CHECK (subscription_id IS NULL OR length(subscription_id) = 36);
+        ALTER TABLE destinations ADD COLUMN subscription_name TEXT
+          CHECK (subscription_name IS NULL OR length(subscription_name) BETWEEN 1 AND 255);
+        """
 }

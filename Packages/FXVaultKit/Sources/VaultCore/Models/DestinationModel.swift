@@ -60,6 +60,9 @@ public struct DestinationModel: Sendable, Hashable, Identifiable {
     public var sortOrder: Int
     /// When the remote was last listed (import, Refresh or Sync).
     public var lastRefreshedAt: Date?
+    /// A Key Vault of its own's Azure subscription (1.0 D6c6), nil until Connect Azure or a
+    /// Refresh saves it: the sidebar groups Azure › subscription › vault by it.
+    public var subscription: KeyVaultSubscriptionModel?
     /// Live items by kind and pending changes, set by the observation.
     public var secretCount: Int
     public var variableCount: Int
@@ -75,6 +78,7 @@ public struct DestinationModel: Sendable, Hashable, Identifiable {
         stage: String?,
         sortOrder: Int,
         lastRefreshedAt: Date? = nil,
+        subscription: KeyVaultSubscriptionModel? = nil,
         secretCount: Int = 0,
         variableCount: Int = 0,
         pendingCount: Int = 0,
@@ -88,6 +92,7 @@ public struct DestinationModel: Sendable, Hashable, Identifiable {
         self.stage = stage
         self.sortOrder = sortOrder
         self.lastRefreshedAt = lastRefreshedAt
+        self.subscription = subscription
         self.secretCount = secretCount
         self.variableCount = variableCount
         self.pendingCount = pendingCount
@@ -194,5 +199,17 @@ public struct DestinationItemModel: Sendable, Hashable, Identifiable {
 
     public var nameKey: String {
         GitHubNameValidator.foldKey(name)
+    }
+}
+
+/// The Azure subscription a Key Vault was found in (1.0 D6c6): its id, for matching, and the
+/// name the sidebar shows ("Example Production").
+public struct KeyVaultSubscriptionModel: Sendable, Hashable {
+    public let id: UUID
+    public let name: String
+
+    public init(id: UUID, name: String) {
+        self.id = id
+        self.name = name
     }
 }

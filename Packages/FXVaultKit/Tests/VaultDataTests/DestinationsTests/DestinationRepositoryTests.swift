@@ -113,6 +113,34 @@ struct DestinationRepositoryTests {
 
     // MARK: - Key Vaults of their own (1.0, B8b)
 
+    /// Connect Azure saves the vault's subscription (1.0 D6c6); one imported before gets it from
+    /// a Refresh. The name is trimmed, and an empty one is never saved.
+    @Test func aKeyVaultKeepsItsSubscription() async throws {
+        let fixture = try await Fixture.make()
+        let production = KeyVaultSubscriptionModel(id: UUID(), name: "Example Production")
+        let imported = try fixture.destinations.createDestination(
+            repositoryID: nil,
+            target: Self.keyVault,
+            stage: nil,
+            subscription: production
+        )
+        let older = try fixture.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-sample-legacy", tenantID: nil),
+            stage: nil
+        )
+        #expect(try fixture.destinations.destination(imported)?.subscription == production)
+        #expect(try fixture.destinations.destination(older)?.subscription == nil)
+
+        try fixture.destinations.setSubscription(KeyVaultSubscriptionModel(id: production.id, name: "  Example Production "), of: older)
+        #expect(try fixture.destinations.destination(older)?.subscription == production)
+        try fixture.destinations.setSubscription(KeyVaultSubscriptionModel(id: UUID(), name: " "), of: older)
+        #expect(try fixture.destinations.destination(older)?.subscription == production)
+        #expect(configError {
+            try fixture.destinations.setSubscription(production, of: DestinationID())
+        } == .destinationNotFound)
+    }
+
     @Test func keyVaultsOfTheirOwnStandBesideRepositoryDestinations() async throws {
         let fixture = try await Fixture.make()
         let standalone = try fixture.destinations.createDestination(repositoryID: nil, target: Self.keyVault, stage: nil)

@@ -57,6 +57,28 @@ struct AzureDiscoveryRepositoryTests {
         #expect(azRuns.allSatisfy { $0.environment["PATH"] == "/Users/user-a/tools/bin:/usr/bin" })
     }
 
+    /// A Key Vault imported before 1.0 D6c6: its Refresh finds the subscription that lists it,
+    /// by name in any case, within its tenant when it has one.
+    @Test func aVaultIsFoundInTheSubscriptionThatListsIt() async throws {
+        let files = FakeGHFileInspector()
+        files.addFolder("/Users/user-a/tools/bin", owner: FakeGHFileInspector.defaultUserID)
+        files.addFile(Self.shellAZ, owner: FakeGHFileInspector.defaultUserID)
+        let runner = FakeCommandRunner()
+        runner.stub(argumentsPrefix: ["-i", "-l", "-c"], with: .success("__FXV_B__PATH=/Users/user-a/tools/bin:/usr/bin\n\0__FXV_E__"))
+        Self.stubAZ(runner)
+        let repository = try Self.repository(runner: runner, files: files)
+        let production = KeyVaultSubscriptionModel(
+            id: try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001")),
+            name: "Example Production"
+        )
+
+        #expect(try await repository.subscription(ofVaultNamed: "KV-EXAMPLE-PROD", tenantID: nil) == production)
+        let tenant = "00000000-0000-0000-0000-0000000000A1"
+        #expect(try await repository.subscription(ofVaultNamed: "kv-example-prod", tenantID: tenant) == production)
+        #expect(try await repository.subscription(ofVaultNamed: "kv-example-prod", tenantID: "00000000-0000-0000-0000-0000000000b2") == nil)
+        #expect(try await repository.subscription(ofVaultNamed: "kv-example-legacy", tenantID: nil) == nil)
+    }
+
     @Test func aFailedProbeFallsBackToTheFixedFolders() async throws {
         let files = FakeGHFileInspector()
         files.addFolder("/usr/local/bin", owner: FakeGHFileInspector.defaultUserID)

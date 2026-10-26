@@ -597,7 +597,8 @@ destination item never reaches GitHub except as a copy in a repository scope.
 - `struct DestinationRepository(session:clock:)`; every mutation is one `VaultSession.write` and
   throws `ConfigRepositoryError` (`.destinationNotFound`, `.destinationFull`,
   `.tooManyDestinations`, `.destinationExists`).
-  Destinations: `createDestination(repositoryID:target:stage:)`, `updateDestination(_:stage:)`,
+  Destinations: `createDestination(repositoryID:target:stage:subscription:)`, `updateDestination(_:stage:)`,
+  `setSubscription(_:of:)` (1.0 D6c6: a Key Vault's Azure subscription, trimmed, an empty name never saved),
   `deleteDestination(_:)` (FX Vault only; nothing is deleted remotely), `reorderDestinations`,
   `destination(_:)`, `destinations(repositoryID:)`, `observeDestinations(repositoryID:)`,
   `pendingCounts()` / `observePendingCounts()`, `retiredDestinationLabels()` /
@@ -626,7 +627,9 @@ destination item never reaches GitHub except as a copy in a repository scope.
 - `actor ShellResolvingAzureTokens` builds the `AzureCLITokenProvider` on first use with the probed
   login-shell environment (`github.shellEnvironment()`); `reset()` drops every cached token.
 - `AzureDiscoveryRepository` (1.0, B8): `subscriptions()`, `keyVaults(subscriptionID:)` and
-  `discover()` over `AzureCLIDiscovery`, read-only and without storage. It and the token
+  `discover()` over `AzureCLIDiscovery`, read-only and without storage;
+  `subscription(ofVaultNamed:tenantID:)` (D6c6) finds the subscription that lists a vault (name
+  and tenant case-insensitive). It and the token
   provider get their `AzureCLIRunner` from `ShellResolvingAzureCLI` (same shell probe).
 - Across places: `ItemCopySource` reads a row of any of the three tables and one `link_id` group
   spans them; `LinkedCopyPlaceModel.destination(…)`; `ConfigRepository+Links`,
@@ -1095,8 +1098,8 @@ AppTests).
 - `Onboarding`, then `Connect` (`AppViewModel.isFirstConnectPending`, in memory only: a lock
   or relaunch goes to the main window; steps GitHub then Azure, `ConnectAzureModel` lists
   through `AzureDiscoveryRepository` and imports each checked vault as a Key Vault of its own
-  with `createDestination(repositoryID: nil)` and `DestinationSyncRepository.importRemote`,
-  reusing a vault already there; Run state shared with gh setup in `SetupCommandRunState`), `Lock` / `RecoveryReset` (both with `GHStatusRow`). The lock screen shows
+  with `createDestination(repositoryID: nil, subscription:)` and `DestinationSyncRepository.importRemote`,
+  reusing a vault already there (`setSubscription`); Run state shared with gh setup in `SetupCommandRunState`), `Lock` / `RecoveryReset` (both with `GHStatusRow`). The lock screen shows
   "Unlock with Touch ID" (SF Symbol `touchid`) when Touch ID can run, and otherwise names why the
   password is required under the password field (`LockNoticeModel`: "Password required: After a
   restart" / "Every 14 days" / "Fingerprints changed"). After a password unlock the vault is
@@ -1175,7 +1178,9 @@ AppTests).
     items FX Vault cannot use), and the same `ConfigTableView` through `ConfigTableModel` with
     the Status column under SECRETS · n (Key Vault holds secrets only). Copy To lists the repository's
     scopes, the folders and the other destinations; ⌘C / ⌘V and `.env` import work as for scopes.
-    Refresh is disabled offline.
+    Refresh is disabled offline. After a Refresh, a Key Vault of its own without a subscription
+    gets it through `FeatureDependencies.azureDiscovery` (D6c6; no `az` call at launch), so the
+    sidebar's `SidebarAzureModel` groups it.
   - `RepoDetailViewModel` (`Main/RepoDetail`): the place header (1.0 D6c3, `Main/Place`:
     `PlaceHeader` with `headerTitle`, `headerSubline` built by `PlaceCopy`, Refreshing… or the
     drift line, and ⋯ More, whose item actions are `PlaceItemMoreItems` (shared with Key Vaults

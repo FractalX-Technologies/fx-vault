@@ -18,6 +18,7 @@ struct ConnectAzureTests {
         tenantID: UUID(uuidString: "00000000-0000-0000-0000-0000000000a1")!,
         isDefault: true
     )
+    static let productionSubscription = KeyVaultSubscriptionModel(id: production.id, name: production.name)
     static let retired = FakeAzureOutput.Subscription(
         id: UUID(uuidString: "00000000-0000-0000-0000-000000000003")!,
         name: "Example Retired",
@@ -77,6 +78,7 @@ struct ConnectAzureTests {
         #expect(vaults.map(\.target.displayName) == ["kv-example-prod", "kv-example-shared"])
         let prod = try #require(vaults.first)
         #expect(prod.target == .azureKeyVault(vaultName: "kv-example-prod", tenantID: "00000000-0000-0000-0000-0000000000a1"))
+        #expect(prod.subscription == Self.productionSubscription, "the sidebar groups it under its subscription")
         let item = try #require(try harness.data.destinations.items(destinationID: prod.id).first)
         #expect(item.name == "DATABASE_URL")
         let value = try harness.data.destinations.reveal(item.id)
@@ -86,6 +88,12 @@ struct ConnectAzureTests {
 
     @Test func importingAgainReusesTheVault() async throws {
         let harness = try await Self.scripted()
+        // Saved before 1.0 D6c6: Connect gives the vault it reuses its subscription.
+        let saved = try harness.data.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-example-prod", tenantID: Self.production.tenantID.uuidString.lowercased()),
+            stage: nil
+        )
         for _ in 0..<2 {
             let connect = harness.app.makeConnectViewModel()
             await connect.load()
@@ -95,7 +103,28 @@ struct ConnectAzureTests {
             await connect.importSelected()
             #expect(connect.summary?.keyVaultCount == 1)
         }
-        #expect(try harness.data.destinations.destinations(repositoryID: nil).count == 1)
+        #expect(try harness.data.destinations.destinations(repositoryID: nil).map(\.id) == [saved])
+        #expect(try harness.data.destinations.destination(saved)?.subscription == Self.productionSubscription)
+    }
+
+    /// 1.0 D6c6: a vault without a saved subscription gets it from its Refresh (no `az` at launch).
+    @Test func refreshingAVaultSavesItsSubscription() async throws {
+        let harness = try await Self.scripted()
+        let destinations = harness.data.destinations
+        let id = try destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-example-prod", tenantID: nil),
+            stage: nil
+        )
+        let model = DestinationDetailViewModel(
+            destination: try #require(try destinations.destination(id)),
+            dependencies: harness.dependencies(recorder: ActionRecorder())
+        ) {
+            try? destinations.destination(id)
+        }
+        #expect(try destinations.destination(id)?.subscription == nil)
+        model.refreshNow()
+        #expect(await TestFixtures.eventually { (try? destinations.destination(id)?.subscription) == Self.productionSubscription })
     }
 
     @Test func skipImportsGitHubOnlyAndNothingCheckedOpensTheVault() async throws {
