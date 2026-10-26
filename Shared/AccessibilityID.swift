@@ -176,6 +176,19 @@ enum AccessibilityID {
         static let addAccount = "accounts.addAccount"
         static let addAccountCheckAgain = "accounts.addAccount.checkAgain"
         static let unmappedCheckAgain = "accounts.unmapped.checkAgain"
+
+        /// An Azure tenant row (its lowercased id; empty for the default tenant), 1.0 S1b.
+        static func azureTenant(_ id: String) -> String {
+            "accounts.azure.tenant.\(id)"
+        }
+
+        static func azureChooseVaults(_ id: String) -> String {
+            "accounts.azure.chooseVaults.\(id)"
+        }
+
+        static let azureSignOut = "accounts.azure.signOut"
+        static let azureCheckAgain = "accounts.azure.checkAgain"
+        static let azureAddVaults = "accounts.azure.addVaults"
     }
 
     /// The menu bar item's menu (1.0 M1).

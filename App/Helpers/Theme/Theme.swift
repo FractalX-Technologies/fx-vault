@@ -111,6 +111,8 @@ enum Theme {
         static let fileSecretSheetWidth: CGFloat = 460
         /// The drop overlay sits this far inside a place (board Place-FileDrop).
         static let fileDropInset: CGFloat = 8
+        /// Choose Vaults… in Settings (1.0 S1b): its vault list scrolls past this.
+        static let chooseVaultsSheetMaxHeight: CGFloat = 520
         /// The inset of the 1.0 dialogs (boards Sync-Progress, Sync-Delete, NewRepo, Share-*).
         static let dialogInset: CGFloat = 22
         /// A row of a dialog's grey list box (board Sync-Delete).

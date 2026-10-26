@@ -8,13 +8,16 @@ public enum FakeAzureOutput {
         public let id: UUID
         public let name: String
         public let tenantID: UUID
+        /// `tenantDisplayName`; nil leaves the key out, as older `az` versions do.
+        public let tenantName: String?
         public let state: String
         public let isDefault: Bool
 
-        public init(id: UUID, name: String, tenantID: UUID, state: String = "Enabled", isDefault: Bool = false) {
+        public init(id: UUID, name: String, tenantID: UUID, tenantName: String? = nil, state: String = "Enabled", isDefault: Bool = false) {
             self.id = id
             self.name = name
             self.tenantID = tenantID
+            self.tenantName = tenantName
             self.state = state
             self.isDefault = isDefault
         }
@@ -29,9 +32,10 @@ public enum FakeAzureOutput {
     /// `az account list --output json`.
     public static func accountList(_ subscriptions: [Subscription]) -> String {
         let entries = subscriptions.map { subscription in
-            """
+            let tenantName = subscription.tenantName.map { #""tenantDisplayName":"\#($0)","# } ?? ""
+            return """
             {"cloudName":"AzureCloud","id":"\(subscription.id.uuidString.lowercased())","isDefault":\(subscription.isDefault),\
-            "name":"\(subscription.name)","state":"\(subscription.state)","tenantId":"\(subscription.tenantID.uuidString.lowercased())",\
+            "name":"\(subscription.name)","state":"\(subscription.state)",\(tenantName)"tenantId":"\(subscription.tenantID.uuidString.lowercased())",\
             "user":{"name":"user-a@example.com","type":"user"}}
             """
         }

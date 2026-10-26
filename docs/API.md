@@ -457,7 +457,7 @@ read-only, with `Timeouts.azList` (60 s), the same binary, environment and failu
 
 | Command | argv | Reads | Notes |
 |---|---|---|---|
-| subscriptions | `<az> account list --output json` | `id`, `name`, `tenantId`, `state`, `isDefault` | `id` and `tenantId` must be UUIDs (the tenant is lowercased); any entry missing a field is `.decoding` for the whole answer. `user` is never read. A subscription listed twice keeps the default entry. `[]` is `.azNotSignedIn`: with nobody signed in `az` exits 0, and `AZURE_CORE_ONLY_SHOW_ERRORS` hides its hint. `state`: Enabled, Warned, PastDue, Disabled, Deleted, else `other`. |
+| subscriptions | `<az> account list --output json` | `id`, `name`, `tenantId`, `state`, `isDefault`; optional `tenantDisplayName` (1.0 S1b) | `id` and `tenantId` must be UUIDs (the tenant is lowercased); any entry missing a field is `.decoding` for the whole answer. `tenantDisplayName` is cleaned (`DisplayNameSanitizer`) and nil when absent or empty (older `az`). `user` is never read. A subscription listed twice keeps the default entry. `[]` is `.azNotSignedIn`: with nobody signed in `az` exits 0, and `AZURE_CORE_ONLY_SHOW_ERRORS` hides its hint. `state`: Enabled, Warned, PastDue, Disabled, Deleted, else `other`. |
 | vaults | `<az> keyvault list --resource-type vault --subscription <id> --output json` | `name`, `resourceGroup`, `location`, `properties.vaultUri` | The id is a `UUID` value, so it can never become a flag. `--resource-type vault` leaves out Managed HSMs. A name that breaks the vault rules (`DestinationRules.isValidKeyVaultName`) or a missing resource group or location is `.decoding`. `vaultUri` is kept only when it is exactly the vault's own `https://<name>.vault.azure.net` (another cloud's or vault's host gives nil); the data plane never uses it. |
 
 `discover()` lists the subscriptions, then each one's vaults, one `az` at a time (concurrent runs
@@ -489,7 +489,7 @@ become a valid FX Vault name is unusable (`DestinationUnusableReason.invalidName
 | `DestinationSyncRepository.resolve` | list, read | Keep Mine / Use Remote; refreshes first and throws `.stale` when a finding no longer holds; values are read only for Use Remote |
 | `DestinationSyncRepository.importRemote` | list, read | Right after Add Destination: every usable remote item the vault does not have, with its value where the provider returns one |
 | `ShellResolvingAzureTokens` | `az` | Creates `AzureCLITokenProvider` once the login-shell probe (A2) is in; `reset()` on lock |
-| `AzureDiscoveryRepository` | `az account list`, `az keyvault list` | `subscriptions()`, `keyVaults(subscriptionID:)`, `discover()` for Connect Azure and the sidebar; the login-shell PATH (A2) as for tokens; stores nothing |
+| `AzureDiscoveryRepository` | `az account list`, `az keyvault list` | `subscriptions()`, `keyVaults(subscriptionID:)`, `discover()` for Connect Azure, the sidebar and Settings › Accounts › Azure; the login-shell PATH (A2) as for tokens; stores nothing |
 
 Clients come from `DestinationRemoteFactory(transport:azureTokens:clock:)` through
 `LiveDestinationRemoteProvider`.

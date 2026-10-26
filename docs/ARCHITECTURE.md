@@ -1136,7 +1136,8 @@ AppTests).
   or relaunch goes to the main window; steps GitHub then Azure, `ConnectAzureModel` lists
   through `AzureDiscoveryRepository` and imports each checked vault as a Key Vault of its own
   with `createDestination(repositoryID: nil, subscription:)` and `DestinationSyncRepository.importRemote`,
-  reusing a vault already there (`setSubscription`); Run state shared with gh setup in `SetupCommandRunState`), `Lock` / `RecoveryReset` (both with `GHStatusRow`). The lock screen shows
+  reusing a vault already there (`setSubscription`); Run state shared with gh setup in `SetupCommandRunState`;
+  the list itself is `AzureVaultChoicesView`, shared with Settings' Choose Vaults…), `Lock` / `RecoveryReset` (both with `GHStatusRow`). The lock screen shows
   "Unlock with Touch ID" (SF Symbol `touchid`) when Touch ID can run, and otherwise names why the
   password is required under the password field (`LockNoticeModel`: "Password required: After a
   restart" / "Every 14 days" / "Fingerprints changed"). After a password unlock the vault is
@@ -1159,7 +1160,13 @@ AppTests).
   v0.3.2: "SSH aliases without an account" lists the GitHub aliases no account uses, with the
   `gh auth login` command and **Check Again**, which reloads the tab and, through
   `AppViewModel.accountsDidChange()` / `accountsRevision`, the main window's sidebar; the aliases
-  load before gh detection, so they show while gh is missing),
+  load before gh detection, so they show while gh is missing; 1.0 S1b: the Azure group,
+  `AzureAccountsViewModel`, owned by it and reset on lock, on its own task so `az` never waits
+  for gh: `AzureTenantRowModel.rows` builds one row per tenant from the Key Vaults of their own
+  and `AzureDiscoveryRepository.subscriptions()` (`az account list`, the only `az` it runs;
+  `tenantDisplayName`, never the user); Choose Vaults… is a `ConnectAzureModel` with
+  `.tenant(id)` scope in a sheet, which leaves the vaults already in FX Vault out; the logins
+  are Copy-only),
   Advanced (v0.3.1: the trusted gh with its owner and **Revoke**).
 - `Main` (§10.4), `MainViewModel` owns:
   - `SidebarViewModel` (`Main/Sidebar`): vault repositories observed (work without gh), gh

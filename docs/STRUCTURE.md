@@ -35,7 +35,8 @@ FXVault/
 │   │   ├── Onboarding/              # OnboardingScreen/ViewModel, Steps/OnboardingStepViews
 │   │   ├── Connect/                 # ConnectScreen/ViewModel (after onboarding: choose what to
 │   │   │                            # import, first-import summary), ConnectAzureModel/View
-│   │   │                            # (subscriptions and vaults), ConnectCopy
+│   │   │                            # (subscriptions and vaults), AzureVaultChoicesView (the
+│   │   │                            # list, shared with Choose Vaults…), ConnectCopy
 │   │   ├── Lock/                    # LockScreen/ViewModel, RecoveryResetScreen/ViewModel,
 │   │   │                            # Notch/ (NotchIslandController + panel, NotchIslandView
 │   │   │                            # + model, NotchGeometry),
@@ -143,7 +144,8 @@ FXVault/
 │   │                                # rows, values and states; boards Settings-*), General
 │   │                                # (+ QuickVaultShortcutRecorder), Security(+ViewModel),
 │   │                                # ResetVaultSheet (+ its Security card; board Reset-Confirm),
-│   │                                # Accounts(+ViewModel), Advanced,
+│   │                                # Accounts(+ViewModel), AzureAccounts Section/ViewModel/Copy
+│   │                                # (the Azure group and Choose Vaults…, 1.0 S1b), Advanced,
 │   │                                # SharingSettingsScreen/ViewModel (the sent log; v0.9.0)
 │   ├── Components/                  # SecretValueEditor, MaskedValueCell (+ FileSecretChip, F1), RecoveryKeyGridView,
 │   │   │                            # PassphraseView, EmptyStateView, GHStatusRow,
@@ -200,7 +202,8 @@ FXVault/
 │   ├── <Name>ViewModelTests.swift   # one suite per view model / manager: AppViewModel,
 │   │                                # AutoLock, Clipboard, Onboarding, Lock, TouchIDOffer,
 │   │                                # DiagnosticReport (--diagnose), RecoveryReset,
-│   │                                # Preferences, AccountsSettings, GHStatusProbe, MainViewModel,
+│   │                                # Preferences, AccountsSettings, AzureAccounts (S1b),
+│   │                                # GHStatusProbe, MainViewModel,
 │   │                                # Sidebar, ScopeList, RepoDetail, ItemEditor, Environment
 │   │                                # (+ EnvironmentBranchPolicyForm), Sync, DriftReview,
 │   │                                # CreateRepo (+ CreateRepoEditor), EnvFileImport,

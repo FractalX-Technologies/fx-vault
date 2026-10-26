@@ -957,7 +957,26 @@ reason"). The `GH_TOKEN` note and its command sit under the card with Add Accoun
 trailing edge: a 340 pt popover with `gh auth login` as a `CommandRow` and Check Again (gh logs
 accounts in interactively, so it stays Copy-only; the same `GHLoginSteps` as the SSH aliases
 without an account). SSH aliases without an account are their own
-group. The gh path and version are in Advanced. The board's Azure group is not built yet.
+group. The gh path and version are in Advanced.
+
+Azure (1.0, S1b; `AzureAccountsSection`): after the GitHub card, before the SSH aliases. One row
+per tenant: the saved Key Vaults' tenants (a vault saved without one counts in `az`'s default
+tenant) and every tenant `az account list` lists. The title is `tenantDisplayName`; the detail
+is "Example Production · 2 vaults, Example Staging · 1 vault" ("1 other vault" for vaults saved
+before their subscription was; "No vaults in FX Vault"). A signed-in tenant has "● Signed in"
+and Choose Vaults…; another "Not signed in · …" in its detail and `az login --tenant <id>` in
+11 pt mono, middle-truncated with the whole command as help, and an outline Copy that turns to
+"Copied". Signed-in tenants come first, then by title. Sign out of Azure gives `az logout` the
+same way, while a tenant is signed in. Without `az`, or with nobody signed in and no vault, the
+card says what is missing over its commands as `CommandRow`s (Connect Azure's words); an `az`
+failure is an `InlineErrorView`. After a Copy, the footnote says to run it in Terminal, with
+Check Again; after Add Vaults it says what was added and what could not be read. Choose Vaults…
+is a 440 pt `DialogSheet` ("Choose vaults", the tenant's name) over Connect Azure's list
+(`AzureVaultChoicesView`) for that tenant only: nothing checked, a vault already in FX Vault
+checked and disabled ("westeurope · In FX Vault"), "N vaults selected" in the footer, then
+Cancel and Add Vaults. Departures from the board: "Signed in", not "Signed in as user-a" (FX
+Vault doesn't keep the signed-in account); a tenant that isn't signed in shows its id, since
+`az` names only the tenants it is signed in to.
 
 Sharing (v0.9.0) has one group, "Files you shared", with the footnote "Names only; FX Vault keeps
 no copy of the file. If one leaks, rotate what's in it.": one row per export, newest first: the

@@ -8,13 +8,17 @@ public struct AzureSubscriptionModel: Sendable, Hashable, Identifiable {
     public let name: String
     /// Lowercased UUID text, the form `DestinationTargetModel.azureKeyVault` takes.
     public let tenantID: String
+    /// The tenant's `tenantDisplayName`, cleaned (``DisplayNameSanitizer``); nil when this `az`
+    /// lists none (Settings › Accounts then names the tenant by its id).
+    public let tenantName: String?
     public let state: AzureSubscriptionState
     public let isDefault: Bool
 
-    public init(id: UUID, name: String, tenantID: String, state: AzureSubscriptionState, isDefault: Bool) {
+    public init(id: UUID, name: String, tenantID: String, tenantName: String? = nil, state: AzureSubscriptionState, isDefault: Bool) {
         self.id = id
         self.name = name
         self.tenantID = tenantID
+        self.tenantName = tenantName
         self.state = state
         self.isDefault = isDefault
     }
@@ -83,6 +87,7 @@ public struct AzureCLIDiscovery: Sendable {
     private static let idField = "id"
     private static let nameField = "name"
     private static let tenantField = "tenantId"
+    private static let tenantNameField = "tenantDisplayName"
     private static let stateField = "state"
     private static let defaultField = "isDefault"
     private static let resourceGroupField = "resourceGroup"
@@ -150,10 +155,13 @@ public struct AzureCLIDiscovery: Sendable {
                   let state = entry.string(.key(stateField)),
                   let isDefault = entry.bool(.key(defaultField))
             else { throw .decoding }
+            // Optional: older `az` versions list no tenant name.
+            let tenantName = entry.string(.key(tenantNameField)).map { DisplayNameSanitizer.sanitize($0) }
             let subscription = AzureSubscriptionModel(
                 id: id,
                 name: name,
                 tenantID: tenant.uuidString.lowercased(),
+                tenantName: tenantName?.isEmpty == false ? tenantName : nil,
                 state: AzureSubscriptionState(listed: state),
                 isDefault: isDefault
             )

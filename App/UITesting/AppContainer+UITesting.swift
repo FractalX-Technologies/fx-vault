@@ -155,6 +155,7 @@ enum UITestAzure {
         id: FakeAzureOutput.syntheticID(0x01),
         name: "Example Production",
         tenantID: FakeAzureOutput.syntheticID(0xA1),
+        tenantName: "Example",
         isDefault: true
     )
 

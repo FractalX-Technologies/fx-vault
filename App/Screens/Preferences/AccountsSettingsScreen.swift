@@ -4,7 +4,8 @@ import VaultData
 
 /// Preferences › Accounts (§10; board Settings-Accounts): each gh account with its SSH alias,
 /// **Re-check** and **Test**, its token, scopes and organizations (1.0), the accounts FX Vault
-/// can't use, then Add Account…. The gh path and version are in Advanced.
+/// can't use, then Add Account…, then the Azure tenants (S1b). The gh path and version are in
+/// Advanced.
 struct AccountsSettingsScreen: View {
     let preferences: PreferencesViewModel
 
@@ -61,6 +62,7 @@ private struct AccountsSettingsContent: View {
                     ))
                 }
             }
+            AzureAccountsSection(viewModel: viewModel.azure)
             if !viewModel.unmappedAliases.isEmpty {
                 UnmappedAliasesSection(aliases: viewModel.unmappedAliases, viewModel: viewModel)
             }
