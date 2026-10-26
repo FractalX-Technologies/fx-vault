@@ -221,7 +221,8 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   A secret's value is never typed into the text: the key after `=` opens Set value… with it
   (type, paste or Generate), and a click on a value's token opens it again. A paste after a
   secret's `=` is its value; pasted `KEY=value` lines become masked tokens and the clipboard is
-  cleared, and key material (Base64, a connection string) never becomes a name. A copy from the
+  cleared, and key material (Base64, hex, a known token, a connection string) never becomes a
+  name. A copy from the
   notes writes `••••`. Each line says what it does or why it can't be saved, with Key Vault's
   name rules in a Key Vault. Review ⌘S lists what is added, changed and removed; Save turns it
   into pending changes, and nothing reaches GitHub or Key Vault until Sync. With unsaved

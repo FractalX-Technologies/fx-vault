@@ -1267,7 +1267,9 @@ AppTests).
     (the shared `validatePaste`) and Import .env… (`canImportEnv`). A value set on a line
     (Done, a paste after `=`, a pasted name the section has) is one undo step: the line gets a
     new token (`NotesTokenStore.replacement`), so the undo stack holds token ids only; Undo and
-    Redo refresh the notes from the undo manager's notifications.
+    Redo refresh the notes from the undo manager's notifications. A pasted word that would pass
+    as a name is a value when `NotesPasteParser.looksLikeValue` (`CredentialClassifier`'s value
+    checks: a token prefix, or high entropy with a lowercase letter) says so.
     The drift check runs when a repository opens (`DriftRepository.detectOnOpen`).
     v0.4.0 multi-selection: ⌘/⇧-click and ⌘A select rows (`selection`); with two or more
     selected, `RepoDetailSelectionActions` replaces the add actions ("N selected", Push on Next

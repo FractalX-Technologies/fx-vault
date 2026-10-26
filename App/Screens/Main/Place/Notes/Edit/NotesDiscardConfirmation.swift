@@ -10,7 +10,14 @@ extension View {
     func notesDiscardConfirmation(_ main: MainViewModel) -> some View {
         confirmationDialog(
             NotesEditCopy.discardTitle(main.discardRequest?.count ?? 0),
-            isPresented: Binding(get: { main.discardRequest != nil }, set: { if !$0 { main.keepEditingNotes() } }),
+            isPresented: Binding(get: { main.discardRequest != nil }, set: { isPresented in
+                // SwiftUI may close the dialog before it runs Discard's action: Keep Editing
+                // waits a turn, and does nothing once Discard has answered.
+                guard !isPresented else { return }
+                Task { @MainActor in
+                    main.keepEditingNotes()
+                }
+            }),
             titleVisibility: .visible
         ) {
             Button(NotesEditCopy.discard, role: .destructive) {
