@@ -119,7 +119,7 @@ nonisolated enum SyncCopy {
 
     /// A line about the place itself, without a symbol or a name: it reads muted.
     static func placeLine(_ text: String) -> SyncChangeLineModel {
-        SyncChangeLineModel(symbol: nil, name: nil, detail: text, text: text)
+        SyncChangeLineModel(symbol: nil, name: nil, detail: text, text: text, kind: nil)
     }
 
     /// `Deployment branches: selected (release/*)`.
