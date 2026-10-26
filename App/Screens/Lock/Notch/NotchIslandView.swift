@@ -48,6 +48,7 @@ final class NotchIslandModel {
 struct NotchIslandView: View {
     @Bindable var model: NotchIslandModel
     @FocusState private var isPasswordFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: Theme.Spacing.medium) {
@@ -80,11 +81,18 @@ struct NotchIslandView: View {
         case .password:
             password
         case .unlocked:
-            Label(String(localized: "island.unlocked", defaultValue: "Unlocked"), systemImage: "lock.open.fill")
-                .fxTextStyle(.headline)
-                .foregroundStyle(Theme.Colors.islandInk)
-                .frame(maxWidth: .infinity)
-                .accessibilityIdentifier(AccessibilityID.Island.unlocked)
+            Label {
+                Text(String(localized: "island.unlocked", defaultValue: "Unlocked"))
+            } icon: {
+                // The finger was accepted: the padlock opens with a bounce.
+                Image(systemName: "lock.open.fill")
+                    .symbolEffect(.bounce, options: .nonRepeating, value: reduceMotion ? false : model.isUnlocked)
+            }
+            .fxTextStyle(.headline)
+            .foregroundStyle(Theme.Colors.islandInk)
+            .frame(maxWidth: .infinity)
+            .transition(reduceMotion ? .opacity : .scale(scale: 0.8).combined(with: .opacity))
+            .accessibilityIdentifier(AccessibilityID.Island.unlocked)
         }
     }
 
@@ -102,12 +110,15 @@ struct NotchIslandView: View {
                         } else {
                             TouchIDSensorView(
                                 session: model.lock.islandTouchID,
-                                controlSize: .large,
+                                side: Theme.Layout.touchIDGlyph,
                                 font: Theme.Typography.title
                             )
                         }
                     }
                     .foregroundStyle(Theme.Colors.islandInk)
+                    // While Touch ID checks the finger, the glyph swells a little.
+                    .scaleEffect(model.lock.isUnlocking && !reduceMotion ? 1.15 : 1)
+                    .animation(Theme.Durations.spring, value: model.lock.isUnlocking)
                     VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
                         Text(String(localized: "island.locked", defaultValue: "FX Vault is locked"))
                             .fxTextStyle(.headline)
@@ -118,7 +129,7 @@ struct NotchIslandView: View {
                             } icon: {
                                 TouchIDSensorView(
                                     session: model.lock.islandTouchID,
-                                    controlSize: .small,
+                                    side: Theme.Layout.touchIDGlyphSmall,
                                     font: Theme.Typography.caption
                                 )
                             }

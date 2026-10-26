@@ -35,6 +35,9 @@ enum Theme {
         static let buttonPaddingToolbar: CGFloat = 12
         /// Circular icon buttons (toolbar-style New, Share, Lock).
         static let iconButtonSize: CGFloat = 32
+        /// The island's Touch ID glyph beside its title (22 pt), and beside a caption (12 pt).
+        static let touchIDGlyph: CGFloat = 24
+        static let touchIDGlyphSmall: CGFloat = 14
         /// Text fields and secure fields.
         static let inputHeight: CGFloat = 44
         /// The count badge in the toolbar Sync pill (board Main2-Home: 16 pt, 12 / 6 pt sides).

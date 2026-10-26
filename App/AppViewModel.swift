@@ -115,6 +115,7 @@ final class AppViewModel {
     /// SwiftUI `openWindow` action.
     @ObservationIgnored private var mainWindowOpener: (() -> Void)?
     @ObservationIgnored private weak var mainWindow: NSWindow?
+    @ObservationIgnored private let windowShowGate = WindowShowGate()
     /// The one lock model, shared by the notch island and the window's recovery and Touch ID offer.
     @ObservationIgnored private(set) lazy var lockScreen = LockViewModel(app: self)
     /// The unlock UI while locked (1.0). Nil without side effects (tests, previews), where the
@@ -697,9 +698,13 @@ final class AppViewModel {
         window.isRestorable = false
         mainWindow = window
         container.autoLock.observeClose(of: window)
-        // FX Vault starts locked, and the Dock reopens the window: the island unlocks instead.
+        // FX Vault starts locked, and the Dock reopens the window: the island unlocks instead,
+        // once the window is on screen (a close before that is undone).
         if unlocksInIsland {
-            Task { self.presentIsland() }
+            windowShowGate.onScreen(window) { [weak self] in
+                guard let self, self.unlocksInIsland else { return }
+                self.presentIsland()
+            }
         }
     }
 

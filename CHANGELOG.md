@@ -3,6 +3,20 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 1.0.1
+
+### Fixed
+
+- **One unlock screen at launch.** Opening FX Vault while locked showed the window's lock
+  screen beside the island; the island alone unlocks now, as after a lock.
+- **Touch ID glyph size.** The island's fingerprint was drawn at 128 pt; it matches the text
+  beside it again (24 pt, 14 pt in the quick vault's caption).
+
+### Changed
+
+- **Touch ID feedback in the island.** The fingerprint swells while Touch ID checks the
+  finger, and the open padlock bounces in on unlock (a plain fade with Reduce Motion).
+
 ## 1.0.0
 
 ### Added
