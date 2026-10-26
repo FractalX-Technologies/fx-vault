@@ -47,4 +47,25 @@ struct DestinationPlaceEditsTests {
         #expect(error == .validation(.invalidName(.tooLong(maxLength: DestinationRules.maxKeyVaultNameLength))))
         #expect(try fixture.status(removed) == .synced)
     }
+
+    /// The same vault serving a repository and standing on its own are two places: an edit of one
+    /// never reaches the other's items.
+    @Test func anItemOfAnotherKeyVaultIsRefused() async throws {
+        let fixture = try await DestinationRepositoryTests.Fixture.make()
+        let vault = try fixture.keyVault()
+        let standalone = try fixture.destinations.createDestination(repositoryID: nil, target: DestinationRepositoryTests.keyVault, stage: nil)
+        let elsewhere = try fixture.add(standalone, "API_KEY", value: ConfigFixture.valueA)
+        try fixture.markSynced(standalone)
+
+        for edits in [
+            PlaceItemEditsModel(deletions: [elsewhere]),
+            PlaceItemEditsModel(changes: [.init(id: elsewhere, value: SecretBytes(utf8: ConfigFixture.valueB))]),
+        ] {
+            defer { edits.wipe() }
+            let error = configError { try fixture.destinations.applyEdits(edits, destinationID: vault) }
+            #expect(error == .itemNotFound)
+        }
+        #expect(try fixture.status(elsewhere) == .synced)
+        #expect(try fixture.reveal(elsewhere) == ConfigFixture.valueA)
+    }
 }

@@ -191,6 +191,31 @@ nonisolated enum NotesEditCopy {
         ))
     }
 
+    /// Something was copied since the paste read the clipboard: it stays.
+    static func pastedValuesKept(_ count: Int) -> String {
+        String(inflected: AttributedString(
+            localized: "notesEdit.paste.valuesKept",
+            defaultValue: "^[\(count) value](inflect: true) set from the clipboard"
+        ))
+    }
+
+    // MARK: - Leaving an edit
+
+    /// Another place, scope or Table while the edit has changes.
+    static func discardTitle(_ count: Int) -> String {
+        String(inflected: AttributedString(
+            localized: "notesEdit.discard.title",
+            defaultValue: "Discard ^[\(count) unsaved change](inflect: true)?"
+        ))
+    }
+
+    static let discardMessage = String(
+        localized: "notesEdit.discard.message",
+        defaultValue: "Your edits to the notes and the values you set are dropped. Nothing was saved."
+    )
+    static let discard = String(localized: "notesEdit.discard.confirm", defaultValue: "Discard")
+    static let keepEditing = String(localized: "notesEdit.discard.keep", defaultValue: "Keep Editing")
+
     // MARK: - Review (board Place-Review)
 
     static func reviewTitle(_ place: String) -> String {

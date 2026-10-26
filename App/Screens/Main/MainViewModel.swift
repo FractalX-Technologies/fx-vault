@@ -22,8 +22,12 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     private(set) var destinationDetail: DestinationDetailViewModel?
     /// The detail column of the selected imported organization (1.0).
     private(set) var organizationDetail: OrganizationDetailViewModel?
-    /// Notes or Table, for every place (1.0 B9); Notes at each launch.
-    var placeViewMode: PlaceViewMode = .notes
+    /// Notes or Table, for every place (1.0 B9); Notes at each launch. Changed through
+    /// ``show(_:)``, which asks before Table drops an edit of the notes.
+    private(set) var placeViewMode: PlaceViewMode = .notes
+    /// "Discard N unsaved changes?" (1.0 N2): another place, scope or Table waits for it while
+    /// the place on screen keeps its edit.
+    private(set) var discardRequest: NotesDiscardRequestModel?
     /// The sheet on screen (``MainSheet``). Setting another route replaces it.
     var activeSheet: MainSheet? {
         didSet {
@@ -114,6 +118,108 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// A destination to select once the repository's column exists.
     @ObservationIgnored private var pendingDestination: DestinationID?
 
+    // MARK: - Leaving an edit of the notes (1.0 N2)
+
+    /// What the sidebar and the scopes selected when the detail last followed them: Keep Editing
+    /// goes back to it.
+    @ObservationIgnored private var shownSelection = PlaceSelectionModel()
+    /// What runs after Discard: following the new selection, Table.
+    @ObservationIgnored private var discardResumes: [() -> Void] = []
+    @ObservationIgnored private var isRestoringSelection = false
+
+    /// The edit of the place on screen.
+    var openNotesEdit: NotesEditSession? {
+        destinationDetail?.notesEdit ?? folderDetail?.notesEdit ?? detail?.notesEdit
+    }
+
+    private var currentSelection: PlaceSelectionModel {
+        PlaceSelectionModel(
+            rowID: sidebar.selectedRowID,
+            folderID: sidebar.selectedFolderID,
+            organizationOwnerID: sidebar.selectedOrganizationOwnerID,
+            keyVaultID: sidebar.selectedKeyVaultID,
+            scopeID: scopeList?.selectedScopeID
+        )
+    }
+
+    /// Notes or Table (the header's picker, ⌘K): Table asks first while the notes have unsaved
+    /// edits, since it drops them.
+    func show(_ mode: PlaceViewMode) {
+        guard mode != placeViewMode else { return }
+        guard mode == .table, let edit = openNotesEdit, edit.changeCount > 0 else {
+            placeViewMode = mode
+            return
+        }
+        ask(toDiscard: edit) { [weak self] in
+            self?.placeViewMode = .table
+        }
+    }
+
+    /// True when the detail must not follow the selection yet: it is going back after Keep
+    /// Editing, or it would drop an edit with unsaved changes (then "Discard…?" asks first and
+    /// `resume` follows it after Discard). Lock and closing the window discard without asking.
+    private func holdsForNotesEdit(resume: @escaping () -> Void) -> Bool {
+        if isRestoringSelection {
+            return true
+        }
+        let selection = currentSelection
+        guard selection != shownSelection else { return false }
+        if discardRequest != nil {
+            return true
+        }
+        guard let edit = openNotesEdit, edit.changeCount > 0 else {
+            shownSelection = selection
+            return false
+        }
+        ask(toDiscard: edit, then: resume)
+        return true
+    }
+
+    private func ask(toDiscard edit: NotesEditSession, then resume: @escaping () -> Void) {
+        if discardRequest == nil {
+            discardRequest = NotesDiscardRequestModel(count: edit.changeCount)
+        }
+        discardResumes.append(resume)
+    }
+
+    /// Discard: the edit ends and its values are wiped, then the selection or Table goes ahead.
+    func discardNotesEdit() {
+        guard discardRequest != nil else { return }
+        discardRequest = nil
+        let resumes = discardResumes
+        discardResumes = []
+        openNotesEdit?.finish()
+        for resume in resumes {
+            resume()
+        }
+    }
+
+    /// Keep Editing (or Esc): the sidebar and the scopes go back to the place being edited.
+    func keepEditingNotes() {
+        guard discardRequest != nil else { return }
+        discardRequest = nil
+        discardResumes = []
+        pendingRow = nil
+        let selection = shownSelection
+        isRestoringSelection = true
+        defer { isRestoringSelection = false }
+        if let id = selection.keyVaultID {
+            sidebar.selectedKeyVaultID = id
+        } else if let id = selection.organizationOwnerID {
+            sidebar.selectedOrganizationOwnerID = id
+        } else if let id = selection.folderID {
+            sidebar.selectedFolderID = id
+        } else if let id = selection.rowID {
+            sidebar.selectedRowID = id
+        } else {
+            sidebar.selectedRowID = nil
+            sidebar.selectedFolderID = nil
+            sidebar.selectedOrganizationOwnerID = nil
+            sidebar.selectedKeyVaultID = nil
+        }
+        scopeList?.selectedScopeID = selection.scopeID
+    }
+
     // MARK: - Revealed values
 
     /// A secret shows in the open place (notes or table): the window stays out of screen
@@ -191,6 +297,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     /// Rebuilds the scopes and detail columns when the selected repository, folder, organization
     /// or Key Vault changes (or the repository or organization becomes imported, or is removed).
     private func followSelection() {
+        guard !holdsForNotesEdit(resume: { [weak self] in self?.followSelection() }) else { return }
         dropPendingRowElsewhere()
         if let id = sidebar.selectedKeyVaultID {
             detail = nil
@@ -255,6 +362,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         )
         scopes.onSelectionChange = { [weak self, weak scopes, weak detail] in
             guard let scopes else { return }
+            let resume: () -> Void = { [weak scopes] in scopes?.onSelectionChange?() }
+            guard self?.holdsForNotesEdit(resume: resume) != true else { return }
             self?.followScopeSelection(scopes)
             self?.dropPendingRowElsewhere()
             guard let scope = scopes.selectedScope?.scope else { return }
@@ -262,6 +371,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             self?.selectPendingRow()
         }
         scopeList = scopes
+        // A new list starts at its repository scope without calling `onSelectionChange`.
+        shownSelection = currentSelection
         self.detail = detail
         detail.checkDriftOnOpen()
         if let pendingDestination {
@@ -391,10 +502,10 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     }
 
     /// Import .env (⇧⌘I) needs a selected scope whose items can change, a folder or a
-    /// destination.
+    /// destination, none of them with its notes being edited.
     var canImportEnv: Bool {
-        isUnlocked && (folderDetail?.canEdit == true || destinationDetail?.canEdit == true
-            || (scopeList?.selectedScope != nil && detail?.canEdit == true))
+        isUnlocked && (folderDetail?.acceptsOutsideEdits == true || destinationDetail?.acceptsOutsideEdits == true
+            || (scopeList?.selectedScope != nil && detail?.acceptsOutsideEdits == true))
     }
 
     func importEnv() {
@@ -574,7 +685,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     func jump(to item: JumpItemModel) {
         jump(to: item.target)
         // The row is selected in the table: the notes have no selection.
-        placeViewMode = .table
+        show(.table)
         pendingRow = item.match
         selectPendingRow()
     }
@@ -723,6 +834,9 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     func vaultDidLock() {
         reconnectTask?.cancel()
         reconnectTask = nil
+        // The places drop their edits on lock: nothing is left to ask about.
+        discardRequest = nil
+        discardResumes = []
         activeSheet = nil
         jumpPalette = nil
     }

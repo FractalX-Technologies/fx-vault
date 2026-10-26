@@ -54,8 +54,8 @@ struct NotesLineView: View {
         .padding(.trailing, Theme.Spacing.large)
         .frame(height: isRevealed ? Theme.Layout.notesRevealedLineHeight : Theme.Layout.notesLineHeight)
         .background(isRevealed ? Theme.Colors.surface2 : Color.clear)
-        .modifier(NotesLineEditGesture(onEdit: onEdit))
         .accessibilityElement(children: .contain)
+        .modifier(NotesLineEditGesture(onEdit: onEdit, number: line.number))
     }
 
     private var item: NotesItemLineModel? {
@@ -112,6 +112,7 @@ struct NotesLineView: View {
 /// Click to edit: the text cursor over the line, and VoiceOver's Edit Notes action.
 private struct NotesLineEditGesture: ViewModifier {
     let onEdit: (() -> Void)?
+    let number: Int
 
     func body(content: Content) -> some View {
         if let onEdit {
@@ -120,6 +121,7 @@ private struct NotesLineEditGesture: ViewModifier {
                 .onTapGesture(perform: onEdit)
                 .pointerStyle(.horizontalText)
                 .accessibilityAction(named: NotesEditCopy.edit, onEdit)
+                .accessibilityIdentifier(AccessibilityID.Place.notesLine(number))
         } else {
             content
         }

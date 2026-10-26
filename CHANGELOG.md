@@ -218,13 +218,16 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   master password, for 30 s, with the window kept out of screen capture.
 - **Notes editing.** Click a line, or choose ⋯ More › Edit Notes, to edit a place's notes as
   text: type `KEY=value` lines under `# Secrets` or `# Variables`, rename, delete and move lines.
-  A secret's value is never typed into the text: the key after `=` opens Set value… (type, paste
-  or Generate), and a click on a value's token opens it again. Pasted `KEY=value` lines become
-  masked tokens and the clipboard is cleared; a copy from the notes writes `••••`. Each line says
-  what it does or why it can't be saved, with Key Vault's name rules in a Key Vault. Review ⌘S
-  lists what is added, changed and removed; Save turns it into pending changes, and nothing
-  reaches GitHub or Key Vault until Sync. Locking, another place or Table drops the edit.
-  An organization's notes stay read only.
+  A secret's value is never typed into the text: the key after `=` opens Set value… with it
+  (type, paste or Generate), and a click on a value's token opens it again. A paste after a
+  secret's `=` is its value; pasted `KEY=value` lines become masked tokens and the clipboard is
+  cleared, and key material (Base64, a connection string) never becomes a name. A copy from the
+  notes writes `••••`. Each line says what it does or why it can't be saved, with Key Vault's
+  name rules in a Key Vault. Review ⌘S lists what is added, changed and removed; Save turns it
+  into pending changes, and nothing reaches GitHub or Key Vault until Sync. With unsaved
+  changes, another place, scope or Table asks "Discard N unsaved changes?" first; locking drops
+  the edit. Paste and Import .env… wait for the edit to end. An organization's notes stay read
+  only.
 
 ### Removed
 

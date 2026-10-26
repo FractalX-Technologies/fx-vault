@@ -1,9 +1,10 @@
+import AppKit
 import SwiftUI
 import VaultCore
 
 /// Set value… (board Place-SecretValue): the value of a secret, or of a variable with line
 /// breaks, typed, pasted or generated outside the notes' text. Done sets it on the line's token;
-/// closing the popover any other way drops what was typed.
+/// closing the popover any other way drops what was typed. Its window stays out of screen capture.
 struct NotesValuePopover: View {
     let request: NotesValueRequestModel
     /// A GitHub place: a new secret's line can still become a variable.
@@ -41,6 +42,8 @@ struct NotesValuePopover: View {
                 PasteButton(payloadType: String.self) { @Sendable strings in
                     Task { @MainActor in
                         text = strings.joined(separator: "\n")
+                        // As ⌘V after a secret's `=`: the value leaves the clipboard.
+                        NotesClipboard.clear(.general, ifStillAt: NSPasteboard.general.changeCount)
                     }
                 }
                 .controlSize(.small)
@@ -69,6 +72,7 @@ struct NotesValuePopover: View {
         }
         .padding(Theme.Spacing.large)
         .frame(width: Theme.Layout.notesValuePopoverWidth)
+        .screenCaptureProtected()
         .onDisappear {
             text = ""
         }

@@ -579,13 +579,20 @@ foreground color, so `.primary` text still turns white on selected rows.
   system `PasteButton`, so the clipboard is read only on that click), Generate (32 random bytes
   as 43 base64url characters), Secret | Variable on a new GitHub line, "Leave it empty to keep
   the current value." on an existing secret, and Done (⌘↩). It opens on a click on a token and
-  on any key typed after a secret's `=`; typing `=` after a new secret's name brings its token.
-- Paste (board Place-Paste): `KEY=value` lines from the clipboard become lines with masked
-  tokens, a name the section already has takes the new value ("replaces value"), and the
-  clipboard is cleared; a toast at the bottom says "3 values set from the clipboard · clipboard
-  cleared" for 4 s (`Theme.Durations.notesToast`). Other text pastes as text and stays on the
-  clipboard. Copy and Cut write `••••` for a token; pasting back into the editor brings the cut
-  line whole, a second copy as a new "Set value…" line.
+  on any key typed after a secret's `=`, its field starting with that key; typing `=` after a
+  new secret's name brings its token. Its window stays out of screen capture, and Paste clears
+  the clipboard as ⌘V does.
+- Paste (board Place-Paste): after a secret's `=` the whole paste is that line's value.
+  Elsewhere, `KEY=value` lines from the clipboard become lines with masked tokens, a name the
+  section already has takes the new value ("replaces value"), and the clipboard is cleared; a
+  toast at the bottom says "3 values set from the clipboard · clipboard cleared" for 4 s
+  (`Theme.Durations.notesToast`), or "… set from the clipboard" alone when something was copied
+  since. Lines without a value, and one line of key material (Base64 with its `=` padding, a
+  connection string), are not `KEY=value` lines. Among the secrets, other text is a name
+  (pasted as text) or one line that opens Set value… with it on a new line; several lines
+  beep. Among the variables, other text pastes as text and stays on the clipboard. Copy and Cut
+  write `••••` for a token; pasting back into the editor brings the cut line whole, a second
+  copy as a new "Set value…" line.
 - Review (board Place-Review; `NotesReviewSheet`): ⌘S opens a `DialogSheet` "Review changes to
   production", "api-service · 4 changes", with Added · N, Changed · N and Removed · N in hairline
   boxes: `NAME` in `.monoName`, its kind, and the detail at the trailing edge ("info → debug",
@@ -595,8 +602,13 @@ foreground color, so `.primary` text still turns white on selected rows.
 - Departures from those boards: removed items are listed under the text, not kept in place
   struck through; Set value… shows what is typed (the shared `SecretValueEditor`), not dots;
   there is no Convert… link (a new secret's Kind does it); tokens are 16 pt, not the read
-  notes' 18 pt, to keep 24 pt lines; a file token has no doc symbol; another place, Table or a
-  lock drops the edit without asking; an organization's notes stay read only.
+  notes' 18 pt, to keep 24 pt lines; a file token has no doc symbol; an organization's notes
+  stay read only.
+- Leaving an edit with unsaved changes (another place, scope or Table): a confirmation dialog
+  "Discard 4 unsaved changes?", "Your edits to the notes and the values you set are dropped.
+  Nothing was saved.", Discard
+  (destructive) and Keep Editing (cancel, Esc), which puts the sidebar back on the place being
+  edited. Without changes the edit just ends; a lock or closing the window never asks.
 - ⋯ More (board Main2-Actions), what each place offers, disabled when the account may not:
   New Secret, New Variable, Add File Secret… | Paste Multiple…, Import .env…, Export .env…, Copy All | Copy To
   (the selection, or the open tab when nothing is selected), Share Securely… | Deployment

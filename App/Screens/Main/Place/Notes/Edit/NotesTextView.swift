@@ -3,9 +3,9 @@ import SwiftUI
 import VaultCore
 
 /// The notes editor (1.0 N2, anton D3): an `NSTextView` on TextKit 2 that never holds a secret's
-/// value. Values are tokens (``NotesTokenAttachment``) set in Set value…; typing one into a secret's
-/// line opens it instead, a copy writes `••••`, a pasted `KEY=value` line becomes a token and the
-/// clipboard is cleared. Undo lives in the edit only; substitutions and Writing Tools are off.
+/// value. Values are tokens (``NotesTokenAttachment``) set in Set value…; typing or pasting one
+/// among the secrets opens it instead, a copy writes `••••`, a pasted `KEY=value` line becomes a
+/// token and the clipboard is cleared. Undo lives in the edit only; text services are off.
 final class NotesTextView: NSTextView {
     let session: NotesEditSession
     /// TextKit 2's storage: the layout manager holds it weakly.
@@ -40,6 +40,14 @@ final class NotesTextView: NSTextView {
             textStorage?.setAttributedString(NotesEditText.document(session.initialLines, tokens: session.tokens, renderer: session))
         }
         session.update(NotesEditText.paragraphs(of: attributedString()))
+        // Undo and Redo change the text without `textDidChange`: the notes must follow them too.
+        for name in [Notification.Name.NSUndoManagerDidUndoChange, .NSUndoManagerDidRedoChange] {
+            NotificationCenter.default.addObserver(self, selector: #selector(undoDidChangeText), name: name, object: session.undoManager)
+        }
+    }
+
+    @objc private func undoDidChangeText() {
+        textDidChange(Notification(name: NSText.didChangeNotification, object: self))
     }
 
     required init?(coder: NSCoder) {
@@ -306,7 +314,9 @@ final class NotesTextView: NSTextView {
 
 extension NotesTextView: NSTextViewDelegate {
     func textView(_ textView: NSTextView, shouldChangeTextInRanges affectedRanges: [NSValue], replacementStrings: [String]?) -> Bool {
-        guard !isProgrammaticEdit else { return true }
+        // Undo and Redo put back text the editor had: a token coming back after a secret's `=`
+        // is not a typed key.
+        guard !isProgrammaticEdit, undoManager?.isUndoing != true, undoManager?.isRedoing != true else { return true }
         // An attributes-only change (a font or a style): the editor keeps its own.
         guard let replacementStrings else { return false }
         let ranges = affectedRanges.map(\.rangeValue)
@@ -339,7 +349,7 @@ extension NotesTextView: NSTextViewDelegate {
             return false
         }
         guard offset > equals.location, !replacement.allSatisfy({ $0 == " " || $0 == "\t" }) else { return true }
-        requestValue(onLine: line)
+        requestValue(onLine: line, startText: replacement)
         return false
     }
 
@@ -386,23 +396,86 @@ extension NotesTextView {
         return true
     }
 
-    /// ⌘V: the editor's own copy whole, else `KEY=value` lines or one secret's value as tokens
-    /// (then the clipboard is cleared), else plain text.
+    /// ⌘V: the editor's own copy whole; after a secret's `=`, that line's value; else `KEY=value`
+    /// lines as tokens; else text, which among the secrets only a name may be. A value read from
+    /// the clipboard clears it.
     override func readSelection(from pboard: NSPasteboard, type: NSPasteboard.PasteboardType) -> Bool {
         guard let string = pboard.string(forType: .string) else { return false }
         let changeCount = pboard.changeCount
         if let copied = session.copiedFragment, copied.changeCount == changeCount {
             return insertFragment(copied.text)
         }
-        let count = pasteValues(string)
-        guard count > 0 else {
-            return insertFragment(plain(string.replacingOccurrences(of: NotesEditAnalysis.tokenCharacter, with: "")))
+        let location = selectedRange().location
+        let kind = section(at: location)
+        // First: key material pasted as a value must never be read as `KEY=value` names.
+        if kind == .secret, let line = valueLine(at: location) {
+            guard pasteValue(string, onLine: line) else {
+                NSSound.beep()
+                return true
+            }
+            session.didPasteValues(1, clearedClipboard: NotesClipboard.clear(pboard, ifStillAt: changeCount))
+            return true
         }
-        // Only what was pasted: anything copied since stays.
-        if pboard.changeCount == changeCount {
-            pboard.clearContents()
+        if let count = pasteLines(string, kind: kind, at: location) {
+            session.didPasteValues(count, clearedClipboard: NotesClipboard.clear(pboard, ifStillAt: changeCount))
+            return true
         }
-        session.didPasteValues(count)
+        let text = string.replacingOccurrences(of: NotesEditAnalysis.tokenCharacter, with: "")
+        guard kind == .secret else {
+            return insertFragment(plain(text))
+        }
+        return pasteAmongSecrets(text, pboard: pboard, changeCount: changeCount)
+    }
+
+    /// The line holding `location` when `location` is after its `=`.
+    private func valueLine(at location: Int) -> NSRange? {
+        let line = paragraphRange(at: location)
+        let equals = (text.substring(with: line) as NSString).range(of: "=")
+        guard equals.location != NSNotFound, location - line.location > equals.location else { return nil }
+        return line
+    }
+
+    /// The whole paste as the value of the secret on `line`; false for nothing but line breaks.
+    private func pasteValue(_ string: String, onLine line: NSRange) -> Bool {
+        guard let token = tokenOnLine(line) else { return false }
+        let value = SecretBytes(utf8: string)
+        defer { value.wipe() }
+        do {
+            try setValue(value, on: token)
+        } catch {
+            return false
+        }
+        return true
+    }
+
+    /// Among the secrets, text that is not `KEY=value` lines: a name goes in as text (`NAME=`
+    /// with its token), one other line opens Set value… with it on a new line, and anything
+    /// else is refused, so a value never lands in the text, its undo or ``NotesEditSession/text``.
+    private func pasteAmongSecrets(_ text: String, pboard: NSPasteboard, changeCount: Int) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains(where: \.isNewline) else {
+            NSSound.beep()
+            return true
+        }
+        let place = session.target.kind
+        if place.nameProblem(trimmed) == nil {
+            return insertFragment(plain(trimmed))
+        }
+        let name = String(trimmed.dropLast()).trimmingCharacters(in: .whitespaces)
+        if trimmed.hasSuffix("="), !name.isEmpty, place.nameProblem(name) == nil {
+            let line = NSMutableAttributedString(attributedString: plain("\(name) = "))
+            line.append(NotesEditText.token(session.tokens.make(kind: .secret), renderer: session))
+            return insertFragment(line)
+        }
+        let token = session.tokens.make(kind: .secret)
+        let line = NSMutableAttributedString(attributedString: plain(" = "))
+        line.append(NotesEditText.token(token, renderer: session))
+        insertLines([line], near: selectedRange().location)
+        // The name goes before the `=`, once Set value… closes.
+        let newLine = paragraphRange(at: selectedRange().location)
+        setSelectedRange(NSRange(location: newLine.location, length: 0))
+        _ = NotesClipboard.clear(pboard, ifStillAt: changeCount)
+        presentValueEditor(for: token, line: newLine, startText: text)
         return true
     }
 
@@ -435,38 +508,23 @@ extension NotesTextView {
         return true
     }
 
-    /// Values a paste sets: `KEY=value` lines (board Place-Paste), or one value pasted after a
-    /// secret's `=`. Returns how many; 0 leaves the paste to plain text.
-    private func pasteValues(_ string: String) -> Int {
-        let location = selectedRange().location
-        let kind = section(at: location)
-        if let entries = NotesPasteParser.entries(in: string, place: session.target.kind) {
-            defer {
-                for entry in entries {
-                    entry.value.wipe()
-                }
+    /// `KEY=value` lines (board Place-Paste) as lines of `kind`, or nil when the text is not only
+    /// such lines. Returns how many values were set.
+    private func pasteLines(_ string: String, kind: ConfigKind, at location: Int) -> Int? {
+        guard let entries = NotesPasteParser.entries(in: string, place: session.target.kind) else { return nil }
+        defer {
+            for entry in entries {
+                entry.value.wipe()
             }
-            undoManager?.beginUndoGrouping()
-            defer { undoManager?.endUndoGrouping() }
-            var lines: [NSAttributedString] = []
-            for entry in entries where !replaceValue(named: entry.name, kind: kind, with: entry.value) {
-                lines.append(newLine(name: entry.name, value: entry.value, kind: kind))
-            }
-            insertLines(lines, near: location)
-            return entries.count
         }
-        let line = paragraphRange(at: location)
-        let equals = (text.substring(with: line) as NSString).range(of: "=")
-        guard kind == .secret, equals.location != NSNotFound, location - line.location > equals.location,
-              let token = tokenOnLine(line) else { return 0 }
-        let value = SecretBytes(utf8: string)
-        defer { value.wipe() }
-        do {
-            try session.tokens.setValue(value, for: token)
-        } catch {
-            return 0
+        undoManager?.beginUndoGrouping()
+        defer { undoManager?.endUndoGrouping() }
+        var lines: [NSAttributedString] = []
+        for entry in entries where !replaceValue(named: entry.name, kind: kind, with: entry.value) {
+            lines.append(newLine(name: entry.name, value: entry.value, kind: kind))
         }
-        return 1
+        insertLines(lines, near: location)
+        return entries.count
     }
 
     /// A pasted name the section already has replaces that line's value ("replaces value").
@@ -478,9 +536,9 @@ extension NotesTextView {
             guard equals.location != NSNotFound, place.normalizedName(self.name(onLine: line)) == name else { continue }
             if let token = tokens(in: line).last?.id {
                 do {
-                    try session.tokens.setValue(value, for: token)
+                    try setValue(value, on: token)
                 } catch {
-                    // `KEY=` with nothing after it: the line keeps its value.
+                    // Nothing but line breaks: the line keeps its value.
                 }
                 return true
             }
@@ -551,14 +609,15 @@ extension NotesTextView: NSPopoverDelegate {
         return token
     }
 
-    /// Opens Set value… for the token on `line`.
-    func requestValue(onLine line: NSRange) {
+    /// Opens Set value… for the token on `line`, its field starting with `startText` (the key
+    /// that opened it).
+    func requestValue(onLine line: NSRange, startText: String = "") {
         guard let token = tokenOnLine(line) else { return }
-        presentValueEditor(for: token, line: paragraphRange(at: line.location))
+        presentValueEditor(for: token, line: paragraphRange(at: line.location), startText: startText)
     }
 
-    private func presentValueEditor(for token: NotesTokenID, line: NSRange) {
-        session.requestValue(for: token, name: name(onLine: line))
+    private func presentValueEditor(for token: NotesTokenID, line: NSRange, startText: String = "") {
+        session.requestValue(for: token, name: name(onLine: line), startText: startText)
         guard let request = session.valueRequest, window != nil,
               let anchor = tokens(in: line).first(where: { $0.id == token }).flatMap({ segmentRect($0.range) }) else { return }
         popover?.close()
@@ -591,6 +650,21 @@ extension NotesTextView: NSPopoverDelegate {
 // MARK: - What the edit asks of the editor
 
 extension NotesTextView: NotesEditorCommands {
+    /// One undo step: the line gets a new token holding `value`, so Undo puts the old token (and
+    /// its value) back while the undo stack itself holds ids only.
+    @discardableResult
+    func setValue(_ value: SecretBytes, on token: NotesTokenID) throws(ValidationError) -> NotesTokenID {
+        guard let found = tokens(in: NSRange(location: 0, length: text.length)).first(where: { $0.id == token }) else {
+            try session.tokens.setValue(value, for: token)
+            return token
+        }
+        let fresh = try session.tokens.replacement(for: token, value: value)
+        breakUndoCoalescing()
+        replace(found.range, with: NotesEditText.token(fresh, renderer: session))
+        breakUndoCoalescing()
+        return fresh
+    }
+
     func tokensDidChange() {
         if let layoutManager = textLayoutManager {
             layoutManager.invalidateLayout(for: layoutManager.documentRange)

@@ -97,16 +97,97 @@ struct NotesEditSessionTests {
         let fixture = try await RepoDetailViewModelTests.Fixture()
         let model = fixture.viewModel
         let key = URL(fileURLWithPath: "/tmp/AuthKey.p8")
-        #expect(model.acceptsFileDrops)
+        #expect(model.acceptsOutsideEdits)
 
         model.beginNotesEdit(at: nil)
-        #expect(!model.acceptsFileDrops)
+        #expect(!model.acceptsOutsideEdits)
         model.dropFile(key)
         #expect(fixture.recorder.presented.isEmpty)
 
         model.notesEdit?.cancel()
         model.dropFile(key)
         #expect(fixture.recorder.presented.count == 1)
+    }
+
+    /// The repository api-service selected in the main window, its scopes listed, and a Key Vault
+    /// of its own in the sidebar.
+    static func mainWindow() async throws -> (TestHarness, MainViewModel, RepoDetailViewModel, DestinationID) {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: MainViewModelTests.ready)
+        let main = harness.app.makeMainViewModel()
+        _ = try await harness.stageRepository(items: [TestFixtures.item(.secret, "API_TOKEN", "FXV_FIXTURE_SECRET")])
+        let vaultID = try harness.data.destinations.createDestination(
+            repositoryID: nil,
+            target: .azureKeyVault(vaultName: "kv-example-prod", tenantID: nil),
+            stage: nil
+        )
+        #expect(await TestFixtures.eventually { !main.sidebar.owners.isEmpty && !main.sidebar.keyVaults.isEmpty })
+        main.sidebar.selectedRowID = try #require(main.sidebar.owners.flatMap(\.repos).first).id
+        let detail = try #require(main.detail)
+        #expect(await TestFixtures.eventually { main.scopeList?.selectedScope != nil })
+        return (harness, main, detail, vaultID)
+    }
+
+    /// ⌘V of copied items or `.env` text and Import .env… write to the vault at once, around the
+    /// edit: they wait for it to end, as a file drop does.
+    @Test func pasteAndImportWaitForTheEditToEnd() async throws {
+        let (_, main, detail, _) = try await Self.mainWindow()
+        let providers = [NSItemProvider(object: "REGION=eu" as NSString)]
+        #expect(main.canImportEnv)
+        #expect(detail.validatePaste(providers)?.count == 1)
+
+        detail.beginNotesEdit(at: nil)
+        #expect(!main.canImportEnv)
+        #expect(detail.validatePaste(providers) == nil)
+
+        detail.notesEdit?.cancel()
+        #expect(main.canImportEnv)
+        #expect(detail.validatePaste(providers)?.count == 1)
+    }
+
+    /// With unsaved changes, another place or Table asks "Discard…?" first: Keep Editing puts the
+    /// sidebar back, Discard ends the edit and goes on. Without changes the edit just ends.
+    @Test func leavingAnEditWithChangesAsksFirst() async throws {
+        let (_, main, detail, vaultID) = try await Self.mainWindow()
+        let repository = main.sidebar.selectedRowID
+        detail.beginNotesEdit(at: nil)
+        let (session, view) = try Self.editor(detail)
+        Self.appendLine("NEW_FLAG=on", in: view)
+        #expect(session.changeCount == 1)
+
+        main.sidebar.selectedKeyVaultID = vaultID
+        #expect(main.discardRequest == NotesDiscardRequestModel(count: 1))
+        #expect(main.destinationDetail == nil)
+        main.keepEditingNotes()
+        #expect(main.discardRequest == nil)
+        #expect(main.sidebar.selectedRowID == repository)
+        #expect(main.sidebar.selectedKeyVaultID == nil)
+        #expect(main.detail === detail)
+        #expect(detail.notesEdit === session)
+
+        main.show(.table)
+        #expect(main.discardRequest == NotesDiscardRequestModel(count: 1))
+        #expect(main.placeViewMode == .notes)
+        main.discardNotesEdit()
+        #expect(main.placeViewMode == .table)
+        #expect(session.isFinished)
+        #expect(detail.notesEdit == nil)
+
+        main.show(.notes)
+        detail.beginNotesEdit(at: nil)
+        let (again, againView) = try Self.editor(detail)
+        Self.appendLine("OTHER_FLAG=on", in: againView)
+        main.sidebar.selectedKeyVaultID = vaultID
+        main.discardNotesEdit()
+        #expect(again.isFinished)
+        #expect(main.destinationDetail?.destinationID == vaultID)
+
+        main.sidebar.selectedRowID = repository
+        let next = try #require(main.detail)
+        #expect(await TestFixtures.eventually { main.scopeList?.selectedScope != nil })
+        next.beginNotesEdit(at: nil)
+        main.sidebar.selectedKeyVaultID = vaultID
+        #expect(main.discardRequest == nil, "nothing to lose")
+        #expect(main.destinationDetail?.destinationID == vaultID)
     }
 
     @Test func lockingDropsTheEditAndItsValues() async throws {

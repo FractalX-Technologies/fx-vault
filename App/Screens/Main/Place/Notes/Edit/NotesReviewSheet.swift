@@ -14,6 +14,7 @@ struct NotesReviewSheet: View {
                     Text(verbatim: section.title)
                         .fxTextStyle(.caption)
                         .foregroundStyle(Theme.Colors.subtleText)
+                        .accessibilityIdentifier(AccessibilityID.Place.notesReviewSection(section.id))
                     VStack(spacing: 0) {
                         ForEach(section.rows) { row in
                             if row.id != section.rows.first?.id {

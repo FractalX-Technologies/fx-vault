@@ -235,11 +235,6 @@ final class FolderDetailViewModel: LockObserving {
         presentImport(.chooser)
     }
 
-    /// The ⌘V validator: the providers while the folder can change.
-    func validatePaste(_ providers: [NSItemProvider]) -> [NSItemProvider]? {
-        canEdit ? providers : nil
-    }
-
     /// ⌘V in the folder: items FX Vault copied, or `.env` text for the import preview.
     func handlePaste(_ providers: [NSItemProvider]) async {
         guard canEdit else { return }

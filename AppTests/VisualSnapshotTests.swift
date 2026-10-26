@@ -199,7 +199,7 @@ struct VisualSnapshotTests {
     @Test func mainWindowNotesEdit() async throws {
         let (harness, main) = try await MainSnapshotFixture.make()
         let detail = try #require(main.detail)
-        main.placeViewMode = .notes
+        main.show(.notes)
         detail.beginNotesEdit(at: nil)
         let session = try #require(detail.notesEdit)
         let editor = NotesTextView(session: session)

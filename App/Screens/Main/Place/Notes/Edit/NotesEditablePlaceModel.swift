@@ -37,8 +37,8 @@ extension NotesEditablePlaceModel where Self: ConfigTableModel {
         canEdit
     }
 
-    // Add file secret writes to the vault at once, around the edit's pending text.
-    var acceptsFileDrops: Bool {
+    // A drop, a paste or an import writes to the vault at once, around the edit's pending text.
+    var acceptsOutsideEdits: Bool {
         canEdit && notesEdit == nil
     }
 

@@ -6,9 +6,10 @@ struct PlaceViewModePicker: View {
     let main: MainViewModel
 
     var body: some View {
-        @Bindable var main = main
+        // Through `show`: Table asks before it drops an edit of the notes (1.0 N2).
+        let mode = Binding(get: { main.placeViewMode }, set: { main.show($0) })
         SegmentedPill(
-            selection: $main.placeViewMode,
+            selection: mode,
             segments: [
                 .init(value: PlaceViewMode.notes, title: NotesCopy.notes),
                 .init(value: PlaceViewMode.table, title: NotesCopy.table),
