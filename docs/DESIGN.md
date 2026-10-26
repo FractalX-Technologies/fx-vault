@@ -132,6 +132,7 @@ is required.
 | `.monoValue` | SF Mono | 13 | +0.08em | Masked values `••••••••` |
 | `.monoMeta` / `.monoMetaEmphasized` | SF Mono / medium | 12 | 0 | Timestamps, counts, repository paths; names in the sidebar tree and the Sync summary |
 | `.monoCounter` | SF Mono | 12 | +0.06em | `02 / 05` |
+| `.monoLabel` | SF Mono | 11 | 0 | A notes line's number and a masked value's `••••` token |
 | `.sectionLabel` | SF Mono | 11, UPPERCASE | +0.08em | `ENVIRONMENT`, `MASTER PASSWORD`, column headers |
 | `.statusLine` | SF Mono | 11, UPPERCASE | +0.06em | `PASSWORD REQUIRED AFTER RESTART`, `WRITE LIMIT …` |
 | `.passphraseWord` | SF Mono medium | 17 | 0 | Words of a generated passphrase (`PassphraseView`) |

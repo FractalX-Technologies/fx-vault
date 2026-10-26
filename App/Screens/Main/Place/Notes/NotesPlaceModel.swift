@@ -64,11 +64,7 @@ extension ConfigRowModel {
         if let inherited {
             return inherited.reach
         }
-        let note = PlaceCopy.subline([
-            kind == .secret && !hasValue ? NotesCopy.noValue : nil,
-            overrides.map(NotesCopy.overrides),
-        ])
-        return note.isEmpty ? nil : note
+        return NotesItemLineModel.note(kind: kind, hasValue: hasValue, detail: overrides.map(NotesCopy.overrides))
     }
 }
 

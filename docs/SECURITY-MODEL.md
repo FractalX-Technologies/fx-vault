@@ -200,6 +200,13 @@ login password). The result is a single-use authorization (`EnvExportAuthorizati
 rotation in between invalidates it, and an authorization for one purpose cannot be used for
 another.
 
+Reveal in a place's notes (1.0 B9, `ReauthPurpose.reveal`) asks the same check for one secret.
+Its `NotesRevealAuthorization` carries no session binding (`isUsable` is always true): the model
+takes it and decrypts in the same main-actor turn the check returns in, and only for the request
+still waiting for that check (a Cancel, another scope, a lock or a newer request drops it);
+decrypting fails while the vault is locked. The revealed value is not selectable, so ⌘C,
+Copy and Services can't put it on the clipboard around `ClipboardManager`.
+
 ## 7. Values in use
 
 - `SecretBytes` holds values in memory: lock-protected, wiped on `wipe()` and `deinit`,

@@ -5,6 +5,8 @@ import VaultData
 
 /// Proof that `ReauthGate` said yes to one Reveal; ``ReauthModel`` hands it out once.
 nonisolated final class NotesRevealAuthorization: ReauthAuthorization {
+    // No session binding needed: `reauthorized()` takes it and reveals in the same main-actor
+    // turn, and decrypting fails while the vault is locked.
     let isUsable = true
 }
 
@@ -18,7 +20,7 @@ struct NotesRevealRequestModel: Identifiable, Hashable {
 /// at once, then the master password), then ``ConfigValueRevealer`` decrypts the one secret and
 /// masks it again after `Timeouts.revealRemask`, on resign active, on another place and on lock.
 @Observable
-final class NotesRevealModel: LockObserving {
+final class NotesRevealModel: LockObserving, ReauthFlow {
     private(set) var request: NotesRevealRequestModel?
     /// A fresh check per request: Touch ID's status may have changed since the last one.
     private(set) var reauth: ReauthModel<NotesRevealAuthorization>?
@@ -47,23 +49,8 @@ final class NotesRevealModel: LockObserving {
         request = NotesRevealRequestModel(id: line.id, name: line.name)
     }
 
-    /// Tries Touch ID once when the sheet appears; a Mac without it shows the password field.
-    func start() async {
-        await authenticateWithTouchID(automatic: true)
-    }
-
-    func authenticateWithTouchID(automatic: Bool = false) async {
-        guard let reauth else { return }
-        if await reauth.authorizeWithTouchID(automatic: automatic) {
-            reveal()
-        }
-    }
-
-    func authenticateWithPassword() async {
-        guard let reauth else { return }
-        if await reauth.authorizeWithPassword() {
-            reveal()
-        }
+    var pendingReauth: ReauthModel<NotesRevealAuthorization>? {
+        reauth
     }
 
     /// Drops the request and its typed password (Cancel, the sheet closed, lock).
@@ -85,7 +72,10 @@ final class NotesRevealModel: LockObserving {
         cancel()
     }
 
-    private func reveal() {
+    /// Reveals the request's secret. A check that ends after Cancel, another scope or a lock
+    /// finds no request; one that ends after a new request finds that request's own, unanswered
+    /// check: neither reveals anything.
+    func reauthorized() {
         guard let request, reauth?.takeAuthorization() != nil else { return }
         cancel()
         do {

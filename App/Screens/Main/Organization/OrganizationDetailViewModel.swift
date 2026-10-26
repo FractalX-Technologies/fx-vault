@@ -270,10 +270,11 @@ extension OrganizationDetailViewModel: NotesPlaceModel {
             kind: item.kind,
             value: values.display(id: item.id, kind: item.kind, hasValue: item.hasValue),
             mark: NotesMarkModel.mark(isChangedAtSource: isChangedOnGitHub(item), status: item.syncStatus),
-            note: PlaceCopy.subline([
-                item.kind == .secret && !item.hasValue ? NotesCopy.noValue : nil,
-                item.visibility.reachTitle(selectedCount: item.selectedRepositoryCount),
-            ]),
+            note: NotesItemLineModel.note(
+                kind: item.kind,
+                hasValue: item.hasValue,
+                detail: item.visibility.reachTitle(selectedCount: item.selectedRepositoryCount)
+            ),
             canReveal: item.kind == .secret && item.hasValue
         )
     }
