@@ -52,6 +52,10 @@ jobs:
           else
             version="${REF_NAME#v}"
             create_tag=false
+            # Anyone who can push may create a tag: only a commit already on main gets signed.
+            status="$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$GITHUB_SHA" --jq .status)"
+            [[ "$status" == "identical" || "$status" == "behind" ]] \
+              || { echo "::error::Tag $REF_NAME points at a commit that isn't on main ($status)"; exit 1; }
           fi
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
             echo "::error::Invalid version: use MAJOR.MINOR.PATCH with an optional -suffix"

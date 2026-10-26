@@ -101,8 +101,8 @@ names.
    must print `true`. Before the first release with environment writes, run the LiveE2E write
    suite on a throwaway repository and record the results in docs/API.md (Q6).
 2. **Run `Release` on `main`** with the version (above). It refuses a version whose tag
-   exists. Pushing a `v*` tag by hand (admins only, ruleset) runs the same jobs without
-   creating the tag. When the run succeeds, skip steps 3 and 4 and go on to step 5, or to
+   exists. Pushing a `v*` tag of a commit on `main` runs the same jobs without creating the
+   tag. When the run succeeds, skip steps 3 and 4 and go on to step 5, or to
    step 7 when the `cask` job ran.
 3. **Optional rehearsal.** This runs the signed build without notarizing:
 
@@ -279,7 +279,8 @@ With Run workflow on `main` (`workflow_dispatch`, a required `version` input), o
 `v*` tag push. One release runs at a time (`concurrency: release`).
 
 1. **`meta`**: works out the version (from the input or the tag) and validates it. Run
-   workflow only works on `main`, and only for a version whose tag doesn't exist yet.
+   workflow only works on `main`, and only for a version whose tag doesn't exist yet. A
+   pushed tag must point at a commit that is already on `main`.
 2. **`signed`**: on `macos-26`, with no tests (`ci.yml` gates `main`), in environment
    `release` (deployments from `main` and `v*` tags only), only on `FractalX-Technologies/fx-vault`. It fails with the names
    of any secret or variable below that the repository can't read. It:
@@ -299,8 +300,8 @@ With Run workflow on `main` (`workflow_dispatch`, a required `version` input), o
    signing keys, installed with `bundle install` against the lockfile's checksums, never
    from a cache.
 3. **`publish`**: in environment `release`, with no signing secret. After Run workflow it
-   first creates the annotated tag `v<version>` on the built commit. The ruleset lets
-   GitHub Actions bypass it, so the tag only exists after a signed build passed. It downloads the artifact, attests the DMG with `actions/attest` and runs
+   first creates the annotated tag `v<version>` on the built commit, so the tag only exists
+   after a signed build passed. It downloads the artifact, attests the DMG with `actions/attest` and runs
    `scripts/release-local.sh --publish-only`, which checks the sha256, the tag and the
    release, then uploads both files. Only this job gets `contents: write`, `id-token: write`
    and `attestations: write`.
@@ -326,8 +327,9 @@ signed. A local release is verified with its `.sha256`, `spctl` and `stapler val
    the variable, `publish` ends with a notice to bump the cask by hand.
 
 All actions are pinned to full commit SHAs. The workflow's default permission is
-`contents: read`. A ruleset limits creating, moving and deleting `v*` tags to the
-repository's admins and GitHub Actions.
+`contents: read`. A ruleset limits moving and deleting `v*` tags to the repository's
+admins. Creating them stays open, because the workflow creates them, and `meta` refuses a
+tag whose commit isn't on `main`.
 
 ### Homebrew: the tap App
 
