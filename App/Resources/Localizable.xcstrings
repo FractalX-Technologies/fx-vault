@@ -16215,6 +16215,17 @@
         }
       }
     },
+    "settings.general.quickVault.refused" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This shortcut is in use. Choose another."
+          }
+        }
+      }
+    },
     "settings.general.screenLock" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

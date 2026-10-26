@@ -19,12 +19,12 @@ final class CarbonQuickVaultHotKey: QuickVaultHotKeyRegistering {
     private var onPress: (() -> Void)?
 
     /// "FXVQ": tells our hot key apart in the event.
-    private static let signature: OSType = 0x4658_5651
+    nonisolated static let signature: OSType = 0x4658_5651
 
     @discardableResult
     func register(_ shortcut: QuickVaultShortcutModel, onPress: @escaping () -> Void) -> Bool {
         unregister()
-        installHandlerIfNeeded()
+        guard installHandlerIfNeeded() else { return false }
         var ref: EventHotKeyRef?
         let status = RegisterEventHotKey(
             shortcut.carbonKeyCode,
@@ -35,7 +35,7 @@ final class CarbonQuickVaultHotKey: QuickVaultHotKeyRegistering {
             &ref
         )
         guard status == noErr, let ref else {
-            AppLog.ui.error("Quick vault shortcut was not registered")
+            AppLog.ui.error("RegisterEventHotKey failed: \(status, privacy: .public)")
             return false
         }
         hotKey = ref
@@ -55,10 +55,11 @@ final class CarbonQuickVaultHotKey: QuickVaultHotKeyRegistering {
         onPress?()
     }
 
-    private func installHandlerIfNeeded() {
-        guard handler == nil else { return }
+    /// False when Carbon refuses the handler: a registered key would never reach us.
+    private func installHandlerIfNeeded() -> Bool {
+        guard handler == nil else { return true }
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-        InstallEventHandler(
+        let status = InstallEventHandler(
             GetApplicationEventTarget(),
             quickVaultHotKeyPressed,
             1,
@@ -66,6 +67,12 @@ final class CarbonQuickVaultHotKey: QuickVaultHotKeyRegistering {
             Unmanaged.passUnretained(self).toOpaque(),
             &handler
         )
+        guard status == noErr else {
+            AppLog.ui.error("InstallEventHandler failed: \(status, privacy: .public)")
+            handler = nil
+            return false
+        }
+        return true
     }
 
     // The handler holds an unretained pointer to self: it must go first.
@@ -77,13 +84,26 @@ final class CarbonQuickVaultHotKey: QuickVaultHotKeyRegistering {
     }
 }
 
-/// Carbon's C callback. Hot keys arrive on the main thread's event loop.
+/// Carbon's C callback. Hot keys arrive on the main thread's event loop; another hot key of the
+/// app (none today) passes on.
 private nonisolated func quickVaultHotKeyPressed(
     _ call: EventHandlerCallRef?,
     _ event: EventRef?,
     _ context: UnsafeMutableRawPointer?
 ) -> OSStatus {
-    guard let context else { return OSStatus(eventNotHandledErr) }
+    var hotKeyID = EventHotKeyID()
+    let status = GetEventParameter(
+        event,
+        EventParamName(kEventParamDirectObject),
+        EventParamType(typeEventHotKeyID),
+        nil,
+        MemoryLayout<EventHotKeyID>.size,
+        nil,
+        &hotKeyID
+    )
+    guard let context, status == noErr, hotKeyID.signature == CarbonQuickVaultHotKey.signature else {
+        return OSStatus(eventNotHandledErr)
+    }
     let address = UInt(bitPattern: context)
     MainActor.assumeIsolated {
         guard let pointer = UnsafeMutableRawPointer(bitPattern: address) else { return }
@@ -96,12 +116,18 @@ private nonisolated func quickVaultHotKeyPressed(
 final class RecordedQuickVaultHotKey: QuickVaultHotKeyRegistering {
     private(set) var registered: QuickVaultShortcutModel?
     private(set) var registrationCount = 0
+    /// Shortcuts "another app" holds: refused, as macOS would.
+    var takenShortcuts: [QuickVaultShortcutModel] = []
     private var onPress: (() -> Void)?
 
     @discardableResult
     func register(_ shortcut: QuickVaultShortcutModel, onPress: @escaping () -> Void) -> Bool {
-        registered = shortcut
         registrationCount += 1
+        guard !takenShortcuts.contains(shortcut) else {
+            unregister()
+            return false
+        }
+        registered = shortcut
         self.onPress = onPress
         return true
     }

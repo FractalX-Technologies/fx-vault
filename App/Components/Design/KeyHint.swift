@@ -24,6 +24,28 @@ struct KeyHint: View {
     }
 }
 
+/// Keys and what they do, in the palettes' footers ("↑ ↓ move", "⌘↩ expand").
+struct KeyHintLabel: View {
+    let keys: [String]
+    let text: String
+
+    init(_ keys: [String], _ text: String) {
+        self.keys = keys
+        self.text = text
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.xSmall) {
+            ForEach(keys, id: \.self) { key in
+                KeyHint(key)
+            }
+            Text(text)
+                .fxTextStyle(.caption)
+                .foregroundStyle(Theme.Colors.mutedText)
+        }
+    }
+}
+
 #Preview {
     HStack {
         KeyHint("⌘F")

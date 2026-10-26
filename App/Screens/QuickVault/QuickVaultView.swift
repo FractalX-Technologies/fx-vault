@@ -59,9 +59,9 @@ private struct QuickVaultSearchView: View {
             results
             Divider()
             QuickVaultFooter {
-                hint("↩", QuickVaultCopy.open)
-                hint("⌘↩", QuickVaultCopy.expand)
-                hint("esc", QuickVaultCopy.close)
+                KeyHintLabel(["↩"], QuickVaultCopy.open)
+                KeyHintLabel(["⌘↩"], QuickVaultCopy.expand)
+                KeyHintLabel(["esc"], QuickVaultCopy.close)
             }
         }
         // A focus set while the panel is being shown is dropped (as in ⌘K), so it is asked for
@@ -74,73 +74,23 @@ private struct QuickVaultSearchView: View {
     }
 
     private var results: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if !model.results.isEmpty || model.items.isEmpty {
-                        SidebarSectionHeader(model.showsRecents ? QuickVaultCopy.recent : JumpPaletteCopy.places)
-                            .padding(.bottom, Theme.Spacing.xSmall)
-                    }
-                    if model.results.isEmpty && model.items.isEmpty {
-                        Text(JumpPaletteCopy.noMatches)
-                            .fxTextStyle(.callout)
-                            .foregroundStyle(Theme.Colors.subtleText)
-                            .padding(.horizontal, Theme.Spacing.small)
-                            .frame(height: Theme.Layout.jumpPaletteRowHeight)
-                    }
-                    ForEach(model.results) { place in
-                        let id = QuickVaultResultID.place(place.holder)
-                        JumpRow(
-                            systemImage: place.row.systemImage,
-                            name: place.row.name,
-                            titleStyle: place.row.titleStyle,
-                            detail: place.row.detail,
-                            highlight: model.highlight(in: place.row.name),
-                            isSelected: id == model.selectedID,
-                            showsReturnKey: false,
-                            hasPendingChanges: place.hasPendingChanges
-                        ) {
-                            model.show(place.holder)
-                        }
-                        .id(id)
-                    }
-                    if !model.items.isEmpty {
-                        SidebarSectionHeader(JumpPaletteCopy.secretsByName)
-                            .padding(.top, model.results.isEmpty ? 0 : Theme.Spacing.small)
-                            .padding(.bottom, Theme.Spacing.xSmall)
-                        ForEach(model.items) { item in
-                            let id = QuickVaultResultID.item(item.id)
-                            JumpRow(
-                                systemImage: item.match.kind.symbolName,
-                                name: item.name,
-                                titleStyle: .mono,
-                                detail: item.detail,
-                                highlight: model.highlight(in: item.name),
-                                isSelected: id == model.selectedID,
-                                showsReturnKey: false
-                            ) {
-                                model.show(item.match.holder)
-                            }
-                            .id(id)
-                        }
-                    }
-                }
-            }
-            .frame(height: Theme.Layout.quickVaultListHeight, alignment: .top)
-            .onChange(of: model.selectedID) { _, id in
-                guard let id else { return }
-                proxy.scrollTo(id)
-            }
-        }
-    }
-
-    private func hint(_ keys: String, _ text: String) -> some View {
-        HStack(spacing: Theme.Spacing.xSmall) {
-            KeyHint(keys)
-            Text(text)
-                .fxTextStyle(.caption)
-                .foregroundStyle(Theme.Colors.mutedText)
-        }
+        JumpResultsList(
+            placesTitle: model.showsRecents ? QuickVaultCopy.recent : JumpPaletteCopy.places,
+            places: model.results.map { place in
+                JumpResultRowModel(
+                    place: place.row,
+                    id: QuickVaultResultID.place(place.holder),
+                    hasPendingChanges: place.hasPendingChanges
+                ) { model.show(place.holder) }
+            },
+            items: model.items.map { item in
+                JumpResultRowModel(item: item, id: QuickVaultResultID.item(item.id)) { model.show(item.match.holder) }
+            },
+            selectedID: model.selectedID,
+            highlight: model.highlight(in:),
+            showsReturnKey: false,
+            height: .fixed(Theme.Layout.quickVaultListHeight)
+        )
     }
 }
 

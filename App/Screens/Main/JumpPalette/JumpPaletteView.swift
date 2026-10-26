@@ -84,71 +84,26 @@ struct JumpPaletteView: View {
     }
 
     private var results: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if !palette.results.isEmpty || palette.items.isEmpty {
-                        SidebarSectionHeader(JumpPaletteCopy.places)
-                            .padding(.bottom, Theme.Spacing.xSmall)
-                    }
-                    if palette.results.isEmpty && palette.items.isEmpty {
-                        Text(JumpPaletteCopy.noMatches)
-                            .fxTextStyle(.callout)
-                            .foregroundStyle(Theme.Colors.subtleText)
-                            .padding(.horizontal, Theme.Spacing.small)
-                            .frame(height: Theme.Layout.jumpPaletteRowHeight)
-                    }
-                    ForEach(palette.results) { place in
-                        let id = JumpResultID.place(place.id)
-                        JumpRow(
-                            systemImage: place.systemImage,
-                            name: place.name,
-                            titleStyle: place.titleStyle,
-                            detail: place.detail,
-                            highlight: palette.highlight(in: place.name),
-                            isSelected: id == palette.selectedID
-                        ) {
-                            palette.open(place)
-                        }
-                        .id(id)
-                    }
-                    if !palette.items.isEmpty {
-                        SidebarSectionHeader(JumpPaletteCopy.secretsByName)
-                            .padding(.top, palette.results.isEmpty ? 0 : Theme.Spacing.small)
-                            .padding(.bottom, Theme.Spacing.xSmall)
-                        ForEach(palette.items) { item in
-                            let id = JumpResultID.item(item.id)
-                            JumpRow(
-                                systemImage: item.match.kind.symbolName,
-                                name: item.name,
-                                titleStyle: .mono,
-                                detail: item.detail,
-                                highlight: palette.highlight(in: item.name),
-                                isSelected: id == palette.selectedID
-                            ) {
-                                palette.open(item)
-                            }
-                            .id(id)
-                        }
-                    }
-                }
-                .padding(Theme.Spacing.small)
-            }
-            // As tall as the rows, up to the maximum, then it scrolls.
-            .frame(maxHeight: Theme.Layout.jumpPaletteListMaxHeight)
-            .fixedSize(horizontal: false, vertical: true)
-            .onChange(of: palette.selectedID) { _, id in
-                guard let id else { return }
-                proxy.scrollTo(id)
-            }
-        }
+        JumpResultsList(
+            placesTitle: JumpPaletteCopy.places,
+            places: palette.results.map { place in
+                JumpResultRowModel(place: place, id: JumpResultID.place(place.id)) { palette.open(place) }
+            },
+            items: palette.items.map { item in
+                JumpResultRowModel(item: item, id: JumpResultID.item(item.id)) { palette.open(item) }
+            },
+            selectedID: palette.selectedID,
+            highlight: palette.highlight(in:),
+            inset: Theme.Spacing.small,
+            height: .upTo(Theme.Layout.jumpPaletteListMaxHeight)
+        )
     }
 
     private var footer: some View {
         HStack(spacing: Theme.Spacing.large) {
-            footerHint(["↑", "↓"], JumpPaletteCopy.move)
-            footerHint(["↩"], JumpPaletteCopy.open)
-            footerHint(["esc"], JumpPaletteCopy.close)
+            KeyHintLabel(["↑", "↓"], JumpPaletteCopy.move)
+            KeyHintLabel(["↩"], JumpPaletteCopy.open)
+            KeyHintLabel(["esc"], JumpPaletteCopy.close)
             Spacer(minLength: 0)
             Text(JumpPaletteCopy.namesOnly)
                 .fxTextStyle(.caption)
@@ -160,17 +115,6 @@ struct JumpPaletteView: View {
         .accessibilityLabel(
             [JumpPaletteCopy.move, JumpPaletteCopy.open, JumpPaletteCopy.close, JumpPaletteCopy.namesOnly].joined(separator: ", ")
         )
-    }
-
-    private func footerHint(_ keys: [String], _ text: String) -> some View {
-        HStack(spacing: Theme.Spacing.xSmall) {
-            ForEach(keys, id: \.self) { key in
-                KeyHint(key)
-            }
-            Text(text)
-                .fxTextStyle(.caption)
-                .foregroundStyle(Theme.Colors.mutedText)
-        }
     }
 }
 

@@ -967,20 +967,23 @@ foreground color, so `.primary` text still turns white on selected rows.
   only the window; chosen over the Sync sheet it does nothing), a
   divider, Lock Now (disabled unless unlocked), Settings… ⌘,, a divider, Quit FX Vault ⌘Q.
 - Counts only: the menu never shows a name or a value.
+- Settings › General's shortcut row says "This shortcut is in use. Choose another." while macOS
+  refuses it (`AppViewModel.isQuickVaultShortcutRefused`).
 
 ### Quick vault (boards QuickVault-Search, -Place, -Locked, -Expanding)
 
-- `QuickVaultView` in its own `NotchIslandPanel` (`QuickVaultController`), placed by
-  `NotchGeometry` like the island (top centre under the menu bar without a notch), with a shadow
+- `QuickVaultView` in its own `NotchIslandPanel` (`QuickVaultController`), made and placed by
+  the island's `NotchPanelPresenter` (`NotchGeometry`; top centre under the menu bar without a
+  notch), a new panel each open, with a shadow
   over other apps' windows; the island's chrome is shared (`.notchIsland(notchHeight:width:)`:
   the notch band, `island` black, lower corners 20 pt, dark scheme). 600 pt wide
   (`quickVaultWidth`), a list of a fixed 300 pt (`quickVaultListHeight`) so search and place keep
   one size.
 - Search: a 36 pt field (`quickVaultFieldHeight`, "Search places and names"), then "Recent" (the
-  empty query, once a place was opened) or "Places", and "Secrets by name" while typing; rows are
-  ⌘K's `JumpRow` without the return key, with an ink dot (`NotesCopy.pendingMark`) on a place
-  waiting for Sync. ↑↓ move across both sections, ↩ opens, ⌘↩ expands. Footer: `KeyHint`s "↩
-  open · ⌘↩ expand · esc close".
+  empty query, once a place was opened) or "Places", and "Secrets by name" while typing: ⌘K's
+  `JumpResultsList` at a fixed height, its `JumpRow`s without the return key, with an ink dot
+  (`NotesCopy.pendingMark`) on a place waiting for Sync. ↑↓ move across both sections, ↩ opens,
+  ⌘↩ expands. Footer: `KeyHintLabel`s (⌘K's too) "↩ open · ⌘↩ expand · esc close".
 - Place: the path (`.caption`, `mutedText`) over the bold name, an outline Expand (⌘↩); the
   place's own lines (`quickVaultLineHeight` 27 pt, mono names, N1's `NotesValueView`: masked
   token, `no value`, file label), each with Copy, a lock badge (`Typography.lockBadge`, 7 pt bold)

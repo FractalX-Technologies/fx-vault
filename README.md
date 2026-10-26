@@ -37,8 +37,9 @@ the secrets your code reads at runtime in Azure Key Vault.
   variables by name. ↩ shows a place's lines; **Copy** puts a variable on the clipboard at once
   and a secret after Touch ID or the master password (the clipboard clears after 30 seconds);
   ⌘↩ opens the place in the main window. It is hidden from screen capture and closes when you
-  switch away or FX Vault locks. While locked, the island asks for the unlock first, then opens
-  it.
+  switch away or FX Vault locks; esc takes you back to the app you were in. While locked, the
+  island asks for the unlock first, then opens it. If another app already uses the shortcut,
+  Settings › General says so.
 - **Secrets and variables, repository and environment level.** Add, edit, rename, convert
   between secret and variable, move between scopes, fill values GitHub does not return, revert
   and delete. Secrets stay masked until you reveal them and re-mask after 30 seconds.
