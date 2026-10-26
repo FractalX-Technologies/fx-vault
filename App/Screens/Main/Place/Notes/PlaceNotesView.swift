@@ -120,7 +120,7 @@ private struct NotesGutter: View {
             }
             // `subtleText`, not the board's lighter #8A8A8E: faint text fails AA (DESIGN.md).
             Text(number, format: .number.grouping(.never))
-                .font(Theme.Typography.monoLabel)
+                .fxTextStyle(.monoLabel)
                 .foregroundStyle(Theme.Colors.subtleText)
                 .accessibilityHidden(true)
         }
@@ -163,12 +163,14 @@ private struct NotesValueView: View {
                 maskToken
             }
         case .revealed(let value):
+            // Not selectable: ⌘C, Copy and Services would bypass `ClipboardManager` (no
+            // concealed marker, no clear after 30 s or on lock, Universal Clipboard).
             Text(verbatim: value)
                 .fxTextStyle(.monoMeta)
                 .foregroundStyle(Theme.Colors.ink)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .textSelection(.enabled)
+                .textSelection(.disabled)
                 .padding(.horizontal, Theme.Spacing.smallMinus)
                 .frame(height: Theme.Layout.notesTokenHeight)
                 .overlay(tokenShape.strokeBorder(Theme.Colors.ink, lineWidth: Theme.Stroke.hairline))
@@ -190,7 +192,7 @@ private struct NotesValueView: View {
 
     private var maskToken: some View {
         Text(verbatim: NotesCopy.maskToken)
-            .font(Theme.Typography.monoLabel)
+            .fxTextStyle(.monoLabel)
             .foregroundStyle(Theme.Colors.mutedText)
             .padding(.horizontal, Theme.Spacing.smallMinus)
             .frame(height: Theme.Layout.notesTokenHeight)

@@ -122,7 +122,8 @@ FXVault/
 │   │   │                            # EnvPasteEditorView,
 │   │   │                            # EnvExportScreen/ViewModel, EnvFilePanels,
 │   │   │                            # EnvFileError+Extension, EnvParseIssue+Extension
-│   │   ├── Reauth/                  # ReauthModel/View ("Confirm it's you": shares, Copy All)
+│   │   ├── Reauth/                  # ReauthModel/View, ReauthFlow ("Confirm it's you": shares,
+│   │   │                            # Copy All, Reveal in the notes)
 │   │   ├── Sharing/                 # ShareImport Screen+ViewModel,
 │   │   │                            # ShareScopeTree Model/View (tri-state), ShareContentSummaryView,
 │   │   │                            # ShareImportPlanEditor/PreviewView, ShareRepositoryImporter,

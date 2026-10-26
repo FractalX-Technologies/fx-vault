@@ -186,6 +186,8 @@ extension Theme.TextStyle {
     static let monoValue = Self(font: Typography.monoName, size: Typography.Size.callout, trackingEm: Typography.Tracking.maskedValue)
     /// 12 pt mono. Timestamps, counts, repository paths.
     static let monoMeta = Self(font: Typography.monoMeta, size: Typography.Size.caption)
+    /// 11 pt mono. A notes line's number and a masked value's token (1.0 B9).
+    static let monoLabel = Self(font: Typography.monoLabel, size: Typography.Size.label)
     /// 12 pt mono, +0.06em. The onboarding step counter (`02 / 05`).
     static let monoCounter = Self(font: Typography.monoMeta, size: Typography.Size.caption, trackingEm: Typography.Tracking.counter)
     /// 11 pt, semibold, sentence case. A Settings group's title ("Lock", "GitHub CLI").

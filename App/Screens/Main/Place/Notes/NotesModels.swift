@@ -40,6 +40,15 @@ struct NotesItemLineModel: Hashable {
     var isInherited = false
 }
 
+extension NotesItemLineModel {
+    /// A line's trailing note: "no value" for a secret without one here, then `detail`
+    /// ("overrides example-org", an organization item's reach); nil when there is nothing.
+    static func note(kind: ConfigKind, hasValue: Bool, detail: String?) -> String? {
+        let note = PlaceCopy.subline([kind == .secret && !hasValue ? NotesCopy.noValue : nil, detail])
+        return note.isEmpty ? nil : note
+    }
+}
+
 /// A section: its `# Secrets · 6` title and its lines.
 struct NotesSectionModel: Hashable {
     let title: String

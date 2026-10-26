@@ -14,7 +14,7 @@ enum CopyAllStep: Equatable {
 /// and on quit). The text exists only between `EnvFileRepository` and the clipboard; nothing is
 /// logged.
 @Observable
-final class CopyAllViewModel: LockObserving {
+final class CopyAllViewModel: LockObserving, ReauthFlow {
     let place: ItemHolderModel
     let reauth: ReauthModel<EnvExportAuthorizationModel>
     private(set) var step: CopyAllStep = .authenticate
@@ -41,23 +41,13 @@ final class CopyAllViewModel: LockObserving {
         dependencies.clipboard.clearDelay.wholeSeconds
     }
 
-    /// Tries Touch ID once when the sheet appears; a Mac without it shows the password field.
-    func start() async {
-        await authenticateWithTouchID(automatic: true)
+    /// Nothing to confirm once copied.
+    var pendingReauth: ReauthModel<EnvExportAuthorizationModel>? {
+        step == .authenticate ? reauth : nil
     }
 
-    func authenticateWithTouchID(automatic: Bool = false) async {
-        guard step == .authenticate else { return }
-        if await reauth.authorizeWithTouchID(automatic: automatic) {
-            copy()
-        }
-    }
-
-    func authenticateWithPassword() async {
-        guard step == .authenticate else { return }
-        if await reauth.authorizeWithPassword() {
-            copy()
-        }
+    func reauthorized() {
+        copy()
     }
 
     /// Drops the typed password and an unused authorization. Call it when the sheet closes.

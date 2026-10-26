@@ -1393,7 +1393,8 @@ AppTests).
     passphrase / damaged file; an expired file has its own small dialog (`hasExpired`); chips, Keep mine default, widening-policy and replay confirmations;
     one-click import of a missing repository through `ShareRepositoryImporter`).
     Re-authentication steps use `ReauthModel` / `ReauthView` (`App/Screens/Reauth/`), shared with
-    Copy All.
+    Copy All and Reveal in the notes, whose models get `start()` (Touch ID once) and the Touch ID
+    and password actions from `ReauthFlow`.
 
 **Components** (`App/Components`): `SecretValueEditor`, `MaskedValueCell` (display-only: masked /
 revealed / plain / missing, the view model owns reveal state), `CommandRow`,
