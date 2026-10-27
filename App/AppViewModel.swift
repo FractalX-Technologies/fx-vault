@@ -115,7 +115,19 @@ final class AppViewModel {
     /// SwiftUI `openWindow` action.
     @ObservationIgnored private var mainWindowOpener: (() -> Void)?
     @ObservationIgnored private weak var mainWindow: NSWindow?
-    @ObservationIgnored private let windowShowGate = WindowShowGate()
+    /// While the island unlocks, the main window stays off screen (1.0 brief).
+    @ObservationIgnored private lazy var windowSuppressor = WindowSuppressor { [weak self] in
+        guard let self else { return false }
+        return unlocksInIsland && island != nil
+    } suppress: { [weak self] window in
+        guard let self else { return }
+        // Closing the window fires the window-close lock trigger, a no-op while locked.
+        if island?.isPresented == true {
+            window.close()
+        } else {
+            presentIsland()
+        }
+    }
     /// The one lock model, shared by the notch island and the window's recovery and Touch ID offer.
     @ObservationIgnored private(set) lazy var lockScreen = LockViewModel(app: self)
     /// The unlock UI while locked (1.0). Nil without side effects (tests, previews), where the
@@ -164,6 +176,9 @@ final class AppViewModel {
         let manager = container.vaultManager
         let state = manager.state
         guard state != .noVault else { return }
+        // The island closes the window of a locked vault: nothing to lock, and a lock would
+        // invalidate the island's Touch ID check as it shows (1.0.1: a touch did nothing).
+        if trigger == .windowClosed, state == .locked { return }
         // Phase A
         manager.lock()
         let leftPhase = phase != .locked
@@ -698,14 +713,8 @@ final class AppViewModel {
         window.isRestorable = false
         mainWindow = window
         container.autoLock.observeClose(of: window)
-        // FX Vault starts locked, and the Dock reopens the window: the island unlocks instead,
-        // once the window is on screen (a close before that is undone).
-        if unlocksInIsland {
-            windowShowGate.onScreen(window) { [weak self] in
-                guard let self, self.unlocksInIsland else { return }
-                self.presentIsland()
-            }
-        }
+        // FX Vault starts locked, and the Dock reopens the window: the island unlocks instead.
+        windowSuppressor.watch(window)
     }
 
     // MARK: - View models

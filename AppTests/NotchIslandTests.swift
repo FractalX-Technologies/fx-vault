@@ -134,6 +134,24 @@ struct NotchIslandTests {
         #expect(harness.biometrics.evaluationCount == evaluations + 1)
     }
 
+    /// The island closes the window of a locked vault, and that close is a lock trigger. In 1.0.1
+    /// it invalidated the island's check as it showed, so a touch did nothing.
+    @Test func closingTheWindowOfALockedVaultKeepsTheIslandCheck() async throws {
+        let harness = try await Self.lockedWithTouchID()
+        let lock = harness.app.lockScreen
+        lock.prepareIslandTouchID()
+        let session = try #require(lock.islandTouchID)
+        let invalidations = harness.biometrics.invalidateCount
+
+        harness.app.lock(trigger: .windowClosed)
+
+        #expect(harness.biometrics.invalidateCount == invalidations)
+        #expect(lock.islandTouchID === session, "The sensor on screen must stay paired with it")
+        await lock.unlockWithTouchID()
+        #expect(harness.app.phase == .unlocked)
+        #expect(harness.biometrics.lastLoadContext == ObjectIdentifier(session.context))
+    }
+
     /// The island showing again replaces a check a lock invalidated meanwhile, and keeps a live one.
     @Test func theIslandReplacesAStaleCheckWhenItShows() async throws {
         let harness = try await Self.lockedWithTouchID()

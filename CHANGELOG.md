@@ -3,6 +3,18 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 1.0.2
+
+### Fixed
+
+- **One unlock screen at launch, again.** 1.0.1 still opened locked with the lock window beside
+  the island: SwiftUI showed the window a second time during launch. The window now stays off
+  screen whenever the island unlocks.
+- **Touch ID in the island.** Closing that window invalidated the island's Touch ID check, so a
+  touch did nothing; it no longer does.
+- **A crash after a few touches.** A renewed Touch ID check could leave two sensors in the island
+  for a moment, which AppKit refuses ("only 1 NSOcclusionDetectionView per window").
+
 ## 1.0.1
 
 ### Fixed
