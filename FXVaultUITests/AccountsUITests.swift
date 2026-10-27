@@ -9,7 +9,7 @@ final class AccountsUITests: VaultUITestCase {
         let app = launch()
         try onboard(app)
         app.typeKey(",", modifierFlags: .command)
-        click(app.toolbars.buttons["Accounts"])
+        click(app.buttons[AccessibilityID.Settings.section("accounts")])
 
         XCTAssertTrue(access(of: "example-org", in: app).contains("Ready"))
         XCTAssertTrue(access(of: "example-labs", in: app).contains("Org secrets need an org admin"))
@@ -23,7 +23,7 @@ final class AccountsUITests: VaultUITestCase {
         let app = launch()
         try onboard(app)
         app.typeKey(",", modifierFlags: .command)
-        click(app.toolbars.buttons["Accounts"])
+        click(app.buttons[AccessibilityID.Settings.section("accounts")])
 
         let tenant = app.descendants(matching: .any)[AccessibilityID.Accounts.azureTenant(tenantID)]
         XCTAssertTrue(tenant.waitForExistence(timeout: timeout), "the signed-in tenant is not listed")

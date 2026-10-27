@@ -4,10 +4,10 @@ import Observation
 import VaultCore
 import VaultData
 
-/// The Settings window (§10 Preferences), aware of the vault phase: General and Advanced hold no
-/// secrets and work in every phase; Security and Accounts need the vault unlocked (their sheets
-/// close on lock), except Reset vault, which needs an existing vault, the master password and
-/// the typed word.
+/// Settings (§10 Preferences; in the main window since 1.0.2), aware of the vault phase: General
+/// and Advanced hold no secrets and work in every phase; Security and Accounts need the vault
+/// unlocked (their sheets close on lock), except Reset vault, which needs an existing vault, the
+/// master password and the typed word.
 @Observable
 final class PreferencesViewModel: LockObserving {
     enum Tab: String, CaseIterable, Identifiable {
@@ -20,9 +20,81 @@ final class PreferencesViewModel: LockObserving {
         var id: String {
             rawValue
         }
+
+        var title: String {
+            switch self {
+            case .general: String(localized: "settings.tab.general", defaultValue: "General")
+            case .security: String(localized: "settings.tab.security", defaultValue: "Security")
+            case .accounts: String(localized: "settings.tab.accounts", defaultValue: "Accounts")
+            case .sharing: ProjectShareCopy.settingsTab
+            case .advanced: String(localized: "settings.tab.advanced", defaultValue: "Advanced")
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .general: "gearshape"
+            case .security: "lock"
+            case .accounts: "person"
+            case .sharing: "square.and.arrow.up"
+            case .advanced: "slider.horizontal.3"
+            }
+        }
+
+        /// What Search Settings matches besides the title: the section's settings, in the
+        /// user's words.
+        var searchTerms: String {
+            switch self {
+            case .general:
+                String(
+                    localized: "settings.search.general",
+                    defaultValue: "quick vault shortcut open at login lock inactivity sleep clipboard sound effects clone folder"
+                )
+            case .security:
+                String(
+                    localized: "settings.search.security",
+                    defaultValue: "touch id master password change recovery key reset vault erase"
+                )
+            case .accounts:
+                String(
+                    localized: "settings.search.accounts",
+                    defaultValue: "github gh account login token scopes organizations ssh azure tenant"
+                )
+            case .sharing:
+                String(
+                    localized: "settings.search.sharing",
+                    defaultValue: "share files sent passphrase rotate airdrop"
+                )
+            case .advanced:
+                String(
+                    localized: "settings.search.advanced",
+                    defaultValue: "gh path github cli telemetry diagnostics vault folder"
+                )
+            }
+        }
+
+        func matches(_ query: String) -> Bool {
+            "\(title) \(searchTerms)".localizedStandardContains(query)
+        }
     }
 
     var selectedTab: Tab = .general
+
+    /// Search Settings (the field over the sections).
+    var searchText = ""
+
+    /// The sections Search Settings keeps, in their order.
+    var visibleTabs: [Tab] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return Tab.allCases }
+        return Tab.allCases.filter { $0.matches(query) }
+    }
+
+    /// The section on screen: the selected one, or the first match when the search hid it.
+    var displayedTab: Tab? {
+        let tabs = visibleTabs
+        return tabs.contains(selectedTab) ? selectedTab : tabs.first
+    }
 
     // Open at login (General), as the system last reported it.
     private(set) var loginItemStatus: LoginItemStatus

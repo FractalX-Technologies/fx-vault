@@ -258,6 +258,15 @@ enum AccessibilityID {
         static let quickVaultShortcut = "settings.quickVaultShortcut"
         static let resetVault = "settings.resetVault"
         static let revealVaultFolder = "settings.revealVaultFolder"
+        /// The sidebar's gear, then Back and Search Settings in the settings panel.
+        static let open = "settings.open"
+        static let back = "settings.back"
+        static let search = "settings.search"
+
+        /// The section row of `tab` (a `PreferencesViewModel.Tab` raw value, such as `accounts`).
+        static func section(_ tab: String) -> String {
+            "settings.section.\(tab)"
+        }
     }
 
     /// Share Project and its "Confirm it's you" step.

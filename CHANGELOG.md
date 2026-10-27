@@ -25,6 +25,10 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Changed
 
+- **Settings in the main window, like Cursor.** ⌘,, Settings… and the sidebar's gear now swap
+  the window's panels for Settings: Back, Search Settings and the sections on the left, the
+  section's cards on the right. The separate Settings window is gone.
+- **A Cursor-like dark palette.** Neutral greys instead of the blue-tinted dark ground and panels.
 - **A launch splash.** The window opens on FX Vault's small grey mark over the soft ground,
   then fades into its content.
 - **The island grows out of the notch.** Each time it shows it starts as the notch itself and

@@ -5,7 +5,7 @@ import SwiftUI
 // optional 11 pt footnote. Rows put a 13 pt label (and an 11 pt detail) before their `.compact`
 // controls (docs/DESIGN.md, "Settings").
 
-/// One Settings tab: a scrolling column of ``PreferencesSection``s on the ground.
+/// One Settings section: a scrolling column of ``PreferencesSection``s on the main window's ground.
 struct PreferencesPage<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
@@ -19,7 +19,6 @@ struct PreferencesPage<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollBounceBehavior(.basedOnSize)
-        .background(Theme.Colors.ground)
     }
 }
 

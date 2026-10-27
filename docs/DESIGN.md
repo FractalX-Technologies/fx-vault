@@ -1017,9 +1017,15 @@ foreground color, so `.primary` text still turns white on selected rows.
 
 ### Settings
 
-Boards Settings-*: the native `Settings` scene and `TabView` (toolbar tabs: `gearshape`, `lock`,
-`person`, `square.and.arrow.up`, `slider.horizontal.3`), 640 pt wide, at least 430 pt of content;
-the window gets `.fxWindowBackground()`. `PreferencesLayout.swift` draws the tabs:
+Boards Settings-* (1.0.2, Cursor-like): Settings fill the main window in place of its panels
+(`SettingsScreen`; `AppViewModel.isShowingSettings`). Where the sidebar sits, a glass panel as
+wide as the sidebar: ← Back (⌘[), Search Settings (`PanelSearchField`, shared with the sidebar's
+search) and the sections as sidebar rows (`gearshape`, `lock`, `person`, `square.and.arrow.up`,
+`slider.horizontal.3`). Beside it, on the ground, the section's `.title2` title 14 pt from the
+top over its cards, in a column at most 640 pt wide. Search Settings keeps the sections whose
+title or listed settings match; with none, "No settings match". ⌘,, the menu bar's Settings…
+and the sidebar's gear open it; while locked it shows after the unlock, a lock closes it, and
+the onboarding has none. `PreferencesLayout.swift` draws the sections:
 
 - `PreferencesPage`: 16/22 pt inset, groups 14 pt apart.
 - `PreferencesSection`: an optional `.groupTitle` (11 pt semibold, `subtleText`, sentence case:

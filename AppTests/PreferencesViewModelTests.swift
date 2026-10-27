@@ -35,6 +35,68 @@ struct PreferencesViewModelTests {
         #expect(viewModel.canStartReset)
     }
 
+    // MARK: - In the main window (1.0.2)
+
+    /// Settings replace the main window's panels (Cursor-like): opened on a tab, closed by
+    /// Back, and closed by a lock, so the next unlock lands on the vault.
+    @Test func settingsOpenInTheMainWindowAndALockClosesThem() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let app = harness.app
+        #expect(!app.isShowingSettings)
+
+        app.showSettings(.advanced)
+        #expect(app.isShowingSettings)
+        #expect(app.requestedSettingsTab == .advanced)
+        app.closeSettings()
+        #expect(!app.isShowingSettings)
+
+        app.showSettings()
+        app.lock(trigger: .manual)
+        #expect(!app.isShowingSettings, "a lock leaves Settings")
+    }
+
+    /// Asked for while locked (the menu bar's Settings…, ⌘,), Settings wait for the unlock.
+    @Test func settingsAskedForWhileLockedShowAfterTheUnlock() async throws {
+        let harness = try await TestHarness(vault: .locked)
+        harness.app.showSettings(.security)
+        #expect(harness.app.isShowingSettings)
+        #expect(harness.app.requestedSettingsTab == .security)
+    }
+
+    /// No vault yet: the onboarding owns the window.
+    @Test func settingsAreNotOfferedDuringTheOnboarding() async throws {
+        let harness = try await TestHarness(vault: .none)
+        #expect(!harness.app.canShowSettings)
+        harness.app.showSettings()
+        #expect(!harness.app.isShowingSettings)
+    }
+
+    /// Search Settings keeps the sections whose title or settings match, any case; the content
+    /// follows the first match when the selected section is filtered out.
+    @Test func searchSettingsFiltersTheSections() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let viewModel = PreferencesViewModel(app: harness.app)
+        #expect(viewModel.visibleTabs == PreferencesViewModel.Tab.allCases)
+        #expect(viewModel.displayedTab == .general)
+
+        viewModel.searchText = "touch id"
+        #expect(viewModel.visibleTabs == [.security])
+        #expect(viewModel.displayedTab == .security)
+
+        viewModel.searchText = "  ADVANCED "
+        #expect(viewModel.visibleTabs == [.advanced])
+
+        viewModel.searchText = "clipboard"
+        #expect(viewModel.visibleTabs == [.general])
+
+        viewModel.searchText = "zzz-nothing"
+        #expect(viewModel.visibleTabs.isEmpty)
+        #expect(viewModel.displayedTab == nil)
+
+        viewModel.searchText = ""
+        #expect(viewModel.displayedTab == .general)
+    }
+
     /// 1.0 (D6c1): an owner's "Approve" in the sidebar opens Settings on Accounts, once.
     @Test func approveInTheSidebarOpensTheAccountsTab() async throws {
         let harness = try await TestHarness(vault: .unlocked)

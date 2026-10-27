@@ -95,9 +95,11 @@ enum Theme {
         static let windowMinHeight: CGFloat = 600
         static let windowDefaultWidth: CGFloat = 1_120
         static let windowDefaultHeight: CGFloat = 720
-        /// The Settings window (boards Settings-*): 640 pt wide, a 520 pt window less its tabs.
+        /// Settings' content column in the main window (boards Settings-*), at most 640 pt wide;
+        /// the section's title sits level with the traffic lights' band.
         static let settingsWidth: CGFloat = 640
         static let settingsMinHeight: CGFloat = 430
+        static let settingsTitleTopInset: CGFloat = 14
         /// A Settings row's top and bottom inset (12 pt sides), and the 26 pt pop-up of a row
         /// ("Lock after inactivity · 5 min").
         static let settingsRowInset: CGFloat = 7

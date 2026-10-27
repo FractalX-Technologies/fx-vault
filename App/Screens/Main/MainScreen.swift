@@ -5,7 +5,7 @@ import VaultCore
 /// The main window (§10.4; boards Main2-Home, Main2-Repository, Main2-Search, Main2-Offline): the
 /// sidebar panel and, beside it, the toolbar panel, the connectivity and recovery-key strips and
 /// the selected place, all on the soft ground under a hidden title bar (``MainWindowTitleBar``); the ⌘K jump palette over them
-/// and the sheet router of the UI feature contract.
+/// and the sheet router of the UI feature contract. Settings take the panels' place (``SettingsScreen``).
 struct MainScreen: View {
     @State private var viewModel: MainViewModel
     @State private var isFullScreen = false
@@ -80,6 +80,32 @@ struct MainScreen: View {
     /// toolbar panel while the sidebar is hidden (View › Hide Sidebar slides it out). The gutters
     /// and the sidebar's top band move the window; the gutter after the sidebar resizes it.
     private var panels: some View {
+        Group {
+            if viewModel.app.isShowingSettings {
+                SettingsScreen(app: viewModel.app, panelWidth: viewModel.sidebarWidth)
+                    .transition(.opacity)
+            } else {
+                vaultPanels
+                    .transition(.opacity)
+            }
+        }
+        .padding(Theme.Layout.mainPanelInset)
+        // The same minimum with the sidebar hidden: showing it again never overflows the window.
+        .frame(minWidth: Theme.Layout.mainScreenMinWidth)
+        .ignoresSafeArea()
+        .background {
+            MainWindowGround()
+                .overlay {
+                    WindowDragArea()
+                        .ignoresSafeArea()
+                }
+        }
+        .animation(Theme.Durations.spring, value: viewModel.isSidebarHidden)
+        .animation(Theme.Durations.interactionAnimation, value: viewModel.app.isShowingSettings)
+    }
+
+    /// The sidebar panel and the toolbar, strips and detail beside it.
+    private var vaultPanels: some View {
         HStack(spacing: 0) {
             if !viewModel.isSidebarHidden {
                 HStack(spacing: 0) {
@@ -114,18 +140,6 @@ struct MainScreen: View {
                     .contentShape(Rectangle())
             }
         }
-        .padding(Theme.Layout.mainPanelInset)
-        // The same minimum with the sidebar hidden: showing it again never overflows the window.
-        .frame(minWidth: Theme.Layout.mainScreenMinWidth)
-        .ignoresSafeArea()
-        .background {
-            MainWindowGround()
-                .overlay {
-                    WindowDragArea()
-                        .ignoresSafeArea()
-                }
-        }
-        .animation(Theme.Durations.spring, value: viewModel.isSidebarHidden)
     }
 }
 
@@ -166,7 +180,7 @@ private struct SidebarResizeHandle: View {
     }
 }
 
-private extension View {
+extension View {
     /// Lets a column take any height the window gives it. SwiftUI measures a column's minimum
     /// height at zero width, where an empty state's wrapping message is about 1,000 pt tall; as a
     /// minimum it grew the window past the screen (the split view before D6c2b was centered in
@@ -300,7 +314,6 @@ private struct MainHomeView: View {
 /// Security on a new one (the board's "Show Key" is not offered).
 private struct RecoveryKeyStrip: View {
     let main: MainViewModel
-    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         MainStatusStrip(
@@ -308,7 +321,6 @@ private struct RecoveryKeyStrip: View {
             title: MainCopy.recoveryKeyNotSaved,
             action: .init(title: MainCopy.createNewRecoveryKey) {
                 main.createNewRecoveryKey()
-                openSettings()
             }
         )
     }

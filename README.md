@@ -185,6 +185,10 @@ FX Vault's dot grid in the menu bar has **Quick Vault** (with its shortcut), ope
 island when locked (**Open FX Vault**), and has **Review Sync · N pending…** (the Sync review, after the unlock), **Lock Now**,
 **Settings…** and **Quit**. It shows counts only, never names or values.
 
+Settings open inside the main window (⌘,, **Settings…** or the sidebar's gear): **Back**,
+**Search Settings** and the sections General, Security, Accounts, Sharing and Advanced on the
+left, their options on the right. Asked for while locked, they show after the unlock.
+
 ### Touch ID
 
 The signed release can unlock the vault with Touch ID. After a password unlock, FX Vault offers

@@ -17,7 +17,7 @@ FXVault/
 │   └── FXVault-Signed.entitlements  # + keychain-access-groups
 ├── App/                             # app target (MainActor by default, everything internal)
 │   ├── FXVaultApp.swift             # @main FXVaultMain (answers --diagnose first), FXVaultApp:
-│   │                                # main Window + Settings scene, VaultCommands menus
+│   │                                # main Window, VaultCommands menus (⌘, opens Settings in it)
 │   ├── Diagnostics/                 # --diagnose: DiagnoseCommand (stdout JSON with the gh
 │   │                                # section, exit), DiagnosticReporter, DiagnosticReportModel,
 │   │                                # GHDiagnosticsTextRenderer (Copy Diagnostics text)
@@ -151,7 +151,7 @@ FXVault/
 │   │   │                            # Securely, boards Share-Pick and Share-Passphrase),
 │   │   │                            # ProjectShareTreeModel, ProjectShareImportView/Editor (a
 │   │   │                            # bundle opened, board Share-OpenPreview), ProjectShareCopy
-│   │   └── Preferences/             # PreferencesScreen/ViewModel, PreferencesLayout (groups,
+│   │   └── Preferences/             # SettingsScreen (in the main window)/PreferencesViewModel, PreferencesLayout (groups,
 │   │                                # rows, values and states; boards Settings-*), General
 │   │                                # (+ QuickVaultShortcutRecorder), Security(+ViewModel),
 │   │                                # ResetVaultSheet (+ its Security card; board Reset-Confirm),
