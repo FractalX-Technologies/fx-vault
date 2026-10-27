@@ -25,6 +25,8 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Changed
 
+- **A launch splash.** The window opens on FX Vault's small grey mark over the soft ground,
+  then fades into its content.
 - **The island grows out of the notch.** Each time it shows it starts as the notch itself and
   springs open, its content fading in; after Unlocked it folds back in (a fade with Reduce
   Motion).

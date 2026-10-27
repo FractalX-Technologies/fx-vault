@@ -67,6 +67,9 @@ enum Theme {
         static let keyHintHeight: CGFloat = 18
         /// The FractalX mark on the lock screen and in onboarding.
         static let brandMarkLarge: CGFloat = 44
+        /// The launch splash's mark, and how small the content starts under it (``fxLaunchSplash()``).
+        static let splashMark: CGFloat = 40
+        static let splashContentScale: CGFloat = 0.985
         /// The dot grid behind the lock screen: one dot every 22 pt.
         static let dotGridSpacing: CGFloat = 22
         static let dotGridDotDiameter: CGFloat = 2

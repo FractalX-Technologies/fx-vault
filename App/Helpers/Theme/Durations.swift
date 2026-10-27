@@ -36,6 +36,10 @@ extension Theme {
         /// The island's content fades in once the outline has mostly grown.
         static let islandContentReveal = Animation.easeOut(duration: 0.2).delay(0.14)
 
+        /// The launch splash: the mark holds, then fades into the content.
+        static let splashHold: Duration = .milliseconds(450)
+        static let splashFade = Animation.easeInOut(duration: 0.4)
+
         /// How long the notch island says "Unlocked" before it goes away.
         static let islandUnlocked: Duration = .milliseconds(900)
 

@@ -165,6 +165,9 @@ keep their own case rules.
   one bouncy spring) from the notch's own size (`NotchRevealShape`), its content fading in after
   (`islandContentReveal`), and folds back after Unlocked (`islandCollapse`); with Reduce Motion it
   only fades.
+  The main window opens on a splash (`fxLaunchSplash()`): the FX Vault mark, 40 pt in `subtleText`, on
+  `MainWindowGround` for `splashHold` (0.45 s), then `splashFade` (0.4 s) into the content, which
+  starts at `splashContentScale` (0.985; 1 with Reduce Motion).
 - **Opacity** (`Theme.Opacity`): `disabled` 0.4, `pressed` 0.82, `hovered` 0.9.
 - **Component metrics** live in `Theme.Layout` ("Design components" section): button heights
   34 / 42, input 44, chip 24, tag 22, segment 30, rows 52 / 36 / 32, mark 18 / 44, dot grid 22.
