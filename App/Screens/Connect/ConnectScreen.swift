@@ -129,27 +129,18 @@ private struct ConnectSourceRow: View {
     let toggle: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.medium) {
-            Toggle(isOn: Binding(get: { isSelected }, set: { _ in toggle() })) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                    Text(source.login)
-                        .fxTextStyle(.bodyEmphasized)
-                        .foregroundStyle(Theme.Colors.ink)
-                    Text(detail)
-                        .fxTextStyle(.caption)
-                        .foregroundStyle(Theme.Colors.subtleText)
-                }
-            }
-            .toggleStyle(.checkbox)
-            .disabled(!source.isReady || isDisabled)
-            .accessibilityIdentifier(AccessibilityID.Connect.source(source.id))
-            Spacer(minLength: Theme.Spacing.medium)
+        ChoiceCheckboxRow(
+            title: source.login,
+            detail: detail,
+            isSelected: isSelected,
+            isDisabled: !source.isReady || isDisabled,
+            accessibilityID: AccessibilityID.Connect.source(source.id),
+            toggle: toggle
+        ) {
             if case .organization(let status) = source.kind {
                 StatusChip(title: status.title, tint: status.tint)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .fxCalloutBackground()
     }
 
     private var detail: String {

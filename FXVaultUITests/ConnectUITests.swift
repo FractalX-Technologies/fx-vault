@@ -14,6 +14,12 @@ final class ConnectUITests: VaultUITestCase {
         XCTAssertTrue(organization.waitForExistence(timeout: timeout), "example-org is not offered")
         XCTAssertEqual(organization.value as? Int, 1, "A ready organization starts checked")
         XCTAssertFalse(app.checkBoxes[AccessibilityID.Connect.source("org:example-labs")].isEnabled)
+        // The whole row answers a click, not only the box and its name (1.0.3: a click on the
+        // row's empty part did nothing).
+        organization.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5)).withOffset(CGVector(dx: 300, dy: 0)).click()
+        XCTAssertEqual(organization.value as? Int, 0, "A click on the row must uncheck the organization")
+        click(organization)
+        XCTAssertEqual(organization.value as? Int, 1, "A click on the box must check it again")
 
         click(app.buttons[AccessibilityID.Connect.toAzure])
         let vault = app.checkBoxes[AccessibilityID.Connect.vault("kv-example-prod")]

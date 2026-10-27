@@ -90,20 +90,13 @@ private struct ConnectVaultRow: View {
     let toggle: () -> Void
 
     var body: some View {
-        Toggle(isOn: Binding(get: { isSelected }, set: { _ in toggle() })) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                Text(verbatim: vault.name)
-                    .fxTextStyle(.bodyEmphasized)
-                    .foregroundStyle(Theme.Colors.ink)
-                Text(verbatim: isSaved ? ConnectCopy.vaultSaved(location: vault.location) : vault.location)
-                    .fxTextStyle(.caption)
-                    .foregroundStyle(Theme.Colors.subtleText)
-            }
-        }
-        .toggleStyle(.checkbox)
-        .disabled(isDisabled)
-        .accessibilityIdentifier(AccessibilityID.Connect.vault(vault.id))
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .fxCalloutBackground()
+        ChoiceCheckboxRow(
+            title: vault.name,
+            detail: isSaved ? ConnectCopy.vaultSaved(location: vault.location) : vault.location,
+            isSelected: isSelected,
+            isDisabled: isDisabled,
+            accessibilityID: AccessibilityID.Connect.vault(vault.id),
+            toggle: toggle
+        )
     }
 }
