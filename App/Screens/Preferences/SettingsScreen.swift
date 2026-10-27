@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Settings in the main window (§10 Preferences, 1.0.2; Cursor-like): where the sidebar sits, a
-/// glass panel with Back, Search Settings and the sections (General, Security, Accounts, Sharing,
+/// pane with Back, Search Settings and the sections (General, Security, Accounts, Sharing,
 /// Advanced); beside it the section's title and cards on the ground. ``MainScreen`` shows it in
 /// place of its panels while ``AppViewModel/isShowingSettings``.
 struct SettingsScreen: View {
@@ -16,14 +16,14 @@ struct SettingsScreen: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Layout.mainPanelInset) {
+        HStack(spacing: 0) {
             SettingsNavigationPanel(viewModel: viewModel) {
                 app.closeSettings()
             }
             .padding(.top, Theme.Layout.sidebarPanelTopInset)
             .frame(width: panelWidth)
             .mainColumnHeight()
-            .fxGlassPanel()
+            .fxSidebarPane()
             .overlay(alignment: .top) {
                 WindowDragArea()
                     .frame(height: Theme.Layout.sidebarPanelTopInset)
@@ -31,6 +31,7 @@ struct SettingsScreen: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .animation(Theme.Durations.interactionAnimation, value: viewModel.displayedTab)
+                .padding(.horizontal, Theme.Layout.mainPanelInset)
         }
         .onChange(of: viewModel.requestedTab, initial: true) {
             viewModel.showRequestedTab()
@@ -116,7 +117,6 @@ private struct SettingsNavigationPanel: View {
                             level: 0,
                             systemImage: tab.systemImage,
                             title: tab.title,
-                            titleStyle: .sans,
                             isSelected: viewModel.displayedTab == tab,
                             accessibilityID: AccessibilityID.Settings.section(tab.rawValue)
                         ) {

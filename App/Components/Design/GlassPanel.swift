@@ -22,6 +22,20 @@ extension View {
     }
 }
 
+extension View {
+    /// The main window's sidebar as a pane (1.0.2, Cursor-like): flush with the window's edges,
+    /// on `surface`, with a hairline at its trailing edge.
+    func fxSidebarPane() -> some View {
+        background(Theme.Colors.surface)
+            .overlay(alignment: .trailing) {
+                Rectangle()
+                    .fill(Theme.Colors.hairline)
+                    .frame(width: Theme.Stroke.hairline)
+                    .accessibilityHidden(true)
+            }
+    }
+}
+
 /// The main window's soft ground (board Main2-Home): `mainGround`, lit from each corner by a glow
 /// that fades out `groundGlowRadius` in. The panels float on it; the other windows keep `ground`.
 struct MainWindowGround: View {

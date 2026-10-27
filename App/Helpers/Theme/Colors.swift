@@ -9,12 +9,12 @@ extension Theme {
     enum Colors {
         // MARK: Grounds and surfaces
 
-        /// The window ground: #FFFFFF / #181818.
+        /// The window ground: #FFFFFF / #151516.
         static let ground = Color(.ground)
-        /// Sidebars, inline fields on the ground and quiet panels: #F5F5F7 / #1F1F1F.
+        /// The sidebar pane, inline fields on the ground and quiet panels: #F5F5F7 / #1B1B1C.
         static let surface = Color(.surface)
         /// Secondary buttons, the segmented pill track, selected sidebar rows, the offline
-        /// banner: #E8E8ED / #2A2A2A.
+        /// banner: #E8E8ED / #2B2B2D.
         static let surface2 = Color(.surface2)
         /// Cards, tables, sheets, inputs and the selected segment, a translucent glass fill so text
         /// stays crisp: white at 80% / #212121 at 92%.
@@ -22,13 +22,13 @@ extension Theme {
 
         // MARK: Text
 
-        /// Primary text and the primary (ink) button fill: #000000 / #E6E6E6.
+        /// Primary text and the primary (ink) button fill: #000000 / #F0F0F0.
         static let ink = Color(.ink)
         /// Text on an ink fill (primary buttons, avatars): the ground color.
         static let onInk = Color(.ground)
-        /// Secondary text, body copy under headings, masked values: #3F3F42 / #A3A3A3.
+        /// Secondary text, body copy under headings, masked values: #3F3F42 / #B9B9B9.
         static let mutedText = Color(.mutedText)
-        /// Section labels, timestamps, counts, placeholders: #5C5C61 / #8A8A8A.
+        /// Section labels, timestamps, counts, placeholders: #5C5C61 / #9B9B9C.
         static let subtleText = Color(.subtleText)
         /// Separators inside mono labels (the `/` in `02 / 05`). Decorative only: it does not
         /// meet text contrast, so never use it for information the user must read.
@@ -44,7 +44,7 @@ extension Theme {
         // MARK: Accents and states
 
         /// The current or interactive state: pending dots, links, focus rings and the Modified /
-        /// Will push chips. Ink since 1.0 (#000000 / #E6E6E6; the brand blue is gone). Also the
+        /// Will push chips. Ink since 1.0 (#000000 / #F0F0F0; the brand blue is gone). Also the
         /// app's global accent color.
         static let brand = Color(.brand)
         /// Needs attention: drift, missing values, offline: #8A6316 / #D9A441.
@@ -66,8 +66,8 @@ extension Theme {
         static let scrim = Color(.scrim)
         /// Under the main window's glass panels (board Main2-Home): black at 8% / 40%.
         static let panelShadow = Color(.panelShadow)
-        /// The main window's soft ground (board Main2-Home): #F8F7F6 / #181818, lit from each
-        /// corner by a glow (``MainWindowGround``).
+        /// The main window's soft ground (board Main2-Home): #F8F7F6 / #151516, lit from each
+        /// corner by a glow in light (``MainWindowGround``); flat in dark, like Cursor.
         static let mainGround = Color(.mainGround)
         static let mainGlowTopLeading = Color(.mainGlowTopLeading)
         static let mainGlowTopTrailing = Color(.mainGlowTopTrailing)

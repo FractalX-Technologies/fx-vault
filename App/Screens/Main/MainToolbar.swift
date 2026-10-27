@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// The toolbar panel over the detail (§10 Toolbar; 1.0 D6c2b; boards Main2-Home, Main2-Repository,
-/// Main2-Search): the selected place's path, the ⌘K search button and the Sync pill on glass. No
-/// native toolbar items (the window's toolbar stays empty, ``MainWindowTitleBar``). New
-/// Repository, Import .env and Share are menu commands only: ⌘N (and an owner's menu), ⇧⌘I, ⌥⌘S.
+/// The toolbar over the detail (§10 Toolbar; boards Main2-Home, Main2-Repository, Main2-Search):
+/// the selected place's path, the ⌘K search button and the Sync pill, flat on the ground like
+/// Cursor's title bar (1.0.2). No native toolbar items (the window's toolbar stays empty,
+/// ``MainWindowTitleBar``). New Repository, Import .env and Share are menu commands only: ⌘N (and
+/// an owner's menu), ⇧⌘I, ⌥⌘S.
 struct MainToolbarPanel: View {
     let viewModel: MainViewModel
 
@@ -22,7 +23,6 @@ struct MainToolbarPanel: View {
         .frame(height: Theme.Layout.toolbarPanelHeight)
         // The panel is the window's title bar: its empty part moves and zooms the window.
         .background(WindowDragArea())
-        .fxGlassPanel()
     }
 }
 

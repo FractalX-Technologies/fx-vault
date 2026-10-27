@@ -75,10 +75,11 @@ struct MainScreen: View {
             }
     }
 
-    /// The panels, `mainPanelInset` from the window's edges and from each other, from the very
-    /// top of the window: the traffic lights sit in the sidebar panel's top inset, or before the
-    /// toolbar panel while the sidebar is hidden (View › Hide Sidebar slides it out). The gutters
-    /// and the sidebar's top band move the window; the gutter after the sidebar resizes it.
+    /// The panes from the very top of the window (1.0.2, Cursor-like): the sidebar flush with the
+    /// window's edges, the traffic lights in its top inset, or before the toolbar while the
+    /// sidebar is hidden (View › Hide Sidebar slides it out); the detail `mainPanelInset` from the
+    /// other edges. The ground and the sidebar's top band move the window; the gutter after the
+    /// sidebar resizes it.
     private var panels: some View {
         Group {
             if viewModel.app.isShowingSettings {
@@ -89,7 +90,6 @@ struct MainScreen: View {
                     .transition(.opacity)
             }
         }
-        .padding(Theme.Layout.mainPanelInset)
         // The same minimum with the sidebar hidden: showing it again never overflows the window.
         .frame(minWidth: Theme.Layout.mainScreenMinWidth)
         .ignoresSafeArea()
@@ -113,7 +113,7 @@ struct MainScreen: View {
                         .padding(.top, Theme.Layout.sidebarPanelTopInset)
                         .frame(width: viewModel.sidebarWidth)
                         .mainColumnHeight()
-                        .fxGlassPanel()
+                        .fxSidebarPane()
                         .overlay(alignment: .top) {
                             WindowDragArea()
                                 .frame(height: Theme.Layout.sidebarPanelTopInset)
@@ -139,6 +139,7 @@ struct MainScreen: View {
                     // without a shape the click reaches the ground's drag area behind.
                     .contentShape(Rectangle())
             }
+            .padding([.trailing, .bottom], Theme.Layout.mainPanelInset)
         }
     }
 }

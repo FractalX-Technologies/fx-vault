@@ -60,22 +60,25 @@ Every color is an asset-catalog color set with a light and a dark variant
 (`App/Resources/Assets.xcassets`), exposed as `Theme.Colors.*`. `DesignTokenTests` checks every
 value below and fails if a color set has no dark variant or no test.
 
-Since 1.0.2 the dark column is Cursor-like: neutral greys (`#181818` ground) instead of pure black,
-warm off-white ink, softer lines, and a faint violet glow from the bottom leading corner.
+Since 1.0.2 the dark column is Cursor-like: neutral greys measured from Cursor (`#151516` ground, `#1B1B1C` sidebar) instead of pure black,
+off-white ink, softer lines and a flat ground (the dark glows equal the ground). The main window
+follows Cursor's layout too: the sidebar is a flush pane on `surface` with a trailing hairline
+(`fxSidebarPane()`), the toolbar sits flat on the ground, and every sidebar name is 13 pt SF Pro
+in 30 pt rows.
 
 | Token (`Theme.Colors.`) | Color set | Light | Dark | Use |
 |---|---|---|---|---|
-| `ground` (`onInk`) | Ground | `#FFFFFF` | `#181818` | Window background; text on an ink fill |
-| `surface` | Surface | `#F5F5F7` | `#1F1F1F` | Quiet panels, search field |
-| `surface2` | Surface2 | `#E8E8ED` | `#2A2A2A` | Secondary buttons, segmented track, selected sidebar row, neutral chip |
+| `ground` (`onInk`) | Ground | `#FFFFFF` | `#151516` | Window background; text on an ink fill |
+| `surface` | Surface | `#F5F5F7` | `#1B1B1C` | The main window's sidebar pane, quiet panels, search field |
+| `surface2` | Surface2 | `#E8E8ED` | `#2B2B2D` | Secondary buttons, segmented track, selected sidebar row, neutral chip |
 | `card` | Card | white 80% | `#212121` 92% | Cards, tables, sheets, inputs, selected segment: the more opaque glass inside a window |
-| `ink` | Ink | `#000000` | `#E6E6E6` | Primary text, primary button fill |
-| `mutedText` | MutedText | `#3F3F42` | `#A3A3A3` | Secondary text, paragraphs under headings, masked values |
-| `subtleText` | SubtleText | `#5C5C61` | `#8A8A8A` | Section labels, timestamps, counts, placeholders |
+| `ink` | Ink | `#000000` | `#F0F0F0` | Primary text, primary button fill |
+| `mutedText` | MutedText | `#3F3F42` | `#B9B9B9` | Secondary text, paragraphs under headings, masked values |
+| `subtleText` | SubtleText | `#5C5C61` | `#9B9B9C` | Section labels, timestamps, counts, placeholders |
 | `faintText` | FaintText | `#A1A1A6` | `#4A4A4A` | Decorative only: the `/` in `02 / 05` |
-| `hairline` | Hairline | black 8% | white 7% | Default borders and dividers |
-| `hairlineStrong` | HairlineStrong | black 16% | white 13% | Outline buttons, tags, inputs, banners that need weight |
-| `brand` | Brand | `#000000` | `#E6E6E6` | Ink: the current or interactive state (principle 2); the app's global accent color |
+| `hairline` | Hairline | black 8% | white 9% | Default borders and dividers |
+| `hairlineStrong` | HairlineStrong | black 16% | white 16% | Outline buttons, tags, inputs, banners that need weight |
+| `brand` | Brand | `#000000` | `#F0F0F0` | Ink: the current or interactive state (principle 2); the app's global accent color |
 | `warning` | Warning | `#8A6316` | `#D9A441` | Drift, value missing, offline (small marks) |
 | `success` | Success | `#1F7A55` | `#3FB283` | Verified, strong password (small marks) |
 | `danger` | Danger | `#CA2121` | `#EC6A6A` | Destructive actions, failures |
@@ -84,11 +87,11 @@ warm off-white ink, softer lines, and a faint violet glow from the bottom leadin
 | `shadow` | Shadow | black 12% | black 40% | The one sheet shadow |
 | `scrim` | Scrim | black 6% | black 30% | The dimmed window behind the ⌘K jump palette |
 | `panelShadow` | PanelShadow | black 8% | black 40% | Under the main window's glass panels |
-| `mainGround` | MainGround | `#F8F7F6` | `#181818` | The main window's soft ground (`MainWindowGround`) |
-| `mainGlowTopLeading` | MainGlowTopLeading | `#FFFFFF` | `#1E1D23` | The ground's glow from the top leading corner |
-| `mainGlowTopTrailing` | MainGlowTopTrailing | `#EBE9E6` | `#1A1A1A` | … from the top trailing corner |
-| `mainGlowBottomTrailing` | MainGlowBottomTrailing | `#E6E5E3` | `#1A1A1A` | … from the bottom trailing corner |
-| `mainGlowBottomLeading` | MainGlowBottomLeading | `#F3EFEB` | `#1F1D25` | … from the bottom leading corner |
+| `mainGround` | MainGround | `#F8F7F6` | `#151516` | The main window's soft ground (`MainWindowGround`) |
+| `mainGlowTopLeading` | MainGlowTopLeading | `#FFFFFF` | `#151516` | The ground's glow from the top leading corner |
+| `mainGlowTopTrailing` | MainGlowTopTrailing | `#EBE9E6` | `#151516` | … from the top trailing corner |
+| `mainGlowBottomTrailing` | MainGlowBottomTrailing | `#E6E5E3` | `#151516` | … from the bottom trailing corner |
+| `mainGlowBottomLeading` | MainGlowBottomLeading | `#F3EFEB` | `#151516` | … from the bottom leading corner |
 
 `Theme.Colors.windowBackground` is the `NSColor` of Ground for AppKit.
 `Theme.Colors.onSelectionSecondary` is the hierarchical `.secondary` style, for secondary text in
@@ -1021,7 +1024,7 @@ Boards Settings-* (1.0.2, Cursor-like): Settings fill the main window in place o
 (`SettingsScreen`; `AppViewModel.isShowingSettings`). Where the sidebar sits, a glass panel as
 wide as the sidebar: ← Back (⌘[), Search Settings (`PanelSearchField`, shared with the sidebar's
 search) and the sections as sidebar rows (`gearshape`, `lock`, `person`, `square.and.arrow.up`,
-`slider.horizontal.3`). Beside it, on the ground, the section's `.title2` title 14 pt from the
+`slider.horizontal.3`). Beside it, on the ground, the section's `.title2` title 22 pt from the
 top over its cards, in a column at most 640 pt wide. Search Settings keeps the sections whose
 title or listed settings match; with none, "No settings match". ⌘,, the menu bar's Settings…
 and the sidebar's gear open it; while locked it shows after the unlock, a lock closes it, and

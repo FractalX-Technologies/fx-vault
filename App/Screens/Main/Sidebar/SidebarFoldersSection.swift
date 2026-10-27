@@ -33,7 +33,6 @@ struct SidebarFoldersSection: View {
                     level: 0,
                     systemImage: "folder.badge.plus",
                     title: FolderCopy.newFolder,
-                    titleStyle: .sans,
                     isSelected: false,
                     isDimmed: true
                 ) {
@@ -47,7 +46,6 @@ struct SidebarFoldersSection: View {
                     level: 0,
                     systemImage: isSelected ? Theme.Symbols.folderSelected : Theme.Symbols.folder,
                     title: folder.name,
-                    titleStyle: .sans,
                     isSelected: isSelected
                 ) {
                     sidebar.selectedFolderID = folder.id

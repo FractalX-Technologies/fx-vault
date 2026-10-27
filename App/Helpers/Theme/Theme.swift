@@ -62,7 +62,7 @@ enum Theme {
         /// (`.fxTableCell()`; the inset table style adds the rest).
         static let tableCellMinHeight: CGFloat = 26
         static let scopeRowHeight: CGFloat = 36
-        static let sidebarRowHeight: CGFloat = 28
+        static let sidebarRowHeight: CGFloat = 30
         /// A shortcut chip (`⌘F`, ``KeyHint``).
         static let keyHintHeight: CGFloat = 18
         /// The FractalX mark on the lock screen and in onboarding.
@@ -99,7 +99,7 @@ enum Theme {
         /// the section's title sits level with the traffic lights' band.
         static let settingsWidth: CGFloat = 640
         static let settingsMinHeight: CGFloat = 430
-        static let settingsTitleTopInset: CGFloat = 14
+        static let settingsTitleTopInset: CGFloat = 22
         /// A Settings row's top and bottom inset (12 pt sides), and the 26 pt pop-up of a row
         /// ("Lock after inactivity · 5 min").
         static let settingsRowInset: CGFloat = 7
