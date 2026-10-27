@@ -14,9 +14,7 @@ struct TouchIDSensorView: View {
     var body: some View {
         if let session {
             let sensor = Sensor(side: side)
-            SensorRepresentable(context: session.context, controlSize: sensor.controlSize)
-                // A new check needs a new view: the pairing is made once, at creation.
-                .id(session.id)
+            SensorRepresentable(session: session, controlSize: sensor.controlSize)
                 .frame(width: sensor.nativeSide, height: sensor.nativeSide)
                 .scaleEffect(sensor.scale)
                 .frame(width: side, height: side)
@@ -48,13 +46,39 @@ struct TouchIDSensorView: View {
     }
 }
 
+/// A new check needs a new `LAAuthenticationView` (the pairing is made once, at creation), and
+/// AppKit allows one per window. Swapped inside one container view, in the same step: as a
+/// SwiftUI `.id` change in an animated update, the old one stayed for its removal transition
+/// beside the new one, and the next touch crashed (1.0.1).
 private struct SensorRepresentable: NSViewRepresentable {
-    let context: LAContext
+    let session: BiometricSession
     let controlSize: NSControl.ControlSize
 
-    func makeNSView(context _: Context) -> LAAuthenticationView {
-        LAAuthenticationView(context: context, controlSize: controlSize)
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
     }
 
-    func updateNSView(_: LAAuthenticationView, context _: Context) {}
+    func makeNSView(context: Context) -> NSView {
+        let container = NSView()
+        install(in: container, coordinator: context.coordinator)
+        return container
+    }
+
+    func updateNSView(_ container: NSView, context: Context) {
+        guard context.coordinator.sessionID != session.id else { return }
+        install(in: container, coordinator: context.coordinator)
+    }
+
+    private func install(in container: NSView, coordinator: Coordinator) {
+        container.subviews.forEach { $0.removeFromSuperview() }
+        let sensor = LAAuthenticationView(context: session.context, controlSize: controlSize)
+        sensor.frame = container.bounds
+        sensor.autoresizingMask = [.width, .height]
+        container.addSubview(sensor)
+        coordinator.sessionID = session.id
+    }
+
+    final class Coordinator {
+        var sessionID: UUID?
+    }
 }
