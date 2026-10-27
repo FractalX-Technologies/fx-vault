@@ -66,7 +66,9 @@ follows Cursor's layout too: the sidebar is a flush pane on `surface` with a tra
 (`fxSidebarPane()`), the toolbar sits flat on the ground, and every sidebar name is 13 pt SF Pro
 in 30 pt rows. The window is glass: `MainWindowGround` blurs the desktop behind the window
 (`BehindWindowBlur`) and tints it `surface` at 32% under the sidebar and `mainGround` at 68%
-beside it (`WindowGlass`); Reduce Transparency makes both tints solid.
+beside it (`WindowGlass`); Reduce Transparency makes both tints solid. The notch island and the
+quick vault use the same blur under `island` black at 60%, solid in the band beside the notch
+and fading out 16 pt below it (`IslandGlass`).
 
 | Token (`Theme.Colors.`) | Color set | Light | Dark | Use |
 |---|---|---|---|---|

@@ -32,6 +32,8 @@ extension Theme {
         /// the moment FX Vault appears (1.0.2). It folds back without one.
         static let islandReveal = Animation.spring(duration: 0.5, bounce: 0.22)
         static let islandCollapseDuration: Duration = .milliseconds(320)
+        /// Two frames as the notch before growing: set any sooner, SwiftUI drew the island whole.
+        static let islandRevealDelay: Duration = .milliseconds(34)
         static let islandCollapse = Animation.spring(duration: 0.32, bounce: 0)
         /// The island's content fades in once the outline has mostly grown.
         static let islandContentReveal = Animation.easeOut(duration: 0.2).delay(0.14)

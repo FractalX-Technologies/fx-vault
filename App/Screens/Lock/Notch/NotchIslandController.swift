@@ -103,7 +103,9 @@ final class NotchIslandController {
         // screen (Quick Vault while locked) folded it, so it grows again too.
         if !model.isRevealed {
             Task { [weak self] in
-                self?.model.isRevealed = true
+                try? await Task.sleep(for: Theme.Durations.islandRevealDelay)
+                guard let self, self.isPresented else { return }
+                self.model.isRevealed = true
             }
         }
         Task {

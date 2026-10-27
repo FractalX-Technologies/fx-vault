@@ -13,6 +13,12 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ### Fixed
 
+- **Touch ID after erasing a vault.** The erased vault's Touch ID key stayed in the keychain, and
+  while it was there Turn On Touch ID failed for the new vault (and Reset or Erase could not
+  remove it). FX Vault now deletes its keys without listing them, which macOS refused.
+- **The island's grow animation.** The island was asked to grow before it had drawn itself as
+  the notch, so it appeared already open. It now draws the notch first, then grows.
+
 - **One unlock screen at launch, again.** 1.0.1 still opened locked with the lock window beside
   the island: SwiftUI showed the window a second time during launch. The window now stays off
   screen whenever the island unlocks.
@@ -31,7 +37,8 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **A Cursor-like main window.** Cursor's dark greys (measured from Cursor), a flat ground, the
   sidebar as a flush pane with a hairline instead of a floating glass panel, a flat toolbar, and
   sidebar names in 13 pt SF Pro. The window is glass, as in Cursor: the desktop shows through
-  the sidebar, blurred, and barely through the rest (solid with Reduce Transparency).
+  the sidebar, blurred, and barely through the rest (solid with Reduce Transparency). The notch
+  island and the quick vault are glass too, solid black only beside the notch.
 - **A launch splash.** The window opens on FX Vault's small grey mark over the soft ground,
   then fades into its content.
 - **The island grows out of the notch.** Each time it shows it starts as the notch itself and

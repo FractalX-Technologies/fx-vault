@@ -9,10 +9,12 @@ struct WindowGlassTests {
     @Test func theTintsAreTranslucent() {
         #expect(WindowGlass.opacity(WindowGlass.ground, reduceTransparency: false) < 1)
         #expect(WindowGlass.opacity(WindowGlass.sidebar, reduceTransparency: false) < 1)
+        #expect(WindowGlass.opacity(WindowGlass.island, reduceTransparency: false) < 1)
     }
 
     @Test func reduceTransparencyMakesThemOpaque() {
         #expect(WindowGlass.opacity(WindowGlass.ground, reduceTransparency: true) == 1)
         #expect(WindowGlass.opacity(WindowGlass.sidebar, reduceTransparency: true) == 1)
+        #expect(WindowGlass.opacity(WindowGlass.island, reduceTransparency: true) == 1)
     }
 }

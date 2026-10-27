@@ -239,7 +239,10 @@ extension View {
             self
         }
         .frame(width: width)
-        .background(Theme.Colors.island, in: shape)
+        .background {
+            IslandGlass(notchHeight: notchHeight)
+                .clipShape(shape)
+        }
         // `reveal` grows it out of the notch (the lock island); 1 draws it whole.
         .clipShape(NotchRevealShape(
             progress: reveal,
@@ -250,5 +253,25 @@ extension View {
             radius: radius
         ))
         .environment(\.colorScheme, .dark)
+    }
+}
+
+/// The island's ground (1.0.2): the desktop blurred under black, like the main window's glass;
+/// solid in the band beside the hardware notch, so the island still reads as its continuation.
+private struct IslandGlass: View {
+    let notchHeight: CGFloat
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            BehindWindowBlur()
+            Theme.Colors.island.opacity(WindowGlass.opacity(WindowGlass.island, reduceTransparency: reduceTransparency))
+            VStack(spacing: 0) {
+                Theme.Colors.island
+                    .frame(height: notchHeight)
+                LinearGradient(colors: [Theme.Colors.island, Theme.Colors.island.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: Theme.Spacing.large)
+            }
+        }
     }
 }

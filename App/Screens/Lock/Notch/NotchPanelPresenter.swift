@@ -43,6 +43,8 @@ final class NotchPanelPresenter {
         let panel = panel ?? makePanel()
         place(size: panel.contentView?.fittingSize ?? .zero)
         panel.makeKeyAndOrderFront(nil)
+        // Draws the current state now (the island as the notch), so the reveal animates from it.
+        panel.displayIfNeeded()
     }
 
     /// `dropping`: the next show draws a new panel, so no old frame flashes when it reopens.
