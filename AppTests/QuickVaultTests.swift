@@ -338,6 +338,26 @@ struct QuickVaultTests {
         #expect(returned == ["true 4242", "true 4242", "false 0", "true 0"])
     }
 
+    /// Locked, every press of the shortcut asks for Touch ID again, even after a cancelled one:
+    /// the once-per-lock auto prompt never covered a second request.
+    @Test func whileLockedEveryShortcutAsksForTouchIDAgain() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        harness.preferences.hasAnsweredTouchIDOffer = true
+        try await harness.enableTouchID()
+        harness.app.lock(trigger: .manual)
+        let lock = harness.app.lockScreen
+        harness.biometrics.failNextLoad(with: .cancelled)
+        harness.app.openQuickVault()
+        await lock.autoPromptIfAllowed(isAppActive: true, isSceneActive: true)
+        #expect(harness.biometrics.loadCount == 1)
+        #expect(harness.app.phase == .locked)
+
+        harness.app.openQuickVault()
+        await lock.autoPromptIfAllowed(isAppActive: true, isSceneActive: true)
+        #expect(harness.biometrics.loadCount == 2, "The second press prompts too")
+        #expect(harness.app.phase == .unlocked)
+    }
+
     /// Locked, the request's app gets the keys after the unlock; a request that ended leaves none.
     @Test func whileLockedTheKeysGoBackToTheRequestsApp() async throws {
         let harness = try await TestHarness(vault: .locked)

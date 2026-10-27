@@ -158,21 +158,13 @@ private struct SidebarSearchField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.compactRow, style: .continuous)
-        HStack(spacing: Theme.Spacing.smallMinus) {
-            Image(systemName: "magnifyingglass")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.subtleText)
-                .accessibilityHidden(true)
-            TextField(SidebarCopy.searchPrompt, text: $sidebar.searchText)
-                .textFieldStyle(.plain)
-                .font(Theme.Typography.caption)
-                .focused($isFocused)
-                .accessibilityLabel(SidebarCopy.searchLabel)
-                .accessibilityIdentifier(AccessibilityID.Main.sidebarSearch)
-                .onExitCommand {
-                    sidebar.searchText = ""
-                }
+        PanelSearchField(
+            prompt: SidebarCopy.searchPrompt,
+            label: SidebarCopy.searchLabel,
+            accessibilityID: AccessibilityID.Main.sidebarSearch,
+            text: $sidebar.searchText,
+            isFocused: $isFocused
+        ) {
             Button {
                 sidebar.focusSearch()
             } label: {
@@ -182,9 +174,6 @@ private struct SidebarSearchField: View {
             .help(SidebarCopy.searchShortcut)
             .accessibilityLabel(SidebarCopy.searchShortcut)
         }
-        .padding(.horizontal, Theme.Spacing.small)
-        .frame(height: Theme.Layout.sidebarControlHeight)
-        .background(Theme.Colors.surface2, in: shape)
         .task(id: sidebar.searchFocusRequest) {
             await takeFocus()
         }
@@ -216,7 +205,6 @@ private struct OwnerNodeView: View {
     let owner: SidebarOwnerModel
     let main: MainViewModel
     var isListFocused: FocusState<Bool>.Binding
-    @Environment(\.openSettings) private var openSettings
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -309,7 +297,6 @@ private struct OwnerNodeView: View {
             } else if !main.approve(owner) {
                 // Another account, or a problem gh can't approve here: Settings has the commands.
                 main.requestAccountsSettings()
-                openSettings()
             }
         }
     }
@@ -324,7 +311,7 @@ private struct RepoNodeView: View {
 
     var body: some View {
         let sidebar = main.sidebar
-        let isOpen = sidebar.selectedRowID == repo.id
+        let isOpen = sidebar.showsEnvironments(of: repo)
         SidebarTreeRow(
             level: 1,
             isExpanded: repo.isImported ? isOpen : nil,
@@ -332,8 +319,9 @@ private struct RepoNodeView: View {
             title: repo.name,
             isSelected: main.isRowSelected(repo),
             isDimmed: !repo.isImported,
-            toggleLabel: SidebarCopy.openRepository(repo.name),
-            onToggle: select
+            toggleLabel: isOpen ? SidebarCopy.collapse(repo.name) : SidebarCopy.openRepository(repo.name),
+            toggleAccessibilityID: AccessibilityID.Main.repositoryToggle(repo.name),
+            onToggle: toggle
         ) {
             select()
         } trailing: {
@@ -368,6 +356,20 @@ private struct RepoNodeView: View {
     private func select() {
         main.select(repository: repo)
         isListFocused.wrappedValue = true
+    }
+
+    /// Opens the repository; on the open one, hides or shows its environments. Hiding them
+    /// moves a selected environment's selection up to the repository, as Finder does.
+    private func toggle() {
+        let sidebar = main.sidebar
+        if sidebar.selectedRowID == repo.id {
+            if sidebar.showsEnvironments(of: repo) {
+                select()
+            }
+            sidebar.toggleEnvironments(of: repo)
+        } else {
+            select()
+        }
     }
 }
 
@@ -497,12 +499,15 @@ private struct SidebarFooter: View {
                 .buttonStyle(.plain)
                 .help(SidebarCopy.lock)
                 .accessibilityLabel(SidebarCopy.lock)
-                SettingsLink {
+                Button {
+                    main.app.showSettings()
+                } label: {
                     footerIcon("gearshape")
                 }
                 .buttonStyle(.plain)
                 .help(SidebarCopy.settings)
                 .accessibilityLabel(SidebarCopy.settings)
+                .accessibilityIdentifier(AccessibilityID.Settings.open)
                 Spacer(minLength: 0)
             }
         }

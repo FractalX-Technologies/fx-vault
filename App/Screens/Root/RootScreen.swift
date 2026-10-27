@@ -10,6 +10,7 @@ struct RootScreen: View {
 
     var body: some View {
         content
+            .fxLaunchSplash()
             .frame(
                 minWidth: Theme.Layout.windowMinWidth,
                 maxWidth: .infinity,

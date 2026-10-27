@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// How a sidebar node's name is set: names from GitHub and Azure in SF Mono, the user's own
-/// names (folders) in SF Pro (boards Main2-Home, Main2-Expanded).
+/// How a place's name is set in the ⌘K palette, the quick vault and the place header: names from
+/// GitHub and Azure in SF Mono, the user's own names (folders) in SF Pro. The sidebar sets every
+/// name in SF Pro (1.0.2, Cursor-like).
 enum SidebarTitleStyle {
     case mono
     case sans
@@ -16,7 +17,6 @@ struct SidebarTreeRow<Trailing: View>: View {
     var isExpanded: Bool?
     let systemImage: String
     let title: String
-    var titleStyle: SidebarTitleStyle = .mono
     let isSelected: Bool
     /// Not in the vault yet (a repository to import), or deleted.
     var isDimmed = false
@@ -60,11 +60,9 @@ struct SidebarTreeRow<Trailing: View>: View {
         .fxRowBackground(isSelected: isSelected, style: .sidebar)
     }
 
+    // 13 pt sans for every name, GitHub's too, as in Cursor's sidebar (1.0.2).
     private var titleFont: Font {
-        switch titleStyle {
-        case .mono: isSelected ? Theme.Typography.monoMetaEmphasized : Theme.Typography.monoMeta
-        case .sans: isSelected ? Theme.Typography.captionEmphasized : Theme.Typography.caption
-        }
+        isSelected ? Theme.Typography.bodyEmphasized : Theme.Typography.callout
     }
 
     @ViewBuilder
@@ -103,7 +101,6 @@ extension SidebarTreeRow where Trailing == EmptyView {
         isExpanded: Bool? = nil,
         systemImage: String,
         title: String,
-        titleStyle: SidebarTitleStyle = .mono,
         isSelected: Bool,
         isDimmed: Bool = false,
         isStruckThrough: Bool = false,
@@ -118,7 +115,6 @@ extension SidebarTreeRow where Trailing == EmptyView {
             isExpanded: isExpanded,
             systemImage: systemImage,
             title: title,
-            titleStyle: titleStyle,
             isSelected: isSelected,
             isDimmed: isDimmed,
             isStruckThrough: isStruckThrough,

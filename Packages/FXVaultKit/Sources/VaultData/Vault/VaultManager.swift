@@ -382,7 +382,7 @@ public final class VaultManager: Sendable {
 
     // MARK: - Touch ID settings
 
-    /// Enables Touch ID unlock (§5.5): deletes orphaned items of other vaults, stores the DEK in
+    /// Enables Touch ID unlock (§5.5): deletes every item (orphans of other vaults too), stores the DEK in
     /// a `.biometryCurrentSet` item and records the enrollment fingerprint.
     ///
     /// - Throws: `VaultError.biometryUnavailable(.unsignedBuild)` in ad-hoc builds, other
@@ -397,7 +397,8 @@ public final class VaultManager: Sendable {
             }
             let keys = try await unwrapWithPassword(password)
             let account = BiometricKeyAccount.name(vaultID: keys.vaultID)
-            try removeOrphanedItems(keeping: account)
+            // Orphans of erased vaults go too; the store below adds this vault's item again.
+            try biometricStore.deleteAll()
             let dek = keys.exportDEK()
             defer { dek.wipe() }
             try biometricStore.store(dek, account: account)
@@ -447,21 +448,38 @@ public final class VaultManager: Sendable {
         try await gate.run {
             try requireVault()
             _ = try await unwrapWithPassword(password)
-            lock()
-            try session.database.write { tx in
-                try records.eraseAllData(in: tx)
-            }
-            lifecycle.withLock { lifecycle in
-                lifecycle.hasVault = false
-                lifecycle.isBiometricsTurnedOffAutomatically = false
-            }
-            checkpointAfterKeyWrite()
-            if capabilities.hasKeychainAccessGroup {
-                for account in (try? biometricStore.allAccounts()) ?? [] {
-                    try? biometricStore.delete(account: account)
-                }
-            }
+            try eraseEverything()
             VaultManagerConstants.log.info("Vault reset")
+        }
+    }
+
+    /// Erases the vault with no password or recovery key, for a user who has lost both: nothing
+    /// can be checked, and without either the encrypted data can never be read again anyway.
+    /// The lock screen asks to type the confirmation word first.
+    ///
+    /// - Throws: `VaultError.notInitialized`.
+    @concurrent
+    public func eraseForgottenVault() async throws {
+        try await gate.run {
+            try requireVault()
+            try eraseEverything()
+            VaultManagerConstants.log.info("Forgotten vault erased")
+        }
+    }
+
+    /// Locks, then erases every row, the vault record and the Touch ID items.
+    private func eraseEverything() throws {
+        lock()
+        try session.database.write { tx in
+            try records.eraseAllData(in: tx)
+        }
+        lifecycle.withLock { lifecycle in
+            lifecycle.hasVault = false
+            lifecycle.isBiometricsTurnedOffAutomatically = false
+        }
+        checkpointAfterKeyWrite()
+        if capabilities.hasKeychainAccessGroup {
+            try? biometricStore.deleteAll()
         }
     }
 
@@ -761,17 +779,6 @@ public final class VaultManager: Sendable {
         try? biometricStore.delete(account: account)
         try updateVault { $0.biometryStateHash = nil }
         lifecycle.withLock { $0.isBiometricsTurnedOffAutomatically = true }
-    }
-
-    /// Deletes every item of the service whose account is not `account` (§5.5 enable).
-    private func removeOrphanedItems(keeping account: String) throws {
-        let orphans = try biometricStore.allAccounts().filter { $0 != account }
-        for orphan in orphans {
-            try biometricStore.delete(account: orphan)
-        }
-        if !orphans.isEmpty {
-            VaultManagerConstants.log.info("Deleted \(orphans.count, privacy: .public) orphaned Touch ID items")
-        }
     }
 
     /// After a rotation: replaces the item with the new DEK when Touch ID is enabled. On failure

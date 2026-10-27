@@ -16,7 +16,7 @@ import VaultCore
 ///
 /// Only Developer ID-signed builds with the embedded profile have the access group. Without it
 /// (`accessGroup == nil`, ad-hoc builds) every operation throws
-/// `.biometryUnavailable(.unsignedBuild)` and ``allAccounts()`` returns nothing.
+/// `.biometryUnavailable(.unsignedBuild)`, except ``deleteAll()``, which has nothing to delete.
 ///
 /// macOS data-protection keychain rules this type follows (checked in v0.1.1; the queries are
 /// built by the pure `…Query` functions below and unit-tested):
@@ -128,20 +128,13 @@ public struct KeychainManager: BiometricKeyStoring {
         }
     }
 
-    public func allAccounts() throws(VaultError) -> [String] {
-        guard let group = accessGroup else { return [] }
-        let query = Self.listQuery(accessGroup: group, context: authManager.silentContext())
-
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        switch status {
-        case errSecSuccess:
-            let items = result as? [[String: Any]] ?? []
-            return items.compactMap { $0[kSecAttrAccount as String] as? String }
-        case errSecItemNotFound:
-            return []
-        default:
-            VaultManagerConstants.log.error("Touch ID item listing failed: \(status, privacy: .public)")
+    // Listing the items instead failed with errSecInteractionNotAllowed while one existed, so
+    // an erased vault's item blocked Touch ID for the next vault (1.0.2).
+    public func deleteAll() throws(VaultError) {
+        guard let group = accessGroup else { return }
+        let status = SecItemDelete(Self.itemQuery(account: nil, accessGroup: group) as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            VaultManagerConstants.log.error("Touch ID items delete failed: \(status, privacy: .public)")
             throw Self.storeError(for: status)
         }
     }
@@ -204,15 +197,6 @@ public struct KeychainManager: BiometricKeyStoring {
         var query = itemQuery(account: account, accessGroup: accessGroup)
         query[kSecReturnAttributes as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
-        query[kSecUseAuthenticationContext as String] = context
-        return query
-    }
-
-    /// Every item of the service in the access group: attributes only, without UI.
-    static func listQuery(accessGroup: String, context: LAContext) -> [String: Any] {
-        var query = itemQuery(account: nil, accessGroup: accessGroup)
-        query[kSecReturnAttributes as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitAll
         query[kSecUseAuthenticationContext as String] = context
         return query
     }

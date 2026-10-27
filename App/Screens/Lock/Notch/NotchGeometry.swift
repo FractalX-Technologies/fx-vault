@@ -14,4 +14,10 @@ enum NotchGeometry {
             height: size.height
         )
     }
+
+    /// The hardware notch's width: the screen less the menu bar areas beside it. 0 without one.
+    static func notchWidth(screenWidth: CGFloat, leftArea: CGRect?, rightArea: CGRect?) -> CGFloat {
+        guard let leftArea, let rightArea else { return 0 }
+        return max(0, screenWidth - leftArea.width - rightArea.width)
+    }
 }

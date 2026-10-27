@@ -63,8 +63,10 @@ final class AppViewModel {
     private(set) var ghStatus: GHStatusModel = .checking
     /// Bumped by ``accountsDidChange()``; the main window reloads its accounts when it changes.
     private(set) var accountsRevision = 0
-    /// The Settings tab the main window asked for (the sidebar's "Approve" asks for Accounts);
-    /// the Settings window switches to it and clears it.
+    /// Settings fill the main window in place of the vault (1.0.2, Cursor-like); a lock ends it.
+    private(set) var isShowingSettings = false
+    /// The Settings tab asked for (the sidebar's "Approve" asks for Accounts); Settings switch
+    /// to it and clear it.
     private(set) var requestedSettingsTab: PreferencesViewModel.Tab?
     /// A Security sheet to open with that tab (the recovery-key banner asks for a new key).
     private(set) var requestedSecuritySheet: SecuritySettingsViewModel.Sheet?
@@ -191,9 +193,12 @@ final class AppViewModel {
         }
         lockCount += 1
         lastLockTrigger = trigger
+        isShowingSettings = false
         // Phase B
         runLockPhaseB()
-        presentIsland()
+        // Nothing stays on screen (1.0.2): the island shows when FX Vault is opened again, and
+        // the window's reopen comes back through `windowSuppressor` as the island.
+        mainWindow?.close()
     }
 
     // MARK: - Notch island
@@ -267,6 +272,8 @@ final class AppViewModel {
         case .locked:
             quickVault.noteRequest()
             isQuickVaultRequested = true
+            // Each press asks for Touch ID, not only the first of this lock.
+            lockScreen.promptAgain()
             // Recovery and the Touch ID offer are in the window; the quick vault follows them.
             guard unlocksInIsland, let island else {
                 requestMainWindow()
@@ -587,9 +594,26 @@ final class AppViewModel {
         accountsRevision += 1
     }
 
-    func requestSettingsTab(_ tab: PreferencesViewModel.Tab, securitySheet: SecuritySettingsViewModel.Sheet? = nil) {
-        requestedSecuritySheet = securitySheet
-        requestedSettingsTab = tab
+    /// The onboarding owns the window until a vault exists.
+    var canShowSettings: Bool {
+        phase != .onboarding
+    }
+
+    /// Settings › `tab` in the main window (⌘,, the menu bar, the sidebar's gear), brought
+    /// forward; while locked they show after the unlock.
+    func showSettings(_ tab: PreferencesViewModel.Tab? = nil, securitySheet: SecuritySettingsViewModel.Sheet? = nil) {
+        guard canShowSettings else { return }
+        if let tab {
+            requestedSecuritySheet = securitySheet
+            requestedSettingsTab = tab
+        }
+        isShowingSettings = true
+        openFXVault()
+    }
+
+    /// Settings' Back: the vault as it was left.
+    func closeSettings() {
+        isShowingSettings = false
     }
 
     func clearSettingsTabRequest() {

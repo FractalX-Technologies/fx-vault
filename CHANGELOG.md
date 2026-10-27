@@ -5,15 +5,52 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ## 1.0.2
 
+### Added
+
+- **Erase a forgotten vault.** With neither the master password nor the recovery key, the
+  island's Recovery Key… now offers "No recovery key either? Erase vault…": type `reset` and
+  FX Vault erases everything on this Mac and starts over at onboarding. Nothing on GitHub changes.
+
 ### Fixed
+
+- **Touch ID after erasing a vault.** The erased vault's Touch ID key stayed in the keychain, and
+  while it was there Turn On Touch ID failed for the new vault (and Reset or Erase could not
+  remove it). FX Vault now deletes its keys without listing them, which macOS refused.
+- **The island's grow animation.** The island was asked to grow before it had drawn itself as
+  the notch, so it appeared already open. It now draws the notch first, then grows.
 
 - **One unlock screen at launch, again.** 1.0.1 still opened locked with the lock window beside
   the island: SwiftUI showed the window a second time during launch. The window now stays off
   screen whenever the island unlocks.
-- **Touch ID in the island.** Closing that window invalidated the island's Touch ID check, so a
-  touch did nothing; it no longer does.
+- **Touch ID in the island.** The island's embedded fingerprint cancelled its own check before
+  any touch, so Touch ID never unlocked from it. Clicking the island's fingerprint now opens the
+  system Touch ID prompt.
+- **⌃⌥V while locked asks for Touch ID every time**, not only the first time after a lock.
+- **The open repository's chevron.** It did nothing on the repository you were in; it now
+  hides its environments (the selection moves up to the repository) and shows them again.
 - **A crash after a few touches.** A renewed Touch ID check could leave two sensors in the island
   for a moment, which AppKit refuses ("only 1 NSOcclusionDetectionView per window").
+
+### Changed
+
+- **Locking leaves nothing on screen.** ⌃⌘L, Lock Now and the auto-lock close the window, and the
+  island shows only when you open FX Vault again (the Dock, Open FX Vault, ⌃⌥V).
+- **Touch ID on request.** The island no longer prompts by itself, at launch or when it shows:
+  click its fingerprint. ⌃⌥V still prompts at once, since the shortcut is the request.
+
+- **Settings in the main window, like Cursor.** ⌘,, Settings… and the sidebar's gear now swap
+  the window's panels for Settings: Back, Search Settings and the sections on the left, the
+  section's cards on the right. The separate Settings window is gone.
+- **A Cursor-like main window.** Cursor's dark greys (measured from Cursor), a flat ground, the
+  sidebar as a flush pane with a hairline instead of a floating glass panel, a flat toolbar, and
+  sidebar names in 13 pt SF Pro. The window is glass, as in Cursor: the desktop shows through
+  the sidebar, blurred, and barely through the rest (solid with Reduce Transparency). The notch
+  island and the quick vault are glass too, solid black only beside the notch.
+- **A launch splash.** The window opens on FX Vault's small grey mark over the soft ground,
+  then fades into its content.
+- **The island grows out of the notch.** Each time it shows it starts as the notch itself and
+  springs open, its content fading in; after Unlocked it folds back in (a fade with Reduce
+  Motion).
 
 ## 1.0.1
 

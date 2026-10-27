@@ -22,12 +22,46 @@ extension View {
     }
 }
 
-/// The main window's soft ground (board Main2-Home): `mainGround`, lit from each corner by a glow
-/// that fades out `groundGlowRadius` in. The panels float on it; the other windows keep `ground`.
+/// The main window's sidebar as a pane (1.0.2, Cursor-like): flush with the window's edges, with
+/// a hairline at its trailing edge. Its tint is ``MainWindowGround``'s, so the glass under it is
+/// not tinted twice.
+private struct SidebarPane: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .overlay(alignment: .trailing) {
+                Rectangle()
+                    .fill(Theme.Colors.hairline)
+                    .frame(width: Theme.Stroke.hairline)
+                    .accessibilityHidden(true)
+            }
+    }
+}
+
+extension View {
+    func fxSidebarPane() -> some View {
+        modifier(SidebarPane())
+    }
+}
+
+/// The main window's soft ground (board Main2-Home): the blurred desktop (``BehindWindowBlur``,
+/// 1.0.2) tinted `surface` under the sidebar (`sidebarWidth`, nil without one) and `mainGround`
+/// beside it, lit from each corner by a glow that fades out `groundGlowRadius` in (light only).
+/// The other windows keep `ground`.
 struct MainWindowGround: View {
+    var sidebarWidth: CGFloat?
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     var body: some View {
         ZStack {
-            Theme.Colors.mainGround
+            BehindWindowBlur()
+            HStack(spacing: 0) {
+                if let sidebarWidth {
+                    Theme.Colors.surface
+                        .opacity(WindowGlass.opacity(WindowGlass.sidebar, reduceTransparency: reduceTransparency))
+                        .frame(width: sidebarWidth)
+                }
+                Theme.Colors.mainGround.opacity(tint)
+            }
             glow(Theme.Colors.mainGlowTopLeading, from: .topLeading)
             glow(Theme.Colors.mainGlowTopTrailing, from: .topTrailing)
             glow(Theme.Colors.mainGlowBottomTrailing, from: .bottomTrailing)
@@ -37,9 +71,14 @@ struct MainWindowGround: View {
         .accessibilityHidden(true)
     }
 
+    private var tint: Double {
+        WindowGlass.opacity(WindowGlass.ground, reduceTransparency: reduceTransparency)
+    }
+
+    // At the ground's tint too: an opaque glow would hide the glass in its corner.
     private func glow(_ color: Color, from corner: UnitPoint) -> some View {
         RadialGradient(
-            colors: [color, color.opacity(0)],
+            colors: [color.opacity(tint), color.opacity(0)],
             center: corner,
             startRadius: 0,
             endRadius: Theme.Layout.groundGlowRadius

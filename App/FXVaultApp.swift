@@ -40,18 +40,6 @@ struct FXVaultApp: App {
             }
         }
 
-        Settings {
-            Group {
-                switch appDelegate.bootstrap {
-                case .ready(let viewModel):
-                    PreferencesScreen(app: viewModel)
-                case .failed(let error):
-                    StartupFailureScreen(error: error)
-                }
-            }
-            .fxWindowBackground()
-        }
-
         // The menu bar item (board MenuBar). Not while the app hosts unit tests or previews: it
         // would sit in the developer's menu bar.
         MenuBarExtra(
@@ -66,7 +54,7 @@ struct FXVaultApp: App {
     }
 }
 
-/// The menu commands (§10 Toolbar): File › New Repository (⌘N), Import .env (⇧⌘I) and Share
+/// The menu commands (§10 Toolbar): FX Vault › Settings… (⌘,), File › New Repository (⌘N), Import .env (⇧⌘I) and Share
 /// Project… (⌥⌘S), Edit › Find (⌘F) and Jump Anywhere (⌘K), View › Hide Sidebar (⌃⌘S), and Vault ›
 /// Lock (⌃⌘L) and Sync (⇧⌘S). Commands that act on the main window reach it through the focused
 /// scene value (``FocusedValues/mainViewModel``).
@@ -75,6 +63,15 @@ struct VaultCommands: Commands {
     @FocusedValue(\.mainViewModel) private var main
 
     var body: some Commands {
+        // Settings live in the main window (1.0.2), so the app menu's item opens them there.
+        CommandGroup(replacing: .appSettings) {
+            Button(MenuBarCopy.settings) {
+                viewModel.showSettings()
+            }
+            .keyboardShortcut(",", modifiers: .command)
+            .disabled(!viewModel.canShowSettings)
+        }
+
         CommandGroup(replacing: .newItem) {
             Button(MainCopy.newRepository) {
                 main?.newRepository()

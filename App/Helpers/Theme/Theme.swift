@@ -62,11 +62,14 @@ enum Theme {
         /// (`.fxTableCell()`; the inset table style adds the rest).
         static let tableCellMinHeight: CGFloat = 26
         static let scopeRowHeight: CGFloat = 36
-        static let sidebarRowHeight: CGFloat = 28
+        static let sidebarRowHeight: CGFloat = 30
         /// A shortcut chip (`⌘F`, ``KeyHint``).
         static let keyHintHeight: CGFloat = 18
         /// The FractalX mark on the lock screen and in onboarding.
         static let brandMarkLarge: CGFloat = 44
+        /// The launch splash's mark, and how small the content starts under it (``fxLaunchSplash()``).
+        static let splashMark: CGFloat = 40
+        static let splashContentScale: CGFloat = 0.985
         /// The dot grid behind the lock screen: one dot every 22 pt.
         static let dotGridSpacing: CGFloat = 22
         static let dotGridDotDiameter: CGFloat = 2
@@ -75,6 +78,8 @@ enum Theme {
         static let islandWidth: CGFloat = 340
         static let islandCornerRadius: CGFloat = 20
         static let islandMenuBarGap: CGFloat = 6
+        /// The hardware notch's lower corners, where the island starts growing.
+        static let notchCornerRadius: CGFloat = 8
         /// The setup command output box: about eight lines before it scrolls.
         static let commandOutputMaxHeight: CGFloat = 140
         /// Widest lock-screen form and onboarding text column.
@@ -90,9 +95,11 @@ enum Theme {
         static let windowMinHeight: CGFloat = 600
         static let windowDefaultWidth: CGFloat = 1_120
         static let windowDefaultHeight: CGFloat = 720
-        /// The Settings window (boards Settings-*): 640 pt wide, a 520 pt window less its tabs.
+        /// Settings' content column in the main window (boards Settings-*), at most 640 pt wide;
+        /// the section's title sits level with the traffic lights' band.
         static let settingsWidth: CGFloat = 640
         static let settingsMinHeight: CGFloat = 430
+        static let settingsTitleTopInset: CGFloat = 22
         /// A Settings row's top and bottom inset (12 pt sides), and the 26 pt pop-up of a row
         /// ("Lock after inactivity · 5 min").
         static let settingsRowInset: CGFloat = 7

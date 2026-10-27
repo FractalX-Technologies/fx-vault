@@ -189,6 +189,24 @@ class VaultUITestCase: XCTestCase {
         return menu
     }
 
+    /// The Debug build's menu bar item for the main window ("FX Vault Dev").
+    let openFXVaultTitle = "Open FX Vault Dev"
+
+    /// A lock leaves nothing on screen (1.0.2): the island waits until FX Vault is opened again.
+    @MainActor
+    func expectNoIslandAfterLock(_ app: XCUIApplication) {
+        let island = app.descendants(matching: .any)[AccessibilityID.Island.panel]
+        XCTAssertFalse(island.waitForExistence(timeout: 3), "Locking showed the island by itself")
+    }
+
+    /// Locks with ⌃⌘L, then opens the island from the menu bar's Open FX Vault.
+    @MainActor
+    func lockThenOpenIsland(_ app: XCUIApplication) {
+        app.typeKey("l", modifierFlags: [.control, .command])
+        expectNoIslandAfterLock(app)
+        click(openMenuBarMenu(app).menuItems[openFXVaultTitle])
+    }
+
     /// Waits for the element to exist and be enabled (view models enable buttons asynchronously).
     @MainActor
     func click(_ element: XCUIElement) {

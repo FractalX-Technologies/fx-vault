@@ -48,6 +48,13 @@ enum AccessibilityID {
         static let unlocked = "island.unlocked"
     }
 
+    /// The recovery screen's last resort: erase a vault whose password and key are both lost.
+    enum Recovery {
+        static let forgotKey = "recovery.forgotKey"
+        static let eraseConfirmation = "recovery.eraseConfirmation"
+        static let erase = "recovery.erase"
+    }
+
     /// In-app Approve through `gh auth refresh` (1.0 B4b).
     enum GHApproval {
         static let sheet = "ghApproval"
@@ -126,6 +133,10 @@ enum AccessibilityID {
         /// The chevron that opens or closes an owner node (1.0).
         static func ownerToggle(_ login: String) -> String {
             "main.ownerToggle.\(login)"
+        }
+
+        static func repositoryToggle(_ name: String) -> String {
+            "main.repositoryToggle.\(name)"
         }
 
         /// An Azure subscription's row under Azure in the sidebar (1.0 D6c6), by id: two
@@ -247,6 +258,15 @@ enum AccessibilityID {
         static let quickVaultShortcut = "settings.quickVaultShortcut"
         static let resetVault = "settings.resetVault"
         static let revealVaultFolder = "settings.revealVaultFolder"
+        /// The sidebar's gear, then Back and Search Settings in the settings panel.
+        static let open = "settings.open"
+        static let back = "settings.back"
+        static let search = "settings.search"
+
+        /// The section row of `tab` (a `PreferencesViewModel.Tab` raw value, such as `accounts`).
+        static func section(_ tab: String) -> String {
+            "settings.section.\(tab)"
+        }
     }
 
     /// Share Project and its "Confirm it's you" step.

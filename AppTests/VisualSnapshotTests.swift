@@ -182,6 +182,20 @@ struct VisualSnapshotTests {
         withExtendedLifetime(harness) {}
     }
 
+    /// 1.0.2 (Cursor-like): Settings in the main window, on General, then on Security.
+    @Test func mainSettings() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        harness.app.showSettings(.general)
+        try await SnapshotOutput.write("main-settings", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        harness.app.showSettings(.security)
+        try await SnapshotOutput.write("main-settings-security", size: SnapshotOutput.windowSize, isTitled: true) {
+            MainScreen(viewModel: main)
+        }
+        withExtendedLifetime(harness) {}
+    }
+
     /// v0.4.0: two rows selected, so the header shows the selection actions.
     @Test func mainWindowSelection() async throws {
         let (harness, main) = try await MainSnapshotFixture.make()

@@ -612,10 +612,9 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         return activeSheet == sheet
     }
 
-    /// An owner's "Approve" or "Settings": Settings › Accounts has the commands that fix it. The
-    /// view then opens the Settings window.
+    /// An owner's "Approve" or "Settings": Settings › Accounts has the commands that fix it.
     func requestAccountsSettings() {
-        app.requestSettingsTab(.accounts)
+        app.showSettings(.accounts)
     }
 
     /// Shows the "recovery key not confirmed" banner (the vault locked during onboarding or a
@@ -625,9 +624,9 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     }
 
     /// The banner's button: the key that was shown cannot be shown again, so Settings › Security
-    /// opens on a new one. The view then opens the Settings window.
+    /// opens on a new one.
     func createNewRecoveryKey() {
-        app.requestSettingsTab(.security, securitySheet: .newRecoveryKey)
+        app.showSettings(.security, securitySheet: .newRecoveryKey)
     }
 
     // MARK: - Jump palette (⌘K, 1.0 D6c2)
@@ -637,7 +636,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
 
     /// The toolbar's search button and ⌘K: unlocked, with no sheet over the window.
     var canJump: Bool {
-        isUnlocked && activeSheet == nil
+        isUnlocked && activeSheet == nil && !app.isShowingSettings
     }
 
     /// ⌘K and the toolbar's search button: opens the palette with the sidebar's places, or

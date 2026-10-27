@@ -60,32 +60,42 @@ Every color is an asset-catalog color set with a light and a dark variant
 (`App/Resources/Assets.xcassets`), exposed as `Theme.Colors.*`. `DesignTokenTests` checks every
 value below and fails if a color set has no dark variant or no test.
 
+Since 1.0.2 the dark column is Cursor-like: neutral greys measured from Cursor (`#151516` ground, `#1B1B1C` sidebar) instead of pure black,
+off-white ink, softer lines and a flat ground (the dark glows equal the ground). The main window
+follows Cursor's layout too: the sidebar is a flush pane on `surface` with a trailing hairline
+(`fxSidebarPane()`), the toolbar sits flat on the ground, and every sidebar name is 13 pt SF Pro
+in 30 pt rows. The window is glass: `MainWindowGround` blurs the desktop behind the window
+(`BehindWindowBlur`) and tints it `surface` at 32% under the sidebar and `mainGround` at 68%
+beside it (`WindowGlass`); Reduce Transparency makes both tints solid. The notch island and the
+quick vault use the same blur under `island` black at 60%, solid in the band beside the notch
+and fading out 16 pt below it (`IslandGlass`).
+
 | Token (`Theme.Colors.`) | Color set | Light | Dark | Use |
 |---|---|---|---|---|
-| `ground` (`onInk`) | Ground | `#FFFFFF` | `#000000` | Window background; text on an ink fill |
-| `surface` | Surface | `#F5F5F7` | `#1C1C1E` | Quiet panels, search field |
-| `surface2` | Surface2 | `#E8E8ED` | `#2C2C2E` | Secondary buttons, segmented track, selected sidebar row, neutral chip |
-| `card` | Card | white 80% | `#1C1C1E` 72% | Cards, tables, sheets, inputs, selected segment: the more opaque glass inside a window |
-| `ink` | Ink | `#000000` | `#FFFFFF` | Primary text, primary button fill |
-| `mutedText` | MutedText | `#3F3F42` | `#AEAEB2` | Secondary text, paragraphs under headings, masked values |
-| `subtleText` | SubtleText | `#5C5C61` | `#8E8E93` | Section labels, timestamps, counts, placeholders |
-| `faintText` | FaintText | `#A1A1A6` | `#48484A` | Decorative only: the `/` in `02 / 05` |
-| `hairline` | Hairline | black 8% | white 10% | Default borders and dividers |
-| `hairlineStrong` | HairlineStrong | black 16% | white 20% | Outline buttons, tags, inputs, banners that need weight |
-| `brand` | Brand | `#000000` | `#FFFFFF` | Ink: the current or interactive state (principle 2); the app's global accent color |
+| `ground` (`onInk`) | Ground | `#FFFFFF` | `#151516` | Window background; text on an ink fill |
+| `surface` | Surface | `#F5F5F7` | `#1B1B1C` | The main window's sidebar pane, quiet panels, search field |
+| `surface2` | Surface2 | `#E8E8ED` | `#2B2B2D` | Secondary buttons, segmented track, selected sidebar row, neutral chip |
+| `card` | Card | white 80% | `#212121` 92% | Cards, tables, sheets, inputs, selected segment: the more opaque glass inside a window |
+| `ink` | Ink | `#000000` | `#F0F0F0` | Primary text, primary button fill |
+| `mutedText` | MutedText | `#3F3F42` | `#B9B9B9` | Secondary text, paragraphs under headings, masked values |
+| `subtleText` | SubtleText | `#5C5C61` | `#9B9B9C` | Section labels, timestamps, counts, placeholders |
+| `faintText` | FaintText | `#A1A1A6` | `#4A4A4A` | Decorative only: the `/` in `02 / 05` |
+| `hairline` | Hairline | black 8% | white 9% | Default borders and dividers |
+| `hairlineStrong` | HairlineStrong | black 16% | white 16% | Outline buttons, tags, inputs, banners that need weight |
+| `brand` | Brand | `#000000` | `#F0F0F0` | Ink: the current or interactive state (principle 2); the app's global accent color |
 | `warning` | Warning | `#8A6316` | `#D9A441` | Drift, value missing, offline (small marks) |
 | `success` | Success | `#1F7A55` | `#3FB283` | Verified, strong password (small marks) |
 | `danger` | Danger | `#CA2121` | `#EC6A6A` | Destructive actions, failures |
 | `inkBadge` | InkBadge | white 20% | black 12% | The count badge inside an ink pill |
-| `dotGrid` | DotGrid | black 12% | white 10% | Dots of `DotGridBackground` |
+| `dotGrid` | DotGrid | black 12% | white 6% | Dots of `DotGridBackground` |
 | `shadow` | Shadow | black 12% | black 40% | The one sheet shadow |
 | `scrim` | Scrim | black 6% | black 30% | The dimmed window behind the ⌘K jump palette |
 | `panelShadow` | PanelShadow | black 8% | black 40% | Under the main window's glass panels |
-| `mainGround` | MainGround | `#F8F7F6` | `#121214` | The main window's soft ground (`MainWindowGround`) |
-| `mainGlowTopLeading` | MainGlowTopLeading | `#FFFFFF` | `#212124` | The ground's glow from the top leading corner |
-| `mainGlowTopTrailing` | MainGlowTopTrailing | `#EBE9E6` | `#1B1B1F` | … from the top trailing corner |
-| `mainGlowBottomTrailing` | MainGlowBottomTrailing | `#E6E5E3` | `#1B1A1A` | … from the bottom trailing corner |
-| `mainGlowBottomLeading` | MainGlowBottomLeading | `#F3EFEB` | `#1B1A1A` | … from the bottom leading corner |
+| `mainGround` | MainGround | `#F8F7F6` | `#151516` | The main window's soft ground (`MainWindowGround`) |
+| `mainGlowTopLeading` | MainGlowTopLeading | `#FFFFFF` | `#151516` | The ground's glow from the top leading corner |
+| `mainGlowTopTrailing` | MainGlowTopTrailing | `#EBE9E6` | `#151516` | … from the top trailing corner |
+| `mainGlowBottomTrailing` | MainGlowBottomTrailing | `#E6E5E3` | `#151516` | … from the bottom trailing corner |
+| `mainGlowBottomLeading` | MainGlowBottomLeading | `#F3EFEB` | `#151516` | … from the bottom leading corner |
 
 `Theme.Colors.windowBackground` is the `NSColor` of Ground for AppKit.
 `Theme.Colors.onSelectionSecondary` is the hierarchical `.secondary` style, for secondary text in
@@ -161,6 +171,13 @@ keep their own case rules.
 - **Motion** (`Theme.Durations`): `interaction` 0.14 s / `interactionAnimation` (ease-out) for
   hover, press, focus, selection, chips; `spring` (0.28 s, no bounce) for the selected segment,
   expanding rows and banners sliding in. Legacy `standardAnimation` = `interactionAnimation`.
+  The notch island grows out of the notch on every show (`islandReveal`, 0.5 s, bounce 0.22, the
+  one bouncy spring) from the notch's own size (`NotchRevealShape`), its content fading in after
+  (`islandContentReveal`), and folds back after Unlocked (`islandCollapse`); with Reduce Motion it
+  only fades.
+  The main window opens on a splash (`fxLaunchSplash()`): the FX Vault mark, 40 pt in `subtleText`, on
+  `MainWindowGround` for `splashHold` (0.45 s), then `splashFade` (0.4 s) into the content, which
+  starts at `splashContentScale` (0.985; 1 with Reduce Motion).
 - **Opacity** (`Theme.Opacity`): `disabled` 0.4, `pressed` 0.82, `hovered` 0.9.
 - **Component metrics** live in `Theme.Layout` ("Design components" section): button heights
   34 / 42, input 44, chip 24, tag 22, segment 30, rows 52 / 36 / 32, mark 18 / 44, dot grid 22.
@@ -1007,9 +1024,15 @@ foreground color, so `.primary` text still turns white on selected rows.
 
 ### Settings
 
-Boards Settings-*: the native `Settings` scene and `TabView` (toolbar tabs: `gearshape`, `lock`,
-`person`, `square.and.arrow.up`, `slider.horizontal.3`), 640 pt wide, at least 430 pt of content;
-the window gets `.fxWindowBackground()`. `PreferencesLayout.swift` draws the tabs:
+Boards Settings-* (1.0.2, Cursor-like): Settings fill the main window in place of its panels
+(`SettingsScreen`; `AppViewModel.isShowingSettings`). Where the sidebar sits, a glass panel as
+wide as the sidebar: ← Back (⌘[), Search Settings (`PanelSearchField`, shared with the sidebar's
+search) and the sections as sidebar rows (`gearshape`, `lock`, `person`, `square.and.arrow.up`,
+`slider.horizontal.3`). Beside it, on the ground, the section's `.title2` title 22 pt from the
+top over its cards, in a column at most 640 pt wide. Search Settings keeps the sections whose
+title or listed settings match; with none, "No settings match". ⌘,, the menu bar's Settings…
+and the sidebar's gear open it; while locked it shows after the unlock, a lock closes it, and
+the onboarding has none. `PreferencesLayout.swift` draws the sections:
 
 - `PreferencesPage`: 16/22 pt inset, groups 14 pt apart.
 - `PreferencesSection`: an optional `.groupTitle` (11 pt semibold, `subtleText`, sentence case:

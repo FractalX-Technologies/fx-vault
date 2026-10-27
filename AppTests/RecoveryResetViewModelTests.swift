@@ -93,4 +93,40 @@ struct RecoveryResetViewModelTests {
         // The user never confirmed saving the new key: the main window reminds them.
         #expect(harness.preferences.isRecoveryKeyConfirmationPending)
     }
+
+    // MARK: - Forgot everything
+
+    @Test func withNeitherThePasswordNorTheKeyTheVaultIsErasedAfterTypingReset() async throws {
+        let harness = try await TestHarness(vault: .locked)
+        harness.app.lockScreen.showRecoveryReset()
+        let viewModel = RecoveryResetViewModel(app: harness.app)
+        viewModel.beginErase()
+        #expect(viewModel.step == .erase)
+        #expect(!viewModel.canErase)
+        viewModel.eraseConfirmationText = "erase"
+        #expect(!viewModel.canErase, "Only the confirmation word erases")
+        viewModel.eraseConfirmationText = " Reset "
+        #expect(viewModel.canErase)
+
+        await viewModel.erase()
+
+        #expect(viewModel.error == nil)
+        #expect(harness.vaultManager.state == .noVault)
+        #expect(harness.app.phase == .onboarding)
+        #expect(!harness.app.lockScreen.isShowingRecoveryReset, "The next lock would open the window")
+        #expect(viewModel.step == .enterKey)
+        #expect(viewModel.eraseConfirmationText.isEmpty)
+    }
+
+    @Test func backFromEraseKeepsTheVault() async throws {
+        let harness = try await TestHarness(vault: .locked)
+        let viewModel = RecoveryResetViewModel(app: harness.app)
+        viewModel.beginErase()
+        viewModel.eraseConfirmationText = "reset"
+        viewModel.cancelErase()
+        #expect(viewModel.step == .enterKey)
+        #expect(viewModel.eraseConfirmationText.isEmpty)
+        await viewModel.erase()
+        #expect(harness.vaultManager.state == .locked)
+    }
 }

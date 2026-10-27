@@ -511,4 +511,33 @@ struct VaultManagerTests {
         again.wipe()
         #expect(harness.manager.state == .unlocked)
     }
+
+    /// The lock screen's last resort when both the password and the recovery key are gone: no
+    /// key can be checked, so it erases without one, like Reset vault.
+    @Test func eraseForgottenVaultErasesALockedVaultWithoutThePassword() async throws {
+        let (harness, recoveryKey) = try await VaultHarness.created()
+        defer { recoveryKey.wipe() }
+        let repo = try harness.seedRepository()
+        try harness.insertItem(repo: repo, name: "API_TOKEN", value: VaultFixture.secretValue)
+        try await harness.manager.enableBiometrics(password: VaultFixture.password)
+        harness.manager.lock()
+
+        try await harness.manager.eraseForgottenVault()
+
+        #expect(harness.manager.state == .noVault)
+        #expect(try harness.records.fetchVault() == nil)
+        #expect(try RepoStore(database: harness.database).fetchAll().isEmpty)
+        #expect(harness.biometrics.accounts.isEmpty, "A Touch ID item would outlive the vault")
+        let again = try await harness.manager.create(password: VaultFixture.otherPassword)
+        again.wipe()
+        #expect(harness.manager.state == .unlocked)
+    }
+
+    @Test func eraseForgottenVaultNeedsAVault() async throws {
+        let harness = try VaultHarness()
+        let error = await vaultError {
+            try await harness.manager.eraseForgottenVault()
+        }
+        #expect(error == .notInitialized)
+    }
 }

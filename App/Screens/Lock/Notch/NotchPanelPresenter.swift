@@ -24,6 +24,16 @@ final class NotchPanelPresenter {
         (NSScreen.main ?? NSScreen.screens.first)?.safeAreaInsets.top ?? 0
     }
 
+    /// The main screen's notch width (``NotchGeometry/notchWidth(screenWidth:leftArea:rightArea:)``).
+    static var screenNotchWidth: CGFloat {
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else { return 0 }
+        return NotchGeometry.notchWidth(
+            screenWidth: screen.frame.width,
+            leftArea: screen.auxiliaryTopLeftArea,
+            rightArea: screen.auxiliaryTopRightArea
+        )
+    }
+
     var isVisible: Bool {
         panel?.isVisible == true
     }
@@ -33,6 +43,8 @@ final class NotchPanelPresenter {
         let panel = panel ?? makePanel()
         place(size: panel.contentView?.fittingSize ?? .zero)
         panel.makeKeyAndOrderFront(nil)
+        // Draws the current state now (the island as the notch), so the reveal animates from it.
+        panel.displayIfNeeded()
     }
 
     /// `dropping`: the next show draws a new panel, so no old frame flashes when it reopens.

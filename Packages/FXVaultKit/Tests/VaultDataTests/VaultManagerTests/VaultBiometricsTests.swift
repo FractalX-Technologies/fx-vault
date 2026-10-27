@@ -442,6 +442,24 @@ struct VaultBiometricsTests {
         #expect(Set(harness.biometrics.deletedAccounts).isSuperset(of: [orphanA, orphanB]))
     }
 
+    /// 1.0.2: a vault erased, then a new one. The old vault's item stayed in the keychain, and
+    /// turning Touch ID on for the new vault must still work.
+    @Test func enableWorksAfterTheVaultWasErasedAndCreatedAgain() async throws {
+        let (harness, recoveryKey) = try await VaultHarness.created()
+        defer { recoveryKey.wipe() }
+        try await harness.manager.enableBiometrics(password: VaultFixture.password)
+        let oldAccount = try harness.account
+        try await harness.manager.resetVault(password: VaultFixture.password)
+        #expect(harness.biometrics.accounts.isEmpty, "the erase deletes the old vault's item")
+
+        harness.biometrics.seedItem(account: oldAccount, bytes: Data(repeating: 0x33, count: Limits.dekBytes))
+        let newKey = try await harness.manager.create(password: VaultFixture.password)
+        defer { newKey.wipe() }
+        try await harness.manager.enableBiometrics(password: VaultFixture.password)
+        #expect(try harness.manager.isBiometricsEnabled())
+        #expect(harness.biometrics.accounts == [try harness.account])
+    }
+
     @Test func disableRequiresThePasswordAndDeletesTheItem() async throws {
         let (harness, recoveryKey) = try await VaultHarness.created()
         defer { recoveryKey.wipe() }

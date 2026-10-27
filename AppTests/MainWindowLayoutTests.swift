@@ -119,10 +119,13 @@ struct MainWindowLayoutTests {
         window.layoutIfNeeded()
         let inset = Theme.Layout.mainPanelInset
 
-        let gutter = CGPoint(x: inset / 2, y: Self.defaultSize.height / 2)
+        // The gutter under the detail (window points start at the bottom); the sidebar is flush
+        // with the leading edge since 1.0.2.
+        let detailLeading = Theme.Layout.sidebarWidth + inset
+        let gutter = CGPoint(x: detailLeading + Theme.Spacing.large, y: inset / 2)
         #expect(Self.view(at: gutter, in: window) is WindowDragArea.DragAreaView)
-        // The detail's bottom leading corner (window points start at the bottom).
-        let detailCorner = CGPoint(x: 2 * inset + Theme.Layout.sidebarWidth + Theme.Spacing.large, y: inset + Theme.Spacing.large)
+        // The detail's bottom leading corner.
+        let detailCorner = CGPoint(x: detailLeading + Theme.Spacing.large, y: inset + Theme.Spacing.large)
         #expect(!(Self.view(at: detailCorner, in: window) is WindowDragArea.DragAreaView))
         withExtendedLifetime(harness) {}
     }

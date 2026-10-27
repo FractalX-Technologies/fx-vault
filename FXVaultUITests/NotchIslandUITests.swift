@@ -1,16 +1,17 @@
 import XCTest
 
 /// The notch island replaces the lock window (tasks/todo.md B11e): locking closes the main
-/// window and shows the island; the master password there unlocks and the window comes back.
+/// window and shows nothing; opening FX Vault shows the island, and the master password there
+/// unlocks and the window comes back.
 /// UI-testing builds are ad-hoc signed, so Touch ID is unavailable and the island asks for the
 /// password at once.
 final class NotchIslandUITests: VaultUITestCase {
     @MainActor
-    func testLockingShowsTheIslandAndItsPasswordUnlocks() throws {
+    func testLockingHidesEverythingAndTheIslandsPasswordUnlocks() throws {
         let app = launch()
         let sidebar = try onboard(app)
 
-        app.typeKey("l", modifierFlags: [.control, .command])
+        lockThenOpenIsland(app)
         let field = app.secureTextFields[AccessibilityID.Island.password]
         XCTAssertTrue(field.waitForExistence(timeout: timeout), "The island never asked for the password")
         let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: sidebar)

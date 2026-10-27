@@ -66,11 +66,14 @@ final class NotchIslandController {
     /// Shows "Unlocked" for a moment, then goes away.
     func dismissUnlocked() {
         isPresented = false
-        model.lock.dropIslandTouchID()
         guard presenter.isVisible else { return }
         model.isUnlocked = true
         hideTask = Task { [weak self] in
             try? await Task.sleep(for: Theme.Durations.islandUnlocked)
+            guard !Task.isCancelled else { return }
+            // Folds back into the notch, then goes.
+            self?.model.isRevealed = false
+            try? await Task.sleep(for: Theme.Durations.islandCollapseDuration)
             guard !Task.isCancelled else { return }
             self?.presenter.hide()
         }
@@ -80,16 +83,30 @@ final class NotchIslandController {
     func dismiss() {
         hideTask?.cancel()
         isPresented = false
-        model.lock.dropIslandTouchID()
+        model.isRevealed = false
         presenter.hide()
     }
 
     private func showIfPresented() {
         guard isPresented, NSApp.isActive else { return }
         model.notchHeight = NotchPanelPresenter.screenNotchHeight
-        // Before the view shows and before the auto-prompt evaluates it.
-        model.lock.prepareIslandTouchID()
+        model.notchWidth = NotchPanelPresenter.screenNotchWidth
+        if !presenter.isVisible {
+            model.isRevealed = false
+        }
         presenter.show()
+        // Drawn as the notch first, then grown on the next pass; a present() over an island on
+        // screen (Quick Vault while locked) folded it, so it grows again too.
+        if !model.isRevealed {
+            Task { [weak self] in
+                try? await Task.sleep(for: Theme.Durations.islandRevealDelay)
+                guard let self, self.isPresented else { return }
+                self.model.isRevealed = true
+            }
+        }
+        // Touch ID waits for a click on the fingerprint (1.0.2); the quick vault's shortcut is
+        // itself that request, so it prompts at once.
+        guard model.opensQuickVault else { return }
         Task {
             await model.lock.autoPromptIfAllowed(isAppActive: NSApp.isActive, isSceneActive: true)
         }

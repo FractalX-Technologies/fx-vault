@@ -15335,6 +15335,39 @@
         }
       }
     },
+    "recoveryReset.erase.subtitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Without your master password or recovery key, nobody can open this vault again, not even FX Vault. Erasing it deletes every repository, secret and variable stored on this Mac and turns off Touch ID, then you create a new vault. Nothing on GitHub changes. This cannot be undone."
+          }
+        }
+      }
+    },
+    "recoveryReset.erase.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Erase vault and start over?"
+          }
+        }
+      }
+    },
+    "recoveryReset.forgotKey" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No recovery key either? Erase vault…"
+          }
+        }
+      }
+    },
     "recoveryReset.key.label" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -16149,6 +16182,17 @@
         }
       }
     },
+    "settings.back" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Back"
+          }
+        }
+      }
+    },
     "settings.general.autoLock" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -16475,6 +16519,105 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Reset vault?"
+          }
+        }
+      }
+    },
+    "settings.search.accounts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "github gh account login token scopes organizations ssh azure tenant"
+          }
+        }
+      }
+    },
+    "settings.search.advanced" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "gh path github cli telemetry diagnostics vault folder"
+          }
+        }
+      }
+    },
+    "settings.search.empty.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Try another word."
+          }
+        }
+      }
+    },
+    "settings.search.empty.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No settings match"
+          }
+        }
+      }
+    },
+    "settings.search.general" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "quick vault shortcut open at login lock inactivity sleep clipboard sound effects clone folder"
+          }
+        }
+      }
+    },
+    "settings.search.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search Settings"
+          }
+        }
+      }
+    },
+    "settings.search.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search Settings"
+          }
+        }
+      }
+    },
+    "settings.search.security" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "touch id master password change recovery key reset vault erase"
+          }
+        }
+      }
+    },
+    "settings.search.sharing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "share files sent passphrase rotate airdrop"
           }
         }
       }

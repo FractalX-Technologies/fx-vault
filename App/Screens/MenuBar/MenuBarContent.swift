@@ -5,7 +5,6 @@ import SwiftUI
 /// Review Sync · N pending… (only with something pending), Lock Now, Settings… and Quit.
 struct MenuBarContent: View {
     let app: AppViewModel
-    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         // The shortcut shows beside it; the menu answers it only while open (the hot key works
@@ -32,11 +31,10 @@ struct MenuBarContent: View {
         .disabled(!app.canLock)
         .accessibilityIdentifier(AccessibilityID.MenuBar.lockNow)
         Button(MenuBarCopy.settings) {
-            // A menu bar item doesn't activate the app: the window would open behind others.
-            NSApp.activate()
-            openSettings()
+            app.showSettings()
         }
         .keyboardShortcut(",", modifiers: .command)
+        .disabled(!app.canShowSettings)
         .accessibilityIdentifier(AccessibilityID.MenuBar.settings)
         Divider()
         Button(MenuBarCopy.quit) {
