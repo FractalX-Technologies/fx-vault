@@ -98,28 +98,32 @@ struct VaultPlatformTests {
         manager.invalidate()
     }
 
-    @Test func presenceAndListQueriesNeverAskForDataOrUI() {
+    @Test func thePresenceQueryNeverAsksForDataOrUI() {
         let manager = BiometricAuthManager()
         let presence = KeychainManager.presenceQuery(
             account: "touchid-v1-00",
             accessGroup: FakeBuildCapabilities.defaultAccessGroup,
             context: manager.silentContext()
         )
-        let list = KeychainManager.listQuery(
-            accessGroup: FakeBuildCapabilities.defaultAccessGroup,
-            context: manager.silentContext()
-        )
-        for query in [presence, list] {
-            #expect(query[kSecReturnData as String] == nil)
-            #expect(query[kSecReturnAttributes as String] as? Bool == true)
-            #expect(query[kSecUseDataProtectionKeychain as String] as? Bool == true)
-            #expect(query[kSecAttrAccessGroup as String] as? String == FakeBuildCapabilities.defaultAccessGroup)
-            #expect((query[kSecUseAuthenticationContext as String] as? LAContext)?.interactionNotAllowed == true)
-        }
+        #expect(presence[kSecReturnData as String] == nil)
+        #expect(presence[kSecReturnAttributes as String] as? Bool == true)
+        #expect(presence[kSecUseDataProtectionKeychain as String] as? Bool == true)
+        #expect(presence[kSecAttrAccessGroup as String] as? String == FakeBuildCapabilities.defaultAccessGroup)
+        #expect((presence[kSecUseAuthenticationContext as String] as? LAContext)?.interactionNotAllowed == true)
         #expect(presence[kSecAttrAccount as String] as? String == "touchid-v1-00")
         #expect(presence[kSecMatchLimit as String] as? String == kSecMatchLimitOne as String)
-        #expect(list[kSecAttrAccount as String] == nil)
-        #expect(list[kSecMatchLimit as String] as? String == kSecMatchLimitAll as String)
+    }
+
+    /// Delete-all matches every item of this flavor's service in the access group, and nothing
+    /// that would need UI (1.0.2: listing them did).
+    @Test func theDeleteAllQueryMatchesEveryItemOfTheService() {
+        let query = KeychainManager.itemQuery(account: nil, accessGroup: FakeBuildCapabilities.defaultAccessGroup)
+        #expect(query[kSecAttrAccount as String] == nil)
+        #expect(query[kSecAttrService as String] as? String == BiometricKeyAccount.service)
+        #expect(query[kSecAttrAccessGroup as String] as? String == FakeBuildCapabilities.defaultAccessGroup)
+        #expect(query[kSecUseDataProtectionKeychain as String] as? Bool == true)
+        #expect(query[kSecReturnAttributes as String] == nil)
+        #expect(query[kSecUseAuthenticationContext as String] == nil)
     }
 
     @Test func presenceMapping() throws {
@@ -146,7 +150,7 @@ struct VaultPlatformTests {
             try manager.delete(account: "touchid-v1-00")
         }
         #expect(try !manager.contains(account: "touchid-v1-00"))
-        #expect(try manager.allAccounts().isEmpty)
+        try manager.deleteAll()
         manager.invalidateAuthentication()
     }
 

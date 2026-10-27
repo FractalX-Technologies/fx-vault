@@ -45,8 +45,9 @@ public protocol BiometricKeyStoring: Sendable {
     /// Deletes the item for `account`. Deleting a missing item succeeds.
     func delete(account: String) throws(VaultError)
 
-    /// The accounts of every item of the FX Vault DEK service, for orphan cleanup.
-    func allAccounts() throws(VaultError) -> [String]
+    /// Deletes every item of the FX Vault DEK service: an erased vault's and the current one.
+    /// A delete needs no UI; listing these items without UI fails while one exists.
+    func deleteAll() throws(VaultError)
 
     /// Invalidates the authentication context of a pending or finished prompt (every lock,
     /// §5.5). Synchronous and safe to call from any thread.

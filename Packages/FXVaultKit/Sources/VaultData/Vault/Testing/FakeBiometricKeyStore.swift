@@ -230,8 +230,11 @@ public final class FakeBiometricKeyStore: BiometricKeyStoring {
         }
     }
 
-    public func allAccounts() throws(VaultError) -> [String] {
-        accounts
+    public func deleteAll() throws(VaultError) {
+        state.withLock { state in
+            state.deletedAccounts += state.items.keys.sorted()
+            state.items = [:]
+        }
     }
 
     public func invalidateAuthentication() {
