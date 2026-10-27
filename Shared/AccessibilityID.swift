@@ -48,6 +48,13 @@ enum AccessibilityID {
         static let unlocked = "island.unlocked"
     }
 
+    /// The recovery screen's last resort: erase a vault whose password and key are both lost.
+    enum Recovery {
+        static let forgotKey = "recovery.forgotKey"
+        static let eraseConfirmation = "recovery.eraseConfirmation"
+        static let erase = "recovery.erase"
+    }
+
     /// In-app Approve through `gh auth refresh` (1.0 B4b).
     enum GHApproval {
         static let sheet = "ghApproval"

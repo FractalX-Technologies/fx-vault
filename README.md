@@ -176,7 +176,9 @@ notch (on a screen without one, it floats under the menu bar): **Touch ID to unl
 Password** for the master password. On a signed build the touch happens in the island itself,
 with no Touch ID dialog. The island never shows names or values. After the unlock it
 says **Unlocked** and the main window opens; locking (⌃⌘L, sleep, idle) closes the window again.
-**Recovery Key…** in the island opens the recovery window. **Settings › General › Open at
+**Recovery Key…** in the island opens the recovery window; with no recovery key either, **No
+recovery key either? Erase vault…** erases everything on this Mac after you type `reset`, and
+FX Vault starts over. **Settings › General › Open at
 login** starts FX Vault, locked, when you log in to your Mac.
 
 FX Vault's dot grid in the menu bar has **Quick Vault** (with its shortcut), opens the same

@@ -2,11 +2,13 @@ import SwiftUI
 import VaultCore
 
 /// Recovery reset (§5.2, D9): recovery key and new password, then the **new** recovery key. One
-/// card on the lock screen's dotted ground.
+/// card on the lock screen's dotted ground. Without the key either, the last resort erases the
+/// vault after typing the confirmation word.
 struct RecoveryResetScreen: View {
     @Bindable var viewModel: RecoveryResetViewModel
     let onCancel: () -> Void
     @FocusState private var isKeyFocused: Bool
+    @FocusState private var isEraseConfirmationFocused: Bool
 
     private var sectionLabel: String {
         String(localized: "recoveryReset.label", defaultValue: "Recovery")
@@ -19,6 +21,8 @@ struct RecoveryResetScreen: View {
                 enterKey
             case .showNewKey:
                 showNewKey
+            case .erase:
+                erase
             }
             if let error = viewModel.error {
                 InlineErrorView(error: error)
@@ -80,6 +84,59 @@ struct RecoveryResetScreen: View {
             .disabled(!viewModel.canReset)
         }
         .padding(.top, Theme.Spacing.small)
+
+        Button(String(localized: "recoveryReset.forgotKey", defaultValue: "No recovery key either? Erase vault…")) {
+            viewModel.beginErase()
+        }
+        .fxLinkButtonStyle()
+        .disabled(viewModel.isWorking)
+        .accessibilityIdentifier(AccessibilityID.Recovery.forgotKey)
+    }
+
+    @ViewBuilder private var erase: some View {
+        SheetHeader(
+            label: sectionLabel,
+            title: String(localized: "recoveryReset.erase.title", defaultValue: "Erase vault and start over?"),
+            subtitle: String(
+                localized: "recoveryReset.erase.subtitle",
+                defaultValue: "Without your master password or recovery key, nobody can open this vault again, not even FX Vault. Erasing it deletes every repository, secret and variable stored on this Mac and turns off Touch ID, then you create a new vault. Nothing on GitHub changes. This cannot be undone."
+            )
+        )
+        VStack(alignment: .leading, spacing: Theme.Spacing.mediumMinus) {
+            SectionLabel(eraseConfirmLabel)
+                .accessibilityHidden(true)
+            TextField(text: $viewModel.eraseConfirmationText, prompt: Text(verbatim: PreferencesViewModel.resetConfirmationWord)) {
+                Text(eraseConfirmLabel)
+            }
+            .autocorrectionDisabled()
+            .focused($isEraseConfirmationFocused)
+            .disabled(viewModel.isWorking)
+            .onSubmit { Task { await viewModel.erase() } }
+            .fxInputField(.rounded, isFocused: isEraseConfirmationFocused, isMonospaced: true)
+            .accessibilityIdentifier(AccessibilityID.Recovery.eraseConfirmation)
+        }
+        ShellFooter(isWorking: viewModel.isWorking) {
+            Button(String(localized: "onboarding.back", defaultValue: "Back")) {
+                viewModel.cancelErase()
+            }
+            .fxButtonStyle(.secondary, size: .large)
+            .keyboardShortcut(.cancelAction)
+            Button(String(localized: "settings.reset.submit", defaultValue: "Erase Vault"), role: .destructive) {
+                Task { await viewModel.erase() }
+            }
+            .fxButtonStyle(.destructive, size: .large)
+            .disabled(!viewModel.canErase)
+            .accessibilityIdentifier(AccessibilityID.Recovery.erase)
+        }
+        .padding(.top, Theme.Spacing.small)
+        .onAppear { isEraseConfirmationFocused = true }
+    }
+
+    private var eraseConfirmLabel: String {
+        String(
+            localized: "settings.reset.confirm",
+            defaultValue: "Type \(PreferencesViewModel.resetConfirmationWord) to confirm"
+        )
     }
 
     @ViewBuilder private var showNewKey: some View {

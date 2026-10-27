@@ -447,21 +447,40 @@ public final class VaultManager: Sendable {
         try await gate.run {
             try requireVault()
             _ = try await unwrapWithPassword(password)
-            lock()
-            try session.database.write { tx in
-                try records.eraseAllData(in: tx)
-            }
-            lifecycle.withLock { lifecycle in
-                lifecycle.hasVault = false
-                lifecycle.isBiometricsTurnedOffAutomatically = false
-            }
-            checkpointAfterKeyWrite()
-            if capabilities.hasKeychainAccessGroup {
-                for account in (try? biometricStore.allAccounts()) ?? [] {
-                    try? biometricStore.delete(account: account)
-                }
-            }
+            try eraseEverything()
             VaultManagerConstants.log.info("Vault reset")
+        }
+    }
+
+    /// Erases the vault with no password or recovery key, for a user who has lost both: nothing
+    /// can be checked, and without either the encrypted data can never be read again anyway.
+    /// The lock screen asks to type the confirmation word first.
+    ///
+    /// - Throws: `VaultError.notInitialized`.
+    @concurrent
+    public func eraseForgottenVault() async throws {
+        try await gate.run {
+            try requireVault()
+            try eraseEverything()
+            VaultManagerConstants.log.info("Forgotten vault erased")
+        }
+    }
+
+    /// Locks, then erases every row, the vault record and the Touch ID items.
+    private func eraseEverything() throws {
+        lock()
+        try session.database.write { tx in
+            try records.eraseAllData(in: tx)
+        }
+        lifecycle.withLock { lifecycle in
+            lifecycle.hasVault = false
+            lifecycle.isBiometricsTurnedOffAutomatically = false
+        }
+        checkpointAfterKeyWrite()
+        if capabilities.hasKeychainAccessGroup {
+            for account in (try? biometricStore.allAccounts()) ?? [] {
+                try? biometricStore.delete(account: account)
+            }
         }
     }
 

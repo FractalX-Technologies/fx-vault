@@ -495,7 +495,8 @@ them with `await`). Packages ship no user-facing text: the app maps every error.
   `biometricUnlockStatus()`, `isBiometricsEnabled()`, `biometricsAvailability()`,
   `changePassword(current:new:rotate:)`, `resetWithRecoveryKey(_:newPassword:)` (always
   rotates), `rotateDEK(password:)`, `newRecoveryKey(password:)`, `enableBiometrics(password:)`,
-  `disableBiometrics(password:)`, `resetVault(password:)`,
+  `disableBiometrics(password:)`, `resetVault(password:)`, `eraseForgottenVault()` (no password:
+  both the password and the recovery key are lost, decision 141),
   `isBiometricsTurnedOffAutomatically` / `acknowledgeBiometricsTurnedOff()` (in memory: Touch ID
   turned itself off through an enrollment change, an invalidated, missing or foreign item, or a
   failed replacement; set wherever that is detected, including ReauthGate checks while unlocked;
@@ -985,6 +986,7 @@ teammate files shipped marked **Experimental**; 1.0 removed both.
 | 139 | Organization edits | `OrganizationItemRepository` (1.0, B6b) keeps organization changes in `org_items` itself (v19: tombstone, synced visibility, edited repository list) rather than a generalized change table: the item's status is derived from its row, as for destinations. A `selected` list is validated once (`GHSelectedRepositories`) and stored whole, or not at all, so a write never sends a partial list |
 | 140 | Organization Sync | `OrganizationSyncRepository` (1.0, B6b) reviews against B12/B13 and blocks an add GitHub already has, an item GitHub changed since it was read (`updatedAt`), and a secret write without its value (gh needs one, even for an access change). Every write sends the complete access: the edited list, or for an unchanged `selected` item GitHub's list read right before the write (B14/B15); an empty list is never written. One confirming re-list records the synced state. No journal: an interrupted write stays pending and the next review blocks it as changed until a refresh |
 | 137 | Test-only SPI | The app and its tests never import VaultStore (`scripts/lint.sh`), so app tests that need held rows call `ShareHoldRepository.hold(_:under:senderName:senderDeviceID:importedAt:)`, and tests of files from older versions write them with `SharingRepository.exportLegacyFile(_:to:senderName:appVersion:authorization:existingFile:)` (format 1, schemas 1–3, the 0.8 writer, still behind `.fileExport` re-authentication). Both are `@_spi(Testing)`: not part of VaultData's public API; only a file that writes `@_spi(Testing) import VaultData` can call them, and `scripts/lint.sh` refuses that import in App/ |
+| 141 | Erase a forgotten vault | Recovery's "No recovery key either? Erase vault…" (1.0.2) erases with no password, an exception to D30 asked for by the owner: with neither the password nor the recovery key nobody can read the vault again, so a password check would only keep the user locked out of starting over. Typing `reset` guards against a slip; nothing on GitHub changes |
 
 ### As built in 1.0 (simplification, slice B3)
 

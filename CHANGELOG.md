@@ -5,6 +5,12 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 
 ## 1.0.2
 
+### Added
+
+- **Erase a forgotten vault.** With neither the master password nor the recovery key, the
+  island's Recovery Key… now offers "No recovery key either? Erase vault…": type `reset` and
+  FX Vault erases everything on this Mac and starts over at onboarding. Nothing on GitHub changes.
+
 ### Fixed
 
 - **One unlock screen at launch, again.** 1.0.1 still opened locked with the lock window beside

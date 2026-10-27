@@ -211,6 +211,11 @@ final class PreferencesViewModel: LockObserving {
     /// command, so documentation and support can quote it.
     static let resetConfirmationWord = "reset"
 
+    /// True when `text` is the confirmation word, ignoring case and surrounding spaces.
+    static func isResetConfirmed(_ text: String) -> Bool {
+        text.trimmingCharacters(in: .whitespaces).lowercased() == resetConfirmationWord
+    }
+
     var canStartReset: Bool {
         app.phase != .onboarding
     }
@@ -218,7 +223,7 @@ final class PreferencesViewModel: LockObserving {
     var canResetVault: Bool {
         canStartReset
             && !resetPassword.isEmpty
-            && resetConfirmationText.trimmingCharacters(in: .whitespaces).lowercased() == Self.resetConfirmationWord
+            && Self.isResetConfirmed(resetConfirmationText)
             && !isResetting
     }
 

@@ -6,11 +6,16 @@ import VaultData
 /// "Forgot password? Use recovery key" (§5.2, D9): the recovery key opens the vault, a new master
 /// password is set, the DEK is **always** rotated and a **new** recovery key is shown. The old
 /// recovery key and the old password stop working.
+///
+/// With neither the password nor the recovery key, the last resort erases the vault after the
+/// confirmation word (``Step/erase``) and FX Vault starts over at onboarding.
 @Observable
 final class RecoveryResetViewModel: LockObserving {
     enum Step: Equatable {
         case enterKey
         case showNewKey
+        /// "No recovery key either": erase everything and start over.
+        case erase
     }
 
     private(set) var step: Step = .enterKey
@@ -22,6 +27,8 @@ final class RecoveryResetViewModel: LockObserving {
     private(set) var strength = PasswordStrength.evaluate("")
     private(set) var isWorking = false
     private(set) var error: ErrorPresentationModel?
+    /// What the user typed to confirm the erase.
+    var eraseConfirmationText = ""
 
     /// The new recovery key groups while they are on screen.
     private(set) var newRecoveryKeyGroups: [String] = []
@@ -81,6 +88,39 @@ final class RecoveryResetViewModel: LockObserving {
         }
     }
 
+    // MARK: - Erase
+
+    var canErase: Bool {
+        step == .erase && PreferencesViewModel.isResetConfirmed(eraseConfirmationText) && !isWorking
+    }
+
+    func beginErase() {
+        cancel()
+        error = nil
+        step = .erase
+    }
+
+    func cancelErase() {
+        eraseConfirmationText = ""
+        error = nil
+        step = .enterKey
+    }
+
+    /// Erases the vault with no password (both are lost) and returns to onboarding.
+    func erase() async {
+        guard canErase else { return }
+        isWorking = true
+        error = nil
+        defer { isWorking = false }
+        do {
+            try await app.container.vaultManager.eraseForgottenVault()
+            cancelErase()
+            app.didResetVault()
+        } catch {
+            self.error = error.presentation
+        }
+    }
+
     func copyNewRecoveryKey() {
         guard let newRecoveryKey else { return }
         app.container.clipboard.copy(newRecoveryKey.formatted)
@@ -108,6 +148,7 @@ final class RecoveryResetViewModel: LockObserving {
 
     func vaultDidLock() {
         cancel()
+        eraseConfirmationText = ""
         error = nil
         step = .enterKey
     }
