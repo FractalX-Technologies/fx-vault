@@ -14,6 +14,10 @@ final class NotchIslandModel {
     let lock: LockViewModel
     /// The screen's notch height; 0 floats the island under the menu bar with all corners round.
     var notchHeight: CGFloat = 0
+    /// The hardware notch's width, where the island grows from; 0 without a notch.
+    var notchWidth: CGFloat = 0
+    /// Grown out of the notch; false draws the notch alone. Each show grows it again.
+    var isRevealed = false
     var isUnlocked = false
     /// **Use Password**, or the Touch ID prompt's own password fallback.
     var prefersPassword = false
@@ -34,6 +38,7 @@ final class NotchIslandModel {
 
     /// A new lock starts on Touch ID again.
     func reset() {
+        isRevealed = false
         isUnlocked = false
         prefersPassword = false
         opensQuickVault = false
@@ -61,7 +66,19 @@ struct NotchIslandView: View {
         .padding(.horizontal, Theme.Spacing.large)
         .padding(.top, model.notchHeight > 0 ? Theme.Spacing.small : Theme.Spacing.medium)
         .padding(.bottom, Theme.Spacing.medium)
-        .notchIsland(notchHeight: model.notchHeight, width: model.width)
+        .opacity(model.isRevealed ? 1 : 0)
+        .animation(
+            model.isRevealed ? Theme.Durations.islandContentReveal : Theme.Durations.interactionAnimation,
+            value: model.isRevealed
+        )
+        .notchIsland(
+            notchHeight: model.notchHeight,
+            width: model.width,
+            // With Reduce Motion the outline stays whole and only the content fades.
+            reveal: reduceMotion || model.isRevealed ? 1 : 0,
+            notchWidth: model.notchWidth
+        )
+        .animation(model.isRevealed ? Theme.Durations.islandReveal : Theme.Durations.islandCollapse, value: model.isRevealed)
         .animation(Theme.Durations.spring, value: model.state)
         .onGeometryChange(for: CGSize.self, of: \.size) { size in
             model.onSizeChange?(size)
@@ -208,7 +225,7 @@ extension View {
     /// The black island grown out of the notch (the lock island, the quick vault): a band the
     /// hardware notch covers, then the content, `width` wide. Under a notch it is flush with the
     /// screen's top edge, so only its lower corners are round.
-    func notchIsland(notchHeight: CGFloat, width: CGFloat) -> some View {
+    func notchIsland(notchHeight: CGFloat, width: CGFloat, reveal: CGFloat = 1, notchWidth: CGFloat = 0) -> some View {
         let radius = Theme.Layout.islandCornerRadius
         let top = notchHeight > 0 ? 0 : radius
         let shape = UnevenRoundedRectangle(
@@ -223,6 +240,15 @@ extension View {
         }
         .frame(width: width)
         .background(Theme.Colors.island, in: shape)
+        // `reveal` grows it out of the notch (the lock island); 1 draws it whole.
+        .clipShape(NotchRevealShape(
+            progress: reveal,
+            startWidth: notchWidth,
+            startHeight: notchHeight,
+            topRadius: top,
+            startRadius: Theme.Layout.notchCornerRadius,
+            radius: radius
+        ))
         .environment(\.colorScheme, .dark)
     }
 }

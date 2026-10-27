@@ -72,6 +72,10 @@ final class NotchIslandController {
         hideTask = Task { [weak self] in
             try? await Task.sleep(for: Theme.Durations.islandUnlocked)
             guard !Task.isCancelled else { return }
+            // Folds back into the notch, then goes.
+            self?.model.isRevealed = false
+            try? await Task.sleep(for: Theme.Durations.islandCollapseDuration)
+            guard !Task.isCancelled else { return }
             self?.presenter.hide()
         }
     }
@@ -81,15 +85,27 @@ final class NotchIslandController {
         hideTask?.cancel()
         isPresented = false
         model.lock.dropIslandTouchID()
+        model.isRevealed = false
         presenter.hide()
     }
 
     private func showIfPresented() {
         guard isPresented, NSApp.isActive else { return }
         model.notchHeight = NotchPanelPresenter.screenNotchHeight
+        model.notchWidth = NotchPanelPresenter.screenNotchWidth
         // Before the view shows and before the auto-prompt evaluates it.
         model.lock.prepareIslandTouchID()
+        if !presenter.isVisible {
+            model.isRevealed = false
+        }
         presenter.show()
+        // Drawn as the notch first, then grown on the next pass; a present() over an island on
+        // screen (Quick Vault while locked) folded it, so it grows again too.
+        if !model.isRevealed {
+            Task { [weak self] in
+                self?.model.isRevealed = true
+            }
+        }
         Task {
             await model.lock.autoPromptIfAllowed(isAppActive: NSApp.isActive, isSceneActive: true)
         }

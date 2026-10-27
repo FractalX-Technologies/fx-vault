@@ -75,6 +75,8 @@ enum Theme {
         static let islandWidth: CGFloat = 340
         static let islandCornerRadius: CGFloat = 20
         static let islandMenuBarGap: CGFloat = 6
+        /// The hardware notch's lower corners, where the island starts growing.
+        static let notchCornerRadius: CGFloat = 8
         /// The setup command output box: about eight lines before it scrolls.
         static let commandOutputMaxHeight: CGFloat = 140
         /// Widest lock-screen form and onboarding text column.

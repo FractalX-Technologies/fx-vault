@@ -21,6 +21,12 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **A crash after a few touches.** A renewed Touch ID check could leave two sensors in the island
   for a moment, which AppKit refuses ("only 1 NSOcclusionDetectionView per window").
 
+### Changed
+
+- **The island grows out of the notch.** Each time it shows it starts as the notch itself and
+  springs open, its content fading in; after Unlocked it folds back in (a fade with Reduce
+  Motion).
+
 ## 1.0.1
 
 ### Fixed

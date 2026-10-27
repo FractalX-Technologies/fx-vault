@@ -36,6 +36,39 @@ struct NotchIslandTests {
         #expect(frame.midX == external.midX)
     }
 
+    // MARK: - Growing out of the notch
+
+    @Test func theNotchIsTheScreenMinusTheAreasBesideIt() {
+        let left = CGRect(x: 0, y: 944, width: 662, height: 38)
+        let right = CGRect(x: 850, y: 944, width: 662, height: 38)
+        #expect(NotchGeometry.notchWidth(screenWidth: 1512, leftArea: left, rightArea: right) == 188)
+        #expect(
+            NotchGeometry.notchWidth(screenWidth: 1512, leftArea: nil, rightArea: nil) == 0,
+            "Without a notch the island grows from a point"
+        )
+    }
+
+    @Test func theIslandGrowsFromTheNotchToItsWholeFrame() {
+        let rect = CGRect(x: 0, y: 0, width: 340, height: 120)
+        let start = NotchRevealShape.outline(progress: 0, in: rect, startWidth: 188, startHeight: 38)
+        #expect(start == CGRect(x: 76, y: 0, width: 188, height: 38), "It starts as the notch itself")
+        let half = NotchRevealShape.outline(progress: 0.5, in: rect, startWidth: 188, startHeight: 38)
+        #expect(half == CGRect(x: 38, y: 0, width: 264, height: 79), "Centered, hung from the top")
+        #expect(NotchRevealShape.outline(progress: 1, in: rect, startWidth: 188, startHeight: 38) == rect)
+        #expect(
+            NotchRevealShape.outline(progress: 1.1, in: rect, startWidth: 188, startHeight: 38) == rect,
+            "A spring's overshoot never draws past the panel"
+        )
+    }
+
+    @Test func aNewShowStartsCollapsed() async throws {
+        let harness = try await TestHarness(vault: .locked)
+        let model = NotchIslandModel(lock: harness.app.lockScreen)
+        model.isRevealed = true
+        model.reset()
+        #expect(!model.isRevealed)
+    }
+
     @Test func touchIDFirstThenPasswordThenUnlocked() async throws {
         let harness = try await TestHarness(vault: .unlocked)
         try await harness.enableTouchID()

@@ -161,6 +161,10 @@ keep their own case rules.
 - **Motion** (`Theme.Durations`): `interaction` 0.14 s / `interactionAnimation` (ease-out) for
   hover, press, focus, selection, chips; `spring` (0.28 s, no bounce) for the selected segment,
   expanding rows and banners sliding in. Legacy `standardAnimation` = `interactionAnimation`.
+  The notch island grows out of the notch on every show (`islandReveal`, 0.5 s, bounce 0.22, the
+  one bouncy spring) from the notch's own size (`NotchRevealShape`), its content fading in after
+  (`islandContentReveal`), and folds back after Unlocked (`islandCollapse`); with Reduce Motion it
+  only fades.
 - **Opacity** (`Theme.Opacity`): `disabled` 0.4, `pressed` 0.82, `hovered` 0.9.
 - **Component metrics** live in `Theme.Layout` ("Design components" section): button heights
   34 / 42, input 44, chip 24, tag 22, segment 30, rows 52 / 36 / 32, mark 18 / 44, dot grid 22.
