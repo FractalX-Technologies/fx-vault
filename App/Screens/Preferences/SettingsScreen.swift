@@ -149,6 +149,6 @@ struct VaultSettingsLockedView: View {
 #Preview {
     if let container = try? AppContainer.preview() {
         SettingsScreen(app: AppViewModel(container: container), panelWidth: Theme.Layout.sidebarWidth)
-            .background(MainWindowGround())
+            .background(MainWindowGround(sidebarWidth: Theme.Layout.sidebarWidth))
     }
 }

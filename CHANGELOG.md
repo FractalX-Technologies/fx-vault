@@ -30,7 +30,8 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   section's cards on the right. The separate Settings window is gone.
 - **A Cursor-like main window.** Cursor's dark greys (measured from Cursor), a flat ground, the
   sidebar as a flush pane with a hairline instead of a floating glass panel, a flat toolbar, and
-  sidebar names in 13 pt SF Pro.
+  sidebar names in 13 pt SF Pro. The window is glass, as in Cursor: the desktop shows through
+  the sidebar, blurred, and barely through the rest (solid with Reduce Transparency).
 - **A launch splash.** The window opens on FX Vault's small grey mark over the soft ground,
   then fades into its content.
 - **The island grows out of the notch.** Each time it shows it starts as the notch itself and

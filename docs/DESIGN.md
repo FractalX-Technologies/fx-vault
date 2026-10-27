@@ -64,7 +64,9 @@ Since 1.0.2 the dark column is Cursor-like: neutral greys measured from Cursor (
 off-white ink, softer lines and a flat ground (the dark glows equal the ground). The main window
 follows Cursor's layout too: the sidebar is a flush pane on `surface` with a trailing hairline
 (`fxSidebarPane()`), the toolbar sits flat on the ground, and every sidebar name is 13 pt SF Pro
-in 30 pt rows.
+in 30 pt rows. The window is glass: `MainWindowGround` blurs the desktop behind the window
+(`BehindWindowBlur`) and tints it `surface` at 62% under the sidebar and `mainGround` at 90%
+beside it (`WindowGlass`); Reduce Transparency makes both tints solid.
 
 | Token (`Theme.Colors.`) | Color set | Light | Dark | Use |
 |---|---|---|---|---|

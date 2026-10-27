@@ -94,7 +94,7 @@ struct MainScreen: View {
         .frame(minWidth: Theme.Layout.mainScreenMinWidth)
         .ignoresSafeArea()
         .background {
-            MainWindowGround()
+            MainWindowGround(sidebarWidth: groundSidebarWidth)
                 .overlay {
                     WindowDragArea()
                         .ignoresSafeArea()
@@ -102,6 +102,11 @@ struct MainScreen: View {
         }
         .animation(Theme.Durations.spring, value: viewModel.isSidebarHidden)
         .animation(Theme.Durations.interactionAnimation, value: viewModel.app.isShowingSettings)
+    }
+
+    /// The sidebar's band of the ground's tint: Settings always have their panel.
+    private var groundSidebarWidth: CGFloat? {
+        viewModel.app.isShowingSettings || !viewModel.isSidebarHidden ? viewModel.sidebarWidth : nil
     }
 
     /// The sidebar panel and the toolbar, strips and detail beside it.
