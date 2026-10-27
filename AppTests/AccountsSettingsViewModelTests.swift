@@ -241,6 +241,8 @@ struct AccountsSettingsViewModelTests {
         harness.runner.stub(argumentsPrefix: ["repo", "list"], with: .success("[]"))
         await harness.app.refreshGHStatus()
         let main = harness.app.makeMainViewModel()
+        // Every listed account: Added (the default) hides one with nothing in the vault.
+        main.sidebar.repoFilter = .all
         await main.sidebar.reload()
         #expect(main.sidebar.owners.map(\.login) == ["user-a"])
         let window = NSWindow(contentViewController: NSHostingController(rootView: MainScreen(viewModel: main)))

@@ -947,6 +947,17 @@
         }
       }
     },
+    "connect.azure.noMatches" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No Key Vault matches the search."
+          }
+        }
+      }
+    },
     "connect.azure.notInstalled" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -976,6 +987,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Requirements"
+          }
+        }
+      }
+    },
+    "connect.azure.search" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search vaults"
           }
         }
       }
@@ -11188,6 +11210,17 @@
         }
       }
     },
+    "main.sidebar.chooseRepositories" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose Repositories…"
+          }
+        }
+      }
+    },
     "main.sidebar.cloned" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -11250,6 +11283,61 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Show what is in %@"
+          }
+        }
+      }
+    },
+    "main.sidebar.filter.added" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Added Repositories"
+          }
+        }
+      }
+    },
+    "main.sidebar.filter.added.short" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Added"
+          }
+        }
+      }
+    },
+    "main.sidebar.filter.all" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "All Repositories"
+          }
+        }
+      }
+    },
+    "main.sidebar.filter.all.short" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "All"
+          }
+        }
+      }
+    },
+    "main.sidebar.filter.label" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show repositories"
           }
         }
       }
@@ -11349,6 +11437,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "No matching repositories"
+          }
+        }
+      }
+    },
+    "main.sidebar.noneAdded.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose the repositories to keep in FX Vault in Settings › Accounts, or show every repository of your GitHub CLI accounts."
+          }
+        }
+      }
+    },
+    "main.sidebar.noneAdded.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No repositories added"
           }
         }
       }
@@ -11525,6 +11635,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Settings"
+          }
+        }
+      }
+    },
+    "main.sidebar.showAll" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show All Repositories"
           }
         }
       }
@@ -15738,6 +15859,160 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Check Again"
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose Repositories…"
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Repositories"
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.added" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Already in FX Vault"
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.archived" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Archived"
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.empty" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This account lists no repository."
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.failed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Could not add %@."
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.fork" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Fork"
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.importing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adding %@…"
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.noMatches" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No repository matches the search."
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.private" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Private"
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.public" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Public"
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.result" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Added ^[%lld repository](inflect: true) to FX Vault."
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.search" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search repositories"
+          }
+        }
+      }
+    },
+    "settings.accounts.chooseRepositories.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose Repositories"
           }
         }
       }

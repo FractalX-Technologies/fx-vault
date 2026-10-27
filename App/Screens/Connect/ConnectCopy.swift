@@ -2,6 +2,9 @@ import Foundation
 
 /// Counted texts of the Connect phase (automatic grammar agreement: "1 repository").
 enum ConnectCopy {
+    static let searchVaults = String(localized: "connect.azure.search", defaultValue: "Search vaults")
+    static let noMatchingVaults = String(localized: "connect.azure.noMatches", defaultValue: "No Key Vault matches the search.")
+
     static func personalRepositories(_ count: Int) -> String {
         String(inflected: AttributedString(
             localized: "connect.source.personal",

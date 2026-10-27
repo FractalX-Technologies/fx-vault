@@ -5,12 +5,23 @@ import VaultCore
 /// with a checkbox (board ConnectAzure). Connect Azure's step and Settings › Accounts › Choose
 /// Vaults… (1.0 S1b) both show it over a ``ConnectAzureModel``.
 struct AzureVaultChoicesView: View {
-    let azure: ConnectAzureModel
+    @Bindable var azure: ConnectAzureModel
     let isDisabled: Bool
 
     var body: some View {
         requirements
-        ForEach(azure.subscriptions) { subscription in
+        if azure.isSearchable {
+            ChooserSearchField(
+                prompt: ConnectCopy.searchVaults,
+                accessibilityID: AccessibilityID.Connect.vaultSearch,
+                text: $azure.query
+            )
+        }
+        let subscriptions = azure.visibleSubscriptions
+        if subscriptions.isEmpty, azure.isSearching {
+            OnboardingNote(ConnectCopy.noMatchingVaults)
+        }
+        ForEach(subscriptions) { subscription in
             VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                 SectionLabel(subscription.name)
                 if let failure = subscription.failure {

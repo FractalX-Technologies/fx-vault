@@ -14,14 +14,19 @@ the secrets your code reads at runtime in Azure Key Vault.
   owner needs under its name (Needs admin:org · Approve, Authorize SSO · Open; Approve runs
   `gh auth refresh` for gh's active account and shows GitHub's one-time code); the Azure Key
   Vaults you connected are under **Azure** by subscription, and Lock and Settings at the bottom of the sidebar.
+  The GitHub header's filter shows only the repositories **Added** to FX Vault (the default, as
+  Azure shows only the vaults you added) or **All** of them, the rest behind each owner's
+  "Show N more"; ⌘K follows it.
   The toolbar shows where you are; **⌘K** jumps to any organization, repository, environment,
   Key Vault or folder by typing part of its name, and finds secrets and variables by name (never
   by value), opening their place with the row selected. Settings ›
   Accounts shows, per organization, whether you can manage its secrets: **Ready**, **Needs
   admin:org** (with the `gh auth refresh -s admin:org` commands to copy, then Re-check), **Org
-  secrets need an org admin**, or **Needs SSO authorization** (with GitHub's SSO page). Its
+  secrets need an org admin**, or **Needs SSO authorization** (with GitHub's SSO page). Each
+  account has **Choose Repositories…**: its repositories by owner, searchable, the ones already
+  in FX Vault checked, and **Add Repositories** imports the ones you check. Its
   **Azure** group lists each tenant with the vaults you keep from it: **Signed in** with **Choose
-  Vaults…** to add more of its vaults, or `az login --tenant <id>` to copy for one that isn't, and
+  Vaults…** to add more of its vaults (with a search field), or `az login --tenant <id>` to copy for one that isn't, and
   `az logout`. FX Vault never signs in or out of Azure for you, and never shows the account.
 - **Organization secrets and variables.** Selecting an organization in the sidebar imports
   its own secrets (names only: GitHub never returns values) and variables with their visibility:

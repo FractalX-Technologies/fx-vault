@@ -3,6 +3,23 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## Unreleased
+
+### Added
+
+- **Only the repositories you added.** The sidebar's GitHub tree lists only the repositories in
+  FX Vault, as Azure lists only the vaults you added. The filter in the GitHub header switches to
+  All; ⌘K follows it.
+- **Choose Repositories…** in Settings › Accounts, per gh account: search its repositories,
+  check the ones to keep and **Add Repositories** imports them.
+- **Search in the choosers.** Choose Repositories… and the Key Vault list (Connect Azure and
+  Choose Vaults…) filter as you type.
+
+### Fixed
+
+- **Checkboxes in Connect and the choosers.** Only the box and its name took a click; the rest of
+  the row did nothing. A click anywhere on the row now checks or unchecks it.
+
 ## 1.0.2
 
 ### Added

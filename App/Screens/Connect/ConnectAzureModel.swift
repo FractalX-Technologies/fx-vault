@@ -76,6 +76,8 @@ final class ConnectAzureModel {
     private(set) var requirement: Requirement?
     private(set) var subscriptions: [Subscription] = []
     var selection: Set<Vault.ID> = []
+    /// The chooser's search: it filters the list, never the selection.
+    var query = ""
     /// The listed vaults already in FX Vault (``Scope/tenant(_:)`` only), by ``Vault/id``.
     private(set) var savedVaultIDs: Set<Vault.ID> = []
     private(set) var isLoading = false
@@ -97,6 +99,28 @@ final class ConnectAzureModel {
 
     var selectedVaults: [Vault] {
         subscriptions.flatMap(\.vaults).filter { selection.contains($0.id) && !savedVaultIDs.contains($0.id) }
+    }
+
+    /// The subscriptions with the vaults whose name, location or subscription matches ``query``;
+    /// a subscription left without a vault is dropped while searching.
+    var visibleSubscriptions: [Subscription] {
+        let search = SearchQuery(query)
+        guard !search.isEmpty else { return subscriptions }
+        return subscriptions.compactMap { subscription in
+            let vaults = subscription.vaults.filter { search.matches($0.name, $0.location, subscription.name) }
+            guard !vaults.isEmpty else { return nil }
+            return Subscription(id: subscription.id, name: subscription.name, vaults: vaults, failure: subscription.failure)
+        }
+    }
+
+    /// The search field shows once there are enough vaults to look through.
+    var isSearchable: Bool {
+        subscriptions.flatMap(\.vaults).count > SearchQuery.fieldThreshold
+    }
+
+    /// A search with more than spaces in it.
+    var isSearching: Bool {
+        !SearchQuery(query).isEmpty
     }
 
     func isSaved(_ vault: Vault) -> Bool {
@@ -206,6 +230,7 @@ final class ConnectAzureModel {
         requirement = nil
         hasLoaded = false
         copiedCommand = nil
+        query = ""
     }
 
     func toggle(_ vault: Vault) {

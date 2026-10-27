@@ -17,6 +17,33 @@ enum SidebarCopy {
     static let addByName = String(localized: "main.sidebar.addByName.menu", defaultValue: "Add Repository by Name…")
     static let newEnvironment = String(localized: "main.scopes.newEnvironment.menu", defaultValue: "New Environment…")
 
+    // MARK: - Repository filter
+
+    static let filterLabel = String(localized: "main.sidebar.filter.label", defaultValue: "Show repositories")
+    static let chooseRepositories = String(localized: "main.sidebar.chooseRepositories", defaultValue: "Choose Repositories…")
+    static let showAll = String(localized: "main.sidebar.showAll", defaultValue: "Show All Repositories")
+    static let noneAddedTitle = String(localized: "main.sidebar.noneAdded.title", defaultValue: "No repositories added")
+    static let noneAddedMessage = String(
+        localized: "main.sidebar.noneAdded.message",
+        defaultValue: "Choose the repositories to keep in FX Vault in Settings › Accounts, or show every repository of your GitHub CLI accounts."
+    )
+
+    /// The filter's short title in the GitHub header.
+    static func filterTitle(_ filter: SidebarRepoFilter) -> String {
+        switch filter {
+        case .added: String(localized: "main.sidebar.filter.added.short", defaultValue: "Added")
+        case .all: String(localized: "main.sidebar.filter.all.short", defaultValue: "All")
+        }
+    }
+
+    /// The filter's menu item.
+    static func filterOption(_ filter: SidebarRepoFilter) -> String {
+        switch filter {
+        case .added: String(localized: "main.sidebar.filter.added", defaultValue: "Added Repositories")
+        case .all: String(localized: "main.sidebar.filter.all", defaultValue: "All Repositories")
+        }
+    }
+
     /// The help of a count of secrets without a value (a repository, a scope, a Key Vault).
     static func valueMissingHelp(_ count: Int) -> String {
         String(inflected: AttributedString(

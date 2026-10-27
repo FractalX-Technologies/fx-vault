@@ -777,8 +777,8 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         }
     }
 
-    /// Every place the sidebar can show, whatever its search; environments are read from the
-    /// vault (the sidebar only lists the selected repository's).
+    /// Every place the sidebar can show under its filter, whatever its search; environments are
+    /// read from the vault (the sidebar only lists the selected repository's).
     private var jumpPlaceInput: JumpPlaceInputModel {
         var environments: [RepoID: [EnvironmentModel]] = [:]
         do {
@@ -788,7 +788,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             AppLog.ui.error("Jump palette could not read the environments")
         }
         return JumpPlaceInputModel(
-            owners: SidebarGrouping.owners(sidebar.input, query: ""),
+            owners: SidebarGrouping.owners(sidebar.input, query: "", filter: sidebar.repoFilter, selectedRowID: sidebar.selectedRowID),
             environments: environments,
             keyVaults: sidebar.keyVaults,
             folders: sidebar.folders

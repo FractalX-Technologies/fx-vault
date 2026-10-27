@@ -127,9 +127,15 @@ final class SidebarViewModel {
 
     // MARK: - Content
 
-    /// The owner nodes under GitHub, filtered by the search.
+    /// The owner nodes under GitHub, filtered by ``repoFilter`` and the search.
     var owners: [SidebarOwnerModel] {
-        SidebarGrouping.owners(input, query: searchText)
+        SidebarGrouping.owners(input, query: searchText, filter: repoFilter, selectedRowID: selectedRowID)
+    }
+
+    /// Only the repositories in the vault, or every one gh lists; remembered across launches.
+    var repoFilter: SidebarRepoFilter {
+        get { app.container.preferences.sidebarRepoFilter }
+        set { app.container.preferences.sidebarRepoFilter = newValue }
     }
 
     /// True when `login` is gh's active account at the last reload: the only one `gh auth
