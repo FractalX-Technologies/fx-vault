@@ -315,6 +315,56 @@ nonisolated enum DriftCopy {
 
     static let resolved = String(localized: "drift.notice.resolved", defaultValue: "Saved. The next Sync pushes your choice.")
 
+    // MARK: - Pull from GitHub (1.0.3)
+
+    static let pullFromGitHub = String(localized: "drift.pull.menu", defaultValue: "Pull from GitHub…")
+    static let pullFromGitHubHelp = String(
+        localized: "drift.pull.help",
+        defaultValue: "Check GitHub now and take what changed there"
+    )
+    static let takeAll = String(localized: "drift.takeAll", defaultValue: "Take All from GitHub")
+
+    static func takeAllTitle(_ count: Int) -> String {
+        String(inflected: AttributedString(
+            localized: "drift.takeAll.title",
+            defaultValue: "Take ^[\(count) change](inflect: true) from GitHub?"
+        ))
+    }
+
+    /// What Take All does, and what it leaves for the user.
+    static func takeAllMessage(conflicts: Int) -> String {
+        let message = String(
+            localized: "drift.takeAll.message",
+            defaultValue: "FX Vault takes GitHub's side of every change: items deleted on GitHub are deleted here, and a secret GitHub changed loses its value here until you enter it (GitHub never returns values)."
+        )
+        guard conflicts > 0 else { return message }
+        return message + " " + String(inflected: AttributedString(
+            localized: "drift.takeAll.conflicts",
+            defaultValue: "^[\(conflicts) conflict](inflect: true) also changed in FX Vault stays for you to choose."
+        ))
+    }
+
+    /// The notice after Take All.
+    static func tookAll(_ count: Int, valuesMissing: Int, conflicts: Int) -> String {
+        var parts = [String(inflected: AttributedString(
+            localized: "drift.tookAll",
+            defaultValue: "Took ^[\(count) change](inflect: true) from GitHub."
+        ))]
+        if valuesMissing > 0 {
+            parts.append(String(inflected: AttributedString(
+                localized: "drift.tookAll.valuesMissing",
+                defaultValue: "Enter the value of ^[\(valuesMissing) secret](inflect: true)."
+            )))
+        }
+        if conflicts > 0 {
+            parts.append(String(inflected: AttributedString(
+                localized: "drift.tookAll.conflicts",
+                defaultValue: "^[\(conflicts) conflict](inflect: true) left to choose."
+            )))
+        }
+        return parts.joined(separator: " ")
+    }
+
     static let needsGH = String(
         localized: "drift.needsGH",
         defaultValue: "Checking GitHub needs the GitHub CLI with a logged-in account."

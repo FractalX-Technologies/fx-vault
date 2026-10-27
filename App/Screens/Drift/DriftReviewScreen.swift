@@ -115,6 +115,13 @@ struct DriftReviewScreen: View {
 
     private var footer: some View {
         ConfigSheetFooter(meta: viewModel.checkedAtText, notice: viewModel.notice) {
+            Button(DriftCopy.takeAll) {
+                viewModel.requestTakeAllFromGitHub()
+            }
+            .fxButtonStyle(.outline, size: .large)
+            .disabled(viewModel.takeableFromGitHub.isEmpty || !viewModel.isOnline || !viewModel.resolving.isEmpty)
+            .help(viewModel.isOnline ? DriftCopy.pullFromGitHubHelp : ConnectivityCopy.offlineHelp)
+            .accessibilityIdentifier(AccessibilityID.Drift.takeAll)
             Button(String(localized: "common.done", defaultValue: "Done")) {
                 dismiss()
             }

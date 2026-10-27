@@ -71,7 +71,10 @@ the secrets your code reads at runtime in Azure Key Vault.
   explains blocked changes with a fix in their place's card, and asks before anything is deleted
   on GitHub or in a vault.
 - **Drift detection.** Changes a teammate made on GitHub since your last sync are listed per
-  repository; keep yours or accept GitHub's.
+  repository; keep yours or accept GitHub's. **Pull from GitHub…** (a repository's context menu)
+  checks now, and **Take All from GitHub** accepts GitHub's side of every change at once (deleted
+  there is deleted here; a secret changed there needs its value again), leaving only the
+  conflicts, also changed in FX Vault, for you to choose.
 - **New repositories.** Stage a repository with its environments, secrets and variables, create
   everything in one Sync, and clone it through your SSH alias.
 - **Runtime destinations (experimental).** Next to a repository's GitHub scopes, add the places
