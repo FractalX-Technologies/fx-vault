@@ -60,32 +60,35 @@ Every color is an asset-catalog color set with a light and a dark variant
 (`App/Resources/Assets.xcassets`), exposed as `Theme.Colors.*`. `DesignTokenTests` checks every
 value below and fails if a color set has no dark variant or no test.
 
+Since 1.0.2 the dark column is Cursor-like: neutral greys (`#181818` ground) instead of pure black,
+warm off-white ink, softer lines, and a faint violet glow from the bottom leading corner.
+
 | Token (`Theme.Colors.`) | Color set | Light | Dark | Use |
 |---|---|---|---|---|
-| `ground` (`onInk`) | Ground | `#FFFFFF` | `#000000` | Window background; text on an ink fill |
-| `surface` | Surface | `#F5F5F7` | `#1C1C1E` | Quiet panels, search field |
-| `surface2` | Surface2 | `#E8E8ED` | `#2C2C2E` | Secondary buttons, segmented track, selected sidebar row, neutral chip |
-| `card` | Card | white 80% | `#1C1C1E` 72% | Cards, tables, sheets, inputs, selected segment: the more opaque glass inside a window |
-| `ink` | Ink | `#000000` | `#FFFFFF` | Primary text, primary button fill |
-| `mutedText` | MutedText | `#3F3F42` | `#AEAEB2` | Secondary text, paragraphs under headings, masked values |
-| `subtleText` | SubtleText | `#5C5C61` | `#8E8E93` | Section labels, timestamps, counts, placeholders |
-| `faintText` | FaintText | `#A1A1A6` | `#48484A` | Decorative only: the `/` in `02 / 05` |
-| `hairline` | Hairline | black 8% | white 10% | Default borders and dividers |
-| `hairlineStrong` | HairlineStrong | black 16% | white 20% | Outline buttons, tags, inputs, banners that need weight |
-| `brand` | Brand | `#000000` | `#FFFFFF` | Ink: the current or interactive state (principle 2); the app's global accent color |
+| `ground` (`onInk`) | Ground | `#FFFFFF` | `#181818` | Window background; text on an ink fill |
+| `surface` | Surface | `#F5F5F7` | `#1F1F1F` | Quiet panels, search field |
+| `surface2` | Surface2 | `#E8E8ED` | `#2A2A2A` | Secondary buttons, segmented track, selected sidebar row, neutral chip |
+| `card` | Card | white 80% | `#212121` 92% | Cards, tables, sheets, inputs, selected segment: the more opaque glass inside a window |
+| `ink` | Ink | `#000000` | `#E6E6E6` | Primary text, primary button fill |
+| `mutedText` | MutedText | `#3F3F42` | `#A3A3A3` | Secondary text, paragraphs under headings, masked values |
+| `subtleText` | SubtleText | `#5C5C61` | `#8A8A8A` | Section labels, timestamps, counts, placeholders |
+| `faintText` | FaintText | `#A1A1A6` | `#4A4A4A` | Decorative only: the `/` in `02 / 05` |
+| `hairline` | Hairline | black 8% | white 7% | Default borders and dividers |
+| `hairlineStrong` | HairlineStrong | black 16% | white 13% | Outline buttons, tags, inputs, banners that need weight |
+| `brand` | Brand | `#000000` | `#E6E6E6` | Ink: the current or interactive state (principle 2); the app's global accent color |
 | `warning` | Warning | `#8A6316` | `#D9A441` | Drift, value missing, offline (small marks) |
 | `success` | Success | `#1F7A55` | `#3FB283` | Verified, strong password (small marks) |
 | `danger` | Danger | `#CA2121` | `#EC6A6A` | Destructive actions, failures |
 | `inkBadge` | InkBadge | white 20% | black 12% | The count badge inside an ink pill |
-| `dotGrid` | DotGrid | black 12% | white 10% | Dots of `DotGridBackground` |
+| `dotGrid` | DotGrid | black 12% | white 6% | Dots of `DotGridBackground` |
 | `shadow` | Shadow | black 12% | black 40% | The one sheet shadow |
 | `scrim` | Scrim | black 6% | black 30% | The dimmed window behind the ⌘K jump palette |
 | `panelShadow` | PanelShadow | black 8% | black 40% | Under the main window's glass panels |
-| `mainGround` | MainGround | `#F8F7F6` | `#121214` | The main window's soft ground (`MainWindowGround`) |
-| `mainGlowTopLeading` | MainGlowTopLeading | `#FFFFFF` | `#212124` | The ground's glow from the top leading corner |
-| `mainGlowTopTrailing` | MainGlowTopTrailing | `#EBE9E6` | `#1B1B1F` | … from the top trailing corner |
-| `mainGlowBottomTrailing` | MainGlowBottomTrailing | `#E6E5E3` | `#1B1A1A` | … from the bottom trailing corner |
-| `mainGlowBottomLeading` | MainGlowBottomLeading | `#F3EFEB` | `#1B1A1A` | … from the bottom leading corner |
+| `mainGround` | MainGround | `#F8F7F6` | `#181818` | The main window's soft ground (`MainWindowGround`) |
+| `mainGlowTopLeading` | MainGlowTopLeading | `#FFFFFF` | `#1E1D23` | The ground's glow from the top leading corner |
+| `mainGlowTopTrailing` | MainGlowTopTrailing | `#EBE9E6` | `#1A1A1A` | … from the top trailing corner |
+| `mainGlowBottomTrailing` | MainGlowBottomTrailing | `#E6E5E3` | `#1A1A1A` | … from the bottom trailing corner |
+| `mainGlowBottomLeading` | MainGlowBottomLeading | `#F3EFEB` | `#1F1D25` | … from the bottom leading corner |
 
 `Theme.Colors.windowBackground` is the `NSColor` of Ground for AppKit.
 `Theme.Colors.onSelectionSecondary` is the hierarchical `.secondary` style, for secondary text in
