@@ -19,8 +19,8 @@ struct BehindWindowBlur: NSViewRepresentable {
 
 enum WindowGlass {
     /// The tints over the blur, as Cursor's: the sidebar shows the desktop, the ground barely.
-    static let ground: Double = 0.9
-    static let sidebar: Double = 0.62
+    static let ground: Double = 0.78
+    static let sidebar: Double = 0.45
 
     /// Reduce Transparency asks for solid colors: the tint becomes opaque.
     static func opacity(_ tint: Double, reduceTransparency: Bool) -> Double {
