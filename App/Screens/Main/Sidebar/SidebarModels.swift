@@ -193,6 +193,25 @@ enum SidebarGrouping {
         return filter(owners, query: trimmed)
     }
 
+    /// The tree for ``SidebarRepoFilter/added``: only repositories in the vault (and the selected
+    /// row, so a repository added by name stays open), owners left without one dropped unless
+    /// they are an imported organization or an account with a problem to fix.
+    static func owners(
+        _ input: SidebarInputModel,
+        query: String,
+        filter repoFilter: SidebarRepoFilter,
+        selectedRowID: SidebarRepoModel.ID?
+    ) -> [SidebarOwnerModel] {
+        let owners = owners(input, query: query)
+        guard repoFilter == .added else { return owners }
+        return owners.compactMap { owner in
+            let repos = owner.repos.filter { $0.isImported || $0.id == selectedRowID }
+            let keepsEmpty = owner.organization != nil || (owner.isPersonal && owner.problem != nil)
+            guard !repos.isEmpty || keepsEmpty else { return nil }
+            return owner.with(repos: repos)
+        }
+    }
+
     /// What an owner node shows: every repository in the vault and the selected one, and the rest
     /// only when `showsAll` (its "Show N more", or a search).
     static func repoList(of owner: SidebarOwnerModel, selectedRowID: SidebarRepoModel.ID?, showsAll: Bool) -> SidebarRepoListModel {
@@ -382,18 +401,24 @@ enum SidebarGrouping {
             // An imported organization stays findable by its login, for its own place.
             let keepsOrganization = owner.organization != nil && owner.login.localizedCaseInsensitiveContains(query)
             guard !repos.isEmpty || keepsOrganization else { return nil }
-            return SidebarOwnerModel(
-                id: owner.id,
-                login: owner.login,
-                accountLogin: owner.accountLogin,
-                ownerType: owner.ownerType,
-                isPersonal: owner.isPersonal,
-                isTruncated: owner.isTruncated,
-                repos: repos,
-                organization: owner.organization,
-                problem: owner.problem
-            )
+            return owner.with(repos: repos)
         }
+    }
+}
+
+private extension SidebarOwnerModel {
+    func with(repos: [SidebarRepoModel]) -> SidebarOwnerModel {
+        SidebarOwnerModel(
+            id: id,
+            login: login,
+            accountLogin: accountLogin,
+            ownerType: ownerType,
+            isPersonal: isPersonal,
+            isTruncated: isTruncated,
+            repos: repos,
+            organization: organization,
+            problem: problem
+        )
     }
 }
 

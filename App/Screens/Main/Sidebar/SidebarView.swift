@@ -17,7 +17,9 @@ struct SidebarView: View {
                 .padding(.horizontal, Theme.Spacing.medium)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Theme.Spacing.xxSmall) {
-                    SidebarSectionHeader(MainCopy.gitHubSection)
+                    SidebarSectionHeader(title: MainCopy.gitHubSection) {
+                        SidebarRepoFilterMenu(sidebar: sidebar)
+                    }
                     if owners.isEmpty {
                         emptyState
                             .padding(.vertical, Theme.Spacing.large)
@@ -124,7 +126,34 @@ struct SidebarView: View {
         )
     }
 
-    private var emptyState: some View {
+    @ViewBuilder private var emptyState: some View {
+        let sidebar = main.sidebar
+        // Without gh there is nothing to choose from: the setup message says what to do first.
+        if sidebar.repoFilter == .added, sidebar.searchText.isEmpty, sidebar.isGitHubReady {
+            EmptyStateView(
+                systemImage: "tray",
+                title: SidebarCopy.noneAddedTitle,
+                message: SidebarCopy.noneAddedMessage
+            ) {
+                VStack(spacing: Theme.Spacing.small) {
+                    Button(SidebarCopy.chooseRepositories) {
+                        main.requestAccountsSettings()
+                    }
+                    .fxButtonStyle(.primary, size: .compact)
+                    .accessibilityIdentifier(AccessibilityID.Main.chooseRepositories)
+                    Button(SidebarCopy.showAll) {
+                        sidebar.repoFilter = .all
+                    }
+                    .fxButtonStyle(.outline, size: .compact)
+                    .accessibilityIdentifier(AccessibilityID.Main.showAllRepositories)
+                }
+            }
+        } else {
+            catalogEmptyState
+        }
+    }
+
+    private var catalogEmptyState: some View {
         EmptyStateView(
             systemImage: "person.crop.circle.badge.questionmark",
             title: main.sidebar.searchText.isEmpty
@@ -148,6 +177,33 @@ struct SidebarView: View {
         return owners
             .filter { sidebar.isExpanded($0) }
             .flatMap { sidebar.repoList(of: $0).shown.map(\.id) }
+    }
+}
+
+/// The GitHub header's filter: only the repositories added to FX Vault (the default, like Azure
+/// lists only its added vaults), or every repository gh lists.
+private struct SidebarRepoFilterMenu: View {
+    @Bindable var sidebar: SidebarViewModel
+
+    var body: some View {
+        Menu {
+            Picker(SidebarCopy.filterLabel, selection: $sidebar.repoFilter) {
+                ForEach(SidebarRepoFilter.allCases) { filter in
+                    Text(SidebarCopy.filterOption(filter)).tag(filter)
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } label: {
+            Text(SidebarCopy.filterTitle(sidebar.repoFilter))
+                .font(Theme.Typography.label)
+                .foregroundStyle(Theme.Colors.subtleText)
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(SidebarCopy.filterLabel)
+        .accessibilityLabel(SidebarCopy.filterLabel)
+        .accessibilityIdentifier(AccessibilityID.Main.repoFilter)
     }
 }
 

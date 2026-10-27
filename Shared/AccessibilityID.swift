@@ -80,6 +80,8 @@ enum AccessibilityID {
         static let azureRequirement = "connect.azure.requirement"
         static let azureCheckAgain = "connect.azure.checkAgain"
         static let stepCounter = "connect.stepCounter"
+        /// The search field above the Key Vault list (1.0.3).
+        static let vaultSearch = "connect.vaultSearch"
 
         /// The checkbox of a source row (`ConnectViewModel.Source.id`).
         static func source(_ id: String) -> String {
@@ -124,6 +126,12 @@ enum AccessibilityID {
 
         /// The search field at the top of the sidebar (⌘F, 1.0).
         static let sidebarSearch = "main.sidebarSearch"
+
+        /// The GitHub header's filter menu: added repositories or all (1.0.3).
+        static let repoFilter = "main.repoFilter"
+        /// The empty Added list's actions (1.0.3).
+        static let chooseRepositories = "main.chooseRepositories"
+        static let showAllRepositories = "main.showAllRepositories"
 
         /// "Show N more" under an owner node: its repositories not in the vault (1.0).
         static func showMore(_ login: String) -> String {
@@ -237,6 +245,19 @@ enum AccessibilityID {
         static func azureChooseVaults(_ id: String) -> String {
             "accounts.azure.chooseVaults.\(id)"
         }
+
+        /// Choose Repositories… on a GitHub account row (1.0.3).
+        static func chooseRepositories(_ login: String) -> String {
+            "accounts.chooseRepositories.\(login)"
+        }
+
+        /// A repository's checkbox in Choose Repositories (its folded `owner/name`).
+        static func repository(_ id: String) -> String {
+            "accounts.repository.\(id)"
+        }
+
+        static let repositorySearch = "accounts.repositorySearch"
+        static let addRepositories = "accounts.addRepositories"
 
         static let azureSignOut = "accounts.azure.signOut"
         static let azureCheckAgain = "accounts.azure.checkAgain"

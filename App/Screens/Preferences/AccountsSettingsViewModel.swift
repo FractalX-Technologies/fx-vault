@@ -40,6 +40,13 @@ final class AccountsSettingsViewModel: LockObserving {
     /// FX Vault never does.
     private(set) var tokenVariables: [ShellVariableName] = []
 
+    /// The open Choose Repositories… sheet (1.0.3).
+    private(set) var repositoryChooser: ChooseRepositoriesModel?
+    /// What the last Add Repositories did, under the accounts.
+    private(set) var repositoryImportResult: ChooseRepositoriesModel.ImportResult?
+    /// The running Add Repositories: a lock cancels it.
+    @ObservationIgnored private var repositoryImportTask: Task<ChooseRepositoriesModel.ImportResult, Never>?
+
     /// The Azure group (1.0 S1b).
     let azure: AzureAccountsViewModel
 
@@ -199,6 +206,40 @@ final class AccountsSettingsViewModel: LockObserving {
         accounts[index] = GHAccountSummaryModel(account: account, status: accounts[index].status)
     }
 
+    // MARK: - Choose Repositories (1.0.3)
+
+    /// Opens Choose Repositories… for a logged-in account.
+    func chooseRepositories(_ account: GHAccountSummaryModel) {
+        guard account.isLoggedIn, repositoryChooser == nil else { return }
+        repositoryImportResult = nil
+        let app = app
+        repositoryChooser = ChooseRepositoriesModel(
+            accountLogin: account.account.login,
+            catalog: app.container.data.catalog,
+            isUnlocked: { app.phase == .unlocked }
+        )
+    }
+
+    /// **Add Repositories**: imports the chosen ones, then closes the sheet. The sidebar
+    /// observes the vault, so they show there at once.
+    func addChosenRepositories() async {
+        guard let chooser = repositoryChooser, repositoryImportTask == nil, !chooser.selectedRepositories.isEmpty else { return }
+        let lockCount = app.lockCount
+        let task = Task { await chooser.importSelected() }
+        repositoryImportTask = task
+        let result = await task.value
+        // A lock cancelled the run, closed the sheet and cleared the tab: nothing to report.
+        guard app.lockCount == lockCount, repositoryImportTask == task else { return }
+        repositoryImportTask = nil
+        repositoryImportResult = result
+        repositoryChooser = nil
+    }
+
+    func closeRepositoryChooser() {
+        guard repositoryChooser?.isImporting != true else { return }
+        repositoryChooser = nil
+    }
+
     // MARK: - LockObserving
 
     func vaultDidLock() {
@@ -210,6 +251,10 @@ final class AccountsSettingsViewModel: LockObserving {
         testResults = [:]
         copiedCommand = nil
         error = nil
+        repositoryImportTask?.cancel()
+        repositoryImportTask = nil
+        repositoryChooser = nil
+        repositoryImportResult = nil
         azure.reset()
     }
 }

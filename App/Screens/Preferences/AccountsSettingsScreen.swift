@@ -55,6 +55,9 @@ private struct AccountsSettingsContent: View {
                     }
                     AddAccountButton(viewModel: viewModel)
                 }
+                if let result = viewModel.repositoryImportResult {
+                    PreferencesFootnote(ChooseRepositoriesCopy.result(result))
+                }
                 if let copied = viewModel.copiedCommand {
                     PreferencesFootnote(String(
                         localized: "settings.accounts.copied",
@@ -70,6 +73,20 @@ private struct AccountsSettingsContent: View {
         .task {
             await viewModel.load()
         }
+        .sheet(isPresented: repositoryChooserBinding) {
+            if let chooser = viewModel.repositoryChooser {
+                ChooseRepositoriesSheet(chooser: chooser, viewModel: viewModel)
+            }
+        }
+    }
+
+    private var repositoryChooserBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.repositoryChooser != nil },
+            set: { isPresented in
+                if !isPresented { viewModel.closeRepositoryChooser() }
+            }
+        )
     }
 
     @ViewBuilder private var emptyState: some View {
@@ -289,6 +306,15 @@ private struct AccountRow: View {
                 .disabled(account.account.sshHostAlias == nil || viewModel.isBusy(account))
             }
             .frame(minHeight: Theme.Layout.settingsAccountLineHeight)
+            HStack {
+                Spacer(minLength: 0)
+                Button(ChooseRepositoriesCopy.menu) {
+                    viewModel.chooseRepositories(account)
+                }
+                .fxButtonStyle(.outline, size: .compact)
+                .disabled(!account.isLoggedIn || viewModel.isBusy(account))
+                .accessibilityIdentifier(AccessibilityID.Accounts.chooseRepositories(account.account.login))
+            }
             subline(symbol: "key", name: String(localized: "settings.accounts.token", defaultValue: "Token")) {
                 PreferencesStatus(title: account.tokenStateTitle, mark: account.tokenStateMark)
             }

@@ -98,10 +98,14 @@ class VaultUITestCase: XCTestCase {
         sidebar.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", name)).firstMatch
     }
 
-    /// Opens an owner node and its "Show N more": owners start collapsed and list only the
-    /// repositories in the vault (1.0), so a repository to import needs both.
+    /// Switches the GitHub filter to All, then opens an owner node and its "Show N more": the
+    /// sidebar lists only added repositories (1.0.3) and owners start collapsed (1.0), so a
+    /// repository to import needs all three.
     @MainActor
     func revealRepositories(of owner: String, in sidebar: XCUIElement) {
+        let app = XCUIApplication()
+        click(sidebar.descendants(matching: .any)[AccessibilityID.Main.repoFilter].firstMatch)
+        click(app.menuItems["All Repositories"])
         click(sidebar.buttons[AccessibilityID.Main.ownerToggle(owner)])
         click(sidebar.buttons[AccessibilityID.Main.showMore(owner)])
     }

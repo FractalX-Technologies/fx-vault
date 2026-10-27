@@ -409,6 +409,8 @@ struct SidebarViewModelTests {
                 : .failure(stderr: "HTTP 404: Not Found")
         }
         let sidebar = SidebarViewModel(app: harness.app)
+        // The catalog itself: Added (the default) would leave out what is not in the vault.
+        sidebar.repoFilter = .all
         await sidebar.reload()
         #expect(sidebar.accountsError == nil)
         #expect(sidebar.owners.map(\.login) == ["Example-Org", "user-a", "user-b"])

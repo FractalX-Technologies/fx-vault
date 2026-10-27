@@ -112,6 +112,7 @@ final class PreferencesManager {
         static let recoveryKeyConfirmationPending = "preferences.recoveryKeyConfirmationPending"
         static let touchIDOfferAnswered = "preferences.touchIDOfferAnswered"
         static let sidebarWidth = "preferences.sidebarWidth"
+        static let sidebarRepoFilter = "preferences.sidebarRepoFilter"
         static let quickVaultKeyCode = "preferences.quickVaultShortcut.keyCode"
         static let quickVaultModifiers = "preferences.quickVaultShortcut.modifiers"
         static let quickVaultKey = "preferences.quickVaultShortcut.key"
@@ -139,6 +140,7 @@ final class PreferencesManager {
         isRecoveryKeyConfirmationPending = store.bool(forKey: Key.recoveryKeyConfirmationPending)
         hasAnsweredTouchIDOffer = store.bool(forKey: Key.touchIDOfferAnswered)
         sidebarWidth = Self.validatedSidebarWidth(store.integer(forKey: Key.sidebarWidth))
+        sidebarRepoFilter = store.string(forKey: Key.sidebarRepoFilter).flatMap(SidebarRepoFilter.init(rawValue:)) ?? .added
         quickVaultShortcut = Self.validatedShortcut(
             keyCode: store.integer(forKey: Key.quickVaultKeyCode),
             modifiers: store.integer(forKey: Key.quickVaultModifiers),
@@ -147,6 +149,13 @@ final class PreferencesManager {
         // The display name shown to nearby Macs is personal data: don't leave it on disk.
         for key in Key.removed {
             store.removeValue(forKey: key)
+        }
+    }
+
+    /// Which GitHub repositories the sidebar lists; only the added ones until the user picks All.
+    var sidebarRepoFilter: SidebarRepoFilter {
+        didSet {
+            store.set(sidebarRepoFilter.rawValue, forKey: Key.sidebarRepoFilter)
         }
     }
 
