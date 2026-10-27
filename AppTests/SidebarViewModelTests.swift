@@ -280,6 +280,31 @@ struct SidebarViewModelTests {
         #expect(sidebar.selectedRepo?.importedRepoID == id)
     }
 
+    /// The open repository's chevron hid nothing: it only selected the repository, which was
+    /// already selected (Bryan, 2026-10-27).
+    @Test func theOpenRepositorysChevronHidesItsEnvironmentsAndShowsThemAgain() async throws {
+        let harness = try await TestHarness(vault: .unlocked)
+        let sidebar = SidebarViewModel(app: harness.app)
+        _ = try await harness.stageRepository()
+        let appeared = await TestFixtures.eventually { !sidebar.input.vaultRepos.isEmpty }
+        #expect(appeared)
+        let row = try #require(sidebar.owners.flatMap(\.repos).first)
+        #expect(!sidebar.showsEnvironments(of: row))
+
+        sidebar.selectedRowID = row.id
+        #expect(sidebar.showsEnvironments(of: row))
+        sidebar.toggleEnvironments(of: row)
+        #expect(!sidebar.showsEnvironments(of: row), "The chevron must hide the open repository's environments")
+        #expect(sidebar.selectedRowID == row.id, "Hiding them keeps the repository open")
+        sidebar.toggleEnvironments(of: row)
+        #expect(sidebar.showsEnvironments(of: row))
+
+        sidebar.toggleEnvironments(of: row)
+        sidebar.selectedRowID = nil
+        sidebar.selectedRowID = row.id
+        #expect(sidebar.showsEnvironments(of: row), "Opening it again shows them")
+    }
+
     /// 1.0 D6d (board Main2-Repository: "api-service 3"): a repository row counts the secrets its
     /// scopes have without a value, and the count follows a fill.
     @Test func aRepositoryCountsItsSecretsWithoutAValue() async throws {

@@ -25,6 +25,16 @@ final class MainTreeUITests: VaultUITestCase {
         click(repository)
         expect(path, toEndWith: "api-service")
 
+        // The open repository's chevron (the first row matching its name) went back to the
+        // repository and hid its environments; it shows and hides them again.
+        XCTAssertTrue(staging.waitForNonExistence(timeout: timeout), "The chevron did not hide the environments")
+        let toggle = sidebar.buttons[AccessibilityID.Main.repositoryToggle("api-service")]
+        click(toggle)
+        XCTAssertTrue(staging.waitForExistence(timeout: timeout), "The chevron did not show them again")
+        click(toggle)
+        XCTAssertTrue(staging.waitForNonExistence(timeout: timeout), "The chevron did not hide them again")
+        expect(path, toEndWith: "api-service")
+
         // Board Main2-Dark: the floating sidebar and the glass toolbar (JumpPaletteUITests has light).
         attachWindowScreenshot(of: app, named: "main-window-dark")
     }

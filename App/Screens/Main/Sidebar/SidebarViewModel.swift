@@ -26,6 +26,7 @@ final class SidebarViewModel {
     var selectedRowID: SidebarRepoModel.ID? {
         didSet {
             guard selectedRowID != oldValue else { return }
+            areOpenEnvironmentsHidden = false
             if let selectedRowID {
                 clearSelection(except: .repository)
                 expandOwner(ofRow: selectedRowID)
@@ -33,6 +34,8 @@ final class SidebarViewModel {
             onChange?()
         }
     }
+    /// The open repository's chevron hid its environments; the repository stays open.
+    private(set) var areOpenEnvironmentsHidden = false
     /// The owner nodes showing their repositories; collapsed by default, and a selection
     /// expands the nodes above it.
     private(set) var expandedOwnerIDs: Set<SidebarOwnerModel.ID> = []
@@ -149,6 +152,17 @@ final class SidebarViewModel {
 
     private var isSearching: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// The open repository shows its environments under it, unless its chevron hid them.
+    func showsEnvironments(of repo: SidebarRepoModel) -> Bool {
+        selectedRowID == repo.id && !areOpenEnvironmentsHidden
+    }
+
+    /// The open repository's chevron: hides or shows its environments, keeping it open.
+    func toggleEnvironments(of repo: SidebarRepoModel) {
+        guard selectedRowID == repo.id else { return }
+        areOpenEnvironmentsHidden.toggle()
     }
 
     /// A search shows every owner open.

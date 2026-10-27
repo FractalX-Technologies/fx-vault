@@ -18,6 +18,8 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   screen whenever the island unlocks.
 - **Touch ID in the island.** Closing that window invalidated the island's Touch ID check, so a
   touch did nothing; it no longer does.
+- **The open repository's chevron.** It did nothing on the repository you were in; it now
+  hides its environments (the selection moves up to the repository) and shows them again.
 - **A crash after a few touches.** A renewed Touch ID check could leave two sensors in the island
   for a moment, which AppKit refuses ("only 1 NSOcclusionDetectionView per window").
 

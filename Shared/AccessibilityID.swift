@@ -135,6 +135,10 @@ enum AccessibilityID {
             "main.ownerToggle.\(login)"
         }
 
+        static func repositoryToggle(_ name: String) -> String {
+            "main.repositoryToggle.\(name)"
+        }
+
         /// An Azure subscription's row under Azure in the sidebar (1.0 D6c6), by id: two
         /// subscriptions may share a name.
         static func subscription(_ id: UUID) -> String {

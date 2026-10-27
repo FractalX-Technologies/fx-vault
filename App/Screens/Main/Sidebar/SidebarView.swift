@@ -324,7 +324,7 @@ private struct RepoNodeView: View {
 
     var body: some View {
         let sidebar = main.sidebar
-        let isOpen = sidebar.selectedRowID == repo.id
+        let isOpen = sidebar.showsEnvironments(of: repo)
         SidebarTreeRow(
             level: 1,
             isExpanded: repo.isImported ? isOpen : nil,
@@ -332,8 +332,9 @@ private struct RepoNodeView: View {
             title: repo.name,
             isSelected: main.isRowSelected(repo),
             isDimmed: !repo.isImported,
-            toggleLabel: SidebarCopy.openRepository(repo.name),
-            onToggle: select
+            toggleLabel: isOpen ? SidebarCopy.collapse(repo.name) : SidebarCopy.openRepository(repo.name),
+            toggleAccessibilityID: AccessibilityID.Main.repositoryToggle(repo.name),
+            onToggle: toggle
         ) {
             select()
         } trailing: {
@@ -368,6 +369,20 @@ private struct RepoNodeView: View {
     private func select() {
         main.select(repository: repo)
         isListFocused.wrappedValue = true
+    }
+
+    /// Opens the repository; on the open one, hides or shows its environments. Hiding them
+    /// moves a selected environment's selection up to the repository, as Finder does.
+    private func toggle() {
+        let sidebar = main.sidebar
+        if sidebar.selectedRowID == repo.id {
+            if sidebar.showsEnvironments(of: repo) {
+                select()
+            }
+            sidebar.toggleEnvironments(of: repo)
+        } else {
+            select()
+        }
     }
 }
 
