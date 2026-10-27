@@ -44,6 +44,8 @@ struct DriftConfirmationModel: Identifiable, Hashable {
     let message: String
     /// The destructive button: "Delete from Vault", or what replaces the vault's item.
     var confirmTitle = DriftCopy.confirmDelete
+    /// Take All from GitHub: every finding without a conflict, not only `driftID`'s.
+    var appliesToAll = false
 
     var id: String {
         driftID + option.rawValue
@@ -103,7 +105,7 @@ final class DriftReviewViewModel {
         } catch {
             fullName = nil
         }
-        if let cached = await service.cachedReport(for: repositoryID) {
+        if !context.checksNow, let cached = await service.cachedReport(for: repositoryID) {
             report = cached
             return
         }
@@ -257,9 +259,63 @@ final class DriftReviewViewModel {
 
     /// The confirmed choice.
     func confirm() async {
-        guard isOnline, let confirmation, let drift = drift(confirmation.driftID) else { return }
+        guard isOnline, let confirmation else { return }
         self.confirmation = nil
+        if confirmation.appliesToAll {
+            await takeAllFromGitHub()
+            return
+        }
+        guard let drift = drift(confirmation.driftID) else { return }
         await resolve(drift, confirmation.option)
+    }
+
+    // MARK: - Take All from GitHub (1.0.3)
+
+    /// The findings GitHub's side can be taken for without a choice: not a conflict (also changed
+    /// in FX Vault) and with Accept GitHub available.
+    var takeableFromGitHub: [DriftModel] {
+        (report?.drifts ?? []).filter { !$0.isConflict && $0.resolution(.acceptGitHub).isAvailable }
+    }
+
+    /// **Take All from GitHub**: always asks first, since it may delete or replace local items.
+    func requestTakeAllFromGitHub() {
+        let count = takeableFromGitHub.count
+        guard isOnline, count > 0, resolving.isEmpty else { return }
+        confirmation = DriftConfirmationModel(
+            driftID: "",
+            option: .acceptGitHub,
+            title: DriftCopy.takeAllTitle(count),
+            message: DriftCopy.takeAllMessage(conflicts: report?.conflicts.count ?? 0),
+            confirmTitle: DriftCopy.takeAll,
+            appliesToAll: true
+        )
+    }
+
+    /// Accepts GitHub for every takeable finding, one at a time (each re-reads its scope). A
+    /// failure stops the run and shows; a secret whose value GitHub changed is left without a
+    /// value rather than opening the editor for each one.
+    private func takeAllFromGitHub() async {
+        let drifts = takeableFromGitHub
+        resolving.formUnion(drifts.map(\.id))
+        defer { resolving.subtract(drifts.map(\.id)) }
+        var taken = 0
+        var valuesMissing = 0
+        for drift in drifts {
+            do {
+                let result = try await service.resolve(drift, option: .acceptGitHub)
+                dependencies.gitHubReachability.recordSuccess()
+                if case .promptFillValue? = result.followUp { valuesMissing += 1 }
+            } catch {
+                dependencies.gitHubReachability.record(error)
+                alert = error.presentation
+                break
+            }
+            report?.drifts.removeAll { $0.id == drift.id }
+            resolvedCount += 1
+            taken += 1
+        }
+        notice = DriftCopy.tookAll(taken, valuesMissing: valuesMissing, conflicts: report?.conflicts.count ?? 0)
+        AppLog.ui.info("Took \(taken, privacy: .public) drift findings from GitHub")
     }
 
     func cancelConfirmation() {

@@ -264,6 +264,11 @@ enum AccessibilityID {
         static let azureAddVaults = "accounts.azure.addVaults"
     }
 
+    /// The drift review (1.0.3).
+    enum Drift {
+        static let takeAll = "drift.takeAll"
+    }
+
     /// The menu bar item's menu (1.0 M1).
     enum MenuBar {
         static let quickVault = "menuBar.quickVault"

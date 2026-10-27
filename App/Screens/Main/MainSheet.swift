@@ -239,6 +239,8 @@ struct SyncContext: Hashable {
 /// The drift review of one repository (§7.7).
 struct DriftReviewContext: Hashable {
     let repositoryID: RepoID
+    /// Pull from GitHub… (1.0.3): check GitHub now instead of showing the last check.
+    var checksNow = false
 }
 
 /// New Repository (⌘N). Both values only preselect the owner picker.

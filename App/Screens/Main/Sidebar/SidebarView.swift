@@ -507,6 +507,13 @@ private struct RepoContextMenu: View {
                     main.present(.shareExport(ShareExportContext(selection: .repository(id))))
                 }
             }
+            Button(DriftCopy.pullFromGitHub) {
+                if let id = repo.importedRepoID {
+                    main.present(.driftReview(DriftReviewContext(repositoryID: id, checksNow: true)))
+                }
+            }
+            .disabled(!sidebar.canPullFromGitHub(repo))
+            .help(main.networkHelp(DriftCopy.pullFromGitHubHelp))
             Divider()
             Button(String(localized: "main.sidebar.remove", defaultValue: "Remove from Vault…"), role: .destructive) {
                 sidebar.requestRemoval(repo)

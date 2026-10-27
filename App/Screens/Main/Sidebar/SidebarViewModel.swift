@@ -609,6 +609,11 @@ final class SidebarViewModel {
         repo.isImported && repo.existsOnGitHub && isGitHubReady && isOnline && !isBusy(repo)
     }
 
+    /// Pull from GitHub… reads the repository on GitHub: the same needs as a clone.
+    func canPullFromGitHub(_ repo: SidebarRepoModel) -> Bool {
+        canClone(repo)
+    }
+
     func canRemove(_ repo: SidebarRepoModel) -> Bool {
         repo.isImported && !isBusy(repo)
     }

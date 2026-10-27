@@ -3,7 +3,7 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## Unreleased
+## 1.0.3
 
 ### Added
 
@@ -14,6 +14,9 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
   check the ones to keep and **Add Repositories** imports them.
 - **Search in the choosers.** Choose Repositories… and the Key Vault list (Connect Azure and
   Choose Vaults…) filter as you type.
+- **Pull from GitHub…** in a repository's context menu checks GitHub now and opens the drift
+  review, where **Take All from GitHub** takes GitHub's side of every change after one
+  confirmation. Conflicts (also changed in FX Vault) stay for you to choose.
 
 ### Fixed
 

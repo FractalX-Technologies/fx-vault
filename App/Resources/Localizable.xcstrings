@@ -3752,6 +3752,28 @@
         }
       }
     },
+    "drift.pull.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Check GitHub now and take what changed there"
+          }
+        }
+      }
+    },
+    "drift.pull.menu" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pull from GitHub…"
+          }
+        }
+      }
+    },
     "drift.replace.confirm" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -3913,6 +3935,83 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "GitHub has names FX Vault cannot store, so they were not compared: %@."
+          }
+        }
+      }
+    },
+    "drift.takeAll" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Take All from GitHub"
+          }
+        }
+      }
+    },
+    "drift.takeAll.conflicts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld conflict](inflect: true) also changed in FX Vault stays for you to choose."
+          }
+        }
+      }
+    },
+    "drift.takeAll.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault takes GitHub's side of every change: items deleted on GitHub are deleted here, and a secret GitHub changed loses its value here until you enter it (GitHub never returns values)."
+          }
+        }
+      }
+    },
+    "drift.takeAll.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Take ^[%lld change](inflect: true) from GitHub?"
+          }
+        }
+      }
+    },
+    "drift.tookAll" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Took ^[%lld change](inflect: true) from GitHub."
+          }
+        }
+      }
+    },
+    "drift.tookAll.conflicts" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld conflict](inflect: true) left to choose."
+          }
+        }
+      }
+    },
+    "drift.tookAll.valuesMissing" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enter the value of ^[%lld secret](inflect: true)."
           }
         }
       }

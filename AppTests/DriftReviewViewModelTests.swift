@@ -21,12 +21,13 @@ struct DriftReviewViewModelTests {
         init(
             cached: DriftReportModel?,
             refresh: Result<DriftReportModel, DriftRepositoryError> = .success(DriftFixtures.report([])),
-            isGitHubReady: Bool = true
+            isGitHubReady: Bool = true,
+            checksNow: Bool = false
         ) async throws {
             harness = try await TestHarness(vault: .unlocked)
             service = FakeDriftService(cached: cached, refresh: refresh)
             viewModel = DriftReviewViewModel(
-                context: DriftReviewContext(repositoryID: DriftFixtures.repositoryID),
+                context: DriftReviewContext(repositoryID: DriftFixtures.repositoryID, checksNow: checksNow),
                 dependencies: harness.dependencies(recorder: recorder, isGitHubReady: isGitHubReady),
                 service: service
             )
@@ -293,6 +294,79 @@ struct DriftReviewViewModelTests {
             "GitHub has names FX Vault cannot store, so they were not compared: bad-name.",
             "GitHub never confirmed 1 earlier pushes. They are pending again for the next Sync.",
         ])
+    }
+
+    // MARK: - Pull from GitHub (1.0.3)
+
+    @Test func pullFromGitHubChecksNowInsteadOfTheLastCheck() async throws {
+        let fresh = DriftFixtures.item(.remoteAdded, .variable, "NEW_URL", itemID: nil)
+        let fixture = try await Fixture(
+            cached: DriftFixtures.report([]),
+            refresh: .success(DriftFixtures.report([fresh])),
+            checksNow: true
+        )
+        await fixture.viewModel.load()
+        #expect(fixture.service.refreshCount == 1)
+        #expect(fixture.viewModel.rows.map(\.id) == [fresh.id])
+    }
+
+    /// Take All accepts GitHub for every finding but the conflicts, after one confirmation,
+    /// without opening the fill editor for a changed secret.
+    @Test func takeAllAcceptsGitHubForEveryFindingButTheConflicts() async throws {
+        let added = DriftFixtures.item(.remoteAdded, .variable, "NEW_URL", itemID: nil)
+        let changed = DriftFixtures.item(.secretModified, .secret, "API_TOKEN")
+        let deleted = DriftFixtures.item(.remoteDeleted, .variable, "GONE")
+        let conflict = DriftFixtures.item(.variableModified, .variable, "MODE", isConflict: true)
+        let fixture = try await Fixture(cached: DriftFixtures.report([added, changed, deleted, conflict]))
+        let model = fixture.viewModel
+        await model.load()
+        #expect(model.takeableFromGitHub.map(\.id) == [added.id, changed.id, deleted.id])
+
+        model.requestTakeAllFromGitHub()
+        let confirmation = try #require(model.confirmation)
+        #expect(confirmation.title == "Take 3 changes from GitHub?")
+        #expect(confirmation.message.hasSuffix("1 conflict also changed in FX Vault stays for you to choose."))
+        #expect(fixture.service.resolutions.isEmpty, "nothing changes before the confirmation")
+
+        await model.confirm()
+        #expect(fixture.service.resolutions == [added, changed, deleted].map {
+            FakeDriftService.Resolution(driftID: $0.id, option: .acceptGitHub)
+        })
+        #expect(model.rows.map(\.id) == [conflict.id])
+        #expect(model.notice == "Took 3 changes from GitHub. Enter the value of 1 secret. 1 conflict left to choose.")
+        #expect(fixture.recorder.presented.isEmpty, "no fill editor per secret")
+        model.finish()
+        #expect(fixture.recorder.refreshes == [.drift(DriftFixtures.repositoryID)])
+    }
+
+    @Test func takeAllStopsAtTheFirstFailure() async throws {
+        let first = DriftFixtures.item(.remoteAdded, .variable, "A_URL", itemID: nil)
+        let second = DriftFixtures.item(.remoteAdded, .variable, "B_URL", itemID: nil)
+        let fixture = try await Fixture(cached: DriftFixtures.report([first, second]))
+        let model = fixture.viewModel
+        await model.load()
+        fixture.service.failResolutions(with: .stale)
+        model.requestTakeAllFromGitHub()
+        await model.confirm()
+        #expect(fixture.service.resolutions.count == 1)
+        #expect(model.alert != nil)
+        #expect(model.rows.count == 2)
+        #expect(model.resolving.isEmpty)
+    }
+
+    @Test func takeAllNeedsSomethingToTakeAndTheConnection() async throws {
+        let conflict = DriftFixtures.item(.variableModified, .variable, "MODE", isConflict: true)
+        let fixture = try await Fixture(cached: DriftFixtures.report([conflict]))
+        await fixture.viewModel.load()
+        fixture.viewModel.requestTakeAllFromGitHub()
+        #expect(fixture.viewModel.confirmation == nil)
+
+        let offline = try await Fixture(cached: DriftFixtures.report([DriftFixtures.item(.remoteAdded, .variable, "X", itemID: nil)]))
+        offline.harness.pathSource.send(.offline)
+        #expect(!offline.viewModel.isOnline)
+        await offline.viewModel.load()
+        offline.viewModel.requestTakeAllFromGitHub()
+        #expect(offline.viewModel.confirmation == nil)
     }
 
     @Test func driftLineCopy() {
