@@ -9,7 +9,7 @@ final class RecoveryEraseUITests: VaultUITestCase {
         let app = launch()
         _ = try onboard(app)
 
-        app.typeKey("l", modifierFlags: [.control, .command])
+        lockThenOpenIsland(app)
         let recovery = app.buttons[AccessibilityID.Island.recoveryKey]
         XCTAssertTrue(recovery.waitForExistence(timeout: timeout), "The island never showed")
         click(recovery)

@@ -125,11 +125,8 @@ struct NotchIslandView: View {
                             Image(systemName: Theme.Symbols.menuBar)
                                 .font(Theme.Typography.title)
                         } else {
-                            TouchIDSensorView(
-                                session: model.lock.islandTouchID,
-                                side: Theme.Layout.touchIDGlyph,
-                                font: Theme.Typography.title
-                            )
+                            Image(systemName: "touchid")
+                                .font(Theme.Typography.title)
                         }
                     }
                     .foregroundStyle(Theme.Colors.islandInk)
@@ -144,11 +141,8 @@ struct NotchIslandView: View {
                             Label {
                                 Text(QuickVaultCopy.touchIDToOpen)
                             } icon: {
-                                TouchIDSensorView(
-                                    session: model.lock.islandTouchID,
-                                    side: Theme.Layout.touchIDGlyphSmall,
-                                    font: Theme.Typography.caption
-                                )
+                                Image(systemName: "touchid")
+                                    .font(Theme.Typography.caption)
                             }
                             .fxTextStyle(.caption)
                             .foregroundStyle(Theme.Colors.islandMuted)

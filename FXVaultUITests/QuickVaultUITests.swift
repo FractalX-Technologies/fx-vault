@@ -39,8 +39,8 @@ final class QuickVaultUITests: VaultUITestCase {
         let app = launch()
         _ = try onboard(app)
         click(openMenuBarMenu(app).menuItems[lockNowTitle])
+        expectNoIslandAfterLock(app)
         let password = app.secureTextFields[AccessibilityID.Island.password]
-        XCTAssertTrue(password.waitForExistence(timeout: timeout), "Lock Now never showed the island")
 
         click(openMenuBarMenu(app).menuItems[quickVaultTitle])
         XCTAssertTrue(password.waitForExistence(timeout: timeout), "Quick Vault while locked didn't ask for the password")

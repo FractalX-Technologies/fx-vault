@@ -22,14 +22,21 @@ All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PA
 - **One unlock screen at launch, again.** 1.0.1 still opened locked with the lock window beside
   the island: SwiftUI showed the window a second time during launch. The window now stays off
   screen whenever the island unlocks.
-- **Touch ID in the island.** Closing that window invalidated the island's Touch ID check, so a
-  touch did nothing; it no longer does.
+- **Touch ID in the island.** The island's embedded fingerprint cancelled its own check before
+  any touch, so Touch ID never unlocked from it. Clicking the island's fingerprint now opens the
+  system Touch ID prompt.
+- **⌃⌥V while locked asks for Touch ID every time**, not only the first time after a lock.
 - **The open repository's chevron.** It did nothing on the repository you were in; it now
   hides its environments (the selection moves up to the repository) and shows them again.
 - **A crash after a few touches.** A renewed Touch ID check could leave two sensors in the island
   for a moment, which AppKit refuses ("only 1 NSOcclusionDetectionView per window").
 
 ### Changed
+
+- **Locking leaves nothing on screen.** ⌃⌘L, Lock Now and the auto-lock close the window, and the
+  island shows only when you open FX Vault again (the Dock, Open FX Vault, ⌃⌥V).
+- **Touch ID on request.** The island no longer prompts by itself, at launch or when it shows:
+  click its fingerprint. ⌃⌥V still prompts at once, since the shortcut is the request.
 
 - **Settings in the main window, like Cursor.** ⌘,, Settings… and the sidebar's gear now swap
   the window's panels for Settings: Back, Search Settings and the sections on the left, the

@@ -1,29 +1,28 @@
 import XCTest
 
-/// The menu bar item (board MenuBar): its menu locks the vault, and Open FX Vault while locked
-/// is the island, not the window. The menu lists its items only, never a name.
+/// The menu bar item (board MenuBar): its menu locks the vault, which leaves nothing on screen,
+/// and Open FX Vault while locked is the island, not the window. The menu lists its items only, never a name.
 final class MenuBarUITests: VaultUITestCase {
     /// The UI-testing build is a Debug build ("FX Vault Dev"), and its onboarded vault has
     /// nothing pending, so Review Sync is hidden.
     private let expectedTitles = ["Quick Vault", "Open FX Vault Dev", "Lock Now", "Settings…", "Quit FX Vault Dev"]
     // A `MenuBarExtra` doesn't pass `.accessibilityIdentifier` to its menu items (Xcode 27,
     // 2026-10-26): they are found by the titles checked above.
-    private let openTitle = "Open FX Vault Dev"
     private let lockNowTitle = "Lock Now"
 
     @MainActor
-    func testLockNowShowsTheIslandAndOpenKeepsIt() throws {
+    func testLockNowHidesEverythingAndOpenShowsTheIsland() throws {
         let app = launch()
         let sidebar = try onboard(app)
 
         let menu = openMenuBarMenu(app)
         XCTAssertEqual(itemTitles(of: menu), expectedTitles)
         click(menu.menuItems[lockNowTitle])
-        let field = app.secureTextFields[AccessibilityID.Island.password]
-        XCTAssertTrue(field.waitForExistence(timeout: timeout), "Lock Now never showed the island")
         XCTAssertTrue(sidebar.waitForNonExistence(timeout: timeout), "The main window stayed open while locked")
+        expectNoIslandAfterLock(app)
 
-        click(openMenuBarMenu(app).menuItems[openTitle])
+        let field = app.secureTextFields[AccessibilityID.Island.password]
+        click(openMenuBarMenu(app).menuItems[openFXVaultTitle])
         XCTAssertTrue(field.waitForExistence(timeout: timeout), "Open FX Vault didn't bring the island")
         XCTAssertFalse(sidebar.exists, "Open FX Vault opened the window while locked")
         type(password, into: field)

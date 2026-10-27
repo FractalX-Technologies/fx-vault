@@ -38,6 +38,8 @@ struct LockScreen: View {
     }
 
     private func autoPrompt() async {
+        // With the island, this screen only backs recovery and the Touch ID offer: no prompt.
+        guard !viewModel.unlocksInIsland else { return }
         await viewModel.autoPromptIfAllowed(isAppActive: NSApp.isActive, isSceneActive: scenePhase == .active)
     }
 }

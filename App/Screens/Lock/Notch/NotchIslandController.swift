@@ -66,7 +66,6 @@ final class NotchIslandController {
     /// Shows "Unlocked" for a moment, then goes away.
     func dismissUnlocked() {
         isPresented = false
-        model.lock.dropIslandTouchID()
         guard presenter.isVisible else { return }
         model.isUnlocked = true
         hideTask = Task { [weak self] in
@@ -84,7 +83,6 @@ final class NotchIslandController {
     func dismiss() {
         hideTask?.cancel()
         isPresented = false
-        model.lock.dropIslandTouchID()
         model.isRevealed = false
         presenter.hide()
     }
@@ -93,8 +91,6 @@ final class NotchIslandController {
         guard isPresented, NSApp.isActive else { return }
         model.notchHeight = NotchPanelPresenter.screenNotchHeight
         model.notchWidth = NotchPanelPresenter.screenNotchWidth
-        // Before the view shows and before the auto-prompt evaluates it.
-        model.lock.prepareIslandTouchID()
         if !presenter.isVisible {
             model.isRevealed = false
         }
@@ -108,6 +104,9 @@ final class NotchIslandController {
                 self.model.isRevealed = true
             }
         }
+        // Touch ID waits for a click on the fingerprint (1.0.2); the quick vault's shortcut is
+        // itself that request, so it prompts at once.
+        guard model.opensQuickVault else { return }
         Task {
             await model.lock.autoPromptIfAllowed(isAppActive: NSApp.isActive, isSceneActive: true)
         }

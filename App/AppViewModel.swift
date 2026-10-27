@@ -196,7 +196,9 @@ final class AppViewModel {
         isShowingSettings = false
         // Phase B
         runLockPhaseB()
-        presentIsland()
+        // Nothing stays on screen (1.0.2): the island shows when FX Vault is opened again, and
+        // the window's reopen comes back through `windowSuppressor` as the island.
+        mainWindow?.close()
     }
 
     // MARK: - Notch island
@@ -270,6 +272,8 @@ final class AppViewModel {
         case .locked:
             quickVault.noteRequest()
             isQuickVaultRequested = true
+            // Each press asks for Touch ID, not only the first of this lock.
+            lockScreen.promptAgain()
             // Recovery and the Touch ID offer are in the window; the quick vault follows them.
             guard unlocksInIsland, let island else {
                 requestMainWindow()
