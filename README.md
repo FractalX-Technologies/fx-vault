@@ -359,6 +359,10 @@ xcodebuild -project FXVault.xcodeproj -scheme FXVaultUITests -destination 'platf
 - That app always starts on a new throwaway vault under the temporary directory (`fxvault-uitests`),
   with a scripted gh (one account, `owner-a`, read commands only), fake Touch ID, in-memory settings
   and a private pasteboard. It never opens your vault, the keychain, a real account or the network.
+- A test starts on that vault already created and unlocked (`VaultUITestCase.launch()`); only the
+  onboarding and Connect tests pass `vault: .none` and walk the onboarding screens.
+- Waits go through `appears(within:)`, `disappears(within:)` and `satisfies(_:within:)`, which
+  check every 0.1 s: XCTest's own waits check once a second on macOS.
 - Debug and Release builds don't contain this code; `scripts/ci-local.sh` checks it.
 - macOS may ask once to allow UI automation (your password). To run `scripts/ci-local.sh` without
   the UI tests, set `FXVAULT_SKIP_UI_TESTS=1`.

@@ -1,7 +1,7 @@
 import XCTest
 
-/// The base of every UI flow: launches the UITesting app, which always starts on a new throwaway
-/// vault with a scripted gh (App/UITesting), so no real vault, keychain item, account or network
+/// The base of every UI flow: launches the UITesting app, which always starts in a new throwaway
+/// folder with a scripted gh (App/UITesting), so no real vault, keychain item, account or network
 /// is touched.
 class VaultUITestCase: XCTestCase {
     let password = "Tq9#vL2!mZ7@xR4$kW8-ui"
@@ -29,10 +29,21 @@ class VaultUITestCase: XCTestCase {
         }
     }
 
+    /// What the app starts on.
+    enum VaultStart {
+        /// No vault: onboarding's Welcome. Only the onboarding and Connect flows need it.
+        case none
+        /// A vault created with ``password`` before launch, unlocked on the main window.
+        case unlocked
+    }
+
     @MainActor
-    func launch(appearance: Appearance = .system) -> XCUIApplication {
+    func launch(appearance: Appearance = .system, vault: VaultStart = .unlocked) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-ApplePersistenceIgnoreState", "YES", "-AppleLanguages", "(en)"] + appearance.launchArguments
+        if vault == .unlocked {
+            app.launchEnvironment[UITestEnvironment.vaultPassword] = password
+        }
         app.launch()
         return app
     }
@@ -74,7 +85,7 @@ class VaultUITestCase: XCTestCase {
 
         let prefix = AccessibilityID.Onboarding.confirmGroupPrefix
         let confirmFields = app.textFields.matching(NSPredicate(format: "identifier BEGINSWITH %@", prefix))
-        XCTAssertTrue(confirmFields.firstMatch.waitForExistence(timeout: timeout))
+        XCTAssertTrue(confirmFields.firstMatch.appears(within: timeout))
         XCTAssertEqual(confirmFields.count, confirmGroupCount)
         for position in 0..<confirmFields.count {
             let field = confirmFields.element(boundBy: position)
@@ -86,9 +97,10 @@ class VaultUITestCase: XCTestCase {
 
     /// The main window's sidebar, once it shows.
     @MainActor
+    @discardableResult
     func mainSidebar(_ app: XCUIApplication) -> XCUIElement {
         let sidebar = app.descendants(matching: .any)[AccessibilityID.Main.sidebar]
-        XCTAssertTrue(sidebar.waitForExistence(timeout: timeout))
+        XCTAssertTrue(sidebar.appears(within: timeout))
         return sidebar
     }
 
@@ -98,14 +110,19 @@ class VaultUITestCase: XCTestCase {
         sidebar.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", name)).firstMatch
     }
 
-    /// Switches the GitHub filter to All, then opens an owner node and its "Show N more": the
-    /// sidebar lists only added repositories (1.0.3) and owners start collapsed (1.0), so a
-    /// repository to import needs all three.
+    /// Switches the GitHub filter to All: the sidebar lists only added repositories (1.0.3), so a
+    /// new vault shows none of the scripted owners.
+    @MainActor
+    func showAllRepositories(in sidebar: XCUIElement) {
+        click(sidebar.descendants(matching: .any)[AccessibilityID.Main.repoFilter].firstMatch)
+        click(XCUIApplication().menuItems["All Repositories"])
+    }
+
+    /// Switches the GitHub filter to All, then opens an owner node and its "Show N more": owners
+    /// start collapsed (1.0), so a repository to import needs all three.
     @MainActor
     func revealRepositories(of owner: String, in sidebar: XCUIElement) {
-        let app = XCUIApplication()
-        click(sidebar.descendants(matching: .any)[AccessibilityID.Main.repoFilter].firstMatch)
-        click(app.menuItems["All Repositories"])
+        showAllRepositories(in: sidebar)
         click(sidebar.buttons[AccessibilityID.Main.ownerToggle(owner)])
         click(sidebar.buttons[AccessibilityID.Main.showMore(owner)])
     }
@@ -115,7 +132,7 @@ class VaultUITestCase: XCTestCase {
     @MainActor
     func searchSidebar(for text: String, in app: XCUIApplication) {
         let field = app.textFields[AccessibilityID.Main.sidebarSearch]
-        XCTAssertTrue(field.waitForExistence(timeout: timeout), "The sidebar has no search field")
+        XCTAssertTrue(field.appears(within: timeout), "The sidebar has no search field")
         app.typeKey("f", modifierFlags: .command)
         type(text, intoFocused: field, in: app)
     }
@@ -125,12 +142,11 @@ class VaultUITestCase: XCTestCase {
     @MainActor
     func searchHiddenSidebar(for text: String, in app: XCUIApplication) {
         let field = app.textFields[AccessibilityID.Main.sidebarSearch]
-        let hidden = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false OR isHittable == false"), object: field)
-        XCTAssertEqual(XCTWaiter().wait(for: [hidden], timeout: timeout), .completed, "The sidebar is not hidden")
+        let hidden = NSPredicate(format: "exists == false OR isHittable == false")
+        XCTAssertTrue(field.satisfies(hidden, within: timeout), "The sidebar is not hidden")
         app.typeKey("f", modifierFlags: .command)
-        XCTAssertTrue(field.waitForExistence(timeout: timeout), "⌘F did not bring the sidebar back")
-        let shown = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: field)
-        XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: timeout), .completed, "⌘F did not bring the sidebar back")
+        XCTAssertTrue(field.appears(within: timeout), "⌘F did not bring the sidebar back")
+        XCTAssertTrue(field.satisfies(NSPredicate(format: "isHittable == true"), within: timeout), "⌘F did not bring the sidebar back")
         type(text, intoFocused: field, in: app)
     }
 
@@ -138,8 +154,7 @@ class VaultUITestCase: XCTestCase {
     @MainActor
     private func type(_ text: String, intoFocused field: XCUIElement, in app: XCUIApplication) {
         app.typeText(text)
-        let typed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", text), object: field)
-        XCTAssertEqual(XCTWaiter().wait(for: [typed], timeout: timeout), .completed, "⌘F did not focus the search field")
+        XCTAssertTrue(field.satisfies(NSPredicate(format: "value == %@", text), within: timeout), "⌘F did not focus the search field")
     }
 
     /// A confirmation dialog's button. The Touch Bar repeats it, disabled, under the same title,
@@ -152,18 +167,15 @@ class VaultUITestCase: XCTestCase {
     /// Waits until the toolbar path (`AccessibilityID.Main.breadcrumb`) ends with `suffix`.
     @MainActor
     func expect(_ path: XCUIElement, toEndWith suffix: String) {
-        let shown = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label ENDSWITH %@ OR value ENDSWITH %@", suffix, suffix),
-            object: path
-        )
-        XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: timeout), .completed, "The path never ended with \(suffix)")
+        let shown = NSPredicate(format: "label ENDSWITH %@ OR value ENDSWITH %@", suffix, suffix)
+        XCTAssertTrue(path.satisfies(shown, within: timeout), "The path never ended with \(suffix)")
     }
 
     /// The groups on the recovery key step, by 0-based index. Each label reads "Group N: XXXX".
     @MainActor
     private func recoveryKeyGroups(in app: XCUIApplication) -> [Int: String] {
         let first = app.descendants(matching: .any)[AccessibilityID.Onboarding.recoveryKeyGroup(0)]
-        XCTAssertTrue(first.waitForExistence(timeout: timeout))
+        XCTAssertTrue(first.appears(within: timeout))
         var groups: [Int: String] = [:]
         var index = 0
         while true {
@@ -177,7 +189,7 @@ class VaultUITestCase: XCTestCase {
 
     @MainActor
     func type(_ text: String, into field: XCUIElement) {
-        XCTAssertTrue(field.waitForExistence(timeout: timeout), "\(field) never appeared")
+        XCTAssertTrue(field.appears(within: timeout), "\(field) never appeared")
         field.click()
         field.typeText(text)
     }
@@ -189,7 +201,7 @@ class VaultUITestCase: XCTestCase {
         let item = app.statusItems.firstMatch
         click(item)
         let menu = item.menus.firstMatch
-        XCTAssertTrue(menu.waitForExistence(timeout: timeout), "The menu bar item opened no menu")
+        XCTAssertTrue(menu.appears(within: timeout), "The menu bar item opened no menu")
         return menu
     }
 
@@ -200,7 +212,7 @@ class VaultUITestCase: XCTestCase {
     @MainActor
     func expectNoIslandAfterLock(_ app: XCUIApplication) {
         let island = app.descendants(matching: .any)[AccessibilityID.Island.panel]
-        XCTAssertFalse(island.waitForExistence(timeout: 3), "Locking showed the island by itself")
+        XCTAssertFalse(island.appears(within: 3), "Locking showed the island by itself")
     }
 
     /// Locks with ⌃⌘L, then opens the island from the menu bar's Open FX Vault.
@@ -214,9 +226,39 @@ class VaultUITestCase: XCTestCase {
     /// Waits for the element to exist and be enabled (view models enable buttons asynchronously).
     @MainActor
     func click(_ element: XCUIElement) {
-        XCTAssertTrue(element.waitForExistence(timeout: timeout), "\(element) never appeared")
-        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: element)
-        XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: timeout), .completed)
+        XCTAssertTrue(element.appears(within: timeout), "\(element) never appeared")
+        XCTAssertTrue(poll(within: timeout) { element.isEnabled }, "\(element) never became enabled")
         element.click()
     }
+}
+
+@MainActor
+extension XCUIElement {
+    // `waitForExistence` and `XCTNSPredicateExpectation` check once a second on macOS, so every
+    // wait cost a second even when the element was already there (about 25 s of a 70 s test).
+    // These check every 0.1 s.
+
+    func appears(within timeout: TimeInterval) -> Bool {
+        poll(within: timeout) { exists }
+    }
+
+    func disappears(within timeout: TimeInterval) -> Bool {
+        poll(within: timeout) { !exists }
+    }
+
+    /// `predicate` over the element's attributes (`label`, `value`, `isHittable`…).
+    func satisfies(_ predicate: NSPredicate, within timeout: TimeInterval) -> Bool {
+        poll(within: timeout) { predicate.evaluate(with: self) }
+    }
+}
+
+/// Checks `condition` every 0.1 s until it holds or `timeout` passes.
+@MainActor
+func poll(within timeout: TimeInterval, until condition: () -> Bool) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    while !condition() {
+        guard Date() < deadline else { return false }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+    }
+    return true
 }

@@ -7,7 +7,7 @@ final class AccountsUITests: VaultUITestCase {
     @MainActor
     func testOrganizationsShowTheirAccess() throws {
         let app = launch()
-        try onboard(app)
+        mainSidebar(app)
         app.typeKey(",", modifierFlags: .command)
         click(app.buttons[AccessibilityID.Settings.section("accounts")])
 
@@ -21,28 +21,28 @@ final class AccountsUITests: VaultUITestCase {
     func testChooseVaultsAddsAVaultOfTheSignedInTenant() throws {
         let tenantID = "00000000-0000-0000-0000-0000000000a1"
         let app = launch()
-        try onboard(app)
+        mainSidebar(app)
         app.typeKey(",", modifierFlags: .command)
         click(app.buttons[AccessibilityID.Settings.section("accounts")])
 
         let tenant = app.descendants(matching: .any)[AccessibilityID.Accounts.azureTenant(tenantID)]
-        XCTAssertTrue(tenant.waitForExistence(timeout: timeout), "the signed-in tenant is not listed")
+        XCTAssertTrue(tenant.appears(within: timeout), "the signed-in tenant is not listed")
         XCTAssertTrue(tenant.staticTexts["Example"].exists)
         XCTAssertTrue(tenant.staticTexts["No vaults in FX Vault"].exists)
         XCTAssertTrue(
-            app.staticTexts[AccessibilityID.Setup.command("az logout")].waitForExistence(timeout: timeout),
+            app.staticTexts[AccessibilityID.Setup.command("az logout")].appears(within: timeout),
             "Sign out of Azure gives az logout"
         )
 
         click(app.buttons[AccessibilityID.Accounts.azureChooseVaults(tenantID)])
         let vault = app.checkBoxes[AccessibilityID.Connect.vault("kv-example-prod")]
-        XCTAssertTrue(vault.waitForExistence(timeout: timeout), "Choose Vaults… lists the tenant's vault")
+        XCTAssertTrue(vault.appears(within: timeout), "Choose Vaults… lists the tenant's vault")
         let add = app.buttons[AccessibilityID.Accounts.azureAddVaults]
         XCTAssertFalse(add.isEnabled, "nothing is checked yet")
         click(vault)
         click(add)
-        XCTAssertTrue(add.waitForNonExistence(timeout: timeout), "Add Vaults closes the sheet")
-        XCTAssertTrue(tenant.staticTexts["Example Production · 1 vault"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(add.disappears(within: timeout), "Add Vaults closes the sheet")
+        XCTAssertTrue(tenant.staticTexts["Example Production · 1 vault"].appears(within: timeout))
         XCTAssertTrue(app.staticTexts["Added 1 vault with 1 secret."].exists)
     }
 
@@ -50,7 +50,7 @@ final class AccountsUITests: VaultUITestCase {
     @MainActor
     private func access(of organization: String, in app: XCUIApplication) -> String {
         let row = app.descendants(matching: .any)[AccessibilityID.Accounts.organization(organization)]
-        XCTAssertTrue(row.waitForExistence(timeout: timeout), "\(organization) is not listed")
+        XCTAssertTrue(row.appears(within: timeout), "\(organization) is not listed")
         // A combined row reports its text as its value on macOS, sometimes as its label.
         let text = [(row.value as? String) ?? "", row.label].joined(separator: " ")
         return text

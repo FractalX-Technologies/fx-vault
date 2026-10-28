@@ -315,3 +315,10 @@ enum AccessibilityID {
         }
     }
 }
+
+/// Launch environment keys the XCUITest suite sets and only the UITesting host reads
+/// (App/UITesting): the other builds compile the names but never look them up.
+enum UITestEnvironment {
+    /// Start on a vault already created with this password, unlocked on the main window.
+    static let vaultPassword = "FXVAULT_UI_TEST_VAULT_PASSWORD"
+}

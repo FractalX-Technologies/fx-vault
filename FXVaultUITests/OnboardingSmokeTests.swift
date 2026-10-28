@@ -1,21 +1,23 @@
 import XCTest
 
-/// The smoke flow (tasks/todo.md B0): onboarding to a main window listing the scripted org, and
-/// ⌘F finding its repository (1.0).
+/// The smoke flow (tasks/todo.md B0): onboarding to a main window that, once Show All is chosen,
+/// lists the scripted org, and ⌘F finding its repository (1.0).
 final class OnboardingSmokeTests: VaultUITestCase {
     @MainActor
     func testOnboardingReachesTheMainWindow() throws {
-        let app = launch()
+        let app = launch(vault: .none)
         let sidebar = try onboard(app)
+        // 1.0.3: a new vault has no repository added; Show All lists what gh can reach.
+        click(app.buttons[AccessibilityID.Main.showAllRepositories])
         for name in ["owner-a", "example-org"] {
-            XCTAssertTrue(sidebarRow(name, in: sidebar).waitForExistence(timeout: timeout), "\(name) is not in the sidebar")
+            XCTAssertTrue(sidebarRow(name, in: sidebar).appears(within: timeout), "\(name) is not in the sidebar")
         }
         XCTAssertFalse(sidebar.descendants(matching: .any)["Could not be listed"].exists)
         expectTrafficLightsInTheSidebarPanel(of: app)
 
         // 1.0: the owners start collapsed; ⌘F searches the tree and opens the owner of a match.
         searchSidebar(for: "api-service", in: app)
-        XCTAssertTrue(sidebarRow("api-service", in: sidebar).waitForExistence(timeout: timeout), "api-service is not found")
+        XCTAssertTrue(sidebarRow("api-service", in: sidebar).appears(within: timeout), "api-service is not found")
 
         // Edit › Find brings a hidden sidebar (View › Hide Sidebar, ⌃⌘S) back before it focuses
         // the search field.
@@ -31,8 +33,8 @@ final class OnboardingSmokeTests: VaultUITestCase {
         let window = app.windows.firstMatch
         let close = window.buttons[XCUIIdentifierCloseWindow]
         let search = app.textFields[AccessibilityID.Main.sidebarSearch]
-        XCTAssertTrue(close.waitForExistence(timeout: timeout), "The window has no close button")
-        XCTAssertTrue(search.waitForExistence(timeout: timeout), "The sidebar has no search field")
+        XCTAssertTrue(close.appears(within: timeout), "The window has no close button")
+        XCTAssertTrue(search.appears(within: timeout), "The sidebar has no search field")
         XCTAssertEqual(close.frame.minX - window.frame.minX, 19, accuracy: 2, "The traffic lights moved sideways")
         XCTAssertEqual(close.frame.minY - window.frame.minY, 19, accuracy: 2, "The traffic lights moved down or up")
         XCTAssertLessThan(close.frame.maxY, search.frame.minY, "The traffic lights overlap the search field")
