@@ -3,6 +3,14 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## Unreleased
+
+### Changed
+
+- **Pasted secrets read like a note.** Paste `key1=secret1` lines under `# Secrets` and each value
+  shows in its line while you edit (a copy still writes `••••`). After Save the new values show in
+  the notes for 30 s without asking, then hide again.
+
 ## 1.0.5
 
 ### Added
