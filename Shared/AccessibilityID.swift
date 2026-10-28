@@ -169,6 +169,10 @@ enum AccessibilityID {
         static let subline = "place.subline"
         static let more = "place.more"
         static let copyAll = "place.copyAll"
+        /// Reveal All on the header, its countdown above the notes and a line's "Copied".
+        static let revealAll = "place.revealAll"
+        static let revealAllBar = "place.revealAllBar"
+        static let notesCopied = "place.notesCopied"
         /// Notes | Table on the header (1.0 B9).
         static let viewMode = "place.viewMode"
         /// A place's notes (1.0 B9; board Main2-Repository).

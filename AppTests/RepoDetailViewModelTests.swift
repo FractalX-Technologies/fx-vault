@@ -18,15 +18,9 @@ struct RepoDetailViewModelTests {
         let repositoryID: RepoID
         let viewModel: RepoDetailViewModel
 
-        init(visibility: RepoVisibility = .private) async throws {
+        init(visibility: RepoVisibility = .private, items: [RepoCreationItemDraftModel] = Fixture.items) async throws {
             harness = try await TestHarness(vault: .unlocked)
-            let id = try await harness.stageRepository(
-                visibility: visibility,
-                items: [
-                    TestFixtures.item(.secret, "API_TOKEN", RepoDetailViewModelTests.secretValue),
-                    TestFixtures.item(.variable, "BASE_URL", RepoDetailViewModelTests.variableValue),
-                ]
-            )
+            let id = try await harness.stageRepository(visibility: visibility, items: items)
             repositoryID = id
             let harness = harness
             viewModel = RepoDetailViewModel(
@@ -38,6 +32,11 @@ struct RepoDetailViewModelTests {
                 }
             )
         }
+
+        static let items = [
+            TestFixtures.item(.secret, "API_TOKEN", RepoDetailViewModelTests.secretValue),
+            TestFixtures.item(.variable, "BASE_URL", RepoDetailViewModelTests.variableValue),
+        ]
 
         func secretRow() async throws -> ConfigRowModel {
             let model = viewModel

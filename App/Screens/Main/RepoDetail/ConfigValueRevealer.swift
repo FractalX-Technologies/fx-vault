@@ -4,7 +4,8 @@ import VaultCore
 import VaultData
 
 /// The values a detail table shows (§5.11), shared by repository scopes and folders (v0.7.0): a
-/// secret is decrypted only while revealed and masked again after `Timeouts.revealRemask`;
+/// secret is decrypted only while revealed and masked again after `Timeouts.revealRemask`
+/// (`Timeouts.revealAllRemask` for Reveal All's, together);
 /// variables are decrypted for the visible rows only. The owner masks everything on resign
 /// active, on a change of scope or folder and on lock.
 @Observable
@@ -16,8 +17,13 @@ final class ConfigValueRevealer {
     private(set) var variableValues: [ConfigItemID: String] = [:]
     /// When each revealed value hides again (the notes' countdown, board Place-Reveal).
     private(set) var hideDates: [ConfigItemID: Date] = [:]
+    /// When the values of Reveal All hide again, together; nil when it isn't on. Its values
+    /// are the revealed ones without a ``hideDates`` entry of their own.
+    private(set) var allHideDate: Date?
     /// The scheduled re-mask of each revealed value (internal so tests can await it).
     @ObservationIgnored private(set) var remaskTasks: [ConfigItemID: Task<Void, Never>] = [:]
+    /// The scheduled re-mask of Reveal All's values (internal so tests can await it).
+    @ObservationIgnored private(set) var revealAllTask: Task<Void, Never>?
     @ObservationIgnored private let decrypt: Reveal
     @ObservationIgnored private let clock: any VaultClock
 
@@ -74,10 +80,46 @@ final class ConfigValueRevealer {
         }
     }
 
+    /// Decrypts every secret of `ids` (all of them or none) and masks them together after
+    /// `Timeouts.revealAllRemask`. A value revealed on its own joins the shared countdown.
+    func revealAll(_ ids: [ConfigItemID]) throws(ConfigRepositoryError) {
+        var texts: [ConfigItemID: String] = [:]
+        for id in ids {
+            let value = try decrypt(id)
+            defer { value.wipe() }
+            guard let text = value.utf8String() else { throw .unexpected }
+            texts[id] = text
+        }
+        for id in ids {
+            remaskTasks.removeValue(forKey: id)?.cancel()
+            hideDates.removeValue(forKey: id)
+        }
+        revealedValues.merge(texts) { $1 }
+        allHideDate = clock.now.addingTimeInterval(Timeouts.revealAllRemask.timeInterval)
+        revealAllTask?.cancel()
+        let clock = clock
+        revealAllTask = Task { [weak self] in
+            do {
+                try await clock.sleep(for: Timeouts.revealAllRemask)
+            } catch {
+                return
+            }
+            self?.hideRevealAll()
+        }
+    }
+
+    var isRevealingAll: Bool {
+        allHideDate != nil
+    }
+
     func hide(_ id: ConfigItemID) {
         remaskTasks.removeValue(forKey: id)?.cancel()
         revealedValues.removeValue(forKey: id)
         hideDates.removeValue(forKey: id)
+        // The last of Reveal All's values hidden on its own ends Reveal All.
+        if isRevealingAll, revealedValues.keys.allSatisfy({ hideDates[$0] != nil }) {
+            endRevealAll()
+        }
     }
 
     /// Masks every revealed value.
@@ -88,6 +130,21 @@ final class ConfigValueRevealer {
         remaskTasks.removeAll()
         revealedValues.removeAll()
         hideDates.removeAll()
+        endRevealAll()
+    }
+
+    /// Masks Reveal All's values; one revealed on its own since keeps its countdown.
+    private func hideRevealAll() {
+        for id in revealedValues.keys where hideDates[id] == nil {
+            revealedValues.removeValue(forKey: id)
+        }
+        endRevealAll()
+    }
+
+    private func endRevealAll() {
+        revealAllTask?.cancel()
+        revealAllTask = nil
+        allHideDate = nil
     }
 
     /// Masks the revealed values of rows that are gone and decrypts the variables of `ids` for

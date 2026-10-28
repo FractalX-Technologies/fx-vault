@@ -114,6 +114,9 @@ public enum Timeouts {
     public static let clipboardClear: Duration = .seconds(30)
     /// A revealed value is masked again after this long.
     public static let revealRemask: Duration = .seconds(30)
+    /// Reveal All of a place's notes masks every value again after this long: twice a single
+    /// reveal, so several values can be copied under one Touch ID.
+    public static let revealAllRemask: Duration = .seconds(60)
 
     // MARK: - Sharing (§9.5)
 

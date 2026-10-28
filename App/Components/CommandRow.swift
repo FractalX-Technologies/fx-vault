@@ -68,7 +68,7 @@ struct CommandRow: View {
             onCopy(command)
         } label: {
             if isCopied {
-                Label(String(localized: "command.copied", defaultValue: "Copied"), systemImage: "checkmark")
+                CopiedLabel()
             } else {
                 Label(String(localized: "command.copy", defaultValue: "Copy"), systemImage: "doc.on.doc")
             }

@@ -56,6 +56,42 @@ final class NotesEditUITests: VaultUITestCase {
         expect(path, toEndWith: "api-service › staging")
     }
 
+    /// Reveal All (board Place-Reveal): one master password shows every secret under one
+    /// countdown, a click on a line copies its value instead of editing, and Hide All masks them.
+    @MainActor
+    func testRevealAllShowsTheSecretsAndAClickCopiesOne() throws {
+        let (app, _, notes, editor) = try editBaseURLLine()
+        editor.typeKey(.upArrow, modifierFlags: .command)
+        editor.typeKey(.rightArrow, modifierFlags: .command)
+        editor.typeKey(.return, modifierFlags: [])
+        editor.typeText("API_KEY=")
+        editor.typeText("u")
+        XCTAssertTrue(app.textViews[AccessibilityID.ItemEditor.value].waitForExistence(timeout: timeout), "No Set value…")
+        app.typeText("i-test-secret")
+        click(app.buttons[AccessibilityID.Place.notesValueDone])
+        app.typeKey("s", modifierFlags: .command)
+        click(app.buttons[AccessibilityID.Place.notesReviewSave])
+        XCTAssertTrue(notes.staticTexts["API_KEY"].waitForExistence(timeout: timeout), "API_KEY is not in the notes")
+        XCTAssertFalse(notes.staticTexts["ui-test-secret"].exists, "The secret shows before Reveal All")
+
+        let revealAll = app.buttons[AccessibilityID.Place.revealAll]
+        click(revealAll)
+        type(password, into: app.secureTextFields[AccessibilityID.Share.password])
+        click(app.buttons[AccessibilityID.Share.passwordContinue])
+        XCTAssertTrue(notes.staticTexts["ui-test-secret"].waitForExistence(timeout: timeout), "Reveal All showed no secret")
+        XCTAssertTrue(notes.descendants(matching: .any)[AccessibilityID.Place.revealAllBar].exists, "No countdown above the notes")
+
+        // The runner can't read the general pasteboard (macOS privacy); NotesRevealTests checks
+        // what lands there.
+        click(notes.staticTexts["API_KEY"])
+        let copied = notes.descendants(matching: .any)[AccessibilityID.Place.notesCopied]
+        XCTAssertTrue(copied.waitForExistence(timeout: timeout), "The line does not say Copied")
+        XCTAssertFalse(app.textViews[AccessibilityID.Place.notesEditor].exists, "The click opened the editor")
+
+        click(revealAll)
+        XCTAssertTrue(notes.staticTexts["ui-test-secret"].waitForNonExistence(timeout: timeout), "Hide All left the secret showing")
+    }
+
     /// api-service imported, a click on BASE_URL's line (4, under "# Variables") and a new line
     /// typed under it: one unsaved change.
     @MainActor

@@ -146,19 +146,26 @@ final class OrganizationDetailViewModel: LockObserving {
         dependencies.actions.present(.copyAll(CopyAllContext(place: .organization(organizationID))))
     }
 
+    func copy(_ id: ConfigItemID) {
+        guard let row = items.first(where: { $0.id == id }) else { return }
+        copy(row)
+    }
+
     /// Copy Value: a secret asks first unless it shows (1.0 T1).
     func copy(_ row: OrgItemModel) {
         notesReveal.copy(row.id, name: row.name, kind: row.kind) { [weak self] id in
-            self?.copyNow(id)
+            self?.copyNow(id) ?? false
         }
     }
 
-    private func copyNow(_ id: ConfigItemID) {
+    private func copyNow(_ id: ConfigItemID) -> Bool {
         do {
             try dependencies.copyOrganizationValue(of: id)
         } catch {
             alert = error.presentation
+            return false
         }
+        return true
     }
 
     // MARK: - Refresh (B7b)

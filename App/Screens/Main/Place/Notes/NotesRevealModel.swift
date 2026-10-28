@@ -12,10 +12,12 @@ nonisolated final class NotesRevealAuthorization: ReauthAuthorization {
 
 /// The secret waiting for "Confirm it's you" (the sheet's item).
 struct NotesRevealRequestModel: Identifiable, Hashable {
-    /// What the secret is asked for: its eye or Reveal, or the table's Copy Value (1.0 T1).
+    /// What the secret is asked for: its eye or Reveal, the table's Copy Value (1.0 T1), or
+    /// Reveal All of these secrets (then `id` is the first and `name` the place).
     enum Action: Hashable {
         case reveal
         case copy
+        case revealAll([ConfigItemID])
     }
 
     let id: ConfigItemID
@@ -24,18 +26,27 @@ struct NotesRevealRequestModel: Identifiable, Hashable {
 
     /// The confirmation's title and message, the same in the main window and the quick vault.
     var title: String {
-        action == .copy ? NotesCopy.copy(name) : NotesCopy.reveal(name)
+        switch action {
+        case .reveal: NotesCopy.reveal(name)
+        case .copy: NotesCopy.copy(name)
+        case .revealAll: NotesCopy.revealAllTitle
+        }
     }
 
     var message: String {
-        action == .copy ? NotesCopy.copyMessage : NotesCopy.revealMessage
+        switch action {
+        case .reveal: NotesCopy.revealMessage
+        case .copy: NotesCopy.copyMessage
+        case .revealAll: NotesCopy.revealAllMessage(place: name)
+        }
     }
 }
 
 /// Reveal in a place's notes (1.0 B9; board Place-Reveal) and in its table (1.0 T1): "Confirm
 /// it's you" first (Touch ID at once, then the master password), then ``ConfigValueRevealer``
 /// decrypts the one secret and masks it again after `Timeouts.revealRemask`, on resign active,
-/// on another place and on lock. The table's Copy Value of a secret asks the same way.
+/// on another place and on lock. The table's Copy Value of a secret asks the same way, and
+/// Reveal All shows every secret of the place under one `Timeouts.revealAllRemask` countdown.
 @Observable
 final class NotesRevealModel: LockObserving, ReauthFlow {
     private(set) var request: NotesRevealRequestModel?
@@ -43,10 +54,12 @@ final class NotesRevealModel: LockObserving, ReauthFlow {
     private(set) var reauth: ReauthModel<NotesRevealAuthorization>?
     var alert: ErrorPresentationModel?
     let values: ConfigValueRevealer
+    /// The last item Copy Value put on the clipboard: its line says Copied under Reveal All.
+    private(set) var copiedID: ConfigItemID?
 
     @ObservationIgnored private let dependencies: FeatureDependencies
-    /// What Copy Value does once the gate says yes: the place's own copy.
-    @ObservationIgnored private var copyValue: ((ConfigItemID) -> Void)?
+    /// What Copy Value does once the gate says yes: the place's own copy, true when it copied.
+    @ObservationIgnored private var copyValue: ((ConfigItemID) -> Bool)?
 
     init(values: ConfigValueRevealer, dependencies: FeatureDependencies) {
         self.values = values
@@ -66,6 +79,40 @@ final class NotesRevealModel: LockObserving, ReauthFlow {
         start(NotesRevealRequestModel(id: id, name: name), reason: .reveal)
     }
 
+    /// The secrets Reveal All shows: the place's own, with a value here.
+    static func revealAllIDs(_ notes: NotesDocumentModel) -> [ConfigItemID] {
+        notes.items.filter(\.canReveal).map(\.id)
+    }
+
+    static func canRevealAll(_ notes: NotesDocumentModel) -> Bool {
+        !revealAllIDs(notes).isEmpty
+    }
+
+    /// The header's Reveal All | Hide All: Hide All always, Reveal All with a secret to show.
+    func canToggleRevealAll(_ notes: NotesDocumentModel) -> Bool {
+        isRevealingAll || Self.canRevealAll(notes)
+    }
+
+    /// Reveal All of the notes' secrets after the gate, or Hide All while they show.
+    func toggleRevealAll(_ notes: NotesDocumentModel, place: String) {
+        if isRevealingAll {
+            hideAll()
+            return
+        }
+        let ids = Self.revealAllIDs(notes)
+        guard let first = ids.first else { return }
+        start(NotesRevealRequestModel(id: first, name: place, action: .revealAll(ids)), reason: .revealAll)
+    }
+
+    var isRevealingAll: Bool {
+        values.isRevealingAll
+    }
+
+    /// When Reveal All's values hide (its countdown above the notes).
+    var revealAllHideDate: Date? {
+        values.allHideDate
+    }
+
     /// The table's eye: Hide for a value that shows, else Reveal after the gate.
     func toggle(_ id: ConfigItemID, name: String) {
         if values.isRevealed(id) {
@@ -76,10 +123,18 @@ final class NotesRevealModel: LockObserving, ReauthFlow {
     }
 
     /// Copy Value: a secret asks first, unless it shows (its value is on screen already); a
-    /// variable copies at once. `copy` is the place's own copy, run once per yes.
-    func copy(_ id: ConfigItemID, name: String, kind: ConfigKind, copy: @escaping (ConfigItemID) -> Void) {
+    /// variable copies at once. `copy` is the place's own copy, run once per yes; it returns
+    /// false when it failed (and showed why), so the line never says Copied for nothing.
+    func copy(_ id: ConfigItemID, name: String, kind: ConfigKind, copy: @escaping (ConfigItemID) -> Bool) {
+        let copy = { [weak self] (id: ConfigItemID) -> Bool in
+            let copied = copy(id)
+            if copied {
+                self?.copiedID = id
+            }
+            return copied
+        }
         guard kind == .secret, !values.isRevealed(id) else {
-            copy(id)
+            _ = copy(id)
             return
         }
         start(NotesRevealRequestModel(id: id, name: name, action: .copy), reason: .copyValue)
@@ -143,7 +198,15 @@ final class NotesRevealModel: LockObserving, ReauthFlow {
                 alert = error.presentation
             }
         case .copy:
-            copy?(request.id)
+            _ = copy?(request.id)
+        case .revealAll(let ids):
+            // A copy from before (the table, an earlier Reveal All) says nothing about this one.
+            copiedID = nil
+            do {
+                try values.revealAll(ids)
+            } catch {
+                alert = error.presentation
+            }
         }
     }
 }

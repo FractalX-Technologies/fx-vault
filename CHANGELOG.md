@@ -3,7 +3,14 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## Unreleased
+## 1.0.4
+
+### Added
+
+- **Reveal All in the notes.** One Touch ID or master password shows every secret of a place for
+  60 seconds under one countdown, as plain note text; meanwhile a click on a line copies its
+  value (the clipboard clears in 30 seconds) instead of opening the editor. **Hide All** masks
+  them at once, as do a lock, another place or switching apps.
 
 ### Fixed
 

@@ -43,6 +43,12 @@ struct NotesItemLineModel: Hashable {
 }
 
 extension NotesItemLineModel {
+    /// The place's own line with a value: Copy in the quick vault, a click under Reveal All.
+    /// What a repository inherits is copied from its organization.
+    var canCopy: Bool {
+        !isInherited && value != .missing
+    }
+
     /// A line's trailing note: "no value" for a secret without one here, then `detail`
     /// ("overrides example-org", an organization item's reach); nil when there is nothing.
     static func note(kind: ConfigKind, hasValue: Bool, detail: String?) -> String? {

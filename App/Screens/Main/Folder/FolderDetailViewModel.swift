@@ -153,11 +153,11 @@ final class FolderDetailViewModel: LockObserving {
     func copy(_ id: ConfigItemID) {
         guard let item = items.first(where: { $0.id == id }) else { return }
         notesReveal.copy(id, name: item.name, kind: item.kind) { [weak self] id in
-            self?.copyNow(id)
+            self?.copyNow(id) ?? false
         }
     }
 
-    private func copyNow(_ id: ConfigItemID) {
+    private func copyNow(_ id: ConfigItemID) -> Bool {
         do {
             try dependencies.copyValue(of: id)
             let name = items.first { $0.id == id }?.name ?? ""
@@ -167,7 +167,9 @@ final class FolderDetailViewModel: LockObserving {
             )
         } catch {
             alert = error.presentation
+            return false
         }
+        return true
     }
 
     func copyAll() {

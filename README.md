@@ -52,7 +52,9 @@ the secrets your code reads at runtime in Azure Key Vault.
 - **Notes.** Every place opens on its notes: numbered `# Secrets` and `# Variables` sections,
   secrets masked and variables in plain text, what a repository gets from its organization (read
   only), and marks for what changed on GitHub or waits for the next Sync. Revealing a secret
-  there asks Touch ID or your master password. Notes | Table switches to the table. Click a
+  there asks Touch ID or your master password. **Reveal All** on the header shows every secret
+  at once for 60 seconds under one countdown, and a click on a line then copies its value instead
+  of editing; Hide All masks them again. Notes | Table switches to the table. Click a
   line (or ⋯ More › Edit Notes) to edit the notes as text; a secret's value goes in Set value…,
   never in the text, and Review ⌘S turns the edits into pending changes for the next Sync.
   Leaving with unsaved changes asks before it drops them.

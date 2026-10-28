@@ -46,6 +46,25 @@ nonisolated enum NotesCopy {
         defaultValue: "The value shows for \(Timeouts.revealRemask.wholeSeconds) seconds, then hides again."
     )
 
+    static let revealAll = String(localized: "notes.revealAll", defaultValue: "Reveal All")
+    static let hideAll = String(localized: "notes.revealAll.hide", defaultValue: "Hide All")
+
+    static let revealAllHelp = String(
+        localized: "notes.revealAll.help",
+        defaultValue: "Reveal every secret here for \(Timeouts.revealAllRemask.wholeSeconds) seconds; click a line to copy its value. Asks for Touch ID or your master password."
+    )
+
+    static let revealAllTitle = String(localized: "notes.revealAll.title", defaultValue: "Reveal All Secrets")
+
+    static func revealAllMessage(place: String) -> String {
+        String(
+            localized: "notes.revealAll.message",
+            defaultValue: "Every secret of \(place) shows for \(Timeouts.revealAllRemask.wholeSeconds) seconds, then hides again. Click a line to copy its value."
+        )
+    }
+
+    static let clickToCopy = String(localized: "notes.revealAll.clickToCopy", defaultValue: "Click a line to copy its value")
+
     /// "Confirm it's you" before a secret's Copy (the table, 1.0 T1; the quick vault, Q1).
     static func copy(_ name: String) -> String {
         String(localized: "quickVault.copy", defaultValue: "Copy \(name)")
