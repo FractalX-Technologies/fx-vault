@@ -222,6 +222,29 @@ struct KATTests {
         }
     }
 
+    @Test func folderFileAADAndBlobs() throws {
+        #expect(!vectors.folderFile.isEmpty)
+        let keys = UnlockedKeys(
+            dek: SymmetricKey(data: try hexData(vectors.hierarchy.dekHex)),
+            vaultID: try hexData(vectors.hierarchy.vaultIdHex),
+            dekVersion: 1
+        )
+        for vector in vectors.folderFile {
+            let file = FolderFileAAD(fileID: try #require(FolderFileID(uuidString: vector.file)))
+            let aad = file.encoded(dekVersion: vector.dekVersion)
+            #expect(aad.hex == vector.aadHex, "AAD \(vector.label)")
+
+            let key = SymmetricKey(data: try hexData(vector.aesKHex))
+            let nonce = try AES.GCM.Nonce(data: try hexData(vector.nonceHex))
+            let blob = try FieldCipher.seal(SecretBytes(try hexData(vector.plainHex)), key: key, aad: aad, nonce: nonce)
+            #expect(blob.hex == vector.blobHex, "blob \(vector.label)")
+            if vector.dekVersion == 1 {
+                let opened = try keys.open(try hexData(vector.blobHex), for: file)
+                #expect(opened.withUnsafeBytes { Data($0) }.hex == vector.plainHex, "open \(vector.label)")
+            }
+        }
+    }
+
     // MARK: DEK wraps (§5.2)
 
     @Test func passwordWrapLayoutAndAAD() throws {

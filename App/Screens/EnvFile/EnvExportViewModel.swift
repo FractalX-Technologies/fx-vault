@@ -398,7 +398,7 @@ final class EnvExportViewModel: LockObserving {
                 scopeTitle = try config.scopes(repositoryID: repositoryID).first { $0.scope == scope }?.title ?? ""
             case .folder(let folderID):
                 // The folder's name in the title; no clone folder to start the save panel in.
-                repositoryName = try folders.folders().first { $0.id == folderID }?.name ?? ""
+                repositoryName = PlaceCopy.path(try folders.folders().path(of: folderID))
                 placeName = repositoryName
                 scopeTitle = ""
             case .destination(let destinationID):

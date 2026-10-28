@@ -216,6 +216,25 @@ def main():
             "blob_hex": (b"\x01" + nonce + sealed).hex(),
         })
 
+    # --- Folder file contents (v23): only the table, the column, the file id and the DEK
+    # version, so a rename re-seals nothing. ---
+    file_cases = [
+        ("folder-file-pdf", uuid.UUID("7f6e5d4c-3b2a-4c1d-8e0f-9a8b7c6d5e4f"), 1,
+         b"%PDF-1.7 FXV_FIXTURE_FOLDER_FILE\n", seq(0xC4, 12)),
+        ("folder-file-binary-v5", uuid.UUID("8a7b6c5d-4e3f-4a2b-9c1d-0e1f2a3b4c5d"), 5,
+         bytes(range(256)), seq(0xD4, 12)),
+    ]
+    vectors["folder_file"] = []
+    for label, f, ver, plain, nonce in file_cases:
+        aad = (lp(FIELD_DOMAIN) + lp(b"folder_file_blobs") + lp(b"content_ct") + lp(f.bytes)
+               + struct.pack(">I", ver))
+        sealed = AESGCM(k_field).encrypt(nonce, plain, aad)
+        vectors["folder_file"].append({
+            "label": label, "aes_k_hex": k_field.hex(), "file": str(f), "dek_version": ver,
+            "plain_hex": plain.hex(), "nonce_hex": nonce.hex(), "aad_hex": aad.hex(),
+            "blob_hex": (b"\x01" + nonce + sealed).hex(),
+        })
+
     # --- DEK wraps (§5.2): 62 bytes = fmt || aead || nonce || ct(32) || tag. ---
     pw_text = "FXV fixture pässwörd ✓"
     pw = unicodedata.normalize("NFC", pw_text).encode()

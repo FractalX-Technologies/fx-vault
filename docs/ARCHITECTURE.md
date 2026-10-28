@@ -502,12 +502,14 @@ them with `await`). Packages ship no user-facing text: the app maps every error.
   failed replacement; set wherever that is detected, including ReauthGate checks while unlocked;
   cleared by enable, disable, reset and an answered offer). Argon2id work is `@concurrent`. A weak
   new password throws `PasswordPolicyError.tooWeak`.
-- `ReauthGate` (D30): `authorize(.export | .share | .copyAll | .reveal, with: .biometrics(prompt) |
-  .password(String))`, `authorizeWithPassword(.newRecoveryKey | .changePassword |
+- `ReauthGate` (D30): `authorize(.export | .share | .copyAll | .reveal | .copyValue | .revealAll
+  | .saveFile, with: .biometrics(prompt) | .password(String))`, `authorizeWithPassword(.newRecoveryKey | .changePassword |
   .disableTouchID | .rotateKey | .resetVault, password:)`; plus `authorizeEnvExport(.file |
-  .clipboard, with:session:) -> EnvExportAuthorizationModel` and `authorizeShare(_:with:session:)
-  -> ShareAuthorizationModel`. Both authorizations are single-use, valid for their purpose only
-  and bound to the session and its key generation (shared core `ReauthTicket`).
+  .clipboard, with:session:) -> EnvExportAuthorizationModel`, `authorizeShare(_:with:session:)
+  -> ShareAuthorizationModel` and (v23) `authorizeFileSave(with:session:) ->
+  FolderFileSaveAuthorizationModel` for a folder file's Save As…. These authorizations are
+  single-use, valid for their purpose only and bound to the session and its key generation
+  (shared core `ReauthTicket`).
 - Touch ID: `BiometricPrompt(reason:fallbackTitle:)` (built by the app with `String(localized:)`),
   `protocol BiometricKeyStoring`, `KeychainManager(accessGroup:authManager:)`,
   `BiometricAuthManager`, `protocol BuildCapabilitiesProviding` / `BuildCapabilities`,

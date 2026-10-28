@@ -46,6 +46,8 @@ final class ItemEditorViewModel: LockObserving {
     private(set) var repository: RepoModel?
     /// The folder of a folder item (v0.7.0).
     private(set) var folder: FolderModel?
+    /// "Mobile › Development" for a subfolder, the name at the top.
+    private(set) var folderTitle = ""
     /// The destination of a destination item (v0.8.0).
     private(set) var destination: DestinationModel?
     /// The live scopes of the repository (Convert/Move targets and scope titles).
@@ -191,11 +193,13 @@ final class ItemEditorViewModel: LockObserving {
     /// A folder item's sheet: the folder and its items.
     private func loadFolder(_ folderID: FolderID) async {
         do {
-            guard let folder = try dependencies.folders.folders().first(where: { $0.id == folderID }) else {
+            let folders = try dependencies.folders.folders()
+            guard let folder = folders.first(where: { $0.id == folderID }) else {
                 throw ConfigRepositoryError.folderNotFound
             }
             let items = try dependencies.folders.items(folderID: folderID).map(EditorItemModel.init)
             self.folder = folder
+            folderTitle = PlaceCopy.path(folders.path(of: folderID))
             siblings = items
             if let id = editedID {
                 guard case .edit = context.mode else { throw ConfigRepositoryError.itemNotFound }
@@ -321,8 +325,8 @@ final class ItemEditorViewModel: LockObserving {
 
     /// "In production of owner/name", or "In the folder Mobile App" (v0.7.0).
     var subtitle: String? {
-        if let folder {
-            return String(localized: "itemEditor.subtitle.folder", defaultValue: "In the folder \(folder.name)")
+        if folder != nil {
+            return String(localized: "itemEditor.subtitle.folder", defaultValue: "In the folder \(folderTitle)")
         }
         if let destination {
             return String(localized: "itemEditor.subtitle.destination", defaultValue: "In \(destination.copyTargetTitle)")
@@ -335,7 +339,7 @@ final class ItemEditorViewModel: LockObserving {
     }
 
     func scopeTitle(_ scope: ConfigScope) -> String {
-        if let folder { return folder.name }
+        if folder != nil { return folderTitle }
         if let destination { return destination.copyTargetTitle }
         return scopeOptions.first { $0.scope == scope }?.title ?? Self.repositoryTitle
     }

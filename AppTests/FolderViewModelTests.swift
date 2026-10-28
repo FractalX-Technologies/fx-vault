@@ -31,7 +31,7 @@ struct FolderViewModelTests {
                 folderID: id,
                 dependencies: repository.harness.dependencies(recorder: recorder)
             ) { [folders] in
-                (try? folders.folders())?.first { $0.id == id }
+                (try? folders.folders()) ?? []
             }
             folder.kind = .secret
         }
@@ -324,5 +324,142 @@ struct FolderViewModelTests {
         #expect(rename.nameNote == nil, "a case-only change of its own name")
         #expect(rename.save())
         #expect(try fixture.harness.data.folders.folders().map(\.name).contains("WEB"))
+    }
+
+    @Test func newSubfolderChecksTheNameAmongItsSiblings() async throws {
+        let fixture = try await Fixture()
+        let dependencies = fixture.harness.dependencies(recorder: fixture.recorder)
+        let folders = fixture.harness.data.folders
+        try folders.createFolder(named: "Development")
+        try folders.createFolder(named: "Builds", in: fixture.folderID)
+
+        let model = FolderNameViewModel(context: FolderNameContext(mode: .create(itemIDs: [], parent: fixture.folderID)), dependencies: dependencies)
+        #expect(model.title == "New Subfolder in Mobile App")
+        model.name = "builds"
+        #expect(model.nameNote == .error(FolderCopy.nameTaken))
+        // A top-level folder of that name is not a sibling.
+        model.name = "Development"
+        #expect(model.nameNote == nil)
+        #expect(model.save())
+        let created = try #require(try folders.folders().first { $0.name == "Development" && $0.parentID == fixture.folderID })
+        #expect(fixture.recorder.openedFolders == [created.id])
+
+        let rename = FolderNameViewModel(context: FolderNameContext(mode: .rename(created.id)), dependencies: dependencies)
+        rename.name = "BUILDS"
+        #expect(rename.nameNote == .error(FolderCopy.nameTaken))
+
+        // Copy To lists each subfolder after its parent, titled with it.
+        #expect(dependencies.folderCopyTargets().map(\.title) == ["Mobile App", "Mobile App › Builds", "Mobile App › Development", "Development"])
+    }
+
+    // MARK: - Files (v23)
+
+    /// A synthetic file in the harness sandbox, for Add File… and drops.
+    private func source(_ name: String, _ text: String, in fixture: Fixture) throws -> URL {
+        let url = fixture.harness.sandbox.appendingPathComponent("in-\(UUID().uuidString)", isDirectory: true).appendingPathComponent(name)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(text.utf8).write(to: url)
+        return url
+    }
+
+    @Test func addFileAndADropKeepFilesInTheFolder() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.folder
+        #expect(model.keepsDroppedFiles)
+
+        model.addFiles([try source("Profile.pdf", "%PDF-1.7 FXV_FIXTURE", in: fixture)])
+        await model.addingFiles?.value
+        #expect(await TestFixtures.eventually { model.files.map(\.name) == ["Profile.pdf"] })
+        #expect(model.notice == FolderFileCopy.added("Profile.pdf"))
+        #expect(model.subline.hasSuffix(" · 1 variable · 1 file"))
+
+        // A file that can't be a file secret is kept as a file, not refused.
+        model.dropFile(try source("Build.ipa", "ipa", in: fixture))
+        await model.addingFiles?.value
+        #expect(await TestFixtures.eventually { model.files.map(\.name) == ["Build.ipa", "Profile.pdf"] })
+        #expect(model.alert == nil)
+        #expect(model.subline.hasSuffix(" · 2 files"))
+        #expect(try fixture.harness.data.folders.folders().first { $0.id == fixture.folderID }?.fileCount == 2)
+
+        // Several at once are all kept, and a key file too large for a value is kept as a file.
+        let big = String(repeating: "x", count: model.maxValueBytes + 1)
+        model.dropFiles([try source("a.pem", "pem", in: fixture), try source("b.txt", "b", in: fixture)])
+        await model.addingFiles?.value
+        model.dropFile(try source("service-account.json", big, in: fixture))
+        await model.addingFiles?.value
+        #expect(await TestFixtures.eventually { model.files.count == 5 })
+        #expect(fixture.recorder.presented.isEmpty, "no drop opened Add File Secret")
+
+        // The limit reads as the panel and the README write it.
+        #expect(FolderFileCopy.limit() == "50 MB")
+        #expect(FolderFileError.tooLarge(limit: Limits.maxFolderFileBytes).localizedMessage.contains("50 MB"))
+    }
+
+    @Test func saveAsAsksItIsYouThenWritesTheFile() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.folder
+        model.addFiles([try source("Signing.p12", "FXV_FIXTURE_P12", in: fixture)])
+        await model.addingFiles?.value
+        #expect(await TestFixtures.eventually { model.files.count == 1 })
+        let file = try #require(model.files.first)
+        let destination = fixture.harness.sandbox.appendingPathComponent("saved-signing.p12")
+
+        model.save(file, to: destination)
+        #expect(model.fileSave.pendingReauth != nil)
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
+        let reauth = try #require(model.fileSave.reauth)
+        reauth.password = "wrong password"
+        await model.fileSave.authenticateWithPassword()
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
+
+        reauth.password = testPassword
+        await model.fileSave.authenticateWithPassword()
+        await model.fileSave.saving?.value
+        #expect(try String(contentsOf: destination, encoding: .utf8) == "FXV_FIXTURE_P12")
+        #expect(model.notice == FolderFileCopy.saved("Signing.p12"))
+        #expect(model.fileSave.pending == nil)
+
+        // Each request gets its own check: one left from a cancelled request authorizes nothing.
+        model.save(file, to: fixture.harness.sandbox.appendingPathComponent("again.p12"))
+        let first = try #require(model.fileSave.reauth)
+        model.fileSave.cancel()
+        model.save(file, to: fixture.harness.sandbox.appendingPathComponent("other.p12"))
+        #expect(model.fileSave.reauth !== first)
+        first.password = testPassword
+        _ = await first.authorizeWithPassword()
+        model.fileSave.reauthorized()
+        #expect(model.fileSave.pending != nil, "the cancelled request's check saved the new one")
+        #expect(!FileManager.default.fileExists(atPath: fixture.harness.sandbox.appendingPathComponent("other.p12").path))
+
+        // A lock closes a request that was never confirmed.
+        model.fileSave.vaultDidLock()
+        #expect(model.fileSave.pending == nil && model.fileSave.reauth == nil)
+    }
+
+    @Test func renameAndDeleteAFile() async throws {
+        let fixture = try await Fixture()
+        let model = fixture.folder
+        model.addFiles([try source("a.pdf", "a", in: fixture), try source("b.pdf", "b", in: fixture)])
+        await model.addingFiles?.value
+        #expect(await TestFixtures.eventually { model.files.count == 2 })
+        let first = try #require(model.files.first { $0.name == "a.pdf" })
+
+        model.beginRename(first)
+        #expect(model.fileNameDraft == "a.pdf")
+        model.fileNameDraft = "B.PDF"
+        model.commitRename()
+        #expect(model.alert != nil)
+        #expect(model.renamingFile == nil)
+        model.alert = nil
+        model.beginRename(first)
+        model.fileNameDraft = "Profile.pdf"
+        model.commitRename()
+        #expect(model.alert == nil)
+        #expect(await TestFixtures.eventually { model.files.map(\.name) == ["b.pdf", "Profile.pdf"] })
+
+        model.requestFileDeletion(try #require(model.files.first { $0.name == "b.pdf" }))
+        model.confirmFileDeletion()
+        #expect(await TestFixtures.eventually { model.files.map(\.name) == ["Profile.pdf"] })
+        #expect(model.pendingFileDeletion == nil)
     }
 }

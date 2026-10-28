@@ -17,6 +17,9 @@ public enum ConfigRepositoryError: Error, Sendable, Hashable {
     case folderNotFound
     /// The folder already holds `limit` secrets and variables (v0.7.0).
     case folderFull(limit: Int)
+    /// A subfolder can't hold subfolders, nor a folder with subfolders go into another: one
+    /// level only.
+    case subfolderNotAllowed
     /// No destination with that id (v0.8.0).
     case destinationNotFound
     /// No organization with that id (1.0).

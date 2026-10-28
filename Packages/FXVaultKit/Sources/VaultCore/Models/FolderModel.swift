@@ -5,30 +5,39 @@ import Foundation
 /// and paste; teammates by a copy sent in a `.fxvault` file.
 public struct FolderModel: Sendable, Hashable, Identifiable {
     public var id: FolderID
-    /// NFC, 1–``Limits/maxFolderNameLength`` scalars (``FolderNameValidator``), unique by fold key.
+    /// The top-level folder this one is in (Mobile › Development); nil at the top. One level only.
+    public var parentID: FolderID?
+    /// NFC, 1–``Limits/maxFolderNameLength`` scalars (``FolderNameValidator``), unique by fold key
+    /// among its parent's subfolders (or the top-level folders).
     public var name: String
-    /// The sidebar order (ascending).
+    /// The sidebar order (ascending) among its siblings.
     public var sortOrder: Int
     /// Live secrets and variables, set by the folder observation.
     public var secretCount: Int
     public var variableCount: Int
+    /// Live files (v23), set by the folder observation.
+    public var fileCount: Int
     public var createdAt: Date
     public var updatedAt: Date
 
     public init(
         id: FolderID = FolderID(),
+        parentID: FolderID? = nil,
         name: String,
         sortOrder: Int,
         secretCount: Int = 0,
         variableCount: Int = 0,
+        fileCount: Int = 0,
         createdAt: Date,
         updatedAt: Date
     ) {
         self.id = id
+        self.parentID = parentID
         self.name = name
         self.sortOrder = sortOrder
         self.secretCount = secretCount
         self.variableCount = variableCount
+        self.fileCount = fileCount
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -41,6 +50,25 @@ public struct FolderModel: Sendable, Hashable, Identifiable {
     /// `name` case-folded (``FolderNameValidator/foldKey(_:)``).
     public var nameKey: String {
         FolderNameValidator.foldKey(name)
+    }
+}
+
+extension [FolderModel] {
+    /// The names from the top down: `["Mobile", "Development"]` for a subfolder, `["Mobile"]` for
+    /// a top-level folder, empty when `id` is gone. Every title outside the sidebar tree uses it,
+    /// so two subfolders of one name stay apart.
+    public func path(of id: FolderID) -> [String] {
+        guard let folder = first(where: { $0.id == id }) else { return [] }
+        guard let parentID = folder.parentID, let parent = first(where: { $0.id == parentID }) else { return [folder.name] }
+        return [parent.name, folder.name]
+    }
+
+    /// Each top-level folder followed by its subfolders, each level in its own order: the
+    /// sidebar's order, flattened for menus and pickers. A subfolder whose parent is missing
+    /// is left out.
+    public var treeOrdered: [FolderModel] {
+        let children = Dictionary(grouping: filter { $0.parentID != nil }) { $0.parentID }
+        return filter { $0.parentID == nil }.flatMap { [$0] + (children[$0.id] ?? []) }
     }
 }
 

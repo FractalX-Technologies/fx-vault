@@ -66,6 +66,10 @@ protocol ConfigTableModel: AnyObject, Observable {
     var acceptsOutsideEdits: Bool { get }
     /// The largest value the place stores (25,600 bytes in a Key Vault), for the drop overlay.
     var maxValueBytes: Int { get }
+    /// A dropped file that can't be a file secret is kept as a file (a folder, v23).
+    var keepsDroppedFiles: Bool { get }
+    /// Keeps dropped files that aren't file secrets (``keepsDroppedFiles`` only).
+    func keepDroppedFiles(_ urls: [URL])
     var alert: ErrorPresentationModel? { get set }
 }
 
@@ -108,22 +112,51 @@ extension ConfigTableModel {
         canEdit
     }
 
+    /// Only a folder keeps files.
+    var keepsDroppedFiles: Bool {
+        false
+    }
+
+    func keepDroppedFiles(_ urls: [URL]) {}
+
     /// The ⌘V validator of the place's column: the providers while it takes outside edits, nil
     /// (Paste disabled) otherwise.
     func validatePaste(_ providers: [NSItemProvider]) -> [NSItemProvider]? {
         acceptsOutsideEdits ? providers : nil
     }
 
+    /// Files dropped on the place. A folder keeps several at once as files (v23); elsewhere the
+    /// first one counts, as ``dropFile(_:)`` says.
+    func dropFiles(_ urls: [URL]) {
+        guard acceptsOutsideEdits else { return }
+        if urls.count > 1, keepsDroppedFiles {
+            keepDroppedFiles(urls.filter(\.isFileURL))
+        } else if let url = urls.first {
+            dropFile(url)
+        }
+    }
+
     /// A file dropped on the place (1.0 F1; board Place-FileDrop): a .p8, .pem or .json file
-    /// opens Add file secret with it. Any other is refused: a drop is quick to do by mistake,
-    /// and Choose… in the sheet takes every file.
+    /// opens Add file secret with it. A folder keeps any other file, and a key file too large
+    /// for a value (v23); elsewhere it is refused: a drop is quick to do by mistake, and Choose…
+    /// in the sheet takes every file.
     func dropFile(_ url: URL) {
         guard acceptsOutsideEdits else { return }
-        guard url.isFileURL, FileSecretRules.isDroppable(fileName: url.lastPathComponent) else {
+        let isSecretFile = FileSecretRules.isDroppable(fileName: url.lastPathComponent)
+            && !(keepsDroppedFiles && Self.byteCount(of: url).map { $0 > maxValueBytes } == true)
+        if url.isFileURL, !isSecretFile, keepsDroppedFiles {
+            keepDroppedFiles([url])
+            return
+        }
+        guard url.isFileURL, isSecretFile else {
             alert = ErrorPresentationModel(title: FileSecretCopy.notDroppableTitle, message: FileSecretCopy.notDroppableMessage)
             return
         }
         addFileSecret(from: url)
+    }
+
+    private static func byteCount(of url: URL) -> Int? {
+        try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize
     }
 
     /// New Secret or New Variable from a place's ⋯ More (1.0 D6c3): that kind's tab first, so

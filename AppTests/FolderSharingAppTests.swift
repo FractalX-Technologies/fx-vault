@@ -135,4 +135,55 @@ struct FolderSharingAppTests {
         #expect(main.activeSheet == .folderName(FolderNameContext(mode: .create(itemIDs: []))))
         withExtendedLifetime(harness) {}
     }
+
+    @Test func subfoldersSitUnderTheirParentAndAreTitledWithIt() async throws {
+        let (harness, main) = try await MainSnapshotFixture.make()
+        let folders = harness.data.folders
+        let mobile = try folders.createFolder(named: "Mobile")
+        let web = try folders.createFolder(named: "Web")
+        let development = try folders.createFolder(named: "Development", in: mobile)
+        let testflight = try folders.createFolder(named: "Testflight Dev", in: mobile)
+        #expect(await TestFixtures.eventually { main.sidebar.folders.count == 4 })
+
+        #expect(main.sidebar.visibleFolders.map(\.id) == [mobile, web])
+        #expect(main.sidebar.visibleSubfolders(of: mobile).map(\.id) == [development, testflight])
+        #expect(main.sidebar.folderTitle(testflight) == "Mobile › Testflight Dev")
+
+        // A subfolder's name keeps its parent on screen; the parent's own name shows them all.
+        main.sidebar.searchText = "testflight"
+        #expect(main.sidebar.visibleFolders.map(\.id) == [mobile])
+        #expect(main.sidebar.visibleSubfolders(of: mobile).map(\.id) == [testflight])
+        main.sidebar.searchText = "mobile"
+        #expect(main.sidebar.visibleSubfolders(of: mobile).map(\.id) == [development, testflight])
+        main.sidebar.searchText = ""
+
+        // Closed by its chevron; selecting one of its subfolders opens it again.
+        main.sidebar.toggle(folder: mobile)
+        #expect(!main.sidebar.isExpanded(folder: mobile))
+        main.sidebar.select(folderID: development)
+        #expect(main.sidebar.isExpanded(folder: mobile))
+        #expect(main.breadcrumb == [FolderCopy.sectionTitle, "Mobile", "Development"])
+        #expect(main.folderDetail?.title == "Mobile › Development")
+
+        // A drag reorders siblings and nothing across levels.
+        main.sidebar.moveFolder(testflight, before: development)
+        #expect(await TestFixtures.eventually { main.sidebar.visibleSubfolders(of: mobile).map(\.id) == [testflight, development] })
+        main.sidebar.moveFolder(web, before: development)
+        #expect(try folders.folders().first { $0.id == web }?.parentID == nil)
+
+        main.newFolder(in: mobile)
+        #expect(main.activeSheet == .folderName(FolderNameContext(mode: .create(itemIDs: [], parent: mobile))))
+        #expect(main.sidebar.subfolderCount(of: mobile) == 2)
+        #expect(FolderCopy.deleteMessage(subfolders: 2).hasPrefix("Its 2 subfolders, secrets and variables"))
+        #expect(FolderCopy.deleteMessage(subfolders: 0) == FolderCopy.deleteMessage)
+        #expect(FolderCopy.deleteMessage(subfolders: 2, files: 3).hasSuffix(" The 3 files kept in it are deleted too."))
+        #expect(FolderCopy.deleteMessage(subfolders: 0, files: 1) == FolderCopy.deleteMessage + " The file kept in it is deleted too.")
+        // A subfolder's files count for its parent: deleting the parent deletes them.
+        let file = harness.sandbox.appendingPathComponent("Profile.pdf")
+        try Data("%PDF-1.7 FXV_FIXTURE".utf8).write(to: file)
+        try folders.addFile(from: file, to: development)
+        #expect(await TestFixtures.eventually { main.sidebar.fileCount(of: mobile) == 1 && main.sidebar.fileCount(of: development) == 1 })
+        #expect(main.sidebar.fileCount(of: web) == 0)
+        withExtendedLifetime(harness) {}
+    }
 }

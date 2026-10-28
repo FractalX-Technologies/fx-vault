@@ -51,7 +51,7 @@ struct FolderDestinationView: View {
                 if !model.folders.isEmpty {
                     Divider()
                     ForEach(model.folders) { folder in
-                        Text(verbatim: folder.name).tag(FolderDestinationModel.FolderChoice.existing(folder.id))
+                        Text(verbatim: model.folderTitles[folder.id] ?? folder.name).tag(FolderDestinationModel.FolderChoice.existing(folder.id))
                     }
                 }
             }

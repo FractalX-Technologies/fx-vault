@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 import VaultCore
 
-/// `folders` and `folder_items` (§6 `v12_folders`, v0.7.0).
+/// `folders` and `folder_items` (§6 `v12_folders`, v0.7.0), and `folder_files` with their blobs (v23).
 ///
 /// No sync path reads these tables: folder items reach a repository only as copies written by
 /// VaultData into `config_items`. Link groups (`link_id`) span both tables, so the link counts
@@ -41,9 +41,11 @@ public struct FolderStore: Sendable {
         }
     }
 
-    /// One past the largest `sort_order`, so a new folder goes last.
-    public func nextSortOrder(in tx: StoreTransaction) throws -> Int {
-        let largest = try FolderRecord.select(max(FolderRecord.CodingKeys.sortOrder), as: Int?.self).fetchOne(tx.db)
+    /// One past the largest `sort_order` among `parent`'s subfolders (the top-level folders
+    /// for nil), so a new folder goes last there.
+    public func nextSortOrder(parent: FolderID?, in tx: StoreTransaction) throws -> Int {
+        let siblings = FolderRecord.filter(FolderRecord.CodingKeys.parentID == parent?.uuidString)
+        let largest = try siblings.select(max(FolderRecord.CodingKeys.sortOrder), as: Int?.self).fetchOne(tx.db)
         return (largest ?? nil).map { $0 + 1 } ?? 0
     }
 
@@ -131,6 +133,60 @@ public struct FolderStore: Sendable {
         }
     }
 
+    // MARK: - Files (v23)
+
+    public func fetchFileRecord(id: FolderFileID, in tx: StoreTransaction) throws -> FolderFileRecord? {
+        try FolderFileRecord.fetchOne(tx.db, key: id.uuidString)
+    }
+
+    /// The files of one folder by name.
+    public func fetchFileRecords(folderID: FolderID, in tx: StoreTransaction) throws -> [FolderFileRecord] {
+        try Self.orderedFiles(folderID: folderID).fetchAll(tx.db)
+    }
+
+    /// Ids of every file in a stable order (DEK rotation re-seals one at a time). Decoding whole
+    /// records throws on a tampered id, where skipping it would leave a blob under the old DEK.
+    public func fetchFileIDs(in tx: StoreTransaction) throws -> [FolderFileID] {
+        try FolderFileRecord.order(FolderFileRecord.CodingKeys.id).fetchAll(tx.db).map(\.id)
+    }
+
+    /// The files of one folder, now and after each change. Reads no blob.
+    public func observeFiles(folderID: FolderID) -> AsyncThrowingStream<[FolderFileModel], any Error> {
+        database.observe { db in
+            try Self.orderedFiles(folderID: folderID).fetchAll(db).map(\.model)
+        }
+    }
+
+    /// Inserts a file and its sealed bytes. Throws ``StoreError/constraintViolation(_:)``:
+    /// `.unique` for a name the folder already has, `.foreignKey` for a missing folder, `.check`
+    /// for a size over 50 MB.
+    public func insertFile(_ file: FolderFileRecord, blob: FolderFileBlobRecord, in tx: StoreTransaction) throws {
+        try file.insert(tx.db)
+        try blob.insert(tx.db)
+    }
+
+    /// Replaces a file row (its name). Throws ``StoreError/notFound`` if there is none.
+    public func updateFile(_ file: FolderFileRecord, in tx: StoreTransaction) throws {
+        guard try FolderFileRecord.exists(tx.db, key: file.id.uuidString) else {
+            throw StoreError.notFound
+        }
+        try file.update(tx.db)
+    }
+
+    /// Removes a file and its bytes. Returns false if there was none.
+    @discardableResult
+    public func deleteFile(id: FolderFileID, in tx: StoreTransaction) throws -> Bool {
+        try FolderFileRecord.deleteOne(tx.db, key: id.uuidString)
+    }
+
+    public func fetchFileBlob(fileID: FolderFileID, in tx: StoreTransaction) throws -> FolderFileBlobRecord? {
+        try FolderFileBlobRecord.fetchOne(tx.db, key: fileID.uuidString)
+    }
+
+    public func updateFileBlob(_ blob: FolderFileBlobRecord, in tx: StoreTransaction) throws {
+        try blob.update(tx.db)
+    }
+
     // MARK: - Linked copies
 
     /// The folder items of a link group (repository items are in ``ConfigStore``).
@@ -151,6 +207,12 @@ public struct FolderStore: Sendable {
 
     // MARK: - Queries
 
+    private static func orderedFiles(folderID: FolderID) -> QueryInterfaceRequest<FolderFileRecord> {
+        FolderFileRecord
+            .filter(FolderFileRecord.CodingKeys.folderID == folderID.uuidString)
+            .order(FolderFileRecord.CodingKeys.nameKey)
+    }
+
     private static func orderedFolders() -> QueryInterfaceRequest<FolderRecord> {
         FolderRecord.order(FolderRecord.CodingKeys.sortOrder, FolderRecord.CodingKeys.nameKey)
     }
@@ -170,9 +232,24 @@ public struct FolderStore: Sendable {
             }
             counts[folder, default: [:]][kind] = row[2]
         }
+        let fileRows = try Row.fetchAll(
+            db,
+            FolderFileRecord
+                .select(FolderFileRecord.CodingKeys.folderID, count(FolderFileRecord.CodingKeys.id))
+                .group(FolderFileRecord.CodingKeys.folderID)
+        )
+        var fileCounts: [String: Int] = [:]
+        for row in fileRows {
+            guard let folder: String = row[0] else { continue }
+            fileCounts[folder] = row[1]
+        }
         return folders.map { folder in
             let byKind = counts[folder.id.uuidString] ?? [:]
-            return folder.model(secretCount: byKind[.secret] ?? 0, variableCount: byKind[.variable] ?? 0)
+            return folder.model(
+                secretCount: byKind[.secret] ?? 0,
+                variableCount: byKind[.variable] ?? 0,
+                fileCount: fileCounts[folder.id.uuidString] ?? 0
+            )
         }
     }
 

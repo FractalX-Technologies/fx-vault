@@ -37,10 +37,12 @@ class VaultUITestCase: XCTestCase {
         case unlocked
     }
 
+    /// `environment` adds launch environment keys (``UITestEnvironment``) for one flow.
     @MainActor
-    func launch(appearance: Appearance = .system, vault: VaultStart = .unlocked) -> XCUIApplication {
+    func launch(appearance: Appearance = .system, vault: VaultStart = .unlocked, environment: [String: String] = [:]) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-ApplePersistenceIgnoreState", "YES", "-AppleLanguages", "(en)"] + appearance.launchArguments
+        app.launchEnvironment.merge(environment) { _, new in new }
         if vault == .unlocked {
             app.launchEnvironment[UITestEnvironment.vaultPassword] = password
         }
@@ -142,8 +144,7 @@ class VaultUITestCase: XCTestCase {
     @MainActor
     func searchHiddenSidebar(for text: String, in app: XCUIApplication) {
         let field = app.textFields[AccessibilityID.Main.sidebarSearch]
-        let hidden = NSPredicate(format: "exists == false OR isHittable == false")
-        XCTAssertTrue(field.satisfies(hidden, within: timeout), "The sidebar is not hidden")
+        XCTAssertTrue(poll(within: timeout) { !field.exists || !field.isHittable }, "The sidebar is not hidden")
         app.typeKey("f", modifierFlags: .command)
         XCTAssertTrue(field.appears(within: timeout), "⌘F did not bring the sidebar back")
         XCTAssertTrue(field.satisfies(NSPredicate(format: "isHittable == true"), within: timeout), "⌘F did not bring the sidebar back")
@@ -246,9 +247,11 @@ extension XCUIElement {
         poll(within: timeout) { !exists }
     }
 
-    /// `predicate` over the element's attributes (`label`, `value`, `isHittable`…).
+    /// `predicate` over the element's attributes (`label`, `value`, `isHittable`…). Reading an
+    /// attribute of an element that is gone fails the test at once ("Failed to get matching
+    /// snapshot"), so a missing element counts as not yet.
     func satisfies(_ predicate: NSPredicate, within timeout: TimeInterval) -> Bool {
-        poll(within: timeout) { predicate.evaluate(with: self) }
+        poll(within: timeout) { exists && predicate.evaluate(with: self) }
     }
 }
 

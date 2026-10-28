@@ -237,7 +237,7 @@ private struct ProjectShareContentsStep: View {
         )
     }
 
-    /// Production leaving the Mac and secrets that travel by name only.
+    /// Production leaving the Mac, secrets that travel by name only, and folder files left out.
     @ViewBuilder
     private var notes: some View {
         if viewModel.includesProduction {
@@ -248,6 +248,9 @@ private struct ProjectShareContentsStep: View {
         if let missing = viewModel.preview?.valueMissingNames, !missing.isEmpty {
             ConfigEditorNoteView(note: .warning(ProjectShareCopy.valueMissing(missing.count)), style: .dialog)
                 .help(missing.joined(separator: "\n"))
+        }
+        if viewModel.leavesOutFolderFiles {
+            ConfigEditorNoteView(note: .info(ProjectShareCopy.folderFilesLeftOut), style: .dialog)
         }
     }
 }

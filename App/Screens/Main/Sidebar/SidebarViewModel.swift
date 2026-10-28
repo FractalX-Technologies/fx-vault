@@ -45,12 +45,18 @@ final class SidebarViewModel {
     private(set) var fullyShownOwnerIDs: Set<SidebarOwnerModel.ID> = []
     /// The folders (v0.7.0), in the user's order.
     private(set) var folders: [FolderModel] = []
+    /// Folders the user closed, their subfolders hidden; open by default.
+    private(set) var collapsedFolderIDs: Set<FolderID> = []
     /// The selected folder: selecting one clears the repository selection, and back.
     var selectedFolderID: FolderID? {
         didSet {
             guard selectedFolderID != oldValue else { return }
-            if selectedFolderID != nil {
+            if let selectedFolderID {
                 clearSelection(except: .folder)
+                // A jump (⌘K, a new subfolder) into a closed folder shows the row.
+                if let parent = folder(selectedFolderID)?.parentID {
+                    collapsedFolderIDs.remove(parent)
+                }
             }
             onChange?()
         }
@@ -303,9 +309,43 @@ final class SidebarViewModel {
 
     // MARK: - Folders (v0.7.0)
 
-    /// The folders whose name matches the search.
+    /// The top-level folders on screen: those whose name, or a subfolder's, matches the search.
     var visibleFolders: [FolderModel] {
-        folders.filter { matchesSearch($0.name) }
+        folders.filter { $0.parentID == nil && (matchesSearch($0.name) || !visibleSubfolders(of: $0.id).isEmpty) }
+    }
+
+    /// `parent`'s subfolders on screen: every one when the parent's own name matches the search.
+    func visibleSubfolders(of parent: FolderID) -> [FolderModel] {
+        let subfolders = folders.filter { $0.parentID == parent }
+        guard let folder = folder(parent), !matchesSearch(folder.name) else { return subfolders }
+        return subfolders.filter { matchesSearch($0.name) }
+    }
+
+    func subfolderCount(of id: FolderID) -> Int {
+        folders.count { $0.parentID == id }
+    }
+
+    /// The files a folder and its subfolders keep (v23): deleting it deletes them.
+    func fileCount(of id: FolderID) -> Int {
+        folders.filter { $0.id == id || $0.parentID == id }.reduce(0) { $0 + $1.fileCount }
+    }
+
+    /// A search shows every folder open.
+    func isExpanded(folder id: FolderID) -> Bool {
+        isSearching || !collapsedFolderIDs.contains(id)
+    }
+
+    func toggle(folder id: FolderID) {
+        if collapsedFolderIDs.contains(id) {
+            collapsedFolderIDs.remove(id)
+        } else {
+            collapsedFolderIDs.insert(id)
+        }
+    }
+
+    /// "Mobile › Development": the names from the top, for every title outside the tree.
+    func folderTitle(_ id: FolderID) -> String {
+        PlaceCopy.path(folders.path(of: id))
     }
 
     /// Folders and Key Vaults match the search by name; an empty search matches everything.
@@ -339,15 +379,16 @@ final class SidebarViewModel {
         }
     }
 
-    /// Puts `moved` right before `target` (a folder dragged onto another one).
+    /// Puts `moved` right before `target` (a folder dragged onto a sibling).
     func moveFolder(_ moved: FolderID, before target: FolderID) {
-        var order = folders.map(\.id)
+        guard let parent = folder(moved).map(\.parentID), folder(target)?.parentID == parent else { return }
+        var order = folders.filter { $0.parentID == parent }.map(\.id)
         guard moved != target, let from = order.firstIndex(of: moved) else { return }
         order.remove(at: from)
         guard let to = order.firstIndex(of: target) else { return }
         order.insert(moved, at: to)
         do {
-            try data.folders.reorderFolders(order)
+            try data.folders.reorderFolders(order, in: parent)
         } catch {
             alert = error.presentation
         }

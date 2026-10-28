@@ -6073,6 +6073,17 @@
         }
       }
     },
+    "error.config.subfolderNotAllowed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folders hold one level of subfolders."
+          }
+        }
+      }
+    },
     "error.config.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -6707,6 +6718,72 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "A link with this name exists. FX Vault never writes through a link: choose another name."
+          }
+        }
+      }
+    },
+    "error.folderFile.authorizationInvalid" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Each save needs a fresh Touch ID or master password check. Confirm it's you and try again."
+          }
+        }
+      }
+    },
+    "error.folderFile.quarantine" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "macOS could not mark the file as downloaded, so FX Vault removed it. Save it to a folder on your Mac's disk."
+          }
+        }
+      }
+    },
+    "error.folderFile.read.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The file was not added"
+          }
+        }
+      }
+    },
+    "error.folderFile.tooLarge" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The file is larger than %@. A folder keeps files up to that size."
+          }
+        }
+      }
+    },
+    "error.folderFile.unreadable" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FX Vault cannot open this file. Check that it is a file you can read, not a folder."
+          }
+        }
+      }
+    },
+    "error.folderFile.write.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The file was not saved"
           }
         }
       }
@@ -8218,6 +8295,28 @@
         }
       }
     },
+    "folder.delete.files" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The %lld files kept in it are deleted too."
+          }
+        }
+      }
+    },
+    "folder.delete.files.one" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The file kept in it is deleted too."
+          }
+        }
+      }
+    },
     "folder.delete.message" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8225,6 +8324,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Its secrets and variables are removed from this Mac. Copies you pasted into repositories stay where they are."
+          }
+        }
+      }
+    },
+    "folder.delete.messageWithSubfolders" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Its ^[%lld subfolder](inflect: true), secrets and variables are removed from this Mac. Copies you pasted into repositories stay where they are."
           }
         }
       }
@@ -8482,6 +8592,17 @@
         }
       }
     },
+    "folder.name.newSubfolderTitle" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Subfolder in %@"
+          }
+        }
+      }
+    },
     "folder.name.newTitle" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -8532,7 +8653,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Another folder already has this name."
+            "value" : "Another folder here already has this name."
           }
         }
       }
@@ -8544,6 +8665,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "New Folder…"
+          }
+        }
+      }
+    },
+    "folder.newSubfolder" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Subfolder…"
           }
         }
       }
@@ -8610,6 +8742,248 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Add one, paste KEY=value lines with ⌘V, import a .env file, or copy items here from a repository."
+          }
+        }
+      }
+    },
+    "folderFile.add" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add File…"
+          }
+        }
+      }
+    },
+    "folderFile.added" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Added %@."
+          }
+        }
+      }
+    },
+    "folderFile.count" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%lld file](inflect: true)"
+          }
+        }
+      }
+    },
+    "folderFile.delete" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete…"
+          }
+        }
+      }
+    },
+    "folderFile.delete.confirm" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete File"
+          }
+        }
+      }
+    },
+    "folderFile.delete.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The file is removed from FX Vault. Copies you saved stay where they are."
+          }
+        }
+      }
+    },
+    "folderFile.delete.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete %@?"
+          }
+        }
+      }
+    },
+    "folderFile.drop.detail" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ up to %2$@ become file secrets · any other file up to %3$@ is kept as a file"
+          }
+        }
+      }
+    },
+    "folderFile.drop.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Drop to add to this folder"
+          }
+        }
+      }
+    },
+    "folderFile.panel.add.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose files up to %@ each. FX Vault keeps an encrypted copy; the files are not changed."
+          }
+        }
+      }
+    },
+    "folderFile.panel.add.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "folderFile.panel.add.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Files"
+          }
+        }
+      }
+    },
+    "folderFile.panel.save.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The file is saved unencrypted. Choose a folder that is not synced or shared if it is sensitive."
+          }
+        }
+      }
+    },
+    "folderFile.panel.save.prompt" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save"
+          }
+        }
+      }
+    },
+    "folderFile.rename" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rename…"
+          }
+        }
+      }
+    },
+    "folderFile.rename.submit" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rename"
+          }
+        }
+      }
+    },
+    "folderFile.rename.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rename File"
+          }
+        }
+      }
+    },
+    "folderFile.save.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The file is saved unencrypted where you chose. Confirm it's you."
+          }
+        }
+      }
+    },
+    "folderFile.save.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save %@"
+          }
+        }
+      }
+    },
+    "folderFile.saveAs" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save As…"
+          }
+        }
+      }
+    },
+    "folderFile.saved" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saved %@."
+          }
+        }
+      }
+    },
+    "folderFile.section" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Files · %lld"
           }
         }
       }
@@ -14880,6 +15254,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%lld days"
+          }
+        }
+      }
+    },
+    "projectShare.folderFiles.leftOut" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Files kept in folders aren't included. Send them another way if your teammate needs them."
           }
         }
       }
@@ -21843,6 +22228,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "reveal every secret of a place"
+          }
+        }
+      }
+    },
+    "touchID.prompt.saveFile" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "save a file from the vault"
           }
         }
       }

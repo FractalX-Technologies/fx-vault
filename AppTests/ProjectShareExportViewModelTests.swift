@@ -216,6 +216,33 @@ struct ProjectShareExportViewModelTests {
         #expect(model.counts == ShareItemCountModel(secrets: 1, variables: 0))
         let folderRow = try #require(model.tree?.roots.first { $0.id == .folder(folderID) })
         #expect(folderRow.itemCounts == ShareItemCountModel(secrets: 1, variables: 0))
+        #expect(!model.leavesOutFolderFiles)
+    }
+
+    /// A folder's files never travel (v23): the sheet says so while that folder is checked.
+    @Test func aFolderWithFilesSaysTheyStayBehind() async throws {
+        let world = try await ProjectShareWorld()
+        let folders = world.sender.data.folders
+        let folderID = try folders.createFolder(named: "Mobile App")
+        _ = try folders.addItem(folderID: folderID, kind: .secret, name: "FIREBASE_KEY", value: SecretBytes(utf8: "FXV_FOLDER"))
+        let file = world.sender.sandbox.appendingPathComponent("Profile.pdf")
+        try Data("%PDF-1.7 FXV_FIXTURE".utf8).write(to: file)
+        try folders.addFile(from: file, to: folderID)
+        let model = ProjectShareViewModel(
+            context: ShareExportContext(selection: .folder(folderID)),
+            dependencies: world.senderDependencies(),
+            delivery: FakeShareFileDelivery(),
+            identity: ProjectShareWorld.identity,
+            stagingRoot: world.sender.sandbox
+        )
+        await model.start()
+        await model.settle()
+        #expect(model.leavesOutFolderFiles)
+
+        let folderRow = try #require(model.tree?.roots.first { $0.id == .folder(folderID) })
+        model.setChecked(false, for: folderRow)
+        await model.settle()
+        #expect(!model.leavesOutFolderFiles)
     }
 
     /// Continue is gone: an empty selection is the only gate before Touch ID.

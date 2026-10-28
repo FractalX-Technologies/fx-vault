@@ -55,7 +55,8 @@ enum ProjectSharePlanning {
             )
         }
         let folderStore = FolderStore(database: database)
-        let folders = try folderStore.fetchFolderRecords(in: tx).map { record in
+        // A received folder lands at the top (no nesting in a share), so only those can merge.
+        let folders = try folderStore.fetchFolderRecords(in: tx).filter { $0.parentID == nil }.map { record in
             ShareLocalFolderModel(
                 folder: record.model(),
                 items: try folderStore.fetchItemRecords(folderID: record.id, in: tx).map {

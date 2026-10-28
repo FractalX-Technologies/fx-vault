@@ -130,7 +130,7 @@ final class ProjectShareViewModel: LockObserving {
         isLoading = true
         defer { isLoading = false }
         if case .folder(let id) = context.selection {
-            let name = dependencies.folders.folderName(id)
+            let name = dependencies.folders.folderTitle(id)
             openedFolderName = name.isEmpty ? nil : name
         }
         do {
@@ -361,6 +361,11 @@ final class ProjectShareViewModel: LockObserving {
     /// The file includes production (a stage or an environment picked in the tree).
     var includesProduction: Bool {
         preview?.includesProduction == true
+    }
+
+    /// A checked folder keeps files, which the file leaves out (v23).
+    var leavesOutFolderFiles: Bool {
+        tree?.leavesOutFolderFiles == true
     }
 
     var productionPlaces: [String] {

@@ -316,3 +316,26 @@ struct LimitsTests {
         #expect(Duration.zero.timeInterval == 0)
     }
 }
+
+@Suite("FolderModel paths")
+struct FolderPathTests {
+    private static func folder(_ name: String, in parent: FolderModel? = nil, order: Int) -> FolderModel {
+        FolderModel(parentID: parent?.id, name: name, sortOrder: order, createdAt: .distantPast, updatedAt: .distantPast)
+    }
+
+    @Test func aSubfolderIsNamedAfterItsParentAndListedUnderIt() {
+        let mobile = Self.folder("Mobile", order: 0)
+        let web = Self.folder("Web", order: 1)
+        let development = Self.folder("Development", in: mobile, order: 0)
+        let testflight = Self.folder("Testflight Dev", in: mobile, order: 1)
+        let orphan = FolderModel(parentID: FolderID(), name: "Orphan", sortOrder: 0, createdAt: .distantPast, updatedAt: .distantPast)
+        // The store's order: sort_order across levels.
+        let folders = [mobile, development, orphan, web, testflight]
+
+        #expect(folders.path(of: development.id) == ["Mobile", "Development"])
+        #expect(folders.path(of: web.id) == ["Web"])
+        #expect(folders.path(of: orphan.id) == ["Orphan"])
+        #expect(folders.path(of: FolderID()).isEmpty)
+        #expect(folders.treeOrdered.map(\.name) == ["Mobile", "Development", "Testflight Dev", "Web"])
+    }
+}

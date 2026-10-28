@@ -542,6 +542,14 @@ foreground color, so `.primary` text still turns white on selected rows.
   (`PlaceViewModePicker`, a small `SegmentedPill`; 1.0 B9) and ⋯ More. Then the notes (the
   default, below), or the `SegmentedPill` (Secrets / Variables) with the selection's actions and
   the table with `.fxTable()`.
+- A folder's files (v23, `FolderFilesSection`), under its notes or table when it has any: "Files ·
+  N" in `.sectionLabel` `mutedText` with a `.compact` outline Add File… on the right, then one
+  `tableRowHeight` row per file: its Finder icon (18 pt), the name in `.body` `ink` (truncated in
+  the middle), the size in `.monoMeta` `mutedText` (as Finder writes it) and a `.compact` outline
+  Save As…; Rename… and Delete… in the row's context menu. After four rows the list scrolls. A
+  drop on a folder says "Drop to add to this folder": key files still open Add File Secret, any
+  other file up to 50 MB is kept. Save As… opens the save panel, then the `DialogSheet` "Save
+  <name>" with `ReauthView`.
 - Inherited organization items (1.0, B7a; board Place-Table): when the repository's
   organization is in the vault, each tab lists after its own rows the organization's items that
   reach the repository (all → every repository, private → private and internal ones, selected →

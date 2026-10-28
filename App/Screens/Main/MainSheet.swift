@@ -211,8 +211,9 @@ struct ItemEditorContext: Hashable {
 /// New Folder… or Rename… (v0.7.0).
 struct FolderNameContext: Hashable {
     enum Mode: Hashable {
-        /// A new folder; `itemIDs` are copied into it (rows dropped on "New Folder").
-        case create(itemIDs: [ConfigItemID])
+        /// A new folder, inside `parent` when set; `itemIDs` are copied into it (rows dropped on
+        /// "New Folder").
+        case create(itemIDs: [ConfigItemID], parent: FolderID? = nil)
         case rename(FolderID)
     }
 

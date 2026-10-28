@@ -274,7 +274,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
     }
 
     /// The selected place as the toolbar's path, named like its sidebar section:
-    /// `GitHub › owner › repo › environment`, `Azure › vault` or `Folders › name`; empty with
+    /// `GitHub › owner › repo › environment`, `Azure › vault` or `Folders › parent › name`; empty with
     /// nothing selected.
     var breadcrumb: [String] {
         if let vault = sidebar.selectedKeyVault {
@@ -282,7 +282,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             return [SidebarCopy.azureSection] + [vault.subscription?.name, vault.title].compactMap(\.self)
         }
         if let folder = sidebar.selectedFolder {
-            return [FolderCopy.sectionTitle, folder.name]
+            return [FolderCopy.sectionTitle] + sidebar.folders.path(of: folder.id)
         }
         if let owner = sidebar.selectedOrganizationOwner {
             return [MainCopy.gitHubSection, owner.login]
@@ -341,7 +341,7 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
             detail = nil
             scopeList = nil
             folderDetail = FolderDetailViewModel(folderID: folderID, dependencies: featureDependencies) { [weak sidebar] in
-                sidebar?.folder(folderID)
+                sidebar?.folders ?? []
             }
             return
         }
@@ -525,10 +525,10 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
         present(.envImport(EnvImportContext(repositoryID: repo.id, scope: scope.scope, fileURL: nil)))
     }
 
-    /// New Folder… (⇧⌘N, v0.7.0).
-    func newFolder() {
+    /// New Folder… (⇧⌘N, v0.7.0), or New Subfolder… in `parent`.
+    func newFolder(in parent: FolderID? = nil) {
         guard isUnlocked else { return }
-        present(.folderName(FolderNameContext(mode: .create(itemIDs: []))))
+        present(.folderName(FolderNameContext(mode: .create(itemIDs: [], parent: parent))))
     }
 
     /// File › Share Project… (v0.9.0): the selected scope or folder, or the selected repository.

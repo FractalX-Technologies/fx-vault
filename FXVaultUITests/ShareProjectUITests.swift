@@ -12,8 +12,7 @@ final class ShareProjectUITests: VaultUITestCase {
         revealRepositories(of: "example-org", in: sidebar)
         click(sidebarRow("api-service", in: sidebar))
         click(app.buttons[AccessibilityID.Main.importRepository])
-        let imported = NSPredicate(format: "exists == false")
-        XCTAssertTrue(app.buttons[AccessibilityID.Main.importRepository].satisfies(imported, within: timeout), "The import never finished")
+        XCTAssertTrue(app.buttons[AccessibilityID.Main.importRepository].disappears(within: timeout), "The import never finished")
 
         app.typeKey("s", modifierFlags: [.option, .command])
         let production = app.checkBoxes[AccessibilityID.Share.stage("production")]

@@ -2,7 +2,7 @@ import SwiftUI
 import VaultCore
 
 /// A folder's actions (v0.7.0): the sidebar row's context menu and the end of its ⋯ More.
-/// Share Securely… and Export .env… need items.
+/// Share Securely… and Export .env… need items; New Subfolder… only at the top.
 struct FolderContextMenu: View {
     let folderID: FolderID
     let main: MainViewModel
@@ -10,6 +10,13 @@ struct FolderContextMenu: View {
     var body: some View {
         let folder = main.sidebar.folder(folderID)
         let hasItems = (folder?.itemCount ?? 0) > 0
+        // One level: a subfolder has no New Subfolder….
+        if folder?.parentID == nil {
+            Button(FolderCopy.newSubfolder) {
+                main.newFolder(in: folderID)
+            }
+            .accessibilityIdentifier(AccessibilityID.Main.newSubfolder)
+        }
         Button(FolderCopy.rename) {
             main.present(.folderName(FolderNameContext(mode: .rename(folderID))))
         }

@@ -10,6 +10,7 @@ protocol ReauthAuthorization: AnyObject, Sendable {
 
 extension ShareAuthorizationModel: ReauthAuthorization {}
 extension EnvExportAuthorizationModel: ReauthAuthorization {}
+extension FolderFileSaveAuthorizationModel: ReauthAuthorization {}
 
 /// "Confirm it's you" before a share or Copy All (D30, §5.6): Touch ID first, and after any
 /// Touch ID failure the master password, through `ReauthGate`. The repository consumes the

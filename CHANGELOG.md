@@ -3,7 +3,17 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## Unreleased
+## 1.0.5
+
+### Added
+
+- **Files in folders.** Keep any file in a folder, up to 50 MB each, encrypted in your vault:
+  ⋯ More › Add File…, or drop it on the folder (key files still become file secrets). Each file
+  shows its size, and **Save As…** writes it back after Touch ID or your master password, marked
+  as downloaded so macOS checks it before it opens. Rename… and Delete… are in its context menu.
+  Files are never synced or shared.
+- **Subfolders.** Right-click a folder › **New Subfolder…** for one level of folders inside it
+  ("Mobile › Development", "Mobile › Testflight Dev"). The toolbar path and Copy To name both.
 
 ### Fixed
 

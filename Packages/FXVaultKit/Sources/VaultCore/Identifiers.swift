@@ -97,6 +97,8 @@ public typealias SyncRunID = Identifier<SyncRunTag>
 public typealias ItemLinkID = Identifier<ItemLinkTag>
 /// Primary key of a `folders` row: a folder of secrets and variables (v0.7.0).
 public typealias FolderID = Identifier<FolderModel>
+/// Primary key of a `folder_files` row: a file kept in a folder (v23).
+public typealias FolderFileID = Identifier<FolderFileModel>
 /// Primary key of a `destinations` row: a runtime destination of a repository (v0.8.0).
 public typealias DestinationID = Identifier<DestinationModel>
 /// Primary key of a `sent_shares` row: one share file this Mac wrote (v0.9.0).

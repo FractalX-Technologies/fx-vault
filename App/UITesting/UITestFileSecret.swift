@@ -21,4 +21,39 @@ enum UITestFileSecret {
         return url
     }
 }
+
+/// The files the UITesting host's Add File… picks and where its Save As… writes (v23): the file
+/// the test names in ``UITestEnvironment/folderFileName`` and ``UITestEnvironment/folderFileText``,
+/// written fresh in the UI-test folder, and a `saved` folder next to it that the test reads back.
+enum UITestFolderFile {
+    static func chooseFiles(fileManager: FileManager = .default) -> [URL] {
+        let environment = ProcessInfo.processInfo.environment
+        guard let name = environment[UITestEnvironment.folderFileName], let text = environment[UITestEnvironment.folderFileText] else {
+            return []
+        }
+        let saved = savedFolder(fileManager)
+        let url = saved.deletingLastPathComponent().appendingPathComponent(name)
+        do {
+            try fileManager.createDirectory(at: saved, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            try Data(text.utf8).write(to: url, options: .atomic)
+        } catch {
+            preconditionFailure("The UI-test folder file could not be written: \(error)")
+        }
+        return [url]
+    }
+
+    static func destination(fileName: String, fileManager: FileManager = .default) -> URL? {
+        let saved = savedFolder(fileManager)
+        do {
+            try fileManager.createDirectory(at: saved, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        } catch {
+            preconditionFailure("The UI-test save folder could not be created: \(error)")
+        }
+        return saved.appendingPathComponent(fileName)
+    }
+
+    private static func savedFolder(_ fileManager: FileManager) -> URL {
+        fileManager.temporaryDirectory.appendingPathComponent(UITestEnvironment.folderFileSavedPath, isDirectory: true)
+    }
+}
 #endif
