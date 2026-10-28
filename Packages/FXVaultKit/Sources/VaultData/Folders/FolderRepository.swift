@@ -384,7 +384,7 @@ public struct FolderRepository: Sendable {
 
     // MARK: - Private
 
-    private static let log = Logger(subsystem: ConfigConstants.logSubsystem, category: "folders")
+    static let log = Logger(subsystem: ConfigConstants.logSubsystem, category: "folders")
 
     private static func normalize(_ value: SecretBytes) throws(ConfigRepositoryError) -> ValueNormalizer.NormalizedValue {
         do {

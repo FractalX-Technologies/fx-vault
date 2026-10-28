@@ -26,6 +26,8 @@ struct DEKRotationReportModel: Sendable, Hashable {
     var organizationValues = 0
     /// Organization `synced_fp` values that could not be recomputed and were cleared, 1.0.
     var organizationSyncedFingerprintsCleared = 0
+    /// Folder files re-sealed (v23).
+    var folderFiles = 0
 }
 
 /// Re-encrypts every encrypted column under a new DEK inside the caller's transaction (§5.2
@@ -39,8 +41,8 @@ struct DEKRotationReportModel: Sendable, Hashable {
 ///   matched under the old key, otherwise cleared (see ``DEKRotationReportModel``).
 ///
 /// Then every `folder_items.value_ct` (v0.7.0, with `value_fp` recomputed), `destination_items`
-/// (v0.8.0) and `org_items` (1.0) value is opened under the old keys and sealed under the new
-/// ones.
+/// (v0.8.0) and `org_items` (1.0) value, and every folder file's bytes (v23), is opened under the
+/// old keys and sealed under the new ones.
 ///
 /// Any decryption failure aborts the whole transaction: a rotation never leaves rows under two
 /// different DEKs.
@@ -84,7 +86,26 @@ struct DEKRotator {
         }
         try reencryptDestinations(from: oldKeys, to: newKeys, report: &report, in: tx)
         try reencryptOrganizations(from: oldKeys, to: newKeys, report: &report, in: tx)
+        try reencryptFolderFiles(from: oldKeys, to: newKeys, report: &report, in: tx)
         return report
+    }
+
+    /// Folder files (v23), one blob at a time so at most one file is in memory unsealed.
+    private func reencryptFolderFiles(
+        from oldKeys: borrowing UnlockedKeys,
+        to newKeys: borrowing UnlockedKeys,
+        report: inout DEKRotationReportModel,
+        in tx: StoreTransaction
+    ) throws {
+        for id in try folderStore.fetchFileIDs(in: tx) {
+            guard var blob = try folderStore.fetchFileBlob(fileID: id, in: tx) else { continue }
+            let aad = FolderFileAAD(fileID: id)
+            let plaintext = try oldKeys.open(blob.contentCiphertext, for: aad)
+            defer { plaintext.wipe() }
+            blob.contentCiphertext = try newKeys.seal(plaintext, for: aad)
+            try folderStore.updateFileBlob(blob, in: tx)
+            report.folderFiles += 1
+        }
     }
 
     /// Destination item values with their fingerprints (v0.8.0). A `synced_fp` is recomputed

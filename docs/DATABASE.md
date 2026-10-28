@@ -705,6 +705,32 @@ CREATE INDEX folders_parent ON folders(parent_id) WHERE parent_id IS NOT NULL;
   parent.
 - A received share folder lands at the top and merges only with a top-level folder of its name.
 
+### v23_folder_files (after 1.0.4)
+
+```sql
+CREATE TABLE folder_files (
+  id TEXT PRIMARY KEY CHECK (length(id) = 36),
+  folder_id TEXT NOT NULL REFERENCES folders(id) ON DELETE CASCADE,
+  name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 255),
+  name_key TEXT NOT NULL,
+  byte_count INTEGER NOT NULL CHECK (byte_count BETWEEN 0 AND 52428800),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL);
+CREATE UNIQUE INDEX folder_files_name_key ON folder_files(folder_id, name_key);
+CREATE TABLE folder_file_blobs (
+  file_id TEXT PRIMARY KEY REFERENCES folder_files(id) ON DELETE CASCADE,
+  content_ct BLOB NOT NULL);
+```
+
+- Any file up to 50 MB in a folder. The name and size are plaintext, like a folder's name; the
+  bytes are one blob sealed with `FolderFileAAD` (file id and DEK version only), in their own
+  table so listings and the sidebar counts never read them.
+- Names are unique per folder by `FolderNameValidator.foldKey`; Add File turns a taken name into
+  `name 2.ext`. A rename re-seals nothing.
+- Deleting a file, its folder or the folder's parent removes the blob. DEK rotation re-seals every
+  blob, one at a time. Reset erases both tables with every other one.
+- Files are never in notes, copies, `.env` files, Copy All or shares.
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -719,6 +745,7 @@ CREATE INDEX folders_parent ON folders(parent_id) WHERE parent_id IS NOT NULL;
 | `sync_journal` | `SyncJournalRecord` | `SyncJournalStore` | Names and push fingerprints only, never values |
 | `imported_share_packages` | `ImportedSharePackageRecord` | `SharePackageStore` | `sender_device_id` for a 0.9 teammates file, v0.9.0 |
 | `folders` | `FolderRecord` | `FolderStore` | Unique by `name_key` among siblings, sidebar order per parent, v0.7.0; `parent_id` (v22) |
+| `folder_files`, `folder_file_blobs` | `FolderFileRecord` (`FolderFileModel`), `FolderFileBlobRecord` | `FolderStore` | Name and size; the sealed bytes in their own table, v23 |
 | `folder_items` | `FolderItemRecord` (with ciphertext; `FolderItemModel` without) | `FolderStore` | Always with a value; `link_id` groups span `config_items`, v0.7.0; `file_detail` (v21) |
 | `provider_connections` | — | — | Empty and unused since v16 (Supabase and Vercel tokens, v0.8.0) |
 | `destinations` | `DestinationRecord` (`DestinationSettings` in `settings_json`) | `DestinationStore` | Unique per repository by `target_key`, v0.8.0; a NULL `repository_id` is a Key Vault of its own, unique by `target_key` (v18, 1.0); its Azure subscription (v20) |

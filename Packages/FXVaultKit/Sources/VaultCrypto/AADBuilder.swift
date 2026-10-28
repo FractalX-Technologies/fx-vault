@@ -285,3 +285,32 @@ public struct DestinationFieldAAD: FieldContext, Hashable {
         )
     }
 }
+
+/// The identity a folder file's bytes are bound to (v23, `folder_file_blobs.content_ct`): the
+/// file's row and the DEK version only. Neither the folder nor the name is bound, so renaming or
+/// moving a file never re-seals up to 50 MB; the table name keeps a file blob from opening as any
+/// item value, and the row keeps one file's bytes from opening as another's.
+public struct FolderFileAAD: FieldContext, Hashable {
+    /// Table name as written into the AAD.
+    public static let table = "folder_file_blobs"
+    /// Column name as written into the AAD.
+    public static let column = "content_ct"
+
+    public let fileID: FolderFileID
+
+    public init(fileID: FolderFileID) {
+        self.fileID = fileID
+    }
+
+    /// `LP("fxvault/v1/field") ‖ LP("folder_file_blobs") ‖ LP("content_ct") ‖ LP(file 16B) ‖
+    /// u32be(dek_version)`.
+    public func encoded(dekVersion: UInt32) -> Data {
+        var builder = AADBuilder()
+        builder.appendLengthPrefixed(CryptoDomain.fieldLabel)
+        builder.appendLengthPrefixed(Self.table)
+        builder.appendLengthPrefixed(Self.column)
+        builder.appendLengthPrefixed(fileID.bytes)
+        builder.append(uint32BigEndian: dekVersion)
+        return builder.data
+    }
+}

@@ -29,8 +29,9 @@ struct MigrationTests {
             "v11_spaces", "v12_folders", "v13_destinations", "v14_project_shares",
             "v15_drop_teammates", "v16_drop_runtime_providers", "v17_organizations", "v18_standalone_key_vaults",
             "v19_org_item_changes", "v20_key_vault_subscriptions", "v21_file_secrets", "v22_subfolders",
+            "v23_folder_files",
         ])
-        #expect(Migration.latest == .v22Subfolders)
+        #expect(Migration.latest == .v23FolderFiles)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -455,6 +456,7 @@ struct MigrationTests {
     static let seedLinkID = "44444444-4444-4444-8444-444444444444"
     static let seedFolderID = "77777777-7777-4777-8777-777777777777"
     static let seedSubfolderID = "77777777-7777-4777-8777-777777777778"
+    static let seedFolderFileID = "77777777-7777-4777-8777-777777777779"
     static let seedFolderItemID = "88888888-8888-4888-8888-888888888888"
     static let seedConnectionID = "99999999-9999-4999-8999-999999999999"
     static let seedDestinationID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
@@ -570,6 +572,16 @@ struct MigrationTests {
                     INSERT INTO folders (id, parent_id, name, name_key, sort_order, created_at, updated_at)
                     VALUES (?, ?, 'Development', 'development', 0, ?, ?)
                     """, arguments: [seedSubfolderID, seedFolderID, seedTime, seedTime])
+            }
+            if version >= .v23FolderFiles {
+                try db.execute(sql: """
+                    INSERT INTO folder_files (id, folder_id, name, name_key, byte_count, created_at, updated_at)
+                    VALUES (?, ?, 'Profile.pdf', 'profile.pdf', 40, ?, ?)
+                    """, arguments: [seedFolderFileID, seedFolderID, seedTime, seedTime])
+                try db.execute(
+                    sql: "INSERT INTO folder_file_blobs (file_id, content_ct) VALUES (?, ?)",
+                    arguments: [seedFolderFileID, Data(repeating: 9, count: 69)]
+                )
             }
             guard version >= .v13Destinations else { return }
             try db.execute(sql: """
@@ -715,6 +727,8 @@ struct MigrationTests {
         #expect(folders.filter { $0.parentID == nil }.map(\.name) == ["Mobile App"])
         #expect(folders.filter { $0.parentID == folderID }.map(\.name) == (version >= .v22Subfolders ? ["Development"] : []))
         #expect(folders.first { $0.id == folderID }?.variableCount == 1)
+        // v23 seeds one file in the folder from v12.
+        #expect(folders.first { $0.id == folderID }?.fileCount == (version >= .v23FolderFiles ? 1 : 0))
         let destinations = try DestinationStore(database: database).fetchDestinations(repositoryID: repoID)
         guard version >= .v13Destinations else {
             #expect(destinations.isEmpty)

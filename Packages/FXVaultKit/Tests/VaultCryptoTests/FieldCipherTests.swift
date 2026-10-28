@@ -201,4 +201,27 @@ struct AADBuilderTests {
         #expect(synced?.rowID == item.id)
         #expect(FieldLocation.configItemSyncedValue.column == "synced_value_ct")
     }
+
+    /// v23: a folder file's AAD is the field label, its table and column, the file id and the
+    /// DEK version, length-prefixed; its blob opens for that file and DEK version only, and never
+    /// as a folder item of the same id.
+    @Test func folderFileAADBindsTheFileAndTheDEKVersion() throws {
+        let fileID = FolderFileID()
+        let aad = FolderFileAAD(fileID: fileID)
+        var expected = Data()
+        for part in [Data("fxvault/v1/field".utf8), Data("folder_file_blobs".utf8), Data("content_ct".utf8), Data(fileID.bytes)] {
+            expected.append(contentsOf: withUnsafeBytes(of: UInt32(part.count).bigEndian) { Array($0) })
+            expected.append(part)
+        }
+        expected.append(contentsOf: [0, 0, 0, 2])
+        #expect(aad.encoded(dekVersion: 2) == expected)
+
+        let keys = UnlockedKeys(dek: SymmetricKey(size: .bits256), vaultID: Data(repeating: 1, count: 16), dekVersion: 1)
+        let content = SecureRandom.secretBytes(count: 4096)
+        let blob = try keys.seal(content, for: aad)
+        #expect(try keys.open(blob, for: aad) == content)
+        #expect(throws: VaultError.self) { try keys.open(blob, for: FolderFileAAD(fileID: FolderFileID())) }
+        let asFolderItem = FolderFieldAAD(rowID: ConfigItemID(fileID.uuid), folderID: FolderID(), kind: .secret, name: "A")
+        #expect(throws: VaultError.self) { try keys.open(blob, for: asFolderItem) }
+    }
 }

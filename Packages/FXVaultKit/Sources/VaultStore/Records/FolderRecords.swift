@@ -28,7 +28,7 @@ public struct FolderRecord: Codable, Sendable, Hashable, FetchableRecord, Persis
     }
 
     /// The domain model with its live item counts.
-    public func model(secretCount: Int = 0, variableCount: Int = 0) -> FolderModel {
+    public func model(secretCount: Int = 0, variableCount: Int = 0, fileCount: Int = 0) -> FolderModel {
         FolderModel(
             id: id,
             parentID: parentID,
@@ -36,6 +36,7 @@ public struct FolderRecord: Codable, Sendable, Hashable, FetchableRecord, Persis
             sortOrder: sortOrder,
             secretCount: secretCount,
             variableCount: variableCount,
+            fileCount: fileCount,
             createdAt: createdAt,
             updatedAt: updatedAt
         )
@@ -139,5 +140,70 @@ public struct FolderItemRecord: Codable, Sendable, Hashable, FetchableRecord, Pe
 
     public static func databaseDateDecodingStrategy(for column: String) -> DatabaseDateDecodingStrategy {
         DatabaseTimestamp.decodingStrategy
+    }
+}
+
+/// One `folder_files` row (v23): a file's metadata, never its bytes (``FolderFileBlobRecord``).
+public struct FolderFileRecord: Codable, Sendable, Hashable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "folder_files"
+
+    public var id: FolderFileID
+    public var folderID: FolderID
+    /// NFC (``FolderFileNameValidator``).
+    public var name: String
+    /// ``FolderNameValidator/foldKey(_:)`` of ``name``; unique per folder.
+    public var nameKey: String
+    public var byteCount: Int
+    public var createdAt: Date
+    public var updatedAt: Date
+
+    public init(id: FolderFileID = FolderFileID(), folderID: FolderID, name: String, byteCount: Int, createdAt: Date, updatedAt: Date) {
+        self.id = id
+        self.folderID = folderID
+        self.name = name
+        nameKey = FolderNameValidator.foldKey(name)
+        self.byteCount = byteCount
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    public var model: FolderFileModel {
+        FolderFileModel(id: id, folderID: folderID, name: name, byteCount: byteCount, createdAt: createdAt, updatedAt: updatedAt)
+    }
+
+    enum CodingKeys: String, CodingKey, ColumnExpression {
+        case id
+        case folderID = "folder_id"
+        case name
+        case nameKey = "name_key"
+        case byteCount = "byte_count"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+
+    public static func databaseDateEncodingStrategy(for column: String) -> DatabaseDateEncodingStrategy {
+        DatabaseTimestamp.encodingStrategy
+    }
+
+    public static func databaseDateDecodingStrategy(for column: String) -> DatabaseDateDecodingStrategy {
+        DatabaseTimestamp.decodingStrategy
+    }
+}
+
+/// One `folder_file_blobs` row (v23): a file's bytes sealed with `FolderFileAAD`.
+public struct FolderFileBlobRecord: Codable, Sendable, Hashable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "folder_file_blobs"
+
+    public var fileID: FolderFileID
+    public var contentCiphertext: Data
+
+    public init(fileID: FolderFileID, contentCiphertext: Data) {
+        self.fileID = fileID
+        self.contentCiphertext = contentCiphertext
+    }
+
+    enum CodingKeys: String, CodingKey, ColumnExpression {
+        case fileID = "file_id"
+        case contentCiphertext = "content_ct"
     }
 }

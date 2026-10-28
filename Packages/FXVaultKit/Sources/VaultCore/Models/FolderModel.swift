@@ -15,6 +15,8 @@ public struct FolderModel: Sendable, Hashable, Identifiable {
     /// Live secrets and variables, set by the folder observation.
     public var secretCount: Int
     public var variableCount: Int
+    /// Live files (v23), set by the folder observation.
+    public var fileCount: Int
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -25,6 +27,7 @@ public struct FolderModel: Sendable, Hashable, Identifiable {
         sortOrder: Int,
         secretCount: Int = 0,
         variableCount: Int = 0,
+        fileCount: Int = 0,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -34,6 +37,7 @@ public struct FolderModel: Sendable, Hashable, Identifiable {
         self.sortOrder = sortOrder
         self.secretCount = secretCount
         self.variableCount = variableCount
+        self.fileCount = fileCount
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }

@@ -569,4 +569,25 @@ enum MigrationSQL {
               OR EXISTS (SELECT 1 FROM folders WHERE parent_id = NEW.id))
           BEGIN SELECT RAISE(ABORT, 'folders: one level of subfolders'); END;
         """
+
+    // MARK: v23_folder_files (folder files and subfolders, slice 3). Additive.
+
+    /// Any file kept in a folder, up to 50 MB (52 428 800 bytes). The name and size are plaintext
+    /// metadata; the bytes are one sealed blob in a table of their own, so listings never read
+    /// them (a rowid table: WITHOUT ROWID suits small rows only). Names are unique per folder by
+    /// `name_key`. Deleting the folder deletes its files.
+    static let v23FolderFiles = """
+        CREATE TABLE folder_files (
+          id TEXT PRIMARY KEY CHECK (length(id) = 36),
+          folder_id TEXT NOT NULL REFERENCES folders(id) ON DELETE CASCADE,
+          name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 255),
+          name_key TEXT NOT NULL,
+          byte_count INTEGER NOT NULL CHECK (byte_count BETWEEN 0 AND 52428800),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL);
+        CREATE UNIQUE INDEX folder_files_name_key ON folder_files(folder_id, name_key);
+        CREATE TABLE folder_file_blobs (
+          file_id TEXT PRIMARY KEY REFERENCES folder_files(id) ON DELETE CASCADE,
+          content_ct BLOB NOT NULL);
+        """
 }

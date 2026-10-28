@@ -97,6 +97,17 @@ struct KATVectors: Decodable {
         let blobHex: String
     }
 
+    struct FolderFileVector: Decodable {
+        let label: String
+        let aesKHex: String
+        let file: String
+        let dekVersion: UInt32
+        let plainHex: String
+        let nonceHex: String
+        let aadHex: String
+        let blobHex: String
+    }
+
     struct PasswordWrap: Decodable {
         let text: String
         let saltHex: String
@@ -145,6 +156,7 @@ struct KATVectors: Decodable {
     let folderField: [FolderFieldVector]
     let destinationField: [DestinationFieldVector]
     let organizationField: [OrganizationFieldVector]
+    let folderFile: [FolderFileVector]
     let wrap: Wraps
     let recovery: [RecoveryVector]
     let crockford: [CrockfordVector]

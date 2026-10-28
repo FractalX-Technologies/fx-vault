@@ -106,6 +106,14 @@ public enum Limits {
     /// `length()` counts them (macOS file names are at most 255 UTF-8 bytes).
     public static let maxFileSecretNameLength = 255
 
+    // MARK: - Folder files (v23)
+
+    /// Largest file a folder keeps (decided with Bryan, 2026-10-28). The whole file is sealed as
+    /// one blob, so it is held in memory once while it is added or saved.
+    public static let maxFolderFileBytes = 50 * bytesPerMiB
+    /// Longest folder file name, in Unicode scalars as the v23 CHECK's `length()` counts them.
+    public static let maxFolderFileNameLength = 255
+
     // MARK: - Write throttle and retries (D12, §7.3)
 
     /// FX Vault's own cap on gh write commands per minute, per account.

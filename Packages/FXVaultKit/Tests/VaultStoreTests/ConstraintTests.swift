@@ -131,6 +131,57 @@ struct ConstraintTests {
         #expect(try seeded.integer("SELECT COUNT(*) FROM folders") == 3)
     }
 
+    /// v23: file names are unique per folder, sizes stop at 50 MB, a file needs its folder, and
+    /// deleting the folder deletes its files and their bytes.
+    @Test func folderFilesAreUniquePerFolderAndGoWithIt() throws {
+        let seeded = try SeededDatabase()
+        func folder(_ name: String) throws -> String {
+            let id = UUID().uuidString.lowercased()
+            try seeded.execute("INSERT INTO folders (id, name, name_key, created_at, updated_at) VALUES ('\(id)', '\(name)', '\(name)', 't', 't')")
+            return id
+        }
+        func file(_ name: String, in folder: String, bytes: Int = 1) throws {
+            let id = UUID().uuidString.lowercased()
+            try seeded.execute("""
+                INSERT INTO folder_files (id, folder_id, name, name_key, byte_count, created_at, updated_at)
+                VALUES ('\(id)', '\(folder)', '\(name)', '\(name.lowercased())', \(bytes), 't', 't')
+                """)
+            try seeded.execute("INSERT INTO folder_file_blobs (file_id, content_ct) VALUES ('\(id)', x'01')")
+        }
+        let mobile = try folder("mobile")
+        let web = try folder("web")
+        try file("a.pdf", in: mobile, bytes: 52_428_800)
+        try file("a.pdf", in: web)
+        #expect(throws: Self.unique) { try file("A.PDF", in: mobile) }
+        #expect(throws: Self.check) { try file("big.zip", in: mobile, bytes: 52_428_801) }
+        #expect(throws: Self.check) { try file("", in: mobile) }
+        #expect(throws: Self.foreignKey) { try file("b.pdf", in: UUID().uuidString.lowercased()) }
+
+        try seeded.execute("DELETE FROM folders WHERE id = '\(mobile)'")
+        #expect(try seeded.integer("SELECT COUNT(*) FROM folder_files") == 1)
+        #expect(try seeded.integer("SELECT COUNT(*) FROM folder_file_blobs") == 1)
+    }
+
+    @Test func aTamperedFileIDStopsTheListRotationReSeals() throws {
+        let seeded = try SeededDatabase()
+        let store = FolderStore(database: seeded.database)
+        let folder = UUID().uuidString.lowercased()
+        let now = DatabaseTimestamp.string(from: Date())
+        try seeded.execute("INSERT INTO folders (id, name, name_key, created_at, updated_at) VALUES ('\(folder)', 'm', 'm', '\(now)', '\(now)')")
+        func file(_ id: String) throws {
+            try seeded.execute("""
+                INSERT INTO folder_files (id, folder_id, name, name_key, byte_count, created_at, updated_at)
+                VALUES ('\(id)', '\(folder)', '\(id).pdf', '\(id).pdf', 1, '\(now)', '\(now)')
+                """)
+        }
+        try file(UUID().uuidString.lowercased())
+        #expect(try seeded.database.read { tx in try store.fetchFileIDs(in: tx) }.count == 1)
+
+        // Skipping the row would leave its blob under the old DEK, unreadable after the rotation.
+        try file("zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz")
+        #expect(throws: (any Error).self) { try seeded.database.read { tx in try store.fetchFileIDs(in: tx) } }
+    }
+
     @Test func kindIsAnEnum() throws {
         let seeded = try SeededDatabase()
         #expect(throws: Self.check) {
