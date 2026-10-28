@@ -72,6 +72,89 @@ struct FolderRepositoryTests {
         #expect(configError { try fixture.folders.deleteFolder(firebase) } == .folderNotFound)
     }
 
+    // MARK: - Subfolders (v22)
+
+    @Test func subfoldersAreOneLevelWithNamesUniqueAmongSiblings() async throws {
+        let fixture = try await Fixture.make()
+        let mobile = try fixture.folders.createFolder(named: "Mobile")
+        let backend = try fixture.folders.createFolder(named: "Backend")
+        let development = try fixture.folders.createFolder(named: "Development", in: mobile)
+        let testflight = try fixture.folders.createFolder(named: "Testflight Dev", in: mobile)
+        // The same name fits under another parent and at the top.
+        let backendDevelopment = try fixture.folders.createFolder(named: "Development", in: backend)
+        try fixture.folders.createFolder(named: "Development")
+
+        let byID = Dictionary(uniqueKeysWithValues: try fixture.folders.folders().map { ($0.id, $0) })
+        #expect(byID[development]?.parentID == mobile)
+        #expect(byID[backendDevelopment]?.parentID == backend)
+        #expect(byID[mobile]?.parentID == nil)
+        #expect(byID[development]?.sortOrder == 0)
+        #expect(byID[testflight]?.sortOrder == 1)
+
+        #expect(configError { try fixture.folders.createFolder(named: "DEVELOPMENT", in: mobile) } == .validation(.duplicateName))
+        #expect(configError { try fixture.folders.createFolder(named: "Builds", in: development) } == .subfolderNotAllowed)
+        #expect(configError { try fixture.folders.createFolder(named: "Builds", in: FolderID()) } == .folderNotFound)
+        #expect(configError { try fixture.folders.renameFolder(testflight, to: "development") } == .validation(.duplicateName))
+        try fixture.folders.renameFolder(testflight, to: "Backend")
+    }
+
+    @Test func aFolderMovesIntoAndOutOfATopLevelFolder() async throws {
+        let fixture = try await Fixture.make()
+        let mobile = try fixture.folders.createFolder(named: "Mobile")
+        let development = try fixture.folders.createFolder(named: "Development", in: mobile)
+        let testflight = try fixture.folders.createFolder(named: "Testflight Dev")
+        let item = try fixture.add(testflight, "API_KEY", value: ConfigFixture.valueA)
+
+        try fixture.folders.moveFolder(testflight, to: mobile)
+        var byID = Dictionary(uniqueKeysWithValues: try fixture.folders.folders().map { ($0.id, $0) })
+        #expect(byID[testflight]?.parentID == mobile)
+        #expect(byID[testflight]?.sortOrder == 1)
+        // The items' AAD binds their folder, not its parent, so they still open.
+        #expect(try fixture.reveal(item) == ConfigFixture.valueA)
+
+        try fixture.folders.moveFolder(development, to: nil)
+        byID = Dictionary(uniqueKeysWithValues: try fixture.folders.folders().map { ($0.id, $0) })
+        #expect(byID[development]?.parentID == nil)
+        #expect(byID[development]?.sortOrder == 1)
+
+        let other = try fixture.folders.createFolder(named: "Development", in: mobile)
+        #expect(configError { try fixture.folders.moveFolder(development, to: mobile) } == .validation(.duplicateName))
+        #expect(configError { try fixture.folders.moveFolder(development, to: other) } == .subfolderNotAllowed)
+        #expect(configError { try fixture.folders.moveFolder(development, to: development) } == .subfolderNotAllowed)
+        // Mobile has subfolders of its own, so it can't become one.
+        #expect(configError { try fixture.folders.moveFolder(mobile, to: development) } == .subfolderNotAllowed)
+        #expect(configError { try fixture.folders.moveFolder(FolderID(), to: nil) } == .folderNotFound)
+    }
+
+    @Test func eachParentKeepsItsOwnOrder() async throws {
+        let fixture = try await Fixture.make()
+        let mobile = try fixture.folders.createFolder(named: "Mobile")
+        let web = try fixture.folders.createFolder(named: "Web")
+        let development = try fixture.folders.createFolder(named: "Development", in: mobile)
+        let testflight = try fixture.folders.createFolder(named: "Testflight Dev", in: mobile)
+
+        try fixture.folders.reorderFolders([testflight, development], in: mobile)
+        try fixture.folders.reorderFolders([web, mobile])
+        let order = try fixture.folders.folders().map { ($0.parentID, $0.name, $0.sortOrder) }
+        #expect(order.filter { $0.0 == nil }.map(\.1) == ["Web", "Mobile"])
+        #expect(order.filter { $0.0 == mobile }.map(\.1) == ["Testflight Dev", "Development"])
+        // A list that mixes levels is refused.
+        #expect(configError { try fixture.folders.reorderFolders([web, mobile, development]) } == .folderNotFound)
+        #expect(configError { try fixture.folders.reorderFolders([development], in: mobile) } == .folderNotFound)
+    }
+
+    @Test func deletingAFolderDeletesItsSubfoldersAndTheirItems() async throws {
+        let fixture = try await Fixture.make()
+        let mobile = try fixture.folders.createFolder(named: "Mobile")
+        let development = try fixture.folders.createFolder(named: "Development", in: mobile)
+        let item = try fixture.add(development, "API_KEY", value: ConfigFixture.valueA)
+        let web = try fixture.folders.createFolder(named: "Web")
+
+        try fixture.folders.deleteFolder(mobile)
+        #expect(try fixture.folders.folders().map(\.id) == [web])
+        #expect(try fixture.store.fetchItemRecord(id: item) == nil)
+    }
+
     @Test func folderObservationCountsItemsByKind() async throws {
         let fixture = try await Fixture.make()
         let folder = try fixture.folders.createFolder(named: "Mobile App")

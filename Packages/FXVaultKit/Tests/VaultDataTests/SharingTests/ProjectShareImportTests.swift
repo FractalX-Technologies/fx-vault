@@ -244,6 +244,23 @@ struct ProjectShareImportTests {
         #expect(try Self.heldNames(world, packageID: bundle.packageID) == ["FXV_LINKED"])
     }
 
+    @Test func aReceivedFolderNeverMergesIntoASubfolderOfTheSameName() async throws {
+        let world = try await ProjectShareWorld.make()
+        defer { world.folder.remove() }
+        let folders = FolderRepository(session: world.receiver.session, clock: world.receiver.clock)
+        let backend = try folders.createFolder(named: "Backend")
+        let development = try folders.createFolder(named: "Development", in: backend)
+        let bundle = Self.bundle(world, folders: [ShareBundleFolderModel(name: "development", secrets: [Self.item("API_KEY", "theirs")])])
+
+        let draft = try await Self.open(world, bundle)
+        #expect(draft.plan.folders.map(\.action) == [.createNew(name: "development")])
+        _ = try await world.receiverSharing.applyBundle(draft, plan: draft.plan, confirmReplay: false)
+
+        let received = try #require(try folders.folders().first { $0.parentID == nil && $0.name == "development" })
+        #expect(try folders.items(folderID: received.id).map(\.name) == ["API_KEY"])
+        #expect(try folders.items(folderID: development).isEmpty)
+    }
+
     // MARK: - Refusals
 
     @Test func anExpiredFileIsRefused() async throws {

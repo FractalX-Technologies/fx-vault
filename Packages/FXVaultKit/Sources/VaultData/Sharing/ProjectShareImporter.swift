@@ -221,10 +221,10 @@ struct ProjectShareImporter {
         case .createNew(let name):
             let validName = try FolderNameValidator.validate(name)
             let key = FolderNameValidator.foldKey(validName)
-            guard try !store.fetchFolderRecords(in: tx).contains(where: { $0.nameKey == key }) else {
+            guard try !store.fetchFolderRecords(in: tx).contains(where: { $0.parentID == nil && $0.nameKey == key }) else {
                 throw ValidationError.duplicateName
             }
-            let record = FolderRecord(name: validName, sortOrder: try store.nextSortOrder(in: tx), createdAt: now, updatedAt: now)
+            let record = FolderRecord(name: validName, sortOrder: try store.nextSortOrder(parent: nil, in: tx), createdAt: now, updatedAt: now)
             try store.insertFolder(record, in: tx)
             folderID = record.id
             replaces = false

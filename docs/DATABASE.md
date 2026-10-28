@@ -680,6 +680,31 @@ ALTER TABLE config_items ADD COLUMN file_detail TEXT
   the value, and a pushed Key Vault rename gives it to the new row. Revert restores a value but
   not a label an edit dropped; `.env` files and share files carry no label.
 
+### v22_subfolders (after 1.0.4)
+
+```sql
+ALTER TABLE folders ADD COLUMN parent_id TEXT REFERENCES folders(id) ON DELETE CASCADE
+  CHECK (parent_id IS NULL OR (length(parent_id) = 36 AND parent_id <> id));
+DROP INDEX folders_name_key;
+CREATE UNIQUE INDEX folders_name_key ON folders(ifnull(parent_id, ''), name_key);
+CREATE INDEX folders_parent ON folders(parent_id) WHERE parent_id IS NOT NULL;
+-- folders_one_level_insert / folders_one_level_update: RAISE(ABORT) when the parent is itself a
+-- subfolder, or (update) when the folder that moves has subfolders of its own.
+```
+
+- One level of subfolders (Mobile › Development). NULL `parent_id` is a top-level folder, which
+  is every folder saved before v22.
+- Names are unique among siblings: the index keys on `ifnull(parent_id, '')` because SQLite
+  treats NULLs as distinct in a unique index, so two top-level folders of one name would pass.
+- The triggers keep the tree one level deep at the database; `FolderRepository` checks the same
+  first and throws `subfolderNotAllowed`. A trigger's RAISE reaches Swift as
+  `StoreError.constraintViolation(.other)`.
+- `sort_order` is per parent (`FolderStore.nextSortOrder(parent:)`, `reorderFolders(_:in:)`).
+  Deleting a folder cascades to its subfolders and their items. Moving a folder
+  (`FolderRepository.moveFolder`) re-seals nothing: `FolderFieldAAD` binds the folder, not its
+  parent.
+- A received share folder lands at the top and merges only with a top-level folder of its name.
+
 ## Tables at a glance
 
 | Table | Record | Store | Notes |
@@ -693,7 +718,7 @@ ALTER TABLE config_items ADD COLUMN file_detail TEXT
 | `config_items` | `ConfigItemRecord` (with ciphertext), `ConfigItemState` (read-only projection without ciphertext) | `ConfigStore` | Status is derived with `ConfigSyncStatus.derive(state.syncFacts)`; `link_id` groups linked copies (v0.4.1); `share_hold` (v0.9.0); `file_detail` (v21) |
 | `sync_journal` | `SyncJournalRecord` | `SyncJournalStore` | Names and push fingerprints only, never values |
 | `imported_share_packages` | `ImportedSharePackageRecord` | `SharePackageStore` | `sender_device_id` for a 0.9 teammates file, v0.9.0 |
-| `folders` | `FolderRecord` | `FolderStore` | Unique by `name_key`, sidebar order, v0.7.0 |
+| `folders` | `FolderRecord` | `FolderStore` | Unique by `name_key` among siblings, sidebar order per parent, v0.7.0; `parent_id` (v22) |
 | `folder_items` | `FolderItemRecord` (with ciphertext; `FolderItemModel` without) | `FolderStore` | Always with a value; `link_id` groups span `config_items`, v0.7.0; `file_detail` (v21) |
 | `provider_connections` | — | — | Empty and unused since v16 (Supabase and Vercel tokens, v0.8.0) |
 | `destinations` | `DestinationRecord` (`DestinationSettings` in `settings_json`) | `DestinationStore` | Unique per repository by `target_key`, v0.8.0; a NULL `repository_id` is a Key Vault of its own, unique by `target_key` (v18, 1.0); its Azure subscription (v20) |

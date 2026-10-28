@@ -7,16 +7,19 @@ public struct FolderRecord: Codable, Sendable, Hashable, FetchableRecord, Persis
     public static let databaseTableName = "folders"
 
     public var id: FolderID
+    /// v22: the top-level folder this one is in; nil at the top.
+    public var parentID: FolderID?
     /// NFC (``FolderNameValidator``).
     public var name: String
-    /// ``FolderNameValidator/foldKey(_:)`` of ``name``; unique.
+    /// ``FolderNameValidator/foldKey(_:)`` of ``name``; unique per parent.
     public var nameKey: String
     public var sortOrder: Int
     public var createdAt: Date
     public var updatedAt: Date
 
-    public init(id: FolderID = FolderID(), name: String, sortOrder: Int, createdAt: Date, updatedAt: Date) {
+    public init(id: FolderID = FolderID(), parentID: FolderID? = nil, name: String, sortOrder: Int, createdAt: Date, updatedAt: Date) {
         self.id = id
+        self.parentID = parentID
         self.name = name
         nameKey = FolderNameValidator.foldKey(name)
         self.sortOrder = sortOrder
@@ -28,6 +31,7 @@ public struct FolderRecord: Codable, Sendable, Hashable, FetchableRecord, Persis
     public func model(secretCount: Int = 0, variableCount: Int = 0) -> FolderModel {
         FolderModel(
             id: id,
+            parentID: parentID,
             name: name,
             sortOrder: sortOrder,
             secretCount: secretCount,
@@ -39,6 +43,7 @@ public struct FolderRecord: Codable, Sendable, Hashable, FetchableRecord, Persis
 
     enum CodingKeys: String, CodingKey, ColumnExpression {
         case id
+        case parentID = "parent_id"
         case name
         case nameKey = "name_key"
         case sortOrder = "sort_order"

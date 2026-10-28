@@ -31,16 +31,24 @@ public struct FolderRepository: Sendable {
 
     // MARK: - Folders
 
-    /// Creates a folder at the end of the sidebar order.
+    /// Creates a folder at the end of the sidebar order, or of `parent`'s subfolders.
     ///
-    /// - Throws: `.validation` for an invalid name or one another folder has
-    ///   (`.duplicateName`, case-insensitive).
+    /// - Throws: `.validation` for an invalid name or one a sibling has (`.duplicateName`,
+    ///   case-insensitive), `.folderNotFound` for a missing parent, `.subfolderNotAllowed` when
+    ///   `parent` is itself a subfolder.
     @discardableResult
-    public func createFolder(named name: String) throws(ConfigRepositoryError) -> FolderID {
+    public func createFolder(named name: String, in parent: FolderID? = nil) throws(ConfigRepositoryError) -> FolderID {
         let id = try write { _, tx, now in
             let validName = try FolderNameValidator.validate(name)
-            try requireAvailable(validName, except: nil, in: tx)
-            let record = FolderRecord(name: validName, sortOrder: try store.nextSortOrder(in: tx), createdAt: now, updatedAt: now)
+            try requireTopLevel(parent, in: tx)
+            try requireAvailable(validName, parent: parent, except: nil, in: tx)
+            let record = FolderRecord(
+                parentID: parent,
+                name: validName,
+                sortOrder: try store.nextSortOrder(parent: parent, in: tx),
+                createdAt: now,
+                updatedAt: now
+            )
             try store.insertFolder(record, in: tx)
             return record.id
         }
@@ -54,7 +62,7 @@ public struct FolderRepository: Sendable {
             guard var folder = try store.fetchFolder(id: id, in: tx) else { throw ConfigRepositoryError.folderNotFound }
             let validName = try FolderNameValidator.validate(name)
             guard validName != folder.name else { return }
-            try requireAvailable(validName, except: id, in: tx)
+            try requireAvailable(validName, parent: folder.parentID, except: id, in: tx)
             folder.name = validName
             folder.nameKey = FolderNameValidator.foldKey(validName)
             folder.updatedAt = now
@@ -62,8 +70,8 @@ public struct FolderRepository: Sendable {
         }
     }
 
-    /// Deletes a folder and its items. Their copies in repositories stay where they are; a copy
-    /// left alone in its link group is no longer shown as linked.
+    /// Deletes a folder, its subfolders and their items. Their copies in repositories stay where
+    /// they are; a copy left alone in its link group is no longer shown as linked.
     public func deleteFolder(_ id: FolderID) throws(ConfigRepositoryError) {
         try write { _, tx, _ in
             guard try store.deleteFolder(id: id, in: tx) else { throw ConfigRepositoryError.folderNotFound }
@@ -71,11 +79,36 @@ public struct FolderRepository: Sendable {
         Self.log.info("Deleted a folder")
     }
 
-    /// Puts the folders in the order of `ids` (the sidebar after a drag), which must list every
-    /// folder once.
-    public func reorderFolders(_ ids: [FolderID]) throws(ConfigRepositoryError) {
+    /// Moves a folder into `parent` (nil: to the top), last among its new siblings. Its items
+    /// stay sealed as they are: their AAD binds the folder, not its parent.
+    ///
+    /// - Throws: `.folderNotFound`, `.subfolderNotAllowed` (the target is a subfolder, or the
+    ///   folder has subfolders of its own), `.validation(.duplicateName)` when the target has a
+    ///   folder of that name.
+    public func moveFolder(_ id: FolderID, to parent: FolderID?) throws(ConfigRepositoryError) {
         try write { _, tx, now in
-            let folders = try store.fetchFolderRecords(in: tx)
+            guard var folder = try store.fetchFolder(id: id, in: tx) else { throw ConfigRepositoryError.folderNotFound }
+            guard folder.parentID != parent else { return }
+            if let parent {
+                guard parent != id else { throw ConfigRepositoryError.subfolderNotAllowed }
+                try requireTopLevel(parent, in: tx)
+                if try store.fetchFolderRecords(in: tx).contains(where: { $0.parentID == id }) {
+                    throw ConfigRepositoryError.subfolderNotAllowed
+                }
+            }
+            try requireAvailable(folder.name, parent: parent, except: id, in: tx)
+            folder.parentID = parent
+            folder.sortOrder = try store.nextSortOrder(parent: parent, in: tx)
+            folder.updatedAt = now
+            try store.updateFolder(folder, in: tx)
+        }
+    }
+
+    /// Puts `parent`'s subfolders (the top-level folders for nil) in the order of `ids` (the
+    /// sidebar after a drag), which must list each of them once.
+    public func reorderFolders(_ ids: [FolderID], in parent: FolderID? = nil) throws(ConfigRepositoryError) {
+        try write { _, tx, now in
+            let folders = try store.fetchFolderRecords(in: tx).filter { $0.parentID == parent }
             guard Set(ids) == Set(folders.map(\.id)), ids.count == folders.count else {
                 throw ConfigRepositoryError.folderNotFound
             }
@@ -301,8 +334,8 @@ public struct FolderRepository: Sendable {
             switch target {
             case .newFolder(let name):
                 let validName = try FolderNameValidator.validate(name)
-                try requireAvailable(validName, except: nil, in: tx)
-                let record = FolderRecord(name: validName, sortOrder: try store.nextSortOrder(in: tx), createdAt: now, updatedAt: now)
+                try requireAvailable(validName, parent: nil, except: nil, in: tx)
+                let record = FolderRecord(name: validName, sortOrder: try store.nextSortOrder(parent: nil, in: tx), createdAt: now, updatedAt: now)
                 try store.insertFolder(record, in: tx)
                 folderID = record.id
             case .existing(let id):
@@ -361,11 +394,19 @@ public struct FolderRepository: Sendable {
         }
     }
 
-    private func requireAvailable(_ name: String, except id: FolderID?, in tx: StoreTransaction) throws {
+    /// Names are unique among siblings: Mobile › Development and Backend › Development both fit.
+    private func requireAvailable(_ name: String, parent: FolderID?, except id: FolderID?, in tx: StoreTransaction) throws {
         let key = FolderNameValidator.foldKey(name)
-        if try store.fetchFolderRecords(in: tx).contains(where: { $0.id != id && $0.nameKey == key }) {
+        if try store.fetchFolderRecords(in: tx).contains(where: { $0.id != id && $0.parentID == parent && $0.nameKey == key }) {
             throw ValidationError.duplicateName
         }
+    }
+
+    /// `parent` exists and is at the top (the triggers of v22 refuse a second level too).
+    private func requireTopLevel(_ parent: FolderID?, in tx: StoreTransaction) throws {
+        guard let parent else { return }
+        guard let record = try store.fetchFolder(id: parent, in: tx) else { throw ConfigRepositoryError.folderNotFound }
+        guard record.parentID == nil else { throw ConfigRepositoryError.subfolderNotAllowed }
     }
 
     private func writer(_ keys: borrowing UnlockedKeys, _ tx: StoreTransaction, _ now: Date) -> FolderItemWriter {

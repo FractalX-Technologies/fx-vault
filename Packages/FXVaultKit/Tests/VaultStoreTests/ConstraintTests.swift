@@ -94,6 +94,43 @@ struct ConstraintTests {
         #expect(try seeded.integer("SELECT COUNT(*) FROM folder_items") == 0)
     }
 
+    /// v22: names are unique per parent, a subfolder's parent is top level, a folder with
+    /// subfolders can't move under another, and deleting a folder deletes its subfolders.
+    @Test func subfoldersAreOneLevelWithNamesUniquePerParent() throws {
+        let seeded = try SeededDatabase()
+        func insert(_ name: String, parent: String? = nil) throws -> String {
+            let id = UUID().uuidString.lowercased()
+            let parentSQL = parent.map { "'\($0)'" } ?? "NULL"
+            try seeded.execute("""
+                INSERT INTO folders (id, parent_id, name, name_key, created_at, updated_at)
+                VALUES ('\(id)', \(parentSQL), '\(name)', '\(name.lowercased())', 't', 't')
+                """)
+            return id
+        }
+        let mobile = try insert("Mobile")
+        let backend = try insert("Backend")
+        let development = try insert("Development", parent: mobile)
+        _ = try insert("Development", parent: backend)
+        let topDevelopment = try insert("Development")
+        #expect(throws: Self.unique) { try insert("Development", parent: mobile) }
+        #expect(throws: Self.unique) { try insert("Mobile") }
+        #expect(throws: StoreError.constraintViolation(.other)) { try insert("iOS", parent: development) }
+        #expect(throws: StoreError.constraintViolation(.other)) {
+            try seeded.execute("UPDATE folders SET parent_id = '\(backend)' WHERE id = '\(mobile)'")
+        }
+        #expect(throws: StoreError.constraintViolation(.other)) {
+            try seeded.execute("UPDATE folders SET parent_id = '\(development)' WHERE id = '\(backend)'")
+        }
+        #expect(throws: Self.check) {
+            try seeded.execute("UPDATE folders SET parent_id = id WHERE id = '\(topDevelopment)'")
+        }
+        #expect(throws: Self.foreignKey) { try insert("Orphan", parent: UUID().uuidString.lowercased()) }
+
+        try seeded.execute("DELETE FROM folders WHERE id = '\(mobile)'")
+        #expect(try seeded.integer("SELECT COUNT(*) FROM folders WHERE parent_id = '\(mobile)'") == 0)
+        #expect(try seeded.integer("SELECT COUNT(*) FROM folders") == 3)
+    }
+
     @Test func kindIsAnEnum() throws {
         let seeded = try SeededDatabase()
         #expect(throws: Self.check) {

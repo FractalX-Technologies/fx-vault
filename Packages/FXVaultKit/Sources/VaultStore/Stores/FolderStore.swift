@@ -41,9 +41,11 @@ public struct FolderStore: Sendable {
         }
     }
 
-    /// One past the largest `sort_order`, so a new folder goes last.
-    public func nextSortOrder(in tx: StoreTransaction) throws -> Int {
-        let largest = try FolderRecord.select(max(FolderRecord.CodingKeys.sortOrder), as: Int?.self).fetchOne(tx.db)
+    /// One past the largest `sort_order` among `parent`'s subfolders (the top-level folders
+    /// for nil), so a new folder goes last there.
+    public func nextSortOrder(parent: FolderID?, in tx: StoreTransaction) throws -> Int {
+        let siblings = FolderRecord.filter(FolderRecord.CodingKeys.parentID == parent?.uuidString)
+        let largest = try siblings.select(max(FolderRecord.CodingKeys.sortOrder), as: Int?.self).fetchOne(tx.db)
         return (largest ?? nil).map { $0 + 1 } ?? 0
     }
 

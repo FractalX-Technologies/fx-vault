@@ -6073,6 +6073,17 @@
         }
       }
     },
+    "error.config.subfolderNotAllowed" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folders hold one level of subfolders."
+          }
+        }
+      }
+    },
     "error.config.title" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {

@@ -28,9 +28,9 @@ struct MigrationTests {
             "v7_journal_fingerprints", "v8_force_push_requested_at", "v9_item_links", "v10_teammates",
             "v11_spaces", "v12_folders", "v13_destinations", "v14_project_shares",
             "v15_drop_teammates", "v16_drop_runtime_providers", "v17_organizations", "v18_standalone_key_vaults",
-            "v19_org_item_changes", "v20_key_vault_subscriptions", "v21_file_secrets",
+            "v19_org_item_changes", "v20_key_vault_subscriptions", "v21_file_secrets", "v22_subfolders",
         ])
-        #expect(Migration.latest == .v21FileSecrets)
+        #expect(Migration.latest == .v22Subfolders)
         #expect(Migration.v1Vault < Migration.v7JournalFingerprints)
         #expect(VaultMigrator.makeMigrator().migrations == Migration.allCases.map(\.rawValue))
     }
@@ -454,6 +454,7 @@ struct MigrationTests {
     static let seedPushedFingerprint = Data(repeating: 10, count: 32)
     static let seedLinkID = "44444444-4444-4444-8444-444444444444"
     static let seedFolderID = "77777777-7777-4777-8777-777777777777"
+    static let seedSubfolderID = "77777777-7777-4777-8777-777777777778"
     static let seedFolderItemID = "88888888-8888-4888-8888-888888888888"
     static let seedConnectionID = "99999999-9999-4999-8999-999999999999"
     static let seedDestinationID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
@@ -564,6 +565,12 @@ struct MigrationTests {
                     seedFolderItemID, seedFolderID, Data(repeating: 7, count: 40), Data(repeating: 8, count: 32),
                     seedLinkID, seedTime, seedTime,
                 ])
+            if version >= .v22Subfolders {
+                try db.execute(sql: """
+                    INSERT INTO folders (id, parent_id, name, name_key, sort_order, created_at, updated_at)
+                    VALUES (?, ?, 'Development', 'development', 0, ?, ?)
+                    """, arguments: [seedSubfolderID, seedFolderID, seedTime, seedTime])
+            }
             guard version >= .v13Destinations else { return }
             try db.execute(sql: """
                 INSERT INTO destinations (id, repository_id, provider, target_key, settings_json, stage, stage_key,
@@ -703,9 +710,11 @@ struct MigrationTests {
             #expect(linkCount == 1)
             return
         }
-        #expect(folders.map(\.name) == ["Mobile App"])
-        #expect(folders.first?.variableCount == 1)
         let folderID = try #require(FolderID(uuidString: seedFolderID))
+        // A folder from before v22 stays at the top; v22 seeds Development in it.
+        #expect(folders.filter { $0.parentID == nil }.map(\.name) == ["Mobile App"])
+        #expect(folders.filter { $0.parentID == folderID }.map(\.name) == (version >= .v22Subfolders ? ["Development"] : []))
+        #expect(folders.first { $0.id == folderID }?.variableCount == 1)
         let destinations = try DestinationStore(database: database).fetchDestinations(repositoryID: repoID)
         guard version >= .v13Destinations else {
             #expect(destinations.isEmpty)

@@ -1,5 +1,79 @@
 # FX Vault - Implementation Plan
 
+## Folder files and subfolders — slices (2026-10-28, careful)
+
+Goal: a folder holds any file (PDF, profiles, anything), encrypted in the vault, up to 50 MB, saved back
+to disk with Save As… after Touch ID or the master password; folders get one level of subfolders
+(Mobile › Development, Testflight Dev). Decided with Bryan: careful mode, one level, Touch ID · 50 MB.
+
+Gates (every slice, in order):
+- `swift test --package-path Packages/FXVaultKit` · app unit suite (`xcodebuild test -only-testing:AppTests`,
+  ad-hoc) · `scripts/lint.sh` · `scripts/sync-strings.sh --check` · `scripts/check-secrets.sh`
+- e2e: `FXVaultUITests` once, then the touched flows again. Throwaway UI-testing vault only. Skipped for a
+  slice no flow can see (data-only, docs)
+- review (myself, then review-code / review-tests / review-security as the slice needs) → gate → commit
+  (explicit paths) → push → CI green
+
+Reserved for the user: each new migration id (v22, v23: once a Dev build runs one, older branches can't open
+the Dev vault), the release, anything that deletes vault data.
+
+Design (decided in the plan, pushback welcome):
+- Files live in SQLite, not on disk: rotation and reset stay atomic. `folder_files` (metadata: name, size,
+  type, folder) and `folder_file_blobs` (ciphertext) are separate tables so listings never read blobs. AAD
+  `FolderFileAAD` binds the table, the file id and the DEK version (not the folder: moving a file never
+  re-encrypts 50 MB).
+- File names are plaintext metadata, like F1's file labels and folder names (SECURITY-MODEL says so).
+- Files stay out of everything that handles values: notes text, Copy To, Copy All, Export .env, ⌘K value
+  search, links, Share Securely (v1: "files aren't included", said in the share sheet).
+- Subfolders: `folders.parent_id`, names unique per parent, one level enforced by a trigger and the app.
+  Deleting a folder deletes its subfolders (the confirmation counts them). A subfolder shares as its own
+  folder; a shared folder brings only its own items (no nesting in `.fxvault` in v1).
+
+- [x] 0 Reset fix: `eraseAllData` also empties folders, folder items, organizations, destinations and every
+  later table (today "Reset vault" leaves them, undecryptable). Own PR. Writes: test vaults only. e2e:
+  skipped (RecoveryEraseUITests covers the flow; a store test seeds every table).
+- [x] 1 Subfolders, data: v22 `parent_id`, per-parent unique names, one-level trigger; FolderRepository
+  create(in:), move into/out of a parent, order per parent, cascade delete. Writes: test vaults. e2e: skipped
+  (no UI yet); migration and repository tests.
+- [ ] 2 Subfolders, UI: the sidebar tree (expand/collapse), New Subfolder… in a folder's menu, breadcrumb and
+  header "Mobile › Development", ⌘K / Quick Vault / Copy To titles with the parent. e2e: create Mobile, then
+  Development and Testflight Dev in it; both show under Mobile and open.
+- [ ] 3 Files, data: v23 tables, FolderFileAAD, FolderFileRepository (add from URL ≤ 50 MB, list, rename,
+  delete, write to URL with a single-use authorization), DEK rotation re-seals blobs, reset erases them,
+  `ReauthPurpose.saveFile`. Writes: test vaults. e2e: skipped; repository, crypto and rotation tests.
+- [ ] 4 Files, UI: a Files section in a folder (notes and table): Add File…, drop any file (p8/pem/json still
+  offer the file secret), Save As… after Touch ID, Rename, Delete; counts in the sidebar. e2e: add a
+  synthetic PDF, save it back after the master password, the saved bytes match; delete it.
+- [ ] 5 Docs and changelog: README, SECURITY-MODEL, DATABASE (v22, v23), SHARING-PROTOCOL note, DESIGN,
+  release check row, CHANGELOG Unreleased.
+
+Review 0 — Reset fix:
+- Store: `VaultRecordStore.eraseAllData(in:)` deletes every table in `sqlite_master` (not `sqlite_*`, not
+  `grdb_migrations`) with foreign keys deferred to the commit, instead of a fixed list of 9 tables. Used by
+  Reset Vault and Erase a forgotten vault. 1 new test (seed of every migration + an organization): red before
+  (folders, folder_items, organizations, org_items, sent_shares survived), green after.
+- e2e: skipped, no screen changes; RecoveryEraseUITests drives the erase flow.
+- Gates: package 1446 green · app unit 918 green · lint OK · check-secrets OK. No strings changed.
+- Review: self-review (tiny diff); no triggers or virtual tables in the schema; the pragma resets at commit.
+- Found on the way: vaults reset before this fix still hold those rows (names readable, values sealed under
+  the old key). Not cleaned here.
+- Commit: `b1f6019` (PR #29)
+
+Review 1 — Subfolders, data:
+- Store: v22 `parent_id` (FK cascade, no self-parent), `folders_name_key` over (parent, name), two triggers
+  for one level. `FolderRecord`/`FolderModel.parentID`; `FolderStore.nextSortOrder(parent:)`.
+- Repository: `createFolder(named:in:)`, sibling-scoped rename, `moveFolder(_:to:)` (no re-seal: the AAD
+  binds the folder), `reorderFolders(_:in:)`; `ConfigRepositoryError.subfolderNotAllowed` + its message.
+- Sharing: a received folder plans and creates only against top-level folders.
+- Tests: migration step-by-step seeds a subfolder at v22; ConstraintTests (index, CHECK, triggers, FK,
+  cascade); 4 FolderRepositoryTests (create, move, order, cascade); 1 share test, red without the planner
+  filter. Gates: package green · app unit 918 green · lint OK · strings synced · check-secrets OK.
+- e2e: skipped, no UI yet (slice 2). Review: self-review only (saving the agent budget for slices 3–4).
+- Left for slice 2: the sidebar still lists every folder flat; `FolderNameViewModel` still checks names
+  across all folders; an exported subfolder arrives at the top under its own name.
+- Commit: (pending)
+
+
 **Status (2026-10-15):** v0.1.0 beta built and released: a universal DMG, Developer ID-signed, notarized and stapled, published on `FractalX-Technologies/fx-vault` (tag `v0.1.0`) and installed with `brew install --cask fractalx-technologies/tap/fx-vault`. Milestones 1–7 are implemented on `main` (3b0e9b9, 101b22c, b062759, 9bf1419). 967 package tests (13 of them opt-in live tests) and 288 app tests pass, CI is green on `macos-26` (blocking) and `xcode-27`, and the live write E2E suite passed against real GitHub (docs/API.md "Write run, 2026-10-15"). Nearby sharing ships as experimental. Still open: the §11 items marked *Pending* (hardware and manual checks, the second gh account, the rest of the Q6 facts) and the gaps marked *Not done* or *Gap*.
 
 **Baseline:**

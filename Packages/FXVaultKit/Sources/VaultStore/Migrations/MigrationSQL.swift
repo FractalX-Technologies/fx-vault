@@ -546,4 +546,27 @@ enum MigrationSQL {
             AND coalesce(json_extract(file_detail, '$.lineCount'), 0) >= 0
             AND json_remove(file_detail, '$.fileName', '$.lineCount', '$.encoding') = '{}'));
         """
+
+    // MARK: v22_subfolders (folder files and subfolders, slice 1). Additive.
+
+    /// One level of subfolders (Mobile › Development): `parent_id` names a top-level folder, and
+    /// deleting it deletes its subfolders and their items. Names are unique per parent, so the
+    /// global `folders_name_key` gives way to one over (parent, name). The triggers keep it one
+    /// level: a parent can't have a parent, and a folder with subfolders can't become one.
+    static let v22Subfolders = """
+        ALTER TABLE folders ADD COLUMN parent_id TEXT REFERENCES folders(id) ON DELETE CASCADE
+          CHECK (parent_id IS NULL OR (length(parent_id) = 36 AND parent_id <> id));
+        DROP INDEX folders_name_key;
+        CREATE UNIQUE INDEX folders_name_key ON folders(ifnull(parent_id, ''), name_key);
+        CREATE INDEX folders_parent ON folders(parent_id) WHERE parent_id IS NOT NULL;
+        CREATE TRIGGER folders_one_level_insert BEFORE INSERT ON folders
+          WHEN NEW.parent_id IS NOT NULL
+            AND (SELECT parent_id FROM folders WHERE id = NEW.parent_id) IS NOT NULL
+          BEGIN SELECT RAISE(ABORT, 'folders: one level of subfolders'); END;
+        CREATE TRIGGER folders_one_level_update BEFORE UPDATE OF parent_id ON folders
+          WHEN NEW.parent_id IS NOT NULL
+            AND ((SELECT parent_id FROM folders WHERE id = NEW.parent_id) IS NOT NULL
+              OR EXISTS (SELECT 1 FROM folders WHERE parent_id = NEW.id))
+          BEGIN SELECT RAISE(ABORT, 'folders: one level of subfolders'); END;
+        """
 }

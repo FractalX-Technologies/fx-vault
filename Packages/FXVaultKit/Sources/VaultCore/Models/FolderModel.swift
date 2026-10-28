@@ -5,9 +5,12 @@ import Foundation
 /// and paste; teammates by a copy sent in a `.fxvault` file.
 public struct FolderModel: Sendable, Hashable, Identifiable {
     public var id: FolderID
-    /// NFC, 1–``Limits/maxFolderNameLength`` scalars (``FolderNameValidator``), unique by fold key.
+    /// The top-level folder this one is in (Mobile › Development); nil at the top. One level only.
+    public var parentID: FolderID?
+    /// NFC, 1–``Limits/maxFolderNameLength`` scalars (``FolderNameValidator``), unique by fold key
+    /// among its parent's subfolders (or the top-level folders).
     public var name: String
-    /// The sidebar order (ascending).
+    /// The sidebar order (ascending) among its siblings.
     public var sortOrder: Int
     /// Live secrets and variables, set by the folder observation.
     public var secretCount: Int
@@ -17,6 +20,7 @@ public struct FolderModel: Sendable, Hashable, Identifiable {
 
     public init(
         id: FolderID = FolderID(),
+        parentID: FolderID? = nil,
         name: String,
         sortOrder: Int,
         secretCount: Int = 0,
@@ -25,6 +29,7 @@ public struct FolderModel: Sendable, Hashable, Identifiable {
         updatedAt: Date
     ) {
         self.id = id
+        self.parentID = parentID
         self.name = name
         self.sortOrder = sortOrder
         self.secretCount = secretCount
