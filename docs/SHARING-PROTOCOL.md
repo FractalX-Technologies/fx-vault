@@ -109,6 +109,8 @@ A copy of a folder is scope `folder`, `schemaVersion` 3, and carries a `folder` 
   `imported_share_packages` like an import.
 - 0.6 and older reject version 3 (`unsupportedSchemaVersion`): a `.fxvault` folder file shows
   "Wrong passphrase or damaged file" there.
+- A folder's subfolders (v22) and files (v23) are never in a share: the payload carries the
+  folder's secrets and variables only, and the format is unchanged.
 
 ### 1.4 Bundles: schema 4 (v0.9.0)
 

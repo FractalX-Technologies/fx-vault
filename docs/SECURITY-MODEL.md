@@ -55,6 +55,16 @@ Touch ID   the DEK in a data-protection keychain item (signed builds only, §5)
   kind changes re-seal; DEK rotation re-seals every folder value. Folder items live in their own
   tables, which no sync path reads: they reach GitHub only after the user copies them into a
   repository scope and syncs. Folder names are plaintext, like repository names.
+- **Folder files (v23):** a file kept in a folder (any type, up to 50 MB) is one AES-256-GCM
+  blob in `folder_file_blobs.content_ct` under K_field with `FolderFileAAD`: field label, table
+  `folder_file_blobs`, column `content_ct`, the file id and the DEK version. A blob never opens as
+  another file or as any item. The file's name, size and folder are **not** in the AAD, so a
+  rename or a move re-seals nothing; someone who can write `vault.sqlite` could therefore swap the
+  name or folder of two file rows without detection (Save As… of "a.pdf" would write the bytes of
+  "b.pdf"). That needs write access to the database, which §10 already places out of scope. The
+  file name, its size and its folder are plaintext (`folder_files`), like item names, so a stolen
+  disk shows that a vault holds `prod-signing.p12` of 4 KB. No vault-wide cap: each file is at
+  most 50 MB (`CHECK` and the reader), and the vault grows with what the user keeps.
 - **Destinations (v0.8.0):** `destination_items.value_ct` is AES-256-GCM under K_field with
   `DestinationFieldAAD`: the field layout above with table `destination_items`, the destination
   id in the repository's place and no environment, so a destination blob never opens as a
@@ -112,6 +122,12 @@ key" option, and always by a recovery reset) is one transaction:
    turns Touch ID off rather than leaving a stale key).
 
 Notes:
+- Folder files (v23) are re-sealed in the same transaction, one at a time (the old blob, its
+  plaintext and the new blob are in memory together: about 4× the file's size at the peak, at
+  most ~200 MB). A vault with gigabytes of files makes the rotation's transaction, and its WAL,
+  that large: a full disk aborts the rotation with nothing changed, and a recovery reset needs the
+  space before it can finish. A file row whose id does not decode aborts the rotation instead of
+  being skipped, so no blob is left under the old DEK.
 - A row with a synced fingerprint but no synced ciphertext keeps a fingerprint recomputed from
   the current value when the two matched before; otherwise the fingerprint is cleared and the
   item is pushed again on the next Sync.
@@ -227,6 +243,10 @@ The table's eye and Copy Value on a secret (1.0 T1) go through the same `NotesRe
 dropped by Cancel, another scope, a lock or a newer request; a secret that shows copies at
 once, a variable copies at once, and an inherited secret is never revealed or copied there.
 
+Save As… of a folder file (v23, `ReauthPurpose.saveFile`) asks the same check each time. Its
+`FolderFileSaveAuthorizationModel` is single-use and bound to the session and key generation
+like the `.env` export's, so a lock between the check and the write refuses the write.
+
 ## 7. Values in use
 
 - `SecretBytes` holds values in memory: lock-protected, wiped on `wipe()` and `deinit`,
@@ -329,6 +349,17 @@ once, a variable copies at once, and an inherited secret is never revealed or co
   wipes the bytes after Add, on close and on lock, and throws away a read still running then. The file itself is left where
   it is: FX Vault never deletes or changes it. Logs carry counts only, never the file name, the
   same as item names.
+- **Folder files (v23):** Add File… or a drop on a folder (any file that is not a file secret)
+  reads one regular file of at most 50 MB with the same `SecretFileReader`, off the main actor,
+  seals it and wipes the bytes. **Save As…** asks the save panel first, then "Confirm it's you"
+  (`ReauthPurpose.saveFile`, a single-use `FolderFileSaveAuthorizationModel` bound to the session
+  like the `.env` export's), decrypts into `SecretBytes` off the main actor and writes with
+  `SecureFileWriter` (0600, no symlinks, atomic rename; it replaces a file only after the save
+  panel confirmed it). The saved file is **unencrypted** where the user chose, as the panel says.
+  FX Vault is not sandboxed, so macOS would not quarantine what it writes: Save As… sets
+  `com.apple.quarantine` itself (agent "FX Vault", type other download), so Gatekeeper checks an
+  app, installer or script kept in the vault before it first opens; a file that cannot be marked
+  is removed. Logs carry byte counts only.
 - **Files:** `.env` and `.fxvault` exports are written 0600 from creation (exclusive create, no
   symlinks, `F_FULLFSYNC`, atomic rename), with iCloud-sync and git-exposure warnings and a
   `.gitignore` offer.

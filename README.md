@@ -89,7 +89,13 @@ the secrets your code reads at runtime in Azure Key Vault.
   own ("Mobile App", "Stripe test") under GitHub in the sidebar (New Folder…, ⇧⌘N). A folder never
   goes to GitHub by itself: copy its items into any repository with ⌘C / ⌘V or Copy To, and every
   copy stays linked, so changing a value in the folder offers to update the repositories that
-  use it. Folders take Paste Multiple…, `.env` import and export too.
+  use it. Folders take Paste Multiple…, `.env` import and export too, and one level of
+  subfolders (right-click a folder › New Subfolder…: "Mobile › Development").
+- **Files in folders.** Keep any file in a folder (a PDF, a provisioning profile, a `.p12`, up to
+  50 MB each) with ⋯ More › Add File… or a drop: FX Vault keeps an encrypted copy and leaves the
+  original alone. **Save As…** writes it back after Touch ID or your master password, unencrypted
+  where you choose, and marked as downloaded so macOS checks an app or script before it opens.
+  Files stay in your vault: they are never synced or shared.
 - **Send a folder to a teammate.** From the folder's menu, share it as an encrypted `.fxvault`
   file (after Touch ID or your master password). The teammate saves it as a folder of their own
   or imports it into one of their repositories. Each person keeps their own copy.

@@ -41,10 +41,10 @@ Design (decided in the plan, pushback welcome):
 - [x] 3 Files, data: v23 tables, FolderFileAAD, FolderFileRepository (add from URL ≤ 50 MB, list, rename,
   delete, write to URL with a single-use authorization), DEK rotation re-seals blobs, reset erases them,
   `ReauthPurpose.saveFile`. Writes: test vaults. e2e: skipped; repository, crypto and rotation tests.
-- [ ] 4 Files, UI: a Files section in a folder (notes and table): Add File…, drop any file (p8/pem/json still
+- [x] 4 Files, UI: a Files section in a folder (notes and table): Add File…, drop any file (p8/pem/json still
   offer the file secret), Save As… after Touch ID, Rename, Delete; counts in the sidebar. e2e: add a
   synthetic PDF, save it back after the master password, the saved bytes match; delete it.
-- [ ] 5 Docs and changelog: README, SECURITY-MODEL, DATABASE (v22, v23), SHARING-PROTOCOL note, DESIGN,
+- [x] 5 Docs and changelog: README, SECURITY-MODEL, DATABASE (v22, v23), SHARING-PROTOCOL note, DESIGN,
   release check row, CHANGELOG Unreleased.
 
 Review 0 — Reset fix:
@@ -71,7 +71,7 @@ Review 1 — Subfolders, data:
 - e2e: skipped, no UI yet (slice 2). Review: self-review only (saving the agent budget for slices 3–4).
 - Left for slice 2: the sidebar still lists every folder flat; `FolderNameViewModel` still checks names
   across all folders; an exported subfolder arrives at the top under its own name.
-- Commit: `6654acc` (draft PR #30)
+- Commit: `397e4d3` (draft PR #30; `6654acc` before the rebase)
 
 Review 2 — Subfolders, UI:
 - Sidebar: subfolders one step in under their folder's chevron (open by default; selecting one opens its
@@ -85,7 +85,7 @@ Review 2 — Subfolders, UI:
 - Tests: 1 VaultCore (path, tree order); 3 app (sidebar, name sheet + Copy To, ⌘K); XCUITest
   `testSubfoldersSitUnderTheirFolderAndOpen` (⇧⌘N Mobile, New Subfolder… ×2, path, chevron).
 - Not in this slice: no UI to move a folder into or out of another (the repository has `moveFolder`).
-- Commit: `6b1e159`
+- Commit: `1d11dfb` (`6b1e159` before the rebase)
 
 Review 3 — Files, data:
 - Store: v23 `folder_files` (name, size ≤ 52 428 800, unique per folder by fold key, cascade with the
@@ -107,8 +107,33 @@ Review 3 — Files, data:
   scope like § 10), § 3 rotation of blobs, § 6 `.saveFile`, § 7 50 MB reads; no vault-wide cap, the
   rotation cost (one transaction, ~4× a file's size in memory at the peak) is documented instead.
 - e2e: skipped (no UI yet, slice 4).
-- Commit: (pending)
+- Commit: `124d12b` (`a9b6d9b` before the rebase)
 
+
+Review 4 — Files, UI:
+- Folder: a Files section ("Files · N", Add File…, rows with icon, name, size, Save As…; Rename… and
+  Delete… in the context menu), Add File… in ⋯ More, "· N files" in the subline (the sidebar shows no
+  counts anywhere, so no file count there). Save As…: save panel, then "Confirm it's you" (a
+  `ReauthModel` per request), then the write off the main actor. Adds run off the main actor too; a
+  lock stops them and closes every file dialog.
+- Drops on a folder: several files are all kept; a key file too large for a value is kept as a file;
+  elsewhere unchanged. Deleting a folder names the files that go with it. Share Securely says folder
+  files aren't included.
+- review-code: blocker fixed (one shared `ReauthModel`: stale Touch ID status, and a check running for
+  a cancelled request could authorize the next); "52.4 MB" for the 50 MiB limit → `.memory` style;
+  rename/delete intents in the view model; first failure kept on a multi-add; duplicated extensions
+  list and UI-test path extracted.
+- UI test helpers: `satisfies` waits for the element to exist (it failed at once on a missing one;
+  the two `exists == false` waits use `disappears`); QuickVault waits for the field's focus before
+  typing.
+- Tests: AppTests 925 green; package 1469; full UI suite 22/24, then the touched flows again green but
+  QuickVault's menu test. That one is the Mac's load (40–60, another session's simulators), not this
+  change: alternating runs at the same load, the branch passed 3/3 and origin/main failed 2/3.
+- Commit: `f9ce404`, UI test helpers `51c73ca`
+
+Review 5 — Docs: README (subfolders, files), SECURITY-MODEL §2 §3 §6 §7, ARCHITECTURE (ReauthGate),
+DATABASE (v22, v23), SHARING-PROTOCOL (not in shares), DESIGN (Files section), RELEASING row 77,
+CHANGELOG Unreleased.
 
 **Status (2026-10-15):** v0.1.0 beta built and released: a universal DMG, Developer ID-signed, notarized and stapled, published on `FractalX-Technologies/fx-vault` (tag `v0.1.0`) and installed with `brew install --cask fractalx-technologies/tap/fx-vault`. Milestones 1–7 are implemented on `main` (3b0e9b9, 101b22c, b062759, 9bf1419). 967 package tests (13 of them opt-in live tests) and 288 app tests pass, CI is green on `macos-26` (blocking) and `xcode-27`, and the live write E2E suite passed against real GitHub (docs/API.md "Write run, 2026-10-15"). Nearby sharing ships as experimental. Still open: the §11 items marked *Pending* (hardware and manual checks, the second gh account, the rest of the Q6 facts) and the gaps marked *Not done* or *Gap*.
 
