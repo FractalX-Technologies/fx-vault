@@ -242,12 +242,20 @@ final class NotesEditSession {
         finish()
     }
 
-    /// The secrets whose values this edit sets, by the name they are saved under.
+    /// The secrets whose values showed in their tokens, by the name they are saved under: a
+    /// value drawn `••••` (line breaks, over the limit) was never on screen and still asks.
     private var savedSecretNames: Set<String> {
         let plan = analysis.plan
-        let added = plan.additions.filter { $0.kind == .secret }.map(\.name)
-        let changed = plan.changes.filter { $0.origin.kind == .secret && $0.value != nil }.map { $0.name ?? $0.origin.name }
+        let added = plan.additions.filter { $0.kind == .secret && showsValue($0.value) }.map(\.name)
+        let changed = plan.changes.filter { change in
+            change.origin.kind == .secret && change.value.map(showsValue) == true
+        }.map { $0.name ?? $0.origin.name }
         return Set(added + changed)
+    }
+
+    private func showsValue(_ value: NotesEditValueModel) -> Bool {
+        guard case .token(let id) = value, case .visible = display(of: id) else { return false }
+        return true
     }
 
     /// Cancel: drops every edit.

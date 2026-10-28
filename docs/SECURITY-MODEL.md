@@ -322,7 +322,14 @@ like the `.env` export's, so a lock between the check and the write refuses the 
   Values become `SecretBytes`, and the clipboard is cleared if nothing was copied since (Set
   value…'s Paste button clears it too). Generate draws 32 bytes from
   `SystemRandomNumberGenerator`. Revealed values are hidden when an edit starts. Save writes
-  pending changes only; nothing reaches GitHub or Key Vault before Sync. While an edit runs, a
+  pending changes only; nothing reaches GitHub or Key Vault before Sync. A second deliberate
+  widening, asked for by the user: a one-line secret value set in this edit (pasted, typed or
+  generated, within the limit) is drawn in its token's image instead of `••••`, still outside
+  the text, undo and pasteboard (each draw makes a `String` copy, as a Reveal's does), and the
+  main window is excluded from screen capture for the whole edit. After Save those secrets, and
+  only those, show in the read notes without a check for `Timeouts.revealRemask`: matched by
+  name among the place's live secrets in the first snapshot that has them, never after that
+  snapshot or 30 s. While an edit runs, a
   file drop, ⌘V of copied items and Import .env… wait for it to end.
 - **Quick vault (1.0 Q1):** a global shortcut registered with Carbon's `RegisterEventHotKey`,
   which needs no Accessibility or Input Monitoring permission and receives that one combination

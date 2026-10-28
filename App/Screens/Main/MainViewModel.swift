@@ -225,11 +225,13 @@ final class MainViewModel: LockObserving, ConnectivityObserving {
 
     // MARK: - Revealed values
 
-    /// A secret shows in the open place (notes or table): the window stays out of screen
-    /// capture and the toolbar says so (board Place-Reveal).
+    /// A secret shows in the open place (notes or table), or its notes are edited (a value set
+    /// there shows in its token): the window stays out of screen capture and the toolbar says so
+    /// (board Place-Reveal).
     var isShowingRevealedValue: Bool {
         [detail?.values, folderDetail?.values, destinationDetail?.values, organizationDetail?.values]
             .contains { $0?.isShowingRevealedValue == true }
+            || [detail?.notesEdit, folderDetail?.notesEdit, destinationDetail?.notesEdit].contains { $0 != nil }
     }
 
     /// Masks every revealed value of the open places (FX Vault resigned active).

@@ -444,6 +444,11 @@ struct NotesRevealTests {
 
         let repository = try await MainConnectivityTests.open(repositoryID, in: main)
         try await Self.expectTheWindowFollows(repository.values, in: main) { repository.rows.first?.id }
+        // An edit can draw a value set in it: the window stays out of capture while it runs.
+        repository.beginNotesEdit(at: nil)
+        #expect(main.isShowingRevealedValue)
+        repository.notesEdit?.cancel()
+        #expect(!main.isShowingRevealedValue)
 
         main.sidebar.selectedFolderID = folderID
         let folder = try #require(main.folderDetail)

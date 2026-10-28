@@ -27,6 +27,8 @@ final class ConfigValueRevealer {
     /// Secrets just saved from the notes editor (1.0 N2), by name: their values were on screen
     /// while editing, so each shows without asking once its row arrives, then hides as any other.
     @ObservationIgnored private var savedNames: Set<String> = []
+    /// After this, names still waiting no longer show: their values left the screen long ago.
+    @ObservationIgnored private var savedNamesExpiry: Date?
     @ObservationIgnored private let decrypt: Reveal
     @ObservationIgnored private let clock: any VaultClock
 
@@ -118,6 +120,7 @@ final class ConfigValueRevealer {
     /// Shows the secrets named `names` as their rows arrive (``follow(liveIDs:variableIDs:secrets:)``).
     func revealOnArrival(_ names: Set<String>) {
         savedNames = names
+        savedNamesExpiry = clock.now.addingTimeInterval(Timeouts.revealRemask.timeInterval)
     }
 
     func hide(_ id: ConfigItemID) {
@@ -159,11 +162,20 @@ final class ConfigValueRevealer {
     /// Masks the revealed values of rows that are gone, shows the secrets of `secrets` (id to name)
     /// saved from the notes editor, and decrypts the variables of `ids` for plaintext display (a
     /// locked vault leaves them masked).
-    func follow(liveIDs: Set<ConfigItemID>, variableIDs: [ConfigItemID], secrets: [ConfigItemID: String] = [:]) {
+    func follow(liveIDs: Set<ConfigItemID>, variableIDs: [ConfigItemID], secrets: [ConfigItemID: String]) {
         for id in revealedValues.keys where !liveIDs.contains(id) {
             hide(id)
         }
-        for (id, name) in secrets where savedNames.remove(name) != nil {
+        if let savedNamesExpiry, clock.now > savedNamesExpiry {
+            savedNames.removeAll()
+        }
+        let arrived = secrets.filter { savedNames.contains($0.value) }
+        if !arrived.isEmpty {
+            // The save is one transaction: its snapshot brings every name at once. A name left
+            // over must not show a secret that arrives later some other way (a pull, a drop).
+            savedNames.removeAll()
+        }
+        for id in arrived.keys {
             do {
                 try reveal(id)
             } catch {
@@ -194,15 +206,23 @@ protocol ConfigNamedItem {
     var id: ConfigItemID { get }
     var kind: ConfigKind { get }
     var name: String { get }
+    var isDeleted: Bool { get }
 }
 
 extension ConfigItemModel: ConfigNamedItem {}
-extension FolderItemModel: ConfigNamedItem {}
 extension DestinationItemModel: ConfigNamedItem {}
 
+extension FolderItemModel: ConfigNamedItem {
+    // A folder's item is removed at once: it has no pending deletion.
+    var isDeleted: Bool {
+        false
+    }
+}
+
 extension Sequence where Element: ConfigNamedItem {
-    /// The secrets' names by id, for ``ConfigValueRevealer/follow(liveIDs:variableIDs:secrets:)``.
+    /// The live secrets' names by id, for ``ConfigValueRevealer/follow(liveIDs:variableIDs:secrets:)``:
+    /// a pending deletion may share a new secret's name.
     var secretNames: [ConfigItemID: String] {
-        Dictionary(filter { $0.kind == .secret }.map { ($0.id, $0.name) }) { first, _ in first }
+        Dictionary(uniqueKeysWithValues: filter { $0.kind == .secret && !$0.isDeleted }.map { ($0.id, $0.name) })
     }
 }
