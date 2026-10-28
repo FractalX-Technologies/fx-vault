@@ -85,7 +85,12 @@ enum JumpPlaces {
             }
         }
         places += input.keyVaults.map { place(.keyVault($0.id), $0.title, $0.provider.title, $0.provider.symbolName) }
-        places += input.folders.map { place(.folder($0.id), $0.name, PlaceCopy.folder, Theme.Symbols.folder, style: .sans) }
+        // A subfolder says its parent ("Folder · Mobile"), and its parent's name finds it too.
+        places += input.folders.treeOrdered.map { folder in
+            let parent = Array(input.folders.path(of: folder.id).dropLast())
+            let detail = PlaceCopy.subline([PlaceCopy.folder] + parent)
+            return place(.folder(folder.id), folder.name, detail, Theme.Symbols.folder, style: .sans, path: parent)
+        }
         return places
     }
 
@@ -108,8 +113,9 @@ enum JumpPlaces {
                 let detail = PlaceCopy.path([repo.ownerLogin, repo.name, environment.name])
                 return JumpItemModel(match: match, detail: detail, target: .environment(repositoryID, environmentID))
             case .place(.folder(let id)):
-                guard let folder = input.folders.first(where: { $0.id == id }) else { return nil }
-                return JumpItemModel(match: match, detail: PlaceCopy.subline([PlaceCopy.folder, folder.name]), target: .folder(id))
+                let path = input.folders.path(of: id)
+                guard !path.isEmpty else { return nil }
+                return JumpItemModel(match: match, detail: PlaceCopy.subline([PlaceCopy.folder, PlaceCopy.path(path)]), target: .folder(id))
             case .place(.destination(let id)):
                 guard let vault = input.keyVaults.first(where: { $0.id == id }) else { return nil }
                 return JumpItemModel(match: match, detail: PlaceCopy.subline([vault.provider.title, vault.title]), target: .keyVault(id))

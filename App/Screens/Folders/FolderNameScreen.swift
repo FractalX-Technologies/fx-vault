@@ -1,7 +1,7 @@
 import SwiftUI
 import VaultCore
 
-/// New Folder… and Rename… (v0.7.0). UI feature contract entry view: presented by `MainScreen`
+/// New Folder…, New Subfolder… and Rename… (v0.7.0). UI feature contract entry view: presented by `MainScreen`
 /// for `MainSheet.folderName`.
 struct FolderNameScreen: View {
     @State private var viewModel: FolderNameViewModel
@@ -31,6 +31,7 @@ struct FolderNameScreen: View {
                     prompt: Text(verbatim: FolderCopy.namePrompt).foregroundStyle(Theme.Colors.subtleText)
                 )
                 .focused($isNameFocused)
+                .accessibilityIdentifier(AccessibilityID.Main.folderName)
                 .autocorrectionDisabled()
                 .labelsHidden()
                 .fxInputField(.rounded, isFocused: isNameFocused, isInvalid: viewModel.nameNote?.isError ?? false)

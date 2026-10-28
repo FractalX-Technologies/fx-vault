@@ -124,6 +124,21 @@ enum AccessibilityID {
             "main.organization.\(login)"
         }
 
+        /// A folder's row in the sidebar, by its title ("Mobile › Development" for a subfolder).
+        static func folder(_ title: String) -> String {
+            "main.folder.\(title)"
+        }
+
+        /// The chevron that opens or closes a folder with subfolders.
+        static func folderToggle(_ title: String) -> String {
+            "main.folderToggle.\(title)"
+        }
+
+        /// New Subfolder… in a top-level folder's menu.
+        static let newSubfolder = "main.newSubfolder"
+        /// The name field of New Folder…, New Subfolder… and Rename….
+        static let folderName = "main.folderName"
+
         /// The search field at the top of the sidebar (⌘F, 1.0).
         static let sidebarSearch = "main.sidebarSearch"
 

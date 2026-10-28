@@ -6,6 +6,7 @@ enum FolderCopy {
     /// One key with the place header's kind.
     static let eyebrow = PlaceCopy.folder
     static let newFolder = String(localized: "folder.new", defaultValue: "New Folder…")
+    static let newSubfolder = String(localized: "folder.newSubfolder", defaultValue: "New Subfolder…")
     static let rename = String(localized: "folder.rename", defaultValue: "Rename…")
     static let delete = String(localized: "folder.delete", defaultValue: "Delete Folder…")
     static let exportEnv = PlaceCopy.exportEnv
@@ -15,11 +16,15 @@ enum FolderCopy {
     )
     static let nameField = String(localized: "folder.name.field", defaultValue: "Name")
     static let namePrompt = String(localized: "folder.name.prompt", defaultValue: "Mobile App")
-    static let nameTaken = String(localized: "folder.name.taken", defaultValue: "Another folder already has this name.")
+    static let nameTaken = String(localized: "folder.name.taken", defaultValue: "Another folder here already has this name.")
     static let create = String(localized: "folder.name.create", defaultValue: "Create")
     static let renameSubmit = String(localized: "folder.name.rename", defaultValue: "Rename")
     static let newTitle = String(localized: "folder.name.newTitle", defaultValue: "New Folder")
     static let renameTitle = String(localized: "folder.name.renameTitle", defaultValue: "Rename Folder")
+
+    static func newSubfolderTitle(_ parent: String) -> String {
+        String(localized: "folder.name.newSubfolderTitle", defaultValue: "New Subfolder in \(parent)")
+    }
 
     static func deleteTitle(_ name: String) -> String {
         String(localized: "folder.delete.title", defaultValue: "Delete the folder \(name)?")
@@ -30,6 +35,15 @@ enum FolderCopy {
         localized: "folder.delete.message",
         defaultValue: "Its secrets and variables are removed from this Mac. Copies you pasted into repositories stay where they are."
     )
+
+    /// A folder with subfolders: they go with it.
+    static func deleteMessage(subfolders: Int) -> String {
+        guard subfolders > 0 else { return deleteMessage }
+        return String(inflected: AttributedString(
+            localized: "folder.delete.messageWithSubfolders",
+            defaultValue: "Its ^[\(subfolders) subfolder](inflect: true), secrets and variables are removed from this Mac. Copies you pasted into repositories stay where they are."
+        ))
+    }
 
     static func deleteItemsMessage(count: Int) -> String {
         count == 1

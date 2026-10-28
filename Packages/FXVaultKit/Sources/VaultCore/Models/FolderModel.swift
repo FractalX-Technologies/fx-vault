@@ -49,6 +49,25 @@ public struct FolderModel: Sendable, Hashable, Identifiable {
     }
 }
 
+extension [FolderModel] {
+    /// The names from the top down: `["Mobile", "Development"]` for a subfolder, `["Mobile"]` for
+    /// a top-level folder, empty when `id` is gone. Every title outside the sidebar tree uses it,
+    /// so two subfolders of one name stay apart.
+    public func path(of id: FolderID) -> [String] {
+        guard let folder = first(where: { $0.id == id }) else { return [] }
+        guard let parentID = folder.parentID, let parent = first(where: { $0.id == parentID }) else { return [folder.name] }
+        return [parent.name, folder.name]
+    }
+
+    /// Each top-level folder followed by its subfolders, each level in its own order: the
+    /// sidebar's order, flattened for menus and pickers. A subfolder whose parent is missing
+    /// is left out.
+    public var treeOrdered: [FolderModel] {
+        let children = Dictionary(grouping: filter { $0.parentID != nil }) { $0.parentID }
+        return filter { $0.parentID == nil }.flatMap { [$0] + (children[$0.id] ?? []) }
+    }
+}
+
 /// A secret or variable in a folder (v0.7.0, `folder_items` row), without its value.
 ///
 /// Its id is a ``ConfigItemID``: copy and paste, linked copies and the detail table treat a

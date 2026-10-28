@@ -184,7 +184,7 @@ final class ShareImportViewModel: LockObserving {
             if let target = destination.saveTarget {
                 let saved = try await dependencies.sharing.saveFolder(folderDraft, as: target, conflicts: destination.conflicts)
                 self.folderDraft = nil
-                folderNotice = FolderDestinationCopy.saved(saved, folderName: dependencies.folders.folderName(saved.folderID))
+                folderNotice = FolderDestinationCopy.saved(saved, folderName: dependencies.folders.folderTitle(saved.folderID))
                 step = .folderSaved
                 dependencies.actions.openFolder(saved.folderID)
             } else if let target = destination.importTarget {

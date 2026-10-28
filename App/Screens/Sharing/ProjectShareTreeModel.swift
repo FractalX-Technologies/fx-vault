@@ -32,14 +32,16 @@ struct ProjectShareTreeModel: Equatable, ShareCheckTree {
     /// - Parameters:
     ///   - repositories: each repository's node (``ShareScopeTreeModel/repositoryNode(repository:scopes:items:destinations:)``)
     ///     and its part, in the order the sheet lists them.
-    ///   - folders: the vault's folders that can be added (each one a leaf row).
-    init(repositories: [(node: ShareScopeNodeModel, part: RepositoryPart)], folders: [FolderModel]) {
+    ///   - folders: the vault's folders that can be added (each one a leaf row, a subfolder
+    ///     titled "Mobile › Development").
+    ///   - allFolders: every folder, for those titles.
+    init(repositories: [(node: ShareScopeNodeModel, part: RepositoryPart)], folders: [FolderModel], allFolders: [FolderModel]) {
         parts = repositories.map(\.part)
         folderIDs = folders.map(\.id)
         let folderNodes = folders.map { folder in
             ShareScopeNodeModel(
                 id: .folder(folder.id),
-                title: folder.name,
+                title: PlaceCopy.path(allFolders.path(of: folder.id)),
                 kind: .folder,
                 children: nil,
                 ownCounts: ShareItemCountModel(secrets: folder.secretCount, variables: folder.variableCount)
@@ -210,8 +212,9 @@ struct ProjectShareTreeLoader {
             )
             entries.append((node, part))
         }
-        let shareable = try folders.folders().filter { $0.itemCount > 0 }
-        return ProjectShareTreeModel(repositories: entries, folders: shareable)
+        let allFolders = try folders.folders()
+        let shareable = allFolders.treeOrdered.filter { $0.itemCount > 0 }
+        return ProjectShareTreeModel(repositories: entries, folders: shareable, allFolders: allFolders)
     }
 
     /// The current value of an observation stream (database observations deliver it at once).

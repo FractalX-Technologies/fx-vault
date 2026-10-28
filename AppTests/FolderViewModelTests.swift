@@ -31,7 +31,7 @@ struct FolderViewModelTests {
                 folderID: id,
                 dependencies: repository.harness.dependencies(recorder: recorder)
             ) { [folders] in
-                (try? folders.folders())?.first { $0.id == id }
+                (try? folders.folders()) ?? []
             }
             folder.kind = .secret
         }
@@ -324,5 +324,31 @@ struct FolderViewModelTests {
         #expect(rename.nameNote == nil, "a case-only change of its own name")
         #expect(rename.save())
         #expect(try fixture.harness.data.folders.folders().map(\.name).contains("WEB"))
+    }
+
+    @Test func newSubfolderChecksTheNameAmongItsSiblings() async throws {
+        let fixture = try await Fixture()
+        let dependencies = fixture.harness.dependencies(recorder: fixture.recorder)
+        let folders = fixture.harness.data.folders
+        try folders.createFolder(named: "Development")
+        try folders.createFolder(named: "Builds", in: fixture.folderID)
+
+        let model = FolderNameViewModel(context: FolderNameContext(mode: .create(itemIDs: [], parent: fixture.folderID)), dependencies: dependencies)
+        #expect(model.title == "New Subfolder in Mobile App")
+        model.name = "builds"
+        #expect(model.nameNote == .error(FolderCopy.nameTaken))
+        // A top-level folder of that name is not a sibling.
+        model.name = "Development"
+        #expect(model.nameNote == nil)
+        #expect(model.save())
+        let created = try #require(try folders.folders().first { $0.name == "Development" && $0.parentID == fixture.folderID })
+        #expect(fixture.recorder.openedFolders == [created.id])
+
+        let rename = FolderNameViewModel(context: FolderNameContext(mode: .rename(created.id)), dependencies: dependencies)
+        rename.name = "BUILDS"
+        #expect(rename.nameNote == .error(FolderCopy.nameTaken))
+
+        // Copy To lists each subfolder after its parent, titled with it.
+        #expect(dependencies.folderCopyTargets().map(\.title) == ["Mobile App", "Mobile App › Builds", "Mobile App › Development", "Development"])
     }
 }

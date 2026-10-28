@@ -10,6 +10,23 @@ import VaultData
 @MainActor
 @Suite("Jump palette")
 struct JumpPaletteTests {
+    @Test func aSubfolderSaysItsParentAndItsParentsNameFindsIt() async throws {
+        let harness = try await TestHarness(vault: .unlocked, ghStatus: MainViewModelTests.ready)
+        let main = harness.app.makeMainViewModel()
+        let mobile = try harness.data.folders.createFolder(named: "Mobile")
+        let development = try harness.data.folders.createFolder(named: "Development", in: mobile)
+        #expect(await TestFixtures.eventually { main.sidebar.folders.count == 2 })
+
+        main.showJumpPalette()
+        let palette = try #require(main.jumpPalette)
+        palette.query = "mobile"
+        #expect(palette.results.map(\.name) == ["Mobile", "Development"])
+        #expect(palette.results.map(\.detail) == ["Folder", "Folder · Mobile"])
+        palette.query = "development"
+        palette.open()
+        #expect(main.sidebar.selectedFolderID == development)
+    }
+
     @Test func typingFiltersThePlacesAndReturnOpensTheSelectedOne() async throws {
         let harness = try await TestHarness(vault: .unlocked, ghStatus: MainViewModelTests.ready)
         let main = harness.app.makeMainViewModel()

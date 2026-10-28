@@ -71,6 +71,20 @@ Review 1 — Subfolders, data:
 - e2e: skipped, no UI yet (slice 2). Review: self-review only (saving the agent budget for slices 3–4).
 - Left for slice 2: the sidebar still lists every folder flat; `FolderNameViewModel` still checks names
   across all folders; an exported subfolder arrives at the top under its own name.
+- Commit: `6654acc` (draft PR #30)
+
+Review 2 — Subfolders, UI:
+- Sidebar: subfolders one step in under their folder's chevron (open by default; selecting one opens its
+  parent); search keeps a parent whose subfolder matches; a drag reorders siblings only. New Subfolder…
+  in a top-level folder's menu; the delete confirmation counts the subfolders that go with it.
+- Titles: `[FolderModel].path(of:)` + `PlaceCopy.path` give "Mobile › Development" to the header, the
+  toolbar path, Copy To (each subfolder after its parent), the item editor, .env import/export, Share
+  Securely's tree and the received-folder picker; ⌘K shows "Folder · Mobile" and finds it by the parent.
+- Name sheet: names checked among siblings; "New Subfolder in Mobile"; "Another folder here already has
+  this name." A received folder's new name and same-name preselect look at top-level folders only.
+- Tests: 1 VaultCore (path, tree order); 3 app (sidebar, name sheet + Copy To, ⌘K); XCUITest
+  `testSubfoldersSitUnderTheirFolderAndOpen` (⇧⌘N Mobile, New Subfolder… ×2, path, chevron).
+- Not in this slice: no UI to move a folder into or out of another (the repository has `moveFolder`).
 - Commit: (pending)
 
 

@@ -759,8 +759,8 @@ final class EnvImportViewModel: LockObserving {
     private func loadScopeOptions() {
         if let folderID {
             // A folder is its own single target.
-            let name = (try? folders.folders())?.first { $0.id == folderID }?.name
-            scopeOptions = name.map { [EnvImportScopeOptionModel(scope: .repository, title: $0, isEditable: true)] } ?? []
+            let path = ((try? folders.folders()) ?? []).path(of: folderID)
+            scopeOptions = path.isEmpty ? [] : [EnvImportScopeOptionModel(scope: .repository, title: PlaceCopy.path(path), isEditable: true)]
             return
         }
         if let destinationID {

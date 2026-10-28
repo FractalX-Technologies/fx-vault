@@ -3,8 +3,9 @@ import Observation
 import VaultCore
 import VaultData
 
-/// New Folder… and Rename… (v0.7.0): one name, checked live with `FolderNameValidator` and
-/// against the other folders (case-insensitive). A new folder is selected in the sidebar.
+/// New Folder…, New Subfolder… and Rename… (v0.7.0): one name, checked live with
+/// `FolderNameValidator` and against its siblings (case-insensitive). A new folder is selected
+/// in the sidebar.
 @Observable
 final class FolderNameViewModel {
     let context: FolderNameContext
@@ -19,20 +20,27 @@ final class FolderNameViewModel {
         self.context = context
         self.dependencies = dependencies
         let folders = (try? dependencies.folders.folders()) ?? []
-        if case .rename(let id) = context.mode {
-            name = folders.first { $0.id == id }?.name ?? ""
-            otherKeys = Set(folders.filter { $0.id != id }.map(\.nameKey))
-        } else {
-            otherKeys = Set(folders.map(\.nameKey))
+        switch context.mode {
+        case .rename(let id):
+            let folder = folders.first { $0.id == id }
+            name = folder?.name ?? ""
+            otherKeys = Set(folders.filter { $0.id != id && $0.parentID == folder?.parentID }.map(\.nameKey))
+        case .create(_, let parent):
+            parentName = parent.flatMap { parent in folders.first { $0.id == parent }?.name }
+            otherKeys = Set(folders.filter { $0.parentID == parent }.map(\.nameKey))
         }
     }
+
+    /// The folder a new subfolder goes in, for the title.
+    private(set) var parentName: String?
 
     var isRenaming: Bool {
         if case .rename = context.mode { true } else { false }
     }
 
     var title: String {
-        isRenaming ? FolderCopy.renameTitle : FolderCopy.newTitle
+        if isRenaming { return FolderCopy.renameTitle }
+        return parentName.map(FolderCopy.newSubfolderTitle) ?? FolderCopy.newTitle
     }
 
     var primaryTitle: String {
@@ -62,8 +70,8 @@ final class FolderNameViewModel {
         defer { isSaving = false }
         do {
             switch context.mode {
-            case .create(let itemIDs):
-                let id = try dependencies.folders.createFolder(named: name)
+            case .create(let itemIDs, let parent):
+                let id = try dependencies.folders.createFolder(named: name, in: parent)
                 if !itemIDs.isEmpty {
                     try dependencies.folders.copyItems(itemIDs, to: id, conflicts: .keep)
                 }

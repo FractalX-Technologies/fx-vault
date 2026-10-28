@@ -278,8 +278,8 @@ final class QuickVaultViewModel: LockObserving {
             detail.select(scope: scope)
             source = detail
         case .place(.folder(let id)):
-            let folder = input.places.folders.first { $0.id == id }
-            source = FolderDetailViewModel(folderID: id, dependencies: dependencies) { folder }
+            let folders = input.places.folders
+            source = FolderDetailViewModel(folderID: id, dependencies: dependencies) { folders }
         case .place(.destination(let id)):
             guard let vault = input.places.keyVaults.first(where: { $0.id == id }) else { return nil }
             source = DestinationDetailViewModel(destination: vault, dependencies: dependencies) { vault }

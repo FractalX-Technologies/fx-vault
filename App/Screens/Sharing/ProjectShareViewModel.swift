@@ -130,7 +130,7 @@ final class ProjectShareViewModel: LockObserving {
         isLoading = true
         defer { isLoading = false }
         if case .folder(let id) = context.selection {
-            let name = dependencies.folders.folderName(id)
+            let name = dependencies.folders.folderTitle(id)
             openedFolderName = name.isEmpty ? nil : name
         }
         do {

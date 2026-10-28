@@ -27,6 +27,8 @@ final class FolderDestinationModel {
     let variableCount: Int
     var choice: Choice = .folder
     private(set) var folders: [FolderModel] = []
+    /// "Mobile › Development" for each folder in the picker.
+    private(set) var folderTitles: [FolderID: String] = [:]
     var folderChoice: FolderChoice = .new
     var newFolderName: String
     /// Merging: replace the values of names the folder already has (off keeps them).
@@ -50,8 +52,11 @@ final class FolderDestinationModel {
         secretCount = manifest.repository.secrets.count
         variableCount = manifest.repository.variables.count
         newFolderName = senderFolderName
-        folders = (try? dependencies.folders.folders()) ?? []
-        if let same = folders.first(where: { $0.nameKey == FolderNameValidator.foldKey(senderFolderName) }) {
+        let all = (try? dependencies.folders.folders()) ?? []
+        folders = all.treeOrdered
+        folderTitles = Dictionary(uniqueKeysWithValues: all.map { ($0.id, PlaceCopy.path(all.path(of: $0.id))) })
+        // A new folder lands at the top, so only a top-level folder of that name is the same one.
+        if let same = folders.first(where: { $0.parentID == nil && $0.nameKey == FolderNameValidator.foldKey(senderFolderName) }) {
             folderChoice = .existing(same.id)
         }
         repositories = (try? dependencies.sharing.importTargets()) ?? []
@@ -65,7 +70,7 @@ final class FolderDestinationModel {
         if let error = FolderNameValidator.violation(in: newFolderName) {
             return .error(error.localizedMessage)
         }
-        if folders.contains(where: { $0.nameKey == FolderNameValidator.foldKey(newFolderName) }) {
+        if folders.contains(where: { $0.parentID == nil && $0.nameKey == FolderNameValidator.foldKey(newFolderName) }) {
             return .error(FolderCopy.nameTaken)
         }
         return nil

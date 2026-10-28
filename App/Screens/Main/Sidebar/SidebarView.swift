@@ -85,7 +85,7 @@ struct SidebarView: View {
             Text(DestinationCopy.removeMessage(vault.copyTargetTitle))
         }
         .confirmationDialog(
-            FolderCopy.deleteTitle(sidebar.pendingFolderDeletion?.name ?? ""),
+            FolderCopy.deleteTitle(sidebar.pendingFolderDeletion.map { sidebar.folderTitle($0.id) } ?? ""),
             isPresented: folderDeletionBinding,
             titleVisibility: .visible,
             presenting: sidebar.pendingFolderDeletion
@@ -93,8 +93,8 @@ struct SidebarView: View {
             Button(FolderCopy.deleteConfirm, role: .destructive) {
                 sidebar.confirmFolderDeletion()
             }
-        } message: { _ in
-            Text(FolderCopy.deleteMessage)
+        } message: { folder in
+            Text(FolderCopy.deleteMessage(subfolders: sidebar.subfolderCount(of: folder.id)))
         }
     }
 

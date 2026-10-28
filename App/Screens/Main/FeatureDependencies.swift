@@ -196,11 +196,13 @@ struct FeatureDependencies {
             .map { ItemCopyTargetModel(place: .destination($0.id), title: $0.copyTargetTitle, isEditable: true) }
     }
 
-    /// Copy To › Folder targets (v0.7.0): every folder but `excluded`, by sidebar order.
+    /// Copy To › Folder targets (v0.7.0): every folder but `excluded`, by sidebar order, each
+    /// subfolder after its parent as "Mobile › Development".
     func folderCopyTargets(excluding excluded: FolderID? = nil) -> [ItemCopyTargetModel] {
-        ((try? folders.folders()) ?? [])
+        let all = (try? folders.folders()) ?? []
+        return all.treeOrdered
             .filter { $0.id != excluded }
-            .map { ItemCopyTargetModel(place: .folder($0.id), title: $0.name, isEditable: true) }
+            .map { ItemCopyTargetModel(place: .folder($0.id), title: PlaceCopy.path(all.path(of: $0.id)), isEditable: true) }
     }
 
     /// The Touch ID prompt for a re-authentication (D24: texts are built in the app).

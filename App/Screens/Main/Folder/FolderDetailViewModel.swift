@@ -46,14 +46,15 @@ final class FolderDetailViewModel: LockObserving {
     private(set) var linkedCopies: [LinkedCopyModel] = []
 
     @ObservationIgnored private let dependencies: FeatureDependencies
-    @ObservationIgnored private let folderProvider: () -> FolderModel?
+    @ObservationIgnored private let foldersProvider: () -> [FolderModel]
     @ObservationIgnored private let tasks = TaskBag()
 
-    /// - Parameter folder: the live folder row (its name and counts follow the sidebar).
-    init(folderID: FolderID, dependencies: FeatureDependencies, folder: @escaping () -> FolderModel?) {
+    /// - Parameter folders: the live folder rows (the name, its parent's and the counts follow
+    ///   the sidebar).
+    init(folderID: FolderID, dependencies: FeatureDependencies, folders: @escaping () -> [FolderModel]) {
         self.folderID = folderID
         self.dependencies = dependencies
-        folderProvider = folder
+        foldersProvider = folders
         values = ConfigValueRevealer(config: dependencies.config, clock: dependencies.clock)
         notesReveal = NotesRevealModel(values: values, dependencies: dependencies)
         copyFlow = ItemCopyFlow(dependencies: dependencies)
@@ -62,7 +63,12 @@ final class FolderDetailViewModel: LockObserving {
     }
 
     var folder: FolderModel? {
-        folderProvider()
+        foldersProvider().first { $0.id == folderID }
+    }
+
+    /// "Mobile › Development" for a subfolder, the name for a top-level folder.
+    var title: String {
+        PlaceCopy.path(foldersProvider().path(of: folderID))
     }
 
     private var place: ItemPlaceModel {
@@ -211,7 +217,7 @@ final class FolderDetailViewModel: LockObserving {
     /// The "Delete?" sheet of ``pendingDeletion``.
     var deletionSheet: DeleteItemsSheetModel? {
         pendingDeletion.map {
-            DeleteItemsSheetModel(entries: $0.map(DeleteItemsSheetModel.Entry.init), place: folder?.name ?? "", target: .folder)
+            DeleteItemsSheetModel(entries: $0.map(DeleteItemsSheetModel.Entry.init), place: title, target: .folder)
         }
     }
 
@@ -323,7 +329,7 @@ final class FolderDetailViewModel: LockObserving {
             )
             return
         }
-        request(copied.ids, to: ItemCopyTargetModel(place: place, title: folder?.name ?? "", isEditable: canEdit))
+        request(copied.ids, to: ItemCopyTargetModel(place: place, title: title, isEditable: canEdit))
     }
 
     private func request(_ ids: [ConfigItemID], to target: ItemCopyTargetModel) {
@@ -393,7 +399,7 @@ extension FolderDetailViewModel: ConfigTableModel {}
 
 extension FolderDetailViewModel: NotesPlaceModel {
     var notesPlaceName: String {
-        folder?.name ?? ""
+        title
     }
 }
 

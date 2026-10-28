@@ -61,14 +61,14 @@ private struct FolderDetailHeader: View {
 
     var body: some View {
         if let edit = viewModel.notesEdit {
-            NotesEditHeader(title: viewModel.folder?.name ?? "", titleStyle: .sans, session: edit)
+            NotesEditHeader(title: viewModel.title, titleStyle: .sans, session: edit)
         } else {
             header
         }
     }
 
     private var header: some View {
-        PlaceHeader(title: viewModel.folder?.name ?? "", titleStyle: .sans, subline: viewModel.subline) {
+        PlaceHeader(title: viewModel.title, titleStyle: .sans, subline: viewModel.subline) {
             RevealAllButton(model: viewModel, main: main)
             CopyToMenu(title: PlaceCopy.copyTo, rows: viewModel.placeCopyRows, viewModel: viewModel, showsChevron: true)
                 .menuStyle(.button)
