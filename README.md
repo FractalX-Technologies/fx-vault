@@ -74,7 +74,7 @@ the secrets your code reads at runtime in Azure Key Vault.
   repository; keep yours or accept GitHub's. **Pull from GitHub…** (a repository's context menu)
   checks now, and **Take All from GitHub** accepts GitHub's side of every change at once (deleted
   there is deleted here; a secret changed there needs its value again), leaving only the
-  conflicts, also changed in FX Vault, for you to choose.
+  conflicts, also changed in FX Vault, for you to choose; with none left, the review closes.
 - **New repositories.** Stage a repository with its environments, secrets and variables, create
   everything in one Sync, and clone it through your SSH alias.
 - **Runtime destinations (experimental).** Next to a repository's GitHub scopes, add the places

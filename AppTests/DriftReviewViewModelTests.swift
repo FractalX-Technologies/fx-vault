@@ -181,7 +181,7 @@ struct DriftReviewViewModelTests {
         #expect(fixture.service.resolutions.isEmpty)
 
         await model.choose(drift.id, .acceptGitHub)
-        await model.confirm()
+        await Self.confirmInDialog(model)
         #expect(fixture.service.resolutions == [FakeDriftService.Resolution(driftID: drift.id, option: .acceptGitHub)])
         #expect(model.rows.isEmpty)
     }
@@ -206,7 +206,7 @@ struct DriftReviewViewModelTests {
         model.cancelConfirmation()
         #expect(fixture.service.resolutions.isEmpty)
         await model.choose(both.id, .acceptGitHub)
-        await model.confirm()
+        await Self.confirmInDialog(model)
         #expect(fixture.service.resolutions == [FakeDriftService.Resolution(driftID: both.id, option: .acceptGitHub)])
 
         // Nothing of the vault's to lose: no question.
@@ -328,15 +328,30 @@ struct DriftReviewViewModelTests {
         #expect(confirmation.message.hasSuffix("1 conflict also changed in FX Vault stays for you to choose."))
         #expect(fixture.service.resolutions.isEmpty, "nothing changes before the confirmation")
 
-        await model.confirm()
+        await Self.confirmInDialog(model)
         #expect(fixture.service.resolutions == [added, changed, deleted].map {
             FakeDriftService.Resolution(driftID: $0.id, option: .acceptGitHub)
         })
         #expect(model.rows.map(\.id) == [conflict.id])
         #expect(model.notice == "Took 3 changes from GitHub. Enter the value of 1 secret. 1 conflict left to choose.")
+        #expect(!model.isDone, "a conflict is left to choose")
         #expect(fixture.recorder.presented.isEmpty, "no fill editor per secret")
         model.finish()
         #expect(fixture.recorder.refreshes == [.drift(DriftFixtures.repositoryID)])
+    }
+
+    /// Take All with nothing left to choose closes the review; with a conflict left it stays.
+    @Test func takeAllClosesTheReviewWhenNothingIsLeft() async throws {
+        let added = DriftFixtures.item(.remoteAdded, .variable, "NEW_URL", itemID: nil)
+        let deleted = DriftFixtures.item(.remoteDeleted, .variable, "GONE")
+        let fixture = try await Fixture(cached: DriftFixtures.report([added, deleted]))
+        let model = fixture.viewModel
+        await model.load()
+        model.requestTakeAllFromGitHub()
+        await Self.confirmInDialog(model)
+        #expect(fixture.service.resolutions.map(\.driftID) == [added.id, deleted.id])
+        #expect(model.rows.isEmpty)
+        #expect(model.isDone)
     }
 
     @Test func takeAllStopsAtTheFirstFailure() async throws {
@@ -347,11 +362,12 @@ struct DriftReviewViewModelTests {
         await model.load()
         fixture.service.failResolutions(with: .stale)
         model.requestTakeAllFromGitHub()
-        await model.confirm()
+        await Self.confirmInDialog(model)
         #expect(fixture.service.resolutions.count == 1)
         #expect(model.alert != nil)
         #expect(model.rows.count == 2)
         #expect(model.resolving.isEmpty)
+        #expect(!model.isDone)
     }
 
     @Test func takeAllNeedsSomethingToTakeAndTheConnection() async throws {
@@ -367,6 +383,14 @@ struct DriftReviewViewModelTests {
         await offline.viewModel.load()
         offline.viewModel.requestTakeAllFromGitHub()
         #expect(offline.viewModel.confirmation == nil)
+    }
+
+    /// As the confirmation dialog runs it: SwiftUI dismisses it (Cancel's path, which drops
+    /// `confirmation`) before the button's task runs, so the action gets the one it showed.
+    static func confirmInDialog(_ model: DriftReviewViewModel) async {
+        guard let confirmation = model.confirmation else { return }
+        model.cancelConfirmation()
+        await model.confirm(confirmation)
     }
 
     @Test func driftLineCopy() {
