@@ -18,6 +18,8 @@ final class QuickVaultUITests: VaultUITestCase {
         XCTAssertTrue(sidebar.buttons[AccessibilityID.Main.environment("staging")].appears(within: timeout))
 
         let field = openQuickVault(app)
+        // The field takes the focus by itself; typing before it has it goes nowhere on a loaded Mac.
+        XCTAssertTrue(field.satisfies(NSPredicate(format: "hasKeyboardFocus == true"), within: timeout), "The quick vault's field did not take the focus")
         app.typeText("staging")
         XCTAssertTrue(field.satisfies(NSPredicate(format: "value == %@", "staging"), within: timeout), "The quick vault's field did not take the typing")
         field.typeKey(.return, modifierFlags: [])

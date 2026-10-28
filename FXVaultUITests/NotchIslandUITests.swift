@@ -14,7 +14,7 @@ final class NotchIslandUITests: VaultUITestCase {
         lockThenOpenIsland(app)
         let field = app.secureTextFields[AccessibilityID.Island.password]
         XCTAssertTrue(field.appears(within: timeout), "The island never asked for the password")
-        XCTAssertTrue(sidebar.satisfies(NSPredicate(format: "exists == false"), within: timeout), "The main window stayed open while locked")
+        XCTAssertTrue(sidebar.disappears(within: timeout), "The main window stayed open while locked")
         XCTAssertFalse(app.staticTexts["api-service"].exists, "The island shows a name")
 
         type(password, into: field)
