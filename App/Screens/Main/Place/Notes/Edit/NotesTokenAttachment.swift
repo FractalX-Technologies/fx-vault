@@ -6,7 +6,7 @@ protocol NotesTokenRenderer: AnyObject, Sendable {
 }
 
 /// A token in the notes editor's text (1.0 N2, anton D3): one character the text, its undo and its
-/// pasteboard see, drawn as a chip (`••••`, "Set value…", "3 lines"). It holds only the token's id,
+/// pasteboard see, drawn as a chip (`••••`, a value set in this edit, "Set value…", "3 lines"). It holds only the token's id,
 /// so undoing a cut or a deletion brings the same token back with its value.
 nonisolated final class NotesTokenAttachment: NSTextAttachment {
     let tokenID: NotesTokenID
@@ -94,15 +94,24 @@ nonisolated final class NotesTokenAttachment: NSTextAttachment {
 enum NotesTokenDrawing {
     private static let height = Theme.Layout.notesEditTokenHeight
     private static let padding = Theme.Spacing.smallMinus
+    /// A visible value longer than this keeps its start and end: a token can't wrap.
+    static let visibleMaxCharacters = 48
 
     static func label(for display: NotesTokenStore.Display) -> String {
         switch display {
         case .masked(let oversize?): "\(NotesCopy.maskToken) \(NotesEditCopy.bytes(oversize))"
         case .masked(nil): NotesCopy.maskToken
+        case .visible(let value): shortened(value)
         case .setValue: NotesEditCopy.setValueToken
         case .lines(let count): NotesEditCopy.lines(count)
         case .file(let file): FileSecretCopy.notesLabel(file)
         }
+    }
+
+    private static func shortened(_ value: String) -> String {
+        guard value.count > visibleMaxCharacters else { return value }
+        let kept = visibleMaxCharacters - 1
+        return "\(value.prefix(kept - kept / 2))…\(value.suffix(kept / 2))"
     }
 
     private static var labelAttributes: [NSAttributedString.Key: Any] {
@@ -130,6 +139,12 @@ enum NotesTokenDrawing {
         let shape = NSBezierPath(roundedRect: rect.insetBy(dx: 0.5, dy: 0.5), xRadius: Theme.Radius.token, yRadius: Theme.Radius.token)
         let textColor: NSColor
         switch display {
+        case .visible:
+            // The read notes' revealed value: ink text in an ink outline.
+            Theme.Colors.Editor.ink.setStroke()
+            shape.lineWidth = Theme.Stroke.hairline
+            shape.stroke()
+            textColor = Theme.Colors.Editor.ink
         case .setValue:
             Theme.Colors.Editor.ink.setStroke()
             shape.lineWidth = Theme.Stroke.hairline

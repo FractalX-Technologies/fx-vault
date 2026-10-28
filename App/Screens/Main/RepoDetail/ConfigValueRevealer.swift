@@ -24,6 +24,9 @@ final class ConfigValueRevealer {
     @ObservationIgnored private(set) var remaskTasks: [ConfigItemID: Task<Void, Never>] = [:]
     /// The scheduled re-mask of Reveal All's values (internal so tests can await it).
     @ObservationIgnored private(set) var revealAllTask: Task<Void, Never>?
+    /// Secrets just saved from the notes editor (1.0 N2), by name: their values were on screen
+    /// while editing, so each shows without asking once its row arrives, then hides as any other.
+    @ObservationIgnored private var savedNames: Set<String> = []
     @ObservationIgnored private let decrypt: Reveal
     @ObservationIgnored private let clock: any VaultClock
 
@@ -112,6 +115,11 @@ final class ConfigValueRevealer {
         allHideDate != nil
     }
 
+    /// Shows the secrets named `names` as their rows arrive (``follow(liveIDs:variableIDs:secrets:)``).
+    func revealOnArrival(_ names: Set<String>) {
+        savedNames = names
+    }
+
     func hide(_ id: ConfigItemID) {
         remaskTasks.removeValue(forKey: id)?.cancel()
         revealedValues.removeValue(forKey: id)
@@ -128,6 +136,7 @@ final class ConfigValueRevealer {
             task.cancel()
         }
         remaskTasks.removeAll()
+        savedNames.removeAll()
         revealedValues.removeAll()
         hideDates.removeAll()
         endRevealAll()
@@ -147,11 +156,19 @@ final class ConfigValueRevealer {
         allHideDate = nil
     }
 
-    /// Masks the revealed values of rows that are gone and decrypts the variables of `ids` for
-    /// plaintext display (a locked vault leaves them masked).
-    func follow(liveIDs: Set<ConfigItemID>, variableIDs: [ConfigItemID]) {
+    /// Masks the revealed values of rows that are gone, shows the secrets of `secrets` (id to name)
+    /// saved from the notes editor, and decrypts the variables of `ids` for plaintext display (a
+    /// locked vault leaves them masked).
+    func follow(liveIDs: Set<ConfigItemID>, variableIDs: [ConfigItemID], secrets: [ConfigItemID: String] = [:]) {
         for id in revealedValues.keys where !liveIDs.contains(id) {
             hide(id)
+        }
+        for (id, name) in secrets where savedNames.remove(name) != nil {
+            do {
+                try reveal(id)
+            } catch {
+                AppLog.ui.error("A saved secret could not be shown")
+            }
         }
         var values: [ConfigItemID: String] = [:]
         for id in variableIDs {
@@ -169,5 +186,23 @@ final class ConfigValueRevealer {
     /// Drops the decrypted variables (lock, another scope or folder).
     func clearVariables() {
         variableValues.removeAll()
+    }
+}
+
+/// An item a place's snapshot holds: a scope's, a folder's or a Key Vault's.
+protocol ConfigNamedItem {
+    var id: ConfigItemID { get }
+    var kind: ConfigKind { get }
+    var name: String { get }
+}
+
+extension ConfigItemModel: ConfigNamedItem {}
+extension FolderItemModel: ConfigNamedItem {}
+extension DestinationItemModel: ConfigNamedItem {}
+
+extension Sequence where Element: ConfigNamedItem {
+    /// The secrets' names by id, for ``ConfigValueRevealer/follow(liveIDs:variableIDs:secrets:)``.
+    var secretNames: [ConfigItemID: String] {
+        Dictionary(filter { $0.kind == .secret }.map { ($0.id, $0.name) }) { first, _ in first }
     }
 }

@@ -175,6 +175,12 @@ final class NotesRevealModel: LockObserving, ReauthFlow {
         values.remaskAll()
     }
 
+    /// The secrets an edit just saved with values typed or pasted in it: they show without
+    /// asking, as they did in the editor, and hide after `Timeouts.revealRemask`.
+    func showSaved(_ names: Set<String>) {
+        values.revealOnArrival(names)
+    }
+
     func hideDate(of id: ConfigItemID) -> Date? {
         values.hideDates[id]
     }

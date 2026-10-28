@@ -84,6 +84,8 @@ final class NotesEditSession {
     @ObservationIgnored var caretLine: Int?
     /// Called once the edit is saved or cancelled.
     @ObservationIgnored var onFinish: () -> Void = {}
+    /// Called after Save with the names of the secrets whose values this edit set.
+    @ObservationIgnored var onSaved: (Set<String>) -> Void = { _ in }
     @ObservationIgnored private var paragraphs: [NotesParagraphModel] = []
     @ObservationIgnored private(set) var isFinished = false
 
@@ -227,6 +229,7 @@ final class NotesEditSession {
     func save() {
         let edits = makeEdits()
         defer { edits.wipe() }
+        let secretNames = savedSecretNames
         do {
             try target.save(edits)
         } catch {
@@ -235,7 +238,16 @@ final class NotesEditSession {
             return
         }
         review = nil
+        onSaved(secretNames)
         finish()
+    }
+
+    /// The secrets whose values this edit sets, by the name they are saved under.
+    private var savedSecretNames: Set<String> {
+        let plan = analysis.plan
+        let added = plan.additions.filter { $0.kind == .secret }.map(\.name)
+        let changed = plan.changes.filter { $0.origin.kind == .secret && $0.value != nil }.map { $0.name ?? $0.origin.name }
+        return Set(added + changed)
     }
 
     /// Cancel: drops every edit.

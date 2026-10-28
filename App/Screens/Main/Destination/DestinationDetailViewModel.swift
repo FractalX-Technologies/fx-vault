@@ -144,7 +144,11 @@ final class DestinationDetailViewModel: LockObserving {
 
     func apply(_ items: [DestinationItemModel]) {
         self.items = items
-        values.follow(liveIDs: Set(items.map(\.id)), variableIDs: items.filter { $0.kind == .variable }.map(\.id))
+        values.follow(
+            liveIDs: Set(items.map(\.id)),
+            variableIDs: items.filter { $0.kind == .variable }.map(\.id),
+            secrets: items.secretNames
+        )
         // Key Vault holds secrets only (R3): the table never shows variables.
         kind = .secret
     }
