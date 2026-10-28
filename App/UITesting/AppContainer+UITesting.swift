@@ -2,6 +2,7 @@
 import DestinationKit
 import Foundation
 import GitHubKit
+import os
 import VaultCore
 import VaultData
 
@@ -15,6 +16,26 @@ enum UITestLaunch {
     static let runsDirectoryName = "fxvault-uitests"
     /// Runs older than this are removed at launch; a younger one may belong to a suite still running.
     static let staleRunAge: TimeInterval = 60 * 60
+
+    /// Creates the vault before the first scene, so the app opens unlocked on the main window as
+    /// after onboarding's Not Now (``UITestEnvironment/vaultPassword``): walking the onboarding
+    /// screens cost every UI test about 35 s, so only the onboarding tests walk them. Blocks the
+    /// launch; `create` runs off the main actor.
+    static func createVault(with manager: VaultManager, password: String) throws {
+        let outcome = OSAllocatedUnfairLock<Result<Void, any Error>?>(initialState: nil)
+        let done = DispatchSemaphore(value: 0)
+        Task.detached {
+            do {
+                try await manager.create(password: password).wipe()
+                outcome.withLock { $0 = .success(()) }
+            } catch {
+                outcome.withLock { $0 = .failure(error) }
+            }
+            done.signal()
+        }
+        done.wait()
+        try outcome.withLock { $0 }?.get()
+    }
 
     /// A new, empty, owner-only folder for this launch, so every launch starts with no vault.
     static func prepareRoot(fileManager: FileManager = .default, now: Date = Date()) -> URL {
@@ -188,7 +209,7 @@ extension AppContainer {
         capabilities.accessGroup = nil
         let preferences = PreferencesManager(store: InMemoryPreferencesStore())
         preferences.ghPathOverride = ghPath
-        return try sandboxed(
+        let container = try sandboxed(
             mode: .uiTest(root: root),
             session: session,
             data: VaultDataComponents.makeOffline(
@@ -203,6 +224,10 @@ extension AppContainer {
             ghStatusProbe: { GitHubEnvironmentStatusProbe(github: $0.github, preferences: preferences) },
             clock: clock
         )
+        if let password = ProcessInfo.processInfo.environment[UITestEnvironment.vaultPassword] {
+            try UITestLaunch.createVault(with: container.vaultManager, password: password)
+        }
+        return container
     }
 }
 #endif

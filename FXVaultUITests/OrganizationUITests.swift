@@ -9,13 +9,13 @@ final class OrganizationUITests: VaultUITestCase {
         let app = launch()
         let notes = try importExampleOrganization(app)
         for text in ["# Secrets · 2", "NPM_TOKEN", "no value · all repos", "# Variables · 1", "REGION", "ui-test", "private and internal"] {
-            XCTAssertTrue(notes.staticTexts[text].waitForExistence(timeout: timeout), "\(text) is not in the notes")
+            XCTAssertTrue(notes.staticTexts[text].appears(within: timeout), "\(text) is not in the notes")
         }
         XCTAssertFalse(app.buttons[AccessibilityID.Main.importOrganization].exists)
 
         let table = showTable(app)
         for text in ["NPM_TOKEN", "STRIPE_KEY", "REGION", "all repos", "selected · 3 repos", "private and internal"] {
-            XCTAssertTrue(table.staticTexts[text].waitForExistence(timeout: timeout), "\(text) is not in the table")
+            XCTAssertTrue(table.staticTexts[text].appears(within: timeout), "\(text) is not in the table")
         }
     }
 
@@ -32,37 +32,37 @@ final class OrganizationUITests: VaultUITestCase {
         type("zone", into: app.textFields[AccessibilityID.ItemEditor.name])
         type("eu-west-1", into: app.textViews[AccessibilityID.ItemEditor.value])
         click(app.sheets.firstMatch.buttons["Add"])
-        XCTAssertTrue(table.staticTexts["ZONE"].waitForExistence(timeout: timeout), "The new variable is not in the table")
-        XCTAssertTrue(table.staticTexts["Added"].waitForExistence(timeout: timeout), "The new variable is not pending")
+        XCTAssertTrue(table.staticTexts["ZONE"].appears(within: timeout), "The new variable is not in the table")
+        XCTAssertTrue(table.staticTexts["Added"].appears(within: timeout), "The new variable is not pending")
 
         table.staticTexts["NPM_TOKEN"].rightClick()
         click(app.menuItems["Delete…"])
         let confirm = app.buttons[AccessibilityID.Place.deleteConfirm]
-        XCTAssertTrue(confirm.waitForExistence(timeout: timeout), "Delete… opened no sheet")
+        XCTAssertTrue(confirm.appears(within: timeout), "Delete… opened no sheet")
         // Neither button is the default: Return keeps the sheet and deletes nothing.
         app.typeKey(.return, modifierFlags: [])
-        XCTAssertFalse(table.staticTexts["Deleted"].waitForExistence(timeout: 2), "Return deleted NPM_TOKEN")
+        XCTAssertFalse(table.staticTexts["Deleted"].appears(within: 2), "Return deleted NPM_TOKEN")
         XCTAssertTrue(confirm.exists, "Return closed the sheet")
         app.typeKey(.escape, modifierFlags: [])
-        XCTAssertTrue(confirm.waitForNonExistence(timeout: timeout), "Esc did not close the sheet")
+        XCTAssertTrue(confirm.disappears(within: timeout), "Esc did not close the sheet")
         XCTAssertFalse(table.staticTexts["Deleted"].exists, "Esc deleted NPM_TOKEN")
 
         table.staticTexts["NPM_TOKEN"].rightClick()
         click(app.menuItems["Delete…"])
         click(confirm)
-        XCTAssertTrue(table.staticTexts["Deleted"].waitForExistence(timeout: timeout), "NPM_TOKEN is not pending deletion")
+        XCTAssertTrue(table.staticTexts["Deleted"].appears(within: timeout), "NPM_TOKEN is not pending deletion")
     }
 
-    /// Onboards, imports example-org from its sidebar row and returns its notes (the default).
+    /// Imports example-org from its sidebar row and returns its notes (the default).
     @MainActor
     private func importExampleOrganization(_ app: XCUIApplication) throws -> XCUIElement {
-        _ = try onboard(app)
+        showAllRepositories(in: mainSidebar(app))
         let row = app.descendants(matching: .any)[AccessibilityID.Main.organization("example-org")]
-        XCTAssertTrue(row.waitForExistence(timeout: timeout), "example-org has no organization row")
+        XCTAssertTrue(row.appears(within: timeout), "example-org has no organization row")
         click(row)
         click(app.buttons[AccessibilityID.Main.importOrganization])
         let notes = app.descendants(matching: .any)[AccessibilityID.Place.notes]
-        XCTAssertTrue(notes.waitForExistence(timeout: timeout), "The import never showed the notes")
+        XCTAssertTrue(notes.appears(within: timeout), "The import never showed the notes")
         return notes
     }
 
@@ -71,7 +71,7 @@ final class OrganizationUITests: VaultUITestCase {
     private func showTable(_ app: XCUIApplication) -> XCUIElement {
         click(app.descendants(matching: .any)[AccessibilityID.Place.viewMode].buttons["Table"])
         let table = app.descendants(matching: .any)[AccessibilityID.Main.organizationTable]
-        XCTAssertTrue(table.waitForExistence(timeout: timeout), "Table never showed the table")
+        XCTAssertTrue(table.appears(within: timeout), "Table never showed the table")
         return table
     }
 }

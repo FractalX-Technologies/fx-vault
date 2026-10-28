@@ -15,25 +15,25 @@ final class NotesEditUITests: VaultUITestCase {
         // A secret's value is never typed into the text: its first key opens Set value… with it.
         editor.typeText("u")
         let value = app.textViews[AccessibilityID.ItemEditor.value]
-        XCTAssertTrue(value.waitForExistence(timeout: timeout), "The key after `=` opened no Set value…")
+        XCTAssertTrue(value.appears(within: timeout), "The key after `=` opened no Set value…")
         app.typeText("i-test-secret")
         XCTAssertEqual(value.value as? String, "ui-test-secret", "Set value… lost the key that opened it")
         click(app.buttons[AccessibilityID.Place.notesValueDone])
         XCTAssertFalse((editor.value as? String ?? "").contains("ui-test-secret"), "The value is in the notes' text")
         let status = app.staticTexts[AccessibilityID.Place.notesEditStatus]
-        XCTAssertTrue(status.waitForExistence(timeout: timeout), "The header counts no changes")
+        XCTAssertTrue(status.appears(within: timeout), "The header counts no changes")
         XCTAssertTrue((status.value as? String ?? "").contains("2"), "The header does not count both lines")
 
         app.typeKey("s", modifierFlags: .command)
         let save = app.buttons[AccessibilityID.Place.notesReviewSave]
-        XCTAssertTrue(save.waitForExistence(timeout: timeout), "⌘S opened no review")
+        XCTAssertTrue(save.appears(within: timeout), "⌘S opened no review")
         let added = app.sheets.firstMatch.staticTexts[AccessibilityID.Place.notesReviewSection("added")]
         XCTAssertTrue((added.value as? String ?? "").contains("2"), "The review does not list both lines")
         attachWindowScreenshot(of: app, named: "notes-review")
         click(save)
 
-        XCTAssertTrue(editor.waitForNonExistence(timeout: timeout), "Save left the editor open")
-        XCTAssertTrue(notes.staticTexts["LOG_FORMAT"].waitForExistence(timeout: timeout), "LOG_FORMAT is not in the notes")
+        XCTAssertTrue(editor.disappears(within: timeout), "Save left the editor open")
+        XCTAssertTrue(notes.staticTexts["LOG_FORMAT"].appears(within: timeout), "LOG_FORMAT is not in the notes")
         XCTAssertTrue(notes.staticTexts["API_KEY"].exists, "API_KEY is not in the notes")
     }
 
@@ -52,7 +52,7 @@ final class NotesEditUITests: VaultUITestCase {
 
         click(staging)
         click(dialogButton("Discard", in: app))
-        XCTAssertTrue(editor.waitForNonExistence(timeout: timeout), "Discard kept the editor")
+        XCTAssertTrue(editor.disappears(within: timeout), "Discard kept the editor")
         expect(path, toEndWith: "api-service › staging")
     }
 
@@ -66,30 +66,30 @@ final class NotesEditUITests: VaultUITestCase {
         editor.typeKey(.return, modifierFlags: [])
         editor.typeText("API_KEY=")
         editor.typeText("u")
-        XCTAssertTrue(app.textViews[AccessibilityID.ItemEditor.value].waitForExistence(timeout: timeout), "No Set value…")
+        XCTAssertTrue(app.textViews[AccessibilityID.ItemEditor.value].appears(within: timeout), "No Set value…")
         app.typeText("i-test-secret")
         click(app.buttons[AccessibilityID.Place.notesValueDone])
         app.typeKey("s", modifierFlags: .command)
         click(app.buttons[AccessibilityID.Place.notesReviewSave])
-        XCTAssertTrue(notes.staticTexts["API_KEY"].waitForExistence(timeout: timeout), "API_KEY is not in the notes")
+        XCTAssertTrue(notes.staticTexts["API_KEY"].appears(within: timeout), "API_KEY is not in the notes")
         XCTAssertFalse(notes.staticTexts["ui-test-secret"].exists, "The secret shows before Reveal All")
 
         let revealAll = app.buttons[AccessibilityID.Place.revealAll]
         click(revealAll)
         type(password, into: app.secureTextFields[AccessibilityID.Share.password])
         click(app.buttons[AccessibilityID.Share.passwordContinue])
-        XCTAssertTrue(notes.staticTexts["ui-test-secret"].waitForExistence(timeout: timeout), "Reveal All showed no secret")
+        XCTAssertTrue(notes.staticTexts["ui-test-secret"].appears(within: timeout), "Reveal All showed no secret")
         XCTAssertTrue(notes.descendants(matching: .any)[AccessibilityID.Place.revealAllBar].exists, "No countdown above the notes")
 
         // The runner can't read the general pasteboard (macOS privacy); NotesRevealTests checks
         // what lands there.
         click(notes.staticTexts["API_KEY"])
         let copied = notes.descendants(matching: .any)[AccessibilityID.Place.notesCopied]
-        XCTAssertTrue(copied.waitForExistence(timeout: timeout), "The line does not say Copied")
+        XCTAssertTrue(copied.appears(within: timeout), "The line does not say Copied")
         XCTAssertFalse(app.textViews[AccessibilityID.Place.notesEditor].exists, "The click opened the editor")
 
         click(revealAll)
-        XCTAssertTrue(notes.staticTexts["ui-test-secret"].waitForNonExistence(timeout: timeout), "Hide All left the secret showing")
+        XCTAssertTrue(notes.staticTexts["ui-test-secret"].disappears(within: timeout), "Hide All left the secret showing")
     }
 
     /// api-service imported, a click on BASE_URL's line (4, under "# Variables") and a new line
@@ -97,16 +97,16 @@ final class NotesEditUITests: VaultUITestCase {
     @MainActor
     private func editBaseURLLine() throws -> (app: XCUIApplication, sidebar: XCUIElement, notes: XCUIElement, editor: XCUIElement) {
         let app = launch()
-        let sidebar = try onboard(app)
+        let sidebar = mainSidebar(app)
         revealRepositories(of: "example-org", in: sidebar)
         click(sidebarRow("api-service", in: sidebar))
         click(app.buttons[AccessibilityID.Main.importRepository])
         let notes = app.descendants(matching: .any)[AccessibilityID.Place.notes]
-        XCTAssertTrue(notes.staticTexts["BASE_URL"].waitForExistence(timeout: timeout), "The import never showed the notes")
+        XCTAssertTrue(notes.staticTexts["BASE_URL"].appears(within: timeout), "The import never showed the notes")
 
         click(notes.descendants(matching: .any)[AccessibilityID.Place.notesLine(4)])
         let editor = app.textViews[AccessibilityID.Place.notesEditor]
-        XCTAssertTrue(editor.waitForExistence(timeout: timeout), "A click on a line opened no editor")
+        XCTAssertTrue(editor.appears(within: timeout), "A click on a line opened no editor")
         editor.typeKey(.return, modifierFlags: [])
         editor.typeText("LOG_FORMAT=json")
         return (app, sidebar, notes, editor)

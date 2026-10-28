@@ -9,13 +9,12 @@ final class NotchIslandUITests: VaultUITestCase {
     @MainActor
     func testLockingHidesEverythingAndTheIslandsPasswordUnlocks() throws {
         let app = launch()
-        let sidebar = try onboard(app)
+        let sidebar = mainSidebar(app)
 
         lockThenOpenIsland(app)
         let field = app.secureTextFields[AccessibilityID.Island.password]
-        XCTAssertTrue(field.waitForExistence(timeout: timeout), "The island never asked for the password")
-        let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: sidebar)
-        XCTAssertEqual(XCTWaiter().wait(for: [closed], timeout: timeout), .completed, "The main window stayed open while locked")
+        XCTAssertTrue(field.appears(within: timeout), "The island never asked for the password")
+        XCTAssertTrue(sidebar.satisfies(NSPredicate(format: "exists == false"), within: timeout), "The main window stayed open while locked")
         XCTAssertFalse(app.staticTexts["api-service"].exists, "The island shows a name")
 
         type(password, into: field)
