@@ -112,21 +112,17 @@ public struct VaultRecordStore: Sendable {
         try database.checkpointTruncate()
     }
 
-    /// Deletes children before parents so foreign keys never block the reset.
+    /// Every table the migrations made, read from the schema: a fixed list missed the tables
+    /// added after it (folders, organizations, sent shares stayed after a reset, 1.0.4).
+    /// Foreign keys are checked at commit, when every table is empty, so the order is free.
     public func eraseAllData(in tx: StoreTransaction) throws {
-        let tables = [
-            SyncJournalRecord.databaseTableName,
-            ImportedSharePackageRecord.databaseTableName,
-            BranchPatternRecord.databaseTableName,
-            ConfigItemRecord.databaseTableName,
-            EnvironmentRecord.databaseTableName,
-            RepositoryRecord.databaseTableName,
-            AccountRecord.databaseTableName,
-            KeyWrapRecord.databaseTableName,
-            VaultRecord.databaseTableName,
-        ]
+        try tx.db.execute(sql: "PRAGMA defer_foreign_keys = ON")
+        let tables = try String.fetchAll(tx.db, sql: """
+            SELECT name FROM sqlite_master
+            WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name <> 'grdb_migrations'
+            """)
         for table in tables {
-            try tx.db.execute(sql: "DELETE FROM \(table)")
+            try tx.db.execute(sql: "DELETE FROM \(table.quotedDatabaseIdentifier)")
         }
     }
 }
