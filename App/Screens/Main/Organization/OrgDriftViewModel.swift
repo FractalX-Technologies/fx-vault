@@ -116,9 +116,10 @@ final class OrgDriftViewModel {
         await resolve(finding, option)
     }
 
-    func confirm() async {
-        guard let confirmation, let finding = findings.first(where: { $0.id == confirmation.driftID }) else { return }
+    /// The confirmed choice, as the dialog showed it.
+    func confirm(_ confirmation: DriftConfirmationModel) async {
         self.confirmation = nil
+        guard let finding = findings.first(where: { $0.id == confirmation.driftID }) else { return }
         await resolve(finding, confirmation.option)
     }
 

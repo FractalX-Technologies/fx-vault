@@ -3,6 +3,15 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## Unreleased
+
+### Fixed
+
+- **Confirmed drift choices did nothing.** Take All from GitHub, and every choice that asks
+  first (taking GitHub's deletion, using GitHub's item over yours), in a repository's and an
+  organization's review, closed the confirmation without applying it. They apply now, and Take
+  All closes the review when nothing is left to choose.
+
 ## 1.0.3
 
 ### Added

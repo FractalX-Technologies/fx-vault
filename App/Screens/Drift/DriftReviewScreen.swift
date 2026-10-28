@@ -28,13 +28,18 @@ struct DriftReviewScreen: View {
         .driftSheetFrame()
         .fxSheetBackground()
         .errorAlert($viewModel.alert)
-        .driftConfirmationDialog(viewModel.confirmation) {
-            await viewModel.confirm()
+        .driftConfirmationDialog(viewModel.confirmation) { confirmation in
+            await viewModel.confirm(confirmation)
         } cancel: {
             viewModel.cancelConfirmation()
         }
         .task {
             await viewModel.load()
+        }
+        .onChange(of: viewModel.isDone) { _, isDone in
+            if isDone {
+                dismiss()
+            }
         }
         .onDisappear {
             viewModel.finish()

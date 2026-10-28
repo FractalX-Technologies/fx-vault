@@ -96,7 +96,9 @@ struct OrganizationDriftReviewTests {
         await review.choose(region.id, .acceptGitHub)
         #expect(review.confirmation?.title == DriftCopy.deleteItemTitle("REGION"))
         #expect(review.confirmation?.confirmTitle == DriftCopy.confirmDelete)
-        await review.confirm()
+        let confirmation = try #require(review.confirmation)
+        review.cancelConfirmation() // the dialog dismisses before its button's task runs
+        await review.confirm(confirmation)
         #expect(await TestFixtures.eventually { !detail.items.contains { $0.name == "REGION" } })
 
         // Taking GitHub's API_TOKEN over the one added here asks first too; cancelling keeps it.

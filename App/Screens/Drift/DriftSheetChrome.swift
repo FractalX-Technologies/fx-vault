@@ -13,9 +13,11 @@ extension View {
     }
 
     /// "Delete … from your vault?" (or another loss of local data) before the resolution.
+    /// `confirm` gets the confirmation shown: the dialog's dismissal runs `cancel` (which drops
+    /// it) before the button's task starts, so it can't be read back from the model.
     func driftConfirmationDialog(
         _ confirmation: DriftConfirmationModel?,
-        confirm: @escaping () async -> Void,
+        confirm: @escaping (DriftConfirmationModel) async -> Void,
         cancel: @escaping () -> Void
     ) -> some View {
         confirmationDialog(
@@ -27,7 +29,7 @@ extension View {
             presenting: confirmation
         ) { confirmation in
             Button(confirmation.confirmTitle, role: .destructive) {
-                Task { await confirm() }
+                Task { await confirm(confirmation) }
             }
             Button(String(localized: "common.cancel", defaultValue: "Cancel"), role: .cancel) {
                 cancel()

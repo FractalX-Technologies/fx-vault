@@ -57,8 +57,8 @@ struct OrgDriftScreen: View {
         .driftSheetFrame()
         .fxSheetBackground()
         .errorAlert($viewModel.alert)
-        .driftConfirmationDialog(viewModel.confirmation) {
-            await viewModel.confirm()
+        .driftConfirmationDialog(viewModel.confirmation) { confirmation in
+            await viewModel.confirm(confirmation)
         } cancel: {
             viewModel.cancelConfirmation()
         }

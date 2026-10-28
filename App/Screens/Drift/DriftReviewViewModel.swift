@@ -79,6 +79,8 @@ final class DriftReviewViewModel {
     private(set) var resolvedCount = 0
     private(set) var fullName: String?
     private(set) var notice: String?
+    /// Take All left nothing to choose: the review closes.
+    private(set) var isDone = false
     var confirmation: DriftConfirmationModel?
     var alert: ErrorPresentationModel?
 
@@ -257,10 +259,10 @@ final class DriftReviewViewModel {
         await resolve(drift, option)
     }
 
-    /// The confirmed choice.
-    func confirm() async {
-        guard isOnline, let confirmation else { return }
+    /// The confirmed choice, as the dialog showed it.
+    func confirm(_ confirmation: DriftConfirmationModel) async {
         self.confirmation = nil
+        guard isOnline else { return }
         if confirmation.appliesToAll {
             await takeAllFromGitHub()
             return
@@ -300,6 +302,7 @@ final class DriftReviewViewModel {
         defer { resolving.subtract(drifts.map(\.id)) }
         var taken = 0
         var valuesMissing = 0
+        var failed = false
         for drift in drifts {
             do {
                 let result = try await service.resolve(drift, option: .acceptGitHub)
@@ -308,6 +311,7 @@ final class DriftReviewViewModel {
             } catch {
                 dependencies.gitHubReachability.record(error)
                 alert = error.presentation
+                failed = true
                 break
             }
             report?.drifts.removeAll { $0.id == drift.id }
@@ -316,6 +320,8 @@ final class DriftReviewViewModel {
         }
         notice = DriftCopy.tookAll(taken, valuesMissing: valuesMissing, conflicts: report?.conflicts.count ?? 0)
         AppLog.ui.info("Took \(taken, privacy: .public) drift findings from GitHub")
+        // A failure's alert and a conflict still to choose keep the review open.
+        isDone = !failed && report?.drifts.isEmpty == true
     }
 
     func cancelConfirmation() {
