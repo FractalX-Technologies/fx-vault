@@ -3,6 +3,15 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## Unreleased
+
+### Fixed
+
+- **Reset left folders and organizations behind.** Reset Vault and Erase a forgotten vault
+  deleted repositories and their items but kept folders, folder items, organizations, their
+  items and the record of sent shares, which a new vault could no longer decrypt. A reset now
+  empties every table.
+
 ## 1.0.4
 
 ### Added

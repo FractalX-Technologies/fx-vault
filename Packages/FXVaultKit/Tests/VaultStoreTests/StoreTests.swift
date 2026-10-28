@@ -65,6 +65,38 @@ struct VaultRecordStoreTests {
         }
         #expect(try VaultMigrator.isUpToDate(seeded.database))
     }
+
+    /// Every table a migration made, seeded as the migration tests seed them (folders,
+    /// organizations, destinations…): a reset leaves none of their rows, whatever the order of
+    /// their foreign keys.
+    @Test func eraseAllDataEmptiesEveryTableTheMigrationsMade() throws {
+        let database = try DatabaseFactory.inMemory()
+        try MigrationTests.seed(database, upTo: .latest)
+        // The migration seed has no organization: add one with an item.
+        try database.write { tx in
+            let organizationID = UUID().uuidString
+            try tx.db.execute(sql: """
+                INSERT INTO organizations (id, login, login_key, account_login, created_at, updated_at)
+                VALUES (?, 'example-org', 'example-org', 'octocat', ?, ?)
+                """, arguments: [organizationID, MigrationTests.seedTime, MigrationTests.seedTime])
+            try tx.db.execute(sql: """
+                INSERT INTO org_items (id, organization_id, kind, name, value_ct, value_fp, visibility, created_at, updated_at)
+                VALUES (?, ?, 'variable', 'REGION', x'01', x'02', 'all', ?, ?)
+                """, arguments: [UUID().uuidString, organizationID, MigrationTests.seedTime, MigrationTests.seedTime])
+        }
+        let count = { (table: String) in
+            try database.read { tx in try Int.fetchOne(tx.db, sql: "SELECT count(*) FROM \(table)") ?? 0 }
+        }
+        for table in ["folders", "folder_items", "organizations", "org_items", "destinations", "destination_items"] {
+            #expect(try count(table) > 0, "the seed has no \(table) row")
+        }
+
+        try VaultRecordStore(database: database).eraseAllData()
+        for table in MigrationTests.expectedTables {
+            #expect(try count(table) == 0, "\(table)")
+        }
+        #expect(try VaultMigrator.isUpToDate(database))
+    }
 }
 
 @Suite("AccountStore")
