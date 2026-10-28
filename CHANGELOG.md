@@ -3,7 +3,7 @@
 All notable changes to FX Vault are listed here. Versions follow `MAJOR.MINOR.PATCH`
 (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## Unreleased
+## 1.0.4
 
 ### Added
 
