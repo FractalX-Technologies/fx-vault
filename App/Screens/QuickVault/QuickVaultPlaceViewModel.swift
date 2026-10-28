@@ -45,7 +45,7 @@ final class QuickVaultPlaceViewModel {
     }
 
     func canCopy(_ line: NotesItemLineModel) -> Bool {
-        !line.isInherited && line.value != .missing
+        line.canCopy
     }
 
     /// A secret asks first, unless revealed: its value is on screen already.
@@ -55,7 +55,7 @@ final class QuickVaultPlaceViewModel {
 
     func copy(_ line: NotesItemLineModel) {
         guard canCopy(line) else { return }
-        reveal.copy(line.id, name: line.name, kind: line.kind) { [weak self] in self?.copyNow($0) }
+        reveal.copy(line.id, name: line.name, kind: line.kind) { [weak self] in self?.copyNow($0) ?? false }
     }
 
     /// The place goes away: nothing stays revealed or asked for.
@@ -65,13 +65,15 @@ final class QuickVaultPlaceViewModel {
         reveal.values.clearVariables()
     }
 
-    private func copyNow(_ id: ConfigItemID) {
+    private func copyNow(_ id: ConfigItemID) -> Bool {
         error = nil
         do {
             try copyValue(id)
             copiedID = id
+            return true
         } catch {
             self.error = error.presentation
+            return false
         }
     }
 }

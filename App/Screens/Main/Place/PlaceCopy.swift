@@ -14,6 +14,8 @@ nonisolated enum PlaceCopy {
     static let pasteMultiple = String(localized: "place.more.pasteMultiple", defaultValue: "Paste Multiple…")
     static let importEnv = String(localized: "place.more.importEnv", defaultValue: "Import .env…")
     static let exportEnv = String(localized: "place.more.exportEnv", defaultValue: "Export .env…")
+    /// A row's or a line's Copy Value (the table's row menu, a click under Reveal All).
+    static let copyValue = String(localized: "main.table.copy", defaultValue: "Copy Value")
     static let copyTo = String(localized: "place.more.copyTo", defaultValue: "Copy To")
     static let shareSecurely = String(localized: "place.more.shareSecurely", defaultValue: "Share Securely…")
     static let deploymentBranches = String(localized: "place.more.deploymentBranches", defaultValue: "Deployment Branches…")

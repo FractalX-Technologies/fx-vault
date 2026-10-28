@@ -166,6 +166,7 @@ private struct RepoDetailHeader: View {
                     .help(error.message)
             }
         } accessories: {
+            RevealAllButton(model: viewModel, main: main)
             CopyAllButton(isEnabled: viewModel.canCopyAll) {
                 viewModel.copyAll()
             }

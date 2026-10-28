@@ -13,6 +13,8 @@ protocol NotesPlaceModel: AnyObject, Observable {
     var notesPlaceName: String { get }
     /// What the ○ mark means here: "Changed on GitHub", "Changed in Key Vault".
     var changedAtSourceTitle: String { get }
+    /// Copy Value of the place's own item: a secret asks first unless it shows (1.0 T1).
+    func copy(_ id: ConfigItemID)
 }
 
 extension NotesPlaceModel {

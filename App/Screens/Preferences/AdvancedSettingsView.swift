@@ -82,7 +82,7 @@ struct AdvancedSettingsView: View {
                         Task { await viewModel.copyDiagnostics() }
                     } label: {
                         if viewModel.hasCopiedDiagnostics {
-                            Label(String(localized: "settings.advanced.diagnostics.copied", defaultValue: "Copied"), systemImage: "checkmark")
+                            CopiedLabel()
                         } else {
                             Label(String(localized: "command.copy", defaultValue: "Copy"), systemImage: "doc.on.doc")
                         }

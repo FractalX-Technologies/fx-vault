@@ -271,7 +271,11 @@ once, a variable copies at once, and an inherited secret is never revealed or co
   and the `.env` import sheet are excluded from screen capture. A Reveal in a place's notes
   or its table, and the table's Copy Value of a secret (1.0), ask Touch ID or the master
   password first, and the main window is excluded from screen capture while any value shows;
-  a revealed value is not selectable. Sheets that hold typed or
+  a revealed value is not selectable. **Reveal All** (a place's notes) is the one deliberate
+  widening, asked for by the user: one check decrypts every own secret of the place, all or
+  none, for 60 s under one countdown, and while they show a click on a line copies its value
+  without a new check (it is on screen already). The same paths mask them: the timer, resign
+  active, another place, an edit of the notes and lock. Sheets that hold typed or
   decrypted values (`LockObserving`) wipe them on lock and on close.
 - **Notes editing (1.0):** a value never enters the editor's text. Each is a token (a text
   attachment holding an id); its bytes sit in the edit's `NotesTokenStore` as `SecretBytes`,

@@ -69,6 +69,7 @@ private struct FolderDetailHeader: View {
 
     private var header: some View {
         PlaceHeader(title: viewModel.folder?.name ?? "", titleStyle: .sans, subline: viewModel.subline) {
+            RevealAllButton(model: viewModel, main: main)
             CopyToMenu(title: PlaceCopy.copyTo, rows: viewModel.placeCopyRows, viewModel: viewModel, showsChevron: true)
                 .menuStyle(.button)
                 .menuIndicator(.hidden)
@@ -156,7 +157,7 @@ private struct FolderRowActions: View {
                 viewModel.toggleReveal(row.id)
             }
         }
-        Button(String(localized: "main.table.copy", defaultValue: "Copy Value")) {
+        Button(PlaceCopy.copyValue) {
             viewModel.copy(row.id)
         }
         Divider()

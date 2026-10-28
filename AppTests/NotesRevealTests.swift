@@ -134,6 +134,219 @@ struct NotesRevealTests {
         #expect(reveal.request == nil)
     }
 
+    /// Reveal All (board Place-Reveal): one "Confirm it's you" shows every secret of the place
+    /// under one countdown; a click copies at once while they show, and they hide together.
+    @Test func revealAllAsksOnceThenShowsEverySecretUntilTheyHideTogether() async throws {
+        let fixture = try await RepoDetailViewModelTests.Fixture(
+            items: RepoDetailViewModelTests.Fixture.items + [TestFixtures.item(.secret, "DB_PASSWORD", Self.otherSecret)]
+        )
+        let (harness, model) = (fixture.harness, fixture.viewModel)
+        let reveal = model.notesReveal
+        #expect(await TestFixtures.eventually { model.items.count == 3 })
+        let secrets = model.notes.items.filter { $0.kind == .secret }
+
+        reveal.toggleRevealAll(model.notes, place: model.notesPlaceName)
+        #expect(reveal.request?.action == .revealAll(secrets.map(\.id)))
+        #expect(!reveal.isRevealingAll)
+        #expect(Self.value(of: "API_TOKEN", in: model) == .masked)
+
+        let sleepersBefore = harness.clock.sleeperCount
+        await TableRevealTests.confirm(reveal)
+        #expect(reveal.request == nil)
+        #expect(Self.value(of: "API_TOKEN", in: model) == .revealed(RepoDetailViewModelTests.secretValue))
+        #expect(Self.value(of: "DB_PASSWORD", in: model) == .revealed(Self.otherSecret))
+        #expect(reveal.revealAllHideDate == harness.clock.now.addingTimeInterval(Timeouts.revealAllRemask.timeInterval))
+        #expect(secrets.allSatisfy { reveal.hideDate(of: $0.id) == nil }, "one countdown for all, none per line")
+
+        // A shown secret copies at once: no second "Confirm it's you".
+        model.copy(try #require(secrets.last).id)
+        #expect(reveal.request == nil)
+        #expect(harness.pasteboardString == Self.otherSecret)
+        #expect(reveal.copiedID == secrets.last?.id, "its line says Copied")
+
+        await harness.clock.waitForSleepers(count: sleepersBefore + 1)
+        harness.clock.advance(by: Timeouts.revealAllRemask)
+        await model.values.revealAllTask?.value
+        #expect(Self.value(of: "API_TOKEN", in: model) == .masked)
+        #expect(Self.value(of: "DB_PASSWORD", in: model) == .masked)
+        #expect(!reveal.isRevealingAll)
+        #expect(reveal.revealAllHideDate == nil)
+    }
+
+    /// Hide All, another scope and a lock mask every secret Reveal All showed.
+    @Test func hideAllLockAndAnotherScopeEndRevealAll() async throws {
+        let fixture = try await RepoDetailViewModelTests.Fixture()
+        let model = fixture.viewModel
+        let reveal = model.notesReveal
+        let line = try await Self.secretLine(model)
+
+        reveal.toggleRevealAll(model.notes, place: model.notesPlaceName)
+        await TableRevealTests.confirm(reveal)
+        #expect(reveal.isRevealingAll)
+        model.copy(line.id)
+        #expect(reveal.copiedID == line.id)
+        reveal.toggleRevealAll(model.notes, place: model.notesPlaceName)
+        #expect(!reveal.isRevealingAll)
+        #expect(reveal.request == nil, "Hide All asks nothing")
+        #expect(Self.value(model) == .masked)
+
+        try fixture.harness.data.config.createEnvironment(in: fixture.repositoryID, name: "production")
+        let production = try EditorFixtures.environment(fixture.harness, fixture.repositoryID, named: "production")
+        reveal.toggleRevealAll(model.notes, place: model.notesPlaceName)
+        await TableRevealTests.confirm(reveal)
+        #expect(reveal.isRevealingAll)
+        #expect(reveal.copiedID == nil, "a new Reveal All forgets the earlier copy")
+        model.select(scope: .environment(production.id))
+        #expect(!reveal.isRevealingAll)
+        model.select(scope: .repository)
+        _ = try await Self.secretLine(model)
+
+        reveal.toggleRevealAll(model.notes, place: model.notesPlaceName)
+        await TableRevealTests.confirm(reveal)
+        #expect(Self.value(model) == .revealed(RepoDetailViewModelTests.secretValue))
+        fixture.harness.app.lock(trigger: .manual)
+        #expect(!reveal.isRevealingAll)
+        #expect(Self.value(model) == .masked)
+    }
+
+    /// A lock while Reveal All's "Confirm it's you" is up drops it: nothing shows.
+    @Test func aLockDuringRevealAllsCheckRevealsNothing() async throws {
+        let fixture = try await RepoDetailViewModelTests.Fixture()
+        let model = fixture.viewModel
+        let reveal = model.notesReveal
+        _ = try await Self.secretLine(model)
+
+        reveal.toggleRevealAll(model.notes, place: model.notesPlaceName)
+        await reveal.start()
+        reveal.reauth?.password = testPassword
+        fixture.harness.app.lock(trigger: .manual)
+        await reveal.authenticateWithPassword()
+        #expect(reveal.request == nil)
+        #expect(!reveal.isRevealingAll)
+        #expect(Self.value(model) == .masked)
+    }
+
+    /// One secret that can't be decrypted reveals none (all or nothing) and says why; a value
+    /// revealed on its own before keeps showing with its own countdown.
+    @Test func aFailedDecryptRevealsNoneOfTheSecrets() async throws {
+        let fixture = try await RepoDetailViewModelTests.Fixture(
+            items: RepoDetailViewModelTests.Fixture.items + [TestFixtures.item(.secret, "DB_PASSWORD", Self.otherSecret)]
+        )
+        let (harness, model) = (fixture.harness, fixture.viewModel)
+        #expect(await TestFixtures.eventually { model.items.count == 3 })
+        let first = try #require(model.notes.items.first { $0.name == "API_TOKEN" })
+        let broken = try #require(model.notes.items.first { $0.name == "DB_PASSWORD" })
+        let values = ConfigValueRevealer(clock: harness.clock) { id throws(ConfigRepositoryError) in
+            guard id != broken.id else { throw .unexpected }
+            return SecretBytes(utf8: RepoDetailViewModelTests.secretValue)
+        }
+        let reveal = NotesRevealModel(values: values, dependencies: harness.dependencies(recorder: ActionRecorder()))
+        try values.reveal(first.id)
+
+        reveal.toggleRevealAll(model.notes, place: model.notesPlaceName)
+        await TableRevealTests.confirm(reveal)
+        #expect(reveal.alert != nil)
+        #expect(!reveal.isRevealingAll)
+        #expect(values.revealAllTask == nil)
+        #expect(!values.isRevealed(broken.id))
+        #expect(Set(values.revealedValues.keys) == [first.id], "only the earlier single reveal shows")
+        #expect(reveal.hideDate(of: first.id) != nil, "and it keeps its own countdown")
+    }
+
+    /// A secret revealed on its own joins Reveal All's countdown; one hidden on its own leaves
+    /// the others showing.
+    @Test func revealAllTakesOverASingleRevealAndHidesOneByOne() async throws {
+        let fixture = try await RepoDetailViewModelTests.Fixture(
+            items: RepoDetailViewModelTests.Fixture.items + [TestFixtures.item(.secret, "DB_PASSWORD", Self.otherSecret)]
+        )
+        let model = fixture.viewModel
+        let reveal = model.notesReveal
+        #expect(await TestFixtures.eventually { model.items.count == 3 })
+        let first = try #require(model.notes.items.first { $0.name == "API_TOKEN" })
+
+        reveal.ask(first)
+        await TableRevealTests.confirm(reveal)
+        #expect(reveal.hideDate(of: first.id) != nil)
+        reveal.toggleRevealAll(model.notes, place: model.notesPlaceName)
+        await TableRevealTests.confirm(reveal)
+        #expect(reveal.hideDate(of: first.id) == nil)
+        #expect(model.remaskTasks[first.id] == nil, "its own re-mask is gone")
+
+        reveal.hide(first.id)
+        #expect(reveal.isRevealingAll)
+        #expect(Self.value(of: "DB_PASSWORD", in: model) == .revealed(Self.otherSecret))
+        let second = try #require(model.notes.items.first { $0.name == "DB_PASSWORD" })
+        reveal.hide(second.id)
+        #expect(!reveal.isRevealingAll, "the last one hidden ends Reveal All")
+    }
+
+    /// Every other path that masks a value ends Reveal All too: an edit of the notes and the
+    /// app resigning active (which keeps the window out of screen capture meanwhile).
+    @Test func anEditAndResignActiveEndRevealAll() async throws {
+        let fixture = try await RepoDetailViewModelTests.Fixture()
+        let model = fixture.viewModel
+        let line = try await Self.secretLine(model)
+
+        try model.values.revealAll([line.id])
+        model.beginNotesEdit(at: nil)
+        #expect(!model.notesReveal.isRevealingAll)
+        #expect(Self.value(model) == .masked)
+
+        let main = fixture.harness.app.makeMainViewModel()
+        let repository = try await MainConnectivityTests.open(fixture.repositoryID, in: main)
+        #expect(await TestFixtures.eventually { !repository.rows.isEmpty })
+        let id = try #require(repository.items.first { $0.kind == .secret }?.id)
+        try repository.values.revealAll([id])
+        #expect(main.isShowingRevealedValue)
+        main.remaskRevealedValues()
+        #expect(!repository.notesReveal.isRevealingAll)
+        #expect(!main.isShowingRevealedValue)
+    }
+
+    /// Under Reveal All a secret that doesn't show (hidden on its own) still asks before its
+    /// copy, and a copy that fails never says Copied.
+    @Test func aMaskedSecretStillAsksAndAFailedCopyIsNotCopied() async throws {
+        let fixture = try await RepoDetailViewModelTests.Fixture(
+            items: RepoDetailViewModelTests.Fixture.items + [TestFixtures.item(.secret, "DB_PASSWORD", Self.otherSecret)]
+        )
+        let model = fixture.viewModel
+        let reveal = model.notesReveal
+        #expect(await TestFixtures.eventually { model.items.count == 3 })
+        #expect(reveal.canToggleRevealAll(model.notes))
+        let first = try #require(model.notes.items.first { $0.name == "API_TOKEN" })
+
+        reveal.toggleRevealAll(model.notes, place: model.notesPlaceName)
+        await TableRevealTests.confirm(reveal)
+        reveal.hide(first.id)
+        #expect(reveal.isRevealingAll)
+        model.copy(first.id)
+        #expect(reveal.request?.action == .copy)
+        #expect(fixture.harness.pasteboardString == nil)
+        reveal.cancel()
+
+        reveal.copy(first.id, name: first.name, kind: .variable) { _ in false }
+        #expect(reveal.copiedID == nil)
+    }
+
+    /// Nothing to reveal (no secret with a value here) asks nothing.
+    @Test func revealAllWithoutSecretsAsksNothing() async throws {
+        let fixture = try await RepoDetailViewModelTests.Fixture(items: [
+            TestFixtures.item(.variable, "BASE_URL", RepoDetailViewModelTests.variableValue),
+        ])
+        let model = fixture.viewModel
+        #expect(await TestFixtures.eventually { model.items.count == 1 })
+        #expect(!NotesRevealModel.canRevealAll(model.notes))
+        #expect(!model.notesReveal.canToggleRevealAll(model.notes), "the header's Reveal All is disabled")
+        model.notesReveal.toggleRevealAll(model.notes, place: model.notesPlaceName)
+        #expect(model.notesReveal.request == nil)
+    }
+
+    static let otherSecret = "FXV_FIXTURE_OTHER_SECRET"
+
+    static func value(of name: String, in model: RepoDetailViewModel) -> ConfigValueDisplayModel? {
+        model.notes.items.first { $0.name == name }?.value
+    }
+
     /// An organization's own secret reveals through the organization's items.
     @Test func anOrganizationsSecretRevealsToo() async throws {
         let (harness, organization) = try await OrganizationEditingTests().imported()

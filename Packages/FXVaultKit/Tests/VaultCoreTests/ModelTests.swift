@@ -304,6 +304,7 @@ struct LimitsTests {
         #expect(Limits.passwordKDFMemoryBytes == 268_435_456)
         #expect(Timeouts.rateLimitBackoff == .seconds(60))
         #expect(Timeouts.clipboardClear == .seconds(30))
+        #expect(Timeouts.revealAllRemask == .seconds(60))
         #expect(Timeouts.autoLockDefault == Timeouts.autoLock(minutes: Timeouts.autoLockDefaultMinutes))
         #expect(Timeouts.autoLockOptionMinutes.contains(Timeouts.autoLockDefaultMinutes))
         #expect(Timeouts.passwordMaxAge == .seconds(14 * 24 * 3600))

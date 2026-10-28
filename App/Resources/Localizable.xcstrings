@@ -12442,6 +12442,72 @@
         }
       }
     },
+    "notes.revealAll" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reveal All"
+          }
+        }
+      }
+    },
+    "notes.revealAll.clickToCopy" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click a line to copy its value"
+          }
+        }
+      }
+    },
+    "notes.revealAll.help" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reveal every secret here for %lld seconds; click a line to copy its value. Asks for Touch ID or your master password."
+          }
+        }
+      }
+    },
+    "notes.revealAll.hide" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide All"
+          }
+        }
+      }
+    },
+    "notes.revealAll.message" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Every secret of %1$@ shows for %2$lld seconds, then hides again. Click a line to copy its value."
+          }
+        }
+      }
+    },
+    "notes.revealAll.title" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reveal All Secrets"
+          }
+        }
+      }
+    },
     "notes.section.inherited" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -16310,17 +16376,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Can’t use · %@"
-          }
-        }
-      }
-    },
-    "settings.advanced.diagnostics.copied" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copied"
           }
         }
       }
@@ -21777,6 +21832,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "reveal a secret"
+          }
+        }
+      }
+    },
+    "touchID.prompt.revealAll" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "reveal every secret of a place"
           }
         }
       }

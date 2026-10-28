@@ -11,6 +11,8 @@ public enum ReauthPurpose: String, Sendable, Hashable, CaseIterable {
     case copyAll
     /// Reveal in a place's notes (1.0 B9): one secret shown until it re-masks.
     case reveal
+    /// Reveal All in a place's notes: every secret of the place shown until they re-mask.
+    case revealAll
     /// Copy of one secret from the quick vault (1.0 Q1), where Copy sits beside the mask.
     case copyValue
 }

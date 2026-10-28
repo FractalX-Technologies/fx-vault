@@ -76,6 +76,7 @@ private struct DestinationDetailHeader: View {
                 StatusChip.tag(DestinationCopy.experimentalTag)
                     .help(DestinationCopy.experimentalHelp)
             }
+            RevealAllButton(model: viewModel, main: main)
             CopyAllButton(isEnabled: viewModel.canCopyAll) {
                 viewModel.copyAll()
             }
@@ -233,7 +234,7 @@ private struct DestinationRowActions: View {
                     viewModel.toggleReveal(row.id)
                 }
             }
-            Button(String(localized: "main.table.copy", defaultValue: "Copy Value")) {
+            Button(PlaceCopy.copyValue) {
                 viewModel.copy(row.id)
             }
             Divider()

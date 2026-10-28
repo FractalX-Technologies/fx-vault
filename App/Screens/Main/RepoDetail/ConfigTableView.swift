@@ -330,7 +330,7 @@ struct ConfigRowActions: View {
                 viewModel.toggleReveal(row.id)
             }
         }
-        Button(String(localized: "main.table.copy", defaultValue: "Copy Value")) {
+        Button(PlaceCopy.copyValue) {
             viewModel.copy(row.id)
         }
         .disabled(!row.hasValue)

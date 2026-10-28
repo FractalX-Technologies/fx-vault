@@ -58,6 +58,7 @@ struct OrganizationDetailScreen: View {
                 }
             }
         } accessories: {
+            RevealAllButton(model: viewModel, main: main)
             CopyAllButton(isEnabled: viewModel.canCopyAll) {
                 viewModel.copyAll()
             }
@@ -168,7 +169,7 @@ private struct OrganizationRowActions: View {
 
     var body: some View {
         if rows.count == 1, let row = rows.first {
-            Button(String(localized: "main.table.copy", defaultValue: "Copy Value")) {
+            Button(PlaceCopy.copyValue) {
                 viewModel.copy(row)
             }
             .disabled(!row.hasValue)
