@@ -1,10 +1,13 @@
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 import VaultCore
 import VaultData
 
 /// Column 3 for a folder (v0.7.0; board Folder-View): the header (the name, "Folder · never sent
 /// anywhere by itself · counts", Copy To, Share Securely…, Notes | Table, ⋯ More), then the notes,
-/// or the Secrets | Variables pill with the selection's actions and the table without Status.
+/// or the Secrets | Variables pill with the selection's actions and the table without Status,
+/// then the folder's files (v23).
 struct FolderDetailScreen: View {
     @Bindable var viewModel: FolderDetailViewModel
     let main: MainViewModel
@@ -29,6 +32,9 @@ struct FolderDetailScreen: View {
                     FolderSelectionMenu(rows: rows, viewModel: viewModel)
                 }
             }
+            if !viewModel.files.isEmpty {
+                FolderFilesSection(viewModel: viewModel)
+            }
             if let notice = viewModel.notice {
                 Text(notice)
                     .font(Theme.Typography.caption)
@@ -48,12 +54,13 @@ struct FolderDetailScreen: View {
             viewModel.confirmDeletion()
         }
         .modifier(ItemCopyConflictDialog(viewModel: viewModel))
+        .modifier(FolderFileDialogs(viewModel: viewModel))
     }
 }
 
 /// The folder's name in sans (the user named it), its subline, Copy To and Share Securely… as on
 /// board Folder-View, and ⋯ More: New Secret, New Variable, Paste Multiple…, Import .env…, Copy
-/// All, Delete Selected…, then the folder's own menu (Rename…, Share Securely…, Export .env…,
+/// All, Delete Selected…, Add File…, then the folder's own menu (Rename…, Share Securely…, Export .env…,
 /// Delete Folder…).
 private struct FolderDetailHeader: View {
     let viewModel: FolderDetailViewModel
@@ -88,6 +95,10 @@ private struct FolderDetailHeader: View {
                     viewModel.copyAll()
                 }
             }
+            Button(FolderFileCopy.addFile) {
+                viewModel.addFiles(FolderFilePanels.chooseFiles())
+            }
+            .disabled(!viewModel.canEdit)
             Divider()
             FolderContextMenu(folderID: viewModel.folderID, main: main)
         }
@@ -195,5 +206,181 @@ private struct FolderSelectionMenu: View {
         Button(String(localized: "main.table.several.delete", defaultValue: "Delete \(rows.count)…"), role: .destructive) {
             viewModel.requestDeletion(of: rows)
         }
+    }
+}
+
+/// The folder's files (v23): "Files · N" with Add File…, then one row per file, scrolling after
+/// ``Theme/Layout/folderFilesVisibleRows``.
+private struct FolderFilesSection: View {
+    let viewModel: FolderDetailViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            HStack(spacing: Theme.Spacing.small) {
+                Text(FolderFileCopy.sectionTitle(count: viewModel.files.count))
+                    .fxTextStyle(.sectionLabel)
+                    .foregroundStyle(Theme.Colors.mutedText)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                if viewModel.canEdit {
+                    Button(FolderFileCopy.addFile) {
+                        viewModel.addFiles(FolderFilePanels.chooseFiles())
+                    }
+                    .fxButtonStyle(.outline, size: .compact)
+                    .accessibilityIdentifier(AccessibilityID.FolderFiles.add)
+                }
+            }
+            if viewModel.files.count > Theme.Layout.folderFilesVisibleRows {
+                ScrollView {
+                    rows
+                }
+                .frame(height: CGFloat(Theme.Layout.folderFilesVisibleRows) * Theme.Layout.tableRowHeight)
+            } else {
+                rows
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(AccessibilityID.FolderFiles.section)
+    }
+
+    private var rows: some View {
+        LazyVStack(spacing: 0) {
+            ForEach(viewModel.files) { file in
+                FolderFileRow(file: file, viewModel: viewModel)
+            }
+        }
+    }
+}
+
+/// A file's Finder icon, name and size, Save As… on the row, and Save As…, Rename… and Delete…
+/// in its context menu.
+private struct FolderFileRow: View {
+    let file: FolderFileModel
+    let viewModel: FolderDetailViewModel
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.small) {
+            Image(nsImage: icon)
+                .resizable()
+                .frame(width: Theme.Layout.folderFileIconSize, height: Theme.Layout.folderFileIconSize)
+                .accessibilityHidden(true)
+            Text(file.name)
+                .fxTextStyle(.body)
+                .foregroundStyle(Theme.Colors.ink)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: Theme.Spacing.small)
+            Text(FolderFileCopy.size(file.byteCount))
+                .fxTextStyle(.monoMeta)
+                .foregroundStyle(Theme.Colors.mutedText)
+            Button(FolderFileCopy.saveAs, action: save)
+                .fxButtonStyle(.outline, size: .compact)
+                .accessibilityIdentifier(AccessibilityID.FolderFiles.save(file.name))
+        }
+        .frame(height: Theme.Layout.tableRowHeight)
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button(FolderFileCopy.saveAs, action: save)
+            if viewModel.canEdit {
+                Button(FolderFileCopy.rename) {
+                    viewModel.beginRename(file)
+                }
+                Divider()
+                Button(FolderFileCopy.delete, role: .destructive) {
+                    viewModel.requestFileDeletion(file)
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(AccessibilityID.FolderFiles.row(file.name))
+    }
+
+    private var icon: NSImage {
+        let ext = (file.name as NSString).pathExtension
+        return NSWorkspace.shared.icon(for: UTType(filenameExtension: ext) ?? .data)
+    }
+
+    private func save() {
+        guard let destination = FolderFilePanels.chooseDestination(fileName: file.name) else { return }
+        viewModel.save(file, to: destination)
+    }
+}
+
+/// Rename… (an alert with the name), "Delete?", and Save As…'s "Confirm it's you".
+private struct FolderFileDialogs: ViewModifier {
+    @Bindable var viewModel: FolderDetailViewModel
+
+    func body(content: Content) -> some View {
+        @Bindable var fileSave = viewModel.fileSave
+        let saveRequest = Binding(
+            get: { fileSave.pending },
+            set: { if $0 == nil { fileSave.cancel() } }
+        )
+        content
+            .alert(FolderFileCopy.renameTitle, isPresented: isRenaming, presenting: viewModel.renamingFile) { _ in
+                TextField(FolderFileCopy.renameTitle, text: $viewModel.fileNameDraft)
+                    .accessibilityIdentifier(AccessibilityID.FolderFiles.renameField)
+                Button(FolderFileCopy.renameSubmit) {
+                    viewModel.commitRename()
+                }
+                .keyboardShortcut(.defaultAction)
+                Button(String(localized: "common.cancel", defaultValue: "Cancel"), role: .cancel) {}
+            }
+            .confirmationDialog(
+                FolderFileCopy.deleteTitle(viewModel.pendingFileDeletion?.name ?? ""),
+                isPresented: isDeleting,
+                titleVisibility: .visible,
+                presenting: viewModel.pendingFileDeletion
+            ) { _ in
+                Button(FolderFileCopy.deleteConfirm, role: .destructive) {
+                    viewModel.confirmFileDeletion()
+                }
+            } message: { _ in
+                Text(FolderFileCopy.deleteMessage)
+            }
+            .sheet(item: saveRequest) { request in
+                FolderFileSaveDialog(request: request, fileSave: fileSave)
+            }
+            .errorAlert($fileSave.alert)
+    }
+
+    private var isRenaming: Binding<Bool> {
+        Binding(
+            get: { viewModel.renamingFile != nil },
+            set: { if !$0 { viewModel.renamingFile = nil } }
+        )
+    }
+
+    private var isDeleting: Binding<Bool> {
+        Binding(
+            get: { viewModel.pendingFileDeletion != nil },
+            set: { if !$0 { viewModel.pendingFileDeletion = nil } }
+        )
+    }
+}
+
+private struct FolderFileSaveDialog: View {
+    let request: FolderFileSaveModel.Request
+    let fileSave: FolderFileSaveModel
+
+    var body: some View {
+        DialogSheet(title: FolderFileCopy.saveTitle(request.file.name)) {
+            if let reauth = fileSave.reauth {
+                ReauthView(
+                    model: reauth,
+                    message: FolderFileCopy.saveMessage,
+                    onTouchID: { await fileSave.authenticateWithTouchID() },
+                    onPassword: { await fileSave.authenticateWithPassword() }
+                )
+            }
+        } actions: {
+            Button(String(localized: "common.cancel", defaultValue: "Cancel")) {
+                fileSave.cancel()
+            }
+            .fxButtonStyle(.outline, size: .dialog)
+            .keyboardShortcut(.cancelAction)
+        }
+        .frame(width: Theme.Layout.sheetWidth)
+        .task { await fileSave.start() }
     }
 }

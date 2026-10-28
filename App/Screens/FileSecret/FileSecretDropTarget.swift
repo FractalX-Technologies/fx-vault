@@ -19,23 +19,23 @@ private struct FileSecretDropTarget<Model: ConfigTableModel>: ViewModifier {
             .onDrop(of: [.fileURL], isTargeted: $isTargeted) { providers in
                 guard viewModel.acceptsOutsideEdits else { return false }
                 Task {
-                    if let url = await FileDropURL.url(from: providers) {
-                        viewModel.dropFile(url)
-                    }
+                    viewModel.dropFiles(await FileDropURL.urls(from: providers))
                 }
                 return true
             }
             .overlay {
                 if isTargeted, viewModel.acceptsOutsideEdits {
-                    FileSecretDropOverlay(limit: viewModel.maxValueBytes)
+                    FileSecretDropOverlay(limit: viewModel.maxValueBytes, keepsFiles: viewModel.keepsDroppedFiles)
                 }
             }
     }
 }
 
-/// "Drop to add as a file secret" over the place: a dashed ink outline 8 pt inside it.
+/// "Drop to add as a file secret" over the place: a dashed ink outline 8 pt inside it. A folder
+/// says that it keeps any other file too (v23).
 private struct FileSecretDropOverlay: View {
     let limit: Int
+    let keepsFiles: Bool
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
@@ -44,10 +44,10 @@ private struct FileSecretDropOverlay: View {
                 .font(Theme.Typography.emptyStateIcon)
                 .foregroundStyle(Theme.Colors.ink)
                 .accessibilityHidden(true)
-            Text(FileSecretCopy.dropTitle)
+            Text(keepsFiles ? FolderFileCopy.dropTitle : FileSecretCopy.dropTitle)
                 .fxTextStyle(.leadEmphasized)
                 .foregroundStyle(Theme.Colors.ink)
-            Text(FileSecretCopy.dropDetail(limit: limit))
+            Text(keepsFiles ? FolderFileCopy.dropDetail(secretLimit: limit) : FileSecretCopy.dropDetail(limit: limit))
                 .fxTextStyle(.caption)
                 .foregroundStyle(Theme.Colors.mutedText)
         }
@@ -62,12 +62,19 @@ private struct FileSecretDropOverlay: View {
 
 /// The file URL of a drop, loaded from its first provider that has one.
 private enum FileDropURL {
-    static func url(from providers: [NSItemProvider]) async -> URL? {
-        guard let provider = providers.first(where: { $0.canLoadObject(ofClass: URL.self) }) else { return nil }
-        return await withCheckedContinuation { continuation in
-            _ = provider.loadObject(ofClass: URL.self) { @Sendable url, _ in
-                continuation.resume(returning: url)
+    /// Every dropped file's URL, in the order dropped.
+    static func urls(from providers: [NSItemProvider]) async -> [URL] {
+        var urls: [URL] = []
+        for provider in providers where provider.canLoadObject(ofClass: URL.self) {
+            let url: URL? = await withCheckedContinuation { continuation in
+                _ = provider.loadObject(ofClass: URL.self) { @Sendable url, _ in
+                    continuation.resume(returning: url)
+                }
+            }
+            if let url {
+                urls.append(url)
             }
         }
+        return urls
     }
 }

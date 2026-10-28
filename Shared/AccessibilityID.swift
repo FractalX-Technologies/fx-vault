@@ -329,6 +329,24 @@ enum AccessibilityID {
             "share.stage.\(name)"
         }
     }
+
+    /// A folder's Files section (v23).
+    enum FolderFiles {
+        static let section = "folderFiles.section"
+        static let add = "folderFiles.add"
+        /// The rename field of Rename….
+        static let renameField = "folderFiles.renameField"
+
+        /// The row of the file named `name`.
+        static func row(_ name: String) -> String {
+            "folderFiles.row.\(name)"
+        }
+
+        /// Save As… on the row of the file named `name`.
+        static func save(_ name: String) -> String {
+            "folderFiles.save.\(name)"
+        }
+    }
 }
 
 /// Launch environment keys the XCUITest suite sets and only the UITesting host reads
@@ -336,4 +354,10 @@ enum AccessibilityID {
 enum UITestEnvironment {
     /// Start on a vault already created with this password, unlocked on the main window.
     static let vaultPassword = "FXVAULT_UI_TEST_VAULT_PASSWORD"
+    /// The name of the file Add File… picks, and its text (synthetic, never a real document).
+    static let folderFileName = "FXVAULT_UI_TEST_FOLDER_FILE_NAME"
+    static let folderFileText = "FXVAULT_UI_TEST_FOLDER_FILE_TEXT"
+    /// Where Save As… writes in the UITesting host, under the temporary directory both the host
+    /// and the test runner use; the test reads the file back from there.
+    static let folderFileSavedPath = "fxvault-uitests/folder-files/saved"
 }

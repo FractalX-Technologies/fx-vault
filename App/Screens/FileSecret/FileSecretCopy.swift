@@ -90,8 +90,12 @@ nonisolated enum FileSecretCopy {
 
     /// ".p8, .pem, .json · up to 48,000 bytes" (the place's limit: 25,600 for a Key Vault).
     static func dropDetail(limit: Int) -> String {
-        let extensions = FileSecretRules.droppableExtensions.map { ".\($0)" }.joined(separator: ", ")
-        return String(localized: "fileSecret.drop.detail", defaultValue: "\(extensions) · up to \(bytes(limit))")
+        String(localized: "fileSecret.drop.detail", defaultValue: "\(droppableExtensions) · up to \(bytes(limit))")
+    }
+
+    /// ".p8, .pem, .json": the extensions a drop turns into a file secret.
+    static var droppableExtensions: String {
+        FileSecretRules.droppableExtensions.map { ".\($0)" }.joined(separator: ", ")
     }
 
     static let notDroppableTitle = String(localized: "fileSecret.drop.refused.title", defaultValue: "This file can't be dropped here")

@@ -55,6 +55,12 @@ enum ProjectShareCopy {
             : String(localized: "projectShare.valueMissing", defaultValue: "\(count) secrets have no value here and travel by name only")
     }
 
+    /// The note under the tree when a checked folder keeps files (v23).
+    static let folderFilesLeftOut = String(
+        localized: "projectShare.folderFiles.leftOut",
+        defaultValue: "Files kept in folders aren't included. Send them another way if your teammate needs them."
+    )
+
     /// The note under the tree when the file carries production values.
     static func productionIncluded(_ places: [String]) -> String {
         String(

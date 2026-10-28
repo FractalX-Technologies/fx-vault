@@ -22,6 +22,17 @@ final class FolderDetailViewModel: LockObserving {
         }
     }
     private(set) var items: [FolderItemModel] = []
+    /// The folder's files by name (v23).
+    private(set) var files: [FolderFileModel] = []
+    /// Save As… of a file: "Confirm it's you", then the write.
+    let fileSave: FolderFileSaveModel
+    /// The file whose Rename… is open, and the name being typed.
+    var renamingFile: FolderFileModel?
+    var fileNameDraft = ""
+    /// The file waiting for "Delete?".
+    var pendingFileDeletion: FolderFileModel?
+    /// The last Add File… or drop, while its files are read and sealed (tests await it).
+    @ObservationIgnored private(set) var addingFiles: Task<Void, Never>?
     /// Revealed secrets and decrypted variables.
     let values: ConfigValueRevealer
     /// Reveal in the notes, after Touch ID or the master password (1.0 B9).
@@ -58,8 +69,10 @@ final class FolderDetailViewModel: LockObserving {
         values = ConfigValueRevealer(config: dependencies.config, clock: dependencies.clock)
         notesReveal = NotesRevealModel(values: values, dependencies: dependencies)
         copyFlow = ItemCopyFlow(dependencies: dependencies)
+        fileSave = FolderFileSaveModel(dependencies: dependencies)
         dependencies.actions.addLockObserver(self)
         observeItems()
+        observeFiles()
     }
 
     var folder: FolderModel? {
@@ -88,12 +101,14 @@ final class FolderDetailViewModel: LockObserving {
         items.lazy.filter { $0.kind == kind }.count
     }
 
-    /// "Folder · never sent anywhere by itself · 4 secrets · 1 variable" (board Folder-View).
+    /// "Folder · never sent anywhere by itself · 4 secrets · 1 variable" (board Folder-View),
+    /// then "· 2 files" when it keeps any (v23).
     var subline: String {
         PlaceCopy.subline([
             PlaceCopy.folder,
             PlaceCopy.folderNote,
             PlaceCopy.counts(secrets: count(of: .secret), variables: count(of: .variable)),
+            files.isEmpty ? nil : FolderFileCopy.count(files.count),
         ])
     }
 
@@ -127,6 +142,19 @@ final class FolderDetailViewModel: LockObserving {
                 }
             } catch {
                 AppLog.ui.error("Folder item observation ended")
+            }
+        })
+    }
+
+    private func observeFiles() {
+        let stream = dependencies.folders.observeFiles(folderID: folderID)
+        tasks.set("files", Task { [weak self] in
+            do {
+                for try await files in stream {
+                    self?.files = files
+                }
+            } catch {
+                AppLog.ui.error("Folder file observation ended")
             }
         })
     }
@@ -383,6 +411,75 @@ final class FolderDetailViewModel: LockObserving {
         dependencies.actions.present(.shareExport(ShareExportContext(selection: .folder(folderID))))
     }
 
+    // MARK: - Files (v23)
+
+    /// Keeps each file in the folder, off the main actor (up to 50 MB is read and sealed). The
+    /// rest are still added after one fails; the first failure says why. A lock stops the rest.
+    func addFiles(_ urls: [URL]) {
+        guard canEdit, !urls.isEmpty else { return }
+        let folders = dependencies.folders
+        let folderID = folderID
+        addingFiles = Task { [weak self] in
+            var failure: FolderFileError?
+            for url in urls where !Task.isCancelled {
+                let result = await Task.detached(priority: .userInitiated) { () -> Result<FolderFileModel, FolderFileError> in
+                    do throws(FolderFileError) {
+                        return .success(try folders.addFile(from: url, to: folderID))
+                    } catch {
+                        return .failure(error)
+                    }
+                }.value
+                switch result {
+                case .success(let file): self?.notice = FolderFileCopy.added(file.name)
+                case .failure(let error): failure = failure ?? error
+                }
+            }
+            if let failure, !Task.isCancelled {
+                self?.alert = failure.presentation
+            }
+        }
+    }
+
+    /// Save As… once the destination is chosen: "Confirm it's you", then the write.
+    func save(_ file: FolderFileModel, to destination: URL) {
+        fileSave.request(file, to: destination) { [weak self] name in
+            self?.notice = FolderFileCopy.saved(name)
+        }
+    }
+
+    /// Rename… with the file's name to edit.
+    func beginRename(_ file: FolderFileModel) {
+        guard canEdit else { return }
+        fileNameDraft = file.name
+        renamingFile = file
+    }
+
+    /// Renames the file Rename… opened to ``fileNameDraft``; a name that can't be used says why.
+    func commitRename() {
+        guard let file = renamingFile else { return }
+        renamingFile = nil
+        do {
+            try dependencies.folders.renameFile(file.id, to: fileNameDraft)
+        } catch {
+            alert = error.presentation
+        }
+    }
+
+    func requestFileDeletion(_ file: FolderFileModel) {
+        guard canEdit else { return }
+        pendingFileDeletion = file
+    }
+
+    func confirmFileDeletion() {
+        guard let file = pendingFileDeletion else { return }
+        pendingFileDeletion = nil
+        do {
+            try dependencies.folders.deleteFiles([file.id])
+        } catch {
+            alert = error.presentation
+        }
+    }
+
     // MARK: - LockObserving
 
     func vaultDidLock() {
@@ -392,10 +489,103 @@ final class FolderDetailViewModel: LockObserving {
         pendingDeletion = nil
         pendingCopy = nil
         linkedPopoverRowID = nil
+        renamingFile = nil
+        fileNameDraft = ""
+        pendingFileDeletion = nil
+        addingFiles?.cancel()
     }
 }
 
-extension FolderDetailViewModel: ConfigTableModel {}
+extension FolderDetailViewModel: ConfigTableModel {
+    /// A drop that can't be a file secret is kept as a file (v23).
+    var keepsDroppedFiles: Bool {
+        canEdit
+    }
+
+    func keepDroppedFiles(_ urls: [URL]) {
+        addFiles(urls)
+    }
+}
+
+/// Save As… of a folder file (v23): the destination is chosen first, then "Confirm it's you"
+/// (Touch ID or the master password, `ReauthPurpose.saveFile`), then the repository writes the
+/// bytes with the single-use authorization. A lock cancels a request in progress.
+@Observable
+final class FolderFileSaveModel: ReauthFlow, LockObserving {
+    struct Request: Identifiable {
+        let id = UUID()
+        let file: FolderFileModel
+        let destination: URL
+    }
+
+    private(set) var pending: Request?
+    /// A fresh check per request, as in `NotesRevealModel`: Touch ID's status may have changed,
+    /// and a check still running for a cancelled request must not authorize the next one.
+    private(set) var reauth: ReauthModel<FolderFileSaveAuthorizationModel>?
+    var alert: ErrorPresentationModel?
+    /// The write of the last confirmed request (tests await it).
+    @ObservationIgnored private(set) var saving: Task<Void, Never>?
+
+    @ObservationIgnored private let dependencies: FeatureDependencies
+    @ObservationIgnored private var onSaved: ((String) -> Void)?
+
+    init(dependencies: FeatureDependencies) {
+        self.dependencies = dependencies
+        dependencies.actions.addLockObserver(self)
+    }
+
+    func request(_ file: FolderFileModel, to destination: URL, onSaved: @escaping (String) -> Void) {
+        cancel()
+        let gate = dependencies.reauth
+        let session = dependencies.session
+        reauth = ReauthModel(
+            prompt: FeatureDependencies.reauthPrompt(for: .saveFile),
+            touchIDStatus: dependencies.touchIDStatus()
+        ) { credential in
+            try await gate.authorizeFileSave(with: credential, session: session)
+        }
+        self.onSaved = onSaved
+        pending = Request(file: file, destination: destination)
+    }
+
+    var pendingReauth: ReauthModel<FolderFileSaveAuthorizationModel>? {
+        pending == nil ? nil : reauth
+    }
+
+    /// Writes off the main actor and consumes the authorization: a failure needs a new check.
+    func reauthorized() {
+        guard let request = pending, let authorization = reauth?.takeAuthorization() else { return }
+        pending = nil
+        reauth = nil
+        let folders = dependencies.folders
+        let id = request.file.id
+        let destination = request.destination
+        let onSaved = onSaved
+        saving = Task { [weak self] in
+            let result = await Task.detached(priority: .userInitiated) { () -> Result<Void, FolderFileError> in
+                do throws(FolderFileError) {
+                    return .success(try folders.saveFile(id, to: destination, authorization: authorization))
+                } catch {
+                    return .failure(error)
+                }
+            }.value
+            switch result {
+            case .success: onSaved?(request.file.name)
+            case .failure(let error): self?.alert = error.presentation
+            }
+        }
+    }
+
+    func cancel() {
+        pending = nil
+        reauth?.reset()
+        reauth = nil
+    }
+
+    func vaultDidLock() {
+        cancel()
+    }
+}
 
 extension FolderDetailViewModel: NotesPlaceModel {
     var notesPlaceName: String {

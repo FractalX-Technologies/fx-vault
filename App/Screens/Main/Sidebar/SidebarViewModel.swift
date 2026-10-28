@@ -325,6 +325,11 @@ final class SidebarViewModel {
         folders.count { $0.parentID == id }
     }
 
+    /// The files a folder and its subfolders keep (v23): deleting it deletes them.
+    func fileCount(of id: FolderID) -> Int {
+        folders.filter { $0.id == id || $0.parentID == id }.reduce(0) { $0 + $1.fileCount }
+    }
+
     /// A search shows every folder open.
     func isExpanded(folder id: FolderID) -> Bool {
         isSearching || !collapsedFolderIDs.contains(id)

@@ -252,9 +252,13 @@ struct FileSecretTests {
         #expect(fixture.recorder.presented == [.fileSecret(FileSecretContext(place: .folder(fixture.folderID), fileURL: key))])
         #expect(folder.kind == .secret, "the new secret shows when the sheet closes")
 
-        folder.dropFile(URL(fileURLWithPath: "/tmp/notes.txt"))
-        #expect(fixture.recorder.presented.count == 1)
-        #expect(folder.alert == ErrorPresentationModel(title: FileSecretCopy.notDroppableTitle, message: FileSecretCopy.notDroppableMessage))
+        // Any other file is refused, except in a folder, which keeps it as a file (v23; see
+        // FolderViewModelTests.addFileAndADropKeepFilesInTheFolder).
+        let repository = fixture.repository.viewModel
+        repository.dropFile(URL(fileURLWithPath: "/tmp/notes.txt"))
+        #expect(fixture.repository.recorder.presented.isEmpty)
+        #expect(repository.alert == ErrorPresentationModel(title: FileSecretCopy.notDroppableTitle, message: FileSecretCopy.notDroppableMessage))
+        #expect(folder.keepsDroppedFiles && !repository.keepsDroppedFiles)
 
         folder.addFileSecret(from: nil)
         #expect(fixture.recorder.presented.last == .fileSecret(FileSecretContext(place: .folder(fixture.folderID))))

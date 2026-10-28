@@ -94,7 +94,7 @@ struct SidebarView: View {
                 sidebar.confirmFolderDeletion()
             }
         } message: { folder in
-            Text(FolderCopy.deleteMessage(subfolders: sidebar.subfolderCount(of: folder.id)))
+            Text(FolderCopy.deleteMessage(subfolders: sidebar.subfolderCount(of: folder.id), files: sidebar.fileCount(of: folder.id)))
         }
     }
 

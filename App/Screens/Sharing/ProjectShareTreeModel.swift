@@ -26,6 +26,8 @@ struct ProjectShareTreeModel: Equatable, ShareCheckTree {
     private(set) var roots: [ShareScopeNodeModel]
     private(set) var parts: [RepositoryPart]
     private(set) var folderIDs: [FolderID]
+    /// The listed folders that keep files (v23), which a share never carries.
+    private let folderIDsWithFiles: Set<FolderID>
     private(set) var checkedLeaves: Set<ShareScopeNodeID> = []
     private var leaves: [ShareScopeNodeID: Set<ShareScopeNodeID>] = [:]
 
@@ -38,6 +40,7 @@ struct ProjectShareTreeModel: Equatable, ShareCheckTree {
     init(repositories: [(node: ShareScopeNodeModel, part: RepositoryPart)], folders: [FolderModel], allFolders: [FolderModel]) {
         parts = repositories.map(\.part)
         folderIDs = folders.map(\.id)
+        folderIDsWithFiles = Set(folders.filter { $0.fileCount > 0 }.map(\.id))
         let folderNodes = folders.map { folder in
             ShareScopeNodeModel(
                 id: .folder(folder.id),
@@ -101,6 +104,11 @@ struct ProjectShareTreeModel: Equatable, ShareCheckTree {
     /// True when nothing is checked.
     var isEmpty: Bool {
         checkedLeaves.isEmpty
+    }
+
+    /// A checked folder keeps files, which stay behind (v23).
+    var leavesOutFolderFiles: Bool {
+        folderIDsWithFiles.contains { checkedLeaves.contains(.folder($0)) }
     }
 
     // MARK: - Selection

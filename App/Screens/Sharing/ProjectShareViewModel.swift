@@ -363,6 +363,11 @@ final class ProjectShareViewModel: LockObserving {
         preview?.includesProduction == true
     }
 
+    /// A checked folder keeps files, which the file leaves out (v23).
+    var leavesOutFolderFiles: Bool {
+        tree?.leavesOutFolderFiles == true
+    }
+
     var productionPlaces: [String] {
         preview?.productionPlaces ?? []
     }

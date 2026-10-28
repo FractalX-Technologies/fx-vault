@@ -82,6 +82,10 @@ enum Theme {
         static let notchCornerRadius: CGFloat = 8
         /// The setup command output box: about eight lines before it scrolls.
         static let commandOutputMaxHeight: CGFloat = 140
+        /// A folder's Files section shows this many rows, then scrolls (v23).
+        static let folderFilesVisibleRows = 4
+        /// A file's Finder icon in the Files section.
+        static let folderFileIconSize: CGFloat = 18
         /// Widest lock-screen form and onboarding text column.
         static let lockFormWidth: CGFloat = 360
         static let onboardingTextWidth: CGFloat = 460

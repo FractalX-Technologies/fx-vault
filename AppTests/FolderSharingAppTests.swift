@@ -176,6 +176,14 @@ struct FolderSharingAppTests {
         #expect(main.sidebar.subfolderCount(of: mobile) == 2)
         #expect(FolderCopy.deleteMessage(subfolders: 2).hasPrefix("Its 2 subfolders, secrets and variables"))
         #expect(FolderCopy.deleteMessage(subfolders: 0) == FolderCopy.deleteMessage)
+        #expect(FolderCopy.deleteMessage(subfolders: 2, files: 3).hasSuffix(" The 3 files kept in it are deleted too."))
+        #expect(FolderCopy.deleteMessage(subfolders: 0, files: 1) == FolderCopy.deleteMessage + " The file kept in it is deleted too.")
+        // A subfolder's files count for its parent: deleting the parent deletes them.
+        let file = harness.sandbox.appendingPathComponent("Profile.pdf")
+        try Data("%PDF-1.7 FXV_FIXTURE".utf8).write(to: file)
+        try folders.addFile(from: file, to: development)
+        #expect(await TestFixtures.eventually { main.sidebar.fileCount(of: mobile) == 1 && main.sidebar.fileCount(of: development) == 1 })
+        #expect(main.sidebar.fileCount(of: web) == 0)
         withExtendedLifetime(harness) {}
     }
 }

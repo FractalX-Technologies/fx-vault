@@ -26,3 +26,51 @@ enum FileSecretPanels {
         #endif
     }
 }
+
+/// The panels of a folder's Files section (v23). View-only: the view model receives the URLs.
+enum FolderFilePanels {
+    /// Asks for files to keep in the folder. Hidden files are shown. Empty when the user cancels.
+    static func chooseFiles() -> [URL] {
+        #if FXVAULT_UI_TESTING
+        // XCUITest cannot drive an open panel reliably: the UITesting host picks its fixture.
+        return UITestFolderFile.chooseFiles()
+        #else
+        let panel = NSOpenPanel()
+        panel.title = String(localized: "folderFile.panel.add.title", defaultValue: "Add Files")
+        panel.prompt = String(localized: "folderFile.panel.add.prompt", defaultValue: "Add")
+        panel.message = String(
+            localized: "folderFile.panel.add.message",
+            defaultValue: "Choose files up to \(FolderFileCopy.limit()) each. FX Vault keeps an encrypted copy; the files are not changed."
+        )
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.showsHiddenFiles = true
+        guard panel.runModal() == .OK else { return [] }
+        return panel.urls
+        #endif
+    }
+
+    /// Asks where to save a file. The panel itself confirms replacing an existing file. Nil when
+    /// the user cancels.
+    static func chooseDestination(fileName: String) -> URL? {
+        #if FXVAULT_UI_TESTING
+        return UITestFolderFile.destination(fileName: fileName)
+        #else
+        let panel = NSSavePanel()
+        panel.title = FolderFileCopy.saveTitle(fileName)
+        panel.prompt = String(localized: "folderFile.panel.save.prompt", defaultValue: "Save")
+        panel.message = String(
+            localized: "folderFile.panel.save.message",
+            defaultValue: "The file is saved unencrypted. Choose a folder that is not synced or shared if it is sensitive."
+        )
+        panel.nameFieldStringValue = fileName
+        panel.showsHiddenFiles = true
+        panel.canCreateDirectories = true
+        panel.isExtensionHidden = false
+        panel.allowsOtherFileTypes = true
+        guard panel.runModal() == .OK else { return nil }
+        return panel.url
+        #endif
+    }
+}
