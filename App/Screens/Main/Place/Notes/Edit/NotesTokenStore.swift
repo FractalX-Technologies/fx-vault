@@ -9,6 +9,9 @@ final class NotesTokenStore {
     enum Display: Hashable {
         /// `••••`, with the size when it is over the place's limit.
         case masked(oversizeBytes: Int?)
+        /// A one-line secret value pasted or typed in this edit, drawn in its chip like a note's
+        /// text: the user has it on screen already. It stays out of the text, undo and copies.
+        case visible(String)
         /// The dashed "Set value…" of a secret without a value.
         case setValue
         /// A variable value with line breaks: "3 lines".
@@ -126,6 +129,9 @@ final class NotesTokenStore {
             return .file(file)
         }
         let bytes = entry.isNew ? entry.value?.count : nil
+        if let bytes, bytes <= maxValueBytes, let text = entry.value?.utf8String(), !text.contains(where: \.isNewline) {
+            return .visible(text)
+        }
         return .masked(oversizeBytes: bytes.flatMap { $0 > maxValueBytes ? $0 : nil })
     }
 

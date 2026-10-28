@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 import VaultCore
@@ -49,6 +50,41 @@ struct NotesRevealTests {
         await model.remaskTasks[line.id]?.value
         #expect(Self.value(model) == .masked)
         #expect(reveal.hideDate(of: line.id) == nil)
+    }
+
+    /// Secrets whose values were just pasted or typed in the editor show after Save without
+    /// asking (the user had them on screen), then hide again on the usual timer; the others
+    /// stay masked.
+    @Test func savedValuesShowAfterTheEditUntilTheyHide() async throws {
+        let fixture = try await RepoDetailViewModelTests.Fixture()
+        let (harness, model) = (fixture.harness, fixture.viewModel)
+        _ = try await Self.secretLine(model)
+        model.beginNotesEdit(at: nil)
+        let (session, view) = try NotesEditSessionTests.editor(model)
+        let pasteboard = NotesEditorTests.pasteboard()
+        defer { pasteboard.releaseGlobally() }
+        pasteboard.clearContents()
+        pasteboard.setString("key1=secret1\nkey2=secret2\n", forType: .string)
+        view.setSelectedRange(NSRange(location: NSMaxRange((view.string as NSString).range(of: "API_TOKEN = ")) + 1, length: 0))
+        NotesEditorTests.type("\n", in: view)
+        #expect(view.readSelection(from: pasteboard, type: .string))
+
+        let sleepersBefore = harness.clock.sleeperCount
+        session.requestReview()
+        session.save()
+        #expect(await TestFixtures.eventually {
+            model.notes.items.first { $0.name == "KEY2" }?.value == .revealed("secret2")
+        })
+        let key1 = try #require(model.notes.items.first { $0.name == "KEY1" })
+        #expect(key1.value == .revealed("secret1"))
+        #expect(model.notesReveal.request == nil, "nothing asked")
+        #expect(Self.value(model) == .masked, "API_TOKEN was not edited")
+        #expect(model.notesReveal.hideDate(of: key1.id) == harness.clock.now.addingTimeInterval(Timeouts.revealRemask.timeInterval))
+
+        await harness.clock.waitForSleepers(count: sleepersBefore + 2)
+        harness.clock.advance(by: Timeouts.revealRemask)
+        await model.remaskTasks[key1.id]?.value
+        #expect(model.notes.items.first { $0.name == "KEY1" }?.value == .masked)
     }
 
     /// With Touch ID on, the sheet asks once when it appears and reveals on success.
@@ -408,6 +444,11 @@ struct NotesRevealTests {
 
         let repository = try await MainConnectivityTests.open(repositoryID, in: main)
         try await Self.expectTheWindowFollows(repository.values, in: main) { repository.rows.first?.id }
+        // An edit can draw a value set in it: the window stays out of capture while it runs.
+        repository.beginNotesEdit(at: nil)
+        #expect(main.isShowingRevealedValue)
+        repository.notesEdit?.cancel()
+        #expect(!main.isShowingRevealedValue)
 
         main.sidebar.selectedFolderID = folderID
         let folder = try #require(main.folderDetail)

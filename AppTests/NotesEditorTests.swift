@@ -162,6 +162,36 @@ struct NotesEditorTests {
         #expect(edits.additions.map { $0.value.utf8String() } == ["sk_test_1", "pk.2"])
     }
 
+    /// Values pasted or typed in this edit read like a note in their tokens (the user has them on
+    /// screen already); the text, a copy and an existing secret still hold none.
+    @Test func newSecretValuesShowInTheirTokens() throws {
+        let (session, view) = Self.editor()
+        let pasteboard = Self.pasteboard()
+        defer { pasteboard.releaseGlobally() }
+        pasteboard.clearContents()
+        pasteboard.setString("key1=secret1\nkey2=secret2\n", forType: .string)
+
+        Self.newSecretLine(in: view)
+        #expect(view.readSelection(from: pasteboard, type: .string))
+        #expect(view.string.contains("KEY1 = \(Self.token)\nKEY2 = \(Self.token)\n"))
+        #expect(!view.string.contains("secret1"))
+        let tokens = NotesEditText.paragraphs(of: view.attributedString()).flatMap(\.tokens)
+        #expect(tokens.map(session.display(of:)) == [.masked(oversizeBytes: nil), .visible("secret1"), .visible("secret2")])
+        #expect(NotesTokenDrawing.label(for: .visible("secret1")) == "secret1")
+
+        view.selectAll(nil)
+        #expect(view.writeSelection(to: pasteboard, types: [.string]))
+        #expect(pasteboard.string(forType: .string)?.contains("secret") == false, "a copy writes the mask")
+    }
+
+    /// A long value shows its start and end in a chip of bounded width.
+    @Test func aLongVisibleValueIsShortenedInTheMiddle() {
+        let value = String(repeating: "a", count: 40) + String(repeating: "z", count: 40)
+        let label = NotesTokenDrawing.label(for: .visible(value))
+        #expect(label.count == NotesTokenDrawing.visibleMaxCharacters)
+        #expect(label.hasPrefix("aaaa") && label.hasSuffix("zzzz") && label.contains("…"))
+    }
+
     /// Key material that reads as `name=value` to the `.env` parser: Base64 with its padding
     /// and connection strings (short made-up keys).
     nonisolated static let keyMaterial = [
@@ -462,7 +492,7 @@ struct NotesEditorTests {
         #expect(NotesTokenDrawing.label(for: .file(file)) == FileSecretCopy.notesLabel(file))
 
         try session.tokens.setValue(SecretBytes(utf8: "typed"), for: token)
-        #expect(session.display(of: token) == .masked(oversizeBytes: nil))
+        #expect(session.display(of: token) == .visible("typed"))
         let copy = try #require(session.tokens.duplicate(token))
         #expect(session.display(of: copy) == .setValue, "a copy of the line is a new secret")
     }

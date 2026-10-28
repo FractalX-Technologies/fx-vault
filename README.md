@@ -57,6 +57,8 @@ the secrets your code reads at runtime in Azure Key Vault.
   of editing; Hide All masks them again. Notes | Table switches to the table. Click a
   line (or ⋯ More › Edit Notes) to edit the notes as text; a secret's value goes in Set value…,
   never in the text, and Review ⌘S turns the edits into pending changes for the next Sync.
+  Secret values you paste (`KEY=value` lines), type or generate read like a note: each shows in
+  its line while you edit and for 30 seconds after Save, then hides.
   Leaving with unsaved changes asks before it drops them.
 - **File secrets.** Add a key file (`.p8`, `.pem`, `.json`) as a secret with ⋯ More › Add File
   Secret… or by dropping it on a place: stored as exact text or Base64 (binary files always),

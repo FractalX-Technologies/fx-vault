@@ -28,6 +28,9 @@ extension NotesEditablePlaceModel {
         session.onFinish = { [weak self] in
             self?.notesEdit = nil
         }
+        session.onSaved = { [weak self] names in
+            self?.notesReveal.showSaved(names)
+        }
         notesEdit = session
     }
 }

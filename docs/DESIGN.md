@@ -617,7 +617,7 @@ foreground color, so `.primary` text still turns white on selected rows.
   new secret's name brings its token. Its window stays out of screen capture, and Paste clears
   the clipboard as ⌘V does.
 - Paste (board Place-Paste): after a secret's `=` the whole paste is that line's value.
-  Elsewhere, `KEY=value` lines from the clipboard become lines with masked tokens, a name the
+  Elsewhere, `KEY=value` lines from the clipboard become lines with tokens, a name the
   section already has takes the new value ("replaces value"), and the clipboard is cleared; a
   toast at the bottom says "3 values set from the clipboard · clipboard cleared" for 4 s
   (`Theme.Durations.notesToast`), or "… set from the clipboard" alone when something was copied
@@ -627,6 +627,11 @@ foreground color, so `.primary` text still turns white on selected rows.
   random-looking key included even when it would pass as a name; several lines beep. Among the variables, other text pastes as text and stays on the clipboard. Copy and Cut
   write `••••` for a token; pasting back into the editor brings the cut line whole, a second
   copy as a new "Set value…" line.
+- A secret value set in the edit (pasted, typed or generated) shows in its token like the
+  revealed value of the read notes (ink text in an ink outline, shortened in the middle past 48
+  characters); one with line breaks or over the limit stays `••••`. The value is still outside
+  the text, its undo and its copies. After Save those secrets show in the notes without "Confirm
+  it's you" and hide after `Timeouts.revealRemask`, as a Reveal does.
 - Review (board Place-Review; `NotesReviewSheet`): ⌘S opens a `DialogSheet` "Review changes to
   production", "api-service · 4 changes", with Added · N, Changed · N and Removed · N in hairline
   boxes: `NAME` in `.monoName`, its kind, and the detail at the trailing edge ("info → debug",

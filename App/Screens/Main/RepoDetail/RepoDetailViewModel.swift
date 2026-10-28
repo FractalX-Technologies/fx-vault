@@ -660,7 +660,8 @@ final class RepoDetailViewModel: LockObserving {
         self.items = items
         values.follow(
             liveIDs: Set(items.map(\.id)),
-            variableIDs: items.filter { $0.kind == .variable && $0.hasValue }.map(\.id)
+            variableIDs: items.filter { $0.kind == .variable && $0.hasValue }.map(\.id),
+            secrets: items.secretNames
         )
     }
 

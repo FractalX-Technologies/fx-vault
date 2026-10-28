@@ -162,7 +162,11 @@ final class FolderDetailViewModel: LockObserving {
     /// Applies a new snapshot of the folder's items.
     func apply(_ items: [FolderItemModel]) {
         self.items = items
-        values.follow(liveIDs: Set(items.map(\.id)), variableIDs: items.filter { $0.kind == .variable }.map(\.id))
+        values.follow(
+            liveIDs: Set(items.map(\.id)),
+            variableIDs: items.filter { $0.kind == .variable }.map(\.id),
+            secrets: items.secretNames
+        )
     }
 
     // MARK: - Reveal and copy

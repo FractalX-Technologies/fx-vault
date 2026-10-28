@@ -248,7 +248,9 @@ final class OrganizationDetailViewModel: LockObserving {
         self.items = items
         values.follow(
             liveIDs: Set(items.map(\.id)),
-            variableIDs: items.filter { $0.kind == .variable && $0.hasValue }.map(\.id)
+            variableIDs: items.filter { $0.kind == .variable && $0.hasValue }.map(\.id),
+            // An organization's notes are never edited: nothing saved here waits to show.
+            secrets: [:]
         )
     }
 
